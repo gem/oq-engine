@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    
+    name="fs_model_eshm20_ver09e_var_Mthr"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Shallow Default"
+        >
+            <simpleFaultSource
+            id="SHD-SFS-GRCF02G"
+            name="GRCF02GT"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            24.2905 35.5986 24.23346 35.61197 24.17698 35.62687 24.12068 35.64223 24.06333 35.65479 24.00591 35.66715 23.94822 35.67868 23.8905 35.6902
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        57.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.5
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        10.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    Leonard2014_Interplate
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.45
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.9524" bValue="1.106" maxMag="6.9" minMag="5.9"/>
+                <rake>
+                    -90.0
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

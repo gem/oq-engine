@@ -57,14 +57,13 @@ from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
 
 
 class TestGCMTCatalogue(unittest.TestCase):
-    '''Class for testing seismicity utilities'''
+    """Class for testing seismicity utilities"""
 
-    rel_path = os.path.join('..', 'parsers', 'catalogue', 'gcmt_data')
+    rel_path = os.path.join("..", "parsers", "catalogue", "gcmt_data")
     FILE_PATH = os.path.dirname(__file__)
     BASE_DATA_PATH = os.path.join(FILE_PATH, rel_path)
 
     def setUp(self):
-
         # Parse catalogue
         fname = os.path.join(self.BASE_DATA_PATH, "test_gcmt_catalogue_01.txt")
 
@@ -73,10 +72,9 @@ class TestGCMTCatalogue(unittest.TestCase):
         self.cat = prs.read_file()
 
     def test_serialise_to_csv_centroid(self):
-        """ Test serialise centroid """
+        """Test serialise centroid"""
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-
             # Expected - The content of the output file was manually checked
             # against the original .ndk file
             tmp = "expected_gcmt_centroid.csv"
@@ -93,10 +91,9 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.assertTrue(statement, msg)
 
     def test_serialise_to_csv_hypocenter(self):
-        """ Test serialise hypocenter """
+        """Test serialise hypocenter"""
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-
             # Expected - The content of the output file was manually checked
             # against the original .ndk file
             tmp = "expected_gcmt_hypocenter.csv"

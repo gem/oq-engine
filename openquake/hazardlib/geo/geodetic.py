@@ -87,7 +87,18 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     return diameter * distance
 
 
-@compile("f8[:](f8, f8, f8[:], f8[:])")
+@compile("(f8, f8, f8[:], f8[:])")
+def fast_distance(lon, lat, lons, lats):
+    lon, lat = math.radians(lon), math.radians(lat)
+    lons, lats = np.radians(lons), np.radians(lats)
+    distance = np.arcsin(np.sqrt(
+        np.sin((lat - lats) / 2.0) ** 2.0
+        + np.cos(lat) * np.cos(lats)
+        * np.sin((lon - lons) / 2.0) ** 2.0))
+    return 2 * EARTH_RADIUS * distance
+
+
+@compile("(f8, f8, f8[:], f8[:])")
 def fast_azimuth(lon, lat, lons, lats):
     """
     Calculate the azimuths of a collection of points with respect to a
@@ -124,6 +135,13 @@ def azimuth(lons1, lats1, lons2, lats2):
         - np.sin(lats1) * cos_lat2 * np.cos(lons1 - lons2)
     ))
     return (360 - true_course) % 360
+
+
+def azimuths(coos):
+    """
+    Compute the azimuths from an array of lines with shape (L, 2, 3)
+    """
+    return azimuth(coos[:, 0, 0], coos[:, 0, 1], coos[:, 1, 0], coos[:, 1, 1])
 
 
 def distance(lons1, lats1, depths1, lons2, lats2, depths2):
@@ -550,7 +568,7 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     Parameters are the same as for :func:`distance_to_arc`.
     """
 
-    if type(plons) is float:
+    if isinstance(plons, float):
         plons = np.array([plons])
         plats = np.array([plats])
 

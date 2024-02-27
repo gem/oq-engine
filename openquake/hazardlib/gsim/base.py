@@ -36,7 +36,6 @@ from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, simple_cmaker)
-from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -137,8 +136,7 @@ class MetaGSIM(abc.ABCMeta):
                             'and compute in %s' % name)
         bad = bad_methods(dic)
         if bad:
-            print('%s cannot contain the methods %s' % (name, bad),
-                  file=sys.stderr)
+            sys.exit('%s cannot contain the methods %s' % (name, bad))
         for k, v in dic.items():
             if (k == 'compute' and v.__annotations__.get("ctx")
                     is not numpy.recarray):
@@ -365,7 +363,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         else:
             ctx = rup  # rup is already a good object
         assert self.compute.__annotations__.get("ctx") is numpy.recarray
-        cmaker = simple_cmaker([self], [imt.string], mags=['%.2f' % rup.mag])
+        if isinstance(rup.mag, float):  # in old-fashioned tests
+            mags = ['%.2f' % rup.mag]
+        else:  # array
+            mags=['%.2f' % mag for mag in rup.mag]
+        cmaker = simple_cmaker([self], [imt.string], mags=mags)
         if not isinstance(ctx, numpy.ndarray):
             ctx = cmaker.recarray([ctx])
         self.compute(ctx, [imt], mean, sig, tau, phi)

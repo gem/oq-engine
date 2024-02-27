@@ -45,29 +45,30 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module :mod:`openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian`
 imports :class:`openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian.IsotropicGaussian`
 the simple isotropic Gaussian smoothing kernel as described by Frankel (1995)
 
 Frankel, A. (1995) Mapping Seismic Hazard in the Central and Eastern United
 States. Seismological Research Letters. 66(4) 8 - 21
-'''
+"""
 
 import numpy as np
 from openquake.hmtk.seismicity.utils import haversine
 from openquake.hmtk.seismicity.smoothing.kernels.base import (
-    BaseSmoothingKernel)
+    BaseSmoothingKernel,
+)
 
 
 class IsotropicGaussian(BaseSmoothingKernel):
-    '''
+    """
     Applies a simple isotropic Gaussian smoothing using an Isotropic Gaussian
     Kernel - taken from Frankel (1995) approach
-    '''
+    """
 
     def smooth_data(self, data, config, is_3d=False):
-        '''
+        """
         Applies the smoothing kernel to the data
 
         :param np.ndarray data:
@@ -82,18 +83,22 @@ class IsotropicGaussian(BaseSmoothingKernel):
             * smoothed_value: np.ndarray vector of smoothed values
             * Total (summed) rate of the original values
             * Total (summed) rate of the smoothed values
-        '''
-        max_dist = config['Length_Limit'] * config['BandWidth']
+        """
+        max_dist = config["Length_Limit"] * config["BandWidth"]
         smoothed_value = np.zeros(len(data), dtype=float)
         for iloc in range(0, len(data)):
-            dist_val = haversine(data[:, 0], data[:, 1],
-                                 data[iloc, 0], data[iloc, 1])
+            dist_val = haversine(
+                data[:, 0], data[:, 1], data[iloc, 0], data[iloc, 1]
+            )
 
             if is_3d:
-                dist_val = np.sqrt(dist_val.flatten() ** 2.0 +
-                                   (data[:, 2] - data[iloc, 2]) ** 2.0)
+                dist_val = np.sqrt(
+                    dist_val.flatten() ** 2.0
+                    + (data[:, 2] - data[iloc, 2]) ** 2.0
+                )
             id0 = np.where(dist_val <= max_dist)[0]
-            w_val = (np.exp(-(dist_val[id0] ** 2.0) /
-                            (config['BandWidth'] ** 2.))).flatten()
+            w_val = (
+                np.exp(-(dist_val[id0] ** 2.0) / (config["BandWidth"] ** 2.0))
+            ).flatten()
             smoothed_value[iloc] = np.sum(w_val * data[id0, 3]) / np.sum(w_val)
         return smoothed_value, np.sum(data[:, -1]), np.sum(smoothed_value)

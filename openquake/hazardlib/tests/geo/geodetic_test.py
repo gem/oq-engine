@@ -33,16 +33,15 @@ assert_aeq = numpy.testing.assert_almost_equal
 class TestGeodeticDistance(unittest.TestCase):
     def test_LAX_to_JFK(self):
         dist = geodetic.geodetic_distance(*(LAX + JFK))
-        self.assertAlmostEqual(dist, 0.623585 * geodetic.EARTH_RADIUS,
-                               delta=0.1)
+        assert_aeq(dist, 0.623585 * geodetic.EARTH_RADIUS, decimal=1)
         dist2 = geodetic.geodetic_distance(*(JFK + LAX))
-        self.assertAlmostEqual(dist, dist2)
+        assert_aeq(dist, dist2)
 
     def test_on_equator(self):
         dist = geodetic.geodetic_distance(0, 0, 1, 0)
-        self.assertAlmostEqual(dist, 111.1949266)
+        assert_aeq(dist, 111.1949266)
         [dist2] = geodetic.geodetic_distance([-5], [0], [-6], [0])
-        self.assertAlmostEqual(dist, dist2)
+        assert_aeq(dist, dist2)
 
     def test_along_meridian(self):
         coords = list(map(numpy.array, [(77.5, -150.), (-10., 15.),
@@ -52,18 +51,17 @@ class TestGeodeticDistance(unittest.TestCase):
 
     def test_one_point_on_pole(self):
         dist = geodetic.geodetic_distance(0, 90, 0, 88)
-        self.assertAlmostEqual(dist, 222.3898533)
+        assert_aeq(dist, 222.3898533)
 
     def test_small_distance(self):
         dist = geodetic.geodetic_distance(0, 0, 0, 1e-10)
-        self.assertAlmostEqual(dist, 0)
+        assert_aeq(dist, 0)
         dist = geodetic.geodetic_distance(-1e-12, 0, 0, 0)
-        self.assertAlmostEqual(dist, 0)
+        assert_aeq(dist, 0)
 
     def test_opposite_points(self):
         dist = geodetic.geodetic_distance(110, -10, -70, 10)
-        self.assertAlmostEqual(dist, geodetic.EARTH_RADIUS * numpy.pi,
-                               places=3)
+        assert_aeq(dist, geodetic.EARTH_RADIUS * numpy.pi, decimal=3)
 
     def test_arrays(self):
         lons1 = numpy.array([[-50.03824533, -153.97808192],
@@ -100,7 +98,7 @@ class TestGeodeticDistance(unittest.TestCase):
 class TestAzimuth(unittest.TestCase):
     def test_LAX_to_JFK(self):
         az = geodetic.azimuth(*(LAX + JFK))
-        self.assertAlmostEqual(az, 360 - 65.8922, places=4)
+        assert_aeq(az, 360 - 65.8922, decimal=4)
 
     def test_meridians(self):
         az = geodetic.azimuth(0, 0, 0, 1)
@@ -139,19 +137,19 @@ class TestDistance(unittest.TestCase):
         p1 = (0, 0, 10)
         p2 = (0.5, -0.3, 5)
         distance = geodetic.distance(*(p1 + p2))
-        self.assertAlmostEqual(distance, 65.0295143)
+        assert_aeq(distance, 65.0295143)
 
     def test_topo(self):
         p1 = (0, 0, 1)
         p2 = (0, 0, -1)
         distance = geodetic.distance(*(p1 + p2))
-        self.assertAlmostEqual(distance, 2.0)
+        assert_aeq(distance, 2.0)
 
     def test_topo2(self):
         p1 = (0, 0, 3)
         p2 = (0.5, -0.3, -2)
         distance = geodetic.distance(*(p1 + p2))
-        self.assertAlmostEqual(distance, 65.0295143)
+        assert_aeq(distance, 65.0295143)
 
 
 class MinDistanceToSegmentTest(unittest.TestCase):
@@ -162,32 +160,32 @@ class MinDistanceToSegmentTest(unittest.TestCase):
 
     def test_one(self):
         # Positive distance halfspace - within segment
-        dist = float(geodetic.min_distance_to_segment(
+        dist, = geodetic.min_distance_to_segment(
             self.slons, self.slats, lons=numpy.array([0.0]),
-            lats=numpy.array([-2.0])))
-        self.assertAlmostEqual(dist, 219.90986712)
+            lats=numpy.array([-2.0]))
+        assert_aeq(dist, 219.90986712)
 
     def test_two(self):
         # Negative distance halfspace - within segment
-        dist = float(geodetic.min_distance_to_segment(
+        dist, = geodetic.min_distance_to_segment(
             self.slons, self.slats, lons=numpy.array([0.0]),
-            lats=numpy.array([2.0])))
-        self.assertAlmostEqual(dist, -205.18959626)
+            lats=numpy.array([2.0]))
+        assert_aeq(dist, -205.18959626)
 
     def test_three(self):
         # Positive distance halfspace - outside segment
-        dist = float(geodetic.min_distance_to_segment(
+        dist, = geodetic.min_distance_to_segment(
             self.slons, self.slats, lons=numpy.array([3.0]),
-            lats=numpy.array([0.0])))
-        self.assertAlmostEqual(dist, 186.38785969)
+            lats=numpy.array([0.0]))
+        assert_aeq(dist, 186.38785969)
 
     def test_four(self):
         # Negative distance halfspace - outside segment
-        dist = float(geodetic.min_distance_to_segment(
+        dist, = geodetic.min_distance_to_segment(
             self.slons, self.slats,
             lons=numpy.array([-2.0]),
-            lats=numpy.array([0.5])))
-        self.assertAlmostEqual(dist, -125.8000481)
+            lats=numpy.array([0.5]))
+        assert_aeq(dist, -125.8000481)
 
     def test_five(self):
         # Seglons with three elements
@@ -203,36 +201,36 @@ class DistanceToSemiArcTest(unittest.TestCase):
     # values in this test are based on the tests used for the
     # DistanceToArcTest
     def test_one_point(self):
-        dist = float(geodetic.distance_to_semi_arc(
-            12.3, 44.5, 39.4, plons=13.4, plats=46.9))
-        self.assertAlmostEqual(dist, -105.12464364)
-        dist = float(geodetic.distance_to_arc(
-            12.3, 44.5, 219.4, plons=13.4, plats=46.9))
-        self.assertAlmostEqual(dist, +105.12464364)
-        dist = float(geodetic.distance_to_semi_arc(
-            12.3, 44.5, 39.4, plons=13.4, plats=44.9))
-        self.assertAlmostEqual(dist, 38.34459954)
+        dist, = geodetic.distance_to_semi_arc(
+            12.3, 44.5, 39.4, plons=13.4, plats=46.9)
+        assert_aeq(dist, -105.12464364)
+        dist = geodetic.distance_to_arc(
+            12.3, 44.5, 219.4, plons=13.4, plats=46.9)
+        assert_aeq(dist, +105.12464364)
+        dist = geodetic.distance_to_semi_arc(
+            12.3, 44.5, 39.4, plons=13.4, plats=44.9)
+        assert_aeq(dist, 38.34459954)
         # This tests the distance to a point in the y-negative halfspace in a
         # reference system which uses as the origin the reference point
         # (i.e. (12.3; 44.5)) and the y direction as the direction with
         # azimuth = 39.4)
-        dist = float(geodetic.distance_to_semi_arc(
-            12.3, 44.5, 39.4, plons=11.3, plats=44.5))
-        self.assertAlmostEqual(dist, -79.3093368)
+        dist = geodetic.distance_to_semi_arc(
+            12.3, 44.5, 39.4, plons=11.3, plats=44.5)
+        assert_aeq(dist, -79.3093368)
 
 
 class DistanceToArcTest(unittest.TestCase):
     # values in this test have not been checked by hand
     def test_one_point(self):
-        dist = float(
-            geodetic.distance_to_arc(12.3, 44.5, 39.4, plons=13.4, plats=46.9))
-        self.assertAlmostEqual(dist, -105.12464364)
+        dist = geodetic.distance_to_arc(
+            12.3, 44.5, 39.4, plons=13.4, plats=46.9)
+        assert_aeq(dist, -105.12464364)
         dist = geodetic.distance_to_arc(12.3, 44.5, 219.4,
                                         plons=13.4, plats=46.9)
-        self.assertAlmostEqual(dist, +105.12464364)
-        dist = float(geodetic.distance_to_arc(
-            12.3, 44.5, 39.4, plons=13.4, plats=44.9))
-        self.assertAlmostEqual(dist, 38.34459954)
+        assert_aeq(dist, +105.12464364)
+        dist = geodetic.distance_to_arc(
+            12.3, 44.5, 39.4, plons=13.4, plats=44.9)
+        assert_aeq(dist, 38.34459954)
 
     def test_several_points(self):
         plons = numpy.array([3.3, 4.3])
@@ -246,17 +244,17 @@ class PointAtTest(unittest.TestCase):
     # values are verified using pyproj's spherical Geod
     def test(self):
         lon, lat = geodetic.point_at(10.0, 20.0, 30.0, 50.0)
-        self.assertAlmostEqual(lon, 10.239856504796101, places=6)
-        self.assertAlmostEqual(lat, 20.38925590463351, places=6)
+        assert_aeq(lon, 10.239856504796101, decimal=6)
+        assert_aeq(lat, 20.38925590463351, decimal=6)
 
         lon, lat = geodetic.point_at(-13.5, 22.4, -140.0, 120.0)
-        self.assertAlmostEqual(lon, -14.245910669126582, places=6)
-        self.assertAlmostEqual(lat, 21.57159463157223, places=6)
+        assert_aeq(lon, -14.245910669126582, decimal=6)
+        assert_aeq(lat, 21.57159463157223, decimal=6)
 
     def test_zero_distance(self):
         lon, lat = geodetic.point_at(1.3, -5.6, -35.0, 0)
-        self.assertAlmostEqual(lon, 1.3)
-        self.assertAlmostEqual(lat, -5.6)
+        assert_aeq(lon, 1.3)
+        assert_aeq(lat, -5.6)
 
 
 class NPointsBetweenTest(unittest.TestCase):

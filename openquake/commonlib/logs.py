@@ -24,8 +24,8 @@ import getpass
 import logging
 import traceback
 from datetime import datetime
-from openquake.baselib import config, zeromq, parallel
-from openquake.commonlib import readinput, dbapi, mosaic
+from openquake.baselib import config, zeromq, parallel, workerpool as w
+from openquake.commonlib import readinput, dbapi
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -41,7 +41,7 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(mosaic.MosaicGetter().get_models_list())
+        MODELS.extend(readinput.read_mosaic_df().code)
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR
@@ -57,6 +57,9 @@ def dbcmd(action, *args):
     """
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     if dbhost == 'local':
+        if action.startswith('workers_'):
+            master = w.WorkerMaster()  # zworkers
+            return getattr(master, action[8:])()
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -80,8 +83,8 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     task = 'task #%d' % task_no
     return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
-                 
-    
+
+
 def get_datadir():
     """
     Extracts the path of the directory where the openquake data are stored
@@ -275,17 +278,18 @@ class LogContext:
                                       self.calc_id, hc_id)
 
 
-def init(dummy, job_ini, log_level='info', log_file=None,
+def init(job_ini, dummy=None, log_level='info', log_file=None,
          user_name=None, hc_id=None, host=None, tag=''):
     """
-    :param dummy: ignored parameter, exists for backward compatibility
     :param job_ini: path to the job.ini file or dictionary of parameters
+    :param dummy: ignored parameter, exists for backward compatibility
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
-    :param tag: tag (for instance the model name) to show before the log message
+    :param tag: tag (for instance the model name) to show before the log
+        message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -293,5 +297,7 @@ def init(dummy, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
+    if job_ini in ('job', 'calc'):  # backward compatibility
+        job_ini = dummy
     return LogContext(job_ini, 0, log_level, log_file,
                       user_name, hc_id, host, tag)

@@ -395,6 +395,22 @@ def _get_sa_at_1180(region, C, imt, ctx):
             _get_soil_depth_term(region, C, fake_z1pt0, vs30_1180) +
             _get_regional_term(region, C, imt, vs30_1180, ctx.rrup))
 
+def get_epistemic_sigma(ctx):
+    """
+    This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are
+    counted in each magnitude and distance bins. However, the epistemic sigma is based on NZ SMDB v1.0
+    """
+
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+
+    return sigma_epi
 
 class AbrahamsonEtAl2014(GMPE):
     """
@@ -438,10 +454,11 @@ class AbrahamsonEtAl2014(GMPE):
     #: Reference rock conditions as defined at page
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, sigma_mu_epsilon = 0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon = sigma_mu_epsilon, **kwargs)
         self.region = kwargs.get('region')
         assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
+        self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -475,6 +492,8 @@ class AbrahamsonEtAl2014(GMPE):
 
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)
+
+            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             # get standard deviations
             sig[m], tau[m], phi[m] = _get_stddevs(

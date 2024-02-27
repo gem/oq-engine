@@ -528,6 +528,11 @@ modal_damage_state:
   Example: *modal_damage_state = true*.
   Default: false
 
+mosaic_model:
+  Used to restrict the ruptures to a given model
+  Example: *mosaic_model = ZAF*
+  Default: empty string
+
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
   Example: *num_epsilon_bins = 3*.
@@ -578,7 +583,7 @@ pointsource_distance:
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
   Example: *postproc_func = compute_mrd.main*
-  Default: '' (no postprocessing)
+  Default: 'dummy.main' (no postprocessing)
 
 postproc_args:
   Specify the arguments to be passed to the postprocessing function
@@ -669,6 +674,11 @@ rlz_index:
   Example: *rlz_index = 0*.
   Default: None
 
+rupture_dict:
+  Dictionary with rupture parameters lon, lat, dep, mag, rake, strike, dip
+  Example: *rupture_dict = {'lon': 10, 'lat': 20, 'dep': 10, 'mag': 6, 'rake': 0}*
+  Default: {}
+
 rupture_mesh_spacing:
   Set the discretization parameter (in km) for rupture geometries.
   Example: *rupture_mesh_spacing = 2.0*.
@@ -704,6 +714,11 @@ ses_seed:
   Example: *ses_seed = 123*.
   Default: 42
 
+rupture_usgs_id:
+  Used in Aristotle calculations to download a rupture from the USGS site
+  Example: *rupture_usgs_id = usp000fjta*.
+  Default: no default
+
 shakemap_id:
   Used in ShakeMap calculations to download a ShakeMap from the USGS site
   Example: *shakemap_id = usp000fjta*.
@@ -736,6 +751,11 @@ sites:
 
 sites_slice:
   INTERNAL
+
+smlt_branch:
+   Used to restrict the source model logic tree to a specific branch
+   Example: *smlt_branch=b1*
+   Default: empty string, meaning all branches
 
 soil_intensities:
   Used in classical calculations with amplification_method = convolution
@@ -885,7 +905,7 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-        'source_model_logic_tree', 'hazard_curves',
+        'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
@@ -1003,11 +1023,12 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
+    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
+    mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -1044,6 +1065,7 @@ class OqParam(valid.ParamSet):
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
+    rupture_dict = valid.Param(valid.dictionary, {})
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
@@ -1057,6 +1079,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
+    rupture_usgs_id = valid.Param(valid.nice_string, None)
     shakemap_id = valid.Param(valid.nice_string, None)
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
@@ -1064,6 +1087,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_slice = valid.Param(valid.simple_slice, None)
+    smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
     source_nodes = valid.Param(valid.namelist, [])
@@ -1079,7 +1103,7 @@ class OqParam(valid.ParamSet):
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
-    vs30_tolerance = valid.Param(valid.positiveint, 0)
+    vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
     @property
@@ -1584,7 +1608,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(imt, dtype) for imt in self.imtls])
+        return numpy.dtype([(imt, dtype) for imt in sort_by_imt(self.imtls)])
 
     @property
     def lti(self):
@@ -1931,8 +1955,8 @@ class OqParam(valid.ParamSet):
                 os.path.join(self.input_dir, self.export_dir))
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
-            logging.warning('export_dir not specified. Using export_dir=%s'
-                            % self.export_dir)
+            logging.info('export_dir not specified. Using export_dir=%s'
+                         % self.export_dir)
             return True
         if not os.path.exists(self.export_dir):
             try:

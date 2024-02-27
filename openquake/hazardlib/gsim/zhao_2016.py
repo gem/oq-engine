@@ -30,7 +30,6 @@ import copy
 import numpy as np
 import pandas as pd
 import fiona
-from collections import OrderedDict
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -529,10 +528,12 @@ def get_volc_zones(volc_polygons):
                 zone_lats[zone_id[i], c] = f['geometry']['coordinates'][0][c][1]
 
     # Store all required info in dict
-    pgn_store = {'zone': zone_id, 'zone_lons': zone_lons, 'zone_lats': zone_lats}
+    pgn_store = {'zone': zone_id,
+                 'zone_lons': zone_lons,
+                 'zone_lats': zone_lats}
 
     # Set dict for volcanic zones
-    zone_dict = OrderedDict([(pgn_store['zone'][z], {}) for z in pgn_store['zone']])
+    zone_dict = {pgn_store['zone'][z]: {} for z in pgn_store['zone']}
 
     # Get polygon per zone
     pnts_zone, zone_pgn = zone_dict, zone_dict
@@ -927,8 +928,8 @@ class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
 
 class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     """
-    Implements the subduction in-slab GMPE of Zhao et al (2016c) with non-ergodic
-    path correction for propagation through volcanic regions.
+    Implements the subduction in-slab GMPE of Zhao et al (2016c) with
+    non-ergodic path correction for propagation through volcanic regions.
 
     Zhao, J. X., Jiang, F., Shi, P., Xing, H., Huang, H., Hou, R.,
     Zhang, Y., Yu, P., Lan, X., Rhoades, D. A., Somerville, P. G., Irikura, K.,
@@ -951,12 +952,13 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}
 
-    #: Required distance measure is Rrup, Rvolc and closest_point
-    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'closest_point', 'clon', 'clat'}
-    
+    #: Required distance measure is Rrup, Rvolc and clon, clat
+    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'clon', 'clat'}
+
     # Set coeff tables
     COEFFS = COEFFS_SLAB
     COEFFS_SITE = COEFFS_SITE_SLAB
+
 
 class ZhaoEtAl2016SSlabSiteSigma(ZhaoEtAl2016SSlab):
     """

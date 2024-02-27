@@ -69,7 +69,7 @@ def recurrence_table(mag, dmag, year, time_interval=None):
     """
     # Define magnitude vectors
     if time_interval is None:
-        num_year = np.max(year) - np.min(year) + 1.
+        num_year = np.max(year) - np.min(year) + 1.0
     else:
         num_year = time_interval
     upper_m = np.max(np.ceil(10.0 * mag) / 10.0)
@@ -88,19 +88,19 @@ def recurrence_table(mag, dmag, year, time_interval=None):
     # Normalise to Annual Rate
     number_obs_annual = number_obs / num_year
     n_c_annual = n_c / num_year
-    rec_table = np.column_stack([mval, number_obs, n_c, number_obs_annual,
-                                 n_c_annual])
+    rec_table = np.column_stack(
+        [mval, number_obs, n_c, number_obs_annual, n_c_annual]
+    )
     return rec_table
 
 
 def input_checks(catalogue, config, completeness):
-    """ Performs a basic set of input checks on the data
-    """
+    """Performs a basic set of input checks on the data"""
 
     if isinstance(completeness, np.ndarray):
         # completeness table is a numpy array (i.e. [year, magnitude])
         if np.shape(completeness)[1] != 2:
-            raise ValueError('Completeness Table incorrectly configured')
+            raise ValueError("Completeness Table incorrectly configured")
         else:
             cmag = completeness[:, 1]
             ctime = completeness[:, 0]
@@ -108,28 +108,28 @@ def input_checks(catalogue, config, completeness):
         # Completeness corresponds to a single magnitude (i.e. applies to
         # the entire catalogue)
         cmag = np.array(completeness)
-        ctime = np.array(np.min(catalogue.data['year']))
+        ctime = np.array(np.min(catalogue.data["year"]))
     else:
         # Everything is valid - i.e. no completeness magnitude
-        cmag = np.array(np.min(catalogue.data['magnitude']))
-        ctime = np.array(np.min(catalogue.data['year']))
+        cmag = np.array(np.min(catalogue.data["magnitude"]))
+        ctime = np.array(np.min(catalogue.data["year"]))
 
     # Set the config parameters if missing
     config = {} if config is None else config
-    key = 'reference_magnitude'
+    key = "reference_magnitude"
     if key not in config or config[key] is None:
-        config['reference_magnitude'] = 0.0
-    key = 'magnitude_interval'
+        config["reference_magnitude"] = 0.0
+    key = "magnitude_interval"
     if key not in config or config[key] is None:
-        config['magnitude_interval'] = 0.1
-    ref_mag = config['reference_magnitude']
-    dmag = config['magnitude_interval']
+        config["magnitude_interval"] = 0.1
+    ref_mag = config["reference_magnitude"]
+    dmag = config["magnitude_interval"]
 
     return cmag, ctime, ref_mag, dmag, config
 
 
 def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
-    '''
+    """
     Generate a random list of magnitudes distributed according to a
     truncated Gutenberg-Richter model
 
@@ -144,15 +144,16 @@ def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
 
     :returns:
         Vector of generated magnitudes
-    '''
-    sampler = np.random.uniform(0., 1., nsamples)
-    beta = bval * np.log(10.)
-    return (-1. / beta) * (
-        np.log(1. - sampler * (1 - np.exp(-beta * (mmax - mmin))))) + mmin
+    """
+    sampler = np.random.uniform(0.0, 1.0, nsamples)
+    beta = bval * np.log(10.0)
+    return (-1.0 / beta) * (
+        np.log(1.0 - sampler * (1 - np.exp(-beta * (mmax - mmin))))
+    ) + mmin
 
 
 def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
-    '''
+    """
     Generates a synthetic catalogue for a specified number of years, with
     magnitudes distributed according to a truncated Gutenberg-Richter
     distribution
@@ -169,15 +170,15 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
         Number of years
     :returns:
         Synthetic catalogue (dict) with year and magnitude attributes
-    '''
-    nsamples = int(np.round(nyears * (10. ** (aval - bval * mmin)), 0))
+    """
+    nsamples = int(np.round(nyears * (10.0 ** (aval - bval * mmin)), 0))
     year = np.random.randint(0, nyears, nsamples)
     # Get magnitudes
     mags = generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples)
-    return {'magnitude': mags, 'year': np.sort(year)}
+    return {"magnitude": mags, "year": np.sort(year)}
 
 
-#def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
+# def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
 #    """
 #    Re-sample the completeness table to a specified sample_width
 #    """
@@ -227,26 +228,26 @@ def get_completeness_counts(catalogue, completeness, d_m):
     # frequently! So we offset the bin edge by a very tiny amount to ensure
     # that, for example, M = 4.099999999 is assigned to the bin M = 4.1 and
     # not 4.0
-    master_bins = np.arange(np.min(cmag) - 1.0E-7,
-                            np.max(cmag) + d_m,
-                            d_m)
+    master_bins = np.arange(np.min(cmag) - 1.0e-7, np.max(cmag) + d_m, d_m)
     count_rates = np.zeros(len(master_bins) - 1)
     count_years = np.zeros_like(count_rates)
     for i in range(len(cyear) - 1):
-        time_idx = np.logical_and(catalogue.data["dtime"] < cyear[i],
-                                  catalogue.data["dtime"] >= cyear[i + 1])
+        time_idx = np.logical_and(
+            catalogue.data["dtime"] < cyear[i],
+            catalogue.data["dtime"] >= cyear[i + 1],
+        )
         nyrs = cyear[i] - cyear[i + 1]
         sel_mags = catalogue.data["magnitude"][time_idx]
-        m_idx = np.where(master_bins >= (cmag[i] - (d_m / 2.)))[0]
+        m_idx = np.where(master_bins >= (cmag[i] - (d_m / 2.0)))[0]
         m_bins = master_bins[m_idx]
-        count_rates[m_idx[:-1]] += np.histogram(
-            sel_mags,
-            bins=m_bins)[0].astype(float)
+        count_rates[m_idx[:-1]] += np.histogram(sel_mags, bins=m_bins)[
+            0
+        ].astype(float)
         count_years[m_idx[:-1]] += float(nyrs)
     # Removes any zero rates greater than
     last_loc = np.where(count_rates > 0)[0][-1]
-    n_obs = count_rates[:(last_loc + 1)]
-    t_per = count_years[:(last_loc + 1)]
-    cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.
-    cent_mag = np.around(cent_mag[:(last_loc + 1)], 3)
+    n_obs = count_rates[: (last_loc + 1)]
+    t_per = count_years[: (last_loc + 1)]
+    cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.0
+    cent_mag = np.around(cent_mag[: (last_loc + 1)], 3)
     return cent_mag, t_per, n_obs

@@ -16,6 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib import __version__
+from openquake.baselib import __version__  # noqa
 from openquake.risklib import read_nrml
 read_nrml.update_validators()

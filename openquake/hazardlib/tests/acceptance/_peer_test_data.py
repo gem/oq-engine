@@ -8,7 +8,6 @@ from openquake.hazardlib.geo import Polygon, Point, Line
 from openquake.hazardlib.site import Site
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from openquake.hazardlib.source import SimpleFaultSource
 from openquake.hazardlib.pmf import PMF
 
 import numpy

@@ -241,7 +241,7 @@ class UpgradeManager(object):
         try:
             curs.execute(query)
             return set(version for version, in curs.fetchall())
-        except:
+        except BaseException:
             raise VersioningNotInstalled('Run oq engine --upgrade-db')
 
     def parse_script_name(self, script_name):

@@ -12,14 +12,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04]
-        python-version: ["3.10"]
+        python-version: ["3.9"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -35,21 +35,21 @@ jobs:
         source ~/openquake/bin/activate
         pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver upgrade
-        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage' && pytest doc/adv-manual/*.rst
+        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage'
 
   hazardlib:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.9"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -63,9 +63,10 @@ jobs:
       run: |
         set -e
         source ~/openquake/bin/activate
-        pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+        pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver upgrade
         cd openquake
+        ruff check --preview --select NPY201 .
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
@@ -74,14 +75,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -102,14 +103,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -130,14 +131,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies

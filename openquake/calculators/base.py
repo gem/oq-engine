@@ -221,18 +221,19 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         :param remove: set it to False to remove the hdf5cache file (if any)
         :param shutdown: set it to True to shutdown the ProcessPool
         """
+        oq = self.oqparam
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             if concurrent_tasks is None:  # use the job.ini parameter
-                ct = self.oqparam.concurrent_tasks
+                ct = oq.concurrent_tasks
             else:  # used the parameter passed in the command-line
                 ct = concurrent_tasks
             if ct == 0:  # disable distribution temporarily
                 oq_distribute = os.environ.get('OQ_DISTRIBUTE')
                 os.environ['OQ_DISTRIBUTE'] = 'no'
-            if ct != self.oqparam.concurrent_tasks:
+            if ct != oq.concurrent_tasks:
                 # save the used concurrent_tasks
-                self.oqparam.concurrent_tasks = ct
+                oq.concurrent_tasks = ct
             if self.precalc is None:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
@@ -263,9 +264,12 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.Global.reset()
 
-                # remove temporary hdf5 file, if any (currently none)
-                if os.path.exists(self.datastore.tempname) and remove:
-                    os.remove(self.datastore.tempname)
+                # remove temporary hdf5 file, if any
+                if os.path.exists(self.datastore.tempname):
+                    if remove and oq.calculation_mode != 'preclassical':
+                        # removing in preclassical with multiFaultSources
+                        # would break --hc which is reading the temp file
+                        os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -474,8 +478,9 @@ class HazardCalculator(BaseCalculator):
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we
             # must not enter in SLOW MODE there
-            msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
-                   'engine would like at least 0.25 GB per core, i.e. %.1f GB: '
+            msg = ('Entering SLOW MODE. You have %.1f GB available, '
+                   'but the engine would like at least 0.25 GB per core, '
+                   'i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
                    ) % (avail, required)
             if oq.concurrent_tasks:
@@ -575,7 +580,8 @@ class HazardCalculator(BaseCalculator):
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
-            haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
+            haz_sitecol = readinput.get_site_collection(
+                oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             df = readinput.Global.pmap.to_dframe()
@@ -814,7 +820,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['cost_calculator'] = exposure.cost_calculator
+            self.datastore['exposure'] = exposure
             if hasattr(readinput.Global.exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
                     exposure.exposures, hdf5.vstr)
@@ -1116,7 +1122,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     fname = oqparam.inputs['gmfs']
     dtdict = {'sid': U32,
               'eid': U32,
-              'custom_site_id': (numpy.string_, 8),
+              'custom_site_id': (numpy.bytes_, 8),
               None: F32}
     array = hdf5.read_csv(
         fname, dtdict,
@@ -1437,7 +1443,7 @@ def run_calc(job_ini, **kw):
     :param kw: parameters to override
     :returns: a Calculator instance
     """
-    with logs.init("job", job_ini) as log:
+    with logs.init(job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
         calc.run()

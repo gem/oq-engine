@@ -55,17 +55,17 @@ from copy import deepcopy
 from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.seismicity.gcmt_catalogue import GCMTCatalogue
 from openquake.hmtk.parsers.catalogue.base import (
-    BaseCatalogueParser, BaseCatalogueWriter)
+    BaseCatalogueParser,
+    BaseCatalogueWriter,
+)
 
 
 class CsvCatalogueParser(BaseCatalogueParser):
-    """CSV Catalogue Parser Class
-    """
+    """CSV Catalogue Parser Class"""
 
     def read_file(self, start_year=None, end_year=None):
-        """
-        """
-        filedata = open(self.input_file, 'r')
+        """ """
+        filedata = open(self.input_file, "r")
         catalogue = self._setup_catalogue()
         # Reading the data file
         data = csv.DictReader(filedata)
@@ -73,15 +73,17 @@ class CsvCatalogueParser(BaseCatalogueParser):
         for irow, row in enumerate(data):
             if irow == 0:
                 valid_key_list = self._header_check(
-                    row.keys(),
-                    catalogue.TOTAL_ATTRIBUTE_LIST)
+                    row.keys(), catalogue.TOTAL_ATTRIBUTE_LIST
+                )
             for key in valid_key_list:
                 if key in catalogue.FLOAT_ATTRIBUTE_LIST:
                     catalogue.data[key] = self._float_check(
-                        catalogue.data[key], row[key], irow, key)
+                        catalogue.data[key], row[key], irow, key
+                    )
                 elif key in catalogue.INT_ATTRIBUTE_LIST:
                     catalogue.data[key] = self._int_check(
-                        catalogue.data[key], row[key], irow, key)
+                        catalogue.data[key], row[key], irow, key
+                    )
                 else:
                     catalogue.data[key].append(row[key])
         if start_year:
@@ -107,67 +109,83 @@ class CsvCatalogueParser(BaseCatalogueParser):
             if element in catalogue_keys:
                 valid_key_list.append(element)
             else:
-                print('Catalogue Attribute %s is not '
-                      'a recognised catalogue key' % element)
+                print(
+                    "Catalogue Attribute %s is not "
+                    "a recognised catalogue key" % element
+                )
         return valid_key_list
 
     def _float_check(self, attribute_array, value, irow, key):
-        '''Checks if value is valid float, appends to array if valid, appends
-        nan if not'''
-        value = value.strip(' ')
+        """Checks if value is valid float, appends to array if valid, appends
+        nan if not"""
+        value = value.strip(" ")
         try:
             if value:
                 attribute_array = np.hstack([attribute_array, float(value)])
             else:
                 attribute_array = np.hstack([attribute_array, np.nan])
-        except:
+        except ValueError:
             print(irow, key)
-            msg = 'Input file format error at line: %d' % (irow + 2)
-            msg += ' key: %s' % (key)
+            msg = "Input file format error at line: %d" % (irow + 2)
+            msg += " key: %s" % (key)
             raise ValueError(msg)
         return attribute_array
 
     def _int_check(self, attribute_array, value, irow, key):
-        '''Checks if value is valid integer, appends to array if valid, appends
-        nan if not'''
-        value = value.strip(' ')
+        """Checks if value is valid integer, appends to array if valid, appends
+        nan if not"""
+        value = value.strip(" ")
         try:
             if value:
                 attribute_array = np.hstack([attribute_array, int(value)])
             else:
                 attribute_array = np.hstack([attribute_array, np.nan])
-        except:
-            msg = 'Input file format error at line: %d' % (irow + 2)
-            msg += ' key: %s' % (key)
+        except ValueError:
+            msg = "Input file format error at line: %d" % (irow + 2)
+            msg += " key: %s" % (key)
             raise ValueError(msg)
         return attribute_array
 
 
 class GCMTCsvCatalogueParser(CsvCatalogueParser):
-    """
-
-    """
+    """ """
 
     def _setup_catalogue(self):
-        """
-        """
+        """ """
         return GCMTCatalogue()
 
 
 class CsvCatalogueWriter(BaseCatalogueWriter):
-    '''
+    """
     Writes catalogue to csv file
-    '''
+    """
+
     # Because the catalogues TOTAL_ATTRIBUTE_LIST is randomly ordered,
     # the preferred output order is given as a list here
-    OUTPUT_LIST = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
-                   'minute', 'second', 'timeError', 'longitude',
-                   'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
-                   'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
-                   'magnitudeType']
+    OUTPUT_LIST = [
+        "eventID",
+        "Agency",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "timeError",
+        "longitude",
+        "latitude",
+        "SemiMajor90",
+        "SemiMinor90",
+        "ErrorStrike",
+        "depth",
+        "depthError",
+        "magnitude",
+        "sigmaMagnitude",
+        "magnitudeType",
+    ]
 
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
-        '''
+        """
         Writes the catalogue to file, purging events if necessary.
 
         :param catalogue:
@@ -179,19 +197,20 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
         :param numpy.ndarray magnitude_table:
             Magnitude-time table specifying the year and magnitudes of
             completeness
-        '''
+        """
         # First apply purging conditions
-        output_catalogue = self.apply_purging(catalogue,
-                                              flag_vector,
-                                              magnitude_table)
-        outfile = open(self.output_file, 'wt')
+        output_catalogue = self.apply_purging(
+            catalogue, flag_vector, magnitude_table
+        )
+        outfile = open(self.output_file, "wt")
         writer = csv.DictWriter(outfile, fieldnames=self.OUTPUT_LIST)
 
         writer.writeheader()
         # Quick check to remove nan arrays
         for key in self.OUTPUT_LIST:
-            cond = (isinstance(output_catalogue.data[key], np.ndarray)
-                    and np.all(np.isnan(output_catalogue.data[key])))
+            cond = isinstance(
+                output_catalogue.data[key], np.ndarray
+            ) and np.all(np.isnan(output_catalogue.data[key]))
             if cond:
                 output_catalogue.data[key] = []
         # Write the catalogue
@@ -201,12 +220,12 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
                 if len(output_catalogue.data[key]) > 0:
                     row_dict[key] = output_catalogue.data[key][iloc]
                 else:
-                    row_dict[key] = ''
+                    row_dict[key] = ""
             writer.writerow(row_dict)
         outfile.close()
 
     def apply_purging(self, catalogue, flag_vector, magnitude_table):
-        '''
+        """
         Apply all the various purging conditions, if specified.
 
         :param catalogue:
@@ -217,16 +236,16 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
         :param numpy.ndarray magnitude_table:
             Magnitude-time table specifying the year and magnitudes of
             completeness
-        '''
+        """
         output_catalogue = deepcopy(catalogue)
         if magnitude_table is not None:
             if flag_vector is not None:
                 output_catalogue.catalogue_mt_filter(
-                    magnitude_table, flag_vector)
+                    magnitude_table, flag_vector
+                )
                 return output_catalogue
             else:
-                output_catalogue.catalogue_mt_filter(
-                    magnitude_table)
+                output_catalogue.catalogue_mt_filter(magnitude_table)
                 return output_catalogue
 
         if flag_vector is not None:
@@ -235,21 +254,53 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
 
 
 class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
-    '''
+    """
     Writes GCMT catalogue to csv file
-    '''
-    OUTPUT_LIST = ['eventID', 'centroidID', 'Agency', 'year', 'month', 'day',
-                   'hour', 'minute', 'second', 'timeError', 'longitude',
-                   'latitude', 'depth', 'depthError', 'magnitude',
-                   'sigmaMagnitude', 'magnitudeType', 'moment', 'SemiMajor90',
-                   'SemiMinor90', 'ErrorStrike', 'strike1', 'rake1', 'dip1',
-                   'strike2', 'rake2', 'dip2', 'f_clvd', 'e_rel',
-                   'eigenvalue_b', 'azimuth_b', 'plunge_b',
-                   'eigenvalue_p', 'azimuth_p', 'plunge_p',
-                   'eigenvalue_t', 'azimuth_t', 'plunge_t']
+    """
+
+    OUTPUT_LIST = [
+        "eventID",
+        "centroidID",
+        "Agency",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "timeError",
+        "longitude",
+        "latitude",
+        "depth",
+        "depthError",
+        "magnitude",
+        "sigmaMagnitude",
+        "magnitudeType",
+        "moment",
+        "SemiMajor90",
+        "SemiMinor90",
+        "ErrorStrike",
+        "strike1",
+        "rake1",
+        "dip1",
+        "strike2",
+        "rake2",
+        "dip2",
+        "f_clvd",
+        "e_rel",
+        "eigenvalue_b",
+        "azimuth_b",
+        "plunge_b",
+        "eigenvalue_p",
+        "azimuth_p",
+        "plunge_p",
+        "eigenvalue_t",
+        "azimuth_t",
+        "plunge_t",
+    ]
 
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
-        '''
+        """
         Writes the catalogue to file, purging events if necessary.
 
         :param catalogue:
@@ -261,19 +312,20 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
         :param numpy.ndarray magnitude_table:
             Magnitude-time table specifying the year and magnitudes of
             completeness
-        '''
+        """
         # First apply purging conditions
-        output_catalogue = self.apply_purging(catalogue,
-                                              flag_vector,
-                                              magnitude_table)
-        outfile = open(self.output_file, 'wt')
+        output_catalogue = self.apply_purging(
+            catalogue, flag_vector, magnitude_table
+        )
+        outfile = open(self.output_file, "wt")
         writer = csv.DictWriter(outfile, fieldnames=self.OUTPUT_LIST)
 
         writer.writeheader()
         # Quick check to remove nan arrays
         for key in self.OUTPUT_LIST:
-            cond = (isinstance(output_catalogue.data[key], np.ndarray)
-                    and np.all(np.isnan(output_catalogue.data[key])))
+            cond = isinstance(
+                output_catalogue.data[key], np.ndarray
+            ) and np.all(np.isnan(output_catalogue.data[key]))
             if cond:
                 output_catalogue.data[key] = []
         # Write the catalogue
@@ -283,12 +335,12 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
                 if len(output_catalogue.data[key]) > 0:
                     row_dict[key] = output_catalogue.data[key][iloc]
                 else:
-                    row_dict[key] = ''
+                    row_dict[key] = ""
             writer.writerow(row_dict)
         outfile.close()
 
     def apply_purging(self, catalogue, flag_vector, magnitude_table):
-        '''
+        """
         Apply all the various purging conditions, if specified.
 
         :param catalogue:
@@ -300,16 +352,16 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
         :param numpy.ndarray magnitude_table:
             Magnitude-time table specifying the year and magnitudes of
             completeness
-        '''
+        """
         output_catalogue = deepcopy(catalogue)
         if magnitude_table is not None:
             if flag_vector is not None:
                 output_catalogue.catalogue_mt_filter(
-                    magnitude_table, flag_vector)
+                    magnitude_table, flag_vector
+                )
                 return output_catalogue
             else:
-                output_catalogue.catalogue_mt_filter(
-                    magnitude_table)
+                output_catalogue.catalogue_mt_filter(magnitude_table)
                 return output_catalogue
 
         if flag_vector is not None:

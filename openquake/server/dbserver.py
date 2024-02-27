@@ -54,7 +54,6 @@ class DbServer(object):
                     sock.send(self.pid)
                     continue
                 elif cmd.startswith('workers_'):
-                    # call parallel.workers_start et similar routines
                     master = w.WorkerMaster(args[0])  # zworkers
                     msg = getattr(master, cmd[8:])()
                     sock.send(msg)

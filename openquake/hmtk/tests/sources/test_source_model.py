@@ -44,17 +44,18 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Tests the construction and methods of the
 :class: openquake.hmtk.sources.source_model.mtkSourceModel
-'''
+"""
 
 import os
 import unittest
 import operator
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hmtk.parsers.source_model.nrml04_parser import \
-    nrmlSourceModelParser
+from openquake.hmtk.parsers.source_model.nrml04_parser import (
+    nrmlSourceModelParser,
+)
 from openquake.hmtk.sources.source_model import mtkSourceModel
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.area import AreaSource
@@ -64,48 +65,52 @@ from openquake.hmtk.sources.point_source import mtkPointSource
 
 TOM = PoissonTOM(1.0)
 
-BASE_PATH = os.path.join(os.path.dirname(__file__), 'test_source_files')
+BASE_PATH = os.path.join(os.path.dirname(__file__), "test_source_files")
 
-MODEL_PATH = os.path.join(BASE_PATH, 'mixed_source_model_nrml4_2.xml')
-TEST_PATH = os.path.join(BASE_PATH, 'source_model_writer_test.xml')
+MODEL_PATH = os.path.join(BASE_PATH, "mixed_source_model_nrml4_2.xml")
+TEST_PATH = os.path.join(BASE_PATH, "source_model_writer_test.xml")
 
 
 class TestSourceModel(unittest.TestCase):
-    '''
+    """
     Module to test the
     :class:`openquake.hmtk.sources.source_model.mtkSourceModel`
-    '''
+    """
 
     def setUp(self):
         self.source_model = None
 
     def test_core_instantiation(self):
-        '''
+        """
         Simple test to ensure the class is correctly instantiated
-        '''
-        self.source_model = mtkSourceModel('101', 'Model Name')
-        self.assertEqual(self.source_model.id, '101')
-        self.assertEqual(self.source_model.name, 'Model Name')
+        """
+        self.source_model = mtkSourceModel("101", "Model Name")
+        self.assertEqual(self.source_model.id, "101")
+        self.assertEqual(self.source_model.name, "Model Name")
         # No sources on input
         self.assertEqual(self.source_model.get_number_sources(), 0)
 
         # Input correctly
-        good_model = [mtkPointSource('101', 'Point 1'),
-                      mtkPointSource('102', 'Point 2')]
-        self.source_model = mtkSourceModel('1001', 'Good Model', good_model)
+        good_model = [
+            mtkPointSource("101", "Point 1"),
+            mtkPointSource("102", "Point 2"),
+        ]
+        self.source_model = mtkSourceModel("1001", "Good Model", good_model)
         self.assertEqual(self.source_model.get_number_sources(), 2)
 
         # Input incorrectly - source not as list
         with self.assertRaises(ValueError) as ver:
             self.source_model = mtkSourceModel(
-                '1002', 'Bad Model', mtkPointSource('103', 'Point 3'))
-            self.assertEqual(str(ver.exception),
-                             'Sources must be input as list!')
+                "1002", "Bad Model", mtkPointSource("103", "Point 3")
+            )
+            self.assertEqual(
+                str(ver.exception), "Sources must be input as list!"
+            )
 
     def test_nrml_writer(self):
-        '''
+        """
         Tests the source model writer
-        '''
+        """
         # Load a full source model
         parser = nrmlSourceModelParser(MODEL_PATH)
         source_model = parser.read_file(2.0)
@@ -114,14 +119,18 @@ class TestSourceModel(unittest.TestCase):
         # Load file back
         parser = nrmlSourceModelParser(TEST_PATH)
         source_model_test = parser.read_file(2.0)
-        orig_sources = sorted(source_model.sources,
-                              key=operator.attrgetter('name'))
-        test_sources = sorted(source_model_test.sources,
-                              key=operator.attrgetter('name'))
+        orig_sources = sorted(
+            source_model.sources, key=operator.attrgetter("name")
+        )
+        test_sources = sorted(
+            source_model_test.sources, key=operator.attrgetter("name")
+        )
         for orig_source, test_source in zip(orig_sources, test_sources):
             self.assertEqual(orig_source.name, test_source.name)
-            self.assertEqual(orig_source.mag_scale_rel.__class__.__name__,
-                             test_source.mag_scale_rel.__class__.__name__)
+            self.assertEqual(
+                orig_source.mag_scale_rel.__class__.__name__,
+                test_source.mag_scale_rel.__class__.__name__,
+            )
         # Remove the test file
         os.remove(TEST_PATH)
 
@@ -132,24 +141,19 @@ class TestSourceModel(unittest.TestCase):
         # Load a full source model
         parser = nrmlSourceModelParser(MODEL_PATH)
         source_model = parser.read_file(2.0)
-        oq_source_model = source_model.convert_to_oqhazardlib(TOM,
-                                                              5.0,
-                                                              10.0,
-                                                              10.0,
-                                                              True)
+        oq_source_model = source_model.convert_to_oqhazardlib(
+            TOM, 5.0, 10.0, 10.0, True
+        )
         self.assertIsInstance(oq_source_model[0], AreaSource)
         self.assertIsInstance(oq_source_model[1], AreaSource)
         self.assertIsInstance(oq_source_model[2], PointSource)
         self.assertIsInstance(oq_source_model[3], SimpleFaultSource)
         self.assertIsInstance(oq_source_model[4], ComplexFaultSource)
 
-        source_model.sources[3] = 'Rubbish!'
+        source_model.sources[3] = "Rubbish!"
         with self.assertRaises(ValueError) as ver:
-            oq_source_model = source_model.convert_to_oqhazardlib(TOM,
-                                                                  5.0,
-                                                                  10.0,
-                                                                  10.0,
-                                                                  True)
+            oq_source_model = source_model.convert_to_oqhazardlib(
+                TOM, 5.0, 10.0, 10.0, True
+            )
 
-            self.assertEqual(str(ver.exception),
-                             'Source type not recognised!')
+            self.assertEqual(str(ver.exception), "Source type not recognised!")

@@ -53,16 +53,20 @@ defines the Gardner and Knopoff declustering algorithm
 import numpy as np
 
 from openquake.hmtk.seismicity.declusterer.base import (
-    BaseCatalogueDecluster, DECLUSTERER_METHODS)
+    BaseCatalogueDecluster,
+    DECLUSTERER_METHODS,
+)
 from openquake.hmtk.seismicity.utils import decimal_year, haversine
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import (
-    TIME_DISTANCE_WINDOW_FUNCTIONS)
+    TIME_DISTANCE_WINDOW_FUNCTIONS,
+)
 
 
 @DECLUSTERER_METHODS.add(
     "decluster",
     time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
-    fs_time_prop=float)
+    fs_time_prop=float,
+)
 class GardnerKnopoffType1(BaseCatalogueDecluster):
     """
     This class implements the Gardner Knopoff algorithm as described in
@@ -93,24 +97,27 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
         :rtype: numpy.ndarray
         """
         # Get relevant parameters
-        neq = len(catalogue.data['magnitude'])  # Number of earthquakes
+        neq = len(catalogue.data["magnitude"])  # Number of earthquakes
         # Get decimal year (needed for time windows)
         year_dec = decimal_year(
-            catalogue.data['year'], catalogue.data['month'],
-            catalogue.data['day'])
+            catalogue.data["year"],
+            catalogue.data["month"],
+            catalogue.data["day"],
+        )
         # Get space and time windows corresponding to each event
         # Initial Position Identifier
-        sw_space, sw_time = (
-           config['time_distance_window'].calc(
-            catalogue.data['magnitude'], config.get('time_cutoff')))
+        sw_space, sw_time = config["time_distance_window"].calc(
+            catalogue.data["magnitude"], config.get("time_cutoff")
+        )
         eqid = np.arange(0, neq, 1)
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
         # Sort magnitudes into descending order
-        id0 = np.flipud(np.argsort(catalogue.data['magnitude'],
-                                   kind='heapsort'))
-        longitude = catalogue.data['longitude'][id0]
-        latitude = catalogue.data['latitude'][id0]
+        id0 = np.flipud(
+            np.argsort(catalogue.data["magnitude"], kind="heapsort")
+        )
+        longitude = catalogue.data["longitude"][id0]
+        latitude = catalogue.data["latitude"][id0]
         sw_space = sw_space[id0]
         sw_time = sw_time[id0]
         year_dec = year_dec[id0]
@@ -125,14 +132,21 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                 vsel = np.logical_and(
                     vcl == 0,
                     np.logical_and(
-                        dt >= (-sw_time[i] * config['fs_time_prop']),
-                        dt <= sw_time[i]))
+                        dt >= (-sw_time[i] * config["fs_time_prop"]),
+                        dt <= sw_time[i],
+                    ),
+                )
                 # Of those events inside time window,
                 # find those inside distance window
-                vsel1 = haversine(longitude[vsel],
-                                  latitude[vsel],
-                                  longitude[i],
-                                  latitude[i]) <= sw_space[i]
+                vsel1 = (
+                    haversine(
+                        longitude[vsel],
+                        latitude[vsel],
+                        longitude[i],
+                        latitude[i],
+                    )
+                    <= sw_space[i]
+                )
                 vsel[vsel] = vsel1[:, 0]
                 temp_vsel = np.copy(vsel)
                 temp_vsel[i] = False
@@ -148,7 +162,7 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                     clust_index += 1
 
         # Re-sort the catalog_matrix into original order
-        id1 = np.argsort(eqid, kind='heapsort')
+        id1 = np.argsort(eqid, kind="heapsort")
         eqid = eqid[id1]
         vcl = vcl[id1]
         flagvector = flagvector[id1]

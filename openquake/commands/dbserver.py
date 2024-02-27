@@ -34,12 +34,11 @@ def main(cmd,
     """
     if config.multi_user:
         user = getpass.getuser()
-        if user != config.dbserver.user:
-            sys.exit(f'Only user {config.dbserver.user} can start the dbserver '
+        if user != 'openquake':
+            sys.exit(f'Only user openquake can start the dbserver '
                      f'but you are {user}')
 
     if cmd == 'upgrade':
-        dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
         applied = db.actions.upgrade_db(dbapi.db)
         if applied:
             print('Applied upgrades', applied)

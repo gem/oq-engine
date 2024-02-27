@@ -4,6 +4,7 @@ import numpy as np
 
 g: float = 9.81
 
+
 def newmark_critical_accel(
     factor_of_safety: Union[float, np.ndarray], slope: Union[float, np.ndarray]
 ) -> Union[float, np.ndarray]:
@@ -23,9 +24,9 @@ def newmark_critical_accel(
 
     crit_accel = (factor_of_safety - 1) * np.sin(np.radians(slope)) * g
     if np.isscalar(crit_accel):
-        return max([0., crit_accel])
+        return max([0.0, crit_accel])
     else:
-        return np.array([max([0., ca]) for ca in crit_accel])
+        return np.array([max([0.0, ca]) for ca in crit_accel])
 
 
 def newmark_displ_from_pga_M(
@@ -36,7 +37,7 @@ def newmark_displ_from_pga_M(
     c2: float = 2.335,
     c3: float = -1.478,
     c4: float = 0.424,
-    crit_accel_threshold: float = 0.05
+    crit_accel_threshold: float = 0.05,
 ) -> Union[float, np.ndarray]:
     """
     Landslide displacement calculated from PGA, M, and critical acceleration,
@@ -57,10 +58,10 @@ def newmark_displ_from_pga_M(
 
     :param c2:
         Empirical constant
-    
+
     :param c3:
         Empirical constant
-    
+
     :param c4:
         Empirical constant
 
@@ -71,7 +72,7 @@ def newmark_displ_from_pga_M(
         Defaults to 0.05
 
     :returns:
-        Predicted earthquake displacement in meters. 
+        Predicted earthquake displacement in meters.
     """
 
     # Corrections of invalid values
@@ -93,9 +94,8 @@ def newmark_displ_from_pga_M(
         accel_ratio[accel_ratio > 1.0] = 1.0
         accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
 
-
     pow_1 = (1 - accel_ratio) ** c2
-    pow_2 = accel_ratio ** c3
+    pow_2 = accel_ratio**c3
 
     pow_prod = pow_1 * pow_2
 
@@ -145,5 +145,4 @@ def prob_failure_given_displacement(
 
     Dn = displacement * 100.0
 
-    return c1 * (1 - np.exp(c2 * Dn ** c3))
-
+    return c1 * (1 - np.exp(c2 * Dn**c3))

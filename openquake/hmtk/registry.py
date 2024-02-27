@@ -63,16 +63,17 @@ class CatalogueFunctionRegistry(dict):
             has_default = not isinstance(type_info, type)
             if field not in config and not has_default:
                 raise RuntimeError(
-                    "Configuration not complete. %s missing" % field)
+                    "Configuration not complete. %s missing" % field
+                )
 
     def set_defaults(self, config, fields_spec):
         """
         Set default values got from `fields_spec` into the `config`
         dictionary
         """
-        defaults = dict([(f, d)
-                         for f, d in fields_spec.items()
-                         if not isinstance(d, type)])
+        defaults = dict(
+            [(f, d) for f, d in fields_spec.items() if not isinstance(d, type)]
+        )
         for field, default_value in defaults.items():
             if field not in config:
                 config[field] = default_value
@@ -97,9 +98,10 @@ class CatalogueFunctionRegistry(dict):
             time_bin=float,
             b_value=1E-6
         """
+
         def class_decorator(class_obj):
             original_method = getattr(class_obj, method_name)
-            if sys.version[0] == '2':  # Python 2
+            if sys.version[0] == "2":  # Python 2
                 original_method = original_method.im_func
 
             def caller(fn, obj, catalogue, config=None, *args, **kwargs):
@@ -107,6 +109,7 @@ class CatalogueFunctionRegistry(dict):
                 self.set_defaults(config, fields)
                 self.check_config(config, fields)
                 return fn(obj, catalogue, config, *args, **kwargs)
+
             new_method = decorator(caller, original_method)
             setattr(class_obj, method_name, new_method)
             instance = class_obj()
@@ -117,6 +120,7 @@ class CatalogueFunctionRegistry(dict):
             functools.update_wrapper(func, new_method)
             self[class_obj.__name__] = func
             return class_obj
+
         return class_decorator
 
     def add_function(self, completeness=False, **fields):
@@ -132,19 +136,26 @@ class CatalogueFunctionRegistry(dict):
             time_bin=float,
             b_value=1E-6
         """
+
         def dec(fn):
             if completeness:
+
                 def fn_with_config_and_c(
-                        catalogue, config, completeness_table=None):
+                    catalogue, config, completeness_table=None
+                ):
                     return fn(catalogue, completeness_table, **config)
+
                 fn_with_config = fn_with_config_and_c
             else:
+
                 def fn_with_config_without_c(catalogue, config):
                     return fn(catalogue, **config)
+
                 fn_with_config = fn_with_config_without_c
             fn_with_config.fields = fields
             fn_with_config.completeness = completeness
             fn.fields = fields
             self[fn.__name__] = fn_with_config
             return fn
+
         return dec

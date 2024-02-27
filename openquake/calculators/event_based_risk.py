@@ -309,7 +309,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe().sort_values('taxonomy')
+        adf = self.assetcol.to_dframe().sort_values(['taxonomy', 'ordinal'])
+        # NB: this is subtle! without the second ordering by 'ordinal'
+        # the asset dataframe will be ordered differently on AMD machines
+        # with respect to Intel machines, depending on the machine, thus
+        # causing different losses
         del adf['id']
         monitor.save('assets', adf)
         tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
@@ -408,7 +412,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
-        if 'gmf_data' not in self.datastore:  # start from ruptures
+        if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
+            # start from ruptures
             if (oq.ground_motion_fields and
                     'gsim_logic_tree' not in oq.inputs and
                     oq.gsim == '[FromFile]'):

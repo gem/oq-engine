@@ -18,7 +18,6 @@
 
 import re
 import os
-import sys
 import unittest
 import tempfile
 import numpy

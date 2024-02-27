@@ -46,7 +46,7 @@ import platform
 import subprocess
 from urllib.request import urlopen
 try:
-    import ensurepip
+    import ensurepip  # noqa
 except ImportError:
     sys.exit("ensurepip is missing; on Ubuntu the solution is to install "
              "python3-venv with apt")
@@ -66,6 +66,9 @@ except ImportError:
                      'Operating System to install it')
 
 CDIR = os.path.dirname(os.path.abspath(__file__))
+REMOVE_VENV = '''Found pre-existing venv %s
+If you proceeed you will have to reinstall manually any software other
+than the engine that you may have there. Proceed? [y/N]'''
 
 
 class server:
@@ -194,6 +197,12 @@ def ensure(pip=None, pyvenv=None):
     """
     try:
         if pyvenv:
+            if os.path.exists(pyvenv):
+                answer = input(REMOVE_VENV % pyvenv)
+                if answer.lower() == 'y':
+                    shutil.rmtree(pyvenv)
+                else:
+                    sys.exit(0)
             venv.EnvBuilder(with_pip=True).create(pyvenv)
         else:
             subprocess.check_call([pip, '-m', 'ensurepip', '--upgrade'])
@@ -269,14 +278,8 @@ def before_checks(inst, venv, port, remove, usage):
         inst.DBPORT = int(port)
 
     # check python version
-    if sys.platform == 'linux':
-        # requires Python >= 3.8.0
-        if PYVER < (3, 8, 0):
-            sys.exit('Error: you need at least Python 3.8, but you have %s' %
-                     '.'.join(map(str, sys.version_info)))
-    elif PYVER < (3, 10, 6):
-        # requires Python >= 3.10.6
-        sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
+    if PYVER < (3, 9, 0):
+        sys.exit('Error: you need at least Python 3.9, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
@@ -370,10 +373,9 @@ def install(inst, version, from_fork):
         if inst is server or inst is devel_server:
             subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
-    # create the openquake venv if necessary
-    if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
-        ensure(pyvenv=inst.VENV)
-        print('Created %s' % inst.VENV)
+    # recreate the openquake venv
+    ensure(pyvenv=inst.VENV)
+    print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
         if os.path.exists('python\\python._pth.old'):
@@ -391,11 +393,11 @@ def install(inst, version, from_fork):
     else:
         if os.path.exists('python\\python._pth.old'):
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
         else:
             subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)

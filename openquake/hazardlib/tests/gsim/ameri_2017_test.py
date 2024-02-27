@@ -24,7 +24,6 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 import pathlib
 from openquake.hazardlib import gsim
 import numpy as np
-import unittest
 
 
 data = pathlib.Path(__file__).parent / 'data'

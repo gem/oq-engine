@@ -37,13 +37,6 @@
                 this.render();
             },
 
-            events: {
-                "click .btn-danger": "remove_calculation",
-                "click .btn-traceback": "show_traceback",
-                "click .btn-file": "on_run_risk_clicked",
-                "change .btn-file input": "on_run_risk_queued"
-            },
-
             render: function() {
                 if (!this.can_be_rendered) {
                     return;

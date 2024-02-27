@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import csv
 import sys
 import inspect
 import tempfile
@@ -41,6 +42,7 @@ vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
+CSVFile = collections.namedtuple('CSVFile', 'fname header fields size')
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
@@ -869,7 +871,7 @@ def check_length(field, size):
     return check
 
 
-def _read_csv(fileobj, compositedt):
+def _read_csv(fileobj, compositedt, usecols=None):
     dic = {}
     conv = {}
     for name in compositedt.names:
@@ -881,15 +883,65 @@ def _read_csv(fileobj, compositedt):
         else:
             dic[name] = dt
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
-                         dtype=dic, keep_default_na=False, na_filter=False)
+                         dtype=dic, usecols=usecols,
+                         keep_default_na=False, na_filter=False)
     return df
+
+
+def find_error(fname, errors, dtype):
+    """
+    Given a CSV file with an error, parse it with the csv.reader
+    and get a better exception including the first line with an error
+    """
+    with open(fname, encoding='utf-8-sig', errors=errors) as f:
+        reader = csv.reader(f)
+        start = 1
+        while True:
+            names = next(reader) # header
+            start += 1
+            if not names[0].startswith('#'):
+                break
+        try:
+            for i, row in enumerate(reader, start):
+                for name, val in zip(names, row):
+                    numpy.array([val], dtype[name])
+        except Exception as exc:
+            exc.lineno = i
+            exc.line = ','.join(row)
+            return exc
+
+
+def sniff(fnames, sep=',', ignore=set()):
+    """
+    Read the first line of a set of CSV files by stripping the pre-headers.
+
+    :returns: a list of CSVFile namedtuples.
+    """
+    common = None
+    files = []
+    for fname in fnames:
+        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+            while True:
+                first = next(f)
+                if first.startswith('#'):
+                    continue
+                break
+            header = first.strip().split(sep)
+            if common is None:
+                common = set(header)
+            else:
+                common &= set(header)
+            files.append(CSVFile(fname, header, common, os.path.getsize(fname)))
+    common -= ignore
+    assert common, 'There is no common header subset among %s' % fnames
+    return files
 
 
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None):
+             index=None, errors=None, usecols=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -897,6 +949,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
+    :param usecols: columns to read
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
@@ -910,9 +963,14 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         header = first.strip().split(sep)
         dt = build_dt(dtypedict, header, fname)
         try:
-            df = _read_csv(f, dt)
+            df = _read_csv(f, dt, usecols)
         except Exception as exc:
-            raise InvalidFile('%s: %s' % (fname, exc))
+            err = find_error(fname, errors, dt)
+            if err:
+                raise InvalidFile('%s: %s\nline:%d:%s' %
+                                  (fname, err, err.lineno, err.line))
+            else:
+                raise InvalidFile('%s: %s' % (fname, exc))
     arr = numpy.zeros(len(df), dt)
     for col in df.columns:
         arr[col] = df[col].to_numpy()

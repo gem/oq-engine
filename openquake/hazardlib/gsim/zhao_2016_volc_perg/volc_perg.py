@@ -82,13 +82,13 @@ def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
             checks = pgn_zone[zone_id].intersects(l_mesh[idx_path])
 
             # N points in zone * line spacing = distance in zone
-            r_per_zone = len(np.argwhere(checks == True)) * line_spacing
+            r_per_zone = len(np.argwhere(checks)) * line_spacing
             r_zone_path[idx_path][zone_id] = r_per_zone
 
             # Get coordinates of mesh points in zone
             in_zone_lons, in_zone_lats = [], []
             for idx_pnt, pnt in enumerate(checks):
-                if checks[idx_pnt] == True:
+                if checks[idx_pnt]:
                     in_zone_lons.append(mesh_lons[idx_pnt])
                     in_zone_lats.append(mesh_lats[idx_pnt])
             pnts_in_zone[idx_path][zone_id] = [in_zone_lons, in_zone_lats]

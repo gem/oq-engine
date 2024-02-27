@@ -57,7 +57,7 @@ def save_curve_stats(dstore):
     Save agg_curves-stats
     """
     oq = dstore['oqparam']
-    units = dstore['cost_calculator'].get_units(oq.loss_types)
+    units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
     try:
         K = len(dstore['agg_keys'])
     except KeyError:
@@ -267,7 +267,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
     # can be ['fatalities', 'losses'] in a scenario_damage test
     if oq.investigation_time and loss_cols:  # build aggcurves
         logging.info('Building aggcurves')
-        units = dstore['cost_calculator'].get_units(oq.loss_types)
+        units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
         builder = get_loss_builder(dstore, oq, num_events=num_events)
         try:
             year = events['year']
@@ -420,9 +420,9 @@ def build_reinsurance(dstore, oq, num_events):
                     for k, c in curve[col].items():
                         dic[k].append(c[p])
 
+    cc = dstore['exposure'].cost_calculator
     dstore.create_df('reinsurance-avg_portfolio', pandas.DataFrame(avg),
-                     units=dstore['cost_calculator'].get_units(
-                         oq.loss_types))
+                     units=cc.get_units(oq.loss_types))
     # aggrisk by policy
     avg = general.AccumDict(accum=[])
     rbp_df = dstore.read_df('reinsurance_by_policy')
@@ -440,15 +440,13 @@ def build_reinsurance(dstore, oq, num_events):
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
     dstore.create_df('reinsurance-avg_policy', pandas.DataFrame(avg),
-                     units=dstore['cost_calculator'].get_units(
-                         oq.loss_types))
+                     units=cc.get_units(oq.loss_types))
     if oq.investigation_time is None:
         return
     dic['return_period'] = F32(dic['return_period'])
     dic['rlz_id'] = U16(dic['rlz_id'])
     dstore.create_df('reinsurance-aggcurves', pandas.DataFrame(dic),
-                     units=dstore['cost_calculator'].get_units(
-                         oq.loss_types))
+                     units=cc.get_units(oq.loss_types))
 
 
 @base.calculators.add('post_risk')

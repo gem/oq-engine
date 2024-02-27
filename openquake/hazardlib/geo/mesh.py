@@ -25,6 +25,7 @@ from scipy.spatial.distance import cdist
 import shapely.geometry
 import shapely.ops
 
+from alpha_shapes import Alpha_Shaper
 from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
@@ -409,17 +410,18 @@ class Mesh(object):
             on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+        sbb = geo_utils.get_spherical_bounding_box(
+            self.lons.flatten(), self.lats.flatten())
+        proj = geo_utils.OrthographicProjection(*sbb)
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flat, self.lats.flat)).copy()
+        coords = numpy.transpose(proj(self.lons.flatten(), self.lats.flatten()))
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
 
-    def get_joyner_boore_distance(self, mesh):
+    def get_joyner_boore_distance(self, mesh, unstructured=False):
         """
         Compute and return Joyner-Boore distance to each point of ``mesh``.
         Point's depth is ignored.
@@ -481,12 +483,27 @@ class Mesh(object):
         # to polygon distance, which gives the most accurate value
         # of distance in km (and that value is zero for points inside
         # the polygon).
-        proj, polygon = self._get_proj_enclosing_polygon()
+        if unstructured:
+
+            proj = geo_utils.OrthographicProjection(
+                *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+            # Points at distances lower than 40 km
+            mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+            # Points representing the surface f the rupture
+            sfc_xx, sfc_yy = proj(self.lons, self.lats)
+            points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
+            shaper = Alpha_Shaper(points)
+            alpha_opt, polygon = shaper.optimize()
+
+        else:
+            proj, polygon = self._get_proj_enclosing_polygon()
+
         if not isinstance(polygon, shapely.geometry.Polygon):
             # either line or point is our enclosing polygon. draw
             # a square with side of 10 m around in order to have
             # a proper polygon instead.
             polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
+
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
@@ -511,8 +528,9 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+        sbb = geo_utils.get_spherical_bounding_box(
+            self.lons.flatten(), self.lats.flatten())
+        proj = geo_utils.OrthographicProjection(*sbb)
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
             lats = self.lats.reshape(len(self.lats), 1)

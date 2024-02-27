@@ -45,11 +45,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module to test :class:
 :openquake.hmtk.faults.mfd.youngs_coppersmith.YoungsCoppersmithExponential
 and :class: openquake.hmtk.faults.mfd.youngs_coppersmith.YoungsCoppersmithExponential
-'''
+"""
 
 import os
 import unittest
@@ -58,126 +58,137 @@ from math import log
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hmtk.faults.mfd.base import _scale_moment
-from openquake.hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
-                                                          YoungsCoppersmithCharacteristic)
+from openquake.hmtk.faults.mfd.youngs_coppersmith import (
+    YoungsCoppersmithExponential,
+    YoungsCoppersmithCharacteristic,
+)
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-YC_EXP_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-                                         'yc1985_exponential_BungumFig1.dat'))
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+YC_EXP_DATA = np.genfromtxt(
+    os.path.join(BASE_DATA_PATH, "yc1985_exponential_BungumFig1.dat")
+)
 
 
 class TestYoungsCoppersmithExponential(unittest.TestCase):
-    '''
+    """
     Tests the :class: YoungsCoppersmithExponential
-    '''
+    """
 
     def setUp(self):
-        '''
-        '''
+        """ """
         self.model = YoungsCoppersmithExponential()
         self.msr = WC1994()
-        self.config = {'MFD_spacing': 0.1,
-                       'Maximum_Magnitude': 8.0,
-                       'Maximum_Magnitude_Uncertainty': None,
-                       'Minimum_Magnitude': 5.0,
-                       'Model_Weight': 1.0,
-                       'b_value': [1.0, 0.1]}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Maximum_Magnitude": 8.0,
+            "Maximum_Magnitude_Uncertainty": None,
+            "Minimum_Magnitude": 5.0,
+            "Model_Weight": 1.0,
+            "b_value": [1.0, 0.1],
+        }
 
     def test_class_setup(self):
-        '''
+        """
         Tests the basic setup of the class
-        '''
-        expected_dict = {'b_value': 1.0,
-                         'b_value_sigma': 0.1,
-                         'bin_width': 0.1,
-                         'mfd_model': 'Youngs & Coppersmith Exponential',
-                         'mfd_weight': 1.0,
-                         'mmax': None,
-                         'mmax_sigma': None,
-                         'mmin': 5.0,
-                         'occurrence_rate': None}
+        """
+        expected_dict = {
+            "b_value": 1.0,
+            "b_value_sigma": 0.1,
+            "bin_width": 0.1,
+            "mfd_model": "Youngs & Coppersmith Exponential",
+            "mfd_weight": 1.0,
+            "mmax": None,
+            "mmax_sigma": None,
+            "mmin": 5.0,
+            "occurrence_rate": None,
+        }
 
         self.model.setUp(self.config)
         self.assertDictEqual(expected_dict, self.model.__dict__)
 
     def test_get_mmax(self):
-        '''
+        """
         Tests the function to get Mmax
         Values come from WC1994 (tested in openquake.hazardlib) - only
         functionality is tested for here!
-        '''
+        """
         # Case 1 MMmax and uncertainty specified in config
-        self.config['Maximum_Magnitude'] = 8.0
-        self.config['Maximum_Magnitude_Uncertainty'] = 0.2
+        self.config["Maximum_Magnitude"] = 8.0
+        self.config["Maximum_Magnitude_Uncertainty"] = 0.2
 
         self.model = YoungsCoppersmithExponential()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
         self.assertAlmostEqual(self.model.mmax, 8.0)
         self.assertAlmostEqual(self.model.mmax_sigma, 0.2)
 
         # Case 2: Mmax and uncertainty not specified in config
-        self.config['Maximum_Magnitude'] = None
-        self.config['Maximum_Magnitude_Uncertainty'] = None
+        self.config["Maximum_Magnitude"] = None
+        self.config["Maximum_Magnitude_Uncertainty"] = None
 
         self.model = YoungsCoppersmithExponential()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
         self.assertAlmostEqual(self.model.mmax, 7.9880073)
         self.assertAlmostEqual(self.model.mmax_sigma, 0.23)
 
     def test_cumulative_value(self):
-        '''
+        """
         Tests the calculation of the cumulative rate M > Mref
         Data and tests taken from Bungum (2007). Current parameters should
         reproduce Model 4 line in Figure 1 of Bungum (2007)
-        '''
+        """
         self.model = YoungsCoppersmithExponential()
-        self.config = {'MFD_spacing': 0.1,
-                       'Maximum_Magnitude': 8.0,
-                       'Maximum_Magnitude_Uncertainty': None,
-                       'Minimum_Magnitude': 5.0,
-                       'Model_Weight': 1.0,
-                       'b_value': [1.0, 0.1]}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Maximum_Magnitude": 8.0,
+            "Maximum_Magnitude_Uncertainty": None,
+            "Minimum_Magnitude": 5.0,
+            "Model_Weight": 1.0,
+            "b_value": [1.0, 0.1],
+        }
 
         # Test case 1 - Fault of 120 km length and 60 km width (7200 km ** 2 area)
         # b-value 1, slip = 1 mm/yr
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 7200.)
-        moment_rate = (30. * 1E9) * (7200. * 1E6) * (1.0 / 1000.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 7200.0)
+        moment_rate = (30.0 * 1e9) * (7200.0 * 1e6) * (1.0 / 1000.0)
         momax = _scale_moment(self.model.mmax, in_nm=True)
-        beta = log(10.)
+        beta = log(10.0)
         expected_result = YC_EXP_DATA[:, 1]
         mags = np.arange(5.0, 8.1, 0.1)
         for iloc, mag in enumerate(mags):
             self.assertAlmostEqual(
                 expected_result[iloc],
-                self.model.cumulative_value(mag, moment_rate, beta, momax))
+                self.model.cumulative_value(mag, moment_rate, beta, momax),
+            )
 
     def test_get_mfd(self):
-        '''
+        """
         Tests the main function to get the magnitude frequency distribution
-        '''
+        """
         self.model = YoungsCoppersmithExponential()
-        self.config = {'MFD_spacing': 0.1,
-                       'Maximum_Magnitude': 8.0,
-                       'Maximum_Magnitude_Uncertainty': None,
-                       'Minimum_Magnitude': 5.0,
-                       'Model_Weight': 1.0,
-                       'b_value': [1.0, 0.1]}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Maximum_Magnitude": 8.0,
+            "Maximum_Magnitude_Uncertainty": None,
+            "Minimum_Magnitude": 5.0,
+            "Model_Weight": 1.0,
+            "b_value": [1.0, 0.1],
+        }
         self.model.setUp(self.config)
         # Same fault case as for test_cumulative_value - now comparing incremenetal
         # rates
-        self.model.get_mmax(self.config, self.msr, 0., 7200.)
-        output1 = self.model.get_mfd(1.0, 7200.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 7200.0)
+        output1 = self.model.get_mfd(1.0, 7200.0)
         np.testing.assert_array_almost_equal(YC_EXP_DATA[:, 2], output1[2])
 
         # Test case for when b > 1.5 - should produce array of NaN
         self.model = YoungsCoppersmithExponential()
-        self.config['b_value'] = [1.6, 0.1]
+        self.config["b_value"] = [1.6, 0.1]
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 7200.)
-        _, _, _ = self.model.get_mfd(1.0, 7200.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 7200.0)
+        _, _, _ = self.model.get_mfd(1.0, 7200.0)
         self.assertTrue(np.all(np.isnan(self.model.occurrence_rate)))
 
     def test_return_oq_mfd(self):
@@ -186,114 +197,144 @@ class TestYoungsCoppersmithExponential(unittest.TestCase):
         EvenlyDiscretizedMFD class
         """
         self.model = YoungsCoppersmithExponential()
-        self.config = {'MFD_spacing': 0.1,
-                       'Maximum_Magnitude': 8.0,
-                       'Maximum_Magnitude_Uncertainty': None,
-                       'Minimum_Magnitude': 5.0,
-                       'Model_Weight': 1.0,
-                       'b_value': [1.0, 0.1]}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Maximum_Magnitude": 8.0,
+            "Maximum_Magnitude_Uncertainty": None,
+            "Minimum_Magnitude": 5.0,
+            "Model_Weight": 1.0,
+            "b_value": [1.0, 0.1],
+        }
         self.model.setUp(self.config)
         # Same fault case as for test_cumulative_value - now comparing incremenetal
         # rates
-        self.model.get_mmax(self.config, self.msr, 0., 7200.)
-        _ = self.model.get_mfd(1.0, 7200.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 7200.0)
+        _ = self.model.get_mfd(1.0, 7200.0)
         oq_mfd = self.model.to_evenly_discretized_mfd()
         self.assertTrue(isinstance(oq_mfd, EvenlyDiscretizedMFD))
         self.assertAlmostEqual(oq_mfd.min_mag, 5.05)
         self.assertAlmostEqual(oq_mfd.bin_width, 0.1)
-        np.testing.assert_array_almost_equal(YC_EXP_DATA[:, 2],
-                                             np.array(oq_mfd.occurrence_rates))
+        np.testing.assert_array_almost_equal(
+            YC_EXP_DATA[:, 2], np.array(oq_mfd.occurrence_rates)
+        )
 
 
 class TestYoungsCoppersmithCharacteristic(unittest.TestCase):
-    '''
+    """
     Tests the
     :class: openquake.hmtk.faults.mfd.youngs_coppersmith.YoungsCoppersmithCharacteristic
-    '''
+    """
 
     def setUp(self):
-        '''
-        '''
+        """ """
         self.model = YoungsCoppersmithCharacteristic()
         self.msr = WC1994()
-        self.config = {'MFD_spacing': 0.1,
-                       'Maximum_Magnitude': 8.0,
-                       'Maximum_Magnitude_Uncertainty': None,
-                       'Minimum_Magnitude': 5.0,
-                       'Model_Weight': 1.0,
-                       'b_value': [1.0, 0.1],
-                       'delta_m': None}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Maximum_Magnitude": 8.0,
+            "Maximum_Magnitude_Uncertainty": None,
+            "Minimum_Magnitude": 5.0,
+            "Model_Weight": 1.0,
+            "b_value": [1.0, 0.1],
+            "delta_m": None,
+        }
 
     def test_class_setup(self):
-        '''
+        """
         Tests the basic setup of the class
-        '''
+        """
         # Test case 1 - delta not set
         expected_dict = {
-            'b_value': 1.0,
-            'b_value_sigma': 0.1,
-            'bin_width': 0.1,
-            'mfd_type': 'Youngs & Coppersmith (1985) Characteristic',
-            'mfd_weight': 1.0,
-            'mmax': None,
-            'mmax_sigma': None,
-            'mmin': 5.0,
-            'occurrence_rate': None,
-            'model': None}
+            "b_value": 1.0,
+            "b_value_sigma": 0.1,
+            "bin_width": 0.1,
+            "mfd_type": "Youngs & Coppersmith (1985) Characteristic",
+            "mfd_weight": 1.0,
+            "mmax": None,
+            "mmax_sigma": None,
+            "mmin": 5.0,
+            "occurrence_rate": None,
+            "model": None,
+        }
 
         self.model.setUp(self.config)
         self.assertDictEqual(expected_dict, self.model.__dict__)
 
     def test_get_mmax(self):
-        '''
+        """
         Tests the function to get Mmax
         Values come from WC1994 (tested in openquake.hazardlib) - only
         functionality is tested for here!
-        '''
+        """
         # Case 1 MMmax and uncertainty specified in config
-        self.config['Maximum_Magnitude'] = 8.0
-        self.config['Maximum_Magnitude_Uncertainty'] = 0.2
+        self.config["Maximum_Magnitude"] = 8.0
+        self.config["Maximum_Magnitude_Uncertainty"] = 0.2
 
         self.model = YoungsCoppersmithCharacteristic()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
         self.assertAlmostEqual(self.model.mmax, 8.0)
         self.assertAlmostEqual(self.model.mmax_sigma, 0.2)
 
         # Case 2: Mmax and uncertainty not specified in config
-        self.config['Maximum_Magnitude'] = None
-        self.config['Maximum_Magnitude_Uncertainty'] = None
+        self.config["Maximum_Magnitude"] = None
+        self.config["Maximum_Magnitude_Uncertainty"] = None
 
         self.model = YoungsCoppersmithCharacteristic()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
         self.assertAlmostEqual(self.model.mmax, 7.9880073)
         self.assertAlmostEqual(self.model.mmax_sigma, 0.23)
 
     def test_get_mfd(self):
-        '''
+        """
         Tests the function to get the magnitude frequency distribution
         This function essentially wraps the
         YoungsCoppersmith1985MFD.from_total_moment rate function, which is
         tested in the openquake.hazardlib.
-        '''
+        """
         # Simple test using previously defined fault
         # Area = Length x Width (120 km x 60 km)
         # Slip = 1.0 mm/yr
         expected_rates = np.array(
-            [2.16239062e-03, 1.71764792e-03, 1.36437624e-03, 1.08376257e-03,
-             8.60863210e-04, 6.83807954e-04, 5.43167965e-04, 4.31453651e-04,
-             3.42715817e-04, 2.72228850e-04, 2.16239062e-04, 1.71764792e-04,
-             1.36437624e-04, 1.08376257e-04, 8.60863210e-05, 6.83807954e-05,
-             5.43167965e-05, 4.31453651e-05, 3.42715817e-05, 2.72228850e-05,
-             2.16239062e-05, 1.71764792e-05, 1.36437624e-05, 1.08376257e-05,
-             8.60863210e-06, 7.65552821e-05, 7.65552821e-05, 7.65552821e-05,
-             7.65552821e-05, 7.65552821e-05])
+            [
+                2.16239062e-03,
+                1.71764792e-03,
+                1.36437624e-03,
+                1.08376257e-03,
+                8.60863210e-04,
+                6.83807954e-04,
+                5.43167965e-04,
+                4.31453651e-04,
+                3.42715817e-04,
+                2.72228850e-04,
+                2.16239062e-04,
+                1.71764792e-04,
+                1.36437624e-04,
+                1.08376257e-04,
+                8.60863210e-05,
+                6.83807954e-05,
+                5.43167965e-05,
+                4.31453651e-05,
+                3.42715817e-05,
+                2.72228850e-05,
+                2.16239062e-05,
+                1.71764792e-05,
+                1.36437624e-05,
+                1.08376257e-05,
+                8.60863210e-06,
+                7.65552821e-05,
+                7.65552821e-05,
+                7.65552821e-05,
+                7.65552821e-05,
+                7.65552821e-05,
+            ]
+        )
         self.model = YoungsCoppersmithCharacteristic()
-        self.config['Maximum_Magnitude'] = 8.0
-        self.config['Maximum_Magnitude_Uncertainty'] = None
+        self.config["Maximum_Magnitude"] = 8.0
+        self.config["Maximum_Magnitude_Uncertainty"] = None
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 7200.)
-        output1 = self.model.get_mfd(1.0, 7200.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 7200.0)
+        output1 = self.model.get_mfd(1.0, 7200.0)
         np.testing.assert_array_almost_equal(expected_rates, output1[2])
         self.assertAlmostEqual(output1[0], 5.05)

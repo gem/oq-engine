@@ -14,7 +14,7 @@ Index: oq-engine/openquake/engine/openquake.cfg
 @@ -47,9 +47,10 @@
  # of the master node (on the master node cfg too)
  # example: master.hpc
- host = localhost
+ host = local
 -# port 1908 has a good reputation:
 -# https://isc.sans.edu/port.html?port=1908
 -port = 1908

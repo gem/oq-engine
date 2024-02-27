@@ -45,11 +45,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Class to implement set of functionalities for selecting events from
 and earthquake catalogue
 
-'''
+"""
 
 import numpy as np
 from datetime import datetime
@@ -61,7 +61,7 @@ from openquake.hmtk.seismicity.utils import decimal_time
 
 
 def _check_depth_limits(input_dict):
-    '''Returns the default upper and lower depth values if not in dictionary
+    """Returns the default upper and lower depth values if not in dictionary
 
     :param input_dict:
         Dictionary corresponding to the kwargs dictionary of calling function
@@ -69,45 +69,48 @@ def _check_depth_limits(input_dict):
     :returns:
         'upper_depth': Upper seismogenic depth (float)
         'lower_depth': Lower seismogenic depth (float)
-    '''
-    if ('upper_depth' in input_dict.keys()) and input_dict['upper_depth']:
-        if input_dict['upper_depth'] < 0.:
-            raise ValueError('Upper seismogenic depth must be positive')
+    """
+    if ("upper_depth" in input_dict.keys()) and input_dict["upper_depth"]:
+        if input_dict["upper_depth"] < 0.0:
+            raise ValueError("Upper seismogenic depth must be positive")
         else:
-            upper_depth = input_dict['upper_depth']
+            upper_depth = input_dict["upper_depth"]
     else:
         upper_depth = 0.0
 
-    if ('lower_depth' in input_dict.keys()) and input_dict['lower_depth']:
-        if input_dict['lower_depth'] < upper_depth:
-            raise ValueError('Lower depth must take a greater value than'
-                             ' upper depth!')
+    if ("lower_depth" in input_dict.keys()) and input_dict["lower_depth"]:
+        if input_dict["lower_depth"] < upper_depth:
+            raise ValueError(
+                "Lower depth must take a greater value than" " upper depth!"
+            )
         else:
-            lower_depth = input_dict['lower_depth']
+            lower_depth = input_dict["lower_depth"]
     else:
         lower_depth = np.inf
     return upper_depth, lower_depth
 
 
 def _get_decimal_from_datetime(time):
-    '''
+    """
     As the decimal time function requires inputs in the form of numpy
     arrays need to convert each value in the datetime object  to a single
     numpy array
-    '''
+    """
 
     # Get decimal seconds from seconds + microseconds
-    temp_seconds = float(time.second) + (float(time.microsecond) / 1.0E6)
-    return decimal_time(np.array([time.year], dtype=int),
-                        np.array([time.month], dtype=int),
-                        np.array([time.day], dtype=int),
-                        np.array([time.hour], dtype=int),
-                        np.array([time.minute], dtype=int),
-                        np.array([temp_seconds], dtype=int))
+    temp_seconds = float(time.second) + (float(time.microsecond) / 1.0e6)
+    return decimal_time(
+        np.array([time.year], dtype=int),
+        np.array([time.month], dtype=int),
+        np.array([time.day], dtype=int),
+        np.array([time.hour], dtype=int),
+        np.array([time.minute], dtype=int),
+        np.array([temp_seconds], dtype=int),
+    )
 
 
 class CatalogueSelector(object):
-    '''
+    """
     Class to implement methods for selecting subsets of the catalogue
     according to various attribute criteria.
 
@@ -116,22 +119,22 @@ class CatalogueSelector(object):
 
     :attr create_copy: Boolean to indicate whether to create copy of the
                        original catalogue before selecting {default = True}
-    '''
+    """
 
     def __init__(self, master_catalogue, create_copy=True):
-        '''
+        """
         Instantiate
         :param master_catalogue:
             Instance of openquake.hmtk.seismicity.catalogue.Catalogue class
 
         :param bool create_copy: Option to create copy of te class before
                                  selecting (i.e. preserving original class)
-        '''
+        """
         self.catalogue = master_catalogue
         self.copycat = create_copy
 
     def select_catalogue(self, valid_id):
-        '''
+        """
         Method to post-process the catalogue based on the selection options
 
         :param numpy.ndarray valid_id:
@@ -141,7 +144,7 @@ class CatalogueSelector(object):
         :returns:
             Catalogue of selected events as instance of
             openquake.hmtk.seismicity.catalogue.Catalogue class
-        '''
+        """
         if not np.any(valid_id):
             # No events selected - create clean instance of class
             output = Catalogue()
@@ -161,7 +164,7 @@ class CatalogueSelector(object):
         return output
 
     def within_polygon(self, polygon, distance=None, **kwargs):
-        '''
+        """
         Select earthquakes within polygon
 
         :param polygon:
@@ -173,7 +176,7 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             containing only selected events
-        '''
+        """
 
         if distance:
             # If a distance is specified then dilate the polyon by distance
@@ -184,20 +187,24 @@ class CatalogueSelector(object):
         # Make valid all events inside depth range
         upper_depth, lower_depth = _check_depth_limits(kwargs)
         valid_depth = np.logical_and(
-            self.catalogue.data['depth'] >= upper_depth,
-            self.catalogue.data['depth'] < lower_depth)
+            self.catalogue.data["depth"] >= upper_depth,
+            self.catalogue.data["depth"] < lower_depth,
+        )
 
         # Events outside polygon returned to invalid assignment
-        catalogue_mesh = Mesh(self.catalogue.data['longitude'],
-                              self.catalogue.data['latitude'],
-                              self.catalogue.data['depth'])
-        valid_id = np.logical_and(valid_depth,
-                                  zone_polygon.intersects(catalogue_mesh))
+        catalogue_mesh = Mesh(
+            self.catalogue.data["longitude"],
+            self.catalogue.data["latitude"],
+            self.catalogue.data["depth"],
+        )
+        valid_id = np.logical_and(
+            valid_depth, zone_polygon.intersects(catalogue_mesh)
+        )
 
         return self.select_catalogue(valid_id)
 
     def circular_distance_from_point(self, point, distance, **kwargs):
-        '''
+        """
         Select earthquakes within a distance from a Point
 
         :param point:
@@ -209,13 +216,14 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             containing only selected events
-        '''
+        """
 
-        if kwargs['distance_type'] == 'epicentral':
+        if kwargs["distance_type"] == "epicentral":
             locations = Mesh(
-                self.catalogue.data['longitude'],
-                self.catalogue.data['latitude'],
-                np.zeros(len(self.catalogue.data['longitude']), dtype=float))
+                self.catalogue.data["longitude"],
+                self.catalogue.data["latitude"],
+                np.zeros(len(self.catalogue.data["longitude"]), dtype=float),
+            )
             point = Point(point.longitude, point.latitude, 0.0)
         else:
             locations = self.catalogue.hypocentres_as_mesh()
@@ -225,7 +233,7 @@ class CatalogueSelector(object):
         return self.select_catalogue(is_close)
 
     def cartesian_square_centred_on_point(self, point, distance, **kwargs):
-        '''
+        """
         Select earthquakes from within a square centered on a point
 
         :param point:
@@ -237,31 +245,34 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             class containing only selected events
-        '''
-        point_surface = Point(point.longitude, point.latitude, 0.)
+        """
+        point_surface = Point(point.longitude, point.latitude, 0.0)
         # As distance is
-        north_point = point_surface.point_at(distance, 0., 0.)
-        east_point = point_surface.point_at(distance, 0., 90.)
-        south_point = point_surface.point_at(distance, 0., 180.)
-        west_point = point_surface.point_at(distance, 0., 270.)
+        north_point = point_surface.point_at(distance, 0.0, 0.0)
+        east_point = point_surface.point_at(distance, 0.0, 90.0)
+        south_point = point_surface.point_at(distance, 0.0, 180.0)
+        west_point = point_surface.point_at(distance, 0.0, 270.0)
         is_long = np.logical_and(
-            self.catalogue.data['longitude'] >= west_point.longitude,
-            self.catalogue.data['longitude'] < east_point.longitude)
+            self.catalogue.data["longitude"] >= west_point.longitude,
+            self.catalogue.data["longitude"] < east_point.longitude,
+        )
         is_surface = np.logical_and(
             is_long,
-            self.catalogue.data['latitude'] >= south_point.latitude,
-            self.catalogue.data['latitude'] < north_point.latitude)
+            self.catalogue.data["latitude"] >= south_point.latitude,
+            self.catalogue.data["latitude"] < north_point.latitude,
+        )
 
         upper_depth, lower_depth = _check_depth_limits(kwargs)
         is_valid = np.logical_and(
             is_surface,
-            self.catalogue.data['depth'] >= upper_depth,
-            self.catalogue.data['depth'] < lower_depth)
+            self.catalogue.data["depth"] >= upper_depth,
+            self.catalogue.data["depth"] < lower_depth,
+        )
 
         return self.select_catalogue(is_valid)
 
     def within_joyner_boore_distance(self, surface, distance, **kwargs):
-        '''
+        """
         Select events within a Joyner-Boore distance of a fault
 
         :param surface:
@@ -275,20 +286,24 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             containing only selected events
-        '''
+        """
 
         upper_depth, lower_depth = _check_depth_limits(kwargs)
 
         rjb = surface.get_joyner_boore_distance(
-            self.catalogue.hypocentres_as_mesh())
+            self.catalogue.hypocentres_as_mesh()
+        )
         is_valid = np.logical_and(
             rjb <= distance,
-            np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                           self.catalogue.data['depth'] < lower_depth))
+            np.logical_and(
+                self.catalogue.data["depth"] >= upper_depth,
+                self.catalogue.data["depth"] < lower_depth,
+            ),
+        )
         return self.select_catalogue(is_valid)
 
-    def within_rupture_distance(self, surface, distance,  **kwargs):
-        '''
+    def within_rupture_distance(self, surface, distance, **kwargs):
+        """
         Select events within a rupture distance from a fault surface
 
         :param surface:
@@ -300,20 +315,23 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             containing only selected events
-        '''
+        """
         # Check for upper and lower depths
         upper_depth, lower_depth = _check_depth_limits(kwargs)
 
         rrupt = surface.get_min_distance(self.catalogue.hypocentres_as_mesh())
         is_valid = np.logical_and(
             rrupt <= distance,
-            np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                           self.catalogue.data['depth'] < lower_depth))
+            np.logical_and(
+                self.catalogue.data["depth"] >= upper_depth,
+                self.catalogue.data["depth"] < lower_depth,
+            ),
+        )
 
         return self.select_catalogue(is_valid)
 
     def within_time_period(self, start_time=None, end_time=None):
-        '''
+        """
         Select earthquakes occurring within a given time period
 
         :param start_time:
@@ -325,14 +343,14 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             containing only selected events
-        '''
+        """
         time_value = self.catalogue.get_decimal_time()
         if not start_time:
             if not end_time:
                 # No times input, therefore skip everything and return catalog
                 return self.catalogue
             else:
-                start_time = np.min(self.catalogue.data['year'])
+                start_time = np.min(self.catalogue.data["year"])
         else:
             start_time = _get_decimal_from_datetime(start_time)
 
@@ -344,13 +362,14 @@ class CatalogueSelector(object):
         # Get decimal time values
         time_value = self.catalogue.get_decimal_time()
 
-        is_valid = np.logical_and(time_value >= start_time,
-                                  time_value < end_time)
+        is_valid = np.logical_and(
+            time_value >= start_time, time_value < end_time
+        )
 
         return self.select_catalogue(is_valid)
 
     def within_depth_range(self, lower_depth=None, upper_depth=None):
-        '''
+        """
         Selects events within a specified depth range
 
         :param float lower_depth:
@@ -362,7 +381,7 @@ class CatalogueSelector(object):
         :returns:
             Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
             containing only selected events
-        '''
+        """
         if not lower_depth:
             if not upper_depth:
                 # No limiting depths defined - so return entire catalogue!
@@ -373,12 +392,14 @@ class CatalogueSelector(object):
         if not upper_depth:
             upper_depth = 0.0
 
-        is_valid = np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                                  self.catalogue.data['depth'] < lower_depth)
+        is_valid = np.logical_and(
+            self.catalogue.data["depth"] >= upper_depth,
+            self.catalogue.data["depth"] < lower_depth,
+        )
         return self.select_catalogue(is_valid)
 
     def within_magnitude_range(self, lower_mag=None, upper_mag=None):
-        '''
+        """
         :param float lower_mag:
             Lower magnitude for consideration
 
@@ -388,7 +409,7 @@ class CatalogueSelector(object):
         :returns:
             Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
-        '''
+        """
         if not lower_mag:
             if not upper_mag:
                 # No limiting magnitudes defined - return entire catalogue!
@@ -400,8 +421,9 @@ class CatalogueSelector(object):
             upper_mag = np.inf
 
         is_valid = np.logical_and(
-            self.catalogue.data['magnitude'] >= lower_mag,
-            self.catalogue.data['magnitude'] < upper_mag)
+            self.catalogue.data["magnitude"] >= lower_mag,
+            self.catalogue.data["magnitude"] < upper_mag,
+        )
 
         return self.select_catalogue(is_valid)
 
@@ -441,9 +463,13 @@ class CatalogueSelector(object):
             Returns a :class:htmk.seismicity.catalogue.Catalogue` instance
         """
         is_valid = np.logical_and(
-            self.catalogue.data['longitude'] >= limits[0],
-            np.logical_and(self.catalogue.data['longitude'] <= limits[2],
-                           np.logical_and(
-                               self.catalogue.data['latitude'] >= limits[1],
-                               self.catalogue.data['latitude'] <= limits[3])))
+            self.catalogue.data["longitude"] >= limits[0],
+            np.logical_and(
+                self.catalogue.data["longitude"] <= limits[2],
+                np.logical_and(
+                    self.catalogue.data["latitude"] >= limits[1],
+                    self.catalogue.data["latitude"] <= limits[3],
+                ),
+            ),
+        )
         return self.select_catalogue(is_valid)

@@ -188,6 +188,8 @@ USE_REVERSE_PROXY = False
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
 
+MAX_AELO_SITE_NAME_LEN = 256
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
@@ -254,6 +256,10 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
                 f'If APPLICATION_MODE is {APPLICATION_MODE}'
                 f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
                 f' must all be defined')
+    if not config.directory.mosaic_dir:
+        raise NameError(
+            f'If APPLICATION_MODE is {APPLICATION_MODE}, '
+            f'mosaic_dir must be specified in openquake.cfg')
 
 if LOCKDOWN:
     # do not log to file unless running through the webui
@@ -301,6 +307,7 @@ if LOCKDOWN:
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
+        'openquake.server.announcements',
         )
 
     # Official documentation suggests to override the entire TEMPLATES

@@ -58,7 +58,7 @@ from openquake.hmtk.faults.mfd.base import _scale_moment, BaseMFDfromSlip
 
 
 class Characteristic(BaseMFDfromSlip):
-    '''
+    """
     Class to implement the characteristic earthquake model assuming a truncated
     Gaussian distribution
 
@@ -92,10 +92,10 @@ class Characteristic(BaseMFDfromSlip):
     :param numpy.ndarray occurrence_rate:
         Activity rates for magnitude in the range mmin to mmax in steps of
         bin_width
-    '''
+    """
 
     def setUp(self, mfd_conf):
-        '''
+        """
         Input core configuration parameters as specified in the
         configuration file
 
@@ -113,20 +113,20 @@ class Characteristic(BaseMFDfromSlip):
             * 'Lower_Bound' - Lower bound in terms of number of sigma (float)
             * 'Upper_Bound' - Upper bound in terms of number of sigma (float)
             * 'Sigma' - Standard deviation (in magnitude units) of distribution
-        '''
-        self.mfd_model = 'Characteristic'
-        self.mfd_weight = mfd_conf['Model_Weight']
-        self.bin_width = mfd_conf['MFD_spacing']
+        """
+        self.mfd_model = "Characteristic"
+        self.mfd_weight = mfd_conf["Model_Weight"]
+        self.bin_width = mfd_conf["MFD_spacing"]
         self.mmin = None
         self.mmax = None
         self.mmax_sigma = None
-        self.lower_bound = mfd_conf['Lower_Bound']
-        self.upper_bound = mfd_conf['Upper_Bound']
-        self.sigma = mfd_conf['Sigma']
+        self.lower_bound = mfd_conf["Lower_Bound"]
+        self.upper_bound = mfd_conf["Upper_Bound"]
+        self.sigma = mfd_conf["Sigma"]
         self.occurrence_rate = None
 
     def get_mmax(self, mfd_conf, msr, rake, area):
-        '''
+        """
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
 
@@ -141,17 +141,18 @@ class Characteristic(BaseMFDfromSlip):
 
         :param float area:
             Area of the fault surface (km^2)
-        '''
-        if mfd_conf['Maximum_Magnitude']:
-            self.mmax = mfd_conf['Maximum_Magnitude']
+        """
+        if mfd_conf["Maximum_Magnitude"]:
+            self.mmax = mfd_conf["Maximum_Magnitude"]
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        self.mmax_sigma = (mfd_conf.get('Maximum_Magnitude_Uncertainty', None)
-                           or msr.get_std_dev_mag(None, rake))
+        self.mmax_sigma = mfd_conf.get(
+            "Maximum_Magnitude_Uncertainty", None
+        ) or msr.get_std_dev_mag(None, rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
-        '''
+        """
         Calculates activity rate on the fault
 
         :param float slip:
@@ -170,26 +171,37 @@ class Characteristic(BaseMFDfromSlip):
             * Minimum Magnitude (float)
             * Bin width (float)
             * Occurrence Rates (numpy.ndarray)
-        '''
+        """
         # Working in Nm so convert:  shear_modulus - GPa -> Nm
         # area - km ** 2. -> m ** 2.
         # slip - mm/yr -> m/yr
-        moment_rate = (shear_modulus * 1.E9) * (area * 1.E6) * (slip / 1000.)
+        moment_rate = (
+            (shear_modulus * 1.0e9) * (area * 1.0e6) * (slip / 1000.0)
+        )
         moment_mag = _scale_moment(self.mmax, in_nm=True)
         characteristic_rate = moment_rate / moment_mag
-        if self.sigma and (fabs(self.sigma) > 1E-5):
+        if self.sigma and (fabs(self.sigma) > 1e-5):
             self.mmin = self.mmax + (self.lower_bound * self.sigma)
             mag_upper = self.mmax + (self.upper_bound * self.sigma)
-            mag_range = np.arange(self.mmin,
-                                  mag_upper + self.bin_width,
-                                  self.bin_width)
+            mag_range = np.arange(
+                self.mmin, mag_upper + self.bin_width, self.bin_width
+            )
             self.occurrence_rate = characteristic_rate * (
-                truncnorm.cdf(mag_range + (self.bin_width / 2.),
-                              self.lower_bound, self.upper_bound,
-                              loc=self.mmax, scale=self.sigma) -
-                truncnorm.cdf(mag_range - (self.bin_width / 2.),
-                              self.lower_bound, self.upper_bound,
-                              loc=self.mmax, scale=self.sigma))
+                truncnorm.cdf(
+                    mag_range + (self.bin_width / 2.0),
+                    self.lower_bound,
+                    self.upper_bound,
+                    loc=self.mmax,
+                    scale=self.sigma,
+                )
+                - truncnorm.cdf(
+                    mag_range - (self.bin_width / 2.0),
+                    self.lower_bound,
+                    self.upper_bound,
+                    loc=self.mmax,
+                    scale=self.sigma,
+                )
+            )
         else:
             # Returns only a single rate
             self.mmin = self.mmax

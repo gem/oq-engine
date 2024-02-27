@@ -87,13 +87,13 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         mesh = surface.mesh
         x = mesh.lons.flatten()
         y = mesh.lats.flatten()
-        z = mesh.depths.flatten()*0.01
+        z = mesh.depths.flatten() * 0.01
         plt.plot(x, y, z, 'o', markersize=1)
 
         # Plot the first rupture
         x = ruptures[0].surface.mesh.lons.flatten()
         y = ruptures[0].surface.mesh.lats.flatten()
-        z = ruptures[0].surface.mesh.depths.flatten()*0.01
+        z = ruptures[0].surface.mesh.depths.flatten() * 0.01
         sctt = ax.scatter(x, y, z, marker='s', s=10, c='red')
 
         fmt = 'Rupture num: {:d} magnitude: {:3.1f}'
@@ -103,15 +103,15 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         for pro in profiles:
             coo = [(p.longitude, p.latitude, p.depth) for p in pro.points]
             coo = numpy.array(coo)
-            plt.plot(coo[:, 0], coo[:, 1], coo[:, 2]*0.01, '--g', lw=3)
+            plt.plot(coo[:, 0], coo[:, 1], coo[:, 2] * 0.01, '--g', lw=3)
 
         ax.invert_zaxis()
 
         def animate(i, ruptures, sctt, ax, txt):
-            ax.view_init(elev=10., azim=first_azi+i*0.25 % 360)
+            ax.view_init(elev=10., azim=(first_azi + i * 0.25) % 360)
             x = ruptures[i].surface.mesh.lons.flatten()
             y = ruptures[i].surface.mesh.lats.flatten()
-            z = ruptures[i].surface.mesh.depths.flatten()*0.01
+            z = ruptures[i].surface.mesh.depths.flatten() * 0.01
             sctt._offsets3d = (x, y, z)
             tmp = fmt.format(i, ruptures[i].mag)
             txt.set_text(tmp)
@@ -246,13 +246,13 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         source = self._make_source(mfd=mfd, aspect_ratio=1.5,
                                    profiles=profiles)
 
-        msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 25, msg)
-
         if MAKE_MOVIES:
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test02', source.surface, ruptures,
                                      source.profiles)
+
+        msg = 'Wrong number of ruptures'
+        self.assertEqual(source.count_ruptures(), 32, msg)
 
     def test03(self):
         """ Simplest test - checking when standard floating is used """
@@ -270,7 +270,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                    floating_x_step=0, floating_y_step=0)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 28, msg)
+        self.assertEqual(source.count_ruptures(), 43, msg)
 
         if MAKE_MOVIES:
             ruptures = [r for r in source.iter_ruptures()]

@@ -61,14 +61,16 @@ Bull. Seis. Soc. Am. 75(4) 939 - 964
 import numpy as np
 from math import exp, log
 from openquake.hmtk.faults.mfd.base import _scale_moment, BaseMFDfromSlip
-from openquake.hazardlib.mfd.youngs_coppersmith_1985 import \
-    YoungsCoppersmith1985MFD
+from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
+    YoungsCoppersmith1985MFD,
+)
+
 C_VALUE = 16.05
 D_VALUE = 1.5
 
 
 class YoungsCoppersmithExponential(BaseMFDfromSlip):
-    '''
+    """
     Calculates the activity rate on a fault with a given slip assuming the
     exponential model described in Youngs & Coppersmith (1985) Eq. 11
 
@@ -100,10 +102,10 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
     :param numpy.ndarray occurrence_rate:
         Activity rates for magnitude in the range mmin to mmax in steps of
         bin_width
-    '''
+    """
 
     def setUp(self, mfd_conf):
-        '''
+        """
         Input core configuration parameters as specified in the
         configuration file
 
@@ -119,19 +121,19 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
             maximum magnitude
             (If not defined and the MSR has a sigma term then this will be
             taken from sigma)
-        '''
-        self.mfd_model = 'Youngs & Coppersmith Exponential'
-        self.mfd_weight = mfd_conf['Model_Weight']
-        self.bin_width = mfd_conf['MFD_spacing']
-        self.mmin = mfd_conf['Minimum_Magnitude']
+        """
+        self.mfd_model = "Youngs & Coppersmith Exponential"
+        self.mfd_weight = mfd_conf["Model_Weight"]
+        self.bin_width = mfd_conf["MFD_spacing"]
+        self.mmin = mfd_conf["Minimum_Magnitude"]
         self.mmax = None
         self.mmax_sigma = None
-        self.b_value = mfd_conf['b_value'][0]
-        self.b_value_sigma = mfd_conf['b_value'][1]
+        self.b_value = mfd_conf["b_value"][0]
+        self.b_value_sigma = mfd_conf["b_value"][1]
         self.occurrence_rate = None
 
     def get_mmax(self, mfd_conf, msr, rake, area):
-        '''
+        """
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
 
@@ -143,17 +145,18 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
             Rake of the fault (in range -180 to 180)
         :param float area:
             Area of the fault surface (km^2)
-        '''
-        if mfd_conf['Maximum_Magnitude']:
-            self.mmax = mfd_conf['Maximum_Magnitude']
+        """
+        if mfd_conf["Maximum_Magnitude"]:
+            self.mmax = mfd_conf["Maximum_Magnitude"]
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        self.mmax_sigma = (mfd_conf.get('Maximum_Magnitude_Uncertainty', None)
-                           or msr.get_std_dev_mag(None, rake))
+        self.mmax_sigma = mfd_conf.get(
+            "Maximum_Magnitude_Uncertainty", None
+        ) or msr.get_std_dev_mag(None, rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
-        '''
+        """
         Calculates activity rate on the fault
 
         :param float slip:
@@ -169,33 +172,40 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
             * Minimum Magnitude (float)
             * Bin width (float)
             * Occurrence Rates (numpy.ndarray)
-        '''
+        """
         # Working in Nm so convert:  shear_modulus - GPa -> Nm
         # area - km ** 2. -> m ** 2.
         # slip - mm/yr -> m/yr
-        moment_rate = (shear_modulus * 1.E9) * (area * 1.E6) * (slip / 1000.)
+        moment_rate = (
+            (shear_modulus * 1.0e9) * (area * 1.0e6) * (slip / 1000.0)
+        )
         moment_mag = _scale_moment(self.mmax, in_nm=True)
-        beta = self.b_value * log(10.)
-        mag = np.arange(self.mmin - (self.bin_width / 2.),
-                        self.mmax + self.bin_width,
-                        self.bin_width)
+        beta = self.b_value * log(10.0)
+        mag = np.arange(
+            self.mmin - (self.bin_width / 2.0),
+            self.mmax + self.bin_width,
+            self.bin_width,
+        )
         if self.b_value > 1.5:
-            print('b-value larger than 1.5 will produce invalid results in '
-                  'Anderson & Luco models')
+            print(
+                "b-value larger than 1.5 will produce invalid results in "
+                "Anderson & Luco models"
+            )
             self.occurrence_rate = np.nan * np.ones(len(mag) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
 
         self.occurrence_rate = np.zeros(len(mag) - 1, dtype=float)
         for ival in range(0, len(mag) - 1):
-            self.occurrence_rate[ival] = (
-                self.cumulative_value(mag[ival], moment_rate, beta, moment_mag)
-                - self.cumulative_value(
-                    mag[ival + 1], moment_rate, beta, moment_mag))
+            self.occurrence_rate[ival] = self.cumulative_value(
+                mag[ival], moment_rate, beta, moment_mag
+            ) - self.cumulative_value(
+                mag[ival + 1], moment_rate, beta, moment_mag
+            )
 
         return self.mmin, self.bin_width, self.occurrence_rate
 
     def cumulative_value(self, mag_val, moment_rate, beta, moment_mag):
-        '''
+        """
         Calculates the cumulative rate of events with M > m0 using
         equation 11 of Youngs & Coppersmith (1985)
 
@@ -210,14 +220,15 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
 
         :param float moment_mag:
             Moment of the upper bound magnitude
-        '''
+        """
         exponent = exp(-beta * (self.mmax - mag_val))
-        return (moment_rate * (D_VALUE - self.b_value) * (1. - exponent)) /\
-            (self.b_value * moment_mag * exponent)
+        return (moment_rate * (D_VALUE - self.b_value) * (1.0 - exponent)) / (
+            self.b_value * moment_mag * exponent
+        )
 
 
 class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
-    '''
+    """
     Calculates the activity rate on a fault with a given slip assuming the
     characteristic model described in Youngs & Coppersmith (1985)
     Eqs. 16 and 17
@@ -253,10 +264,10 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
 
     :param model:
         Maintains present instance of :class: YoungsCoppersmith1985MFD
-    '''
+    """
 
     def setUp(self, mfd_conf):
-        '''
+        """
         Input core configuration parameters as specified in the
         configuration file
 
@@ -272,20 +283,20 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
             maximum magnitude
             (If not defined and the MSR has a sigma term then this will be
             taken from sigma)
-        '''
-        self.mfd_type = 'Youngs & Coppersmith (1985) Characteristic'
-        self.mfd_weight = mfd_conf['Model_Weight']
-        self.bin_width = mfd_conf['MFD_spacing']
-        self.mmin = mfd_conf['Minimum_Magnitude']
+        """
+        self.mfd_type = "Youngs & Coppersmith (1985) Characteristic"
+        self.mfd_weight = mfd_conf["Model_Weight"]
+        self.bin_width = mfd_conf["MFD_spacing"]
+        self.mmin = mfd_conf["Minimum_Magnitude"]
         self.mmax = None
         self.mmax_sigma = None
-        self.b_value = mfd_conf['b_value'][0]
-        self.b_value_sigma = mfd_conf['b_value'][1]
+        self.b_value = mfd_conf["b_value"][0]
+        self.b_value_sigma = mfd_conf["b_value"][1]
         self.occurrence_rate = None
         self.model = None
 
     def get_mmax(self, mfd_conf, msr, rake, area):
-        '''
+        """
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
 
@@ -297,18 +308,18 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
             Rake of the fault (in range -180 to 180)
         :param float area:
             Area of the fault surface (km^2)
-        '''
-        if mfd_conf['Maximum_Magnitude']:
-            self.mmax = mfd_conf['Maximum_Magnitude']
+        """
+        if mfd_conf["Maximum_Magnitude"]:
+            self.mmax = mfd_conf["Maximum_Magnitude"]
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        self.mmax_sigma = (mfd_conf.get('Maximum_Magnitude_Uncertainty', None)
-                           or msr.get_std_dev_mag(None, rake))
-
+        self.mmax_sigma = mfd_conf.get(
+            "Maximum_Magnitude_Uncertainty", None
+        ) or msr.get_std_dev_mag(None, rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
-        '''
+        """
         Calculates activity rate on the fault
 
         :param float slip:
@@ -328,17 +339,20 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
         Behavioural Notes: To use the openquake.hazardlib implementation the
         magnitudes returned will be the mid_point of the bins and not the
         original edge points. The minimum magnitude is update to reflect this!
-        '''
+        """
         # Calculate moment rate in N-m / year
-        moment_rate = (shear_modulus * 1.E9) * (area * 1.E6) * (slip / 1000.)
+        moment_rate = (
+            (shear_modulus * 1.0e9) * (area * 1.0e6) * (slip / 1000.0)
+        )
         # Get Youngs & Coppersmith rate from
         # youngs_coppersmith.YoungsCoppersmith1985MFD.from_total_moment_rate
         self.model = YoungsCoppersmith1985MFD.from_total_moment_rate(
-            self.mmin - (self.bin_width / 2.),
+            self.mmin - (self.bin_width / 2.0),
             self.b_value,
             self.mmax - 0.25,
             moment_rate,
-            self.bin_width)
+            self.bin_width,
+        )
         temp_data = self.model.get_annual_occurrence_rates()
         self.occurrence_rate = np.array([value[1] for value in temp_data])
         self.mmin = np.min(np.array([value[0] for value in temp_data]))

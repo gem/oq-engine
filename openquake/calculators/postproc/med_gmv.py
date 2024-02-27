@@ -19,8 +19,9 @@
 import logging
 from openquake.baselib import parallel, python3compat
 from openquake.baselib.general import groupby
-from openquake.hazardlib.contexts import read_cmakers, basename
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.gmf import exp
+from openquake.hazardlib.valid import basename
 
 
 def calc_med_gmv(src_frags, sitecol, cmaker, monitor):

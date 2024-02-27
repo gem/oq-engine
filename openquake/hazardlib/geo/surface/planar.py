@@ -27,7 +27,7 @@ from openquake.baselib.node import Node
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.geo.geodetic import (
     point_at, spherical_to_cartesian, fast_spherical_to_cartesian)
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
@@ -670,6 +670,18 @@ class PlanarSurface(BaseSurface):
     def corner_depths(self):
         return self.array.corners[2]
 
+    @property
+    def tor(self):
+        """
+        :returns: top of rupture line
+        """
+        lo = []
+        la = []
+        for pnt in [self.top_left, self.top_right]:
+            lo.append(pnt.longitude)
+            la.append(pnt.latitude)
+        return Line.from_vectors(lo, la)
+
     def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left, check=True):
         if check:
@@ -937,10 +949,10 @@ class PlanarSurface(BaseSurface):
                    array.uv2 * yy.reshape(yy.shape + (1, )))
         return Mesh(*geo_utils.cartesian_to_spherical(vectors))
 
-    def _get_top_edge_centroid(self):
+    def get_top_edge_centroid(self):
         """
         Overrides :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface._get_top_edge_centroid>`
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_centroid>`
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(

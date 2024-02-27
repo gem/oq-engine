@@ -34,6 +34,7 @@ import shapely
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -491,6 +492,10 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
+    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -510,6 +515,8 @@ class Bradley2013(GMPE):
             # amplification is constant
             v1 = _get_v1(imt)
             mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+
+            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
 
