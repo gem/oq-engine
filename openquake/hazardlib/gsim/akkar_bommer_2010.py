@@ -294,6 +294,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -322,7 +324,7 @@ class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     as for :class:`AkkarBommer2010SWISS01`
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}   
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
