@@ -37,6 +37,9 @@ jobs:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
         set -x
+        # Add openquake user
+        useradd -m -u 1000 -s /bin/bash openquake
+        # update system and install utilities
         dnf update -y
         dnf install -y ${{ matrix.python-version }}
         dnf install -y git git-lfs nc procps
