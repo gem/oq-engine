@@ -48,7 +48,8 @@ MAX_RUPTURES = 2000
 def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
-    out the ruptures far away from every site
+    out the ruptures far away from every site. If a shapely polygon is passed
+    in model_geom, ruptures outside the polygon are discarded.
     """
     if not BaseRupture._code:
         BaseRupture.init()  # initialize rupture codes
@@ -95,11 +96,12 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
         nsites = 0
         if srcfilter.sitecol is not None:
             nsites = len(srcfilter.close_sids(rec, rup.tectonic_region_type))
-            if nsites== 0:
+            if nsites == 0:
                 continue
 
         # apply model filtering if any (used in `oq mosaic sample_rups`)
-        if model_geom and not shapely.contains_xy(model_geom, hypo[0], hypo[1]):
+        if model_geom and not shapely.contains_xy(
+                model_geom, hypo[0], hypo[1]):
             continue
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
@@ -275,7 +277,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
         t0 = time.time()
-        rup_array = get_rup_array(eb_ruptures, srcfilter)
+        rup_array = get_rup_array(eb_ruptures, srcfilter, model_geom)
         dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,

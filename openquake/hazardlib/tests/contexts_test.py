@@ -33,6 +33,7 @@ from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.source.rupture import \
     get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
+from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
@@ -59,6 +60,11 @@ BASE_PATH = os.path.dirname(__file__)
 
 def rms(delta):
     return numpy.sqrt((delta**2).sum())
+
+
+def set_msparams(src, sectiondict):
+    secparams = build_secparams(sectiondict.values())
+    src.set_msparams(secparams, ry0=True)
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -399,7 +405,8 @@ class GetCtxs01TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save([self.src], geom.sections, gettemp(suffix='.hdf5'), msparams=True)
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        set_msparams(self.src, geom.sections)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
@@ -413,6 +420,7 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # extract magnitude 7 context
         [ctx] = cm.get_ctx_iter(self.src, self.sitec)
+
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -451,7 +459,8 @@ class GetCtxs02TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save([self.src], geom.sections, gettemp(suffix='.hdf5'), msparams=True)
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        set_msparams(self.src, geom.sections)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,

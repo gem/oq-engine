@@ -235,8 +235,7 @@ class ComputeTUTest(unittest.TestCase):
         # The simplest test. Straight trace going from west to east.
         lons = np.array([0.0, 0.1, 0.2])
         lats = np.array([0.0, 0.0, 0.0])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.2, 0.1]])
@@ -259,8 +258,7 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.3, 0.0], [0.2, -0.1], [0.4, 0.3]])
@@ -277,8 +275,7 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
@@ -338,7 +335,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.tu_hat
+        slen, uhat, that = line.sut_hat
         np.testing.assert_almost_equal(np.array([[1, 0, 0]]), uhat, decimal=5)
 
         # Now computing ui and ti
@@ -360,7 +357,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.4, 0.6, -0.2, 0.3, 0.005)
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.tu_hat
+        slen, uhat, that = line.sut_hat
 
         # Now computing ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -425,14 +422,13 @@ class ComputeWeightsTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.01)
 
         # slen, uhat and that
-        slen, uhat, that = line.tu_hat
+        slen, uhat, that = line.sut_hat
 
         # Compute ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -457,7 +453,7 @@ class ComputeWeightsTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.2, 0.6, -0.8, 0.1, 0.0025)
 
         # slen, uhat and that
-        slen, uhat, that = line.tu_hat
+        slen, uhat, that = line.sut_hat
 
         # Compute ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)

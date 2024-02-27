@@ -20,6 +20,7 @@ import io
 import os
 import re
 import gzip
+import json
 import collections
 import numpy
 import h5py
@@ -140,15 +141,31 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def build_dstore_log(description='custom calculation', parent=()):
+def build_dstore_log(description='custom calculation', parent=(), ini=None):
     """
     :returns: DataStore instance associated to the .calc_id
     """
-    dic = dict(description=description, calculation_mode='custom')
+    if ini is not None:
+        dic = ini
+    else:
+        dic = dict(description=description, calculation_mode='custom')
     log = init('job', dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log
+
+
+def read_hc_id(hdf5):
+    """
+    Getting the hazard_calculation_id, if any
+    """
+    try:
+        oq = hdf5['oqparam']
+    except KeyError:  # oqparam not saved yet
+        return
+    except OSError:  # file open by another process with oqparam not flushed
+        return
+    return oq.hazard_calculation_id
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -204,6 +221,9 @@ class DataStore(collections.abc.MutableMapping):
                 self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
+            hc_id = read_hc_id(self.hdf5)
+            if hc_id:
+                self.parent = read(hc_id)
         return self
 
     @property

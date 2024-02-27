@@ -64,14 +64,18 @@ def build_secparams(sections):
 
 
 # not fast
-def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
+def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
+                   mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
     """
     U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
+    if close_sec is None:
+        # NB: in the engine close_sec is computed in the preclassical phase
+        close_sec = np.ones(len(secparams), bool)
 
-    # building lines
+    # building lines, very fast
     with mon1:
         lines = []
         for secparam in secparams:
@@ -79,23 +83,28 @@ def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
 
+    # building msparams, slow due to the computation of u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
-            secparam = secparams[idxs]
+            # building u_max
+            tors = [lines[idx] for idx in idxs if close_sec[idx]]
+            if not tors:  # all sections are far away
+                continue
+
+            if ry0:
+                msparam['u_max'] = geo.MultiLine(tors).get_u_max()
 
             # building simple multisurface params
+            secparam = secparams[idxs]
             areas = secparam['area']
             msparam['area'] = areas.sum()
             ws = areas / msparam['area']  # weights
             msparam['dip'] = ws @ secparam['dip']
-            msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
+            msparam['strike'] = utils.angular_mean_weighted(
+                secparam['strike'], ws) % 360
             msparam['width'] = ws @ secparam['width']
             msparam['ztor'] = ws @ secparam['ztor']
             msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            msparam['u_max'] = geo.MultiLine(
-                [lines[idx] for idx in idxs]).set_u_max()
 
             # building bounding box
             lons = np.concatenate([secparam['west'], secparam['east']])
@@ -178,11 +187,9 @@ class MultiSurface(BaseSurface):
             secparams = build_secparams(self.surfaces)
             idxs = range(len(self.surfaces))
             self.msparam = build_msparams([idxs], secparams)[0]
-            self.tor = geo.MultiLine([s.tor for s in self.surfaces])
         else:
             self.msparam = msparam
-            self.tor = geo.MultiLine([s.tor for s in self.surfaces],
-                                     self.msparam['u_max'])
+        self.tor = geo.MultiLine([s.tor for s in self.surfaces])
 
     def get_min_distance(self, mesh):
         """
@@ -314,8 +321,7 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        self.tor.set_u_max()
-        tut, uut = self.tor.get_tu(mesh)
+        tut, uut = self.tor.get_tu(mesh.lons, mesh.lats)
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
@@ -325,10 +331,10 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        self.tor.set_u_max()
-        tut, uut = self.tor.get_tu(mesh)
+        u_max = self.tor.get_u_max()
+        tut, uut = self.tor.get_tu(mesh.lons, mesh.lats)
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = np.abs(uut[uut < 0])
-        condition = uut > self.tor.u_max
-        ry0[condition] = uut[condition] - self.tor.u_max
+        condition = uut > u_max
+        ry0[condition] = uut[condition] - u_max
         return ry0
