@@ -45,6 +45,7 @@ import numpy
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
@@ -97,6 +98,15 @@ AELO_FORM_PLACEHOLDERS = {
     'lat': 'Latitude (max. 5 decimal places)',
     'vs30': 'Vs30 (fixed at 760 m/s)',
     'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)'
+}
+
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'shakemap_id': 'Shakemap ID',
+    'lon': 'Longitude',
+    'lat': 'Latitude',
+    'dep': 'Depth',
+    'mag': 'Magnitude',
+    'rake': 'Rake',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -601,6 +611,155 @@ def aelo_callback(
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
+def aristotle_get_rupture_data(request):
+    """
+    Retrieve rupture parameters corresponding to a given shakemap id
+
+    :param request:
+        a `django.http.HttpRequest` object containing shakemap_id
+    """
+    # TODO: add validation
+    validation_errs = {}
+    invalid_inputs = []
+    try:
+        shakemap_id = valid.simple_id(request.POST.get('shakemap_id'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['shakemap_id']] = str(exc)
+        invalid_inputs.append('shakemap_id')
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+    try:
+        response_data = get_rupture_dict(shakemap_id)
+    except Exception as exc:
+        if '404: Not Found' in str(exc):
+            error_msg = f'Shakemap id "{shakemap_id}" was not found'
+        elif 'There is not rupture.json' in str(exc):
+            error_msg = (f'Shakemap id "{shakemap_id} was found, but it'
+                         f' has no associated rupture data')
+        else:
+            error_msg = str(exc)
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': error_msg}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_run(request):
+    """
+    Run an ARISTOTLE calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
+    """
+    validation_errs = {}
+    invalid_inputs = []
+    try:
+        lon = valid.longitude(request.POST.get('lon'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lon']] = str(exc)
+        invalid_inputs.append('lon')
+    try:
+        lat = valid.latitude(request.POST.get('lat'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lat']] = str(exc)
+        invalid_inputs.append('lat')
+    try:
+        dep = valid.positivefloat(request.POST.get('dep'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dep']] = str(exc)
+        invalid_inputs.append('dep')
+    try:
+        mag = valid.positivefloat(request.POST.get('mag'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['mag']] = str(exc)
+        invalid_inputs.append('mag')
+    try:
+        rake = valid.positivefloat(request.POST.get('rake'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['rake']] = str(exc)
+        invalid_inputs.append('rake')
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+    # TODO: run aristotle calculation
+    # FIXME:
+    response_data = dict(lon=lon, lat=lat, dep=dep, mag=mag, rake=rake)
+
+    # # build a LogContext object associated to a database job
+    # try:
+    #     params = get_params_from(
+    #         dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
+    #         config.directory.mosaic_dir, exclude=['USA'])
+    #     logging.root.handlers = []  # avoid breaking the logs
+    # except Exception as exc:
+    #     response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+    #                      'error_msg': str(exc)}
+    #     return HttpResponse(
+    #         content=json.dumps(response_data), content_type=JSON, status=400)
+    # [jobctx] = engine.create_jobs(
+    #     [params],
+    #     config.distribution.log_level, None, utils.get_user(request), None)
+    # job_id = jobctx.calc_id
+
+    # outputs_uri_web = request.build_absolute_uri(
+    #     reverse('outputs_aelo', args=[job_id]))
+
+    # outputs_uri_api = request.build_absolute_uri(
+    #     reverse('results', args=[job_id]))
+
+    # log_uri = request.build_absolute_uri(
+    #     reverse('log', args=[job_id, '0', '']))
+
+    # traceback_uri = request.build_absolute_uri(
+    #     reverse('traceback', args=[job_id]))
+
+    # response_data = dict(
+    #     status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+    #     log_uri=log_uri, traceback_uri=traceback_uri)
+
+    # job_owner_email = request.user.email
+    # if not job_owner_email:
+    #     response_data['WARNING'] = (
+    #         'No email address is speficied for your user account,'
+    #         ' therefore email notifications will be disabled. As soon as'
+    #         ' the job completes, you can access its outputs at the following'
+    #         ' link: %s. If the job fails, the error traceback will be'
+    #         ' accessible at the following link: %s'
+    #         % (outputs_uri_api, traceback_uri))
+
+    # # spawn the AELO main process
+    # mp.Process(target=aelo.main, args=(
+    #     lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
+    #     aelo_callback)).start()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
 def aelo_run(request):
     """
     Run an AELO calculation.
@@ -966,6 +1125,8 @@ def web_engine(request, **kwargs):
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
+    elif application_mode == 'ARISTOTLE':
+        params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
     return render(
         request, "engine/index.html", params)
 

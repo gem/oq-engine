@@ -45,6 +45,53 @@
               <!-- <input type="submit"> -->
             </form>
           </div>
+          {% elif application_mode == 'ARISTOTLE' %}
+          <div class="span12">
+            <h2>Run an ARISTOTLE calculation</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
+            <form id="aristotle_get_rupture_form" method="post">
+              {% csrf_token %}
+              <div class="aristotle_form_row">
+                <label for"shakemap_id">{{ aristotle_form_placeholders.shakemap_id }}</label>
+                <input class="aristotle-input" type="text" id="shakemap_id" name="shakemap_id" placeholder="{{ aristotle_form_placeholders.shakemap_id }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
+                <!-- <input type="submit"> -->
+              </div>
+            </form>
+            <form id="aristotle_run_form" method="post">
+              {% csrf_token %}
+              <div class="aristotle_form_row">
+                <label for"lat">{{ aristotle_form_placeholders.lat }}</label>
+                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"lon">{{ aristotle_form_placeholders.lon }}</label>
+                <input class="aristotle-input" type="text" id="lon" name="lon" placeholder="{{ aristotle_form_placeholders.lon }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"dep">{{ aristotle_form_placeholders.dep }}</label>
+                <input class="aristotle-input" type="text" id="dep" name="dep" placeholder="{{ aristotle_form_placeholders.dep }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"mag">{{ aristotle_form_placeholders.mag }}</label>
+                <input class="aristotle-input" type="text" id="mag" name="mag" placeholder="{{ aristotle_form_placeholders.mag }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"rake">{{ aristotle_form_placeholders.rake }}</label>
+                <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>
+                <!-- <input type="submit"> -->
+              </div>
+            </form>
+          </div>
           {% endif %}
           <div class="span12">
             <h2>List of calculations{% if server_name %} from {{ server_name }}{% endif %}</h2>

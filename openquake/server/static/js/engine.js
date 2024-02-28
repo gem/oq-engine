@@ -525,5 +525,80 @@
             $("#aelo_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
+
+            // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
+            $("#aristotle_get_rupture_form").submit(function (event) {
+                $('#submit_aristotle_get_rupture').prop('disabled', true);
+                $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
+                var formData = {
+                    shakemap_id: $("#shakemap_id").val(),
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                }).done(function (data) {
+                    // console.log(data);
+                    $('#lat').val(data.lat);
+                    $('#lon').val(data.lon);
+                    $('#dep').val(data.dep);
+                    $('#mag').val(data.mag);
+                    $('#rake').val(data.rake);
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function () {
+                    $('#submit_aristotle_get_rupture').prop('disabled', false);
+                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                });
+                event.preventDefault();
+            });
+            $("#aristotle_run_form > input").click(function() {
+                $(this).css("background-color", "white");
+            });
+            $("#aristotle_run_form").submit(function (event) {
+                $('#submit_aristotle_calc').prop('disabled', true);
+                var formData = {
+                    lon: $("#lon").val(),
+                    lat: $("#lat").val(),
+                    dep: $("#dep").val(),
+                    mag: $("#mag").val(),
+                    rake: $("#rake").val(),
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aristotle_run",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                }).done(function (data) {
+                    console.log(data);
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aristotle_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function () {
+                    $('#submit_aristotle_calc').prop('disabled', false);
+                });
+                event.preventDefault();
+            });
+            $("#aristotle_run_form > input").click(function() {
+                $(this).css("background-color", "white");
+            });
         });
 })($, Backbone, _, gem_oq_server_url);
