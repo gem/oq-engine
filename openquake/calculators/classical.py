@@ -303,7 +303,7 @@ class Hazard:
             self.offset += len(sids)
 
         self.acc['nsites'] = self.offset
-        return self.offset * 16  # 4 + 2 + 2 + 8 bytes
+        return self.offset * 12  # 4 + 2 + 2 + 4 bytes
 
     def store_mean_rates_by_src(self, dic):
         """
