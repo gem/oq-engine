@@ -269,17 +269,30 @@ def decode_lol(lol):
         return lol
 
 
-def extract_cols(datagrp, sel, slcs, columns):
+def fast_read(dset, slices):
+    """
+    Read multiple slices at once, using more memory
+    """
+    out = []
+    start = slices[0].start
+    stop = slices[-1].stop
+    arr = dset[start:stop]
+    for slc in slices:
+        out.append(arr[slc.start-start:slc.stop-start])
+    return numpy.concatenate(out, dtype=arr.dtype)
+
+
+def extract_cols(datagrp, sel, slices, columns):
     """
     :param datagrp: something like and HDF5 data group
     :param sel: dictionary column name -> value specifying a selection
-    :param slc: slices specifying the rows considered
+    :param slices: list of slices
     :param columns: the full list of column names
     :returns: a dictionary col -> array of values
     """
     acc = general.AccumDict(accum=[])  # col -> arrays
-    for slc in slcs:
-        if sel:
+    if sel:
+        for slc in slices:
             ok = slice(None)
             dic = {col: datagrp[col][slc] for col in sel}
             for col in sel:
@@ -289,9 +302,9 @@ def extract_cols(datagrp, sel, slcs, columns):
                     ok &= is_ok(dic[col], sel[col])
             for col in columns:
                 acc[col].append(datagrp[col][slc][ok])
-        else:  # avoid making unneeded copies
-            for col in columns:
-                acc[col].append(datagrp[col][slc])
+    else:  # avoid making unneeded copies
+        for col in columns:
+            acc[col].append(fast_read(datagrp[col], slices))
     return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
 
 
