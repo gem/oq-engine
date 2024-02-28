@@ -271,15 +271,12 @@ def decode_lol(lol):
 
 def fast_read(dset, slices):
     """
-    Read multiple slices at once, using more memory
+    Read multiple slices at once
     """
     out = []
-    start = slices[0].start
-    stop = slices[-1].stop
-    arr = dset[start:stop]
     for slc in slices:
-        out.append(arr[slc.start-start:slc.stop-start])
-    return numpy.concatenate(out, dtype=arr.dtype)
+        out.append(dset[slc])
+    return numpy.concatenate(out, dtype=out[0].dtype)
 
 
 def extract_cols(datagrp, sel, slices, columns):
