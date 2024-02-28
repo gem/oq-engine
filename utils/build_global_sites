@@ -26,11 +26,14 @@ from openquake.hazardlib import gsim_lt
 from openquake.commonlib import readinput
 
 
-dt = [('model', (numpy.string_, 3)), (numpy.string_, 61),
+dt = [('model', (numpy.string_, 3)), ('trt', numpy.string_, 61),
       ('gsim', hdf5.vstr), ('weight', float)]
 
 
 def get_gsim_lt(cwd):
+    """
+    :returns: a GsimLogicTree instance
+    """
     f1 = os.path.join(cwd, 'gmmLTrisk.xml')
     if os.path.exists(f1):
         return gsim_lt.GsimLogicTree(f1)
