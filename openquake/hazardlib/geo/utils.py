@@ -117,7 +117,7 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
-@compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
+@compile(['(f8[:],f8[::1])' ,'(f4[:],f4[::1])'])
 def angular_mean_weighted(degrees, weights):
     rads = numpy.radians(degrees)
     sin = numpy.sin(rads)
