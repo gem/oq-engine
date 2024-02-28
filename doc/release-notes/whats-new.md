@@ -105,6 +105,10 @@ Ali Talha Atici reported an issue with calculations using the
 GMPE ManeaEtAl2021. The problem was solved by renaming the
 existing site parameter `fpeak` as `f0`.
 
+Graeme Weatherill contributed a set of new GMPEs: Weatherill2024ESHM20AvgSA,
+Weatherill2024ESHM20SlopeGeologyAvgSA, Weatherill2024ESHM20Homokedastic
+and GmpeIndirectAvgSA, for use in the European model.
+
 The NathEtAl2012 GMPE was providing unrealistic values for PGV that
 could not be corrected, so we removed support for that Intensity
 Measure Type.
