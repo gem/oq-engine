@@ -55,8 +55,9 @@ from openquake.hmtk.sources.point_source import mtkPointSource
 from openquake.hmtk.sources.area_source import mtkAreaSource
 from openquake.hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
-from openquake.hmtk.parsers.source_model.nrml04_parser import \
-    nrmlSourceModelParser
+from openquake.hmtk.parsers.source_model.nrml04_parser import (
+    nrmlSourceModelParser,
+)
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -69,7 +70,8 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
 
     def setUp(self):
         self.nrml_file = os.path.join(
-            BASE_PATH,  "mixed_source_model_nrml4_2.xml")
+            BASE_PATH, "mixed_source_model_nrml4_2.xml"
+        )
 
     def test_execution_full(self):
         """
@@ -93,19 +95,20 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertEqual(source.name, "Quito")
         self.assertEqual(
             source.geometry.wkt,
-            'POLYGON((-122.50000 38.00000, -122.00000 38.50000, '
-            '-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))')
+            "POLYGON((-122.50000 38.00000, -122.00000 38.50000, "
+            "-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))",
+        )
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertAlmostEqual(source.rupt_aspect_ratio, 1.5)
         for iloc, (prob, npd) in enumerate(source.nodal_plane_dist.data):
             if iloc == 0:
-                self.assertAlmostEqual(prob, 0.3),
+                (self.assertAlmostEqual(prob, 0.3),)
                 self.assertAlmostEqual(npd.strike, 0.0)
                 self.assertAlmostEqual(npd.dip, 90.0)
                 self.assertAlmostEqual(npd.rake, 0.0)
             else:
-                self.assertAlmostEqual(prob, 0.7),
+                (self.assertAlmostEqual(prob, 0.7),)
                 self.assertAlmostEqual(npd.strike, 90.0)
                 self.assertAlmostEqual(npd.dip, 45.0)
                 self.assertAlmostEqual(npd.rake, 90.0)
@@ -135,12 +138,12 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertAlmostEqual(source.mfd.max_mag, 6.5)
         for iloc, (prob, npd) in enumerate(source.nodal_plane_dist.data):
             if iloc == 0:
-                self.assertAlmostEqual(prob, 0.3),
+                (self.assertAlmostEqual(prob, 0.3),)
                 self.assertAlmostEqual(npd.strike, 0.0)
                 self.assertAlmostEqual(npd.dip, 90.0)
                 self.assertAlmostEqual(npd.rake, 0.0)
             else:
-                self.assertAlmostEqual(prob, 0.7),
+                (self.assertAlmostEqual(prob, 0.7),)
                 self.assertAlmostEqual(npd.strike, 90.0)
                 self.assertAlmostEqual(npd.dip, 45.0)
                 self.assertAlmostEqual(npd.rake, 90.0)
@@ -165,10 +168,12 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertAlmostEqual(source.lower_depth, 20.0)
         self.assertEqual(
             str(source.fault_trace.points[0]),
-            "<Latitude=37.730100, Longitude=-121.822900, Depth=0.0000>")
+            "<Latitude=37.730100, Longitude=-121.822900, Depth=0.0000>",
+        )
         self.assertEqual(
             str(source.fault_trace.points[1]),
-            "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>")
+            "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>",
+        )
 
     def _check_complex_fault_source(self, source):
         self.assertTrue(isinstance(source, mtkComplexFaultSource))
@@ -189,7 +194,8 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
 
     def setUp(self):
         self.nrml_file = os.path.join(
-            BASE_PATH, "mixed_source_model_nrml4_2_minimum.xml")
+            BASE_PATH, "mixed_source_model_nrml4_2_minimum.xml"
+        )
 
     def test_execution_full(self):
         """
@@ -213,8 +219,9 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertEqual(source.name, "Quito")
         self.assertEqual(
             source.geometry.wkt,
-            'POLYGON((-122.50000 38.00000, -122.00000 38.50000, '
-            '-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))')
+            "POLYGON((-122.50000 38.00000, -122.00000 38.50000, "
+            "-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))",
+        )
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertFalse(source.rupt_aspect_ratio)
@@ -246,10 +253,12 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertAlmostEqual(source.lower_depth, 20.0)
         self.assertEqual(
             str(source.fault_trace.points[0]),
-            "<Latitude=37.730100, Longitude=-121.822900, Depth=0.0000>")
+            "<Latitude=37.730100, Longitude=-121.822900, Depth=0.0000>",
+        )
         self.assertEqual(
             str(source.fault_trace.points[1]),
-            "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>")
+            "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>",
+        )
         self.assertFalse(source.rupt_aspect_ratio)
         self.assertFalse(source.mag_scale_rel)
         self.assertFalse(source.mfd)

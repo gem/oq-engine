@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="fs_model_eshm20_ver09e_var_Mthr">
+    <simpleFaultSource id="MACF004" name="MACF004T"
+                       tectonicRegion="Shallow Default">
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>
+            -3.758969 35.525409
+            -3.787493 35.486573
+            -3.816013 35.44774 
+            -3.844692 35.408991
+            -3.873431 35.370279
+            -3.902167 35.331573
+            -3.932908 35.293914
+            -3.963796 35.256342
+            -3.992599 35.21769 
+            -4.021399 35.179043
+            -4.050194 35.1404  
+            -4.079468 35.102004
+            -4.109161 35.063832
+          </gml:posList>
+        </gml:LineString>
+        <dip>70.0</dip>
+        <upperSeismoDepth>3.0</upperSeismoDepth>
+        <lowerSeismoDepth>14.0</lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>Leonard2014_Interplate</magScaleRel>
+      <ruptAspectRatio>2.13</ruptAspectRatio>
+      <truncGutenbergRichterMFD
+          aValue="3.2264" bValue="0.953"  minMag="5.9"  maxMag="6.5"/>
+      <rake>-5.0</rake>
+    </simpleFaultSource>
+  </sourceModel>
+</nrml>

@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.frankel_1996 import (
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import SA
-from openquake.hazardlib.gsim.base import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 
 import numpy
 

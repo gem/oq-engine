@@ -40,7 +40,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
         if hc_id < 0:  # interpret negative calculation ids
-            calc_ids = datastore.get_calc_ids()
+            calc_ids = logs.get_calc_ids()
             try:
                 params['hazard_calculation_id'] = calc_ids[hc_id]
             except IndexError:
@@ -51,7 +51,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
             params['hazard_calculation_id'] = hc_id
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", dic, getattr(logging, loglevel.upper()),
+    log = logs.init(dic, log_level=getattr(logging, loglevel.upper()),
                     user_name=user_name, host=host)
     logs.dbcmd('update_job', log.calc_id,
                {'status': 'executing', 'pid': os.getpid()})

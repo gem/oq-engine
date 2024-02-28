@@ -93,10 +93,10 @@ KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
 AELO_FORM_PLACEHOLDERS = {
-    'lon': 'Longitude',
-    'lat': 'Latitude',
+    'lon': 'Longitude (max. 5 decimal places)',
+    'lat': 'Latitude (max. 5 decimal places)',
     'vs30': 'Vs30 (fixed at 760 m/s)',
-    'siteid': 'Site name',
+    'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)'
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -406,7 +406,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host) in calc_data:
+         parent_id, size_mb, host, start_time) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -417,11 +417,15 @@ def calc_list(request, id=None):
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
+        start_time_str = (
+            start_time.strftime("%Y-%m-%d, %H:%M:%S") + " "
+            + settings.TIME_ZONE)
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable, size_mb=size_mb))
+                 parent_id=parent_id, abortable=abortable, size_mb=size_mb,
+                 start_time=start_time_str))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -579,7 +583,8 @@ def aelo_callback(
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
-    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+    lon, lat = inputs['sites'].split()
+    body = (f"Input values: lon = {lon}, lat = {lat},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
     if warnings is not None:
         for warning in warnings:
@@ -621,7 +626,11 @@ def aelo_run(request):
         validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     try:
-        siteid = valid.simple_id(request.POST.get('siteid'))
+        siteid = request.POST.get('siteid')
+        if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
+            raise ValueError(
+                "site name can not be longer than %s characters" %
+                settings.MAX_AELO_SITE_NAME_LEN)
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
         invalid_inputs.append('siteid')
@@ -640,7 +649,8 @@ def aelo_run(request):
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
+            config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
@@ -965,6 +975,8 @@ def web_engine(request, **kwargs):
 def web_engine_get_outputs(request, calc_id, **kwargs):
     application_mode = settings.APPLICATION_MODE.upper()
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
@@ -982,7 +994,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        hcurves=hcurves,
@@ -1002,6 +1014,7 @@ def is_model_preliminary(ds):
         return False
 
 
+# this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
@@ -1016,7 +1029,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         if is_model_preliminary(ds):
             warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
-            asce07_js = ds['asce07'][()].decode('utf8')
+            try:
+                asce07_js = ds['asce07'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
             for key, value in asce07.items():
                 if key not in ('PGA', 'Ss', 'S1'):
@@ -1025,13 +1042,17 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce07_with_units[key] = value
                 elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce07_with_units[key + ' (-)'] = "%.2f" % round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce07_with_units[key + ' (-)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
                 else:
-                    asce07_with_units[key + ' (g)'] = "%.2f" % round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce07_with_units[key + ' (g)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
         if 'asce41' in ds:
-            asce41_js = ds['asce41'][()].decode('utf8')
+            try:
+                asce41_js = ds['asce41'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 if not key.startswith('BSE'):
@@ -1039,13 +1060,13 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 if not isinstance(value, float):
                     asce41_with_units[key] = value
                 else:
-                    asce41_with_units[key + ' (g)'] = "%.2f" % round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce41_with_units[key + ' (g)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         if 'warnings' in ds:
-            ds_warnings = ds['warnings'][()].decode('utf8')
+            ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
                 warnings = ds_warnings
             else:

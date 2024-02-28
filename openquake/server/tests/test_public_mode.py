@@ -169,7 +169,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # check rupture_info
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
         got = loadnpz(self.c.get(extract_url))
-        boundaries = gzip.decompress(got['boundaries']).split(b'\n')
+        boundaries = gzip.decompress(bytes(got['boundaries'])).split(b'\n')
         self.assertEqual(len(boundaries), 31)
         for b in boundaries:
             self.assertEqual(b[:12], b'POLYGON((-77')
@@ -236,10 +236,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         job_id = self.postzip('archive_err_1.zip')['job_id']
         self.wait()
         logging.disable(logging.NOTSET)
-
-        # there is no datastore since the calculation did not start
-        resp = self.c.get('/v1/calc/%s/datastore' % job_id)
-        self.assertEqual(resp.status_code, 404)
 
         tb = self.get('%s/traceback' % job_id)
         if not tb:

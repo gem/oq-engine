@@ -32,7 +32,7 @@ class EvenlyDiscretizedMFDMFDConstraintsTestCase(BaseMFDTestCase):
             min_mag=1, bin_width=2, occurrence_rates=[-0.1, 1]
         )
         self.assertEqual(str(exc), 'all occurrence rates '
-                                      'must not be negative')
+                         'must not be negative')
 
     def test_all_zero_occurrence_rates(self):
         exc = self.assert_mfd_error(
@@ -40,7 +40,7 @@ class EvenlyDiscretizedMFDMFDConstraintsTestCase(BaseMFDTestCase):
             min_mag=1, bin_width=2, occurrence_rates=[0, 0]
         )
         self.assertEqual(str(exc), 'at least one occurrence rate '
-                                      'must be positive')
+                         'must be positive')
 
     def test_negative_minimum_magnitude(self):
         exc = self.assert_mfd_error(
@@ -79,8 +79,6 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
                          [(0.2, 2.1), (0.5, 2.4), (0.8, 5.3)])
         self.assertEqual(evenly_discretized.get_min_max_mag(), (0.2, 0.8))
 
-
-class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
     def test_modify_mfd(self):
         mfd = EvenlyDiscretizedMFD(min_mag=4.0, bin_width=0.1,
                                    occurrence_rates=[1, 2, 3])

@@ -12,12 +12,16 @@ from numpy.lib.stride_tricks import as_strided
 
 # Set PROJ_DATA (proj == 9.0.1) to dir containing proj.db to avoid:
 # 'ERROR 1: PROJ: proj_create_from_name: Cannot find proj.db'
-if 'PROJ_DATA' not in os.environ:
-    os.environ['PROJ_DATA'] = pj.datadir.get_data_dir()
+if "PROJ_DATA" not in os.environ:
+    os.environ["PROJ_DATA"] = pj.datadir.get_data_dir()
 
 
-def sample_raster_at_points(raster_file: str, lon_pts: np.ndarray, lat_pts:
-                            np.ndarray, out_of_bounds_val: float=0.0):
+def sample_raster_at_points(
+    raster_file: str,
+    lon_pts: np.ndarray,
+    lat_pts: np.ndarray,
+    out_of_bounds_val: float = 0.0,
+):
     """
     Gets the values of a raster at each (lon,lat) point specified.
     This is done using a nearest-neighbor approach; no interpolation is
@@ -169,14 +173,14 @@ def rolling_raster_operation(
     trim: bool = False,
     write: bool = False,
 ):
-    if trim == True:
+    if trim:
         return NotImplementedError("Trimming not supported at this time.")
 
     if outfile is None:
-        if write == True:
+        if write:
             raise ValueError("Must specify raster outfile")
         else:
-            outfile_handler, outfile = tempfile.mkstemp(suffix='.tiff')
+            outfile_handler, outfile = tempfile.mkstemp(suffix=".tiff")
 
     ds = gdal.Open(in_raster)
 
@@ -187,7 +191,7 @@ def rolling_raster_operation(
 
     drv = gdal.GetDriverByName("GTiff")
 
-    logging.info(f'Writing {outfile}')
+    logging.info(f"Writing {outfile}")
     new_ds = drv.Create(
         outfile,
         xsize=new_arr.shape[1],
@@ -238,8 +242,7 @@ def vs30_from_slope(
     tectonic_region_type: str = "active",
     method: str = "wald_allen_2007",
 ) -> Union[float, np.array]:
-    """
-    """
+    """ """
     if slope_unit in ["grad", "gradient"]:
         grad = slope
     else:
@@ -288,7 +291,6 @@ def vs30_from_slope_wald_allen_2007(
 
 
 def vs30_from_slope_wald_allen_2007_active(gradient: np.array) -> np.ndarray:
-
     vs30 = np.zeros(gradient.shape)
     vs30[(gradient < 1.0e-4)] = np.mean([0.0, 180.0])
     vs30[(1.0e-4 <= gradient) & (gradient < 2.2e-3)] = np.mean([180.0, 240.0])
@@ -303,7 +305,6 @@ def vs30_from_slope_wald_allen_2007_active(gradient: np.array) -> np.ndarray:
 
 
 def vs30_from_slope_wald_allen_2007_stable(gradient: np.array) -> np.ndarray:
-
     vs30 = np.zeros(gradient.shape)
     vs30[(gradient < 2.0e-5)] = np.mean([0.0, 180.0])
     vs30[(2.0e-5 <= gradient) & (gradient < 2.0e-3)] = np.mean([180.0, 240.0])

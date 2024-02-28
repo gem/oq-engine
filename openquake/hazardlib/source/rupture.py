@@ -846,7 +846,7 @@ def get_ruptures(fname_csv):
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
-        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
+        meshes = [F32(m) for m in json.loads(row['mesh'])]  # 3D arrays
         num_surfaces = len(meshes)
         shapes = []
         points = []

@@ -119,7 +119,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker
 
 U32 = numpy.uint32
 F32 = numpy.float32

@@ -104,12 +104,12 @@ def norm_imt(imt):
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
 
-def calc_rtgm_df(hcurves, sitecol, oq):
+def calc_rtgm_df(hcurves, site, site_idx, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
-    :param hcurves: array of hazard curves of shape (1, M, L1)
-    :param sitecol: a SiteCollection instance with 1 site
+    :param hcurves: array of hazard curves of shape (M, L1)
+    :param site: a Site object
     :param oq: OqParam instance
 
     :returns: pandas dataframe with RTGM and related parameters
@@ -122,7 +122,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     imtls = oq.imtls
     imts, facts = [], []
     for m, imt in enumerate(IMTS):
-        afe = to_rates(hcurves[0, m], oq.investigation_time, minrate=1E-12)
+        afe = to_rates(hcurves[m], oq.investigation_time, minrate=1E-12)
 
         IMT = norm_imt(imt)
         imts.append(IMT)
@@ -131,7 +131,6 @@ def calc_rtgm_df(hcurves, sitecol, oq):
         facts.append(fact)
 
         if afe[0] < MIN_AFE:
-            logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
@@ -139,7 +138,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
         elif afe[-1] > MIN_AFE:
             raise ValueError("the max iml is too low: change the job.ini")
         else:
-            hazdic = _get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
+            hazdic = _get_hazdic(afe, IMT, imtls[imt] * fact, site)
             rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
             results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
             rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
@@ -155,18 +154,21 @@ def calc_rtgm_df(hcurves, sitecol, oq):
             else:
                 RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
                 MCE[m] = RTGM_max[m]
+    facts[0] = 1. # for PGA the Prob MCE is already geometric mean
     dic = {'IMT': imts,
            'UHGM_2475yr-GM': UHGM,
            'RTGM': RTGM_max,
            'ProbMCE': MCE,
            'RiskCoeff': riskCoeff,
-           'DLL': DLLs}
+           'DLL': DLLs,
+           'fact': np.array(facts),
+           'sid': [site_idx]*len(imts)}
 
-    return pd.DataFrame(dic), np.array(facts)
+    rtgm_df = pd.DataFrame(dic)
+    return rtgm_df
 
 
-def _get_hazdic(afe, imt, imtls, sitecol):
-    [site] = sitecol  # there must be a single site
+def _get_hazdic(afe, imt, imtls, site):
     hazdic = {
         'site': {'name': 'site',
                  'lon': site.location.x,
@@ -205,7 +207,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
-def get_low_hazard_asce07():
+def get_zero_hazard_asce07():
     na = 'n.a.'
     asce07 = {
              'PGA': 0,
@@ -230,7 +232,7 @@ def get_low_hazard_asce07():
     return asce07
 
 
-def get_low_hazard_asce41():
+def get_zero_hazard_asce41():
     na = 'n.a.'
     asce41 = {'BSE2N_Ss': na,
               'BSE2E_Ss': na,
@@ -248,24 +250,24 @@ def get_low_hazard_asce41():
     return asce41
 
 
-def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
+def get_mce_asce07(det_imt, DLLs, rtgm, low_haz=False):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
     :param det_imt: deterministic ground motion for each IMT
     :param DLLs: deterministic lower limits according to ASCE 7-16
-    :param dstore: the datastore
+    :param rtgm: dataframe
     :param low_haz: boolean specifying if the hazard is lower than DLLs
     :returns: a dictionary imt -> probabilistic MCE
     :returns: a dictionary imt -> governing MCE
     :returns: a dictionary imt -> deterministic MCE
     :returns: a dictionary all ASCE 7-16 parameters
     """
-    rtgm = dstore['rtgm']
+    prob_mce = rtgm.ProbMCE.to_numpy()
     imts = rtgm['IMT']
     for i, imt in enumerate(imts):
-        if imt == b'SA0P2':
+        if imt == 'SA0P2':
             crs = rtgm['RiskCoeff'][i]
-        elif imt == b'SA1P0':
+        elif imt == 'SA1P0':
             cr1 = rtgm['RiskCoeff'][i]
 
     det_mce = {}
@@ -332,7 +334,7 @@ def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
     return prob_mce_out, mce, det_mce, asce07
 
 
-def get_asce41(dstore, mce, facts):
+def get_asce41(dstore, mce, facts, sid):
     """
     :param dstore: the datastore
     :param mce: governing MCE
@@ -340,7 +342,7 @@ def get_asce41(dstore, mce, facts):
     :returns: a dictionary with the ASCE-41 parameters
     """
     fact = dict(zip(mce, facts))
-    hmap = dstore["hmaps-stats"][0, 0]  # mean hazard on the site, shape (M, P)
+    hmap = dstore["hmaps-stats"][sid, 0]  # mean hazard, shape (M, P)
     oq = dstore['oqparam']
     poes = oq.poes
     imts = list(oq.imtls)
@@ -384,6 +386,81 @@ def get_asce41(dstore, mce, facts):
     return asce41
 
 
+def process_sites(dstore, csm):
+    """
+    :yields: (site, rtgm_df, warning)
+    """
+    for site in dstore['sitecol']:
+        sid = site.id
+        mrs = dstore['mean_rates_by_src'][sid]
+        mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
+
+        oq = dstore['oqparam']
+        stats = list(oq.hazard_stats())
+        assert stats[0] == 'mean', stats[0]
+        hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
+        site = list(dstore['sitecol'])[sid]
+        loc = site.location
+        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
+        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
+
+        if mrs.sum() == 0:
+            warning = ('Zero hazard: there are no ruptures close to the site. '
+                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                       ' See User Guide.')
+            yield site, None, warning
+
+        elif mean_rates.max() < MIN_AFE:
+            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
+                       ' parameters cannot be computed. See User Guide.')
+            yield site, None, warning
+
+        elif (rtgm_df.ProbMCE.to_numpy()[1] < 0.11) or \
+                (rtgm_df.ProbMCE.to_numpy()[2] < 0.04):
+            warning = ('The MCE at the site is very low. Users may need to '
+                       ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                       ' to user-specified minimums (e.g., Ss=0.11g and '
+                       ' S1=0.04g). See User Guide.')
+            yield site, rtgm_df, warning
+
+        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
+            yield site, rtgm_df, 'Only probabilistic MCE'
+
+        else:
+            yield site, rtgm_df, ''
+
+
+
+def calc_asce(dstore, csm, rtgm):
+    """
+    :yields: (sid, asce07, asce41)
+    """
+    imls_by_sid = {}
+    for sid, rtgm_df in rtgm.items():
+        imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
+    out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
+    sitecol = dstore['sitecol']
+    for sid, (mag_dist_eps, sigma_by_src) in out.items():
+        lon = sitecol.lons[sid]
+        lat = sitecol.lats[sid]
+        rtgm_df = rtgm[sid]
+        det_imt, mag_dst_eps_sig = get_deterministic(
+            rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
+        logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
+        prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
+            det_imt, DLLs, rtgm_df)
+        logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
+        logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
+        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
+        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
+        yield sid, mag_dst_eps_sig, asce07, asce41
+
+
+def to_array(dic):
+    return np.array([dic[sid] for sid in sorted(dic)])
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -392,84 +469,54 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    if len(dstore['rup/mag']) == 0:
-        warning = (
-            'The seismic hazard at the site is 0: there are no ruptures'
-            ' close to the site. ASCE 7-16 and ASCE 41-17 parameters'
-            ' cannot be computed.')
-        if 'warnings' in dstore:
-            warnings = dstore['warnings'][()].decode('utf8')
-            dstore['warnings'] = warnings + '\n' + warning
-        else:
-            dstore['warnings'] = warning
-        logging.warning(warning)
-        asce07 = get_low_hazard_asce07()
-        asce41 = get_low_hazard_asce41()
-        dstore['asce07'] = hdf5.dumps(asce07)
-        dstore['asce41'] = hdf5.dumps(asce41)
-        return
-    if dstore['mean_rates_ss'][:].max() < MIN_AFE:
-        warning = (
-            'The seismic hazard at the site is very low. ASCE 7-16 and'
-            ' ASCE 41-17 parameters cannot be computed.')
-        if 'warnings' in dstore:
-            warnings = dstore['warnings'][()].decode('utf8')
-            dstore['warnings'] = warnings + '\n' + warning
-        else:
-            dstore['warnings'] = warning
-        logging.warning(warning)
-        asce07 = get_low_hazard_asce07()
-        asce41 = get_low_hazard_asce41()
-        dstore['asce07'] = hdf5.dumps(asce07)
-        dstore['asce41'] = hdf5.dumps(asce41)
-        return
-    logging.info('Computing Risk Targeted Ground Motion')
-    oq = dstore['oqparam']
-    stats = list(oq.hazard_stats())
-    assert stats[0] == 'mean', stats[0]
-    hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
-    sitecol = dstore['sitecol']
-    rtgm_df, facts = calc_rtgm_df(hcurves, sitecol, oq)
-    logging.info('Computed RTGM\n%s', rtgm_df)
-    dstore.create_df('rtgm', rtgm_df)
-    facts[0] = 1  # for PGA the Prob MCE is already geometric mean
-    imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
-    prob_mce = rtgm_df.ProbMCE.to_numpy()
+    N = len(dstore['sitecol'])
+    asce07 = {}
+    asce41 = {}
+    warnings = {}
+    rtgm_dfs = []
+    rtgm = {}
+    for site, rtgm_df, warning in process_sites(dstore, csm):
+        sid = site.id
+        loc = site.location
+        if warning.startswith(('Zero hazard', 'Very low hazard')):
+            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
+            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
+        elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
+            dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
+            prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
+                dummy_det, DLLs, rtgm_df, low_haz=True)
+            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
+            asce07[sid] = hdf5.dumps(a07)
+            asce41[sid] = hdf5.dumps(a41)
+        else:  # High hazard
+            rtgm[sid] = rtgm_df
+        warnings[sid] = warning
+        if warning:
+            logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
+        if rtgm_df is not None:
+            rtgm_dfs.append(rtgm_df)
+    for sid, mdes, a07, a41 in calc_asce(dstore, csm, rtgm):
+        asce07[sid] = hdf5.dumps(a07)
+        asce41[sid] = hdf5.dumps(a41)
+        dstore[f'mag_dst_eps_sig/{sid}'] = mdes
 
-    if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-        logging.warning('Low hazard, do not disaggregate by source')
-        dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
-        prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
-            prob_mce, dummy_det, DLLs, dstore, low_haz=True)
-        dstore['asce07'] = hdf5.dumps(asce07)
-        asce41 = get_asce41(dstore, mce, facts)
-        dstore['asce41'] = hdf5.dumps(asce41)
-        if Image is None:  # missing PIL
-            logging.warning('Missing module PIL: skipping plotting curves')
-        else:
-            plot_mean_hcurves_rtgm(dstore, update_dstore=True)
-            plot_governing_mce(dstore, update_dstore=True)
-        return
+    dstore['asce07'] = to_array(asce07)
+    dstore['asce41'] = to_array(asce41)
 
-    mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, IMTS, imls_disagg)
-    det_imt, mag_dst_eps_sig = get_deterministic(
-        prob_mce, mag_dist_eps, sigma_by_src)
-    dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
-    logging.info(f'{det_imt=}')
-    prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
-        prob_mce, det_imt, DLLs, dstore)
-    logging.info(f'{mce=}')
-    logging.info(f'{det_mce=}')
-    dstore['asce07'] = hdf5.dumps(asce07)
-    asce41 = get_asce41(dstore, mce, facts)
-    dstore['asce41'] = hdf5.dumps(asce41)
-    logging.info('ASCE 7-16 Parameters=%s' % asce07)
-    logging.info('ASCE 41-17 Parameters=%s' % asce41)
+    if rtgm_dfs:
+        dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-    if Image is None:  # missing PIL
-        logging.warning('Missing module PIL: skipping plotting curves')
+    if rtgm_dfs and N == 1:# and not warnings[sid]:
+        sid = 0
+        if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
+            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+            plot_governing_mce(dstore, sid, update_dstore=True)
+            if not warnings[sid]:
+                plot_disagg_by_src(dstore, sid, update_dstore=True)
+
+    # if warnings are meaningful, and/or there are 2+ sites add them to the ds
+    if len(warnings) == 1:
+        if not warnings[0].startswith('Only probabilistic MCE'):
+            dstore['warnings'] = to_array(warnings)
     else:
-        plot_mean_hcurves_rtgm(dstore, update_dstore=True)
-        plot_disagg_by_src(dstore, update_dstore=True)
-        plot_governing_mce(dstore, update_dstore=True)
+        dstore['warnings'] = to_array(warnings)

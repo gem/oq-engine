@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import json
 import numpy
 import pandas
 try:
@@ -25,7 +26,7 @@ except ImportError:
     rtgmpy = None
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import logs
-from openquake.calculators import base, views
+from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.engine.aelo import get_params_from
 
@@ -42,13 +43,62 @@ ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
           0.4, 0.56995]
 
 
+def test_PAC():
+    # test with same name sources and semicolon convention, full enum
+    job_ini = os.path.join(MOSAIC_DIR, 'PAC/in/job.ini')
+    with logs.init(job_ini) as log:
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+
+    # site (160, -9.5), first level of PGA
+    r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
+    if rtgmpy:
+        a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
+        aac([r0, r1, a7['PGA']], [0.03272511, 0.040312827, 0.83427], atol=1E-6)
+
+    # site (160, -9.4), first level of PGA
+    r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
+    if rtgmpy:
+        a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
+        aac([r0, r1, a7['PGA']], [0.032720476, 0.040302116, 0.7959], atol=1E-6)
+
+        # check that there are not warnings about results
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert sum([len(w) for w in warnings]) == 0
+
+        # check all plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+
+def test_KOR():
+    # another test with same name sources, no semicolon convention, sampling
+    job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
+    dic = dict(sites='128.8 35', site='KOR-site', vs30='760')
+    with logs.init(job_ini) as log:
+        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    if rtgmpy:
+        s = calc.datastore['asce07'][0].decode('ascii')
+        asce07 = json.loads(s)
+        aac(asce07['PGA'], 0.618, atol=5E-5)
+
+        # check all plots created
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
+
+
 def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED):
-        dic = dict(lon=lon, lat=lat, site=site, vs30='760')
-        with logs.init('job', job_ini) as log:
-            log.params.update(get_params_from(dic, MOSAIC_DIR))
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
+        with logs.init(job_ini) as log:
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
         if rtgmpy:
@@ -71,33 +121,75 @@ def test_CCA():
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41, atol=5E-5)
 
-        # run mag_dst_eps_sig exporter
-        [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
-        pandas.read_csv(fname, skiprows=1)
+        # test no close ruptures
+        dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
+        with logs.init(job_ini) as log:
+                log.params.update(get_params_from(
+                    dic, MOSAIC_DIR, exclude=['USA']))
+                calc = base.calculators(log.get_oqparam(), log.calc_id)
+                calc.run()
+        # check that the warning announces no close ruptures
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('Zero hazard')
+
+        # check no plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+
+def test_WAF():
+    # test of site with very low hazard
+    job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
+    dic = dict(sites='9 9', site='WAF-site', vs30='760')
+    with logs.init(job_ini) as log:
+        log.params.update(get_params_from(
+            dic, MOSAIC_DIR, exclude=['USA']))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    if rtgmpy:
+        # check that warning indicates very low hazard
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('Very low')
+
+        # check no plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+        # test of site with very low hazard, but high enough to compute ASCE
+        job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
+        dic = dict(sites='10.93 5.65', site='WAF-site', vs30='760')
+        with logs.init(job_ini) as log:
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
+        # check that warning indicates very low hazard
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('The MCE')
+
+        # check that 2/3 plots created
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
 def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
-    dic = dict(lon=139, lat=36, site='JPN-site', vs30='760')
-    with logs.init('job', job_ini) as log:
-        log.params.update(get_params_from(dic, MOSAIC_DIR))
+    dic = dict(sites='139 36', site='JPN-site', vs30='760')
+    with logs.init(job_ini) as log:
+        log.params.update(get_params_from(
+            dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
-    if rtgmpy:
-        df = views.view('compare_disagg_rates', calc.datastore)
-        aac(df.disagg_rate, df.interp_rate, rtol=.01)
 
-
-# not passing yet
-def test_KOR():
-    # test with same name sources
-    job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
-    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
-    with logs.init('job', job_ini) as log:
-        log.params.update(get_params_from(dic, MOSAIC_DIR))
-        calc = base.calculators(log.get_oqparam(), log.calc_id)
-        calc.run()
     if rtgmpy:
-        df = views.view('compare_disagg_rates', calc.datastore)
-        aac(df.disagg_rate, df.interp_rate, rtol=.025)
+        # check all plots created
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore

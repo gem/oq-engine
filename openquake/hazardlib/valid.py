@@ -34,8 +34,9 @@ from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
-from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, floatdict)  # needed
+from openquake.hazardlib.calc.filters import (  # noqa
+    IntegrationDistance, floatdict
+)
 
 PRECISION = pmf.PRECISION
 
@@ -1394,3 +1395,36 @@ class RjbEquivalent(object):
             repi_idx = numpy.abs(dist - self.repi).argmin()
             dists.append(self.reqv[repi_idx, mag_idx])
         return numpy.array(dists)
+
+
+def basename(src, splitchars='.:'):
+    """
+    :returns: the base name of a split source
+
+    >>> basename('SC:10;0')
+    'SC;0'
+    """
+    src_id = src if isinstance(src, str) else src.source_id
+    for char in splitchars:
+        src_id = re.sub(r'\%s\d+' % char, '', src_id)
+    return src_id
+
+
+def corename(src):
+    """
+    :param src: source object or source name
+    :returns: the core name of a source
+    """
+    src = src if isinstance(src, str) else src.source_id
+    return re.split('[!:;.]', src)[0]
+
+
+def fragmentno(src):
+    "Postfix after :.; as an integer"
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!b16'
+    fragments = re.split('[:.;]', src.source_id)
+    if len(fragments) == 1:  # no fragment number, like in AELO for NZL
+        return -1
+    fragment = fragments[1].split('!')[0]  # strip !b16
+    return int(fragment)
+

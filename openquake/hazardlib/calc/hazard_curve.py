@@ -28,7 +28,7 @@ than 20 lines of code:
    from openquake.calculators.base import calculators
 
    def main(job_ini):
-       with logs.init('job', job_ini) as log:
+       with logs.init(job_ini) as log:
            calc = calculators(log.get_oqparam(), log.calc_id)
            calc.run(individual_rlzs='true', shutdown=True)
            print('The hazard curves are in %s::/hcurves-rlzs'
@@ -47,8 +47,10 @@ import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import ProbabilityMap, ProbabilityCurve
-from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve
+)
+from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM

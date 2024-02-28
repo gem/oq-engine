@@ -1,7 +1,7 @@
 from typing import Union
 
 import numpy as np
-#import xarray as xr
+# import xarray as xr
 
 
 def static_factor_of_safety(
@@ -69,7 +69,8 @@ def static_factor_of_safety(
     term_1 = cohesion / (soil_weight * slab_thickness * np.sin(r_slope))
     term_2 = np.tan(r_fric_ang) / np.tan(r_slope)
     term_3 = (saturation_coeff * water_weight * np.tan(r_fric_ang)) / (
-        soil_weight * np.tan(r_slope))
+        soil_weight * np.tan(r_slope)
+    )
 
     return term_1 + term_2 - term_3
 
@@ -102,7 +103,7 @@ def rock_slope_static_factor_of_safety(
         of shear fractures within a substance relative to the principal
         compressive stress. It should be given in degrees. Typical values are
         30-40 degrees.
-    
+
     :param relief: Local relief calculated based on the moving window analysis,
         whose size is selected to best capture the major hillslope features within
         the study area. Units are in meters.

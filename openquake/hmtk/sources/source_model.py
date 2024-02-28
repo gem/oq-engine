@@ -44,11 +44,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module implements
 :class:`openquake.hmtk.sources.source_model.mtkSourceModel`, the
 general class to describe a set of seismogenic sources
-'''
+"""
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.hmtk.sources.point_source import mtkPointSource
@@ -58,7 +58,7 @@ from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
 
 
 class mtkSourceModel(object):
-    '''
+    """
     Object to describe a seismogenic source model (composite of
     multiple sources with mixed typologies)
 
@@ -68,7 +68,7 @@ class mtkSourceModel(object):
         Source model name
     :param list sources:
         List of seismogenic sources
-    '''
+    """
 
     def __init__(self, identifier=None, name=None, sources=None):
         self.id = identifier
@@ -77,7 +77,7 @@ class mtkSourceModel(object):
             self.sources = sources
         else:
             if sources:
-                raise ValueError('Sources must be input as list!')
+                raise ValueError("Sources must be input as list!")
             self.sources = []
 
     def __iter__(self):
@@ -88,14 +88,15 @@ class mtkSourceModel(object):
         return len(self.sources)
 
     def get_number_sources(self):
-        '''
+        """
         Returns the number of sources in the model
-        '''
+        """
         return len(self.sources)
 
-    def serialise_to_nrml(self, filename, complex_mesh_spacing=2,
-                          use_defaults=False):
-        '''
+    def serialise_to_nrml(
+        self, filename, complex_mesh_spacing=2, use_defaults=False
+    ):
+        """
         Writes the source model to a nrml source model file given by the
         filename
 
@@ -106,16 +107,24 @@ class mtkSourceModel(object):
             Boolean to indicate whether to use default values (True) or not.
             If set to False, ValueErrors will be raised when an essential
             attribute is missing.
-        '''
+        """
         source_model = self.convert_to_oqhazardlib(
-            PoissonTOM(1.0), 2.0, complex_mesh_spacing, 10.0,
-            use_defaults=use_defaults)
+            PoissonTOM(1.0),
+            2.0,
+            complex_mesh_spacing,
+            10.0,
+            use_defaults=use_defaults,
+        )
         write_source_model(filename, source_model, name=self.name)
 
     def convert_to_oqhazardlib(
-            self, tom, simple_mesh_spacing=1.0,
-            complex_mesh_spacing=2.0, area_discretisation=10.0,
-            use_defaults=False):
+        self,
+        tom,
+        simple_mesh_spacing=1.0,
+        complex_mesh_spacing=2.0,
+        area_discretisation=10.0,
+        use_defaults=False,
+    ):
         """
         Converts the source model to an iterator of sources of :class:
         `openquake.hazardlib.source.base.BaseSeismicSource`
@@ -123,18 +132,32 @@ class mtkSourceModel(object):
         oq_source_model = []
         for source in self.sources:
             if isinstance(source, mtkAreaSource):
-                oq_source_model.append(source.create_oqhazardlib_source(
-                    tom, simple_mesh_spacing, area_discretisation,
-                    use_defaults))
+                oq_source_model.append(
+                    source.create_oqhazardlib_source(
+                        tom,
+                        simple_mesh_spacing,
+                        area_discretisation,
+                        use_defaults,
+                    )
+                )
             elif isinstance(source, mtkPointSource):
-                oq_source_model.append(source.create_oqhazardlib_source(
-                    tom, simple_mesh_spacing, use_defaults))
+                oq_source_model.append(
+                    source.create_oqhazardlib_source(
+                        tom, simple_mesh_spacing, use_defaults
+                    )
+                )
             elif isinstance(source, mtkSimpleFaultSource):
-                oq_source_model.append(source.create_oqhazardlib_source(
-                    tom, simple_mesh_spacing, use_defaults))
+                oq_source_model.append(
+                    source.create_oqhazardlib_source(
+                        tom, simple_mesh_spacing, use_defaults
+                    )
+                )
             elif isinstance(source, mtkComplexFaultSource):
-                oq_source_model.append(source.create_oqhazardlib_source(
-                    tom, complex_mesh_spacing, use_defaults))
+                oq_source_model.append(
+                    source.create_oqhazardlib_source(
+                        tom, complex_mesh_spacing, use_defaults
+                    )
+                )
             else:
-                raise ValueError('Source type not recognised!')
+                raise ValueError("Source type not recognised!")
         return oq_source_model

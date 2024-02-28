@@ -261,11 +261,21 @@ class Amplifier(object):
         """
         for gsims in gsims_by_trt.values():
             for gsim in gsims:
+                if vs30_tolerance < 0:
+                    continue
+                elif not hasattr(gsim, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+                    raise AttributeError(
+                        f'The attribute DEFINED_FOR_REFERENCE_VELOCITY is'
+                        f' missing in the gsim {gsim}. However, at your peril,'
+                        f' you can disable the vs30 consistency check by'
+                        f' setting vs30_tolerance = -1')
                 gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
                 if gsim_ref and gsim_ref < self.vs30_ref:
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
                         % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
+        if vs30_tolerance < 0:
+            return
         if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
             raise ValueError('Some vs30 in the site collection is different '
                              'from vs30_ref=%d over the tolerance of %d' %

@@ -24,6 +24,7 @@ import sys
 import zlib
 import copy
 import math
+import time
 import pickle
 import socket
 import random
@@ -59,6 +60,38 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
 mp = multiprocessing.get_context('spawn')
 
 
+class Cache(dict):
+    miss = 0
+    tot = 0
+
+    @property
+    def hit(self):
+        return self.tot - self.miss
+
+    @property
+    def speedup(self):
+        return self.tot / self.miss
+
+    def __setitem__(self, key, val):
+        dict.__setitem__(self, key, val)
+        self.miss += 1
+
+    def __getitem__(self, key):
+        self.tot += 1
+        return dict.__getitem__(self, key)
+
+    def getsize(self):
+        """
+        :returns: the size in bytes of the cache values
+        """
+        return sum(getsizeof(val) for val in self.values())
+
+    def __str__(self):
+        templ = '<Cache hit=%d, miss=%d, speedup=%.1f, size=%s>'
+        return templ % (self.hit, self.miss, self.speedup,
+                        humansize(self.getsize()))
+
+
 def duplicated(items):
     """
     :returns: the list of duplicated keys, possibly empty
@@ -78,12 +111,17 @@ def cached_property(method):
         try:
             val = self.__dict__[name]
         except KeyError:
+            t0 = time.time()
             val = method(self)
+            cached_property.dt[name] = time.time() - t0
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
     newmethod.__doc__ = method.__doc__
     return property(newmethod)
+
+
+cached_property.dt = {}  # dictionary of times
 
 
 def nokey(item):
@@ -437,10 +475,10 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            gh = subprocess.check_output(
-                ['git', 'rev-parse', '--short', 'HEAD'],
-                stderr=open(os.devnull, 'w'),
-                cwd=os.path.dirname(git_path)).strip()
+            with open(os.devnull, 'w') as devnull:
+                gh = subprocess.check_output(
+                    ['git', 'rev-parse', '--short', 'HEAD'],
+                    stderr=devnull, cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
         except Exception:
             pass
@@ -756,20 +794,20 @@ def copyobj(obj, **kwargs):
 class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays with the same lenghts.
-    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
         self.M = len(imtls)
         self.L1 = len(levels)
         self.size = self.M * self.L1
+        items = imtls.items()
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
-                               for imt, imls in imtls.items()])
+                               for imt, imls in items])
         self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
         self.mdic = {}
-        for m, (imt, imls) in enumerate(imtls.items()):
+        for m, (imt, imls) in enumerate(items):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
@@ -1372,6 +1410,9 @@ def getsizeof(o, ids=None):
     if id(o) in ids:
         return 0
 
+    if hasattr(o, 'nbytes'):
+        return o.nbytes
+
     nbytes = sys.getsizeof(o)
     ids.add(id(o))
 
@@ -1445,7 +1486,7 @@ def categorize(values, nchars=2):
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
     prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
-    return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
+    return numpy.array([dic[v] for v in values], (numpy.bytes_, nchars))
 
 
 def get_nbytes_msg(sizedict, size=8):
@@ -1506,7 +1547,7 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.string_, len(value) or 1)
+                tp = (numpy.bytes_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
                 tp = (value.dtype, len(value))
             else:

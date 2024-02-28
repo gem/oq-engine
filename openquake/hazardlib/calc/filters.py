@@ -21,13 +21,11 @@ import sys
 import operator
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
-from openquake.hazardlib.geo.surface.multi import (
-    MultiSurface, _multi_distances, _multi_rx_ry0)
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -46,73 +44,52 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-def _distances_from_dcache(rup, sites, param, dcache):
-    """
-    Calculates the distances for multi-surfaces using a cache.
-
-    :param rup:
-        An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
-    :param sites:
-        A list of sites or a site collection
-    :param param:
-        The required rupture-distance parameter
-    :param dcache:
-        A dictionary with the distances. The first key is the
-        surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctx_iter` method of
-        the :class:`openquake.hazardlib.contexts.ContextMaker`
-    :returns:
-        The computed distances for the rupture in input
-    """
-    # Update the distance cache
-    suids = []  # surface IDs
-    for srf in rup.surface.surfaces:
-        suids.append(srf.suid)
-        if (srf.suid, param) not in dcache:
-            # This function returns the distances that will be added to the
-            # cache. In case of Rx and Ry0, the information cache will
-            # include the ToR of each surface as well as the GC2 t and u
-            # coordinates for each section.
-            for key, val in _multi_distances(srf, sites, param).items():
-                dcache[srf.suid, key] = val
-    # Computing distances using the cache
-    if param in ['rjb', 'rrup']:
-        dcache.hit += 1
-        distances = dcache[suids[0], param]
-        # This is looping over all the surface IDs composing the rupture
-        for suid in suids[1:]:
-            distances = numpy.minimum(distances, dcache[suid, param])
-    elif param in ['rx', 'ry0']:
-        # The computed distances. In this case we are not going to add them to
-        # the cache since they cannot be reused
-        distances = _multi_rx_ry0(dcache, suids, param)
+def get_dparam(surface, sites, param):
+    if param == 'rrup':
+        dist = surface.get_min_distance(sites)
+    elif param == 'tuw':
+        tuw0 = surface.tor.get_tuw(sites)
+        tuw1 = surface.tor.flip().get_tuw(sites)
+        arr = numpy.array([tuw0, tuw1])  # shape (2, 3, N)
+        dist = arr.transpose(2, 0, 1)  # shape (N, 2, 3)
+    elif param == 'rjb':
+        dist = surface.get_joyner_boore_distance(sites)
+    elif param == 'clon_clat':
+        t = surface.get_closest_points(sites)  # tested in classical/case_83
+        dist = t.array.T[:, 0:2]  # shape (N, 2)
+    elif param == 'rx':
+        dist = surface.get_rx_distance(sites)
+    elif param == 'ry0':
+        dist = surface.get_ry0_distance(sites)
     else:
-        raise ValueError("Unknown distance measure %r" % param)
-    return distances
+        raise ValueError('Unknown distance measure %r' % param)
+    return dist
 
 
-def get_distances(rupture, sites, param, dcache=None):
+def get_distances(rupture, sites, param):
     """
     :param rupture: a rupture
     :param sites: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
-    :param dcache: None or a dictionary (surfaceID, dist_type) -> distances
+    :param dcache: distance cache dictionary or None if disabled
     :returns: an array of distances from the given sites
     """
-    if (dcache is not None and isinstance(rupture.surface, MultiSurface) and
-            hasattr(rupture.surface.surfaces[0], 'suid')):
-        return _distances_from_dcache(
-            rupture, sites.complete, param, dcache)[sites.sids]
-    if not rupture.surface:  # PointRupture
-        dist = rupture.hypocenter.distance_to_mesh(sites)
+    surf = rupture.surface
+    if not surf:  # PointRupture
+        if param == 'clon_clat':
+            dist = numpy.empty((len(sites), 2))
+            dist[:, 0] = rupture.hypocenter.x
+            dist[:, 1] = rupture.hypocenter.y
+        else:
+            dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
-        dist = rupture.surface.get_min_distance(sites)
+        dist = get_dparam(surf, sites, 'rrup')
     elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(sites)
+        dist = get_dparam(surf, sites, 'rx')
     elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(sites)
+        dist = get_dparam(surf, sites, 'ry0')
     elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(sites)
+        dist = get_dparam(surf, sites, 'rjb')
     elif param == 'rhypo':
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
@@ -120,17 +97,11 @@ def get_distances(rupture, sites, param, dcache=None):
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(sites)
-    elif param == 'azimuth_cp':
-        dist = rupture.surface.get_azimuth_of_closest_point(sites)
-    elif param == 'closest_point' or param == 'clon' or param == 'clat':
-        t = rupture.surface.get_closest_points(sites)
-        if param == 'closest_point':
-            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
-        if param == 'clon':
-            dist = numpy.reshape([t.lons], (len(t.lons), 1))  # shape (N, 1)
-        if param == 'clat':
-            dist = numpy.reshape([t.lats], (len(t.lons), 1))  # shape (N, 1)  
+        dist = surf.get_azimuth(sites)
+    elif param == 'azimuthcp':
+        dist = surf.get_azimuth_of_closest_point(sites)
+    elif param == 'clon_clat':
+        dist = get_dparam(surf, sites, param)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
@@ -319,6 +290,7 @@ def split_source(src):
     splits = list(src)
     if len(splits) == 1:
         return [src]
+    has_hdf5 = hasattr(src, 'hdf5path')
     has_samples = hasattr(src, 'samples')
     has_smweight = hasattr(src, 'smweight')
     has_scaling_rate = hasattr(src, 'scaling_rate')
@@ -331,6 +303,8 @@ def split_source(src):
         split.trt_smr = src.trt_smr
         split.grp_id = grp_id
         split.id = src.id
+        if has_hdf5:
+            split.hdf5path = src.hdf5path
         if has_samples:
             split.samples = src.samples
         if has_smweight:
@@ -386,7 +360,6 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
-            raise
             raise exc.__class__('source %s: %s' % (src.source_id, exc))
         return bbox
 
@@ -471,6 +444,19 @@ class SourceFilter(object):
             sids = self.close_sids(src)
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
+
+    def get_close(self, tors):
+        """
+        :param tors: a structured array with fields tl0, tl1, tr0, tr1
+        :returns: an array with the number of close sites per bbox
+        """
+        xyz = self.sitecol.xyz
+        tl0, tl1, tr0, tr1 = tors['tl0'], tors['tl1'], tors['tr0'], tors['tr1']
+        distl = distance.cdist(xyz, spherical_to_cartesian(tl0, tl1))
+        distr = distance.cdist(xyz, spherical_to_cartesian(tr0, tr1))
+        dists = numpy.min([distl, distr], axis=0)  # shape (N, S)
+        maxdist = self.integration_distance.y[-1]
+        return (dists <= maxdist).sum(axis=0) # shape (N, S) => S
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:

@@ -29,7 +29,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_02, case_03, case_12, case_18, case_22, case_23,
+    case_01, case_02, case_03, case_04, case_12, case_18, case_22, case_23,
     case_24, case_25, case_26, case_27, case_29, case_32, case_33,
     case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
@@ -103,6 +103,12 @@ class ClassicalTestCase(CalculatorTestCase):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_03.__file__)
 
+    def test_case_04(self):
+        # make sure the UHS are sorted correctly
+        self.run_calc(case_04.__file__, 'job.ini')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
+
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
             self.run_calc(case_01.__file__, 'job_wrong.ini')
@@ -161,7 +167,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertGreater(self.calc.ntiles, 2)
+        self.assertGreater(max(self.calc.ntiles), 2)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -231,7 +237,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
-        expected = '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04006, 0.00000 0.08013, 0.00000 0.12019, 0.00000 0.16025, 0.00000 0.20032, 0.00000 0.24038, 0.00000 0.28045, 0.04512 0.28045, 0.08980 0.28045, 0.13492 0.28045, 0.17961 0.28045, 0.17961 0.24038, 0.17961 0.20032, 0.17961 0.16025, 0.17961 0.12019, 0.17961 0.08013, 0.17961 0.04006, 0.17961 0.00000, 0.00000 0.10000, 0.04512 0.10000, 0.08980 0.10000, 0.13492 0.10000, 0.17961 0.10000, 0.17961 0.14006, 0.17961 0.18013, 0.17961 0.22019, 0.17961 0.26025, 0.17961 0.30032, 0.17961 0.34038, 0.17961 0.38045, 0.13492 0.38045, 0.08980 0.38045, 0.04512 0.38045, 0.00000 0.38045, 0.00000 0.34038, 0.00000 0.30032, 0.00000 0.26025, 0.00000 0.22019, 0.00000 0.18013, 0.00000 0.14006, 0.00000 0.10000))'''
+        expected = '''POLYGON((0.17986 -0.00000, 0.13490 -0.00000, 0.08993 -0.00000, 0.04497 -0.00000, 0.00000 0.00000, 0.00000 0.04101, 0.00000 0.08202, 0.00000 0.12303, 0.00000 0.16404, 0.00000 0.20505, 0.00000 0.24606, 0.00000 0.28708, 0.04497 0.28708, 0.08993 0.28708, 0.13490 0.28708, 0.17987 0.28708, 0.17987 0.24606, 0.17987 0.20505, 0.17987 0.16404, 0.17986 0.12303, 0.17986 0.08202, 0.17986 0.04101, 0.17986 -0.00000, 0.17986 0.10000, 0.13490 0.10000, 0.08993 0.10000, 0.04497 0.10000, 0.00000 0.10000, 0.00000 0.14101, 0.00000 0.18202, 0.00000 0.22303, 0.00000 0.26404, 0.00000 0.30505, 0.00000 0.34606, 0.00000 0.38708, 0.04497 0.38708, 0.08993 0.38708, 0.13490 0.38708, 0.17987 0.38708, 0.17987 0.34606, 0.17987 0.30505, 0.17987 0.26404, 0.17987 0.22303, 0.17987 0.18202, 0.17986 0.14101, 0.17986 0.10000))'''
         self.assertEqual(poly, expected)
 
         # This is for checking purposes. It creates a .txt file that can be
@@ -522,9 +528,12 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_65(self):
         # multiFaultSource with infer_occur_rates=true
-        self.run_calc(case_65.__file__, 'job.ini')
+        self.run_calc(case_65.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_65.__file__, 'job.ini', hazard_calculation_id=hc_id)
         rates = self.calc.datastore['rup/occurrence_rate'][:]
-        aac(rates, [0.356675, 0.105361], atol=5e-7)
+        aac(rates, [0.105361, 0.356675], atol=5e-7)
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
@@ -533,7 +542,8 @@ class ClassicalTestCase(CalculatorTestCase):
         csm = self.calc.datastore['_csm']
         tmpname = general.gettemp()
         [src] = csm.src_groups[0].sources
-        src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
+        src._rupture_idxs = [
+            tuple(map(str, idxs)) for idxs in src.rupture_idxs]
         out = write_source_model(tmpname, csm.src_groups)
         self.assertEqual(out[0], tmpname)
         self.assertEqual(out[1], tmpname + '.hdf5')
@@ -602,15 +612,20 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_75(self):
+        # test for duplicated section IDs
+        with self.assertRaises(nrml.DuplicatedID):
+            self.run_calc(case_75.__file__, 'job.ini',
+                          source_model_logic_tree_file='wrong_ssmLT.xml')
+
         # test calculation with multi-fault
         self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
-        # test for duplicated section IDs
-        with self.assertRaises(nrml.DuplicatedID):
-            self.run_calc(case_75.__file__, 'job.ini',
-                          source_model_logic_tree_file='wrong_ssmLT.xml')
+        # test contexts
+        ctx = view('rup:ufc3mean_0', self.calc.datastore)
+        fname = general.gettemp(text_table(ctx, ext='org'))
+        self.assertEqualFiles('expected/context.org', fname)
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs

@@ -664,6 +664,13 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__call__).args[1:]
 
 
+def get_return_ip(receiver_host):
+    if receiver_host:
+        return socket.gethostbyname(receiver_host)
+    hostname = socket.gethostname()
+    return socket.gethostbyname(hostname)
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
@@ -792,16 +799,14 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        if self.distribute in ('no', 'processpool'):
+        if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = socket.gethostbyname(
-                config.dbserver.receiver_host or socket.gethostname())
+            self.return_ip = get_return_ip(config.dbserver.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
-        self.t0 = time.time()
 
     def log_percent(self):
         """
@@ -825,7 +830,6 @@ class Starmap(object):
         """
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
-            self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -919,9 +923,8 @@ class Starmap(object):
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
-        if nbytes > 1E5:
-            logging.info('Sent %d %s tasks, %s in %d seconds', len(self.tasks),
-                         self.name, humansize(nbytes), time.time() - self.t0)
+        logging.warning('Sent %d %s tasks, %s', len(self.tasks),
+                        self.name, humansize(nbytes))
 
         isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
@@ -1027,12 +1030,20 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
             break
 
 
+def logfinish(n, tot):
+    logging.info('Finished %d of %d jobs', n, tot)
+    return n + 1
+
+
 def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
+    tot = len(allargs)
+    logging.info('Running %d jobs', tot)
     allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {}  # sentinel -> process
+    n = 1
     while allargs:
         args = allargs.pop()
         proc = mp_context.Process(target=func, args=args)
@@ -1042,10 +1053,13 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             for finished in wait(procs):
                 procs[finished].join()
                 del procs[finished]
+                n = logfinish(n, tot)
+                
     while procs:
         for finished in wait(procs):
             procs[finished].join()
             del procs[finished]
+            n = logfinish(n, tot)
 
 
 def slurm_task(calc_dir: str, task_id: str):

@@ -34,8 +34,8 @@ def main(cmd,
     """
     if config.multi_user:
         user = getpass.getuser()
-        if user != config.dbserver.user:
-            sys.exit(f'Only user {config.dbserver.user} can start the dbserver '
+        if user != 'openquake':
+            sys.exit(f'Only user openquake can start the dbserver '
                      f'but you are {user}')
 
     if cmd == 'upgrade':

@@ -24,6 +24,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import contexts, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates)
+from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -118,9 +119,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # check disagg_by_src
         src_ids = decode(self.calc.datastore['mean_rates_by_src/src_id'][:])
-        self.assertEqual(src_ids, ['SSC-AS-001!KOR_c1_M1_1',
-                                   'SSC-AS-001!KOR_c1_M1_2',
-                                   'SSC-AS-001!KOR_c1_M1_3'])
+        self.assertEqual(src_ids, ['SSC-AS-001'])
 
     # NB: this test is sensitive to the lower cutoff for the rates
     # it produces a huge rate 103.6 for the minimum level, cut off at 19.5
@@ -316,8 +315,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(
-            ids, ['A!source_model_1', 'A!source_model_2', 'B'])
+        numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
 
     def test_case_18(self):
         # test classical with 2 gsims and 1 sample
@@ -334,7 +332,8 @@ hazard_uhs-std.csv
 
         # checking the mean rates
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
-        mean_rates = to_rates(mean_poes)
+        window = self.calc.datastore['oqparam'].investigation_time
+        mean_rates = to_rates(mean_poes, window)
         rates_by_source = self.calc.datastore[
             'mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
@@ -621,6 +620,13 @@ hazard_uhs-std.csv
         self.run_calc(case_68.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+        # checking reducing the logic tree to a single branch
+        oq = self.calc.oqparam
+        oq.smlt_branch = 'b01'
+        csm = readinput.get_composite_source_model(oq)
+        assert len(csm.src_groups) == 1
+        assert len(self.calc.csm.src_groups) == 4
 
     def test_case_68_bis(self):
         # extendModel with sampling and reduction to single source

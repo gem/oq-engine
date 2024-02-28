@@ -37,6 +37,7 @@ from openquake.hazardlib.source.multi_fault import MultiFaultSource
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2**16
 EPSILON = 1E-12
 source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -250,7 +251,6 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
 
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
@@ -562,14 +562,12 @@ class RuptureConverter(object):
             surface = geo.GriddedSurface.from_points_list(points)
         elif surface_node.tag.endswith('kiteSurface'):
             # single or multiple kite surfaces
-            profs = []
-            for surface_node in surface_nodes:
-                profs.append(self.geo_lines(surface_node))
-            if len(profs) < 2:
+            profs = [self.geo_lines(node) for node in surface_nodes]
+            if len(profs) == 1:  # there is a single surface_node
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
                     self.rupture_mesh_spacing, sec_id=sec_id)
-            else:
+            else:  # normally found in sections.xml
                 surfaces = []
                 for prof in profs:
                     surfaces.append(geo.KiteSurface.from_profiles(
@@ -1147,10 +1145,12 @@ class SourceConverter(RuptureConverter):
             with context(self.fname, node):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
+                for idx in idxs:
+                    assert U32(idx).max() < TWO16, idx
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
-                                   dic['mag'], dic['rake'],
+                                   mags, dic['rake'],
                                    self.investigation_time,
                                    self.infer_occur_rates)
             return mfs

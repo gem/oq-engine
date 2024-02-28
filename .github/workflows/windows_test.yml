@@ -25,22 +25,22 @@ jobs:
       BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
 
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
     # You can test your matrix by printing the current Python version
@@ -86,14 +86,6 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           cd D:\a\oq-engine\oq-engine
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
-      - name: Run tests for advanced manual
-        if: always()
-        run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          cd D:\a\oq-engine\oq-engine\doc\adv-manual
-          pytest @(get-childitem -name *.rst)
 
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         if: always()

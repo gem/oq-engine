@@ -39,7 +39,7 @@ class MRD01TestCase(unittest.TestCase):
         from openquake.calculators import base
 
         job_ini = os.path.join(CWD, 'expected', 'mrd', 'job.ini')
-        with logs.init('job', job_ini) as log:
+        with logs.init(job_ini) as log:
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
 

@@ -1,6 +1,0 @@
-#,,,,"bs1='', bs41='applyToSources = ""1""\napplyToBranches = ""SM2""'"
-branchset,branch,utype,uvalue,weight
-bs1,SM1,sourceModel,source_model_1.xml,5.000000E-01
-bs1,SM2,sourceModel,source_model_2.xml,5.000000E-01
-bs41,a3pt2b0pt8,abGRAbsolute,3.200000E+00 8.000000E-01,5.000000E-01
-bs41,a3b1,abGRAbsolute,3.000000E+00 1.000000E+00,5.000000E-01

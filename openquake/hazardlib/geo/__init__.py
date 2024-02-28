@@ -25,16 +25,16 @@ geographical primitives, such as :class:`~openquake.hazardlib.geo.point.Point`,
 :mod:`surface <openquake.hazardlib.geo.surface>` implementations and utility
 class :class:`~openquake.hazardlib.geo.nodalplane.NodalPlane`.
 """
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.multiline import MultiLine
-from openquake.hazardlib.geo.polygon import Polygon
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.geo.surface import ComplexFaultSurface
-from openquake.hazardlib.geo.surface import MultiSurface
-from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
-from openquake.hazardlib.geo.surface.gridded import GriddedSurface
-from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.geo import surface
+from openquake.hazardlib.geo.point import Point  # noqa
+from openquake.hazardlib.geo.line import Line  # noqa
+from openquake.hazardlib.geo.multiline import MultiLine  # noqa
+from openquake.hazardlib.geo.polygon import Polygon  # noqa
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh  # noqa
+from openquake.hazardlib.geo.surface import PlanarSurface  # noqa
+from openquake.hazardlib.geo.surface import SimpleFaultSurface  # noqa
+from openquake.hazardlib.geo.surface import ComplexFaultSurface  # noqa
+from openquake.hazardlib.geo.surface import MultiSurface  # noqa
+from openquake.hazardlib.geo.surface.kite_fault import KiteSurface  # noqa
+from openquake.hazardlib.geo.surface.gridded import GriddedSurface  # noqa
+from openquake.hazardlib.geo.nodalplane import NodalPlane  # noqa
+from openquake.hazardlib.geo import surface  # noqa

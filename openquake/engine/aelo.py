@@ -23,8 +23,8 @@ import sys
 import getpass
 import logging
 from openquake.baselib import config, sap
-from openquake.hazardlib import valid
-from openquake.commonlib import readinput, global_model_getter
+from openquake.hazardlib import valid, geo
+from openquake.commonlib import readinput
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -41,22 +41,31 @@ PRELIMINARY_MODEL_WARNING = (
     ' is under review and will be updated' ' during Year 3.')
 
 
-def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
+def get_params_from(inputs, mosaic_dir, exclude=()):
     """
-    :param inputs: a dictionary with lon, lat, vs30, siteid
+    :param inputs: a dictionary with sites, vs30, siteid
+    :param mosaic_dir: directory where the mosaic is located
 
-    Build the job.ini parameters for the given lon, lat extracting them
+    Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    getter = global_model_getter.GlobalModelGetter()
-    model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
-    ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+    mosaic_df = readinput.read_mosaic_df()
+    lonlats = valid.coordinates(inputs['sites'])
+    models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
+    if len(set(models)) > 1:
+        raise ValueError("The sites must all belong to the same model, got %s"
+                         % set(models))
+    lon, lat, _dep = lonlats[0]
+    if models[0] == '???':
+        raise ValueError(
+            f'Site at lon={lon} lat={lat} is not covered by any model!')
+    ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-    params['model'] = model
+    params['mosaic_model'] = models[0]
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
-        params['description'] += ' (%(lon)s, %(lat)s)' % inputs
+        params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['intensity_measure_types_and_levels'] = IMTLS
@@ -64,7 +73,8 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
-    params['sites'] = '%(lon)s %(lat)s' % inputs
+    params['sites'] = inputs['sites']
+    params['max_sites_disagg'] = '1'
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
     params['distance_bin_width'] = '20'
@@ -79,8 +89,7 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     else:
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
-
-    # params['cachedir'] = datastore.get_datadir()
+    params['export_dir'] = ''
     return params
 
 
@@ -94,7 +103,7 @@ def trivial_callback(
 def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
-         siteid: valid.simple_id,
+         siteid: str,
          job_owner_email=None,
          outputs_uri=None,
          jobctx=None,
@@ -104,7 +113,8 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
+    inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid)
+    warnings = []
     if jobctx is None:
         # in  testing mode create a new job context
         config.directory.mosaic_dir = os.path.join(
@@ -112,22 +122,22 @@ def main(lon: valid.longitude,
         dic = dict(calculation_mode='custom', description='AELO')
         [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
                                       None, getpass.getuser(), None)
+    else:
+        # in production mode update jobctx.params
+        try:
+            jobctx.params.update(get_params_from(
+                inputs, config.directory.mosaic_dir, exclude=['USA']))
+        except Exception as exc:
+            # This can happen for instance:
+            # - if no model covers the given coordinates.
+            # - if no ini file was found
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                     exc=exc, warnings=warnings)
+            raise exc
 
-    if not config.directory.mosaic_dir:
-        sys.exit('mosaic_dir is not specified in openquake.cfg')
-    warnings = []
-    try:
-        jobctx.params.update(get_params_from(inputs))
-        if jobctx.params['model'] in PRELIMINARY_MODELS:
-            warnings.append(PRELIMINARY_MODEL_WARNING)
-        logging.root.handlers = []  # avoid breaking the logs
-    except Exception as exc:
-        # This can happen for instance:
-        # - if no model covers the given coordinates.
-        # - if no ini file was found
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=exc, warnings=warnings)
-        raise exc
+    if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
+        warnings.append(PRELIMINARY_MODEL_WARNING)
+    logging.root.handlers = []  # avoid breaking the logs
     try:
         engine.run_jobs([jobctx])
     except Exception as exc:

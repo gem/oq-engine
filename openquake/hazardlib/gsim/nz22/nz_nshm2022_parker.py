@@ -34,7 +34,14 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-
+from openquake.hazardlib.gsim.nz22.const import (
+    periods_AG20,
+    rho_Ws,
+    rho_Bs,
+    periods,
+    theta7s,
+    theta8s,
+)
 from openquake.hazardlib.gsim.parker_2020 import (
     ParkerEtAl2020SInter,
     _c0,
@@ -49,16 +56,24 @@ from openquake.hazardlib.gsim.parker_2020 import (
 
 def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
     """
-    Non-linear site term. The hard coded fnl = 0 for T >=3 is removed in the NZ version of the model (personal
-    communication with Grace).
+    Non-linear site term. The hard coded fnl = 0 for T >=3 is removed
+    in the NZ version of the model (personal communication with
+    Grace).
     """
     # fd for slab only
     pgar = np.exp(fp + fm + c0 + fd)
 
-    fnl = C["f4"] * (np.exp(C["f5"] * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"]))
-             - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
-
-    fnl *= np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
+    fnl = (
+        C["f4"]
+        * (
+            np.exp(
+                C["f5"]
+                * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"])
+            )
+            - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"]))
+        )
+        * np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
+    )
 
     return fnl
 
@@ -83,41 +98,45 @@ def get_stddevs(C, rrup, vs30):
         elif rrup[i] >= r2:
             phi_rv[i] = C["phi22"]
         else:
-            phi_rv[i] = ((C["phi22"] - C["phi21"])
-                         / (math.log(r2) - math.log(r1))) \
-                        * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
+            phi_rv[i] = (
+                (C["phi22"] - C["phi21"]) / (math.log(r2) - math.log(r1))
+            ) * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
 
         if vs30i <= v1:
-            phi_rv[i] += C["phi2V"] * \
-                         (math.log(r2 / max(r1, min(r2, rrup[i])))
-                          / math.log(r2 / r1))
+            phi_rv[i] += C["phi2V"] * (
+                math.log(r2 / max(r1, min(r2, rrup[i]))) / math.log(r2 / r1)
+            )
         elif vs30i < v2:
-            phi_rv[i] += C["phi2V"] * \
-                      ((math.log(v2 / min(v2, vs30i)))
-                       / math.log(v2 / v1)) * \
-                      (math.log(r2 / max(r1, min(r2, rrup[i])))
-                       / math.log(r2 / r1))
+            phi_rv[i] += (
+                C["phi2V"]
+                * ((math.log(v2 / min(v2, vs30i))) / math.log(v2 / v1))
+                * (
+                    math.log(r2 / max(r1, min(r2, rrup[i])))
+                    / math.log(r2 / r1)
+                )
+            )
 
     phi_tot = np.sqrt(phi_rv)
 
-    return [np.sqrt(C["Tau"] ** 2 + phi_tot ** 2), C["Tau"], phi_tot]
+    return [np.sqrt(C["Tau"] ** 2 + phi_tot**2), C["Tau"], phi_tot]
 
 
 def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
     """
-    This NZ specific modification. Get the nonlinear tau and phi terms for Parker's model.
-    This routine is based upon Peter Stafford suggested implementation shared on slack,
-    which is based on AG20 implementation.
+    This NZ specific modification. Get the nonlinear tau and phi terms
+    for Parker's model.  This routine is based upon Peter Stafford
+    suggested implementation shared on slack, which is based on AG20
+    implementation.
     """
     period = imt.period
     # Linear Tau
-    tau_lin = C["Tau"]*np.ones(vs30.shape)
-    tau_lin_pga = C_PGA["Tau"]*np.ones(vs30.shape)
+    tau_lin = C["Tau"] * np.ones(vs30.shape)
+    tau_lin_pga = C_PGA["Tau"] * np.ones(vs30.shape)
 
     r1 = 200.0
     r2 = 500.0
 
-    #Linear Phi
+    # Linear Phi
     phi2_rv = np.zeros(len(vs30))
     phi2_rv_pga = np.zeros(len(vs30))
     for i, vs30i in enumerate(vs30):
@@ -128,10 +147,13 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
             phi2_rv[i] = C["phi22"]
             phi2_rv_pga[i] = C_PGA["phi22"]
         else:
-            phi2_rv[i] = (((C["phi22"] - C["phi21"]) / (math.log(r2) - math.log(r1))) *
-                          (math.log(rrup[i]) - math.log(r1)) + C["phi21"])
-            phi2_rv_pga[i] = (((C_PGA["phi22"] - C_PGA["phi21"]) / (math.log(r2) - math.log(r1))) *
-                              (math.log(rrup[i]) - math.log(r1)) + C_PGA["phi21"])
+            phi2_rv[i] = (
+                (C["phi22"] - C["phi21"]) / (math.log(r2) - math.log(r1))
+            ) * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
+            phi2_rv_pga[i] = (
+                (C_PGA["phi22"] - C_PGA["phi21"])
+                / (math.log(r2) - math.log(r1))
+            ) * (math.log(rrup[i]) - math.log(r1)) + C_PGA["phi21"]
 
     phi_lin = np.sqrt(phi2_rv)
     phi_lin_pga = np.sqrt(phi2_rv_pga)
@@ -140,20 +162,6 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
     phi_amp = 0.3
     phi_B = np.sqrt(phi_lin**2 - phi_amp**2)
     phi_B_pga = np.sqrt(phi_lin_pga**2 - phi_amp**2)
-
-    # correlation coefficients from AG20
-    periods_AG20 = [
-        0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5,
-        0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0
-    ]
-    rho_Ws = [
-        1.0, 0.99, 0.99, 0.97, 0.95, 0.92, 0.9, 0.87, 0.84, 0.82, 0.74, 0.66,
-        0.59, 0.5, 0.41, 0.33, 0.3, 0.27, 0.25, 0.22, 0.19, 0.17, 0.14, 0.1
-    ]
-    rho_Bs = [
-        1.0, 0.99, 0.99, 0.985, 0.98, 0.97, 0.96, 0.94, 0.93, 0.91, 0.86, 0.8,
-        0.78, 0.73, 0.69, 0.62, 0.56, 0.52, 0.495, 0.43, 0.4, 0.37, 0.32, 0.28
-    ]
 
     rho_W_itp = interp1d(np.log(periods_AG20), rho_Ws)
     rho_B_itp = interp1d(np.log(periods_AG20), rho_Bs)
@@ -164,27 +172,39 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
         rhoW = rho_W_itp(np.log(period))
         rhoB = rho_B_itp(np.log(period))
 
-    f2 = (
-        C["f4"] * (np.exp(C["f5"] * (np.minimum(vs30, CONSTANTS["vref_fnl"]) -CONSTANTS["Vb"])) -
-                     math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
+    f2 = C["f4"] * (
+        np.exp(
+            C["f5"]
+            * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"])
+        )
+        - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"]))
     )
     f3 = CONSTANTS["f3"]
 
     partial_f_pga = f2 * pgar / (pgar + f3)
-    partial_f_pga = partial_f_pga*np.ones(vs30.shape)
+    partial_f_pga = partial_f_pga * np.ones(vs30.shape)
 
     # nonlinear variance components
-    phi2_NL = phi_lin**2 + partial_f_pga**2 * phi_B_pga**2 + 2 * partial_f_pga * phi_B_pga*phi_B * rhoW
-    tau2_NL = tau_lin**2 + partial_f_pga**2 * tau_lin_pga**2 + 2 * partial_f_pga * tau_lin_pga*tau_lin * rhoB
+    phi2_NL = (
+        phi_lin**2
+        + partial_f_pga**2 * phi_B_pga**2
+        + 2 * partial_f_pga * phi_B_pga * phi_B * rhoW
+    )
+    tau2_NL = (
+        tau_lin**2
+        + partial_f_pga**2 * tau_lin_pga**2
+        + 2 * partial_f_pga * tau_lin_pga * tau_lin * rhoB
+    )
 
     return [np.sqrt(tau2_NL + phi2_NL), np.sqrt(tau2_NL), np.sqrt(phi2_NL)]
 
 
-def get_sigma_epistemic (trt, region, imt):
+def get_sigma_epistemic(trt, region, imt):
     """
-    This is a NZ-NSHM-2022 specific modification. Currently the epistemic sigma model is
-    applied to Global model only. As for NZ we are using only the global model.
-    Henec below the coefficients are just for the global model.
+    This is a NZ-NSHM-2022 specific modification. Currently the
+    epistemic sigma model is applied to Global model only. As for NZ
+    we are using only the global model.  Henec below the coefficients
+    are just for the global model.
     """
 
     if region is None:
@@ -205,9 +225,11 @@ def get_sigma_epistemic (trt, region, imt):
         elif (period >= 0.01) & (period < T1):
             sigma_epi = sigma_epsilon1
         elif (period >= T1) & (period < T2):
-            per_ratio1 = np.log(period/T1)
-            per_ratio2 = np.log(T2/T1)
-            sigma_epi = sigma_epsilon1 - (sigma_epsilon1 - sigma_epsilon2)*(per_ratio1/per_ratio2)
+            per_ratio1 = np.log(period / T1)
+            per_ratio2 = np.log(T2 / T1)
+            sigma_epi = sigma_epsilon1 - (sigma_epsilon1 - sigma_epsilon2) * (
+                per_ratio1 / per_ratio2
+            )
         else:
             sigma_epi = sigma_epsilon2
 
@@ -218,28 +240,25 @@ def get_sigma_epistemic (trt, region, imt):
 
 def get_backarc_term(trt, imt, ctx):
     """
-    This is a NZ NSHM-2022 specific modification. The backarc correction factors to be applied
-    with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab
-    events. It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016)
-    Earthquake Spectra. The correction is applied only for sites in the backarc region as function of distance.
+    This is a NZ NSHM-2022 specific modification. The backarc
+    correction factors to be applied with the ground motion
+    prediction. In the NZ context, it is applied to only subduction
+    intraslab events. It is essentially the correction factor taken
+    from BC Hydro 2016. Abrahamson et al. (2016) Earthquake
+    Spectra. The correction is applied only for sites in the backarc
+    region as function of distance.
     """
-
-    periods =  [0.0, 0.02, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]
-    theta7s = [1.0988, 1.0988, 1.2536, 1.4175, 1.3997, 1.3582, 1.1648, 0.994, 0.8821, 0.7046, 0.5799, 0.5021, 0.3687, 0.1746,
-       -0.082 , -0.2821, -0.4108, -0.4466, -0.4344, -0.4368, -0.4586, -0.4433, -0.4828]
-    theta8s = [-1.42, -1.42, -1.65, -1.8 , -1.8 , -1.69, -1.49, -1.3 , -1.18, -0.98, -0.82, -0.7 , -0.54, -0.34, -0.05,  0.12,  0.25,  0.3,
-        0.3,  0.3,  0.3,  0.3,  0.3]
-    period  = imt.period
-
+    period = imt.period
     w_epi_factor = 1.008
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    # Note that there is no correction for PGV.
+    # Hence, I make theta7 and theta8 as 0 for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
-    elif (period >= 0 and period < 0.02):
+    elif period >= 0 and period < 0.02:
         theta7 = 1.0988
         theta8 = -1.42
     else:
@@ -254,8 +273,8 @@ def get_backarc_term(trt, imt, ctx):
         f_faba = np.zeros_like(dists)
         fixed_dists = dists[backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[backarc] = theta7 + theta8*np.log(fixed_dists/40.0)
-        return f_faba*w_epi_factor
+        f_faba[backarc] = theta7 + theta8 * np.log(fixed_dists / 40.0)
+        return f_faba * w_epi_factor
     else:
         f_faba = np.zeros_like(dists)
         return f_faba
@@ -263,21 +282,33 @@ def get_backarc_term(trt, imt, ctx):
 
 class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     """
-    Implements NZ NSHM 2022 Soil nonlinearity sigma model modification of ParkerEtAl2020SInter for NZ NSHM 2022.
+    Implements NZ NSHM 2022 Soil nonlinearity sigma model modification
+    of ParkerEtAl2020SInter for NZ NSHM 2022.
     """
 
-    def __init__(self, region=None, saturation_region=None, basin=None,
-                 sigma_mu_epsilon=0.0, modified_sigma=False,
-                 **kwargs):
+    def __init__(
+        self,
+        region=None,
+        saturation_region=None,
+        basin=None,
+        sigma_mu_epsilon=0.0,
+        modified_sigma=False,
+        **kwargs,
+    ):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
-        super().__init__(region=region, saturation_region=saturation_region,
-                         basin=basin, sigma_mu_epsilon=sigma_mu_epsilon, modified_sigma=modified_sigma, **kwargs)
+        super().__init__(
+            region=region,
+            saturation_region=saturation_region,
+            basin=basin,
+            sigma_mu_epsilon=sigma_mu_epsilon,
+            modified_sigma=modified_sigma,
+            **kwargs,
+        )
         self.modified_sigma = modified_sigma
         self.sigma_mu_epsilon = sigma_mu_epsilon
-
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -296,37 +327,63 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             else:
                 m_b = self.MB_REGIONS["default"]
             c0, c0_pga = _c0(
-                trt, self.region, self.saturation_region, C, C_PGA)
+                trt, self.region, self.saturation_region, C, C_PGA
+            )
             fm, fm_pga = _magnitude_scaling(
-                self.SUFFIX, C, C_PGA, ctx.mag, m_b)
+                self.SUFFIX, C, C_PGA, ctx.mag, m_b
+            )
             fp, fp_pga = _path_term(
-                trt, self.region, self.basin, self.SUFFIX,
-                C, C_PGA, ctx.mag, ctx.rrup, m_b)
-            fp_pga = fp_pga + get_backarc_term(trt, PGA(), ctx)  # The backarc term applied to path function for reference rock PGA.
+                trt,
+                self.region,
+                self.basin,
+                self.SUFFIX,
+                C,
+                C_PGA,
+                ctx.mag,
+                ctx.rrup,
+                m_b,
+            )
+            fp_pga = (
+                fp_pga + get_backarc_term(trt, PGA(), ctx)
+            )  # The backarc term applied to path function for reference rock PGA.
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
             fb = _basin_term(self.region, self.basin, C, ctx)
             flin = _linear_amplification(self.region, C, ctx.vs30)
-            fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
-                                   fd_pga)
-            fba = get_backarc_term(trt, imt, ctx) # The backarc correction factor from BC Hydro at individual period.
+            fnl = _non_linear_term(
+                C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga, fd_pga
+            )
+            fba = get_backarc_term(
+                trt, imt, ctx
+            )  # The backarc correction factor from BC Hydro at individual period.
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             mean[m] = fp + fnl + fb + flin + fm + c0 + fd + fba
             if self.sigma_mu_epsilon:
-                # Apply an epistmic adjustment factor. Currently, its applied to only global model.
-                mean[m] += (self.sigma_mu_epsilon * get_sigma_epistemic(trt, self.region, imt))
+                # Apply an epistmic adjustment factor.
+                # Currently, its applied to only global model.
+                mean[m] += self.sigma_mu_epsilon * get_sigma_epistemic(
+                    trt, self.region, imt
+                )
             # The default sigma is modified sigma that accounts for soil nonliearity.
             if self.modified_sigma:
-                pgar = np.exp(fp_pga + fm_pga + c0_pga + fd_pga) # Note that the backarc correction is already applied in f_pga.
-                sig[m], tau[m], phi[m] = get_nonlinear_stddevs(C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30)
+                pgar = np.exp(
+                    fp_pga + fm_pga + c0_pga + fd_pga
+                )  # Note that the backarc correction is already applied in f_pga.
+                sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
+                    C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30
+                )
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
 
-
-    # Note that in these set of coefficients (EQS paper) c6 for interface and f4 and f5 have changed. Also as mentioned by Grace in her email the f4 coefficients are idenyical for interface and slab models.
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    # Note that in these set of coefficients (EQS paper) c6 for
+    # interface and f4 and f5 have changed. Also as mentioned by Grace
+    # in her email the f4 coefficients are idenyical for interface and
+    # slab models.
+    COEFFS = CoeffsTable(
+        sa_damping=5,
+        table="""\
     IMT    c0    AK_c0        Aleutian_c0  Cascadia_c0 CAM_N_c0     CAM_S_c0    JP_Pac_c0    JP_Phi_c0    SA_N_c0     SA_S_c0      TW_E_c0      TW_W_c0     c0slab AK_c0slab Aleutian_c0slab Cascadia_c0slab CAM_c0slab JP_c0slab SA_N_c0slab SA_S_c0slab TW_c0slab  c1     c1slab b4   a0        AK_a0     CAM_a0    JP_a0     SA_a0     TW_a0     a0slab    AK_a0slab Cascadia_a0slab CAM_a0slab JP_a0slab SA_a0slab TW_a0slab c4     c5    c6    c4slab c5slab c6slab d      m      db   V2  JP_s1  TW_s1  s2     AK_s2  Cascadia_s2 JP_s2  SA_s2  TW_s2  f4       f4slab   f5       J_e1   J_e2   J_e3  C_e1   C_e2   C_e3   del_None del_Seattle Tau   phi21 phi22  phi2V  VM phi2S2S,0 a1    phi2SS,1 phi2SS,2 a2
     pgv    8.097 9.283796298  8.374796298  7.728       7.046899908  7.046899908 8.772125851  7.579125851  8.528671414 8.679671414  7.559846279  7.559846279 13.194 12.79     13.6            12.874          12.81      13.248    12.754      12.927      13.516    -1.661 -2.422  0.1 -0.00395  -0.00404  -0.00153  -0.00239  -0.000311 -0.00514  -0.0019   -0.00238  -0.00109        -0.00192   -0.00215  -0.00192   -0.00366  1.336 -0.039 1.844 1.84  -0.05   0.8    0.2693 0.0252 67  850 -0.738 -0.454 -0.601 -1.031 -0.671      -0.738 -0.681 -0.59  -0.31763 -0.31763 -0.0052  -0.137  0.137  0.091 0      0.115  0.068 -0.115    0           0.477 0.348 0.288 -0.179 423 0.142     0.047 0.153    0.166    0.011
     pga    4.082 4.458796298  3.652796298  3.856       2.875899908  2.875899908 5.373125851  4.309125851  5.064671414 5.198671414  3.032846279  3.032846279  9.907  9.404     9.912           9.6             9.58      10.145     9.254       9.991      10.071    -1.662 -2.543  0.1 -0.00657  -0.00541  -0.00387  -0.00862  -0.00397  -0.00787  -0.00255  -0.00227  -0.00354        -0.00238   -0.00335  -0.00238   -0.00362  1.246 -0.021 1.128 1.84  -0.05   0.4    0.3004 0.0314 67 1350 -0.586 -0.44  -0.498 -0.785 -0.572      -0.586 -0.333 -0.44  -0.44169 -0.44169 -0.0052   0      0      1     0      0      1      0        0           0.48  0.396 0.565 -0.18  423 0.221     0.093 0.149    0.327    0.068
@@ -354,89 +411,204 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     5.0    0.465 1.131796298 -0.601203702  0.223      -0.491100092 -0.491100092 1.601125851  0.183125851  1.483671414 1.665671414  0.014846279  0.014846279  3.833  3.142     4.592           3.547           3.502      3.814     3.038       3.038       4.229    -1.504 -1.998  0.1 -0.0016   -0.00125  -0.000895 -0.002    -0.000919 -0.00182  -0.000564 -0.000507 -0.000929       -0.000503  -0.00072  -0.000503  -0.000822 1.564 -0.048 1.21  2.131 -0.154  0.715  0      0       0  760 -0.592 -0.353 -0.506 -1.233 -0.421      -0.592 -0.621 -0.536 -0.03000 -0.03000 -0.0031  -0.642  0.63   0.215 0      0.45   0.321 -0.45     0.132       0.492 0.298 0.298  0     415 0.181     0.005 0.132    0.132    0.014
     7.5    0.078 0.758796298 -1.137203702 -0.162      -0.837100092 -0.837100092 1.270125851 -0.143874149  1.175671414 1.366671414 -0.446153721 -0.446153721  3.132  2.391     3.65            2.84            2.821      3.152     2.368       2.368       3.554    -1.569 -2.019  0.1 -0.000766 -0.000519 -0.000371 -0.000828 -0.000382 -0.000755 -0.000234 -0.00021  -0.000385       -0.000209  -0.000299 -0.000209  -0.000341 1.638 -0.059 1.2   2.185 -0.154  0.73   0      0       0  760 -0.494 -0.311 -0.418 -1.147 -0.357      -0.52  -0.52  -0.444 -0.00500 -0.00500 -0.0031  -0.524  0.306  0.175 0      0.406  0.312 -0.35     0.15        0.492 0.254 0.254  0     419 0.181    -0.016 0.113    0.113    0.016
     10.0   0.046 0.708796298 -1.290203702 -0.193      -0.864100092 -0.864100092 1.364125851 -0.195874149  1.271671414 1.462671414 -0.473153721 -0.473153721  2.72   2.031     2.95            2.422           2.408      2.791     1.939       1.939       3.166    -1.676 -2.047  0.1  0         0         0         0         0         0         0         0         0               0          0         0          0        1.69  -0.067 1.194 2.35  -0.154  0.745  0      0       0  760 -0.395 -0.261 -0.321 -1.06  -0.302      -0.395 -0.42  -0.352  0.00000  0.00000 -0.0031  -0.327  0.182  0.121 0      0.345  0.265 -0.331    0.117       0.492 0.231 0.231  0     427 0.181     0.04  0.11     0.11     0.017
-    """)
+    """,
+    )
+
 
 class NZNSHM2022_ParkerEtAl2020SInterB(NZNSHM2022_ParkerEtAl2020SInter):
     """
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
+    REQUIRES_SITES_PARAMETERS = {"vs30", "z2pt5"}
 
 
 class NZNSHM2022_ParkerEtAl2020SSlab(NZNSHM2022_ParkerEtAl2020SInter):
     """
     Modifications for subduction slab.
     """
+
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     # slab also requires hypo_depth
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth"}
 
     # constant table suffix
     SUFFIX = "slab"
 
-    MB_REGIONS = {"Aleutian": 7.98, "AK": 7.2, "Cascadia": 7.2,
-                  "CAM_S": 7.6, "CAM_N": 7.4, "JP_Pac": 7.65, "JP_Phi": 7.55,
-                  "SA_N": 7.3, "SA_S": 7.25, "TW_W": 7.7, "TW_E": 7.7,
-                  "default": 7.6}
+    MB_REGIONS = {
+        "Aleutian": 7.98,
+        "AK": 7.2,
+        "Cascadia": 7.2,
+        "CAM_S": 7.6,
+        "CAM_N": 7.4,
+        "JP_Pac": 7.65,
+        "JP_Phi": 7.55,
+        "SA_N": 7.3,
+        "SA_S": 7.25,
+        "TW_W": 7.7,
+        "TW_E": 7.7,
+        "default": 7.6,
+    }
 
 
 class NZNSHM2022_ParkerEtAl2020SSlabB(NZNSHM2022_ParkerEtAl2020SSlab):
     """
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
+    REQUIRES_SITES_PARAMETERS = {"vs30", "z2pt5"}
 
 
-add_alias('NZNSHM2022_ParkerEtAl2020SInterAleutian', NZNSHM2022_ParkerEtAl2020SInter,
-          region="AK", saturation_region="Aleutian")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterAlaska', NZNSHM2022_ParkerEtAl2020SInter,
-          region="AK")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterCAMN', NZNSHM2022_ParkerEtAl2020SInter,
-          region="CAM", saturation_region="CAM_N")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterCAMS', NZNSHM2022_ParkerEtAl2020SInter,
-          region="CAM", saturation_region="CAM_S")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterSAN', NZNSHM2022_ParkerEtAl2020SInter,
-          region="SA", saturation_region="SA_N")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterSAS', NZNSHM2022_ParkerEtAl2020SInter,
-          region="SA", saturation_region="SA_S")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterTaiwanE', NZNSHM2022_ParkerEtAl2020SInter,
-          region="TW", saturation_region="TW_E")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterTaiwanW', NZNSHM2022_ParkerEtAl2020SInter,
-          region="TW", saturation_region="TW_W")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterCascadia', NZNSHM2022_ParkerEtAl2020SInterB,
-          region="Cascadia")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterCascadiaOut', NZNSHM2022_ParkerEtAl2020SInterB,
-          region="Cascadia", basin="out")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterCascadiaSeattle', NZNSHM2022_ParkerEtAl2020SInterB,
-          region="Cascadia", basin="Seattle")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterJapanPac', NZNSHM2022_ParkerEtAl2020SInterB,
-          region="JP", saturation_region="JP_Pac")
-add_alias('NZNSHM2022_ParkerEtAl2020SInterJapanPhi', NZNSHM2022_ParkerEtAl2020SInterB,
-          region="JP", saturation_region="JP_Phi")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabAleutian', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="AK", saturation_region="Aleutian")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabAlaska', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="AK")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabCAMN', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="CAM", saturation_region="CAM_N")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabCAMS', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="CAM", saturation_region="CAM_S")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabSAN', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="SA", saturation_region="SA_N")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabSAS', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="SA", saturation_region="SA_S")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabTaiwanE', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="TW", saturation_region="TW_E")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabTaiwanW', NZNSHM2022_ParkerEtAl2020SSlab,
-          region="TW", saturation_region="TW_W")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabCascadia', NZNSHM2022_ParkerEtAl2020SSlabB,
-          region="Cascadia")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabCascadiaOut', NZNSHM2022_ParkerEtAl2020SSlabB,
-          region="Cascadia", basin="out")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabCascadiaSeattle', NZNSHM2022_ParkerEtAl2020SSlabB,
-          region="Cascadia", basin="Seattle")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabJapanPac', NZNSHM2022_ParkerEtAl2020SSlabB,
-          region="JP", saturation_region="JP_Pac")
-add_alias('NZNSHM2022_ParkerEtAl2020SSlabJapanPhi', NZNSHM2022_ParkerEtAl2020SSlabB,
-          region="JP", saturation_region="JP_Phi")
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterAleutian",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="AK",
+    saturation_region="Aleutian",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterAlaska",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="AK",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterCAMN",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="CAM",
+    saturation_region="CAM_N",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterCAMS",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="CAM",
+    saturation_region="CAM_S",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterSAN",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="SA",
+    saturation_region="SA_N",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterSAS",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="SA",
+    saturation_region="SA_S",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterTaiwanE",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="TW",
+    saturation_region="TW_E",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterTaiwanW",
+    NZNSHM2022_ParkerEtAl2020SInter,
+    region="TW",
+    saturation_region="TW_W",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterCascadia",
+    NZNSHM2022_ParkerEtAl2020SInterB,
+    region="Cascadia",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterCascadiaOut",
+    NZNSHM2022_ParkerEtAl2020SInterB,
+    region="Cascadia",
+    basin="out",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterCascadiaSeattle",
+    NZNSHM2022_ParkerEtAl2020SInterB,
+    region="Cascadia",
+    basin="Seattle",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterJapanPac",
+    NZNSHM2022_ParkerEtAl2020SInterB,
+    region="JP",
+    saturation_region="JP_Pac",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SInterJapanPhi",
+    NZNSHM2022_ParkerEtAl2020SInterB,
+    region="JP",
+    saturation_region="JP_Phi",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabAleutian",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="AK",
+    saturation_region="Aleutian",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabAlaska",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="AK",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabCAMN",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="CAM",
+    saturation_region="CAM_N",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabCAMS",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="CAM",
+    saturation_region="CAM_S",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabSAN",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="SA",
+    saturation_region="SA_N",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabSAS",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="SA",
+    saturation_region="SA_S",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabTaiwanE",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="TW",
+    saturation_region="TW_E",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabTaiwanW",
+    NZNSHM2022_ParkerEtAl2020SSlab,
+    region="TW",
+    saturation_region="TW_W",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabCascadia",
+    NZNSHM2022_ParkerEtAl2020SSlabB,
+    region="Cascadia",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabCascadiaOut",
+    NZNSHM2022_ParkerEtAl2020SSlabB,
+    region="Cascadia",
+    basin="out",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabCascadiaSeattle",
+    NZNSHM2022_ParkerEtAl2020SSlabB,
+    region="Cascadia",
+    basin="Seattle",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabJapanPac",
+    NZNSHM2022_ParkerEtAl2020SSlabB,
+    region="JP",
+    saturation_region="JP_Pac",
+)
+add_alias(
+    "NZNSHM2022_ParkerEtAl2020SSlabJapanPhi",
+    NZNSHM2022_ParkerEtAl2020SSlabB,
+    region="JP",
+    saturation_region="JP_Phi",
+)

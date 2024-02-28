@@ -21,8 +21,8 @@ import re
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 6):
-    sys.exit('Sorry, Python < 3.6 is not supported')
+if sys.version_info < (3, 9):
+    sys.exit('Sorry, Python < 3.9 is not supported')
 
 
 def get_version():
@@ -65,7 +65,7 @@ install_requires = [
     'shapely >=1.7',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django >=3.2',
+    'django >=4.2, <5',
     'matplotlib',
     'requests >=2.20',
     'toml >=0.10.2',

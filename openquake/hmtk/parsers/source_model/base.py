@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -57,18 +57,24 @@ class BaseSourceModelParser(object):
     """
     A base class for a Source Model Parser
     """
+
     def __init__(self, input_file):
         """
         Initialise the object and check input file existance
         """
         self.input_file = input_file
         if not os.path.exists(self.input_file):
-            raise IOError('File not found')
+            raise IOError("File not found")
 
     @abc.abstractmethod
-    def read_file(self, identifier, mfd_spacing=0.1,
-                  simple_mesh_spacing=1.0, complex_mesh_spacing=4.0,
-                  area_discretization=10.):
+    def read_file(
+        self,
+        identifier,
+        mfd_spacing=0.1,
+        simple_mesh_spacing=1.0,
+        complex_mesh_spacing=4.0,
+        area_discretization=10.0,
+    ):
         """
         Return an instance of the class :class:`mtkSourceModel`
         """

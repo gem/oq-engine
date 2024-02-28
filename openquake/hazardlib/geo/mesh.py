@@ -410,12 +410,13 @@ class Mesh(object):
             on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+        sbb = geo_utils.get_spherical_bounding_box(
+            self.lons.flatten(), self.lats.flatten())
+        proj = geo_utils.OrthographicProjection(*sbb)
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flat, self.lats.flat)).copy()
+        coords = numpy.transpose(proj(self.lons.flatten(), self.lats.flatten()))
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
@@ -527,8 +528,9 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+        sbb = geo_utils.get_spherical_bounding_box(
+            self.lons.flatten(), self.lats.flatten())
+        proj = geo_utils.OrthographicProjection(*sbb)
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
             lats = self.lats.reshape(len(self.lats), 1)
