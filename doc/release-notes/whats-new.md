@@ -3,10 +3,6 @@ pull requests. It is aimed to users wanting the latest features, bug fixes
 and maximum performance. Users valuing stability may want to stay with
 the LTS release instead (currently at version 3.16.8).
 
-NB: users wanting to perform classical/disaggregation calculations
-with the USA model are strongly adviced to upgrade, since the
-performance improvements are massive (measured up to 40x).
-
 The complete set of changes is listed in the changelog:
 
 https://github.com/gem/oq-engine/blob/engine-3.19/debian/changelog
@@ -43,12 +39,12 @@ We improved the `disagg_by_src` functionality and now it does not generate
 one per task per source anymore. That was very inefficient in models with
 thousands of sources.
 
-Chris di Caprio pointed out that the engine was producing hazard curves
-incorrect in the ultra-high intensity region (around 10g), due to a numerical
-error. It has been fixed.
+Chris di Caprio pointed out that the engine was producing incorrect
+hazard curves in the ultra-high intensity region (around 10g), due to
+a numerical error that we fixed.
 
-The was a serious bug with the ordering of the IMTs causing in some
-situation the generation of uniform hazard spectra with two-peaks.
+There was a serious bug with the ordering of the IMTs causing (in some
+situation) the generation of uniform hazard spectra with two-peaks.
 The bug was introduced in version 3.17 and it is now finally solved.
 
 The classical calculation has been extended to perform aftershock calculations
@@ -59,8 +55,8 @@ given here:
 
 https://github.com/gem/oq-engine/blob/engine-3.19/openquake/qa_tests_data/aftershock/case_1/job.ini
 
-There is some checking for errors, like having `source_id` or `rup_id`
-values that do not exist in the hazard model.
+There is some checking for errors, for instance if there are
+source_id` or `rup_id` values that do not exist in the hazard model.
 
 The experimental `AftershockCalculator` has been removed since its
 functionality has been subsumed inside the standard classical
@@ -72,7 +68,6 @@ Event based improvements
 It is now possible to specify a `geometry_file` in the job.ini, containing
 a polygon or a multipolygon, and use it to discard the ruptures outside
 the region.
-The calculation_mode=ebrisk was not honored when starting from GMFs
 
 We fixed the exporting and then reimporting of GMFs in HDF5 format,
 a feature crucial for producing a curated set of events and GMFs.
@@ -96,8 +91,6 @@ Erika Schiappapietra. The magnitude scaling factor formula used is
 valid for Mb <= Mw < 5.8, but the engine was using it for Mb < Mw < 5.8, i.e.
 missing the case Mw == Mb.
 
-We fixed a bug in the calculation of Rjb for gridded surfaces.
-
 Thomas Bornstein reported an error in the implementation of
 the WongEtAl2022 GMPEs, which we fixed.
 
@@ -118,6 +111,8 @@ correlation coefficients larger than 1.0 for IMT pairs like {PGA, SA(0.1)}
 (this is an artifact of the engine implementation that treats PGA as
 SA(0.05)).
 
+We fixed a bug in the calculation of Rjb for gridded surfaces.
+
 We improved the algorithm used to generate kite surfaces, causing sligthly
 different geometries and therefore slightly different hazard curves.
 
@@ -133,12 +128,12 @@ the body of the CSV files.
 
 We extended the exposure so that it is possible to map different fields
 to the same CSV column, as in this example:
-
+```xml
   <exposureFields>
     <field oq="night" input="total_occupants" />
     <field oq="residents" input="total_occupants" />
   </exposureFields>
-
+```
 The reason is that depending on the field name ("night" vs "residents")
 the engine can use a different algorithm even if the underlying data
 are the same.
