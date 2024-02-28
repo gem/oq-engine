@@ -142,6 +142,7 @@ def _build3(llenghts, azimuths, lam0, phi0, coos):
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean_weighted(azimuths, llenghts) % 360
+
     flatlons, flatlats = coos[:, :, 0].flatten(), coos[:, :, 1].flatten()
     olon, olat, soidx = get_origin(lam0, phi0, flatlons, flatlats, avg_azim)
 
