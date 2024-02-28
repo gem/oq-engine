@@ -269,20 +269,14 @@ def decode_lol(lol):
         return lol
 
 
-def extract_cols(datagrp, sel, slc, columns):
+def extract_cols(datagrp, sel, slcs, columns):
     """
     :param datagrp: something like and HDF5 data group
     :param sel: dictionary column name -> value specifying a selection
-    :param slc: a slice object specifying the rows considered
+    :param slc: slices specifying the rows considered
     :param columns: the full list of column names
     :returns: a dictionary col -> array of values
     """
-    first = columns[0]
-    nrows = len(datagrp[first])
-    if slc.start is None and slc.stop is None:  # split in slices
-        slcs = general.gen_slices(0, nrows, MAX_ROWS)
-    else:
-        slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
     for slc in slcs:
         if sel:
@@ -374,12 +368,13 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
-    def read_df(self, key, index=None, sel=(), slc=slice(None)):
+    def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
         """
         :param key: name of the structured dataset
         :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
         :param slc: slice object to extract a slice of the dataset
+        :param slices: an array of shape (N, 2) with start,stop indices
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
@@ -389,7 +384,13 @@ class File(h5py.File):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = extract_cols(dset, sel, slc, columns)
+            if len(slices):
+                slcs = [slice(s0, s1) for s0, s1 in slices]
+            elif slc.start is None and slc.stop is None:  # split in slices
+                slcs = general.gen_slices(0, len(dset[columns[0]]), MAX_ROWS)
+            else:
+                slcs = [slc]
+            dic = extract_cols(dset, sel, slcs, columns)
             if index is None:
                 return pandas.DataFrame(dic)
             else:
