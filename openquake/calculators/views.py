@@ -1647,6 +1647,10 @@ def view_gh3(token, dstore):
 
 @view.add('exposure_by_country')
 def view_exposure_by_country(token, dstore):
+    """
+    Returns a table with the number of assets per country. The countries
+    are defined as in the file geoBoundariesCGAZ_ADM0.shp
+    """
     geom_df = readinput.read_global_risk_df()
     assetcol = dstore['assetcol']
     lonlats = numpy.zeros((len(assetcol), 2), F32)
