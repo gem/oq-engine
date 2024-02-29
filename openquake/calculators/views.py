@@ -39,7 +39,7 @@ from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser
 )
-from openquake.commonlib import util
+from openquake.commonlib import util, readinput
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
@@ -1643,3 +1643,19 @@ def view_gh3(token, dstore):
     # print(sorted(cnt))
     return numpy.array([stats('gh3', cnt)],
                        dt('kind counts mean stddev min max'))
+
+
+@view.add('exposure_by_country')
+def view_exposure_by_country(token, dstore):
+    geom_df = readinput.read_global_risk_df()
+    assetcol = dstore['assetcol']
+    lonlats = numpy.zeros((len(assetcol), 2), F32)
+    lonlats[:, 0] = assetcol['lon']
+    lonlats[:, 1] = assetcol['lat']
+    codes = geo.utils.geolocate(lonlats, geom_df)
+    uni, cnt = numpy.unique(codes, return_counts=True)
+    out = numpy.zeros(len(uni), dt('country num_assets'))
+    out['country'] = uni
+    out['num_assets'] = cnt
+    out.sort(order='num_assets')
+    return out
