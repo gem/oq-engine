@@ -568,12 +568,13 @@ class ReadGeometryTestCase(unittest.TestCase):
         mosaic_dir = os.path.dirname(mosaic.__file__)
         geom_df = readinput.read_mosaic_df()
         self.assertEqual(len(geom_df), 30)
-        sites_df = pandas.read_csv(os.path.join(mosaic_dir, 'scenarios.csv'),
-                                   usecols=['lat', 'lon'])
+        sites_df = pandas.read_csv(
+            os.path.join(mosaic_dir, 'famous_ruptures.csv'),
+            usecols=['lat', 'lon'])
         lonlats = sites_df[['lon', 'lat']].to_numpy()
         sites_df['code'] = geolocate(lonlats, geom_df)
         t1 = time.time()
-        self.assertEqual(len(sites_df), 108)
+        self.assertEqual(len(sites_df), 90)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
 
         t0 = time.time()
@@ -581,5 +582,5 @@ class ReadGeometryTestCase(unittest.TestCase):
         self.assertEqual(len(risk_df), 218)
         sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
         t1 = time.time()
-        self.assertEqual(len(sites_df), 108)
+        self.assertEqual(len(sites_df), 90)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
