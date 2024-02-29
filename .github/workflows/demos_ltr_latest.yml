@@ -9,7 +9,8 @@ on:
         required: true
   push:
     # FIXME: it would be better to point to ltr and latest
-    branches: [ demos_ltr_latest, engine-3.16, engine-3.17, engine-3.18 ]
+    # branches: [ demos_ltr_latest, engine-3.16, engine-3.17, engine-3.18 ]
+    branches: [ demos_ltr_latest ]
 jobs:
   demos:
     runs-on: ubuntu-latest

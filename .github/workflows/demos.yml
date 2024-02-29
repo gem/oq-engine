@@ -7,7 +7,7 @@ on:
         description: Git Ref
         default: master
         required: true
-      oq-release:  # FIXME: this looks unused
+      oq-release:
         description: 'OQ Release'
         required: true
         default: 'latest'
