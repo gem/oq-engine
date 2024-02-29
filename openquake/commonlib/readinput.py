@@ -1477,7 +1477,7 @@ def read_mosaic_df(buffer=0.1):
     return read_geometries(fname, 'code', buffer)
 
 
-def read_global_risk_df(buffer=0.1):
+def read_countries_df(buffer=0.1):
     """
     :returns: a DataFrame of geometries for the world countries
     """

@@ -577,7 +577,7 @@ class ReadGeometryTestCase(unittest.TestCase):
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
 
         t0 = time.time()
-        risk_df = readinput.read_global_risk_df()  # this is slow
+        risk_df = readinput.read_countries_df()  # this is slow
         self.assertEqual(len(risk_df), 218)
         sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
         t1 = time.time()
