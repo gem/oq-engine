@@ -114,7 +114,6 @@ PSE,MIE,taxonomy_mapping_Palestine.csv
 SYR,MIE,taxonomy_mapping_Middle_East.csv
 AFG,MIE,taxonomy_mapping_Afghanistan.csv
 PAK,MIE,taxonomy_mapping_Pakistan.csv
-ISO,Model,Taxonomy_mapping
 MRT,MRT,taxonomy_mapping_Africa.csv
 DZA,NAF,taxonomy_mapping_Algeria.csv
 EGY,NAF,taxonomy_mapping_Egypt.csv
