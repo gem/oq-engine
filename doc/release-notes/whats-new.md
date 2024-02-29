@@ -301,7 +301,7 @@ promised in the previous release. Python 3.9 is deprecated and will be
 removed in the next release.  We update numpy to version 1.26, scipy
 to version 1.8.1, h5py to version 3.10, numba to 0.58.1, fiona to
 version 1.9.5, GDAL to version 3.7.3, pyproj to 3.6.1 and a few others.
-We updated Django to 3.2.23, containing the latest security fixes.
+We updated Django to version 4.2.10.
 
 The upgrade to numpy 1.26 caused a lot of trouble since numpy >= 1.25
 introduced a machine-dependent optimization in `numpy.argsort` (depending
