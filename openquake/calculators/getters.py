@@ -18,6 +18,7 @@
 
 import operator
 import numpy
+import pandas
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib import probability_map, stats
@@ -139,7 +140,7 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
+    def __init__(self, dstore, full_lt, gh3, imtls=(), poes=(), use_rates=0):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in full_lt.weights])
@@ -154,7 +155,7 @@ class PmapGetter(object):
             self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
         else:
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        self.slices = slices
+        self.gh3 = gh3
         self._pmap = {}
 
     @property
@@ -191,16 +192,22 @@ class PmapGetter(object):
             return self._pmap
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
-            for start, stop in self.slices:
-                rates_df = dstore.read_df('_rates', slc=slice(start, stop))
-                for sid, df in rates_df.groupby('sid'):
-                    try:
-                        array = self._pmap[sid].array
-                    except KeyError:
-                        array = numpy.zeros((self.L, G))
-                        self._pmap[sid] = probability_map.ProbabilityCurve(
-                            array)
-                    array[df.lid, df.gid] = df.rate
+            if isinstance(self.gh3, str):
+                rates_df = dstore.read_df('_rates/' + self.gh3)
+            else:  # gh3 is actually a site_id
+                dfs = []
+                for key in set(dstore['_rates']) - {'weig'}:
+                    df = dstore.read_df('_rates/' + key, sel={'sid': self.gh3})
+                    dfs.append(df)
+                rates_df = pandas.concat(dfs)
+            for sid, df in rates_df.groupby('sid'):
+                try:
+                    array = self._pmap[sid].array
+                except KeyError:
+                    array = numpy.zeros((self.L, G))
+                    self._pmap[sid] = probability_map.ProbabilityCurve(
+                        array)
+                array[df.lid, df.gid] = df.rate
         return self._pmap
 
     # used in risk calculations where there is a single site per getter

@@ -144,6 +144,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             else:  # keep the shape of the underlying array in store_mean_rates
                 result['pnemap'] = ~pmap
             result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['pnemap'].gh3 = str(sites.gh3)
             yield result
 
 
@@ -277,6 +278,8 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
+        gh3 = getattr(pnemap, 'gh3', 'NA')
+
         # store by IMT to save memory
         for m, imt in enumerate(self.imtls):
             slc = self.imtls(imt)
@@ -285,15 +288,11 @@ class Hazard:
             if len(idxs) == 0:  # happens in case_60
                 return 0
             sids = the_sids[idxs]
-            hdf5.extend(self.datastore['_rates/sid'], sids)
-            hdf5.extend(self.datastore['_rates/gid'], gids + gid)
-            hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_rates/rate'], rates[idxs, lids, gids])
-
-            # slice_by_sid contains 3x6=18 slices in classical/case_22
-            # which has 6 IMTs each one with 20 levels
-            sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
+            hdf5.extend(self.datastore[f'_rates/{gh3}/sid'], sids)
+            hdf5.extend(self.datastore[f'_rates/{gh3}/gid'], gids + gid)
+            hdf5.extend(self.datastore[f'_rates/{gh3}/lid'], lids + slc.start)
+            hdf5.extend(self.datastore[f'_rates/{gh3}/rate'],
+                        rates[idxs, lids, gids])
             self.offset += len(sids)
 
         self.acc['nsites'] = self.offset
@@ -394,8 +393,13 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_rates', rates_dt.items())
-        self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
+        self.req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        if self.tiling():
+            gh3s = [str(tile.gh3) for tile in self.sitecol.split_by_gh3()]
+        else:
+            gh3s = []
+        for gh3 in gh3s + ['NA']:
+            self.datastore.create_df('_rates/' + gh3, rates_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
@@ -425,6 +429,15 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
 
+    def tiling(self):
+        oq = self.oqparam
+        max_gb = float(config.memory.pmap_max_gb)
+        if (oq.disagg_by_src or self.N < oq.max_sites_disagg
+            or self.req_gb < max_gb):
+            return False
+        else:
+            return True
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -449,7 +462,6 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             maxw = self.max_weight
         self.init_poes()
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
             self.trt_rlzs)])
         self.datastore['_rates/weig'] = weig
@@ -464,8 +476,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        max_gb = float(config.memory.pmap_max_gb)
-        if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb:
+        if not self.tiling():
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
@@ -698,35 +709,16 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        sites_per_task = int(numpy.ceil(self.N / ct))
-        sbs = dstore['_rates/slice_by_sid'][:]
-        sbs['sid'] //= sites_per_task
-        # NB: there is a genious idea here, to split in tasks by using
-        # the formula ``taskno = sites_ids // sites_per_task`` and then
-        # extracting a dictionary of slices for each taskno. This works
-        # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites
-        # disposed in 2 groups and we want to produce 2 tasks we can use
-        # 012345012345 // 3 = 000111000111 and the slices are
-        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
-        slicedic = AccumDict(accum=[])
-        for idx, start, stop in sbs:
-            slicedic[idx].append((start, stop))
-        if not slicedic:
+        allargs = []
+        for gh3 in sorted(set(dstore['_rates']) - {'weig'}):
+            if len(dstore[f'_rates/{gh3}/sid']):
+                getter= getters.PmapGetter(dstore, self.full_lt, gh3,
+                                           oq.imtls, oq.poes, oq.use_rates)
+                allargs.append((getter, N, hstats, individual,
+                                oq.max_sites_disagg, self.amplifier))
+        if not allargs:
             # no hazard, nothing to do, happens in case_60
             return
-
-        # using compactify improves the performance of `read PoEs`;
-        # I have measured a 3.5x in the AUS model with 1 rlz
-        allslices = [calc.compactify(slices) for slices in slicedic.values()]
-        nslices = sum(len(slices) for slices in allslices)
-        logging.info('There are %d slices of poes [%.1f per task]',
-                     nslices, nslices / len(slicedic))
-        allargs = [
-            (getters.PmapGetter(dstore, self.full_lt, slices,
-                                oq.imtls, oq.poes, oq.use_rates),
-             N, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0

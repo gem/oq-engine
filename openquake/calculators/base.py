@@ -33,7 +33,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, hdf5
-from openquake.baselib import performance, parallel, python3compat
+from openquake.baselib import parallel, python3compat
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -586,7 +586,7 @@ class HazardCalculator(BaseCalculator):
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             df = readinput.Global.pmap.to_dframe()
             df.rate = to_rates(df.rate)
-            self.datastore.create_df('_rates', df)
+            self.datastore.create_df('_rates/NA', df)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
@@ -1069,11 +1069,10 @@ class RiskCalculator(HazardCalculator):
         full_lt = dstore['full_lt'].init()
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = performance.get_slices(dstore['_rates/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             getter = getters.PmapGetter(
-                dstore, full_lt, slices.get(sid, []), self.oqparam.imtls)
+                dstore, full_lt, sid, self.oqparam.imtls)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))

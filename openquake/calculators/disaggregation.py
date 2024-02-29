@@ -196,9 +196,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        nrows = len(dstore['_rates/sid'])
         self.pgetter = getters.PmapGetter(
-            dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
+            dstore, full_lt, 'NA', oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
