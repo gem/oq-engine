@@ -413,7 +413,8 @@ class GsimLogicTree(object):
                 if gsim in self.values[trt]:
                     raise InvalidLogicTree('%s: duplicated gsim %s' %
                                            (self.filename, gsim))
-                gsim.weight = weight
+                if len(weight.dic) > 1:
+                    gsim.weight = weight
                 self.values[trt].append(gsim)
                 bt = BranchTuple(
                     branchset['applyToTectonicRegionType'],
