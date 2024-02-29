@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source
+from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser
 )
@@ -1633,3 +1633,13 @@ def compare_disagg_rates(token, dstore):
                              'disagg_rate': drates, 
                              'interp_rate': irates}
                             ).sort_values(['imt', 'src'])
+
+
+@view.add('gh3')
+def view_gh3(token, dstore):
+    sitecol = dstore['sitecol']
+    gh3 = geo.utils.geohash3(sitecol.lons, sitecol.lats)
+    uni, cnt = numpy.unique(gh3, return_counts=True)
+    # print(sorted(cnt))
+    return numpy.array([stats('gh3', cnt)],
+                       dt('kind counts mean stddev min max'))
