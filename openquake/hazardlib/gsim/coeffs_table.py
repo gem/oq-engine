@@ -23,7 +23,7 @@ import numpy as np
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
-SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR']
+SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR', 'Av']
 
 
 class CoeffsTable(object):
@@ -175,7 +175,8 @@ class CoeffsTable(object):
         dt = RecordBuilder(**{name: 0. for name in header[1:]})
         for line in lines:
             row = line.split()
-            imt_name_or_period = row[0].upper()
+            imt_name_or_period = row[0] if row[0].startswith("AvgSA") else\
+                row[0].upper()
             if imt_name_or_period == 'SA':  # protect against stupid mistakes
                 raise ValueError('specify period as float value '
                                  'to declare SA IMT')
@@ -204,7 +205,7 @@ class CoeffsTable(object):
             if re.search('^(SA|EAS|FAS|DRVT)', imt.string):
                 tmp = np.array(self._coeffs[imt])
                 coeffs.append([tmp[i] for i in coeff_list])
-                if re.search('^(SA)', imt.string):
+                if re.search('^(SA|AvgSA)', imt.string):
                     pof.append(imt.period)
                 elif re.search('^(EAS|FAS|DRVT)', imt.string):
                     pof.append(imt.frequency)

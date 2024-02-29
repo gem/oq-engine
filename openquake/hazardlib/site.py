@@ -20,11 +20,12 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+import pandas
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, CODE32,
+    fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
     spherical_to_cartesian, get_middle_point)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
@@ -563,6 +564,21 @@ class SiteCollection(object):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.complete.array[sids]
             sc.complete = self.complete
+            tiles.append(sc)
+        return tiles
+
+    def split_by_gh3(self):
+        """
+        Split a SiteCollection into a set of tiles with the same geohash3
+        """
+        gh3s = geohash3(self.lons, self.lats)
+        gb = pandas.DataFrame(dict(sid=self.sids, gh3=gh3s)).groupby('gh3')
+        tiles = []
+        for gh3, df in gb:
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.complete.array[df.sid]
+            sc.complete = self.complete
+            sc.gh3 = gh3
             tiles.append(sc)
         return tiles
 

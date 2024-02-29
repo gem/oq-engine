@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Contributed new GMPEs Weatherill2024ESHM20AvgSA,
+    Weatherill2024ESHM20SlopeGeologyAvgSA, Weatherill2024ESHM20Homokedastic
+    and GmpeIndirectAvgSA
+
   [Paolo Tormene, Michele Simionato]
   * Added geometry_file to discard ruptures
 

@@ -25,8 +25,9 @@ from openquake.baselib import hdf5, python3compat, general, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
-    MultiFaultSource, build_secparams, save, load)
+    MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
+from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.hazardlib.sourceconverter import SourceGroup

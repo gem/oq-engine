@@ -65,7 +65,7 @@ install_requires = [
     'shapely >=1.7',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django >=3.2',
+    'django >=4.2, <5',
     'matplotlib',
     'requests >=2.20',
     'toml >=0.10.2',

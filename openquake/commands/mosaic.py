@@ -23,7 +23,6 @@ import json
 import logging
 import getpass
 import cProfile
-import numpy
 import pandas
 import collections
 from openquake.baselib import config, performance

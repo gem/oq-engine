@@ -119,10 +119,14 @@ def angular_distance(km, lat=0, lat2=None):
 
 @compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
 def angular_mean_weighted(degrees, weights):
-    rads = numpy.radians(degrees)
-    sin = numpy.sin(rads)
-    cos = numpy.cos(rads)
-    mean = numpy.arctan2(sin @ weights, cos @ weights)
+    # not using @ to avoid a NumbaPerformanceWarning:
+    # '@' is faster on contiguous arrays
+    mean_sin, mean_cos = 0., 0.
+    for d, w in zip(degrees, weights):
+        r = math.radians(d)
+        mean_sin += math.sin(r) * w
+        mean_cos += math.cos(r) * w
+    mean = numpy.arctan2(mean_sin, mean_cos)
     return numpy.degrees(mean)
 
 

@@ -31,8 +31,7 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
-from openquake.hazardlib.geo.surface.multi import (
-    MultiSurface, build_secparams, build_msparams)
+from openquake.hazardlib.geo.surface.multi import MultiSurface, build_msparams
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource

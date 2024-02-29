@@ -35,11 +35,11 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source
+from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser
 )
-from openquake.commonlib import util
+from openquake.commonlib import util, readinput
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
@@ -1633,3 +1633,33 @@ def compare_disagg_rates(token, dstore):
                              'disagg_rate': drates, 
                              'interp_rate': irates}
                             ).sort_values(['imt', 'src'])
+
+
+@view.add('gh3')
+def view_gh3(token, dstore):
+    sitecol = dstore['sitecol']
+    gh3 = geo.utils.geohash3(sitecol.lons, sitecol.lats)
+    uni, cnt = numpy.unique(gh3, return_counts=True)
+    # print(sorted(cnt))
+    return numpy.array([stats('gh3', cnt)],
+                       dt('kind counts mean stddev min max'))
+
+
+@view.add('exposure_by_country')
+def view_exposure_by_country(token, dstore):
+    """
+    Returns a table with the number of assets per country. The countries
+    are defined as in the file geoBoundariesCGAZ_ADM0.shp
+    """
+    geom_df = readinput.read_countries_df()
+    assetcol = dstore['assetcol']
+    lonlats = numpy.zeros((len(assetcol), 2), F32)
+    lonlats[:, 0] = assetcol['lon']
+    lonlats[:, 1] = assetcol['lat']
+    codes = geo.utils.geolocate(lonlats, geom_df)
+    uni, cnt = numpy.unique(codes, return_counts=True)
+    out = numpy.zeros(len(uni), dt('country num_assets'))
+    out['country'] = uni
+    out['num_assets'] = cnt
+    out.sort(order='num_assets')
+    return out

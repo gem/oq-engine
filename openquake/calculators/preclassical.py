@@ -26,8 +26,8 @@ from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
-from openquake.hazardlib.source.multi_fault import build_secparams
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import (
