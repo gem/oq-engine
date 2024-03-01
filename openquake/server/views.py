@@ -44,7 +44,7 @@ import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib import nrml, gsim, valid, geo
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
@@ -109,6 +109,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'rake': 'Rake',
     'dip': 'Dip',
     'strike': 'Strike',
+    'trt': 'Tectonic region type',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -610,6 +611,18 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+def get_trts(lon, lat):
+    lonlats = numpy.array([[lon, lat]])
+    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
+    mosaic_model = geo.utils.geolocate(lonlats, mosaic_df)[0]
+    site_model_path = os.path.join(
+        config.directory.mosaic_dir, 'site_model.hdf5')
+    site_model = hdf5.File(site_model_path).read_df('model_trt_gsim_weight')
+    trts = set(
+        site_model[site_model['model']==mosaic_model.encode('utf8')]['trt'])
+    return [trt.decode('utf8') for trt in trts]
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -640,7 +653,7 @@ def aristotle_get_rupture_data(request):
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
     try:
-        response_data = get_rupture_dict(shakemap_id)
+        rupture_dict = get_rupture_dict(shakemap_id)
     except Exception as exc:
         if '404: Not Found' in str(exc):
             error_msg = f'Shakemap id "{shakemap_id}" was not found'
@@ -653,6 +666,9 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
+    trts = get_trts(rupture_dict['lon'], rupture_dict['lat'])
+    rupture_dict['trts'] = trts
+    response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
@@ -704,6 +720,12 @@ def aristotle_run(request):
     except Exception as exc:
         validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['strike']] = str(exc)
         invalid_inputs.append('strike')
+    try:
+        trt = request.POST.get('trt')
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['trt']] = str(exc)
+        invalid_inputs.append('trt')
+
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -715,10 +737,10 @@ def aristotle_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    # TODO: run aristotle calculation
-    # FIXME:
+    # FIXME: run aristotle calculation
     response_data = dict(
-        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
+        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike,
+        trt=trt)
 
     # # build a LogContext object associated to a database job
     # try:

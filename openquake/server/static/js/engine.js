@@ -546,6 +546,10 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
+                    $('#trt').empty();
+                    $.each(data.trts, function(index, trt) {
+                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                    });
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -574,7 +578,8 @@
                     mag: $("#mag").val(),
                     rake: $("#rake").val(),
                     dip: $("#dip").val(),
-                    strike: $("#strike").val()
+                    strike: $("#strike").val(),
+                    trt: $('#trt').val()
                 };
                 $.ajax({
                     type: "POST",
