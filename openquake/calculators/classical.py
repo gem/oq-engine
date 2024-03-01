@@ -137,7 +137,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             # size_mb is the maximum size of the pmap array in GB
             size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
                        * 8 / 1024**2)
-            itiles = sitecol.split_in_tiles(size_mb / cmaker.pmap_max_mb)
+            itiles = sitecol.split_in_tiles(
+                int(numpy.ceil(size_mb / cmaker.pmap_max_mb)))
         else:
             itiles = sitecol.split_by_gh3()
         manysites = (len(sitecol) > cmaker.max_sites_disagg
