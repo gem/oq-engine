@@ -153,7 +153,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             else:  # keep the shape of the underlying array in store_mean_rates
                 result['pnemap'] = ~pmap
             result['pnemap'].trt_smrs = cmaker.trt_smrs
-            result['pnemap'].gh3 = sites.gh3
+            result['pnemap'].gh3 = getattr(sites, 'gh3', 'NA')
             yield result
 
 
