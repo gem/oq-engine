@@ -573,6 +573,8 @@
                     dep: $("#dep").val(),
                     mag: $("#mag").val(),
                     rake: $("#rake").val(),
+                    dip: $("#dip").val(),
+                    strike: $("#strike").val()
                 };
                 $.ajax({
                     type: "POST",

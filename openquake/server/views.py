@@ -107,6 +107,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'dep': 'Depth',
     'mag': 'Magnitude',
     'rake': 'Rake',
+    'dip': 'Dip',
+    'strike': 'Strike',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -692,6 +694,16 @@ def aristotle_run(request):
     except Exception as exc:
         validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['rake']] = str(exc)
         invalid_inputs.append('rake')
+    try:
+        dip = valid.positivefloat(request.POST.get('dip'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dip']] = str(exc)
+        invalid_inputs.append('dip')
+    try:
+        strike = valid.positivefloat(request.POST.get('strike'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['strike']] = str(exc)
+        invalid_inputs.append('strike')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -705,7 +717,8 @@ def aristotle_run(request):
                             content_type=JSON, status=400)
     # TODO: run aristotle calculation
     # FIXME:
-    response_data = dict(lon=lon, lat=lat, dep=dep, mag=mag, rake=rake)
+    response_data = dict(
+        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
 
     # # build a LogContext object associated to a database job
     # try:
