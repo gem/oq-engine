@@ -619,7 +619,7 @@ def get_trts(lon, lat):
         config.directory.mosaic_dir, 'site_model.hdf5')
     site_model = hdf5.File(site_model_path).read_df('model_trt_gsim_weight')
     trts = set(
-        site_model[site_model['model']==mosaic_model.encode('utf8')]['trt'])
+        site_model[site_model['model'] == mosaic_model.encode('utf8')]['trt'])
     return [trt.decode('utf8') for trt in trts]
 
 
@@ -658,7 +658,7 @@ def aristotle_get_rupture_data(request):
         if '404: Not Found' in str(exc):
             error_msg = f'Shakemap id "{shakemap_id}" was not found'
         elif 'There is not rupture.json' in str(exc):
-            error_msg = (f'Shakemap id "{shakemap_id} was found, but it'
+            error_msg = (f'Shakemap id "{shakemap_id}" was found, but it'
                          f' has no associated rupture data')
         else:
             error_msg = str(exc)
