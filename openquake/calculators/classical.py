@@ -111,8 +111,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
+    no_tiles = sitecol is None
     with dstore:
-        if sitecol is None:  # regular calculator
+        if no_tiles:  # regular calculator
             sitecol = dstore['sitecol']  # super-fast
         else:  # tiling calculator, read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
@@ -132,9 +133,16 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
     else:
+        if no_tiles:
+            # size_mb is the maximum size of the pmap array in GB
+            size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
+                       * 8 / 1024**2)
+            itiles = sitecol.split_in_tiles(size_mb / cmaker.pmap_max_mb)
+        else:
+            itiles = sitecol.split_by_gh3()
         manysites = (len(sitecol) > cmaker.max_sites_disagg
                 and not cmaker.disagg_by_src)
-        for sites in sitecol.split_by_gh3():
+        for sites in itiles:
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
