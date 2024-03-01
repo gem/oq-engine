@@ -132,19 +132,20 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
     else:
-        N = len(sitecol)
+        manysites = (len(sitecol) > cmaker.max_sites_disagg
+                and not cmaker.disagg_by_src)
         for sites in sitecol.split_by_gh3():
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
+            if manysites:
                 # save data transfer
                 result['pnemap'] = ~pmap.remove_zeros()
             else:  # keep the shape of the underlying array in store_mean_rates
                 result['pnemap'] = ~pmap
             result['pnemap'].trt_smrs = cmaker.trt_smrs
-            result['pnemap'].gh3 = getattr(sites, 'gh3', 'NA')
+            result['pnemap'].gh3 = sites.gh3
             yield result
 
 
