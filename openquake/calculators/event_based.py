@@ -521,8 +521,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
         t1 = time.time()
-        logging.info(f'Generated {filtered_ruptures}/{tot_ruptures} ruptures'
-                     f' and stored in {t1 - t0} seconds')
+        logging.info(f'Generated {filtered_ruptures}/{tot_ruptures} ruptures,'
+                     f' stored in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
