@@ -742,52 +742,6 @@ def aristotle_run(request):
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike,
         trt=trt)
 
-    # # build a LogContext object associated to a database job
-    # try:
-    #     params = get_params_from(
-    #         dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
-    #         config.directory.mosaic_dir, exclude=['USA'])
-    #     logging.root.handlers = []  # avoid breaking the logs
-    # except Exception as exc:
-    #     response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-    #                      'error_msg': str(exc)}
-    #     return HttpResponse(
-    #         content=json.dumps(response_data), content_type=JSON, status=400)
-    # [jobctx] = engine.create_jobs(
-    #     [params],
-    #     config.distribution.log_level, None, utils.get_user(request), None)
-    # job_id = jobctx.calc_id
-
-    # outputs_uri_web = request.build_absolute_uri(
-    #     reverse('outputs_aelo', args=[job_id]))
-
-    # outputs_uri_api = request.build_absolute_uri(
-    #     reverse('results', args=[job_id]))
-
-    # log_uri = request.build_absolute_uri(
-    #     reverse('log', args=[job_id, '0', '']))
-
-    # traceback_uri = request.build_absolute_uri(
-    #     reverse('traceback', args=[job_id]))
-
-    # response_data = dict(
-    #     status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-    #     log_uri=log_uri, traceback_uri=traceback_uri)
-
-    # job_owner_email = request.user.email
-    # if not job_owner_email:
-    #     response_data['WARNING'] = (
-    #         'No email address is speficied for your user account,'
-    #         ' therefore email notifications will be disabled. As soon as'
-    #         ' the job completes, you can access its outputs at the following'
-    #         ' link: %s. If the job fails, the error traceback will be'
-    #         ' accessible at the following link: %s'
-    #         % (outputs_uri_api, traceback_uri))
-
-    # # spawn the AELO main process
-    # mp.Process(target=aelo.main, args=(
-    #     lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
-    #     aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
