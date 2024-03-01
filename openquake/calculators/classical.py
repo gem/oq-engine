@@ -292,17 +292,16 @@ class Hazard:
                 idxs, lids, gids = rates.nonzero()
                 if len(idxs) == 0:  # happens in case_60
                     return 0
-                sids = pnemap.sids[idxs]
-                hdf5.extend(ds['_rates/sid'], sids)
+                hdf5.extend(ds['_rates/sid'], p.sids[idxs])
                 hdf5.extend(ds['_rates/gid'], gids + gid)
                 hdf5.extend(ds['_rates/lid'], lids + slc.start)
                 hdf5.extend(ds['_rates/rate'], rates[idxs, lids, gids])
 
                 # slice_by_sid contains 3x6=18 slices in classical/case_22
                 # which has 6 IMTs each one with 20 levels
-                sbs = build_slice_by_sid(sids, self.offset)
+                sbs = build_slice_by_sid(p.sids, self.offset)
                 hdf5.extend(ds['_rates/slice_by_sid'], sbs)
-                self.offset += len(sids)
+                self.offset += len(p.sids)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
