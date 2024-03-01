@@ -31,6 +31,7 @@ from openquake.commonlib.datastore import build_dstore_log
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
+from openquake.qa_tests_data import mosaic
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -47,6 +48,7 @@ for f in (None, 'ID_1'):
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
+MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 
 
 def add_geohash3(array):
@@ -213,6 +215,26 @@ def read_world_vulnerability(grm_dir, dstore):
     return len(vfuncs)
 
 
+def read_world_tmap(grm_dir, dstore):
+    """
+    Store the world taxonomy mapping
+    """
+    # get the names of the files to read
+    tmap_df = pandas.read_csv(os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv'),
+                              index_col=['country'])
+    dic = {}
+    for fname, df in tmap_df.groupby('fname'):
+        dic[fname] = '_'.join(sorted(df.index))
+    n = len(dic)
+    assert len(set(dic.values())) == n, sorted(dic.values())
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f in dic:
+                df = pandas.read_csv(os.path.join(cwd, f))
+                dstore.create_df('tmap/' + dic[f], df)
+    return n
+
+
 def main(grm_dir):
     """
     Storing global exposure
@@ -223,6 +245,8 @@ def main(grm_dir):
         with mon:
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
+            n = read_world_tmap(grm_dir, dstore)
+            logging.info('Read %d taxonomy mappings', n)
             n = read_world_exposure(grm_dir, dstore)
             logging.info('Created {} with {:_d} assets'.
                          format(dstore.filename, n))
