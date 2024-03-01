@@ -279,7 +279,7 @@ class Hazard:
         rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnemap, the_sids, gid=0):
+    def store_rates(self, pnemap, gid=0):
         """
         Store pnes inside the _rates dataset
         """
@@ -290,7 +290,7 @@ class Hazard:
             idxs, lids, gids = rates.nonzero()
             if len(idxs) == 0:  # happens in case_60
                 return 0
-            sids = the_sids[idxs]
+            sids = pnemap.sids[idxs]
             hdf5.extend(self.datastore['_rates/sid'], sids)
             hdf5.extend(self.datastore['_rates/gid'], gids + gid)
             hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
@@ -529,7 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing PoEs', measuremem=True):
-            nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
+            nbytes = self.haz.store_rates(self.pmap)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
         if oq.disagg_by_src:
@@ -583,7 +583,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
-            nbytes = self.haz.store_rates(pnemap, pnemap.sids, gid)
+            nbytes = self.haz.store_rates(pnemap, gid)
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
