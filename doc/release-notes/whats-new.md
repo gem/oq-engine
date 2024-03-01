@@ -35,7 +35,7 @@ Classical calculations
 We have improved the `preclassical` part of the calculation, which is
 now substantially faster in many cases.
 
-We improved the `disagg_by_src` functionality and now it does not generate
+We have improved the `disagg_by_src` functionality and now it does not generate
 one per task per source anymore. That was very inefficient in models with
 thousands of sources.
 
@@ -47,7 +47,7 @@ There was a serious bug with the ordering of the IMTs causing (in some
 situations) the generation of uniform hazard spectra with two peaks.
 The bug was introduced in version 3.17 and it is now finally solved.
 
-The classical calculation has been extended to perform aftershock calculations
+The classical calculator has been extended to perform aftershock calculations
 if a file `delta_rates.csv` with fields `source_id`, `rup_id`, `delta` is
 passed to the job.ini. The `delta` field contains corrections to the
 occurrence rates of the underlying ruptures. An example of usage is
@@ -77,8 +77,8 @@ to compute properly the aggregate loss curves.
 We fixed the `gmf_data` exporter which was failing with an error
 in presence of a filtered site collection.
 
-We removed a misleading warning "For large exposures you must set
-collect_rlzs=true or avg_losses=false".
+We removed a misleading warning *For large exposures you must set
+collect_rlzs=true or avg_losses=false*.
 
 hazardlib
 ---------------
@@ -144,9 +144,9 @@ are the same.
 
 We optimized some calculations involving secondary perils by making
 sure that SecondaryPerils classes are instantiated only once. In the
-particular case of the TodorovicSilva2022NonParametric model by moving
-the reading of the associated .onnx file at instantiation time we
-got a huge speedup ([#9375](https://github.com/gem/oq-engine/pull/9375)).
+particular case of the TodorovicSilva2022NonParametric model, we got a
+huge speedup by moving the reading of the associated .onnx file at
+instantiation time ([#9375](https://github.com/gem/oq-engine/pull/9375)).
 
 We added a warning in conditioned GMFs calculations in the case when
 all stations are beyond the `maximum_distance_stations` parameter, i.e.
@@ -156,9 +156,8 @@ Bug fixes
 ---------
 
 While working on the AELO project we discovered a long standing bug
-in the disaggregration of mutually exclusive sources,
-i.e. for the Japan model, which was giving the wrong numbers.
-This is now fixed. We also fix a bug on disaggregation by source
+in the disaggregration of mutually exclusive sources used in the Japan model.
+This is now fixed. We also fixed a bug on disaggregation by source
 by forcing a naming convention (the so called the colon convention)
 on mutex sources.
 
@@ -168,7 +167,7 @@ hazard models in the GEM mosaic contains duplicated source IDs. Now
 a clear warning is printed, informing that such models cannot be used
 to perform disaggregation by source. All models used in AELO calculations
 have been fixed and in time we will fix the entire mosaic.
-Notice that same ID sources in different branches of the logic tree are
+Notice that sources with the same ID in different branches of the logic tree are
 accepted since they can be disambiguated by taking into account the branch ID.
 
 While running a chain of calculations (like building the ruptures, building
@@ -200,7 +199,7 @@ Aristotle project
 -----------------
 
 [Aristotle](https://www.globalquakemodel.org/proj/aristotle) is a
-project to provide Multi-Hazard Advice to the European Research
+project to provide Multi-Hazard advice to the European Research
 Coordination Centre in case of disasters. GEM is working on the
 earthquake aspects.
 
@@ -246,19 +245,18 @@ the most relevant ruptures, i.e. the ruptures causing most of the
 losses. For instance  `oq extract/ruptures?threshold=0.8` means
 extracting the ruptures causing 80% or more of the losses.
 
-Similarly, we added a command `oq export relevant_gmfs -e hdf5`
-to extract the most relevant ground motions, i.e. the ground motion
-fields and related events causing most of the losses.
-
-Risk calculations can be started from the extracted GMFs and aggregated
+Similarly, we added a command `oq export relevant_gmfs -e hdf5` to
+extract the most relevant ground motions, i.e. the ground motion
+fields and related events causing most of the losses. Risk
+calculations can be started from the extracted GMFs and aggregated
 loss curves can be build from them.
 
 We extended the command `oq mosaic sample_rups` to multiple models.
 For instance, if you wanted to generate an event set for the Mediterranean
 region without double counting the ruptures you can just run
-
+```
 $ oq mosaic sample_rups EUR,NAF,MIE
-
+```
 This will generate 3 computations (one per model) each containing only
 ruptures within the geographic boundaries of the hazard model.
 
@@ -302,10 +300,10 @@ IT highlights
 
 We added support for Python 3.11 and removed support for Python 3.8, as
 promised in the previous release. Python 3.9 is deprecated and will be
-removed in the next release.  We update numpy to version 1.26, scipy
+removed in the next release.  We updated numpy to version 1.26, scipy
 to version 1.8.1, h5py to version 3.10, numba to 0.58.1, fiona to
-version 1.9.5, GDAL to version 3.7.3, pyproj to 3.6.1 and a few others.
-We updated Django to version 4.2.10.
+version 1.9.5, GDAL to version 3.7.3, pyproj to 3.6.1 and a few other
+dependencies. In particular we updated Django to version 4.2.10.
 
 The upgrade to numpy 1.26 caused a lot of trouble since numpy >= 1.25
 introduced a machine-dependent optimization in `numpy.argsort` (depending
