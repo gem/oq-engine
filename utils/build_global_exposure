@@ -25,8 +25,11 @@ import numpy
 import h5py
 from openquake.baselib import hdf5, sap, performance, general
 from openquake.baselib.parallel import Starmap
+from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import build_dstore_log
+from openquake.commonlib.oqvalidation import OqParam
+from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
 
 U16 = numpy.uint16
@@ -189,6 +192,27 @@ def read_world_exposure(grm_dir, dstore):
     return num_assets
 
 
+def read_world_vulnerability(grm_dir, dstore):
+    """
+    Store the world CompositeRiskModel
+    """
+    kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
+             'fatalities', 'residents']
+    vfuncs = RiskFuncList()
+    for kind in kinds:
+        name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
+        fname = os.path.join(grm_dir, name)
+        for vf in nrml.to_python(fname).values():
+            vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+            vf.kind = 'vulnerability'
+            vfuncs.append(vf)
+    oq = OqParam(calculation_mode='custom')
+    crmodel = CompositeRiskModel(oq, vfuncs)
+    dstore.create_df('crm', crmodel.to_dframe(),
+                     'gzip', **crmodel.get_attrs())
+    return len(vfuncs)
+
+
 def main(grm_dir):
     """
     Storing global exposure
@@ -197,9 +221,13 @@ def main(grm_dir):
     dstore, log = build_dstore_log()
     with dstore, log:
         with mon:
+            n = read_world_vulnerability(grm_dir, dstore)
+            logging.info('Read %d vulnerability functions', n)
             n = read_world_exposure(grm_dir, dstore)
+            logging.info('Created {} with {:_d} assets'.
+                         format(dstore.filename, n))
         logging.info(mon)
-        logging.info('Created {} with {:_d} assets'.format(dstore.filename, n))
+
 
 main.grm_dir = 'global risk model directory'
 
