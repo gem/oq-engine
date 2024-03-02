@@ -133,8 +133,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         Checks on the number of sites, atomic groups and size of the
         disaggregation matrix.
         """
-        if self.N >= 32768:
-            raise ValueError('You can disaggregate at max 32,768 sites')
+        if self.N > 1000:
+            # split1000 imposes a limit of 1000 to max_sites_disagg
+            raise ValueError('You can disaggregate at max 1000 sites')
         few = self.oqparam.max_sites_disagg
         if self.N > few:
             raise ValueError(
