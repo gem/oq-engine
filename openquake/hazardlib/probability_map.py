@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 from openquake.baselib.general import cached_property
-from openquake.baselib.performance import numba, compile
+from openquake.baselib.performance import numba, compile, split_array
 from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
@@ -338,6 +338,18 @@ class ProbabilityMap(object):
         N, L, G = self.array.shape
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+
+    def split1000(self):
+        """
+        :yields: ProbabilityMaps containing at most 1000 sites
+        """
+        N, L, G = self.array.shape
+        idxs = self.sids // 1000
+        for splitno, (sids, array) in enumerate(zip(
+                split_array(self.sids, idxs), split_array(self.array, idxs))):
+            pmap = self.__class__(sids, L, G)
+            pmap.splitno = splitno
+            yield pmap.new(array)
 
     def fill(self, value):
         """

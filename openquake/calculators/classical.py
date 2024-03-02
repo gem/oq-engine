@@ -69,18 +69,6 @@ def get_pmaps_gb(dstore):
     return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs, gids
 
 
-def build_slice_by_sid(sids, offset=0):
-    """
-    Convert an array of site IDs (with repetitions) into an array slice_dt
-    """
-    arr = performance.idx_start_stop(sids)
-    sbs = numpy.zeros(len(arr), slice_dt)
-    sbs['sid'] = arr[:, 0]
-    sbs['start'] = arr[:, 1] + offset
-    sbs['stop'] = arr[:, 2] + offset
-    return sbs
-
-
 class Set(set):
     __iadd__ = set.__ior__
 
@@ -111,9 +99,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    no_tiles = sitecol is None
     with dstore:
-        if no_tiles:  # regular calculator
+        if sitecol is None:  # regular calculator
             sitecol = dstore['sitecol']  # super-fast
         else:  # tiling calculator, read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
@@ -133,28 +120,24 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
     else:
-        if no_tiles:
-            # size_mb is the maximum size of the pmap array in GB
-            size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
-                       * 8 / 1024**2)
-            itiles = sitecol.split_in_tiles(
-                int(numpy.ceil(size_mb / cmaker.pmap_max_mb)))
-        else:
-            itiles = sitecol.split_by_gh3()
-        manysites = (len(sitecol) > cmaker.max_sites_disagg
-                and not cmaker.disagg_by_src)
-        for sites in itiles:
+        # size_mb is the maximum size of the pmap array in GB
+        size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
+                   * 8 / 1024**2)
+        # NB: the parameter config.memory.pmap_max_mb avoids the hanging
+        # of oq1 due to too large zmq packets
+        itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
+        N = len(sitecol)
+        for sites in sitecol.split_in_tiles(itiles):
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            if manysites:
+            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
                 # save data transfer
                 result['pnemap'] = ~pmap.remove_zeros()
             else:  # keep the shape of the underlying array in store_mean_rates
                 result['pnemap'] = ~pmap
             result['pnemap'].trt_smrs = cmaker.trt_smrs
-            result['pnemap'].gh3 = getattr(sites, 'gh3', 'NA')
             yield result
 
 
@@ -284,26 +267,25 @@ class Hazard:
         rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnemap, the_sids, gid=0):
+    def store_rates(self, pnemap, gid=0):
         """
         Store pnes inside the _rates dataset
         """
-        gh3 = getattr(pnemap, 'gh3', 'NA')
-
-        # store by IMT to save memory
-        for m, imt in enumerate(self.imtls):
-            slc = self.imtls(imt)
-            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
-            idxs, lids, gids = rates.nonzero()
-            if len(idxs) == 0:  # happens in case_60
-                return 0
-            sids = the_sids[idxs]
-            hdf5.extend(self.datastore[f'_rates/{gh3}/sid'], sids)
-            hdf5.extend(self.datastore[f'_rates/{gh3}/gid'], gids + gid)
-            hdf5.extend(self.datastore[f'_rates/{gh3}/lid'], lids + slc.start)
-            hdf5.extend(self.datastore[f'_rates/{gh3}/rate'],
-                        rates[idxs, lids, gids])
-            self.offset += len(sids)
+        ds = self.datastore
+        for p in pnemap.split1000():
+            no = p.splitno
+            # store by IMT to save memory
+            for m, imt in enumerate(self.imtls):
+                slc = self.imtls(imt)
+                rates = p.to_rates(slc)  # shape (N, L1, G)
+                idxs, lids, gids = rates.nonzero()
+                if len(idxs) == 0:  # happens in case_60
+                    return 0
+                hdf5.extend(ds[f'_rates/{no}/sid'], p.sids[idxs])
+                hdf5.extend(ds[f'_rates/{no}/gid'], gids + gid)
+                hdf5.extend(ds[f'_rates/{no}/lid'], lids + slc.start)
+                hdf5.extend(ds[f'_rates/{no}/rate'], rates[idxs, lids, gids])
+                self.offset += len(p.sids)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -404,12 +386,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        if self.tiling():
-            gh3s = [str(tile.gh3) for tile in self.sitecol.split_by_gh3()]
-        else:
-            gh3s = []
-        for gh3 in gh3s + ['NA']:
-            self.datastore.create_df('_rates/' + gh3, rates_dt.items())
+        for splitno in range(0, int(numpy.ceil(self.N / 1000))):
+            self.datastore.create_df(f'_rates/{splitno}', rates_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
@@ -438,15 +416,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if avail < size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
-
-    def tiling(self):
-        oq = self.oqparam
-        max_gb = float(config.memory.pmap_max_gb)
-        if (oq.disagg_by_src or self.N < oq.max_sites_disagg
-            or self.req_gb < max_gb):
-            return False
-        else:
-            return True
 
     def execute(self):
         """
@@ -486,7 +455,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        if not self.tiling():
+        max_gb = float(config.memory.pmap_max_gb)
+        if (oq.disagg_by_src or self.N < oq.max_sites_disagg
+            or self.req_gb < max_gb):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
@@ -544,7 +515,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing PoEs', measuremem=True):
-            nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
+            nbytes = self.haz.store_rates(self.pmap)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
         if oq.disagg_by_src:
@@ -598,7 +569,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
-            nbytes = self.haz.store_rates(pnemap, pnemap.sids, gid)
+            nbytes = self.haz.store_rates(pnemap, gid)
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
@@ -729,6 +700,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not allargs:
             # no hazard, nothing to do, happens in case_60
             return
+
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
