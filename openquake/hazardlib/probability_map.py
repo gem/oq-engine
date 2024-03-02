@@ -341,15 +341,16 @@ class ProbabilityMap(object):
 
     def split1000(self):
         """
-        :yields: ProbabilityMaps containing at most 1000 sites
+        :yields: ProbabilityMaps with a .splitno
         """
         N, L, G = self.array.shape
-        idxs = self.sids // 1000
-        for splitno, (sids, array) in enumerate(zip(
-                split_array(self.sids, idxs), split_array(self.array, idxs))):
-            pmap = self.__class__(sids, L, G)
-            pmap.splitno = splitno
-            yield pmap.new(array)
+        mod1000 = self.sids % 1000
+        for splitno in range(1000):
+            ok = mod1000 == splitno
+            if ok.any():
+                pmap = self.__class__(self.sids[ok], L, G)
+                pmap.splitno = splitno
+                yield pmap.new(self.array[ok])
 
     def fill(self, value):
         """

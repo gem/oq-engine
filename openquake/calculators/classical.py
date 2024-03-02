@@ -387,7 +387,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        for splitno in range(0, int(numpy.ceil(self.N / 1000))):
+        for splitno in numpy.unique(self.sitecol.sids % 1000):
             self.datastore.create_df(f'_rates/{splitno}', rates_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
