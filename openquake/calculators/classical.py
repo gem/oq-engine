@@ -271,21 +271,22 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        ds = self.datastore
         for p in pnemap.split1000():
-            no = p.splitno
-            # store by IMT to save memory
+            dic = AccumDict(accum=[])
             for m, imt in enumerate(self.imtls):
                 slc = self.imtls(imt)
                 rates = p.to_rates(slc)  # shape (N, L1, G)
                 idxs, lids, gids = rates.nonzero()
-                if len(idxs) == 0:  # happens in case_60
-                    return 0
-                hdf5.extend(ds[f'_rates/{no}/sid'], p.sids[idxs])
-                hdf5.extend(ds[f'_rates/{no}/gid'], gids + gid)
-                hdf5.extend(ds[f'_rates/{no}/lid'], lids + slc.start)
-                hdf5.extend(ds[f'_rates/{no}/rate'], rates[idxs, lids, gids])
-                self.offset += len(p.sids)
+                if len(idxs):  # zero in case_60
+                    dic['sid'].append( p.sids[idxs])
+                    dic['gid'].append(gids + gid)
+                    dic['lid'].append(lids + slc.start)
+                    dic['rate'].append(rates[idxs, lids, gids])
+                    self.offset += len(p.sids)
+            for key, lst in dic.items():
+                if lst:
+                    a = numpy.concatenate(lst, dtype=lst[0].dtype)
+                    hdf5.extend(self.datastore[f'_rates/{p.splitno}/{key}'], a)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -681,21 +682,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        poes_gb = self.datastore.getsize('_rates') / 1024**3
-        if poes_gb < 1:
-            ct = int(poes_gb * 32) or 1
-        else:
-            ct = int(poes_gb) + 32  # number of tasks > number of GB
-        if ct > 1:
-            logging.info('Producing %d postclassical tasks', ct)
         if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
         allargs = []
-        for gh3 in sorted(set(dstore['_rates']) - {'weig'}):
-            if len(dstore[f'_rates/{gh3}/sid']):
-                getter= getters.PmapGetter(dstore, self.full_lt, gh3,
+        for no in sorted(set(dstore['_rates']) - {'weig'}):
+            if len(dstore[f'_rates/{no}/sid']):
+                getter= getters.PmapGetter(dstore, self.full_lt, no,
                                            oq.imtls, oq.poes, oq.use_rates)
                 allargs.append((getter, N, hstats, individual,
                                 oq.max_sites_disagg, self.amplifier))
