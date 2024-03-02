@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 from openquake.baselib.general import cached_property
-from openquake.baselib.performance import numba, compile, split_array
+from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
@@ -339,7 +339,7 @@ class ProbabilityMap(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def split1000(self):
+    def split500(self):
         """
         :yields: ProbabilityMaps with a .splitno
         """

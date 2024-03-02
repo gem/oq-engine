@@ -271,7 +271,7 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        for p in pnemap.split1000():
+        for p in pnemap.split500():
             dic = AccumDict(accum=[])
             for m, imt in enumerate(self.imtls):
                 slc = self.imtls(imt)
@@ -387,7 +387,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        for splitno in numpy.unique(self.sitecol.sids % 1000):
+        for splitno in numpy.unique(self.sitecol.sids % 500):
             self.datastore.create_df(f'_rates/{splitno}', rates_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
@@ -564,7 +564,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tile in tiles:
                     allargs.append((None, tile, cm, ds))
                     self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles', max(self.ntiles))
+        if self.ntiles:  # can be empty if sg.weight < maxw always
+            logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing PoEs', measuremem=False)
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
