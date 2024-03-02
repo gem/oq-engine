@@ -133,9 +133,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         Checks on the number of sites, atomic groups and size of the
         disaggregation matrix.
         """
-        if self.N > 1000:
-            # split1000 imposes a limit of 1000 to max_sites_disagg
-            raise ValueError('You can disaggregate at max 1000 sites')
+        if self.N > 32768:
+            raise ValueError('You can disaggregate at max 32,768 sites')
         few = self.oqparam.max_sites_disagg
         if self.N > few:
             raise ValueError(
@@ -188,7 +187,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             if self.R > 1:
                 for sid in self.sitecol.sids:
                     pgetter = getters.PmapGetter(
-                        dstore, full_lt, str(sid), oq.imtls, oq.poes)
+                        dstore, full_lt, str(sid % 1000), oq.imtls, oq.poes)
                     hcurve = pgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
