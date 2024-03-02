@@ -157,7 +157,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     used to specify the kind of output.
     """
     with monitor('read PoEs', measuremem=True):
-        pgetter.init()
+        pgetter.init(monitor.task_no)
 
     if amplifier:
         with hdf5.File(pgetter.filename, 'r') as f:
