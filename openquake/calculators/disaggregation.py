@@ -158,23 +158,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         """Performs the disaggregation"""
         return self.full_disaggregation()
 
-    def get_curve(self, sid, rlzs):
-        """
-        Get the hazard curves for the given site ID and realizations.
-
-        :param sid: site ID
-        :param rlzs: a matrix of indices of shape Z
-        :returns: a list of Z arrays of PoEs
-        """
-        poes = []
-        hcurve = self.pgetter.get_hcurve(sid)
-        for z, rlz in enumerate(rlzs):
-            pc = hcurve.extract(rlz)
-            if z == 0:
-                self.curves.append(pc.array[:, 0])
-            poes.append(pc.array[:, 0])
-        return poes
-
     def full_disaggregation(self):
         """
         Run the disaggregation phase.
@@ -197,8 +180,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        self.pgetter = getters.PmapGetter(
-            dstore, full_lt, '0', oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -206,7 +187,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
-                    hcurve = self.pgetter.get_hcurve(sid)
+                    pgetter = getters.PmapGetter(
+                        dstore, full_lt, str(sid), oq.imtls, oq.poes)
+                    hcurve = pgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
                     # get the closest realization to the mean
