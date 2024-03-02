@@ -278,7 +278,7 @@ class Hazard:
                 rates = p.to_rates(slc)  # shape (N, L1, G)
                 idxs, lids, gids = rates.nonzero()
                 if len(idxs):  # zero in case_60
-                    dic['sid'].append( p.sids[idxs])
+                    dic['sid'].append(p.sids[idxs])
                     dic['gid'].append(gids + gid)
                     dic['lid'].append(lids + slc.start)
                     dic['rate'].append(rates[idxs, lids, gids])
