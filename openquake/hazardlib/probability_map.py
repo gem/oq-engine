@@ -339,19 +339,6 @@ class ProbabilityMap(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def split500(self):
-        """
-        :yields: ProbabilityMaps with a .splitno
-        """
-        N, L, G = self.array.shape
-        mod1000 = self.sids % 1000
-        for splitno in range(1000):
-            ok = mod1000 == splitno
-            if ok.any():
-                pmap = self.__class__(self.sids[ok], L, G)
-                pmap.splitno = splitno
-                yield pmap.new(self.array[ok])
-
     def fill(self, value):
         """
         :param value: a scalar probability

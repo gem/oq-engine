@@ -271,22 +271,24 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        for p in pnemap.split500():
-            dic = AccumDict(accum=[])
-            for m, imt in enumerate(self.imtls):
-                slc = self.imtls(imt)
-                rates = p.to_rates(slc)  # shape (N, L1, G)
-                idxs, lids, gids = rates.nonzero()
-                if len(idxs):  # zero in case_60
-                    dic['sid'].append(p.sids[idxs])
-                    dic['gid'].append(gids + gid)
-                    dic['lid'].append(lids + slc.start)
-                    dic['rate'].append(rates[idxs, lids, gids])
-                    self.offset += len(p.sids)
-            for key, lst in dic.items():
-                if lst:
-                    a = numpy.concatenate(lst, dtype=lst[0].dtype)
-                    hdf5.extend(self.datastore[f'_rates/{p.splitno}/{key}'], a)
+        ds = self.datastore
+        for m, imt in enumerate(self.imtls):
+            slc = self.imtls(imt)
+            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
+            idxs, lids, gids = rates.nonzero()
+            sids = pnemap.sids[idxs]
+            if len(sids):  # zero in case_60
+                mod500 = sids % 500
+                for i in range(500):
+                    ok = mod500 == i
+                    if ok.any():
+                        s, g, l = sids[ok], gids[ok], lids[ok]
+                        r = rates[idxs[ok], l, g]
+                        hdf5.extend(ds[f'_rates/{i}/sid'], s)
+                        hdf5.extend(ds[f'_rates/{i}/gid'], g + gid)
+                        hdf5.extend(ds[f'_rates/{i}/lid'], l + slc.start)
+                        hdf5.extend(ds[f'_rates/{i}/rate'], r)
+                self.offset += len(sids)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
