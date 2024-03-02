@@ -272,6 +272,7 @@ class Hazard:
         Store pnes inside the _rates dataset
         """
         ds = self.datastore
+        dic = AccumDict(accum=[])
         for m, imt in enumerate(self.imtls):
             slc = self.imtls(imt)
             rates = pnemap.to_rates(slc)  # shape (N, L1, G)
@@ -282,13 +283,16 @@ class Hazard:
                 for i in range(500):
                     ok = mod500 == i
                     if ok.any():
-                        s, g, l = sids[ok], gids[ok], lids[ok]
+                        s, l, g = sids[ok], lids[ok], gids[ok]
                         r = rates[idxs[ok], l, g]
-                        hdf5.extend(ds[f'_rates/{i}/sid'], s)
-                        hdf5.extend(ds[f'_rates/{i}/gid'], g + gid)
-                        hdf5.extend(ds[f'_rates/{i}/lid'], l + slc.start)
-                        hdf5.extend(ds[f'_rates/{i}/rate'], r)
+                        dic[i, 'sid'].append(s)
+                        dic[i, 'lid'].append(l + slc.start)
+                        dic[i, 'gid'].append(g + gid)
+                        dic[i, 'rate'].append(r)
                 self.offset += len(sids)
+        for (i, key), lst in dic.items():
+            arr = numpy.concatenate(lst, dtype=lst[0].dtype)
+            hdf5.extend(ds[f'_rates/{i}/{key}'], arr)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
