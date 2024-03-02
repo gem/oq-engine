@@ -565,11 +565,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
+        mon = self.monitor('storing PoEs', measuremem=True)
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
-            nbytes = self.haz.store_rates(pnemap, gid)
+            with mon:
+                nbytes = self.haz.store_rates(pnemap, gid)
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
