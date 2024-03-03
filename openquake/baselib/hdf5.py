@@ -269,23 +269,27 @@ def decode_lol(lol):
         return lol
 
 
-def extract_cols(datagrp, sel, slc, columns):
+def fast_read(dset, slices):
+    """
+    Read multiple slices at once
+    """
+    out = []
+    for slc in slices:
+        out.append(dset[slc])
+    return numpy.concatenate(out, dtype=out[0].dtype)
+
+
+def extract_cols(datagrp, sel, slices, columns):
     """
     :param datagrp: something like and HDF5 data group
     :param sel: dictionary column name -> value specifying a selection
-    :param slc: a slice object specifying the rows considered
+    :param slices: list of slices
     :param columns: the full list of column names
     :returns: a dictionary col -> array of values
     """
-    first = columns[0]
-    nrows = len(datagrp[first])
-    if slc.start is None and slc.stop is None:  # split in slices
-        slcs = general.gen_slices(0, nrows, MAX_ROWS)
-    else:
-        slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
-    for slc in slcs:
-        if sel:
+    if sel:
+        for slc in slices:
             ok = slice(None)
             dic = {col: datagrp[col][slc] for col in sel}
             for col in sel:
@@ -295,9 +299,9 @@ def extract_cols(datagrp, sel, slc, columns):
                     ok &= is_ok(dic[col], sel[col])
             for col in columns:
                 acc[col].append(datagrp[col][slc][ok])
-        else:  # avoid making unneeded copies
-            for col in columns:
-                acc[col].append(datagrp[col][slc])
+    else:  # avoid making unneeded copies
+        for col in columns:
+            acc[col].append(fast_read(datagrp[col], slices))
     return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
 
 
@@ -374,12 +378,13 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
-    def read_df(self, key, index=None, sel=(), slc=slice(None)):
+    def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
         """
         :param key: name of the structured dataset
         :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
         :param slc: slice object to extract a slice of the dataset
+        :param slices: an array of shape (N, 2) with start,stop indices
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
@@ -389,7 +394,14 @@ class File(h5py.File):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = extract_cols(dset, sel, slc, columns)
+            if len(slices):
+                slcs = [slice(s0, s1) for s0, s1 in slices]
+            elif slc.start is None and slc.stop is None:  # split in slices
+                slcs = list(general.gen_slices(
+                    0, len(dset[columns[0]]), MAX_ROWS))
+            else:
+                slcs = [slc]
+            dic = extract_cols(dset, sel, slcs, columns)
             if index is None:
                 return pandas.DataFrame(dic)
             else:
