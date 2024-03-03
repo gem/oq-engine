@@ -103,17 +103,15 @@ def todict(pnemap, gid=0, tiling=True):
     rates = pnemap.to_rates()  # shape (N, L, G)
     idxs, lids, gids = rates.nonzero()
     sids = pnemap.sids[idxs]
-    if len(sids):  # zero in case_60
-        mod256 = sids % 256
-        for i in range(256):
-            ok = mod256 == i
-            if ok.any():
-                s, l, g = sids[ok], lids[ok], gids[ok]
-                r = rates[idxs[ok], l, g]
-                dic[i, 'sid'].append(s)
-                dic[i, 'lid'].append(l)
-                dic[i, 'gid'].append(g + gid)
-                dic[i, 'rate'].append(r)
+    mod256 = sids % 256
+    for i in range(256):
+        oki = mod256 == i
+        if oki.any():
+            s, l, g = sids[oki], lids[oki], gids[oki]
+            dic[i, 'sid'].append(s)
+            dic[i, 'lid'].append(l)
+            dic[i, 'gid'].append(g + gid)
+            dic[i, 'rate'].append(rates[idxs[oki], l, g])
     for (i, key), lst in dic.items():
         dic[i, key] = numpy.concatenate(lst, dtype=lst[0].dtype)
     return dic
@@ -158,11 +156,15 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # NB: the parameter config.memory.pmap_max_mb avoids the hanging
         # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
+        N = len(sitecol)
         for sites in sitecol.split_in_tiles(itiles):
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
+            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
+                # save data transfer
+                pmap = pmap.remove_zeros()
             result['pnemap'] = todict(~pmap, gid, tiling)
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
