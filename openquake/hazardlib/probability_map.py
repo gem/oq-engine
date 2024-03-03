@@ -440,15 +440,16 @@ class ProbabilityMap(object):
     # used in classical_risk from CSV
     def to_dframe(self):
         """
-        :returns: a DataFrame with fields sid, gid, lid, poe
+        :returns: a DataFrame with fields sid, gid, lid, rate
         """
         dic = dict(sid=[], gid=[], lid=[], rate=[])
         for sid, arr in zip(self.sids, self.array):
             for (lid, gid), rate in numpy.ndenumerate(arr):
-                dic['sid'].append(sid)
-                dic['gid'].append(gid)
-                dic['lid'].append(lid)
-                dic['rate'].append(rate)
+                if rate:
+                    dic['sid'].append(sid)
+                    dic['gid'].append(gid)
+                    dic['lid'].append(lid)
+                    dic['rate'].append(rate)
         for key, dt in rates_dt.items():
             dic[key] = dt(dic[key])
         return pandas.DataFrame(dic)

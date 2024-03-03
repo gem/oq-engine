@@ -97,25 +97,10 @@ def todict(pnemap, gid=0, tiling=True):
     """
     if not tiling:  # do nothing
         return pnemap
-    elif isinstance(pnemap, AccumDict):  # already converted
+    elif isinstance(pnemap, pandas.DataFrame):  # already converted
         return pnemap
-    dic = AccumDict(accum=[])
-    rates = pnemap.to_rates()  # shape (N, L, G)
-    idxs, lids, gids = rates.nonzero()
-    sids = pnemap.sids[idxs]
-    mod256 = sids % 256
-    for i in range(256):
-        oki = mod256 == i
-        if oki.any():
-            s, l, g = sids[oki], lids[oki], gids[oki]
-            r = rates[idxs[oki], l, g]
-            dic[i, 'sid'].append(s)
-            dic[i, 'lid'].append(l)
-            dic[i, 'gid'].append(g + gid)
-            dic[i, 'rate'].append(r)
-    for (i, key), lst in dic.items():
-        dic[i, key] = numpy.concatenate(lst, dtype=lst[0].dtype)
-    return dic
+    pnemap.array = pnemap.to_rates()  # shape (N, L, G)
+    return pnemap.to_dframe()
 
 
 #  ########################### task functions ############################ #
@@ -157,15 +142,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # NB: the parameter config.memory.pmap_max_mb avoids the hanging
         # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
-        N = len(sitecol)
         for sites in sitecol.split_in_tiles(itiles):
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
-                # save data transfer
-                pmap = pmap.remove_zeros()
             result['pnemap'] = todict(~pmap, gid, tiling)
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
@@ -301,11 +282,11 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        dic = todict(pnemap, gid)
-        for (i, key), arr in dic.items():
-            if key == 'sid':
-                self.offset += len(arr)
-            hdf5.extend(self.datastore[f'_rates/{i}/{key}'], arr)
+        rate_df = todict(pnemap, gid)
+        for i, df in rate_df.groupby(rate_df.sid % 256):
+            self.offset += len(df)
+            for col in df.columns:
+                hdf5.extend(self.datastore[f'_rates/{i}/{col}'], df[col])
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
