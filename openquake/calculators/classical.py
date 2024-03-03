@@ -748,11 +748,14 @@ class ClassicalCalculator(base.HazardCalculator):
             pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
-        parallel.Starmap(
-            postclassical, allargs,
-            distribute='no' if self.few_sites else None,
-            h5=self.datastore.hdf5,
-        ).reduce(self.collect_hazard)
+        smap = parallel.Starmap(
+            postclassical, distribute='no' if self.few_sites else None,
+            h5=self.datastore.hdf5)
+        delta_t = len(sbs) / 1e7
+        for args in allargs:
+            smap.submit(args)
+            time.sleep(delta_t)
+        smap.reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
