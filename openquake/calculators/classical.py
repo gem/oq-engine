@@ -108,10 +108,11 @@ def todict(pnemap, gid=0, tiling=True):
         oki = mod256 == i
         if oki.any():
             s, l, g = sids[oki], lids[oki], gids[oki]
+            r = rates[idxs[oki], l, g]
             dic[i, 'sid'].append(s)
             dic[i, 'lid'].append(l)
             dic[i, 'gid'].append(g + gid)
-            dic[i, 'rate'].append(rates[idxs[oki], l, g])
+            dic[i, 'rate'].append(r)
     for (i, key), lst in dic.items():
         dic[i, key] = numpy.concatenate(lst, dtype=lst[0].dtype)
     return dic
