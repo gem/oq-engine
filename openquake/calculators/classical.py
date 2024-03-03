@@ -157,7 +157,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     used to specify the kind of output.
     """
     with monitor('read PoEs', measuremem=True):
-        pgetter.init(monitor.task_no % parallel.Starmap.num_cores)
+        pgetter.init()
 
     if amplifier:
         with hdf5.File(pgetter.filename, 'r') as f:
@@ -239,7 +239,7 @@ def make_hmap_png(hmap, lons, lats):
 
 class Hazard:
     """
-    Helper class for storing the PoEs
+    Helper class for storing the rates
     """
     def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
@@ -273,23 +273,21 @@ class Hazard:
         """
         ds = self.datastore
         dic = AccumDict(accum=[])
-        for m, imt in enumerate(self.imtls):
-            slc = self.imtls(imt)
-            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
-            idxs, lids, gids = rates.nonzero()
-            sids = pnemap.sids[idxs]
-            if len(sids):  # zero in case_60
-                mod500 = sids % 500
-                for i in range(500):
-                    ok = mod500 == i
-                    if ok.any():
-                        s, l, g = sids[ok], lids[ok], gids[ok]
-                        r = rates[idxs[ok], l, g]
-                        dic[i, 'sid'].append(s)
-                        dic[i, 'lid'].append(l + slc.start)
-                        dic[i, 'gid'].append(g + gid)
-                        dic[i, 'rate'].append(r)
-                self.offset += len(sids)
+        rates = pnemap.to_rates()  # shape (N, L, G)
+        idxs, lids, gids = rates.nonzero()
+        sids = pnemap.sids[idxs]
+        if len(sids):  # zero in case_60
+            mod500 = sids % 500
+            for i in range(500):
+                ok = mod500 == i
+                if ok.any():
+                    s, l, g = sids[ok], lids[ok], gids[ok]
+                    r = rates[idxs[ok], l, g]
+                    dic[i, 'sid'].append(s)
+                    dic[i, 'lid'].append(l)
+                    dic[i, 'gid'].append(g + gid)
+                    dic[i, 'rate'].append(r)
+            self.offset += len(sids)
         for (i, key), lst in dic.items():
             arr = numpy.concatenate(lst, dtype=lst[0].dtype)
             hdf5.extend(ds[f'_rates/{i}/{key}'], arr)
@@ -521,9 +519,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
-        with self.monitor('storing PoEs', measuremem=True):
+        with self.monitor('storing rates', measuremem=True):
             nbytes = self.haz.store_rates(self.pmap)
-        logging.info('Stored %s of PoEs', humansize(nbytes))
+        logging.info('Stored %s of rates', humansize(nbytes))
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -573,7 +571,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.ntiles:  # can be empty if sg.weight < maxw always
             logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
-        mon = self.monitor('storing PoEs', measuremem=False)
+        mon = self.monitor('storing rates', measuremem=False)
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']

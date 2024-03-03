@@ -193,10 +193,6 @@ class PmapGetter(object):
             return self._pmap
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
-            size = len(dstore[f'_rates/{self.splitno}/sid'])
-            sleep = size / 1E7 * taskno
-            print(f'{sleep=}')
-            time.sleep(sleep)
             rates_df = dstore.read_df('_rates/' + self.splitno)
             for sid, df in rates_df.groupby('sid'):
                 try:
