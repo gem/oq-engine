@@ -90,6 +90,31 @@ def store_ctxs(dstore, rupdata_list, grp_id):
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
+
+def todict(pnemap, gid=0):
+    """
+    :returns: dictionary (i, key) -> array
+    """
+    dic = AccumDict(accum=[])
+    rates = pnemap.to_rates()  # shape (N, L, G)
+    idxs, lids, gids = rates.nonzero()
+    sids = pnemap.sids[idxs]
+    if len(sids):  # zero in case_60
+        mod500 = sids % 500
+        for i in range(500):
+            ok = mod500 == i
+            if ok.any():
+                s, l, g = sids[ok], lids[ok], gids[ok]
+                r = rates[idxs[ok], l, g]
+                dic[i, 'sid'].append(s)
+                dic[i, 'lid'].append(l)
+                dic[i, 'gid'].append(g + gid)
+                dic[i, 'rate'].append(r)
+    for (i, key), lst in dic.items():
+        dic[i, key] = numpy.concatenate(lst, dtype=lst[0].dtype)
+    return dic
+
+
 #  ########################### task functions ############################ #
 
 
@@ -272,24 +297,10 @@ class Hazard:
         Store pnes inside the _rates dataset
         """
         ds = self.datastore
-        dic = AccumDict(accum=[])
-        rates = pnemap.to_rates()  # shape (N, L, G)
-        idxs, lids, gids = rates.nonzero()
-        sids = pnemap.sids[idxs]
-        if len(sids):  # zero in case_60
-            mod500 = sids % 500
-            for i in range(500):
-                ok = mod500 == i
-                if ok.any():
-                    s, l, g = sids[ok], lids[ok], gids[ok]
-                    r = rates[idxs[ok], l, g]
-                    dic[i, 'sid'].append(s)
-                    dic[i, 'lid'].append(l)
-                    dic[i, 'gid'].append(g + gid)
-                    dic[i, 'rate'].append(r)
-            self.offset += len(sids)
-        for (i, key), lst in dic.items():
-            arr = numpy.concatenate(lst, dtype=lst[0].dtype)
+        dic = todict(pnemap, gid)
+        for (i, key), arr in dic.items():
+            if key == 'sid':
+                self.offset += len(arr)
             hdf5.extend(ds[f'_rates/{i}/{key}'], arr)
 
         self.acc['nsites'] = self.offset
