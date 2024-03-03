@@ -164,11 +164,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
-                # save data transfer
-                result['pnemap'] = todict(~pmap.remove_zeros(), gid, tiling)
-            else:  # keep the shape of the underlying array in store_mean_rates
-                result['pnemap'] = todict(~pmap, gid, tiling)
+            result['pnemap'] = todict(~pmap, gid, tiling)
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
 
