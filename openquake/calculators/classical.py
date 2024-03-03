@@ -91,7 +91,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def todict(pnemap, gid=0, tiling=True):
+def to_dframe(pnemap, gid=0, tiling=True):
     """
     :returns: dictionary (i, key) -> array
     """
@@ -132,8 +132,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = todict(~pmap, gid, tiling)
-            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['pnemap'] = to_dframe(~pmap, gid, tiling)
+            result['trt_smrs'] = cmaker.trt_smrs
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -147,8 +147,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = todict(~pmap, gid, tiling)
-            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['pnemap'] = to_dframe(~pmap, gid, tiling)
+            result['trt_smrs'] = cmaker.trt_smrs
             yield result
 
 
@@ -282,7 +282,7 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        rate_df = todict(pnemap, gid)
+        rate_df = to_dframe(pnemap, gid)
         for i, df in rate_df.groupby(rate_df.sid % 256):
             self.offset += len(df)
             for col in df.columns:
@@ -348,7 +348,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             pm = ~pnemap
             pm.grp_id = grp_id
-            pm.trt_smrs = pnemap.trt_smrs
+            pm.trt_smrs = dic['trt_smrs']
             acc[source_id] += self.haz.get_rates(pm)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
@@ -568,7 +568,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.ntiles:  # can be empty if sg.weight < maxw always
             logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
-        mon = self.monitor('storing rates', measuremem=False)
+        mon = self.monitor('storing rates', measuremem=True)
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
