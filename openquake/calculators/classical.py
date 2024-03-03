@@ -158,7 +158,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # NB: the parameter config.memory.pmap_max_mb avoids the hanging
         # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
-        N = len(sitecol)
         for sites in sitecol.split_in_tiles(itiles):
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
@@ -184,7 +183,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('read PoEs', measuremem=True):
+    with monitor('reading rates', measuremem=True):
         pgetter.init()
 
     if amplifier:
