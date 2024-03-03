@@ -754,7 +754,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
         delta_t = len(self.datastore['_rates/sid']) / 1e11
-        logging.info('sleep = %.1f seconds', delta_t)
+        logging.info('sleep = %.2f seconds', delta_t)
         if 'delta_rates' in oq.inputs:
             pass  # avoid an HDF5 error
         else:  # in all the other cases
