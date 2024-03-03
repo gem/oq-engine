@@ -95,14 +95,16 @@ def todict(pnemap, gid=0):
     """
     :returns: dictionary (i, key) -> array
     """
+    if isinstance(pnemap, AccumDict):  # already converted
+        return pnemap
     dic = AccumDict(accum=[])
     rates = pnemap.to_rates()  # shape (N, L, G)
     idxs, lids, gids = rates.nonzero()
     sids = pnemap.sids[idxs]
     if len(sids):  # zero in case_60
-        mod500 = sids % 500
-        for i in range(500):
-            ok = mod500 == i
+        mod256 = sids % 256
+        for i in range(256):
+            ok = mod256 == i
             if ok.any():
                 s, l, g = sids[ok], lids[ok], gids[ok]
                 r = rates[idxs[ok], l, g]
@@ -296,12 +298,11 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        ds = self.datastore
         dic = todict(pnemap, gid)
         for (i, key), arr in dic.items():
             if key == 'sid':
                 self.offset += len(arr)
-            hdf5.extend(ds[f'_rates/{i}/{key}'], arr)
+            hdf5.extend(self.datastore[f'_rates/{i}/{key}'], arr)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -402,7 +403,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        for splitno in numpy.unique(self.sitecol.sids % 500):
+        for splitno in numpy.unique(self.sitecol.sids % 256):
             self.datastore.create_df(f'_rates/{splitno}', rates_dt.items())
         # NB: compressing the dataset causes a big slowdown in writing :-(
 

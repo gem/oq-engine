@@ -187,7 +187,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             if self.R > 1:
                 for sid in self.sitecol.sids:
                     pgetter = getters.PmapGetter(
-                        dstore, full_lt, str(sid % 500), oq.imtls, oq.poes)
+                        dstore, full_lt, str(sid % 256), oq.imtls, oq.poes)
                     hcurve = pgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
