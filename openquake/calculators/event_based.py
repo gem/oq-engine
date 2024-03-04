@@ -579,6 +579,10 @@ class EventBasedCalculator(base.HazardCalculator):
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
             sitemodel = oq.inputs.get('site_model', [''])[0]
             if sitemodel.endswith('.hdf5'):
+                if oq.mosaic_model == '???':
+                    raise ValueError(
+                        '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                        oq.rupture_dict)
                 gsim_lt = logictree.GsimLogicTree.from_hdf5(
                     sitemodel, oq.mosaic_model)
         G = gsim_lt.get_num_paths()

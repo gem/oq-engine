@@ -183,6 +183,9 @@ class GsimLogicTree(object):
 
     @classmethod
     def from_hdf5(cls, fname, mosaic_model):
+        """
+        :returns: gsim logic tree associated to the given mosaic model
+        """
         with hdf5.File(fname, 'r') as f:
             alldata = f['model_trt_gsim_weight'][:]
         data = alldata[alldata['model'] == mosaic_model.encode('utf8')]
