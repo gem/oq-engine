@@ -716,7 +716,7 @@ class ClassicalCalculator(base.HazardCalculator):
             slicedic[sid] = calc.compactify(slices)
         nslices = sum(len(slices) for slices in slicedic.values())
         logging.info('There are %d slices of poes [%.1f per task]',
-                     nslices, nslices / len(slicedic))
+                     nslices, nslices / ct)
         allargs = []
         for i in range(ct):
             sdic = {sid: slicedic[sid] for sid in slicedic if sid % ct == i}
