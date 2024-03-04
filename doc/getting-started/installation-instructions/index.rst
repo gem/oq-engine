@@ -27,8 +27,6 @@ To run any serious calculation (i.e. a model in GEM mosaic) you need at least 2 
 calculations and even more memory for risk calculations. For instance, on a recent i9 processor with 32 threads you 
 would need at least 64 GB of RAM.
 
-Check more advanced `hardware suggestions here <https://github.com/gem/oq-engine/blob/master/doc/hardware-suggestions.md>`_.
-
 Installing the Long Term Support (LTS) version
 ----------------------------------------------
 

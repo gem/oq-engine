@@ -18,6 +18,7 @@ is the OpenQuake Engine 3.18.
 .. toctree::
    :maxdepth: 1
 
+   whats-new-3.19
    whats-new-3.18
    whats-new-3.17
    whats-new-3.16
