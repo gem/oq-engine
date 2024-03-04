@@ -155,12 +155,10 @@ class PmapGetter(object):
         else:
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.slices = slices
-        self._pmap = {}
 
     @property
     def sids(self):
-        self.init()
-        return list(self._pmap)
+        return list(self.slices)
 
     @property
     def imts(self):
@@ -172,8 +170,7 @@ class PmapGetter(object):
 
     @property
     def N(self):
-        self.init()
-        return len(self._pmap)
+        return len(self.slices)
 
     @property
     def M(self):
@@ -182,25 +179,6 @@ class PmapGetter(object):
     @property
     def R(self):
         return len(self.weights)
-
-    def init(self):
-        """
-        Build the probability curves from the underlying dataframes
-        """
-        if self._pmap:
-            return self._pmap
-        G = len(self.trt_rlzs)
-        with hdf5.File(self.filename) as dstore:
-            for sid, slices in self.slices.items():
-                df = dstore.read_df('_rates', slices=slices)
-                try:
-                    array = self._pmap[sid].array
-                except KeyError:
-                    array = numpy.zeros((self.L, G))
-                    self._pmap[sid] = probability_map.ProbabilityCurve(
-                        array)
-                array[df.lid, df.gid] = df.rate
-        return self._pmap
 
     # used in risk calculations where there is a single site per getter
     def get_hazard(self, gsim=None):
@@ -221,14 +199,17 @@ class PmapGetter(object):
         :param sid: a site ID
         :returns: a ProbabilityCurve of shape L, R for the given site ID
         """
-        pmap = self.init()
         pc0 = probability_map.ProbabilityCurve(
             numpy.zeros((self.L, self.num_rlzs)))
-        if sid not in pmap:  # no hazard for sid
+        if sid not in self.slices:  # no hazard for sid
             return pc0
+        with hdf5.File(self.filename) as dstore:
+            df = dstore.read_df('_rates', slices=self.slices[sid])
+        array = numpy.zeros((self.L, len(self.trt_rlzs)))
+        array[df.lid, df.gid] = df.rate
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = pmap[sid].array[:, g]
+            rates = array[:, g]
             for rlz in rlzs:
                 pc0.array[:, rlz] += rates
         pc0.array = to_probs(pc0.array)
