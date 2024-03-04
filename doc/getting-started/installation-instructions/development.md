@@ -109,7 +109,7 @@ authkey = changeme  |  authkey = changeme
 
 ## Running the tests
 
-To run the OpenQuake Engine tests see the **[testing](https://github.com/gem/oq-engine/blob/master/doc/contributing/testing.md)** page.
+To run the OpenQuake Engine tests see the **[testing](https://github.com/gem/oq-engine/blob/engine-3.19/doc/contributing/testing.md)** page.
 
 ### Sync the source code with remote
 

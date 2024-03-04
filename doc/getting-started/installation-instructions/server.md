@@ -126,7 +126,7 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers, we suggest `N = 4`.
 
-*gunicorn* is usually managed by the OS init system. See an example for [systemd](https://github.com/gem/oq-engine/blob/master/debian/systemd/openquake-webui.service).
+*gunicorn* is usually managed by the OS init system. See an example for [systemd](https://github.com/gem/oq-engine/blob/engine-3.19/debian/systemd/openquake-webui.service).
 
 ### nginx
 
