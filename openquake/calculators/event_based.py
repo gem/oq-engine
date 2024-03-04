@@ -37,6 +37,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
@@ -571,7 +572,15 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
-        gsim_lt = readinput.get_gsim_lt(self.oqparam)
+        gsim_lt = readinput.get_gsim_lt(oq)
+        if oq.rupture_dict:
+            mosaic_df = readinput.read_mosaic_df(buffer=0)
+            lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
+            sitemodel = oq.inputs.get('site_model', [''])[0]
+            if sitemodel.endswith('.hdf5'):
+                gsim_lt = logictree.GsimLogicTree.from_hdf5(
+                    sitemodel, oq.mosaic_model)
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
