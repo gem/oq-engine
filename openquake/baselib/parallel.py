@@ -324,9 +324,12 @@ class Pickled(object):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         try:
-            self.pik = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
+        self.compressed = len(self.pik) > 1E6
+        if self.compressed:
+            self.pik = zlib.compress(self.pik)
 
     def __repr__(self):
         """String representation of the pickled object"""
@@ -339,7 +342,8 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return pickle.loads(zlib.decompress(self.pik))
+        pik = zlib.decompress(self.pik) if self.compressed else self.pik
+        return pickle.loads(pik)
 
 
 def get_pickled_sizes(obj):
