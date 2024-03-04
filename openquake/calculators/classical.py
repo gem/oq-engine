@@ -400,7 +400,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_rates', rates_dt.items())
+        self.datastore.create_df('_rates', rates_dt.items(), 'gzip')
         self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
