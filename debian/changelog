@@ -1,3 +1,5 @@
+python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
+
   [Graeme Weatherill]
   * Contributed new GMPEs Weatherill2024ESHM20AvgSA,
     Weatherill2024ESHM20SlopeGeologyAvgSA, Weatherill2024ESHM20Homokedastic
@@ -120,6 +122,8 @@
   * Internal: forced the colon convention on mutex sources
   * Fixed a bug in the disaggregation with mutex sources incorrectly
     averaging over the rates and not the poes
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 04 Mar 2024 08:47:34 +0000
 
 python3-oq-engine (3.18.0-1~xenial01) xenial; urgency=low
 

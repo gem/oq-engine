@@ -29,6 +29,7 @@ import toml
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import duplicated, BASE183, group_array
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
@@ -173,14 +174,38 @@ class GsimLogicTree(object):
                      nodes=[N('uncertaintyModel', text=str(gsim)),
                             N('uncertaintyWeight', text='1.0')])
         lt = N('logicTree', {'logicTreeID': 'lt1'},
-               nodes=[N('logicTreeBranchingLevel', {'branchingLevelID': 'bl1'},
-                        nodes=[N('logicTreeBranchSet',
-                                 {'applyToTectonicRegionType': '*',
-                                  'branchSetID': 'bs1',
-                                  'uncertaintyType': 'gmpeModel'},
-                                 nodes=[ltbranch])])])
+               nodes=[N('logicTreeBranchSet',
+                        {'applyToTectonicRegionType': '*',
+                         'branchSetID': 'bs1',
+                         'uncertaintyType': 'gmpeModel'},
+                        nodes=[ltbranch])])
         return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
 
+    @classmethod
+    def from_hdf5(cls, fname, mosaic_model):
+        """
+        :returns: gsim logic tree associated to the given mosaic model
+        """
+        with hdf5.File(fname, 'r') as f:
+            alldata = f['model_trt_gsim_weight'][:]
+        data = alldata[alldata['model'] == mosaic_model.encode('utf8')]
+        trt = data['trt'][0]
+        dat = data[data['trt'] == trt]
+        trt = decode(trt)
+        gsims = decode(dat['gsim'])
+        weights = decode(dat['weight'])
+        ltbranches = [N('logicTreeBranch', {'branchID': 'b1'},
+                        nodes=[N('uncertaintyModel', text=gsim),
+                               N('uncertaintyWeight', text=weight)])
+                      for gsim, weight in zip(gsims, weights)]
+        lt = N('logicTree', {'logicTreeID': 'lt1'},
+               nodes=[N('logicTreeBranchSet',
+                        {'applyToTectonicRegionType': trt,
+                         'branchSetID': 'bs1',
+                         'uncertaintyType': 'gmpeModel'},
+                        nodes=ltbranches)])
+        return cls('fake', [trt], ltnode=lt)
+        
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
         self.filename = fname
@@ -284,8 +309,7 @@ class GsimLogicTree(object):
                 weight = object.__new__(ImtWeight)
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
                 weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
-                if len(weight.dic) > 1:
-                    gsim.weight = weight
+                gsim.weight = weight
                 bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
@@ -413,8 +437,8 @@ class GsimLogicTree(object):
                 if gsim in self.values[trt]:
                     raise InvalidLogicTree('%s: duplicated gsim %s' %
                                            (self.filename, gsim))
-                if len(weight.dic) > 1:
-                    gsim.weight = weight
+
+                gsim.weight = weight
                 self.values[trt].append(gsim)
                 bt = BranchTuple(
                     branchset['applyToTectonicRegionType'],
