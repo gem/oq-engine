@@ -706,35 +706,29 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        sites_per_task = int(numpy.ceil(self.N / ct))
         sbs = dstore['_rates/slice_by_sid'][:]
-        sbs['sid'] //= sites_per_task
-        # NB: there is a genious idea here, to split in tasks by using
-        # the formula ``taskno = sites_ids // sites_per_task`` and then
-        # extracting a dictionary of slices for each taskno. This works
-        # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites
-        # disposed in 2 groups and we want to produce 2 tasks we can use
-        # 012345012345 // 3 = 000111000111 and the slices are
-        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = AccumDict(accum=[])
         for idx, start, stop in sbs:
             slicedic[idx].append((start, stop))
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
-
         # using compactify improves the performance of `read PoEs`;
         # I have measured a 3.5x in the AUS model with 1 rlz
-        allslices = [calc.compactify(slices) for slices in slicedic.values()]
-        nslices = sum(len(slices) for slices in allslices)
+        for sid, slices in slicedic.items():
+            slicedic[sid] = calc.compactify(slices)
+        nslices = sum(len(slices) for slices in slicedic.values())
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
-        allargs = [
-            (getters.PmapGetter(dstore, self.full_lt, slices,
-                                oq.imtls, oq.poes, oq.use_rates),
-             N, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for slices in allslices]
+        allargs = []
+        for i in range(256):
+            sdic = {sid: slicedic[sid] for sid in slicedic if sid % 256 == i}
+            if not sdic:
+                continue
+            pgetter = getters.PmapGetter(dstore, self.full_lt, sdic,
+                                         oq.imtls, oq.poes, oq.use_rates)
+            allargs.append((pgetter, N, hstats, individual,
+                            oq.max_sites_disagg, self.amplifier))
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
