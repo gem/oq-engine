@@ -212,6 +212,7 @@ from openquake.baselib.general import (
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
+MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
@@ -327,7 +328,7 @@ class Pickled(object):
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
-        self.compressed = len(self.pik) > 1E6
+        self.compressed = len(self.pik) > MB
         if self.compressed:
             self.pik = zlib.compress(self.pik)
 
