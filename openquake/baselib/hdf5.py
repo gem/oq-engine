@@ -259,26 +259,6 @@ def is_ok(value, expected):
     return value == expected
 
 
-def decode_lol(lol):
-    """
-    :returns: a list of lists of decoded values
-    """
-    if len(lol) and len(lol[0]) and isinstance(lol[0][0], bytes):
-        return [decode(lst) for lst in lol]
-    else:
-        return lol
-
-
-def fast_read(dset, slices):
-    """
-    Read multiple slices at once
-    """
-    out = []
-    for slc in slices:
-        out.append(dset[slc])
-    return numpy.concatenate(out, dtype=out[0].dtype)
-
-
 def extract_cols(datagrp, sel, slices, columns):
     """
     :param datagrp: something like and HDF5 data group
@@ -301,8 +281,12 @@ def extract_cols(datagrp, sel, slices, columns):
                 acc[col].append(datagrp[col][slc][ok])
     else:  # avoid making unneeded copies
         for col in columns:
-            acc[col].append(fast_read(datagrp[col], slices))
-    return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
+            dset = datagrp[col]
+            for slc in slices:
+                acc[col].append(dset[slc])
+    for k, vs in acc.items():
+        acc[k] = numpy.concatenate(vs, dtype=vs[0].dtype)
+    return acc
 
 
 class File(h5py.File):
@@ -397,7 +381,8 @@ class File(h5py.File):
             if len(slices):
                 slcs = [slice(s0, s1) for s0, s1 in slices]
             elif slc.start is None and slc.stop is None:  # split in slices
-                slcs = general.gen_slices(0, len(dset[columns[0]]), MAX_ROWS)
+                slcs = list(general.gen_slices(
+                    0, len(dset[columns[0]]), MAX_ROWS))
             else:
                 slcs = [slc]
             dic = extract_cols(dset, sel, slcs, columns)
