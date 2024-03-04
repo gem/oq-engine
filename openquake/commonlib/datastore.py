@@ -20,7 +20,6 @@ import io
 import os
 import re
 import gzip
-import json
 import collections
 import numpy
 import h5py

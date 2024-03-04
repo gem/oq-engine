@@ -1469,12 +1469,18 @@ def read_geometries(fname, code, buffer=0):
 
 
 def read_mosaic_df(buffer=0.1):
+    """
+    :returns: a DataFrame of geometries for the mosaic models
+    """
     fname = os.path.join(os.path.dirname(mosaic.__file__),
                          'ModelBoundaries.shp')
     return read_geometries(fname, 'code', buffer)
 
 
-def read_global_risk_df(buffer=0.1):
+def read_countries_df(buffer=0.1):
+    """
+    :returns: a DataFrame of geometries for the world countries
+    """
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)

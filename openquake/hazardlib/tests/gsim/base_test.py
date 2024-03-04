@@ -17,20 +17,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import collections
 import unittest.mock as mock
 import numpy
 
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
     GMPE, gsim_aliases, NotVerifiedWarning, DeprecationWarning)
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.contexts import (
-    ContextMaker, SitesContext, RuptureContext
-)
+    ContextMaker, SitesContext, RuptureContext)
 from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     AbrahamsonGulerce2020SInter)
 aac = numpy.testing.assert_allclose

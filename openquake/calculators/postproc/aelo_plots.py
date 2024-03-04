@@ -130,7 +130,7 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
         plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
                    label=lab, linewidth=3, zorder=1)
         
-        if plot_mce==True:
+        if plot_mce:
         # plot the label only once but it must be at the end of the legend
             if imt == imts[-1]:
                 plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',

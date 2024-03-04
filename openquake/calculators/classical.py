@@ -168,7 +168,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('read PoEs', measuremem=True):
+    with monitor('reading rates', measuremem=True):
         pgetter.init()
 
     if amplifier:
@@ -251,7 +251,7 @@ def make_hmap_png(hmap, lons, lats):
 
 class Hazard:
     """
-    Helper class for storing the PoEs
+    Helper class for storing the rates
     """
     def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
@@ -279,7 +279,7 @@ class Hazard:
         rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnemap, the_sids, gid=0):
+    def store_rates(self, pnemap, gid=0):
         """
         Store pnes inside the _rates dataset
         """
@@ -290,7 +290,7 @@ class Hazard:
             idxs, lids, gids = rates.nonzero()
             if len(idxs) == 0:  # happens in case_60
                 return 0
-            sids = the_sids[idxs]
+            sids = pnemap.sids[idxs]
             hdf5.extend(self.datastore['_rates/sid'], sids)
             hdf5.extend(self.datastore['_rates/gid'], gids + gid)
             hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
@@ -528,9 +528,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
-        with self.monitor('storing PoEs', measuremem=True):
-            nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
-        logging.info('Stored %s of PoEs', humansize(nbytes))
+        with self.monitor('storing rates', measuremem=True):
+            nbytes = self.haz.store_rates(self.pmap)
+        logging.info('Stored %s of rates', humansize(nbytes))
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -579,11 +579,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
+        mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
-            nbytes = self.haz.store_rates(pnemap, pnemap.sids, gid)
+            with mon:
+                nbytes = self.haz.store_rates(pnemap, gid)
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 

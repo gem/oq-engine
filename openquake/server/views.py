@@ -1014,6 +1014,19 @@ def is_model_preliminary(ds):
         return False
 
 
+def get_disp_val(val):
+    # gets the value displayed in the webui according to the rounding rules
+    if val >= 1.0:
+        return '{:.2f}'.format(numpy.round(val, 2))
+    elif val < 0.0001:
+        return f'{val:.1f}'
+    elif val < 0.01:
+        return '{:.4f}'.format(numpy.round(val, 4))
+    elif val < 0.1:
+        return '{:.3f}'.format(numpy.round(val, 3))
+    else:
+        return '{:.2f}'.format(numpy.round(val, 2))
+
 # this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
@@ -1023,7 +1036,6 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07 = asce41 = None
     asce07_with_units = {}
     asce41_with_units = {}
-    ASCE_VIEW_DECIMALS = 2
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if is_model_preliminary(ds):
@@ -1042,11 +1054,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce07_with_units[key] = value
                 elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce07_with_units[key + ' (-)'] = (
-                        f'{value:.{ASCE_VIEW_DECIMALS}}')
+                    asce07_with_units[key + ' (-)'] = get_disp_val(value)
                 else:
-                    asce07_with_units[key + ' (g)'] = (
-                        f'{value:.{ASCE_VIEW_DECIMALS}}')
+                    asce07_with_units[key + ' (g)'] = get_disp_val(value)
         if 'asce41' in ds:
             try:
                 asce41_js = ds['asce41'][0].decode('utf8')
@@ -1060,8 +1070,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 if not isinstance(value, float):
                     asce41_with_units[key] = value
                 else:
-                    asce41_with_units[key + ' (g)'] = (
-                        f'{value:.{ASCE_VIEW_DECIMALS}}')
+                    asce41_with_units[key + ' (g)'] = get_disp_val(value)
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
