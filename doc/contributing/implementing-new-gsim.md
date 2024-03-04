@@ -2,7 +2,7 @@
 
 Below we provide a concise description of the process to be adopted for the creation of a new GSIM (i.e. GMPE or IPE) in the OpenQuake hazard library.
 
-- Read the [Development guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
+- Read the [Development guidelines](https://github.com/gem/oq-engine/blob/master/doc/contributing/development-guidelines.md)
 
 - Fork the oq-engine master
 https://help.github.com/articles/fork-a-repo
@@ -27,7 +27,7 @@ pytest -xv openquake/hazardlib
 ```
 
 - Update the following .rst file (needed to generate automatically documentation):
-https://github.com/gem/oq-engine/blob/master/doc/sphinx/openquake.hazardlib.gsim.rst
+https://github.com/gem/oq-engine/blob/master/doc/api-reference/openquake.hazardlib.gsim.rst
 
 - Check that the new code fulfils PEP 8 standards (usually we do this using tools such as flake8 https://pypi.python.org/pypi/flake8) 
 https://www.python.org/dev/peps/pep-0008/

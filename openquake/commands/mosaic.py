@@ -26,11 +26,14 @@ import cProfile
 import pandas
 import collections
 from openquake.baselib import config, performance
+from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
 from openquake.hazardlib.geo.utils import geolocate
+
+FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
 
 
 def engine_profile(jobctx, nrows):
@@ -272,7 +275,25 @@ sample_rups.extreme_gmv = 'threshold above which a GMV is extreme'
 sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
+
+def aristotle(datadir, rupfname=FAMOUS):
+    smodel = os.path.join(datadir, 'site_model.hdf5')
+    expo = os.path.join(datadir, 'exposure.hdf5')
+    allparams = []
+    for i, row in pandas.read_csv(rupfname).iterrows():
+        rupdic = str(row.to_dict())
+        dic = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
+                   exposure_file=expo, site_model_file=smodel)
+        allparams.append(dic)
+        break
+    jobs = engine.create_jobs(allparams, config.distribution.log_level,
+                              None, getpass.getuser(), None)
+    engine.run_jobs(jobs)
+
+aristotle.datadir = 'Directory containing site_model.hdf5 and exposure.hdf5'
+aristotle.rupfname = 'Filename with planar ruptures'
+    
 # ################################## main ################################## #
 
-main = dict(run_site=run_site,
+main = dict(run_site=run_site, aristotle=aristotle,
             sample_rups=sample_rups)
