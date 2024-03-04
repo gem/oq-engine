@@ -168,6 +168,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
+    mon = monitor('reading rates', measuremem=False)
     if amplifier:
         with hdf5.File(pgetter.filename, 'r') as f:
             ampcode = f['sitecol'].ampcode
@@ -195,7 +196,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
-            pc = pgetter.get_hcurve(sid)  # shape (L, R)
+            pc = pgetter.get_hcurve(sid, mon)  # shape (L, R)
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
                 # NB: the hcurve have soil levels != IMT levels

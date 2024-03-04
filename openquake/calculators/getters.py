@@ -19,7 +19,7 @@
 import operator
 import numpy
 
-from openquake.baselib import general, hdf5
+from openquake.baselib import general, hdf5, performance
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
@@ -194,7 +194,7 @@ class PmapGetter(object):
                 numpy.zeros((self.L, self.num_rlzs)))
         return self.get_hcurve(self.sids[0])
 
-    def get_hcurve(self, sid):  # used in classical
+    def get_hcurve(self, sid, mon=performance.Monitor()):  # used in classical
         """
         :param sid: a site ID
         :returns: a ProbabilityCurve of shape L, R for the given site ID
@@ -203,7 +203,7 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in self.slices:  # no hazard for sid
             return pc0
-        with hdf5.File(self.filename) as dstore:
+        with mon, hdf5.File(self.filename) as dstore:
             df = dstore.read_df('_rates', slices=self.slices[sid])
         array = numpy.zeros((self.L, len(self.trt_rlzs)))
         array[df.lid, df.gid] = df.rate
