@@ -283,24 +283,21 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        # store by IMT to save memory
-        for m, imt in enumerate(self.imtls):
-            slc = self.imtls(imt)
-            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
-            idxs, lids, gids = rates.nonzero()
-            if len(idxs) == 0:  # happens in case_60
-                return 0
-            sids = pnemap.sids[idxs]
-            hdf5.extend(self.datastore['_rates/sid'], sids)
-            hdf5.extend(self.datastore['_rates/gid'], gids + gid)
-            hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_rates/rate'], rates[idxs, lids, gids])
+        rates = pnemap.to_rates()  # shape (N, L1, G)
+        idxs, lids, gids = rates.nonzero()
+        if len(idxs) == 0:  # happens in case_60
+            return 0
+        sids = pnemap.sids[idxs]
+        hdf5.extend(self.datastore['_rates/sid'], sids)
+        hdf5.extend(self.datastore['_rates/gid'], gids + gid)
+        hdf5.extend(self.datastore['_rates/lid'], lids)
+        hdf5.extend(self.datastore['_rates/rate'], rates[idxs, lids, gids])
 
-            # slice_by_sid contains 3x6=18 slices in classical/case_22
-            # which has 6 IMTs each one with 20 levels
-            sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
-            self.offset += len(sids)
+        # slice_by_sid contains 3x6=18 slices in classical/case_22
+        # which has 6 IMTs each one with 20 levels
+        sbs = build_slice_by_sid(sids, self.offset)
+        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
+        self.offset += len(sids)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -400,7 +397,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_rates', rates_dt.items())
+        self.datastore.create_df('_rates', rates_dt.items(), 'gzip')
         self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
@@ -721,8 +718,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %d slices of poes [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = []
-        for i in range(256):
-            sdic = {sid: slicedic[sid] for sid in slicedic if sid % 256 == i}
+        for i in range(ct):
+            sdic = {sid: slicedic[sid] for sid in slicedic if sid % ct == i}
             if not sdic:
                 continue
             pgetter = getters.PmapGetter(dstore, self.full_lt, sdic,
