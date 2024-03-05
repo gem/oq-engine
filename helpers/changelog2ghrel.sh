@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 set -x
 
 which grep sed sort uniq head >/dev/null
