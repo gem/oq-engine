@@ -105,7 +105,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 def to_rates(pnemap, gid=0, tiling=True):
     """
-    :returns: dictionary if tiling is True, else ProbabilityMap unchanged
+    :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
         rates = pnemap.to_rates(gid)
