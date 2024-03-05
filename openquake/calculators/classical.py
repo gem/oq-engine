@@ -120,16 +120,16 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    tiling = not hasattr(sources, '__iter__')  # passed gid instead
+    tiling = not hasattr(sources, '__iter__')  # passed gid
     with dstore:
-        if not tiling:  # regular calculator
-            gid = 0
-            sitecol = dstore['sitecol']  # super-fast
-        else:  # tiling calculator, read the sources from the datastore
+        if tiling:  # tiling calculator, read the sources from the datastore
             gid = sources
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(gzip.decompress(arr.tobytes()))
+        else:  # regular calculator
+            gid = 0
+            sitecol = dstore['sitecol']  # super-fast
 
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
