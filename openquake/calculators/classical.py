@@ -20,6 +20,7 @@ import io
 import os
 import time
 import gzip
+import zlib
 import pickle
 import psutil
 import logging
@@ -108,8 +109,8 @@ def to_rates(pnemap, gid=0, tiling=True):
     :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
-        rates = pnemap.to_rates(gid)
-        return gzip.compress(rates.tobytes())
+        rates = pnemap.to_rates(gid)  # zlib is faster than gzip
+        return zlib.compress(rates.tobytes())
     return pnemap
 
 #  ########################### task functions ############################ #
@@ -290,7 +291,7 @@ class Hazard:
         Store pnes inside the _rates dataset
         """
         if isinstance(pnemap, bytes):  # compressed
-            rates = numpy.frombuffer(gzip.decompress(pnemap), rates_dt)
+            rates = numpy.frombuffer(zlib.decompress(pnemap), rates_dt)
         else:
             rates = pnemap.to_rates()
         if len(rates) == 0:  # happens in case_60
