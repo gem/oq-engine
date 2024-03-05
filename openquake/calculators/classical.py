@@ -725,11 +725,11 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
 
-        # using compactify improves the performance of `read PoEs`;
+        # using compactify improves the performance of `reading rates`;
         # I have measured a 3.5x in the AUS model with 1 rlz
         allslices = [calc.compactify(slices) for slices in slicedic.values()]
         nslices = sum(len(slices) for slices in allslices)
-        logging.info('There are %d slices of poes [%.1f per task]',
+        logging.info('There are %d slices of rates [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, self.full_lt, slices,
