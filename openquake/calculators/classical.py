@@ -105,7 +105,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 def to_rates(pnemap, gid=0, tiling=True):
     """
-    :returns: rates_dt array if tiling is True, else ProbabilityMap unchanged
+    :returns: dictionary if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
         rates = pnemap.to_rates(gid)
@@ -407,7 +407,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
-        # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
         if oq.disagg_by_src:
