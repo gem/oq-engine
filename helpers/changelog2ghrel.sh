@@ -1,8 +1,8 @@
 #!/bin/bash
-# set -e
+set -e
 set -x
 
-trap "" PIPE
+# trap "" PIPE
 
 which grep sed sort uniq head >/dev/null
 if [ $? -ne 0 ]; then
