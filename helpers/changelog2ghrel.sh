@@ -1,10 +1,11 @@
 #!/bin/bash
-#
-
-#
-#
-
 set -x
+
+which grep sed sort uniq >/dev/null
+if [ $? -ne 0 ]; then
+    which grep sed sort uniq
+fi
+
 NL='
 '
 
