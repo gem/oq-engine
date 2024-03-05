@@ -108,7 +108,8 @@ def to_rates(pnemap, gid=0, tiling=True):
     :returns: rates_dt array if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
-        return pnemap.to_rates(gid)
+        rates = pnemap.to_rates(gid)
+        return dict(bytes=gzip.compress(rates.tobytes()), dtype=rates.dtype)
     return pnemap
 
 #  ########################### task functions ############################ #
@@ -288,7 +289,11 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        rates = to_rates(pnemap)  # shape (N, L1, G)
+        if isinstance(pnemap, dict):  # compressed
+            rates = numpy.frombuffer(
+                gzip.decompress(pnemap['bytes']), pnemap['dtype'])
+        else:
+            rates = pnemap.to_rates()
         if len(rates) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
@@ -298,7 +303,7 @@ class Hazard:
 
         # slice_by_sid contains 3x6=18 slices in classical/case_22
         # which has 6 IMTs each one with 20 levels
-        sbs = build_slice_by_sid(rates['sid'], self.offset)
+        sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
         hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
         self.offset += len(rates)
 
