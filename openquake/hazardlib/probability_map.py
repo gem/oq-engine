@@ -410,11 +410,8 @@ class ProbabilityMap(object):
         pnes[pnes == 0.] = 1.11E-16
         rates = -numpy.log(pnes)
         idxs, lids, gids = rates.nonzero()
-        out = numpy.zeros(len(idxs), rates_dt)
-        out['sid'] = self.sids[idxs]
-        out['lid'] = lids
-        out['gid'] = gids + gid
-        out['rate'] = rates[idxs, lids, gids]
+        out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
+                   gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
         return out
 
     def interp4D(self, imtls, poes):
@@ -450,10 +447,7 @@ class ProbabilityMap(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        rates = self.to_rates()
-        dic = dict(sid=rates['sid'], gid=rates['gid'], lid=rates['lid'],
-                   rate=rates['rate'])
-        return pandas.DataFrame(dic)
+        return pandas.DataFrame(self.to_rates())
 
     def multiply_pnes(self, other, g, i):
         """
