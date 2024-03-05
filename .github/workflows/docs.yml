@@ -101,6 +101,11 @@ jobs:
         run: |
           pip install -e .[dev]
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
+      - name: Check consistency between debian/changelog and CONTRIBUTORS.txt
+        shell: bash
+        run: |
+          ./helpers/changelog2ghrel.sh --check
+
       - name: Make docs and rsync to docs.openquake.org
         shell: bash
         env:

@@ -1,3 +1,6 @@
+  [Matteo Nastasio]
+  * Add helper to check consistency between debian/changelog and CONTRIBUTORS.txt
+
   [Michele Simionato]
   * Optimized reading rates in postclassical
   * Reduced data transfer in classical calculations by gzipping the rates
