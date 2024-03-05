@@ -1,12 +1,9 @@
 #!/bin/bash
-set -e
 set -x
 
-# trap "" PIPE
-
-which grep sed sort uniq head >/dev/null
+which grep sed sort uniq >/dev/null
 if [ $? -ne 0 ]; then
-    which grep sed sort uniq head
+    which grep sed sort uniq
 fi
 
 NL='
@@ -38,7 +35,7 @@ per_ver_changelog () {
         if [ "$version_in" ]; then
             cat debian/changelog | sed -n "/^python3-oq-engine (${version_in}-.*/,/^python3-oq-engine .*/p"
         else
-            cat debian/changelog | sed '/^python3-oq-engine.*/q' | head -n -1
+            cat debian/changelog | sed '/^python3-oq-engine.*/q' | sed '$ d' 
         fi
     )
 }
@@ -61,12 +58,7 @@ version_in="$1"
 if [ ! -f debian/changelog ]; then
     usage 1
 fi
-
-# LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
-
-LIST_CONTRIB_P1="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g')"
-LIST_CONTRIB_P2="$(echo "$LIST_CONTRIB_P1" | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g')"
-LIST_CONTRIB="$(echo "$LIST_CONTRIB_P2" | sed 's/\] *$//g' | sort | uniq)"
+LIST_CONTRIB="$(set -e ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
 
 IFS='
 '
