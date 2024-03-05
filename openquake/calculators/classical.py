@@ -301,8 +301,7 @@ class Hazard:
         hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
         hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
-        # slice_by_sid contains 3x6=18 slices in classical/case_22
-        # which has 6 IMTs each one with 20 levels
+        # slice_by_sid contains 3 slices in classical/case_22
         sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
         hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
         self.offset += len(rates)
