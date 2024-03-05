@@ -285,7 +285,9 @@ def extract_cols(datagrp, sel, slices, columns):
             for slc in slices:
                 acc[col].append(dset[slc])
     for k, vs in acc.items():
-        acc[k] = numpy.concatenate(vs, dtype=vs[0].dtype)
+        acc[k] = arr = numpy.concatenate(vs, dtype=vs[0].dtype)
+        if len(arr) and isinstance(arr[0], bytes):
+            acc[k] = numpy.array(decode(arr))
     return acc
 
 

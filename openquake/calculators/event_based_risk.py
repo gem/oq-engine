@@ -253,8 +253,6 @@ def set_oqparam(oq, assetcol, dstore):
     sec_losses = []  # one insured loss for each loss type with a policy
     try:
         policy_df = dstore.read_df('policy')
-        policy_df['loss_type'] = python3compat.decode(
-            policy_df['loss_type'].to_numpy())
     except KeyError:
         pass
     else:
