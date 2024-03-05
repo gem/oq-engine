@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 set -x
-set +o pipefail
+# set +o pipefail
 
 which grep sed sort uniq >/dev/null
 if [ $? -ne 0 ]; then
