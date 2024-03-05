@@ -60,9 +60,7 @@ version_in="$1"
 if [ ! -f debian/changelog ]; then
     usage 1
 fi
-set +e
 LIST_CONTRIB="$(set +o pipefail ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
-set -e
 
 IFS='
 '
