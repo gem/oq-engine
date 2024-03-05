@@ -20,6 +20,7 @@ import io
 import os
 import time
 import gzip
+import zlib
 import pickle
 import psutil
 import logging
@@ -105,10 +106,11 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 def to_rates(pnemap, gid=0, tiling=True):
     """
-    :returns: rates_dt array if tiling is True, else ProbabilityMap unchanged
+    :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
-        return pnemap.to_rates(gid)
+        rates = pnemap.to_rates(gid)  # zlib is faster than gzip
+        return {n: zlib.compress(rates[n].tobytes()) for n in rates}
     return pnemap
 
 #  ########################### task functions ############################ #
@@ -288,19 +290,23 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        rates = to_rates(pnemap)  # shape (N, L1, G)
-        if len(rates) == 0:  # happens in case_60
+        if isinstance(pnemap, dict):  # compressed
+            rates = {
+                n: numpy.frombuffer(zlib.decompress(pnemap[n]), rates_dt[n])
+                for n in rates_dt.names}
+        else:
+            rates = pnemap.to_rates()
+        if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
         hdf5.extend(self.datastore['_rates/gid'], rates['gid'])
         hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
         hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
-        # slice_by_sid contains 3x6=18 slices in classical/case_22
-        # which has 6 IMTs each one with 20 levels
-        sbs = build_slice_by_sid(rates['sid'], self.offset)
+        # slice_by_sid contains 3 slices in classical/case_22
+        sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
         hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
-        self.offset += len(rates)
+        self.offset += len(rates['sid'])
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -402,7 +408,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
-        # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
         if oq.disagg_by_src:
@@ -475,7 +480,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw * .7)
+            self.execute_big(maxw * .75)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -582,10 +587,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
-            pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             with mon:
-                nbytes = self.haz.store_rates(pnemap)
+                nbytes = self.haz.store_rates(dic['pnemap'])
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
@@ -724,11 +728,11 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
 
-        # using compactify improves the performance of `read PoEs`;
+        # using compactify improves the performance of `reading rates`;
         # I have measured a 3.5x in the AUS model with 1 rlz
         allslices = [calc.compactify(slices) for slices in slicedic.values()]
         nslices = sum(len(slices) for slices in allslices)
-        logging.info('There are %d slices of poes [%.1f per task]',
+        logging.info('There are %d slices of rates [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, self.full_lt, slices,
