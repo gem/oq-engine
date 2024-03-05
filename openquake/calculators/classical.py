@@ -109,7 +109,7 @@ def to_rates(pnemap, gid=0, tiling=True):
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
         rates = pnemap.to_rates(gid)
-        return dict(bytes=gzip.compress(rates.tobytes()), dtype=rates.dtype)
+        return gzip.compress(rates.tobytes())
     return pnemap
 
 #  ########################### task functions ############################ #
@@ -289,9 +289,8 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # compressed
-            rates = numpy.frombuffer(
-                gzip.decompress(pnemap['bytes']), pnemap['dtype'])
+        if isinstance(pnemap, bytes):  # compressed
+            rates = numpy.frombuffer(gzip.decompress(pnemap), rates_dt)
         else:
             rates = pnemap.to_rates()
         if len(rates) == 0:  # happens in case_60

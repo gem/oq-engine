@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Optimized reading rates in postclassical
+  * Reduced data transfer in classical calculations by gzipping the rates
+  * Saving disk space in classical calculations (~4x) by gzipping the rates
+
 python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
 
   [Graeme Weatherill]
