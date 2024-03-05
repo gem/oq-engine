@@ -129,7 +129,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
             result['pnemap'] = ~pmap
-            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['trt_smrs'] = cmaker.trt_smrs
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -149,7 +149,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 result['pnemap'] = ~pmap.remove_zeros()
             else:  # keep the shape of the underlying array in store_mean_rates
                 result['pnemap'] = ~pmap
-            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['trt_smrs'] = cmaker.trt_smrs
             yield result
 
 
@@ -357,7 +357,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             pm = ~pnemap
             pm.grp_id = grp_id
-            pm.trt_smrs = pnemap.trt_smrs
+            pm.trt_smrs = dic['trt_smrs']
             acc[source_id] += self.haz.get_rates(pm)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
