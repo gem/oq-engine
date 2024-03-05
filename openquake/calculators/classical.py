@@ -283,21 +283,19 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        rates = pnemap.to_rates()  # shape (N, L1, G)
-        idxs, lids, gids = rates.nonzero()
-        if len(idxs) == 0:  # happens in case_60
-            return 0
-        sids = pnemap.sids[idxs]
-        hdf5.extend(self.datastore['_rates/sid'], sids)
-        hdf5.extend(self.datastore['_rates/gid'], gids + gid)
-        hdf5.extend(self.datastore['_rates/lid'], lids)
-        hdf5.extend(self.datastore['_rates/rate'], rates[idxs, lids, gids])
+        rates = pnemap.to_rates(gid)  # shape (N, L1, G)
+        if len(rates) == 0:  # happens in case_60
+            return self.offset * 12 
+        hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
+        hdf5.extend(self.datastore['_rates/gid'], rates['gid'])
+        hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
+        hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
         # slice_by_sid contains 3x6=18 slices in classical/case_22
         # which has 6 IMTs each one with 20 levels
-        sbs = build_slice_by_sid(sids, self.offset)
+        sbs = build_slice_by_sid(rates['sid'], self.offset)
         hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
-        self.offset += len(sids)
+        self.offset += len(rates)
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -397,7 +395,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_rates', rates_dt.items(), 'gzip')
+        self.datastore.create_df(
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
