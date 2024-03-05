@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+set -e
 
 which grep sed sort uniq >/dev/null
 if [ $? -ne 0 ]; then
@@ -58,7 +58,7 @@ version_in="$1"
 if [ ! -f debian/changelog ]; then
     usage 1
 fi
-LIST_CONTRIB="$(set -e ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
+LIST_CONTRIB="$(set -o pipefail ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
 
 IFS='
 '
