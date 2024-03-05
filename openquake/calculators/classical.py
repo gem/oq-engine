@@ -306,7 +306,7 @@ class Hazard:
         # slice_by_sid contains 3 slices in classical/case_22
         sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
         hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
-        self.offset += len(rates)
+        self.offset += len(rates['sid'])
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
