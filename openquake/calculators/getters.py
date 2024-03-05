@@ -187,7 +187,7 @@ class PmapGetter(object):
         """
         Build the probability curves from the underlying dataframes
         """
-        if self._pmap:
+        if self._pmap or len(self.slices) == 0:
             return self._pmap
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
