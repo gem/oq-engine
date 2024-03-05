@@ -4,7 +4,7 @@
 #
 #
 
-# set -x
+set -x
 NL='
 '
 
