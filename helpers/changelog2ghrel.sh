@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 set -x
+set +o pipefail
 
 which grep sed sort uniq >/dev/null
 if [ $? -ne 0 ]; then
@@ -60,7 +61,7 @@ if [ ! -f debian/changelog ]; then
     usage 1
 fi
 set +e
-LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
+LIST_CONTRIB="$(set +o pipefail ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
 set -e
 
 IFS='
