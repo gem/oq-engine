@@ -1,9 +1,9 @@
 #!/bin/bash
 set -x
 
-which grep sed sort uniq >/dev/null
+which grep sed sort uniq head >/dev/null
 if [ $? -ne 0 ]; then
-    which grep sed sort uniq
+    which grep sed sort uniq head
 fi
 
 NL='
@@ -35,7 +35,7 @@ per_ver_changelog () {
         if [ "$version_in" ]; then
             cat debian/changelog | sed -n "/^python3-oq-engine (${version_in}-.*/,/^python3-oq-engine .*/p"
         else
-            cat debian/changelog | sed '/^python3-oq-engine.*/q' | sed '$ d' 
+            cat debian/changelog | sed '/^python3-oq-engine.*/q' | head -n -1
         fi
     )
 }
