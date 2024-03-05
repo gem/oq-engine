@@ -102,12 +102,16 @@ def store_ctxs(dstore, rupdata_list, grp_id):
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
-#  ########################### task functions ############################ #
 
 def to_rates(pnemap, gid=0, tiling=True):
-    if tiling and hasattr(pnemap, 'to_rates'):
+    """
+    :returns: rates_dt array if tiling is True, else ProbabilityMap unchanged
+    """
+    if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
         return pnemap.to_rates(gid)
     return pnemap
+
+#  ########################### task functions ############################ #
 
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
