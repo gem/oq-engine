@@ -157,23 +157,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         """Performs the disaggregation"""
         return self.full_disaggregation()
 
-    def get_curve(self, sid, rlzs):
-        """
-        Get the hazard curves for the given site ID and realizations.
-
-        :param sid: site ID
-        :param rlzs: a matrix of indices of shape Z
-        :returns: a list of Z arrays of PoEs
-        """
-        poes = []
-        hcurve = self.pgetter.get_hcurve(sid)
-        for z, rlz in enumerate(rlzs):
-            pc = hcurve.extract(rlz)
-            if z == 0:
-                self.curves.append(pc.array[:, 0])
-            poes.append(pc.array[:, 0])
-        return poes
-
     def full_disaggregation(self):
         """
         Run the disaggregation phase.
