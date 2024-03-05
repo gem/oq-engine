@@ -584,10 +584,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
-            pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             with mon:
-                nbytes = self.haz.store_rates(pnemap)
+                nbytes = self.haz.store_rates(dic['pnemap'])
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
