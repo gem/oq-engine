@@ -31,12 +31,14 @@ EOF
 per_ver_changelog () {
     version_in="$1"
     
-    ( if [ "$version_in" ]; then
-          cat debian/changelog | sed -n "/^python3-oq-engine (${version_in}-.*/,/^python3-oq-engine .*/p"
-      else
-          cat debian/changelog | sed '/^python3-oq-engine.*/q' | sed '$ d' 
-      fi )
-    }
+    (
+        if [ "$version_in" ]; then
+            cat debian/changelog | sed -n "/^python3-oq-engine (${version_in}-.*/,/^python3-oq-engine .*/p"
+        else
+            cat debian/changelog | sed '/^python3-oq-engine.*/q' | sed '$ d' 
+        fi
+    )
+}
 
 #
 #  MAIN
@@ -56,7 +58,12 @@ version_in="$1"
 if [ ! -f debian/changelog ]; then
     usage 1
 fi
-LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
+
+# LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
+
+LIST_CONTRIB_P1="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g')"
+LIST_CONTRIB_P2="$(echo "$LIST_CONTRIB_P1" | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g')"
+LIST_CONTRIB="$(echo "$LIST_CONTRIB_P2" | sed 's/\] *$//g' | sort | uniq)"
 
 IFS='
 '
