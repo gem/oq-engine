@@ -328,7 +328,7 @@ class Pickled(object):
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
-        self.compressed = len(self.pik) > MB
+        self.compressed = len(self.pik) > MB and config.distribution.compress
         if self.compressed:
             self.pik = zlib.compress(self.pik)
 
