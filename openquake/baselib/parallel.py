@@ -633,14 +633,13 @@ class IterResult(object):
             yield from self._iter()
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
-            nb = {k: humansize(v) for k, v in reversed(items)}
+            nb = {k: humansize(v) for k, v in list(reversed(items))[:3]}
             recv = sum(self.nbytes.values())
-            msg = nb if len(nb) < 10 else {'tot': humansize(recv)}
             mean = recv / (self.counts or 1)
-            logging.info('Pickle/unpickle time: %.2f seconds', self.dt)
-            logging.info('Received %d * %s %s in %d seconds from %s',
-                         self.counts, humansize(mean), msg,
-                         time.time() - t0, self.name)
+            pu = '[pik/unpik=%.2fs]' % self.dt
+            logging.info('Received %d * %s in %d seconds %s from %s;\n%s',
+                         self.counts, humansize(mean),
+                         time.time() - t0, pu, self.name, nb)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
