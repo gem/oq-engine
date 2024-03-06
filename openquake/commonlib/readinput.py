@@ -900,6 +900,12 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    exposures = oqparam.inputs.get('exposure', [])
+    if exposures and exposures[0].endswith('.hdf5'):  # Aristotle mode
+        with hdf5.File(exposures[0], 'r') as exp:
+            tmap = 1
+            return riskmodels.CompositeRiskModel.read(exp, oqparam, tmap)
+
     risklist = get_risk_functions(oqparam)
     if not oqparam.limit_states and risklist.limit_states:
         oqparam.limit_states = risklist.limit_states
@@ -1410,10 +1416,8 @@ def _checksum(fnames, checksum=0):
     """
     :returns: the 32 bit checksum of a list of files
     """
-    for fname in fnames:
-        if fname == '<in-memory>':
-            pass
-        elif not os.path.exists(fname):
+    for fname in (f for f in fnames if f != '<in-memory>'):
+        if not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (fname, zpath))

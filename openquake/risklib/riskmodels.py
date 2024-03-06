@@ -508,13 +508,14 @@ class CompositeRiskModel(collections.abc.Mapping):
     """
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam):
+    def read(cls, dstore, oqparam, tmap=None):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
         risklist = RiskFuncList()
-        risklist.limit_states = dstore.get_attr('crm', 'limit_states')
+        if hasattr(dstore, 'get_attr'):
+            risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
         for rf_json in df.riskfunc:
             rf = hdf5.json_to_obj(rf_json)
@@ -532,7 +533,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = ast.literal_eval(dstore.get_attr('crm', 'tmap'))
+        crm.tmap = tmap or ast.literal_eval(dstore.get_attr('crm', 'tmap'))
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):

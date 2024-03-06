@@ -277,15 +277,23 @@ sample_rups.slowest = 'profile and show the slowest operations'
 
 
 def aristotle(datadir, rupfname=FAMOUS):
+    """
+    Run Aristotle calculations starting from a file with planar
+    ruptures (by default "famous_ruptures.csv"). You must pass
+    a directory containing two files site_model.hdf5 and exposure.hdf5
+    with a well defined structure.
+    """
     smodel = os.path.join(datadir, 'site_model.hdf5')
     expo = os.path.join(datadir, 'exposure.hdf5')
     allparams = []
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = str(row.to_dict())
+        inputs = {'exposure': [expo], 'site_model': [smodel],
+                  'job_ini': '<in-memory>'}
         dic = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
-                   exposure_file=expo, site_model_file=smodel)
+                   maximum_distance='100', number_of_ground_motion_fields='100',
+                   inputs=inputs)
         allparams.append(dic)
-        break
     jobs = engine.create_jobs(allparams, config.distribution.log_level,
                               None, getpass.getuser(), None)
     engine.run_jobs(jobs)
