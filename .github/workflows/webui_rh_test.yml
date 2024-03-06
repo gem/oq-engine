@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "30 14 * * *"
+    - cron: "45 14 * * *"
 
 jobs:
   test_ui:
@@ -37,9 +37,9 @@ jobs:
         set -x
         if [[ ${{ github.event.inputs.git-ref }} != '' ]];
         then
-           BRANCH =  ${{ github.event.inputs.git-ref }}
+           BRANCH=${{ github.event.inputs.git-ref }}
         else
-           BRANCH = master
+           BRANCH=master
         fi
         # Add openquake user
         useradd -m -u 1000 -s /bin/bash openquake
