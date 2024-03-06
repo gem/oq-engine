@@ -108,8 +108,7 @@ def to_rates(pnemap, gid=0, tiling=True):
     :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
-        rates = pnemap.to_rates(gid)  # zlib is faster than gzip
-        return {n: zlib.compress(rates[n].tobytes()) for n in rates}
+        return pnemap.to_rates(gid)
     return pnemap
 
 #  ########################### task functions ############################ #
@@ -289,12 +288,7 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # compressed
-            rates = {
-                n: numpy.frombuffer(zlib.decompress(pnemap[n]), rates_dt[n])
-                for n in rates_dt.names}
-        else:
-            rates = pnemap.to_rates()
+        rates = to_rates(pnemap)
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
