@@ -26,7 +26,7 @@ from openquake.hazardlib import gsim_lt
 from openquake.commonlib import readinput
 
 
-dt = [('model', (numpy.string_, 3)), ('trt', numpy.string_, 61),
+dt = [('model', (numpy.bytes_, 3)), ('trt', numpy.bytes_, 61),
       ('gsim', hdf5.vstr), ('weight', float)]
 
 

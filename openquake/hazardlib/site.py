@@ -721,7 +721,7 @@ class SiteCollection(object):
         lonlats[:, 1] = self.lats
         codes = geolocate(lonlats, geom_df)
         uni, cnt = numpy.unique(codes, return_counts=True)
-        out = numpy.zeros(len(uni), [('country', (numpy.string_, 3)),
+        out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
                                      ('num_sites', int)])
         out['country'] = uni
         out['num_sites'] = cnt
