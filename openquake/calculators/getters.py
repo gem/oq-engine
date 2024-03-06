@@ -192,7 +192,8 @@ class PmapGetter(object):
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             rates_df = dstore.read_df('_rates', slices=self.slices)
-            for sid, df in rates_df.groupby('sid'):
+            for sid in rates_df.sid.unique():
+                df = rates_df[rates_df.sid == sid]
                 try:
                     array = self._pmap[sid].array
                 except KeyError:
