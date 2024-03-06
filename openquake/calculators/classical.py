@@ -407,7 +407,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
-        self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
+        self.datastore.create_dset('_rates/slice_by_sid', slice_dt,
+                                   compression='gzip')
 
         oq = self.oqparam
         if oq.disagg_by_src:
