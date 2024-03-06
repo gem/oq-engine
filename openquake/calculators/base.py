@@ -876,7 +876,7 @@ class HazardCalculator(BaseCalculator):
             if oq.aristotle:
                 logging.info('Determining the country with most sites')
                 country, num_sites = self.sitecol.by_country()[-1]
-                assert country != '???'
+                assert country != b'???'
             else:
                 country = b''
             tmap = readinput.taxonomy_mapping(
