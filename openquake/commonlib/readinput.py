@@ -903,8 +903,8 @@ def get_crmodel(oqparam):
     exposures = oqparam.inputs.get('exposure', [])
     if exposures and exposures[0].endswith('.hdf5'):  # Aristotle mode
         with hdf5.File(exposures[0], 'r') as exp:
-            tmap = 1
-            return riskmodels.CompositeRiskModel.read(exp, oqparam, tmap)
+            crm = riskmodels.CompositeRiskModel.read(exp, oqparam, tmap='later')
+            return crm
 
     risklist = get_risk_functions(oqparam)
     if not oqparam.limit_states and risklist.limit_states:

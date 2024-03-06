@@ -515,6 +515,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         risklist = RiskFuncList()
         if hasattr(dstore, 'get_attr'):
+            # missing only in Aristotle mode, where dstore is an hdf5.File
             risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
         for rf_json in df.riskfunc:
