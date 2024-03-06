@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * Add helper to check consistency between debian/changelog and CONTRIBUTORS.txt
+
   [Michele Simionato]
   * Added an optional flag `config.distribution.compress` to reduce the
     data transfer by compressing pickles larger than 1 MB
