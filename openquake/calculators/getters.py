@@ -187,20 +187,19 @@ class PmapGetter(object):
         """
         Build the probability curves from the underlying dataframes
         """
-        if self._pmap:
+        if self._pmap or len(self.slices) == 0:
             return self._pmap
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
-            for start, stop in self.slices:
-                rates_df = dstore.read_df('_rates', slc=slice(start, stop))
-                for sid, df in rates_df.groupby('sid'):
-                    try:
-                        array = self._pmap[sid].array
-                    except KeyError:
-                        array = numpy.zeros((self.L, G))
-                        self._pmap[sid] = probability_map.ProbabilityCurve(
-                            array)
-                    array[df.lid, df.gid] = df.rate
+            rates_df = dstore.read_df('_rates', slices=self.slices)
+            for sid, df in rates_df.groupby('sid'):
+                try:
+                    array = self._pmap[sid].array
+                except KeyError:
+                    array = numpy.zeros((self.L, G))
+                    self._pmap[sid] = probability_map.ProbabilityCurve(
+                        array)
+                array[df.lid, df.gid] = df.rate
         return self._pmap
 
     # used in risk calculations where there is a single site per getter

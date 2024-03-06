@@ -1,3 +1,6 @@
+Release notes v3.19
+===================
+
 Version 3.19 is the culmination of 4 months of work involving nearly 340
 pull requests. It is aimed at users wanting the latest features, bug fixes
 and maximum performance. Users valuing stability may want to stay with

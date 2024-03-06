@@ -20,6 +20,7 @@ import io
 import os
 import time
 import gzip
+import zlib
 import pickle
 import psutil
 import logging
@@ -102,6 +103,16 @@ def store_ctxs(dstore, rupdata_list, grp_id):
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
+
+def to_rates(pnemap, gid=0, tiling=True):
+    """
+    :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
+    """
+    if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
+        rates = pnemap.to_rates(gid)  # zlib is faster than gzip
+        return {n: zlib.compress(rates[n].tobytes()) for n in rates}
+    return pnemap
+
 #  ########################### task functions ############################ #
 
 
@@ -111,13 +122,16 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
+    tiling = not hasattr(sources, '__iter__')  # passed gid
     with dstore:
-        if sitecol is None:  # regular calculator
-            sitecol = dstore['sitecol']  # super-fast
-        else:  # tiling calculator, read the sources from the datastore
+        if tiling:  # tiling calculator, read the sources from the datastore
+            gid = sources
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(gzip.decompress(arr.tobytes()))
+        else:  # regular calculator
+            gid = 0
+            sitecol = dstore['sitecol']  # super-fast
 
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
@@ -128,8 +142,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = ~pmap
-            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['pnemap'] = to_rates(~pmap, gid, tiling)
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -138,18 +151,12 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # NB: the parameter config.memory.pmap_max_mb avoids the hanging
         # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
-        N = len(sitecol)
         for sites in sitecol.split_in_tiles(itiles):
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
-                # save data transfer
-                result['pnemap'] = ~pmap.remove_zeros()
-            else:  # keep the shape of the underlying array in store_mean_rates
-                result['pnemap'] = ~pmap
-            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            result['pnemap'] = to_rates(~pmap, gid, tiling)
             yield result
 
 
@@ -279,28 +286,27 @@ class Hazard:
         rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnemap, gid=0):
+    def store_rates(self, pnemap):
         """
         Store pnes inside the _rates dataset
         """
-        # store by IMT to save memory
-        for m, imt in enumerate(self.imtls):
-            slc = self.imtls(imt)
-            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
-            idxs, lids, gids = rates.nonzero()
-            if len(idxs) == 0:  # happens in case_60
-                return 0
-            sids = pnemap.sids[idxs]
-            hdf5.extend(self.datastore['_rates/sid'], sids)
-            hdf5.extend(self.datastore['_rates/gid'], gids + gid)
-            hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_rates/rate'], rates[idxs, lids, gids])
+        if isinstance(pnemap, dict):  # compressed
+            rates = {
+                n: numpy.frombuffer(zlib.decompress(pnemap[n]), rates_dt[n])
+                for n in rates_dt.names}
+        else:
+            rates = pnemap.to_rates()
+        if len(rates['sid']) == 0:  # happens in case_60
+            return self.offset * 12 
+        hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
+        hdf5.extend(self.datastore['_rates/gid'], rates['gid'])
+        hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
+        hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
-            # slice_by_sid contains 3x6=18 slices in classical/case_22
-            # which has 6 IMTs each one with 20 levels
-            sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
-            self.offset += len(sids)
+        # slice_by_sid contains 3 slices in classical/case_22
+        sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
+        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
+        self.offset += len(rates['sid'])
 
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -362,7 +368,6 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             pm = ~pnemap
             pm.grp_id = grp_id
-            pm.trt_smrs = pnemap.trt_smrs
             acc[source_id] += self.haz.get_rates(pm)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
@@ -400,9 +405,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_rates', rates_dt.items(), 'gzip')
-        self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
-        # NB: compressing the dataset causes a big slowdown in writing :-(
+        self.datastore.create_df(
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+        self.datastore.create_dset('_rates/slice_by_sid', slice_dt,
+                                   compression='gzip')
 
         oq = self.oqparam
         if oq.disagg_by_src:
@@ -475,7 +481,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw * .7)
+            self.execute_big(maxw * .75)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -569,23 +575,22 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
+            gid = self.gids[cm.grp_id][0]
             if sg.atomic or sg.weight <= maxw:
-                allargs.append((None, self.sitecol, cm, ds))
+                allargs.append((gid, self.sitecol, cm, ds))
             else:
                 tiles = self.sitecol.split(numpy.ceil(sg.weight / maxw))
                 logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
                 for tile in tiles:
-                    allargs.append((None, tile, cm, ds))
+                    allargs.append((gid, tile, cm, ds))
                     self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
-            pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
-            gid = self.gids[dic['grp_id']][0]
             with mon:
-                nbytes = self.haz.store_rates(pnemap, gid)
+                nbytes = self.haz.store_rates(dic['pnemap'])
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
@@ -724,11 +729,11 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
 
-        # using compactify improves the performance of `read PoEs`;
+        # using compactify improves the performance of `reading rates`;
         # I have measured a 3.5x in the AUS model with 1 rlz
         allslices = [calc.compactify(slices) for slices in slicedic.values()]
         nslices = sum(len(slices) for slices in allslices)
-        logging.info('There are %d slices of poes [%.1f per task]',
+        logging.info('There are %d slices of rates [%.1f per task]',
                      nslices, nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, self.full_lt, slices,

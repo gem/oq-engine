@@ -1,3 +1,6 @@
+Release notes v3.18
+===================
+
 Version 3.18 is the culmination of 3 months of work involving over 210
 pull requests. It is aimed at users wanting the latest features
 and maximum performance. Users valuing stability may want to stay with

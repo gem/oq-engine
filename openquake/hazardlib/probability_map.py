@@ -30,7 +30,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 TWO24 = 2 ** 24
-rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F32}
+rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
+                        ('rate', F32)])
 
 
 if numba:
@@ -393,12 +394,12 @@ class ProbabilityMap(object):
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
-    def to_rates(self, slc=slice(None)):
+    def to_rates(self, gid=0):
         """
         Assuming self contains an array of probabilities of no exceedance,
         returns an array of rates of shape (N, L, G).
         """
-        pnes = self.array[:, slc]
+        pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically,
@@ -407,7 +408,11 @@ class ProbabilityMap(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        return -numpy.log(pnes)
+        rates = -numpy.log(pnes)
+        idxs, lids, gids = rates.nonzero()
+        out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
+                   gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
+        return out
 
     def interp4D(self, imtls, poes):
         """
@@ -442,16 +447,7 @@ class ProbabilityMap(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        dic = dict(sid=[], gid=[], lid=[], rate=[])
-        for sid, arr in zip(self.sids, self.array):
-            for (lid, gid), rate in numpy.ndenumerate(arr):
-                dic['sid'].append(sid)
-                dic['gid'].append(gid)
-                dic['lid'].append(lid)
-                dic['rate'].append(rate)
-        for key, dt in rates_dt.items():
-            dic[key] = dt(dic[key])
-        return pandas.DataFrame(dic)
+        return pandas.DataFrame(self.to_rates())
 
     def multiply_pnes(self, other, g, i):
         """
