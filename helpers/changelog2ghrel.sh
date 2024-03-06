@@ -82,9 +82,6 @@ fi
 # TEST VERSION WITHOUT set +o
 LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
 
-# JUST FOR TEST
-set -o pipefail
-LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
 IFS='
 '
 for contr in $LIST_CONTRIB; do
@@ -94,9 +91,6 @@ for contr in $LIST_CONTRIB; do
         exit 1
     fi
 done
-
-# FIXME: just for test
-false
 
 if [ "$perform_check" = "TRUE" ]; then
     exit 0
