@@ -37,9 +37,9 @@ jobs:
         set -x
         if [ -z ${{ github.event.inputs.git-ref }} ];
         then
-           BRANCH=${{ github.event.inputs.git-ref }}
-        else
            BRANCH=master
+        else
+           BRANCH=${{ github.event.inputs.git-ref }}
         fi
         # Add openquake user
         useradd -m -u 1000 -s /bin/bash openquake
