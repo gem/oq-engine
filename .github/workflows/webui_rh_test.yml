@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "30 14 * * *"
 
 jobs:
   test_ui:
@@ -33,7 +33,6 @@ jobs:
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }} and install OQ
-      env:
       run: |
         set -x
         if [[ ${{ github.event.inputs.git-ref }} != '' ]]
