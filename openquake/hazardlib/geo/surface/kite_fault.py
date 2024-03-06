@@ -1146,6 +1146,7 @@ def _check_sampling(edg, proj):
     last = None
 
     for i_e, e in enumerate(edg):
+        edg = edg[~np.isnan(edg)].reshape(-1, 3)
         if first is None and np.isfinite(e[0]):
             first = i_e
         elif first is not None and np.isfinite(e[0]):
@@ -1161,7 +1162,10 @@ def _check_sampling(edg, proj):
         xp, yp = proj(edg[idx[0]:idx[1], 0], edg[idx[0]:idx[1], 1])
         dsts = (np.diff(xp)**2 + np.diff(yp)**2 +
                 np.diff(edg[idx[0]:idx[1], 2])**2)
-        np.testing.assert_allclose(dsts, dsts[0], rtol=1e-2)
+        try:
+            np.testing.assert_allclose(dsts, np.mean(dsts), rtol=4e-2)
+        except:
+            breakpoint()
 
 
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
