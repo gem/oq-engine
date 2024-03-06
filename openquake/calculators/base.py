@@ -873,7 +873,14 @@ class HazardCalculator(BaseCalculator):
 
         if oq.job_type == 'risk':
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
-            tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
+            if oq.aristotle:
+                logging.info('Determining the country with most sites')
+                country, num_sites = self.sitecol.by_country()[-1]
+                assert country != '???'
+            else:
+                country = None
+            tmap = readinput.taxonomy_mapping(
+                self.oqparam, taxs, country.decode('ascii'))
             self.crmodel.set_tmap(tmap)
             taxonomies = set()
             for ln in oq.loss_types:
