@@ -60,9 +60,6 @@ per_ver_changelog () {
 #  MAIN
 #
 
-# FIXME: just for test
-false
-
 perform_check=FALSE
 if [ "$1" = "--help" -o "$1" = "-h" ]; then
     usage 0
@@ -79,7 +76,11 @@ if [ ! -f debian/changelog ]; then
 fi
 # NOTE: this pipe chain produce on github action a SIGPIPE, to prevent false errors we desable
 #       pipefail with 'set +o'
-LIST_CONTRIB="$(set +o pipefail ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
+# CORRECT
+# LIST_CONTRIB="$(set +o pipefail ; per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
+
+# TEST VERSION WITHOUT set +o
+LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,/,\n/g' | sed 's/^ \+//g' | sed 's/^\[//g' | sed 's/, *$//g' | sed 's/\] *$//g' | sort | uniq)"
 
 IFS='
 '
@@ -90,6 +91,9 @@ for contr in $LIST_CONTRIB; do
         exit 1
     fi
 done
+
+# FIXME: just for test
+false
 
 if [ "$perform_check" = "TRUE" ]; then
     exit 0
