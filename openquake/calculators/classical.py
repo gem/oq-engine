@@ -19,7 +19,6 @@
 import io
 import os
 import time
-import gzip
 import zlib
 import pickle
 import psutil
@@ -109,8 +108,7 @@ def to_rates(pnemap, gid=0, tiling=True):
     :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
     """
     if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
-        rates = pnemap.to_rates(gid)  # zlib is faster than gzip
-        return {n: zlib.compress(rates[n].tobytes()) for n in rates}
+        return pnemap.to_rates(gid)
     return pnemap
 
 #  ########################### task functions ############################ #
@@ -128,7 +126,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             gid = sources
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
-                sources = pickle.loads(gzip.decompress(arr.tobytes()))
+                sources = pickle.loads(zlib.decompress(arr.tobytes()))
         else:  # regular calculator
             gid = 0
             sitecol = dstore['sitecol']  # super-fast
@@ -290,12 +288,7 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # compressed
-            rates = {
-                n: numpy.frombuffer(zlib.decompress(pnemap[n]), rates_dt[n])
-                for n in rates_dt.names}
-        else:
-            rates = pnemap.to_rates()
+        rates = to_rates(pnemap)
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])

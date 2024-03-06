@@ -20,7 +20,6 @@ import os.path
 import pickle
 import operator
 import logging
-import gzip
 import zlib
 import numpy
 
@@ -80,11 +79,11 @@ def check_unique(ids, msg='', strict=True):
                 logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
 
 
-def gzpik(obj):
+def zpik(obj):
     """
-    gzip and pickle a python object
+    zip and pickle a python object
     """
-    gz = gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    gz = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
     return numpy.frombuffer(gz, numpy.uint8)
 
 
@@ -670,8 +669,8 @@ class CompositeSourceModel:
         G = len(self.src_groups)
         arr = numpy.zeros(G + 1, hdf5.vuint8)
         for grp_id, grp in enumerate(self.src_groups):
-            arr[grp_id] = gzpik(grp)
-        arr[G] = gzpik(self.source_info)
+            arr[grp_id] = zpik(grp)
+        arr[G] = zpik(self.source_info)
         size = sum(len(val) for val in arr)
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
@@ -679,7 +678,7 @@ class CompositeSourceModel:
 
     # tested in case_36
     def __fromh5__(self, arr, attrs):
-        objs = [pickle.loads(gzip.decompress(a.tobytes())) for a in arr]
+        objs = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
         self.src_groups = objs[:-1]
         self.source_info = objs[-1]
 
