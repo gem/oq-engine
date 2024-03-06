@@ -528,8 +528,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            nbytes = self.haz.store_rates(self.pmap)
-        logging.info('Stored %s of rates', humansize(nbytes))
+            self.haz.store_rates(self.pmap)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -583,8 +582,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             with mon:
-                nbytes = self.haz.store_rates(dic['pnemap'])
-        logging.info('Stored %s of rates', humansize(nbytes))
+                self.haz.store_rates(dic['pnemap'])
         return {}
 
     def store_info(self):
