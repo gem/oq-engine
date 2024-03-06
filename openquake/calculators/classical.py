@@ -19,7 +19,6 @@
 import io
 import os
 import time
-import gzip
 import zlib
 import pickle
 import psutil
@@ -128,7 +127,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             gid = sources
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
-                sources = pickle.loads(gzip.decompress(arr.tobytes()))
+                sources = pickle.loads(zlib.decompress(arr.tobytes()))
         else:  # regular calculator
             gid = 0
             sitecol = dstore['sitecol']  # super-fast
