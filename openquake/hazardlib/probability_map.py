@@ -397,7 +397,7 @@ class ProbabilityMap(object):
     def to_rates(self, gid=0):
         """
         Assuming self contains an array of probabilities of no exceedance,
-        returns an array of rates of shape (N, L, G).
+        returns a dictionary of arrays with keys sid, lid, gid, rate
         """
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
