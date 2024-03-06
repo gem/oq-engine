@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Added an optional flag `config.distribution.compress` to reduce the
-    data transfer by compressing chunks larger than 1 MB
+    data transfer by compressing pickles larger than 1 MB
   * Optimized reading rates in postclassical
   * Saving disk space in classical calculations (~4x) by gzipping the rates
   * Removed Python version checks in install.py
