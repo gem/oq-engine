@@ -412,6 +412,7 @@ class Result(object):
     func = None
 
     def __init__(self, val, mon, tb_str='', msg=''):
+        t0 = time.time()
         if isinstance(val, dict):
             self.pik = Pickled(val)
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
@@ -429,12 +430,15 @@ class Result(object):
         self.tb_str = tb_str
         self.msg = msg
         self.workerid = (socket.gethostname(), os.getpid())
+        self.dt = time.time() - t0
 
     def get(self):
         """
         Returns the underlying value or raise the underlying exception
         """
+        t0 = time.time()
         val = self.pik.unpickle()
+        self.dt += time.time() - t0
         if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
@@ -607,6 +611,7 @@ class IterResult(object):
     def _iter(self):
         first_time = True
         self.counts = 0
+        self.dt = 0
         for result in self.iresults:
             msg = check_mem_usage()
             # log a warning if too much memory is used
@@ -615,7 +620,9 @@ class IterResult(object):
                 first_time = False  # warn only once
             self.nbytes += result.nbytes
             self.counts += 1
-            yield result.get()
+            out = result.get()
+            self.dt += result.dt
+            yield out
 
     def __iter__(self):
         if self.iresults == ():
@@ -630,6 +637,7 @@ class IterResult(object):
             recv = sum(self.nbytes.values())
             msg = nb if len(nb) < 10 else {'tot': humansize(recv)}
             mean = recv / (self.counts or 1)
+            logging.info('Pickle/unpickle time: %.2f seconds', self.dt)
             logging.info('Received %d * %s %s in %d seconds from %s',
                          self.counts, humansize(mean), msg,
                          time.time() - t0, self.name)
