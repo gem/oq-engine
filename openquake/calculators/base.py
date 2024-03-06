@@ -878,7 +878,7 @@ class HazardCalculator(BaseCalculator):
                 country, num_sites = self.sitecol.by_country()[-1]
                 assert country != '???'
             else:
-                country = None
+                country = b''
             tmap = readinput.taxonomy_mapping(
                 self.oqparam, taxs, country.decode('ascii'))
             self.crmodel.set_tmap(tmap)
