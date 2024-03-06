@@ -35,7 +35,7 @@ jobs:
     - name: Set up Python  ${{ matrix.python-version }} and install OQ
       run: |
         set -x
-        if [[ ${{ github.event.inputs.git-ref }} != '' ]]
+        if [[ ${{ github.event.inputs.git-ref }} != '' ]];
         then
            BRANCH =  ${{ github.event.inputs.git-ref }}
         else
