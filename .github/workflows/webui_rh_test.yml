@@ -34,9 +34,14 @@ jobs:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }} and install OQ
       env:
-        BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
         set -x
+        if [[ ${{ github.event.inputs.git-ref }} != '' ]]
+        then
+           BRANCH =  ${{ github.event.inputs.git-ref }}
+        else
+           BRANCH = master
+        fi
         # Add openquake user
         useradd -m -u 1000 -s /bin/bash openquake
         # update system and install utilities
