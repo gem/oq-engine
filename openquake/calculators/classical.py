@@ -113,22 +113,23 @@ def to_rates(pnemap, gid=0, tiling=True):
 
 #  ########################### task functions ############################ #
 
+def classical_tiling(sitecol, cmakers, dstore, monitor):
+    for cmaker in cmakers:
+        with monitor('reading sources'):  # fast, but uses a lot of RAM
+            arr = dstore.getitem('_csm')[cmaker.grp_id]
+            sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        for result in classical(sources, sitecol, cmaker, dstore, monitor):
+            result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
+            yield result
+
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    tiling = not hasattr(sources, '__iter__')  # passed gid
     with dstore:
-        if tiling:  # tiling calculator, read the sources from the datastore
-            gid = sources
-            with monitor('reading sources'):  # fast, but uses a lot of RAM
-                arr = dstore.getitem('_csm')[cmaker.grp_id]
-                sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        else:  # regular calculator
-            gid = 0
+        if sitecol is None:
             sitecol = dstore['sitecol']  # super-fast
 
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
@@ -140,7 +141,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling)
+            result['pnemap'] = ~pmap
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -157,7 +158,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling)
+            result['pnemap'] = ~pmap
             yield result
 
 
@@ -561,7 +562,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
         allargs = []
-        self.ntiles = []
+        self.tilesizes = []
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -570,19 +571,16 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
-            gid = self.gids[cm.grp_id][0]
-            if sg.atomic or sg.weight <= maxw:
-                allargs.append((gid, self.sitecol, cm, ds))
-            else:
-                tiles = self.sitecol.split(numpy.ceil(sg.weight / maxw))
-                logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
-                for tile in tiles:
-                    allargs.append((gid, tile, cm, ds))
-                    self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles', max(self.ntiles))
+            cm.gid = self.gids[cm.grp_id][0]
+
+        for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
+            allargs.append((tile, self.cmakers, ds))
+            self.tilesizes.append(len(tile))
+        logging.warning('Generated %d tiles', len(self.tilesizes))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
-        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
+        for dic in parallel.Starmap(
+                classical_tiling, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             with mon:
                 self.haz.store_rates(dic['pnemap'])
