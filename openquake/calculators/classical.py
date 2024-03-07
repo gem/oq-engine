@@ -717,13 +717,13 @@ class ClassicalCalculator(base.HazardCalculator):
             # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
             slicedic = performance.get_slices(
                 dstore['_rates/sid'][:] // sites_per_task)
-            nslices = sum(len(lst) for lst in slicedic.values())
-            logging.info('Producing %d postclassical tasks with %d slice(s)',
-                         ct, nslices)
         else:  # split by tile
             slicedic = AccumDict(accum=[])
             for tileno, start, stop in sbt:
                 slicedic[tileno].append((start, stop))
+        nslices = sum(len(lst) for lst in slicedic.values())
+        logging.info('Producing %d postclassical tasks with %d slice(s)',
+                     len(slicedic), nslices)
         allargs = [
             (getters.PmapGetter(dstore, self.full_lt, slicedic[idx],
                                 oq.imtls, oq.poes, oq.use_rates),
