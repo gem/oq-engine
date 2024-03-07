@@ -690,7 +690,17 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
         elif len(sbt) == 1:  # single tile, split by blocks of sites
-            slicedic = performance.get_slices(dstore['_rates/sid'][:] % ct)
+            sites_per_task = int(numpy.ceil(self.N / ct))
+            # NB: there is a genious idea here, to split in tasks by using
+            # the formula ``taskno = sites_ids // sites_per_task`` and then
+            # extracting a dictionary of slices for each taskno. This works
+            # since by construction the site_ids are sequential and there are
+            # at most G slices per task. For instance if there are 6 sites
+            # disposed in 2 groups and we want to produce 2 tasks we can use
+            # 012345012345 // 3 = 000111000111 and the slices are
+            # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
+            slicedic = performance.get_slices(
+                dstore['_rates/sid'][:] // sites_per_task)
             nslices = sum(len(lst) for lst in slicedic.values())
             logging.info('Producing %d postclassical tasks with %d slice(s)',
                          ct, nslices)
