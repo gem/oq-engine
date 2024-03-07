@@ -287,9 +287,9 @@ class Hazard:
         hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
         hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
-        # slice_by_sid contains 3 slices in classical/case_22
+        # slice_by_tile contains 3 slices in classical/case_22
         sbt = numpy.array([(tileno, self.offset, self.offset + n)], slice_dt)
-        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbt)
+        hdf5.extend(self.datastore['_rates/slice_by_tile'], sbt)
         self.offset += n
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
@@ -390,7 +390,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
-        self.datastore.create_dset('_rates/slice_by_sid', slice_dt,
+        self.datastore.create_dset('_rates/slice_by_tile', slice_dt,
                                    compression='gzip')
 
         oq = self.oqparam
@@ -682,26 +682,26 @@ class ClassicalCalculator(base.HazardCalculator):
             ct = int(poes_gb * 32) or 1
         else:
             ct = int(poes_gb) + 32  # number of tasks > number of GB
-        if ct > 1:
-            logging.info('Producing %d postclassical tasks', ct)
         if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        sbt = dstore['_rates/slice_by_sid'][:]
-        slicedic = AccumDict(accum=[])
-        for tileno, start, stop in sbt:
-            slicedic[tileno].append((start, stop))
-        if not slicedic:
+        sbt = dstore['_rates/slice_by_tile'][:]
+        if len(sbt) == 0:
             # no hazard, nothing to do, happens in case_60
             return
-        if len(slicedic) == 1:  # single tile
-            pass
+        elif len(sbt) == 1:  # single tile
+            logging.info('Producing %d postclassical tasks', ct)
+            slicedic = performance.get_slices(dstore['_rates/sid'][:] % ct)
+        else:
+            slicedic = AccumDict(accum=[])
+            for tileno, start, stop in sbt:
+                slicedic[tileno].append((start, stop))
         allargs = [
-            (getters.PmapGetter(dstore, self.full_lt, slicedic[tileno],
+            (getters.PmapGetter(dstore, self.full_lt, slicedic[idx],
                                 oq.imtls, oq.poes, oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for tileno in slicedic]
+            for idx in slicedic]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
