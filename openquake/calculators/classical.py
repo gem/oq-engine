@@ -122,8 +122,7 @@ def classical(sources, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    if not hasattr(cmaker, 'ctx_mon'):
-        cmaker.init_monitoring(monitor)
+    cmaker.init_monitoring(monitor)
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
@@ -688,11 +687,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        poes_gb = self.datastore.getsize('_rates') / 1024**3
-        if poes_gb < 1:
-            ct = int(poes_gb * 32) or 1
-        else:
-            ct = int(poes_gb) + 32  # number of tasks > number of GB
         if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
@@ -702,7 +696,9 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
         uniq_tiles = numpy.unique(sbt['tile'])
-        if len(uniq_tiles) <= 8:  # few tiles, split by blocks of sites
+        if 2*len(uniq_tiles) < parallel.Starmap.num_cores:
+            # would use half the cores, so split by blocks of sites instead
+            ct = oq.concurrent_tasks or 1
             sites_per_task = int(numpy.ceil(self.N / ct))
             # NB: there is a genious idea here, to split in tasks by using
             # the formula ``taskno = sites_ids // sites_per_task`` and then
