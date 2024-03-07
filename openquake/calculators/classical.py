@@ -552,22 +552,21 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        totw = 0
+        hints = []
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             cm.gid = self.gids[cm.grp_id][0]
-            totw += sg.weight
-
+            hints.append(sg.weight / maxw)
+        
         allargs = []
-        hint = 2 * totw / len(self.cmakers) / maxw
-        tiles = self.sitecol.split(hint)
+        tiles = self.sitecol.split(max(hints))
         logging.warning('Generated %d tile(s)', len(tiles))
-        self.ntiles = len(tiles)
         for cm in self.cmakers:
             for i, tile in enumerate(tiles):
                 allargs.append((tile, i, cm, ds))
+        self.ntiles = len(tiles)
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(
