@@ -103,23 +103,24 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid=0, tiling=True):
+def to_rates(pnemap, gid=0):
     """
     :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
     """
-    if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
+    if hasattr(pnemap, 'to_rates'):  # not already converted
         return pnemap.to_rates(gid)
     return pnemap
 
 #  ########################### task functions ############################ #
 
-def classical_tiling(sitecol, cmakers, dstore, monitor):
+def classical_tiling(tile, cmakers, dstore, monitor):
     for cmaker in cmakers:
         with monitor('reading sources'), dstore:  # fast, but uses a lot of RAM
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        for result in classical(sources, sitecol, cmaker, monitor):
+        for result in classical(sources, tile, cmaker, monitor):
             result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
+            result['tileno'] = tile.no
             yield result
 
 
@@ -567,7 +568,8 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gid = self.gids[cm.grp_id][0]
             totw += sg.weight
 
-        for tile in self.sitecol.split(numpy.ceil(totw / maxw)):
+        for i, tile in enumerate(self.sitecol.split(numpy.ceil(totw / maxw))):
+            tile.no = i
             allargs.append((tile, self.cmakers, ds))
             self.tilesizes.append(len(tile))
         logging.warning('Generated %d tiles', len(self.tilesizes))

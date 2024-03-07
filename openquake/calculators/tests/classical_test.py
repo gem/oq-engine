@@ -157,8 +157,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # crossing date line calculation for Alaska
-        # this also tests the splitting in two tiles
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}):
+        # this also tests the splitting in tiles
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 5E-5}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -167,8 +167,8 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertEqual(self.calc.tilesizes,
-                         [2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1])
+        # NB: the job.ini contains concurrent_tasks=4
+        self.assertEqual(self.calc.tilesizes, [4, 4, 4, 3, 3, 3])
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
