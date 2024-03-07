@@ -103,8 +103,13 @@ def to_rates(pnemap, gid=0):
 #  ########################### task functions ############################ #
 
 def classical_tiling(tile, tileno, cmakers, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib
+    """
     for cmaker in cmakers:
-        with monitor('reading sources'), dstore:  # fast, but uses a lot of RAM
+        cmaker.init_monitoring(monitor)
+        with monitor('reading sources', measuremem=True), dstore:
+            # fast, but uses a lot of RAM
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         for result in classical(sources, tile, cmaker, monitor):
@@ -117,7 +122,8 @@ def classical(sources, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    cmaker.init_monitoring(monitor)
+    if not hasattr(cmaker, 'ctx_mon'):
+        cmaker.init_monitoring(monitor)
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
@@ -464,7 +470,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw * .75)
+            self.execute_big(maxw * 1.2)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
