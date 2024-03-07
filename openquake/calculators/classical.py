@@ -118,20 +118,16 @@ def classical_tiling(sitecol, cmakers, dstore, monitor):
         with monitor('reading sources'), dstore:  # fast, but uses a lot of RAM
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        for result in classical(sources, sitecol, cmaker, dstore, monitor):
+        for result in classical(sources, sitecol, cmaker, monitor):
             result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
             yield result
 
 
-def classical(sources, sitecol, cmaker, dstore, monitor):
+def classical(sources, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
     """
     cmaker.init_monitoring(monitor)
-    with dstore:
-        if sitecol is None:
-            sitecol = dstore['sitecol']  # super-fast
-
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
@@ -511,22 +507,18 @@ class ClassicalCalculator(base.HazardCalculator):
                      humansize(nbytes))
         self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
         allargs = []
-        if 'sitecol' in self.datastore.parent:
-            ds = self.datastore.parent
-        else:
-            ds = self.datastore
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
-            if sg.atomic or sg.weight <= maxw:
+            if sg.atomic:
                 blks = [sg]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                allargs.append((block, None, cm, ds))
+                allargs.append((block, self.sitecol, cm))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
