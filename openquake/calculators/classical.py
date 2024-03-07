@@ -102,19 +102,20 @@ def to_rates(pnemap, gid=0):
 
 #  ########################### task functions ############################ #
 
-def classical_tiling(tile, tileno, cmaker, dstore, monitor):
+def classical_tiling(tile, tileno, cmakers, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    cmaker.init_monitoring(monitor)
-    with monitor('reading sources', measuremem=True), dstore:
-        # fast, but uses a lot of RAM
-        arr = dstore.getitem('_csm')[cmaker.grp_id]
-        sources = pickle.loads(zlib.decompress(arr.tobytes()))
-    for result in classical(sources, tile, cmaker, monitor):
-        result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
-        result['tileno'] = tileno
-        yield result
+    for cmaker in cmakers:
+        cmaker.init_monitoring(monitor)
+        with monitor('reading sources', measuremem=True), dstore:
+            # fast, but uses a lot of RAM
+            arr = dstore.getitem('_csm')[cmaker.grp_id]
+            sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        for result in classical(sources, tile, cmaker, monitor):
+            result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
+            result['tileno'] = tileno
+            yield result
 
 
 def classical(sources, sitecol, cmaker, monitor):
@@ -553,19 +554,27 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         hints = []
+        light = []
+        heavy = []
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             cm.gid = self.gids[cm.grp_id][0]
+            if sg.weight < maxw:
+                light.append(cm)
+            else:
+                heavy.append(cm)
             hints.append(sg.weight / maxw)
 
         tiles = self.sitecol.split(max(hints))
         logging.warning('Generated %d tile(s)', len(tiles))
         allargs = []
         for i, tile in enumerate(tiles):
-            for cm in self.cmakers:
-                allargs.append((tile, i, cm, ds))
+            for cm in heavy:
+                allargs.append((tile, i, [cm], ds))
+            allargs.append((tile, i, light, ds))
+
         self.ntiles = len(tiles)
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
