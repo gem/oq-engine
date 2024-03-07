@@ -168,7 +168,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
         # NB: the job.ini contains concurrent_tasks=4
-        self.assertEqual(self.calc.tilesizes, [4, 4, 4, 3, 3, 3])
+        self.assertEqual(self.calc.ntiles, 4)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

@@ -102,20 +102,19 @@ def to_rates(pnemap, gid=0):
 
 #  ########################### task functions ############################ #
 
-def classical_tiling(tile, tileno, cmakers, dstore, monitor):
+def classical_tiling(tile, tileno, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    for cmaker in cmakers:
-        cmaker.init_monitoring(monitor)
-        with monitor('reading sources', measuremem=True), dstore:
-            # fast, but uses a lot of RAM
-            arr = dstore.getitem('_csm')[cmaker.grp_id]
-            sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        for result in classical(sources, tile, cmaker, monitor):
-            result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
-            result['tileno'] = tileno
-            yield result
+    cmaker.init_monitoring(monitor)
+    with monitor('reading sources', measuremem=True), dstore:
+        # fast, but uses a lot of RAM
+        arr = dstore.getitem('_csm')[cmaker.grp_id]
+        sources = pickle.loads(zlib.decompress(arr.tobytes()))
+    for result in classical(sources, tile, cmaker, monitor):
+        result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
+        result['tileno'] = tileno
+        yield result
 
 
 def classical(sources, sitecol, cmaker, monitor):
@@ -470,7 +469,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw * 1.2)
+            self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -549,8 +548,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        allargs = []
-        self.tilesizes = []
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -563,10 +560,14 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gid = self.gids[cm.grp_id][0]
             totw += sg.weight
 
-        for i, tile in enumerate(self.sitecol.split(numpy.ceil(totw / maxw))):
-            allargs.append((tile, i, self.cmakers, ds))
-            self.tilesizes.append(len(tile))
-        logging.warning('Generated %d tiles', len(self.tilesizes))
+        allargs = []
+        hint = 2 * totw / len(self.cmakers) / maxw
+        tiles = self.sitecol.split(hint)
+        logging.warning('Generated %d tile(s)', len(tiles))
+        self.ntiles = len(tiles)
+        for cm in self.cmakers:
+            for i, tile in enumerate(tiles):
+                allargs.append((tile, i, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(
@@ -695,7 +696,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(sbt) == 0:
             # no hazard, nothing to do, happens in case_60
             return
-        elif len(sbt) == 1:  # single tile, split by blocks of sites
+        uniq_tiles = numpy.unique(sbt['tile'])
+        if len(uniq_tiles) == 1:  # single tile, split by blocks of sites
             sites_per_task = int(numpy.ceil(self.N / ct))
             # NB: there is a genious idea here, to split in tasks by using
             # the formula ``taskno = sites_ids // sites_per_task`` and then

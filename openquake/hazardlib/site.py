@@ -556,6 +556,7 @@ class SiteCollection(object):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
+        hint = int(numpy.ceil(hint))
         if hint <= 1:
             return [self]
         elif hint > len(self):
