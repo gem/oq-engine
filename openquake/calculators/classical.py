@@ -115,7 +115,7 @@ def to_rates(pnemap, gid=0, tiling=True):
 
 def classical_tiling(sitecol, cmakers, dstore, monitor):
     for cmaker in cmakers:
-        with monitor('reading sources'):  # fast, but uses a lot of RAM
+        with monitor('reading sources'), dstore:  # fast, but uses a lot of RAM
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         for result in classical(sources, sitecol, cmaker, dstore, monitor):
@@ -567,13 +567,15 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
+        totw = 0
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             cm.gid = self.gids[cm.grp_id][0]
+            totw += sg.weight
 
-        for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
+        for tile in self.sitecol.split(numpy.ceil(totw / maxw)):
             allargs.append((tile, self.cmakers, ds))
             self.tilesizes.append(len(tile))
         logging.warning('Generated %d tiles', len(self.tilesizes))
