@@ -47,13 +47,14 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
+TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
+slice_dt = numpy.dtype([('tile', U16), ('start', int), ('stop', int)])
 
 
 def get_pmaps_gb(dstore):
@@ -67,18 +68,6 @@ def get_pmaps_gb(dstore):
     trt_rlzs = full_lt.get_trt_rlzs(all_trt_smrs)
     gids = full_lt.get_gids(all_trt_smrs)
     return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs, gids
-
-
-def build_slice_by_sid(sids, offset=0):
-    """
-    Convert an array of site IDs (with repetitions) into an array slice_dt
-    """
-    arr = performance.idx_start_stop(sids)
-    sbs = numpy.zeros(len(arr), slice_dt)
-    sbs['sid'] = arr[:, 0]
-    sbs['start'] = arr[:, 1] + offset
-    sbs['stop'] = arr[:, 2] + offset
-    return sbs
 
 
 class Set(set):
@@ -285,12 +274,13 @@ class Hazard:
         rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnemap):
+    def store_rates(self, pnemap, tileno=0):
         """
         Store pnes inside the _rates dataset
         """
         rates = to_rates(pnemap)
-        if len(rates['sid']) == 0:  # happens in case_60
+        n = len(rates['sid'])
+        if n == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
         hdf5.extend(self.datastore['_rates/gid'], rates['gid'])
@@ -298,10 +288,9 @@ class Hazard:
         hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
         # slice_by_sid contains 3 slices in classical/case_22
-        sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
-        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
-        self.offset += len(rates['sid'])
-
+        sbt = numpy.array([(tileno, self.offset, self.offset + n)], slice_dt)
+        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbt)
+        self.offset += n
         self.acc['nsites'] = self.offset
         return self.offset * 12  # 4 + 2 + 2 + 4 bytes
 
@@ -579,7 +568,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 classical_tiling, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             with mon:
-                self.haz.store_rates(dic['pnemap'])
+                self.haz.store_rates(dic['pnemap'], dic['tileno'])
         return {}
 
     def store_info(self):
@@ -699,35 +688,20 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        sites_per_task = int(numpy.ceil(self.N / ct))
-        sbs = dstore['_rates/slice_by_sid'][:]
-        sbs['sid'] //= sites_per_task
-        # NB: there is a genious idea here, to split in tasks by using
-        # the formula ``taskno = sites_ids // sites_per_task`` and then
-        # extracting a dictionary of slices for each taskno. This works
-        # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites
-        # disposed in 2 groups and we want to produce 2 tasks we can use
-        # 012345012345 // 3 = 000111000111 and the slices are
-        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
+        sbt = dstore['_rates/slice_by_sid'][:]
         slicedic = AccumDict(accum=[])
-        for idx, start, stop in sbs:
-            slicedic[idx].append((start, stop))
+        for tileno, start, stop in sbt:
+            slicedic[tileno].append((start, stop))
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
             return
-
-        # using compactify improves the performance of `reading rates`;
-        # I have measured a 3.5x in the AUS model with 1 rlz
-        allslices = [calc.compactify(slices) for slices in slicedic.values()]
-        nslices = sum(len(slices) for slices in allslices)
-        logging.info('There are %d slices of rates [%.1f per task]',
-                     nslices, nslices / len(slicedic))
+        if len(slicedic) == 1:  # single tile
+            pass
         allargs = [
-            (getters.PmapGetter(dstore, self.full_lt, slices,
+            (getters.PmapGetter(dstore, self.full_lt, slicedic[tileno],
                                 oq.imtls, oq.poes, oq.use_rates),
              N, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for slices in allslices]
+            for tileno in slicedic]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
