@@ -102,14 +102,14 @@ def to_rates(pnemap, gid=0):
 
 #  ########################### task functions ############################ #
 
-def classical_tiling(tile, cmakers, dstore, monitor):
+def classical_tiling(tile, tileno, cmakers, dstore, monitor):
     for cmaker in cmakers:
         with monitor('reading sources'), dstore:  # fast, but uses a lot of RAM
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         for result in classical(sources, tile, cmaker, monitor):
             result['pnemap'] = to_rates(result['pnemap'], cmaker.gid)
-            result['tileno'] = tile.no
+            result['tileno'] = tileno
             yield result
 
 
@@ -558,8 +558,7 @@ class ClassicalCalculator(base.HazardCalculator):
             totw += sg.weight
 
         for i, tile in enumerate(self.sitecol.split(numpy.ceil(totw / maxw))):
-            tile.no = i
-            allargs.append((tile, self.cmakers, ds))
+            allargs.append((tile, i, self.cmakers, ds))
             self.tilesizes.append(len(tile))
         logging.warning('Generated %d tiles', len(self.tilesizes))
         self.datastore.swmr_on()  # must come before the Starmap
@@ -690,12 +689,12 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(sbt) == 0:
             # no hazard, nothing to do, happens in case_60
             return
-        elif len(sbt) == 1:  # single tile
+        elif len(sbt) == 1:  # single tile, split by blocks of sites
             slicedic = performance.get_slices(dstore['_rates/sid'][:] % ct)
             nslices = sum(len(lst) for lst in slicedic.values())
             logging.info('Producing %d postclassical tasks with %d slice(s)',
                          ct, nslices)
-        else:
+        else:  # split by tile
             slicedic = AccumDict(accum=[])
             for tileno, start, stop in sbt:
                 slicedic[tileno].append((start, stop))
