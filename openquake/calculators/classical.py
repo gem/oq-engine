@@ -507,7 +507,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
-            if sg.atomic:
+            if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
