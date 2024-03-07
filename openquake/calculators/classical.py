@@ -559,12 +559,12 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             cm.gid = self.gids[cm.grp_id][0]
             hints.append(sg.weight / maxw)
-        
-        allargs = []
+
         tiles = self.sitecol.split(max(hints))
         logging.warning('Generated %d tile(s)', len(tiles))
-        for cm in self.cmakers:
-            for i, tile in enumerate(tiles):
+        allargs = []
+        for i, tile in enumerate(tiles):
+            for cm in self.cmakers:
                 allargs.append((tile, i, cm, ds))
         self.ntiles = len(tiles)
         self.datastore.swmr_on()  # must come before the Starmap
@@ -696,7 +696,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
         uniq_tiles = numpy.unique(sbt['tile'])
-        if len(uniq_tiles) == 1:  # single tile, split by blocks of sites
+        if len(uniq_tiles) <= 8:  # few tiles, split by blocks of sites
             sites_per_task = int(numpy.ceil(self.N / ct))
             # NB: there is a genious idea here, to split in tasks by using
             # the formula ``taskno = sites_ids // sites_per_task`` and then
