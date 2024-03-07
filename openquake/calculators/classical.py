@@ -718,6 +718,10 @@ class ClassicalCalculator(base.HazardCalculator):
             slicedic = AccumDict(accum=[])
             for tileno, start, stop in sbt:
                 slicedic[tileno].append((start, stop))
+
+        # compactifying slices
+        slicedic = {idx: calc.compactify(slices)
+                    for idx, slices in slicedic.items()}
         nslices = sum(len(lst) for lst in slicedic.values())
         logging.info('Producing %d postclassical tasks with %d slice(s)',
                      len(slicedic), nslices)
