@@ -691,8 +691,10 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
         elif len(sbt) == 1:  # single tile
-            logging.info('Producing %d postclassical tasks', ct)
             slicedic = performance.get_slices(dstore['_rates/sid'][:] % ct)
+            nslices = sum(len(lst) for lst in slicedic.values())
+            logging.info('Producing %d postclassical tasks with %d slice(s)',
+                         ct, nslices)
         else:
             slicedic = AccumDict(accum=[])
             for tileno, start, stop in sbt:
