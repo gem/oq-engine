@@ -696,8 +696,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # no hazard, nothing to do, happens in case_60
             return
         uniq_tiles = numpy.unique(sbt['tile'])
-        if len(uniq_tiles) <= 2:
-            # would use only 1 or 2 cores, so split by blocks of sites
+        if len(uniq_tiles) <= 6:
+            # would use few cores, so split by blocks of sites
             ct = oq.concurrent_tasks or 1
             sites_per_task = int(numpy.ceil(self.N / ct))
             # NB: there is a genious idea here, to split in tasks by using
