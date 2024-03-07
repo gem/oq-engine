@@ -554,28 +554,27 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         hints = []
-        light = []
-        heavy = []
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             cm.gid = self.gids[cm.grp_id][0]
-            if sg.weight < maxw:
-                light.append(cm)
-            else:
-                heavy.append(cm)
+            cm.weight = sg.weight / maxw
             hints.append(sg.weight / maxw)
 
         tiles = self.sitecol.split(max(hints))
-        logging.warning('Generated %d tile(s)', len(tiles))
+        self.ntiles = len(tiles)
+        # more tiles, less blocks
+        blocks = list(block_splitter(self.cmakers, self.ntiles,
+                                     get_weight, sort=True))
+        logging.warning('Generated %d tile(s) and %d blocks',
+                        self.ntiles, len(blocks))
         allargs = []
         for i, tile in enumerate(tiles):
-            for cm in heavy:
-                allargs.append((tile, i, [cm], ds))
-            allargs.append((tile, i, light, ds))
+            for cmakers in blocks:
+                allargs.append((tile, i, cmakers, ds))
+            allargs.append((tile, i, cmakers, ds))
 
-        self.ntiles = len(tiles)
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(
