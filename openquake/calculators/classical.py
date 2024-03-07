@@ -567,14 +567,12 @@ class ClassicalCalculator(base.HazardCalculator):
         # more tiles, less blocks
         blocks = list(block_splitter(self.cmakers, self.ntiles,
                                      get_weight, sort=True))
-        logging.warning('Generated %d tile(s) and %d blocks',
-                        self.ntiles, len(blocks))
+        logging.warning('Generated %d x %d = %d tasks',
+                        self.ntiles, len(blocks), self.ntiles * len(blocks))
         allargs = []
         for i, tile in enumerate(tiles):
             for cmakers in blocks:
                 allargs.append((tile, i, cmakers, ds))
-            allargs.append((tile, i, cmakers, ds))
-
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         for dic in parallel.Starmap(
