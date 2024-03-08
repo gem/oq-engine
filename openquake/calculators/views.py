@@ -1519,11 +1519,10 @@ def view_usgs_rupture(token, dstore):
     try:
         usgs_id = token.split(':', 1)[1]
     except IndexError:
-        print('Use the syntax oq show usgs_rupture:<id>')
-        return []
+        return 'Example: oq show usgs_rupture:us70006sj8'
     return get_rupture_dict(usgs_id)
 
-    
+
 @view.add('collapsible')
 def view_collapsible(token, dstore):
     """
