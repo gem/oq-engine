@@ -697,6 +697,7 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         sid_gb = 4 * len(dstore['_rates/sid']) / 1024 ** 3
         if sid_gb <= float(config.memory.pmap_max_gb):
+            logging.info('Building slices by site ID')
             ct = oq.concurrent_tasks or 1
             sites_per_task = int(numpy.ceil(self.N / ct))
             # NB: there is a genious idea here, to split in tasks by using
