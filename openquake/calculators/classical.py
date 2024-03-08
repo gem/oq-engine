@@ -147,7 +147,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
                    * 8 / 1024**2)
         if config.distribution.compress:
-            size_mb /= 4  # produce 4x less tiles
+            size_mb /= 5  # produce 5x less tiles
 
         # NB: the parameter config.memory.pmap_max_mb avoids the hanging
         # of oq1 due to too large zmq packets
