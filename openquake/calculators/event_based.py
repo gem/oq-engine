@@ -744,7 +744,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if 'gmf_data' in self.datastore and size < 4E9:
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
-            logging.warning(msg)
+            logging.info(msg)
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:
