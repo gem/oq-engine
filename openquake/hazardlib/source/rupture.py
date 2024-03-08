@@ -912,13 +912,13 @@ def _width_length(mag, rake):
         return 10.0 ** (-1.14 + 0.35 * mag), 10.0 ** (-1.88 + 0.50 * mag)
 
 
+# copied from the Input Preparation Toolkit (IPT) algorithm
 def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     """
     Build a rupture with a PlanarSurface suitable for scenario calculations
     """
     # copying the algorithm used in PlanarSurface.from_hypocenter
     # with a fixed Magnitude-Scaling Relationship
-
     rdip = math.radians(dip)
     rup_width, rup_length = _width_length(mag, rake)
     # calculate the height of the rupture being projected
@@ -957,6 +957,7 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
         hor_dist, vertical_increment, azimuth=(strike + 180 - theta) % 360)
     bottom_right = rupture_center.point_at(
         hor_dist, vertical_increment, azimuth=(strike + theta) % 360)
+    # print(dip, strike, top_left, top_right, bottom_left, bottom_right)
     surf = PlanarSurface(strike, dip, top_left, top_right,
                          bottom_right, bottom_left)
     rup = BaseRupture(mag, rake, trt, hypocenter, surf)
