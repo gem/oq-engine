@@ -53,7 +53,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-slice_dt = numpy.dtype([('sid', U32), ('start', int), ('stop', int)])
+slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 def get_pmaps_gb(dstore):
@@ -69,13 +69,13 @@ def get_pmaps_gb(dstore):
     return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs, gids
 
 
-def build_slice_by_sid(sids, offset=0):
+def build_slices(idxs, offset=0):
     """
     Convert an array of site IDs (with repetitions) into an array slice_dt
     """
-    arr = performance.idx_start_stop(sids)
+    arr = performance.idx_start_stop(idxs)
     sbs = numpy.zeros(len(arr), slice_dt)
-    sbs['sid'] = arr[:, 0]
+    sbs['idx'] = arr[:, 0]
     sbs['start'] = arr[:, 1] + offset
     sbs['stop'] = arr[:, 2] + offset
     return sbs
@@ -274,6 +274,8 @@ class Hazard:
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
+        self.sites_per_task = int(numpy.ceil(
+            self.N / (oq.concurrent_tasks or 1)))
         self.acc = AccumDict(accum={})
         self.offset = 0
 
@@ -299,9 +301,17 @@ class Hazard:
         hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
         hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
 
-        # slice_by_sid contains 3 slices in classical/case_22
-        sbs = build_slice_by_sid(rates['sid'].copy(), self.offset)
-        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
+        # NB: there is a genious idea here, to split in tasks by using
+        # the formula ``taskno = sites_ids // sites_per_task`` and then
+        # extracting a dictionary of slices for each taskno. This works
+        # since by construction the site_ids are sequential and there are
+        # at most G slices per task. For instance if there are 6 sites
+        # disposed in 2 groups and we want to produce 2 tasks we can use
+        # 012345012345 // 3 = 000111000111 and the slices are
+        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
+        sbs = build_slices(rates['sid'] // self.sites_per_task, self.offset)
+        hdf5.extend(self.datastore['_rates/slice_by_idx'], sbs)
+        # slice_by_idx contains 3 slices in classical/case_22
         self.offset += len(rates['sid'])
 
         self.acc['nsites'] = self.offset
@@ -403,7 +413,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
-        self.datastore.create_dset('_rates/slice_by_sid', slice_dt,
+        self.datastore.create_dset('_rates/slice_by_idx', slice_dt,
                                    compression='gzip')
 
         oq = self.oqparam
@@ -694,30 +704,12 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        poes_gb = self.datastore.getsize('_rates') / 1024**3
-        if poes_gb < 1:
-            ct = int(poes_gb * 32) or 1
-        else:
-            ct = int(poes_gb) + 32  # number of tasks > number of GB
-        if ct > 1:
-            logging.info('Producing %d postclassical tasks', ct)
         if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        sites_per_task = int(numpy.ceil(self.N / ct))
-        sbs = dstore['_rates/slice_by_sid'][:]
-        sbs['sid'] //= sites_per_task
-        # NB: there is a genious idea here, to split in tasks by using
-        # the formula ``taskno = sites_ids // sites_per_task`` and then
-        # extracting a dictionary of slices for each taskno. This works
-        # since by construction the site_ids are sequential and there are
-        # at most G slices per task. For instance if there are 6 sites
-        # disposed in 2 groups and we want to produce 2 tasks we can use
-        # 012345012345 // 3 = 000111000111 and the slices are
-        # {0: [(0, 3), (6, 9)], 1: [(3, 6), (9, 12)]}
         slicedic = AccumDict(accum=[])
-        for idx, start, stop in sbs:
+        for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
             slicedic[idx].append((start, stop))
         if not slicedic:
             # no hazard, nothing to do, happens in case_60
