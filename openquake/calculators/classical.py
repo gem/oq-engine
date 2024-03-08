@@ -469,7 +469,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw * .75)
+            self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -695,9 +695,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(sbt) == 0:
             # no hazard, nothing to do, happens in case_60
             return
-        uniq_tiles = numpy.unique(sbt['tile'])
-        if len(uniq_tiles) <= 6:
-            # would use few cores, so split by blocks of sites
+        sid_gb = 4 * len(dstore['_rates/sid']) / 1024 ** 3
+        if sid_gb <= float(config.memory.pmap_max_gb):
             ct = oq.concurrent_tasks or 1
             sites_per_task = int(numpy.ceil(self.N / ct))
             # NB: there is a genious idea here, to split in tasks by using
