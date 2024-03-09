@@ -719,8 +719,8 @@ class ClassicalCalculator(base.HazardCalculator):
         # I have measured a 3.5x in the AUS model with 1 rlz
         allslices = [calc.compactify(slices) for slices in slicedic.values()]
         nslices = sum(len(slices) for slices in allslices)
-        logging.info('There are %d slices of rates [%.1f per task]',
-                     nslices, nslices / len(slicedic))
+        logging.info('There are %.1f slices of rates per task',
+                     nslices / len(slicedic))
         allargs = [
             (getters.PmapGetter(dstore, self.full_lt, slices,
                                 oq.imtls, oq.poes, oq.use_rates),
