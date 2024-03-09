@@ -1226,11 +1226,18 @@ def import_gmfs_hdf5(dstore, oqparam):
     :param oqparam: an OqParam instance
     :returns: event_ids
     """
-    # NB: you cannot access an external link if the file it points to is
+    # NB: once we tried to use ExternalLinks to avoid copying the GMFs,
+    # but: you cannot access an external link if the file it points to is
     # already open, therefore you cannot run in parallel two calculations
-    # starting from the same GMFs
-    dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
-    dstore['complete'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "sitecol")
+    # starting from the same GMFs; moreover a calc_XXX.hdf5 downloaded
+    # from the webui would be small but orphan of the GMFs; moreover
+    # users changing the name of the external file or changing the
+    # ownership would break calc_XXX.hdf5; therefore we copy everything
+    # even if bloated (also because of SURA issues having the external
+    # file under NFS and calc_XXX.hdf5 in the local filesystem)
+    with hdf5.File(oqparam.inputs['gmfs'], 'r') as f:
+        f.copy('gmf_data', dstore.hdf5)
+        dstore['sitecol'] = f['sitecol']  # complete by construction
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
