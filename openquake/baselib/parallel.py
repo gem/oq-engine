@@ -634,7 +634,7 @@ class IterResult(object):
             recv = sum(self.nbytes.values())
             mean = recv / (self.counts or 1)
             pu = '[unpik=%.2fs]' % self.dt
-            logging.info('Received %d * %s in %d seconds %s from %s;\n%s',
+            logging.info('Received %d * %s in %d seconds %s from %s\n%s',
                          self.counts, humansize(mean),
                          time.time() - t0, pu, self.name, nb)
 
