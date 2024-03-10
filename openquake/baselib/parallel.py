@@ -411,7 +411,6 @@ class Result(object):
     func = None
 
     def __init__(self, val, mon, tb_str='', msg=''):
-        t0 = time.time()
         if isinstance(val, dict):
             self.pik = Pickled(val)
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
@@ -429,7 +428,6 @@ class Result(object):
         self.tb_str = tb_str
         self.msg = msg
         self.workerid = (socket.gethostname(), os.getpid())
-        self.dt = time.time() - t0
 
     def get(self):
         """
@@ -437,7 +435,7 @@ class Result(object):
         """
         t0 = time.time()
         val = self.pik.unpickle()
-        self.dt += time.time() - t0
+        self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
@@ -635,7 +633,7 @@ class IterResult(object):
             nb = {k: humansize(v) for k, v in list(reversed(items))[:3]}
             recv = sum(self.nbytes.values())
             mean = recv / (self.counts or 1)
-            pu = '[pik/unpik=%.2fs]' % self.dt
+            pu = '[unpik=%.2fs]' % self.dt
             logging.info('Received %d * %s in %d seconds %s from %s;\n%s',
                          self.counts, humansize(mean),
                          time.time() - t0, pu, self.name, nb)

@@ -197,6 +197,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
+
+        L = oq.imtls.size
+        Gt = len(self.full_lt.get_trt_rlzs(trt_smrs))
+        nbytes = 8 * len(self.sitecol) * L * Gt
+        logging.warning(f'The global pmap would require %s ({Gt=})',
+                        general.humansize(nbytes))
+
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []

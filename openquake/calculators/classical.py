@@ -515,9 +515,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        nbytes = 8 * len(self.sitecol) * L * Gt
-        logging.info(f'Allocating %s for the global pmap ({Gt=})',
-                     humansize(nbytes))
         self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
         allargs = []
         if 'sitecol' in self.datastore.parent:
