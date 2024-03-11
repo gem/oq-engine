@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -521,8 +521,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
         t1 = time.time()
-        logging.info(f'{tot_ruptures} ruptures filtered to {filtered_ruptures}'
-                     f' and stored in {t1 - t0} seconds')
+        logging.info(f'Generated {filtered_ruptures}/{tot_ruptures} ruptures,'
+                     f' stored in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
@@ -571,7 +571,19 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
-        gsim_lt = readinput.get_gsim_lt(self.oqparam)
+        gsim_lt = readinput.get_gsim_lt(oq)
+        if oq.rupture_dict:
+            mosaic_df = readinput.read_mosaic_df(buffer=0)
+            lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
+            sitemodel = oq.inputs.get('site_model', [''])[0]
+            if sitemodel.endswith('.hdf5'):
+                if oq.mosaic_model == '???':
+                    raise ValueError(
+                        '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                        oq.rupture_dict)
+                gsim_lt = logictree.GsimLogicTree.from_hdf5(
+                    sitemodel, oq.mosaic_model)
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
@@ -650,8 +662,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        elif not oq.rupture_dict and oq.rupture_usgs_id:
-            oq.rupture_dict.update(get_rupture_dict(oq.rupture_usgs_id))
         elif not oq.rupture_dict and 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -731,7 +741,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if 'gmf_data' in self.datastore and size < 4E9:
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
-            logging.warning(msg)
+            logging.info(msg)
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:

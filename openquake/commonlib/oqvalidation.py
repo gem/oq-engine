@@ -714,11 +714,6 @@ ses_seed:
   Example: *ses_seed = 123*.
   Default: 42
 
-rupture_usgs_id:
-  Used in Aristotle calculations to download a rupture from the USGS site
-  Example: *rupture_usgs_id = usp000fjta*.
-  Default: no default
-
 shakemap_id:
   Used in ShakeMap calculations to download a ShakeMap from the USGS site
   Example: *shakemap_id = usp000fjta*.
@@ -1079,7 +1074,6 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
-    rupture_usgs_id = valid.Param(valid.nice_string, None)
     shakemap_id = valid.Param(valid.nice_string, None)
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)

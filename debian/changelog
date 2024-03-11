@@ -1,3 +1,19 @@
+  [Michele Simionato]
+  * Added `oq show usgs_rupture:<usgs_id>` printing the rupture parameters
+
+  [Matteo Nastasi]
+  * Add helper to check consistency between debian/changelog and
+    CONTRIBUTORS.txt
+
+  [Michele Simionato]
+  * Added an optional flag `config.distribution.compress` to reduce the
+    data transfer by compressing pickles larger than 1 MB
+  * Optimized postclassical both for regular and tiling calculations
+  * Saving disk space in classical calculations (~4x) by gzipping the rates
+  * Removed Python version checks in install.py
+
+python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
+
   [Graeme Weatherill]
   * Contributed new GMPEs Weatherill2024ESHM20AvgSA,
     Weatherill2024ESHM20SlopeGeologyAvgSA, Weatherill2024ESHM20Homokedastic
@@ -120,6 +136,8 @@
   * Internal: forced the colon convention on mutex sources
   * Fixed a bug in the disaggregation with mutex sources incorrectly
     averaging over the rates and not the poes
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 04 Mar 2024 08:47:34 +0000
 
 python3-oq-engine (3.18.0-1~xenial01) xenial; urgency=low
 

@@ -168,7 +168,7 @@ agg_id
 
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_1.__file__, 'job2.ini',
-                          insurance_csv="{'structural': 'policy_ins_ko.csv'}")
+                          insurance_file="{'structural': 'policy_ins_ko.csv'}")
         self.assertIn(
             "Please check deductible values. Values larger than the insurance"
             " limit were found for asset(s) {3}.",

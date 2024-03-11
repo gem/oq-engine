@@ -50,7 +50,7 @@ Continue on [How to run the OpenQuake Engine](unix)
 
 ## Test the installation
 
-To run the OpenQuake Engine tests see the **[testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)** page.
+To run the OpenQuake Engine tests see the **[testing](https://github.com/gem/oq-engine/blob/master/doc/contributing/testing.md)** page.
 
 ## Uninstall the OpenQuake Engine
 
