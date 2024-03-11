@@ -15,7 +15,6 @@ jobs:
   demos:
     runs-on: ubuntu-latest
     env:
-      GITHUB_IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
       GITHUB_REF:  ${{ github.ref }}
@@ -45,7 +44,7 @@ jobs:
         #      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
         #      GITHUB_REF:  ${{ github.ref }}
         run: |
-          if [ "$GITHUB_IS_PULL_REQUEST" ]
+          if ${{ github.event_name == 'pull_request' }}
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
               python install.py devel --version ${GITHUB_HD_REF}
@@ -71,7 +70,7 @@ jobs:
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
-          if [ "$GITHUB_IS_PULL_REQUEST" ]
+          if ${{ github.event_name == 'pull_request' }}
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
               GITHUB_BR=${GITHUB_HD_REF}
