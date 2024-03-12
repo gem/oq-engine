@@ -28,7 +28,6 @@ import traceback
 from datetime import datetime
 from shapely import wkt
 import psutil
-import h5py
 import numpy
 import pandas
 
@@ -40,7 +39,6 @@ from openquake.hazardlib import (
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
-from openquake.hazardlib.calc.disagg import to_rates
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
