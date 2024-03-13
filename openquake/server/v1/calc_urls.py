@@ -41,6 +41,14 @@ if settings.APPLICATION_MODE.upper() == 'AELO':
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
     ])
+elif settings.APPLICATION_MODE.upper() == 'ARISTOTLE':
+    urlpatterns.extend([
+        re_path(r'^aristotle_get_rupture_data$',
+                views.aristotle_get_rupture_data),
+        re_path(r'^aristotle_run$', views.aristotle_run),
+        re_path(r'^(\d+)/abort$', views.calc_abort),
+        re_path(r'^(\d+)/remove$', views.calc_remove),
+    ])
 elif settings.APPLICATION_MODE.upper() != 'READ_ONLY':
     urlpatterns.extend([
         re_path(r'^(\d+)/abort$', views.calc_abort),
