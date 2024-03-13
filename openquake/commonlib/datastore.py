@@ -142,13 +142,13 @@ def new(calc_id, oqparam, datadir=None, mode=None):
 
 def build_dstore_log(description='custom calculation', parent=(), ini=None):
     """
-    :returns: DataStore instance associated to the .calc_id
+    :returns: <DataStore> and <LogContext> associated to the calculation
     """
     if ini is not None:
         dic = ini
     else:
         dic = dict(description=description, calculation_mode='custom')
-    log = init('job', dic)
+    log = init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log

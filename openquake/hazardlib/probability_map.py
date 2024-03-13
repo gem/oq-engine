@@ -394,10 +394,10 @@ class ProbabilityMap(object):
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
-    def to_rates(self, gid=0):
+    def to_dict(self, gid=0):
         """
         Assuming self contains an array of probabilities of no exceedance,
-        returns an array of rates of shape (N, L, G).
+        returns a dictionary of arrays with keys sid, lid, gid, rate
         """
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
@@ -447,7 +447,7 @@ class ProbabilityMap(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        return pandas.DataFrame(self.to_rates())
+        return pandas.DataFrame(self.to_dict())
 
     def multiply_pnes(self, other, g, i):
         """

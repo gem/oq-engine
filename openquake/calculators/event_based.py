@@ -38,7 +38,6 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.geo.utils import geolocate
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -663,8 +662,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        elif not oq.rupture_dict and oq.rupture_usgs_id:
-            oq.rupture_dict.update(get_rupture_dict(oq.rupture_usgs_id))
         elif not oq.rupture_dict and 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -744,7 +741,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if 'gmf_data' in self.datastore and size < 4E9:
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
-            logging.warning(msg)
+            logging.info(msg)
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:

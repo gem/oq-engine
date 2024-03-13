@@ -184,7 +184,6 @@ import ast
 import sys
 import stat
 import time
-import zlib
 import socket
 import signal
 import pickle
@@ -207,7 +206,7 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version, shortlist, mp as mp_context)
+    gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
 
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -330,7 +329,7 @@ class Pickled(object):
             raise TypeError('%s: %s' % (exc, obj))
         self.compressed = len(self.pik) > MB and config.distribution.compress
         if self.compressed:
-            self.pik = zlib.compress(self.pik)
+            self.pik = compress(self.pik)
 
     def __repr__(self):
         """String representation of the pickled object"""
@@ -343,7 +342,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        pik = zlib.decompress(self.pik) if self.compressed else self.pik
+        pik = decompress(self.pik) if self.compressed else self.pik
         return pickle.loads(pik)
 
 
@@ -434,7 +433,9 @@ class Result(object):
         """
         Returns the underlying value or raise the underlying exception
         """
+        t0 = time.time()
         val = self.pik.unpickle()
+        self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
@@ -607,6 +608,7 @@ class IterResult(object):
     def _iter(self):
         first_time = True
         self.counts = 0
+        self.dt = 0
         for result in self.iresults:
             msg = check_mem_usage()
             # log a warning if too much memory is used
@@ -615,7 +617,9 @@ class IterResult(object):
                 first_time = False  # warn only once
             self.nbytes += result.nbytes
             self.counts += 1
-            yield result.get()
+            out = result.get()
+            self.dt += result.dt
+            yield out
 
     def __iter__(self):
         if self.iresults == ():
@@ -626,13 +630,13 @@ class IterResult(object):
             yield from self._iter()
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
-            nb = {k: humansize(v) for k, v in reversed(items)}
+            nb = {k: humansize(v) for k, v in list(reversed(items))[:3]}
             recv = sum(self.nbytes.values())
-            msg = nb if len(nb) < 10 else {'tot': humansize(recv)}
             mean = recv / (self.counts or 1)
-            logging.info('Received %d * %s %s in %d seconds from %s',
-                         self.counts, humansize(mean), msg,
-                         time.time() - t0, self.name)
+            pu = '[unpik=%.2fs]' % self.dt
+            logging.info('Received %d * %s in %d seconds %s from %s\n%s',
+                         self.counts, humansize(mean),
+                         time.time() - t0, pu, self.name, nb)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:

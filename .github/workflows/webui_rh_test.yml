@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "05 15 * * *"
 
 jobs:
   test_ui:
@@ -33,10 +33,14 @@ jobs:
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }} and install OQ
-      env:
-        BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
         set -x
+        if [ -z ${{ github.event.inputs.git-ref }} ];
+        then
+           BRANCH=master
+        else
+           BRANCH=${{ github.event.inputs.git-ref }}
+        fi
         # Add openquake user
         useradd -m -u 1000 -s /bin/bash openquake
         # update system and install utilities

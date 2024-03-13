@@ -68,6 +68,7 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
     for m in range(M):
         iml = max_iml[m]
         for n in range(N):
+            # capping the gmv at the median value if val > max_iml[m]
             maxval = exp(mean[m, n], m!=mmi_index)
             for e in range(E):
                 val = array[n, m, e]

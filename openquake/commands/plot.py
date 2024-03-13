@@ -119,15 +119,16 @@ def make_figure_avg_gmf(extractors, what):
     imt = what.split('=')[1]
     ax = fig.add_subplot(1, 1, 1)
     ax.grid(True)
-    ax.set_title('Avg GMF for %s' % imt)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
     if len(extractors) == 2:  # compare two avg_gmf
+        ax.set_title('Delta GMF for %s' % imt)
         ex1, ex2 = extractors
         avg_gmf = ex1.get(what)
         avg_gmf2 = ex2.get(what)
         gmf = avg_gmf[imt] - avg_gmf2[imt]
     else:  # plot a single avg_gmf
+        ax.set_title('Avg GMF for %s' % imt)
         [ex] = extractors
         avg_gmf = ex.get(what)
         gmf = avg_gmf[imt]
