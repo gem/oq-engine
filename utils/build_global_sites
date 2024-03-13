@@ -21,11 +21,12 @@ Build the site model for the world and store it into an HDF5 file.
 """
 import os
 import numpy
-from openquake.baselib import performance, hdf5, sap
+from openquake.baselib import parallel, performance, hdf5, sap
+from openquake.hazardlib.geo import utils
 from openquake.hazardlib import gsim_lt
 from openquake.commonlib import readinput
 
-
+F32 = numpy.float32
 dt = [('model', (numpy.bytes_, 3)), ('trt', numpy.bytes_, 61),
       ('gsim', hdf5.vstr), ('weight', float)]
 
@@ -39,6 +40,10 @@ def get_gsim_lt(cwd):
         return gsim_lt.GsimLogicTree(f1)
     f2 = os.path.join(cwd, 'gmmLT.xml')
     return gsim_lt.GsimLogicTree(f2)
+
+
+def get_countries(lonlats, geom_df, monitor):
+    return {monitor.task_no: utils.geolocate(lonlats, geom_df)}
 
 
 def main(mosaic_dir):
@@ -70,8 +75,15 @@ def main(mosaic_dir):
     for i, row in enumerate(dic.values()):
         for n in row.dtype.names:
             smodel[i][n] = row[n]
+    geom_df = readinput.read_countries_df()
+    lonlats = numpy.zeros((len(dic), 2), numpy.float32)
+    lonlats[:, 0] = smodel['lon']
+    lonlats[:, 1] = smodel['lat']
+    print('Associating countries to {:_d} sites'.format(len(dic)))
+    dic = parallel.Starmap.apply(get_countries, (lonlats, geom_df)).reduce()
     with hdf5.File('site_model.hdf5', 'w') as f:
         f['site_model'] = smodel
+        f['countries'] = numpy.concatenate([dic[no] for no in sorted(dic)])
         f['model_trt_gsim_weight'] = numpy.array(rows, dt)
     print('Generated site_model.hdf5 with {:_d} sites'.format(len(smodel)))
 
