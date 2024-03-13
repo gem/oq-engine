@@ -214,14 +214,15 @@ def get_completeness_counts(catalogue, completeness, d_m):
         * n_obs - number of events in completeness period
     """
     mmax_obs = np.max(catalogue.data["magnitude"])
-    # thw line below was added by Nick Ackerley but it breaks the tests
+    # thw line below was added by Nick Ackerley but it breaks the tests 
     # catalogue.data["dtime"] = catalogue.get_decimal_time()
     if mmax_obs > np.max(completeness[:, 1]):
         cmag = np.hstack([completeness[:, 1], mmax_obs])
     else:
         cmag = completeness[:, 1]
+    #print(cmag)
     cyear = np.hstack([catalogue.end_year + 1, completeness[:, 0]])
-
+    #print(cyear)
     # When the magnitude value is on the bin edge numpy's histogram function
     # may assign randomly to one side or the other based on the floating
     # point value. As catalogues are rounded to the nearest 0.1 this occurs
@@ -244,10 +245,12 @@ def get_completeness_counts(catalogue, completeness, d_m):
             0
         ].astype(float)
         count_years[m_idx[:-1]] += float(nyrs)
+
     # Removes any zero rates greater than
     last_loc = np.where(count_rates > 0)[0][-1]
     n_obs = count_rates[: (last_loc + 1)]
     t_per = count_years[: (last_loc + 1)]
     cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.0
     cent_mag = np.around(cent_mag[: (last_loc + 1)], 3)
+
     return cent_mag, t_per, n_obs
