@@ -103,13 +103,11 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid=0, tiling=True):
+def to_dict(pnemap, gid=0, tiling=True):
     """
-    :returns: compressed bytes if tiling is True, else ProbabilityMap unchanged
+    :returns: dictionary if tiling is True, else ProbabilityMap unchanged
     """
-    if tiling and hasattr(pnemap, 'to_rates'):  # not already converted
-        return pnemap.to_rates(gid)
-    return pnemap
+    return pnemap.to_dict(gid) if tiling else pnemap
 
 #  ########################### task functions ############################ #
 
@@ -140,7 +138,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling)
+            result['pnemap'] = to_dict(~pmap, gid, tiling)
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -157,7 +155,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling)
+            result['pnemap'] = to_dict(~pmap, gid, tiling)
             yield result
 
 
@@ -293,7 +291,10 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        rates = to_rates(pnemap)
+        if isinstance(pnemap, dict):  # already converted
+            rates = pnemap
+        else:
+            rates = to_dict(pnemap)
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
@@ -515,9 +516,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        nbytes = 8 * len(self.sitecol) * L * Gt
-        logging.info(f'Allocating %s for the global pmap ({Gt=})',
-                     humansize(nbytes))
         self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
         allargs = []
         if 'sitecol' in self.datastore.parent:
