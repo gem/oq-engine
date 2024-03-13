@@ -363,10 +363,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             R = 1 if oq.collect_rlzs else self.R
             logging.info('Transfering %s per core in avg_losses',
                          general.humansize(A * ELT * 8 * R))
-            if A * ELT * 8 > config.memory.avg_losses_max:
+            if A * ELT * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'avg_losses=false')
-            elif A * ELT * self.R * 8> config.memory.avg_losses_max:
+            elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and

@@ -1372,10 +1372,10 @@ def get_input_files(oqparam):
         elif key == 'source_model':
             fnames.add(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
+            fnames.update(fname)
             if any(f.endswith(('.xml', '.nrml')) for f in fnames):
                 for exp in asset.Exposure.read_headers(fname):
                     fnames.update(exp.datafiles)
-            fnames.update(fname)
         elif key == 'reinsurance':
             [xml] = fname.values()
             node = nrml.read(xml)
