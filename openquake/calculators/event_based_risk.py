@@ -25,7 +25,7 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, general, python3compat
+from openquake.baselib import hdf5, performance, general, python3compat, config
 from openquake.hazardlib import stats, InvalidFile
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
@@ -360,10 +360,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.L = L = len(oq.loss_types)
         ELT = len(oq.ext_loss_types)
         if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
-            if A * ELT > 10_000_000:
+            if A * ELT > config.memory.avg_losses_max:
                 raise ValueError('For large exposures you must set '
                                  'avg_losses=false')
-            elif A * ELT * self.R > 10_000_000:
+            elif A * ELT * self.R > config.memory.avg_losses_max:
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and

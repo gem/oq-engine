@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a parameter `config.memory.avg_losses_max`
+  * Changed `import_gmfs_hdf5` to not use ExternalLinks
   * Added `oq show usgs_rupture:<usgs_id>` printing the rupture parameters
 
   [Matteo Nastasi]
