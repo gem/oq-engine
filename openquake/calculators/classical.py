@@ -103,12 +103,16 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid=0, tiling=True):
+def to_rates(pnemap, gid, tiling, disagg_by_src):
     """
     :returns: dictionary if tiling is True, else ProbabilityMap with rates
     """
     rates = pnemap.to_rates()
-    return rates.to_dict(gid) if tiling else rates
+    if tiling:
+        return rates.to_dict(gid)
+    if disagg_by_src:
+        return rates
+    return rates.remove_zeros()
 
 #  ########################### task functions ############################ #
 
@@ -120,6 +124,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     tiling = not hasattr(sources, '__iter__')  # passed gid
+    disagg_by_src = cmaker.disagg_by_src
     with dstore:
         if tiling:  # tiling calculator, read the sources from the datastore
             gid = sources
@@ -130,7 +135,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             gid = 0
             sitecol = dstore['sitecol']  # super-fast
 
-    if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
+    if disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -139,7 +144,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling)
+            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -156,7 +161,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling)
+            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
 
 
