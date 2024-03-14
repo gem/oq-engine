@@ -340,7 +340,7 @@ class ProbabilityMap(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def fill(self, value):
+    def fill(self, value, dt=F64):
         """
         :param value: a scalar probability
 
@@ -348,7 +348,7 @@ class ProbabilityMap(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty(self.shape)
+        self.array = numpy.empty(self.shape, dt)
         self.array.fill(value)
         return self
 
