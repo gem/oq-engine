@@ -586,7 +586,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     raise ValueError(
                         'In Aristotle mode the gsim can not be specified in'
                         ' the job.ini: %s' % oq.gsim)
-                if oq.tectonic_region_type is None:
+                if oq.tectonic_region_type == '*':
                     raise ValueError(
                         'The tectonic_region_type parameter must be specified')
                 gsim_lt = logictree.GsimLogicTree.from_hdf5(

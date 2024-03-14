@@ -1095,7 +1095,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    tectonic_region_type = valid.Param(valid.utf8, None)
+    tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(str, 'avg')
     time_per_task = valid.Param(valid.positivefloat, 1200)
     # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR
