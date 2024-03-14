@@ -104,7 +104,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid, disagg_by_src):
+def to_rates(pnemap, disagg_by_src):
     """
     :returns: ProbabilityMap with rates
     """
@@ -143,7 +143,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, disagg_by_src)
+            result['pnemap'] = to_rates(~pmap, disagg_by_src)
+            result['gid'] = gid
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -160,7 +161,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, disagg_by_src)
+            result['pnemap'] = to_rates(~pmap, disagg_by_src)
+            result['gid'] = gid
             yield result
 
 
@@ -292,11 +294,11 @@ class Hazard:
         rates = pmap.array @ self.weig[gids] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnemap):
+    def store_rates(self, pnemap, gid=0):
         """
         Store pnes inside the _rates dataset
         """
-        rates = pnemap.to_dict()
+        rates = pnemap.to_dict(gid)
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
@@ -595,7 +597,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             with mon:
-                self.haz.store_rates(dic['pnemap'])
+                self.haz.store_rates(dic['pnemap'], dic['gid'])
         return {}
 
     def store_info(self):
