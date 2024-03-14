@@ -284,7 +284,7 @@ class Hazard:
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[grp_id]
-        rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
+        rates = -numpy.log(pmap.array) @ self.weig[gids] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap):
@@ -373,7 +373,7 @@ class ClassicalCalculator(base.HazardCalculator):
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(~pnemap, grp_id)
+            acc[source_id] += self.haz.get_rates(pnemap, grp_id)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
