@@ -83,7 +83,6 @@ Contacts
 ********
 
 - Support forum: https://groups.google.com/g/openquake-users
-- X/Twitter: https://x.com/gem_devs
 
 
 License
