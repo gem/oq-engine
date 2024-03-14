@@ -160,7 +160,7 @@ icons on your Windows desktop:
 
 <figure>
 	<img src="_images/13_Desktop_Icons.png" 
-         width="50%" align="centre" />
+         width="10%" align="centre" />
 	<figcaption>OpenQuake Engine Icons</figcaption>
 </figure>
 
