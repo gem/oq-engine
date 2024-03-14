@@ -278,12 +278,12 @@ class Hazard:
         self.offset = 0
 
     # used in in disagg_by_src
-    def get_rates(self, pmap):
+    def get_rates(self, pmap, grp_id):
         """
         :param pmap: a ProbabilityMap
         :returns: an array of rates of shape (N, M, L1)
         """
-        gids = self.gids[pmap.grp_id]
+        gids = self.gids[grp_id]
         rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
@@ -373,9 +373,7 @@ class ClassicalCalculator(base.HazardCalculator):
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            pm = ~pnemap
-            pm.grp_id = grp_id
-            acc[source_id] += self.haz.get_rates(pm)
+            acc[source_id] += self.haz.get_rates(~pnemap, grp_id)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
