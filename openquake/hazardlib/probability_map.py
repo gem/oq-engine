@@ -394,11 +394,7 @@ class ProbabilityMap(object):
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
-    def to_dict(self, gid=0):
-        """
-        Assuming self contains an array of probabilities of no exceedance,
-        returns a dictionary of arrays with keys sid, lid, gid, rate
-        """
+    def to_rates(self, itime=1.):
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -409,6 +405,14 @@ class ProbabilityMap(object):
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
         rates = -numpy.log(pnes)
+        return self.new(rates / itime)
+
+    def to_dict(self, gid=0):
+        """
+        Assuming self contains an array of probabilities of no exceedance,
+        returns a dictionary of arrays with keys sid, lid, gid, rate
+        """
+        rates = self.to_rates().array
         idxs, lids, gids = rates.nonzero()
         out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
                    gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
