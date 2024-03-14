@@ -104,13 +104,11 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid, tiling, disagg_by_src):
+def to_rates(pnemap, gid, disagg_by_src):
     """
-    :returns: dictionary if tiling is True, else ProbabilityMap with rates
+    :returns: ProbabilityMap with rates
     """
     rates = pnemap.to_rates()
-    if tiling:
-        return rates.to_dict(gid)
     if disagg_by_src:
         return rates
     return rates.remove_zeros()
@@ -145,7 +143,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+            result['pnemap'] = to_rates(~pmap, gid, disagg_by_src)
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -162,7 +160,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+            result['pnemap'] = to_rates(~pmap, gid, disagg_by_src)
             yield result
 
 
@@ -298,10 +296,7 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # already converted (tiling)
-            rates = pnemap
-        else:
-            rates = pnemap.to_dict()
+        rates = pnemap.to_dict()
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
