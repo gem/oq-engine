@@ -790,6 +790,11 @@ steps_per_interval:
   Example: *steps_per_interval = 4*.
   Default: 1
 
+tectonic_region_type:
+   Used to specify a tectonic region type.
+   Example: *tectonic_region_type = Active Shallow Crust*.
+   Default: '*'
+
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
   Valid choices are "day", "night", "transit".
@@ -1090,6 +1095,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
+    tectonic_region_type = valid.Param(valid.utf8, None)
     time_event = valid.Param(str, 'avg')
     time_per_task = valid.Param(valid.positivefloat, 1200)
     # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR

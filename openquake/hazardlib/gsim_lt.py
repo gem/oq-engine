@@ -182,15 +182,15 @@ class GsimLogicTree(object):
         return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
 
     @classmethod
-    def from_hdf5(cls, fname, mosaic_model):
+    def from_hdf5(cls, fname, mosaic_model, trt):
         """
         :returns: gsim logic tree associated to the given mosaic model
         """
         with hdf5.File(fname, 'r') as f:
             alldata = f['model_trt_gsim_weight'][:]
         data = alldata[alldata['model'] == mosaic_model.encode('utf8')]
-        trt = data['trt'][0]
         dat = data[data['trt'] == trt]
+        assert len(dat) > 0
         trt = decode(trt)
         gsims = decode(dat['gsim'])
         weights = decode(dat['weight'])
@@ -205,7 +205,7 @@ class GsimLogicTree(object):
                          'uncertaintyType': 'gmpeModel'},
                         nodes=ltbranches)])
         return cls('fake', [trt], ltnode=lt)
-        
+
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
         self.filename = fname
@@ -278,7 +278,7 @@ class GsimLogicTree(object):
                 for gsim in gsims:
                     for k, v in gsim.kwargs.items():
                         if k.endswith(('_file', '_table')):
-                            if v is None: # if volc_arc_file is None
+                            if v is None:  # if volc_arc_file is None
                                 pass
                             else:
                                 fname = os.path.join(dirname, v)
@@ -300,8 +300,8 @@ class GsimLogicTree(object):
                 gsim = valid.gsim(branch['uncertainty'], dirname)
                 for k, v in gsim.kwargs.items():
                     if k.endswith(('_file', '_table')):
-                        if v is None: # if volc_arc_file is None
-                           pass
+                        if v is None:  # if volc_arc_file is None
+                            pass
                         else:
                             arr = numpy.asarray(dic[os.path.basename(v)][()])
                             gsim.kwargs[k] = io.BytesIO(bytes(arr))
