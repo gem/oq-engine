@@ -395,7 +395,7 @@ class ProbabilityMap(object):
         return curves
 
     def to_rates(self, itime=1.):
-        pnes = self.array
+        pnes = self.array.astype(F32)
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically,
