@@ -192,7 +192,7 @@ Once the webui is ready for use, a web browser tab will be opened:
 </figure>
 
 Please refer to the 
-[Web user-interface instructions](../running-calculations/web-ui.html)
+[Web user-interface instructions](../running-calculations/web-ui.rst)
 for more information about using the web-ui.
 
 ## Getting help
