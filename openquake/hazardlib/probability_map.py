@@ -395,7 +395,7 @@ class ProbabilityMap(object):
         return curves
 
     def to_rates(self, itime=1.):
-        pnes = self.array.astype(F32)
+        pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
         # cannot be exactly 1 unless the level is exactly 0. Numerically,
@@ -404,7 +404,7 @@ class ProbabilityMap(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes)
+        rates = -numpy.log(pnes).astype(F32)
         return self.new(rates / itime)
 
     def to_dict(self, gid=0):
