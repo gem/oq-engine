@@ -65,6 +65,7 @@ order to install the OpenQuake engine:
 		 width="50%" align="centre" />
 	<figcaption>License Terms</figcaption>
 </figure>
+
 Press the "I Agree" button.
 
 ### Uninstall Previously installed versions
@@ -105,6 +106,7 @@ previous OpenQuake engine installation, this may take some time to complete:
 </figure>
 
 Once finished, the uninstaller will look like this:
+
 <figure>
 	<img src="_images/08_Uninstall_Complete.png" 
 		 width="50%" align="centre" />
