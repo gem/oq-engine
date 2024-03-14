@@ -340,7 +340,7 @@ class ProbabilityMap(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def fill(self, value):
+    def fill(self, value, dt=F64):
         """
         :param value: a scalar probability
 
@@ -348,7 +348,7 @@ class ProbabilityMap(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty(self.shape)
+        self.array = numpy.empty(self.shape, dt)
         self.array.fill(value)
         return self
 
@@ -404,7 +404,7 @@ class ProbabilityMap(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes)
+        rates = -numpy.log(pnes).astype(F32)
         return self.new(rates / itime)
 
     def to_dict(self, gid=0):

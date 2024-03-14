@@ -56,6 +56,7 @@ get_weight = operator.attrgetter('weight')
 slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
+# NB: using 32 bit ratemaps
 def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
@@ -66,7 +67,7 @@ def get_pmaps_gb(dstore):
     all_trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(all_trt_smrs)
     gids = full_lt.get_gids(all_trt_smrs)
-    return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs, gids
+    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
 
 
 def build_slices(idxs, offset=0):
@@ -444,7 +445,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_gs = max(num_gs)
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
-        size = max_gs * N * L * 8
+        size = max_gs * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -522,7 +523,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(0)
+        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(0, F32)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
