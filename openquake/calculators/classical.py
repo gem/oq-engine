@@ -103,11 +103,12 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_dict(pnemap, gid=0, tiling=True):
+def to_rates(pnemap, gid=0, tiling=True):
     """
-    :returns: dictionary if tiling is True, else ProbabilityMap unchanged
+    :returns: dictionary if tiling is True, else ProbabilityMap with rates
     """
-    return pnemap.to_dict(gid) if tiling else pnemap
+    rates = pnemap.to_rates()
+    return rates.to_dict(gid) if tiling else rates
 
 #  ########################### task functions ############################ #
 
@@ -138,7 +139,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_dict(~pmap, gid, tiling)
+            result['pnemap'] = to_rates(~pmap, gid, tiling)
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -155,7 +156,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_dict(~pmap, gid, tiling)
+            result['pnemap'] = to_rates(~pmap, gid, tiling)
             yield result
 
 
@@ -284,17 +285,17 @@ class Hazard:
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[grp_id]
-        rates = -numpy.log(pmap.array) @ self.weig[gids] / self.itime
+        rates = pmap.array @ self.weig[gids] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap):
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # already converted
+        if isinstance(pnemap, dict):  # already converted (tiling)
             rates = pnemap
         else:
-            rates = to_dict(pnemap)
+            rates = pnemap.to_dict()
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
@@ -375,8 +376,10 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             acc[source_id] += self.haz.get_rates(pnemap, grp_id)
         G = pnemap.array.shape[2]
+        rates = self.pmap.array
+        sidx = self.pmap.sidx[pnemap.sids]
         for i, gid in enumerate(self.gids[grp_id]):
-            self.pmap.multiply_pnes(pnemap, gid, i % G)
+            rates[sidx, :, gid] += pnemap.array[:, :, i % G]
         return acc
 
     def create_rup(self):
@@ -514,7 +517,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
+        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(0)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent

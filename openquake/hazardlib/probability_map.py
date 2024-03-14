@@ -409,10 +409,10 @@ class ProbabilityMap(object):
 
     def to_dict(self, gid=0):
         """
-        Assuming self contains an array of probabilities of no exceedance,
+        Assuming self contains an array of rates,
         returns a dictionary of arrays with keys sid, lid, gid, rate
         """
-        rates = self.to_rates().array
+        rates = self.array
         idxs, lids, gids = rates.nonzero()
         out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
                    gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
@@ -451,14 +451,7 @@ class ProbabilityMap(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        return pandas.DataFrame(self.to_dict())
-
-    def multiply_pnes(self, other, g, i):
-        """
-        Multiply by the probabilities of no exceedence
-        """
-        # assume other.sids are a subset of self.sids
-        self.array[self.sidx[other.sids], :, g] *= other.array[:, :, i]
+        return pandas.DataFrame(self.to_rates().to_dict())
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """
