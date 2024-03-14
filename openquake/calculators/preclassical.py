@@ -200,7 +200,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         L = oq.imtls.size
         Gt = len(self.full_lt.get_trt_rlzs(trt_smrs))
-        nbytes = 8 * len(self.sitecol) * L * Gt
+        nbytes = 4 * len(self.sitecol) * L * Gt
         logging.warning(f'The global pmap would require %s ({Gt=})',
                         general.humansize(nbytes))
 
