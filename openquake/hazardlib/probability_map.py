@@ -340,7 +340,7 @@ class ProbabilityMap(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def fill(self, value):
+    def fill(self, value, dt=F64):
         """
         :param value: a scalar probability
 
@@ -348,7 +348,7 @@ class ProbabilityMap(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty(self.shape)
+        self.array = numpy.empty(self.shape, dt)
         self.array.fill(value)
         return self
 
@@ -394,11 +394,7 @@ class ProbabilityMap(object):
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
-    def to_dict(self, gid=0):
-        """
-        Assuming self contains an array of probabilities of no exceedance,
-        returns a dictionary of arrays with keys sid, lid, gid, rate
-        """
+    def to_rates(self, itime=1.):
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -408,7 +404,15 @@ class ProbabilityMap(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes)
+        rates = -numpy.log(pnes).astype(F32)
+        return self.new(rates / itime)
+
+    def to_dict(self, gid=0):
+        """
+        Assuming self contains an array of rates,
+        returns a dictionary of arrays with keys sid, lid, gid, rate
+        """
+        rates = self.array
         idxs, lids, gids = rates.nonzero()
         out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
                    gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
@@ -447,14 +451,7 @@ class ProbabilityMap(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        return pandas.DataFrame(self.to_dict())
-
-    def multiply_pnes(self, other, g, i):
-        """
-        Multiply by the probabilities of no exceedence
-        """
-        # assume other.sids are a subset of self.sids
-        self.array[self.sidx[other.sids], :, g] *= other.array[:, :, i]
+        return pandas.DataFrame(self.to_rates().to_dict())
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """

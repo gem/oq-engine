@@ -44,7 +44,8 @@ import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib import nrml, gsim, valid, geo
+from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
@@ -97,6 +98,18 @@ AELO_FORM_PLACEHOLDERS = {
     'lat': 'Latitude (max. 5 decimal places)',
     'vs30': 'Vs30 (fixed at 760 m/s)',
     'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)'
+}
+
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'shakemap_id': 'Shakemap ID',
+    'lon': 'Longitude',
+    'lat': 'Latitude',
+    'dep': 'Depth',
+    'mag': 'Magnitude',
+    'rake': 'Rake',
+    'dip': 'Dip',
+    'strike': 'Strike',
+    'trt': 'Tectonic region type',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -598,6 +611,141 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+def get_trts(lon, lat):
+    lonlats = numpy.array([[lon, lat]])
+    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
+    mosaic_model = geo.utils.geolocate(lonlats, mosaic_df)[0]
+    site_model_path = os.path.join(
+        config.directory.mosaic_dir, 'site_model.hdf5')
+    site_model = hdf5.File(site_model_path).read_df('model_trt_gsim_weight')
+    trts = set(
+        site_model[site_model['model'] == mosaic_model.encode('utf8')]['trt'])
+    return [trt.decode('utf8') for trt in trts]
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_get_rupture_data(request):
+    """
+    Retrieve rupture parameters corresponding to a given shakemap id
+
+    :param request:
+        a `django.http.HttpRequest` object containing shakemap_id
+    """
+    # TODO: add validation
+    validation_errs = {}
+    invalid_inputs = []
+    try:
+        shakemap_id = valid.simple_id(request.POST.get('shakemap_id'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['shakemap_id']] = str(exc)
+        invalid_inputs.append('shakemap_id')
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+    try:
+        rupture_dict = get_rupture_dict(shakemap_id)
+    except Exception as exc:
+        if '404: Not Found' in str(exc):
+            error_msg = f'Shakemap id "{shakemap_id}" was not found'
+        elif 'There is not rupture.json' in str(exc):
+            error_msg = (f'Shakemap id "{shakemap_id}" was found, but it'
+                         f' has no associated rupture data')
+        else:
+            error_msg = str(exc)
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': error_msg}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    trts = get_trts(rupture_dict['lon'], rupture_dict['lat'])
+    rupture_dict['trts'] = trts
+    response_data = rupture_dict
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_run(request):
+    """
+    Run an ARISTOTLE calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
+    """
+    validation_errs = {}
+    invalid_inputs = []
+    try:
+        lon = valid.longitude(request.POST.get('lon'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lon']] = str(exc)
+        invalid_inputs.append('lon')
+    try:
+        lat = valid.latitude(request.POST.get('lat'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lat']] = str(exc)
+        invalid_inputs.append('lat')
+    try:
+        dep = valid.positivefloat(request.POST.get('dep'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dep']] = str(exc)
+        invalid_inputs.append('dep')
+    try:
+        mag = valid.positivefloat(request.POST.get('mag'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['mag']] = str(exc)
+        invalid_inputs.append('mag')
+    try:
+        rake = valid.positivefloat(request.POST.get('rake'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['rake']] = str(exc)
+        invalid_inputs.append('rake')
+    try:
+        dip = valid.positivefloat(request.POST.get('dip'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dip']] = str(exc)
+        invalid_inputs.append('dip')
+    try:
+        strike = valid.positivefloat(request.POST.get('strike'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['strike']] = str(exc)
+        invalid_inputs.append('strike')
+    try:
+        trt = request.POST.get('trt')
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['trt']] = str(exc)
+        invalid_inputs.append('trt')
+
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+    # FIXME: run aristotle calculation
+    response_data = dict(
+        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike,
+        trt=trt)
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -966,6 +1114,8 @@ def web_engine(request, **kwargs):
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
+    elif application_mode == 'ARISTOTLE':
+        params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
     return render(
         request, "engine/index.html", params)
 

@@ -56,6 +56,7 @@ get_weight = operator.attrgetter('weight')
 slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
+# NB: using 32 bit ratemaps
 def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
@@ -66,7 +67,7 @@ def get_pmaps_gb(dstore):
     all_trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(all_trt_smrs)
     gids = full_lt.get_gids(all_trt_smrs)
-    return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs, gids
+    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
 
 
 def build_slices(idxs, offset=0):
@@ -103,11 +104,16 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_dict(pnemap, gid=0, tiling=True):
+def to_rates(pnemap, gid, tiling, disagg_by_src):
     """
-    :returns: dictionary if tiling is True, else ProbabilityMap unchanged
+    :returns: dictionary if tiling is True, else ProbabilityMap with rates
     """
-    return pnemap.to_dict(gid) if tiling else pnemap
+    rates = pnemap.to_rates()
+    if tiling:
+        return rates.to_dict(gid)
+    if disagg_by_src:
+        return rates
+    return rates.remove_zeros()
 
 #  ########################### task functions ############################ #
 
@@ -119,6 +125,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     tiling = not hasattr(sources, '__iter__')  # passed gid
+    disagg_by_src = cmaker.disagg_by_src
     with dstore:
         if tiling:  # tiling calculator, read the sources from the datastore
             gid = sources
@@ -129,7 +136,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             gid = 0
             sitecol = dstore['sitecol']  # super-fast
 
-    if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
+    if disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -138,7 +145,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_dict(~pmap, gid, tiling)
+            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
     else:
         # size_mb is the maximum size of the pmap array in GB
@@ -155,7 +162,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_dict(~pmap, gid, tiling)
+            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
 
 
@@ -278,23 +285,23 @@ class Hazard:
         self.offset = 0
 
     # used in in disagg_by_src
-    def get_rates(self, pmap):
+    def get_rates(self, pmap, grp_id):
         """
         :param pmap: a ProbabilityMap
         :returns: an array of rates of shape (N, M, L1)
         """
-        gids = self.gids[pmap.grp_id]
-        rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
+        gids = self.gids[grp_id]
+        rates = pmap.array @ self.weig[gids] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap):
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # already converted
+        if isinstance(pnemap, dict):  # already converted (tiling)
             rates = pnemap
         else:
-            rates = to_dict(pnemap)
+            rates = pnemap.to_dict()
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
@@ -373,12 +380,12 @@ class ClassicalCalculator(base.HazardCalculator):
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            pm = ~pnemap
-            pm.grp_id = grp_id
-            acc[source_id] += self.haz.get_rates(pm)
+            acc[source_id] += self.haz.get_rates(pnemap, grp_id)
         G = pnemap.array.shape[2]
+        rates = self.pmap.array
+        sidx = self.pmap.sidx[pnemap.sids]
         for i, gid in enumerate(self.gids[grp_id]):
-            self.pmap.multiply_pnes(pnemap, gid, i % G)
+            rates[sidx, :, gid] += pnemap.array[:, :, i % G]
         return acc
 
     def create_rup(self):
@@ -438,7 +445,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_gs = max(num_gs)
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
-        size = max_gs * N * L * 8
+        size = max_gs * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -516,7 +523,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
+        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(0, F32)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
