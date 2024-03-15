@@ -900,6 +900,16 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if oqparam.aristotle:
+        with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
+            try:
+                crm = riskmodels.CompositeRiskModel.read(
+                    exp, oqparam, tmap='set_later')
+            except KeyError:
+                pass  # missing crm in exposure.hdf5 in mosaic/case_01
+            else:
+                return crm
+
     risklist = get_risk_functions(oqparam)
     if not oqparam.limit_states and risklist.limit_states:
         oqparam.limit_states = risklist.limit_states
@@ -1096,19 +1106,19 @@ def levels_from(header):
     return levels
 
 
-def taxonomy_mapping(oqparam, taxonomies):
+def taxonomy_mapping(oqparam, taxonomies, country=None):
     """
     :param oqparam: OqParam instance
-    :param taxonomies: array of strings tagcol.taxonomy
-    :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
+    :param taxonomies: array of unique taxonomies as strings
+    :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
     if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         lst = [[(taxo, 1)] for taxo in taxonomies]
         return {lt: lst for lt in oqparam.loss_types}
-    dic = oqparam.inputs['taxonomy_mapping']
-    if isinstance(dic, str):  # same file for all loss_types
-        dic = {lt: dic for lt in oqparam.loss_types}
-    return {lt: _taxonomy_mapping(dic[lt], taxonomies)
+    fname = oqparam.inputs['taxonomy_mapping']
+    if isinstance(fname, str):  # same file for all loss_types
+        fname = {lt: fname for lt in oqparam.loss_types}
+    return {lt: _taxonomy_mapping(fname[lt], taxonomies)
             for lt in oqparam.loss_types}
 
 
@@ -1410,10 +1420,8 @@ def _checksum(fnames, checksum=0):
     """
     :returns: the 32 bit checksum of a list of files
     """
-    for fname in fnames:
-        if fname == '<in-memory>':
-            pass
-        elif not os.path.exists(fname):
+    for fname in (f for f in fnames if f != '<in-memory>'):
+        if not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (fname, zpath))

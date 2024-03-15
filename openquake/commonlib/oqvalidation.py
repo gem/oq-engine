@@ -1735,6 +1735,15 @@ class OqParam(valid.ParamSet):
             return None
         return cls()
 
+    @property
+    def aristotle(self):
+        """
+        Return True if we are in Aristotle mode, i.e. there is an HDF5
+        exposure with a known structure
+        """
+        exposures = self.inputs.get('exposure', [])
+        return exposures and exposures[0].endswith('.hdf5')
+
     def get_kinds(self, kind, R):
         """
         Yield 'rlz-000', 'rlz-001', ...', 'mean', 'quantile-0.1', ...

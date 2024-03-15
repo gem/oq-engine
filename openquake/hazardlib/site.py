@@ -26,7 +26,7 @@ from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
-    spherical_to_cartesian, get_middle_point)
+    spherical_to_cartesian, get_middle_point, geolocate)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -710,6 +710,25 @@ class SiteCollection(object):
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def by_country(self):
+        """
+        Returns a table with the number of sites per country. The countries
+        are defined as in the file geoBoundariesCGAZ_ADM0.shp
+        """
+        from openquake.commonlib import readinput
+        geom_df = readinput.read_countries_df()
+        lonlats = numpy.zeros((len(self), 2), numpy.float32)
+        lonlats[:, 0] = self.lons
+        lonlats[:, 1] = self.lats
+        codes = geolocate(lonlats, geom_df)
+        uni, cnt = numpy.unique(codes, return_counts=True)
+        out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
+                                     ('num_sites', int)])
+        out['country'] = uni
+        out['num_sites'] = cnt
+        out.sort(order='num_sites')
+        return out
 
     def geohash(self, length):
         """

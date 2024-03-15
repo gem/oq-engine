@@ -25,8 +25,8 @@ from openquake.baselib import performance, hdf5, sap
 from openquake.hazardlib import gsim_lt
 from openquake.commonlib import readinput
 
-
-dt = [('model', (numpy.string_, 3)), ('trt', numpy.string_, 61),
+F32 = numpy.float32
+dt = [('model', (numpy.bytes_, 3)), ('trt', numpy.bytes_, 61),
       ('gsim', hdf5.vstr), ('weight', float)]
 
 
@@ -64,8 +64,8 @@ def main(mosaic_dir):
                     dic[row['lon'], row['lat']] = row
                 fields.update(sm.dtype.descr)
                 tot += len(sm)
-    fields['lon'] = numpy.float32
-    fields['lat'] = numpy.float32
+    fields['lon'] = F32
+    fields['lat'] = F32
     smodel = numpy.zeros(len(dic), list(fields.items()))
     for i, row in enumerate(dic.values()):
         for n in row.dtype.names:

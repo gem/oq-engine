@@ -1660,21 +1660,10 @@ def view_gh3(token, dstore):
                        dt('kind counts mean stddev min max'))
 
 
-@view.add('exposure_by_country')
-def view_exposure_by_country(token, dstore):
+@view.add('sites_by_country')
+def view_sites_by_country(token, dstore):
     """
-    Returns a table with the number of assets per country. The countries
+    Returns a table with the number of sites per country. The countries
     are defined as in the file geoBoundariesCGAZ_ADM0.shp
     """
-    geom_df = readinput.read_countries_df()
-    assetcol = dstore['assetcol']
-    lonlats = numpy.zeros((len(assetcol), 2), F32)
-    lonlats[:, 0] = assetcol['lon']
-    lonlats[:, 1] = assetcol['lat']
-    codes = geo.utils.geolocate(lonlats, geom_df)
-    uni, cnt = numpy.unique(codes, return_counts=True)
-    out = numpy.zeros(len(uni), dt('country num_assets'))
-    out['country'] = uni
-    out['num_assets'] = cnt
-    out.sort(order='num_assets')
-    return out
+    return dstore['sitecol'].by_country()
