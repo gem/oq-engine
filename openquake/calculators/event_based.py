@@ -327,7 +327,7 @@ def filter_stations(station_df, complete, rup, maxdist):
             numpy.isin(station_df.index, station_sites.sids)]
         if len(station_data) < ns:
             logging.info('Discarded %d/%d stations more distant than %d km',
-                        ns - len(station_data), ns, maxdist)
+                         ns - len(station_data), ns, maxdist)
     return station_data, station_sites
 
 
@@ -582,8 +582,16 @@ class EventBasedCalculator(base.HazardCalculator):
                     raise ValueError(
                         '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
                         oq.rupture_dict)
+                if oq.gsim != '[FromFile]':
+                    raise ValueError(
+                        'In Aristotle mode the gsim can not be specified in'
+                        ' the job.ini: %s' % oq.gsim)
+                if oq.tectonic_region_type == '*':
+                    raise ValueError(
+                        'The tectonic_region_type parameter must be specified')
                 gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                    sitemodel, oq.mosaic_model)
+                    sitemodel, oq.mosaic_model,
+                    oq.tectonic_region_type.encode('utf8'))
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
