@@ -1106,23 +1106,6 @@ def levels_from(header):
     return levels
 
 
-def aristotle_taxonomy_mapping(exposure_hdf5, taxonomies, country):
-    loss_types = ['occupants', 'structural', 'nonstructural', 'contents',
-                  'number', 'area', 'residents']
-    with hdf5.File(exposure_hdf5, 'r') as exp:
-        datagrp = exp['tmap']
-        for countries in sorted(datagrp):
-            if country in countries:
-                dic = {}
-                for t, df in exp.read_df('tmap/' + countries).groupby(
-                        'taxonomy'):
-                    dic[t] = df[['conversion', 'weight']].to_numpy()
-                lst = [dic[taxo] for taxo in taxonomies[1:]]
-                import pdb; pdb.set_trace()
-                return {lt: lst for lt in loss_types}
-        raise ValueError("Unknown country %s" % country)
-
-
 def taxonomy_mapping(oqparam, taxonomies, country=None):
     """
     :param oqparam: OqParam instance
@@ -1130,9 +1113,6 @@ def taxonomy_mapping(oqparam, taxonomies, country=None):
     :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
     """
     if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        if oqparam.aristotle:
-            return aristotle_taxonomy_mapping(
-                oqparam.inputs['exposure'][0], taxonomies, country)
         lst = [[(taxo, 1)] for taxo in taxonomies]
         return {lt: lst for lt in oqparam.loss_types}
     dic = oqparam.inputs['taxonomy_mapping']
