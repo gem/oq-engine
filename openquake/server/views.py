@@ -752,6 +752,8 @@ def aristotle_run(request):
     inputs = {'exposure': [expo],
               'site_model': [smodel],
               'job_ini': '<in-memory>'}
+    # TODO: should we add form fields also for truncation_level,
+    #       number_of_ground_motion_fields and asset_hazard_distance?
     params = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
                   maximum_distance=str(maximum_distance),
                   tectonic_region_type=trt,
