@@ -1109,16 +1109,16 @@ def levels_from(header):
 def taxonomy_mapping(oqparam, taxonomies, country=None):
     """
     :param oqparam: OqParam instance
-    :param taxonomies: array of strings tagcol.taxonomy
-    :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
+    :param taxonomies: array of unique taxonomies as strings
+    :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
     if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         lst = [[(taxo, 1)] for taxo in taxonomies]
         return {lt: lst for lt in oqparam.loss_types}
-    dic = oqparam.inputs['taxonomy_mapping']
-    if isinstance(dic, str):  # same file for all loss_types
-        dic = {lt: dic for lt in oqparam.loss_types}
-    return {lt: _taxonomy_mapping(dic[lt], taxonomies)
+    fname = oqparam.inputs['taxonomy_mapping']
+    if isinstance(fname, str):  # same file for all loss_types
+        fname = {lt: fname for lt in oqparam.loss_types}
+    return {lt: _taxonomy_mapping(fname[lt], taxonomies)
             for lt in oqparam.loss_types}
 
 
