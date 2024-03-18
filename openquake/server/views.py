@@ -1305,6 +1305,11 @@ def web_engine_get_outputs_aristotle(request, calc_id):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def download_aristotle_losses(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
     body, header = get_aristotle_losses(calc_id)
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(
