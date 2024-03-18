@@ -43,8 +43,12 @@ if settings.WEBUI:
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
                 views.web_engine_get_outputs, name="outputs"),
+        # FIXME: conditional depending from application_mode?
         re_path(r'^engine/(\d+)/outputs_aelo$',
                 views.web_engine_get_outputs_aelo, name="outputs_aelo"),
+        re_path(r'^engine/(\d+)/outputs_aristotle$',
+                views.web_engine_get_outputs_aristotle,
+                name="outputs_aristotle"),
         re_path(r'^engine/license$', views.license,
                 name="license"),
     ]

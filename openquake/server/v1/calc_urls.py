@@ -48,6 +48,8 @@ elif settings.APPLICATION_MODE.upper() == 'ARISTOTLE':
         re_path(r'^aristotle_run$', views.aristotle_run),
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
+        re_path(r'^(\d+)/download_aristotle_losses$',
+                views.download_aristotle_losses),
     ])
 elif settings.APPLICATION_MODE.upper() != 'READ_ONLY':
     urlpatterns.extend([
