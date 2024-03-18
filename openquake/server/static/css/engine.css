@@ -338,3 +338,7 @@ table#aristotle-losses th, td {
     text-align: left;
     padding: 8px;
 }
+
+#aristotle-losses-download {
+  margin-top: 10px;
+}

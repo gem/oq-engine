@@ -59,7 +59,9 @@
         </tr>
       {% endfor %}
     </table>
-    <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aristotle_losses" class="btn btn-sm output-action-btn">Download csv</a>
+    <div id="aristotle-losses-download">
+      <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aristotle_losses" class="btn btn-sm output-action-btn">Download csv</a>
+    </div>
     <hr/>
     <table id="output_table" class="table table-hover">
       <thead>
