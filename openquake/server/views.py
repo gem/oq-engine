@@ -1206,6 +1206,7 @@ def get_disp_val(val):
     else:
         return '{:.2f}'.format(numpy.round(val, 2))
 
+
 # this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
@@ -1309,7 +1310,9 @@ def download_aristotle_losses(request, calc_id):
     response = HttpResponse(
         content_type="text/csv",
         headers={
-            "Content-Disposition": 'attachment; filename="aristotle_losses.csv"'},
+            "Content-Disposition":
+                'attachment; filename="aristotle_losses.csv"'
+        },
     )
     writer = csv.writer(response)
     writer.writerow(header)
