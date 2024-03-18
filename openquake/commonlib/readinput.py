@@ -974,6 +974,10 @@ def get_exposure(oqparam, h5=None):
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(fname, gh3)
+            with hdf5.File(fname) as f:
+                loss_types = f['crm'].attrs['loss_types']
+            oq.all_cost_types = loss_types
+            oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
             exposure = Global.exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
