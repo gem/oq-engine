@@ -37,7 +37,28 @@
 
   {% block templates %}
   <script type="text/template" id="output-table-template">
-    {{ losses | safe }}
+    <table id="aristotle-losses">
+      <thead>
+        <tr>
+          {% for header in losses_header %}
+            <th>{{ header }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      {% for row in losses %}
+        <tr>
+          {% for item in row %}
+            <td>
+              {% if item|stringformat:"s"|floatformat %}
+                {{ item|stringformat:"s"|floatformat:"2" }}
+              {% else %}
+                {{ item|stringformat:"s" }}
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </table>
     <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aristotle_losses" class="btn btn-sm output-action-btn">Download csv</a>
     <hr/>
     <table id="output_table" class="table table-hover">

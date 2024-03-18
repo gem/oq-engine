@@ -52,7 +52,6 @@ from openquake.calculators import base
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
-from openquake.calculators.views import text_table
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo
@@ -1292,14 +1291,15 @@ def get_aristotle_losses(calc_id):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aristotle(request, calc_id):
-    body, header = get_aristotle_losses(calc_id)
-    losses = text_table(body, header, ext='html')
+    losses, losses_header = get_aristotle_losses(calc_id)
+    losses_header = [header.capitalize().replace('_', ' ')
+                     for header in losses_header]
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     # TODO: add warnings from datastore if needed
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
-                       warnings=None))
+                       losses_header=losses_header, warnings=None))
 
 
 @cross_domain_ajax
