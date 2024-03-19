@@ -5,8 +5,7 @@
 The OpenQuake Engine can be installed on Windows with the [universal
 installer](universal.md) (recommended if you plan to develop GMPEs)
 or with a traditional .exe installer which can be downloaded from
-[https://downloads.openquake.org/pkgs/windows/oq-engine/]
-(https://downloads.openquake.org/pkgs/windows/oq-engine/). 
+[https://downloads.openquake.org/pkgs/windows/oq-engine/](https://downloads.openquake.org/pkgs/windows/oq-engine/). 
 The .exe installer includes Python 3.11 and all required dependencies
 and (since version 3.19) does not require Windows administrator 
 privileges.
@@ -31,27 +30,31 @@ Double-click on the installer to start the installation.  You will probably be
 presented with a popup message similar to the one shown below:
 
 <figure>
-	<img src="_images/01_Windows_warning.png" 
-		 width="50%" align="centre" alt="Windows popup"/>
-	<figcaption>"Windows Protected your PC"popup</figcaption>
+	<img src="../../../_images/install/01_Windows_warning.png" 
+		 width="50%" align="center" alt="Windows popup"/>
+	<figcaption><i>"Windows Protected your PC" popup</i></figcaption>
 </figure>
 
-Click on the “More info” link inside the popup:
+Click on the "More info" link inside the popup:
 
-<figure>
-	<img src="_images/02_Run_anyway.png" alt="Run Anyway"
-	 width="50%" align="centre" />
-	<figcaption>Run Anyway</figcaption>
-</figure>
+<img src="_images/02_Run_anyway.png" alt="Run Anyway" width="50%" align="center" />
 
-Check that the App string starts with “OpenQuake_Engine_” and ends with the 
-desired version number, if all is in order, click on the “Run anyway” button 
+Check that the App string starts with "OpenQuake_Engine_" and ends with the 
+desired version number, if all is in order, click on the "Run anyway" button 
 to continue.  You will be presented with an installer dialog similar to the 
 one depicted below:
 
+```{figure} _images/03_Installer_start.png
+:scale: 50 %
+:alt: Installer Start
+
+Installer Start
+```
+
+
 <figure>
 	<img src="_images/03_Installer_start.png" alt="Installer Start"
-	     width="50%" align="centre" />
+	     width="50%" align="center" />
 	<figcaption>Installer Start</figcaption>
 </figure>
 
@@ -62,7 +65,7 @@ order to install the OpenQuake engine:
 
 <figure>
 	<img src="_images/04_License.png" 
-		 width="50%" align="centre" />
+		 width="50%" align="center" />
 	<figcaption>License Terms</figcaption>
 </figure>
 
@@ -75,11 +78,11 @@ Windows installer, you will be presented with a message similar to the one
 depicted below:
 
 <figure>
-	<img src="_images/05_Uninstall.png" width="50%" align="centre" />
+	<img src="_images/05_Uninstall.png" width="50%" align="center" />
 	<figcaption>Already installed</figcaption>
 </figure>
 
-> :warning: **IMPORTANT** even if you have installed the OpenQuake engine via 
+> **IMPORTANT** even if you have installed the OpenQuake engine via 
 > the universal installer, git or some other means, you must ensure that no 
 > OpenQuake engine processes are running, that you do not have the User Manual 
 > PDF or demo files open before proceeding.   If any OpenQuake processes are 
@@ -92,7 +95,7 @@ you can skip ahead to
 Press Next to continue, you will be presented with a reminder message:
 
 <figure>
-	<img src="_images/06_Stop_Processes.png" width="50%" align="centre" />
+	<img src="_images/06_Stop_Processes.png" width="50%" align="center" />
 	<figcaption>Stop processes</figcaption>
 </figure>
 
@@ -101,7 +104,7 @@ associated files, press OK to continue.  The uninstaller will now remove the
 previous OpenQuake engine installation, this may take some time to complete:
 
 <figure>
-	<img src="_images/07_Uninstalling.png" width="50%" align="centre" />
+	<img src="_images/07_Uninstalling.png" width="50%" align="center" />
 	<figcaption>Uninstaller running</figcaption>
 </figure>
 
@@ -109,11 +112,11 @@ Once finished, the uninstaller will look like this:
 
 <figure>
 	<img src="_images/08_Uninstall_Complete.png" 
-		 width="50%" align="centre" />
+		 width="50%" align="center" />
 	<figcaption>Uninstaller completed</figcaption>
 </figure>
 
-Press the “Close” button to close the uninstaller.
+Press the "Close" button to close the uninstaller.
 
 
 ### Install OpenQuake Engine Components {#install-components}
@@ -122,7 +125,7 @@ We are now ready to install the OpenQuake engine components:
 
 <figure>
 	<img src="_images/09_Installer_Components.png" 
-		 width="50%" align="centre" />
+		 width="50%" align="center" />
 	<figcaption>OpenQuake Engine components</figcaption>
 </figure>
 
@@ -135,17 +138,17 @@ the installation location may make it more difficult to provide support.
 
 <figure>
 	<img src="_images/10_Install_Location.png" 
-		 width="50%" align="centre" />
+		 width="50%" align="center" />
 	<figcaption>Installation location</figcaption>
 </figure>
 
-Press the “Install” button to continue.
+Press the "Install" button to continue.
 
 The installer will now execute, this may take some time to complete.
 
 <figure>
 	<img src="_images/11_Installing.png" 
-         width="50%" align="centre" />
+         width="50%" align="center" />
 	<figcaption>Installer running</figcaption>
 </figure>
 
@@ -153,7 +156,7 @@ Once the installer has completed, it will look something like this:
 
 <figure>
 	<img src="_images/12_Complete.png" 
-         width="50%" align="centre" />
+         width="50%" align="center" />
 	<figcaption>OpenQuake Engine installer completed</figcaption>
 </figure>
 
@@ -162,16 +165,16 @@ icons on your Windows desktop:
 
 <figure>
 	<img src="_images/13_Desktop_Icons.png" 
-         width="10%" align="centre" />
+         width="10%" align="center" />
 	<figcaption>OpenQuake Engine Icons</figcaption>
 </figure>
 
 It should also be possible find the OpenQuake Engine by pressing the Windows
-key and typing “OpenQuake”:
+key and typing "OpenQuake":
 
 <figure>
 	<img src="_images/14_Win11_Start_menu.png" 
-         width="50%" align="centre" />
+         width="50%" align="center" />
 	<figcaption>OpenQuake Engine App in the Windows Start Menu</figcaption>
 </figure>
 
@@ -181,7 +184,7 @@ may take several minutes to complete:
 
 <figure>
 	<img src="_images/15_Starting_webui_wait.png" 
-         width="50%" align="centre" />
+         width="50%" align="center" />
 	<figcaption>OpenQuake Engine webui starting</figcaption>
 </figure>
 
@@ -189,7 +192,7 @@ Once the webui is ready for use, a web browser tab will be opened:
 
 <figure>
 	<img src="_images/16_webui_up.png" 
-		 width="50%" align="centre" />
+		 width="50%" align="center" />
 	<figcaption>OpenQuake engine web user-interface</figcaption>
 </figure>
 
