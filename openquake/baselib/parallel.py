@@ -320,6 +320,8 @@ class Pickled(object):
 
     :param obj: the object to pickle
     """
+    compressed = False
+
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
