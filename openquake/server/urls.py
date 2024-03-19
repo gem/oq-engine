@@ -41,8 +41,6 @@ if settings.WEBUI:
             re_path(r'^$', RedirectView.as_view(
                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
-            re_path(r'^engine/license$', views.license,
-                    name="license"),
         ]
     else:
         urlpatterns += [
