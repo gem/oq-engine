@@ -102,8 +102,12 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
         iso_code.decode('utf8')
         for iso_code in
         dstore['assetcol/tagcol/ID_0'][numpy.unique(assetcol['ID_0'])]]
-    ax.plot([], [], ' ', label=','.join(iso_codes))
-    ax.legend()
+
+    # NOTE: use the following lines to add custom items without changing title
+    # ax.plot([], [], ' ', label=','.join(iso_codes))
+    # ax.legend()
+    ax.legend(title='Countries:'+','.join(iso_codes))
+
     if save_to:
         p.savefig(save_to, alpha=True, dpi=300)
         logging.info(f'Plot saved to {save_to}')
