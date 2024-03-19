@@ -80,7 +80,7 @@ def fix(arr):
             ID1[i] = '%s-%s' % (id0, ID1[i])
 
 
-def collect_exposures(expo_dir):
+def collect_exposures(grm_dir):
     """
     Collect the files of kind Exposure_<Country>.xml.
 
@@ -88,12 +88,12 @@ def collect_exposures(expo_dir):
     """
     out = []
     csvfiles = []
-    for region in os.listdir(expo_dir):
-        expodir = os.path.join(expo_dir, region)
-        if os.path.isfile(expodir):
+    for region in os.listdir(grm_dir):
+        expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
+        if not os.path.exists(expodir):
             continue
         for fname in os.listdir(expodir):
-            if fname.endswith('.xml'):  # i.e. Exposure_Chile.xml
+            if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
                 fullname = os.path.join(expodir, fname)
                 out.append(fullname)
                 exposure, _ = _get_exposure(fullname)
@@ -168,7 +168,7 @@ def read_world_exposure(grm_dir, dstore):
 
     :param grm_dir: directory containing the global risk model
     """
-    exposure, fnames, csvfiles = collect_exposures(grm_dir + '/Exposure')
+    exposure, fnames, csvfiles = collect_exposures(grm_dir)
     dstore['exposure'] = exposure
     files = hdf5.sniff(csvfiles, ',', IGNORE)
     dtlist = [(t, U32) for t in TAGS] + \
