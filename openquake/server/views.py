@@ -790,7 +790,7 @@ def aristotle_run(request):
     proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
 
-    response_data = dict(status='created', job_id=jobctx.calc_id)
+    response_data = dict(status='created', job_id=jobctxs[-1].calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
