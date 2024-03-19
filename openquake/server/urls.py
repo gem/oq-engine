@@ -43,7 +43,7 @@ if settings.WEBUI:
                 permanent=True)),
             re_path(r'^engine/license$', views.license,
                     name="license"),
-        ]    
+        ]
     else:
         urlpatterns += [
             re_path(r'^$', RedirectView.as_view(
@@ -58,7 +58,7 @@ if settings.WEBUI:
     urlpatterns += [
         re_path(r'^engine/license$', views.license,
                 name="license"),
-    ]    
+    ]
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
