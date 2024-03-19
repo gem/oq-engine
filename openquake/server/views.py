@@ -47,6 +47,7 @@ from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid, geo
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
+from openquake.risklib import asset
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -674,16 +675,7 @@ def aristotle_get_rupture_data(request):
                         status=200)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def aristotle_run(request):
-    """
-    Run an ARISTOTLE calculation.
-
-    :param request:
-        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
-    """
+def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
     try:
@@ -745,26 +737,57 @@ def aristotle_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    return lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt
+
+
+def get_countries_around(rupdic, maxdist, expo, smodel):
+    """
+    :returns: (country_codes, counts) for the countries around rupdic
+    """
+    sm = readinput.get_site_model_around(smodel, rupdic, maxdist)
+    gh3 = numpy.array(sorted(set(geo.utils.geohash3(sm['lon'], sm['lat']))))
+    exposure = asset.Exposure.read_around(expo, gh3)
+    id0s, counts = numpy.unique(exposure.assets['ID_0'], return_counts=1)
+    return exposure.tagcol.ID_0[id0s]
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_run(request):
+    """
+    Run an ARISTOTLE calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
+    """
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt = res
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
-    rupdic = str(dict(
-        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike))
-    inputs = {'exposure': [expo],
-              'site_model': [smodel],
-              'job_ini': '<in-memory>'}
+    rupdic = dict(
+        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
+    countries, counts = get_countries_around(rupdic, expo, smodel)
+
+    inputs = {'exposure': [expo], 'site_model': [smodel],'job_ini': '<in-memory>'}
     # TODO: should we add form fields also for truncation_level,
     #       number_of_ground_motion_fields and asset_hazard_distance?
-    params = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
-                  maximum_distance=str(maximum_distance),
-                  tectonic_region_type=trt,
-                  truncation_level='3.0',
-                  number_of_ground_motion_fields='10',
-                  asset_hazard_distance='50',
-                  inputs=inputs)
-    [jobctx] = engine.create_jobs(
-        [params],
-        config.distribution.log_level, None, utils.get_user(request), None)
-    proc = mp.Process(target=engine.run_jobs, args=([jobctx],))
+    allparams = []
+    for country in countries:
+        params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
+                      maximum_distance=str(maximum_distance),
+                      tectonic_region_type=trt,
+                      truncation_level='3.0',
+                      number_of_ground_motion_fields='10',
+                      asset_hazard_distance='50',
+                      country=country,
+                      inputs=inputs)
+        allparams.appemd(params)
+    jobctxs = engine.create_jobs(
+        allparams, config.distribution.log_level, None, utils.get_user(request), None)
+    proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
 
     response_data = dict(status='created', job_id=jobctx.calc_id)
