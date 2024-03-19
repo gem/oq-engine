@@ -1275,6 +1275,7 @@ def get_aristotle_losses(calc_id):
     loss_types = oq.loss_types
     header = ['weight', 'gsim'] + loss_types
     body = []
+    weighted_sum = {}
     for idx, branch in enumerate(gsim_lt.branches):
         row = []
         gsim = branch.gsim
@@ -1284,7 +1285,15 @@ def get_aristotle_losses(calc_id):
         row.append(gsim)
         for loss_id, loss in zip(risk.loss_id, risk.loss):
             row.append(loss)
+            try:
+                weighted_sum[loss_id] += loss * weight
+            except KeyError:
+                weighted_sum[loss_id] = loss * weight
         body.append(row)
+    row = [1.0, 'Weighted Average']
+    for loss_id in weighted_sum:
+        row.append(weighted_sum[loss_id])
+    body.append(row)
     return body, header
 
 

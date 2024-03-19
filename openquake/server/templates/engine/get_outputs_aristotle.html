@@ -41,14 +41,14 @@
       <thead>
         <tr>
           {% for header in losses_header %}
-            <th>{{ header }}</th>
+            <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header }}</th>
           {% endfor %}
         </tr>
       </thead>
       {% for row in losses %}
-        <tr>
+        <tr {% if forloop.last %}style="border-top: 2px solid black;"{% endif%}>
           {% for item in row %}
-            <td>
+            <td {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>
               {% if item|stringformat:"s"|floatformat %}
                 {{ item|stringformat:"s"|floatformat:"2" }}
               {% else %}
