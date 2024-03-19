@@ -36,18 +36,29 @@ urlpatterns = [
 # 'collectstatic' and related configurationis on the reverse proxy
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
+    if settings.TOOLS_ONLY:
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
+                permanent=True)),
+            re_path(r'^engine/license$', views.license,
+                    name="license"),
+        ]    
+    else:
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/engine/' % settings.WEBUI_PATHPREFIX,
+                permanent=True)),
+            re_path(r'^engine/?$', views.web_engine, name="index"),
+            re_path(r'^engine/(\d+)/outputs$',
+                    views.web_engine_get_outputs, name="outputs"),
+            re_path(r'^engine/(\d+)/outputs_aelo$',
+                    views.web_engine_get_outputs_aelo, name="outputs_aelo"),
+        ]
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(
-            url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-            permanent=True)),
-        re_path(r'^engine/?$', views.web_engine, name="index"),
-        re_path(r'^engine/(\d+)/outputs$',
-                views.web_engine_get_outputs, name="outputs"),
-        re_path(r'^engine/(\d+)/outputs_aelo$',
-                views.web_engine_get_outputs_aelo, name="outputs_aelo"),
         re_path(r'^engine/license$', views.license,
                 name="license"),
-    ]
+    ]    
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
         urlpatterns.append(re_path(r'^%s/' % app_name, include(

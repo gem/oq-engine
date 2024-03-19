@@ -40,6 +40,8 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = True
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+TOOLS_ONLY = False
+
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
 USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
 
