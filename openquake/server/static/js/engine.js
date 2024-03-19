@@ -579,6 +579,7 @@
                     rake: $("#rake").val(),
                     dip: $("#dip").val(),
                     strike: $("#strike").val(),
+                    maximum_distance: $("#maximum_distance").val(),
                     trt: $('#trt').val()
                 };
                 $.ajax({

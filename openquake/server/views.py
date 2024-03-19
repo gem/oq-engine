@@ -109,6 +109,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'rake': 'Rake',
     'dip': 'Dip',
     'strike': 'Strike',
+    'maximum_distance': 'Maximum distance',
     'trt': 'Tectonic region type',
 }
 
@@ -721,6 +722,13 @@ def aristotle_run(request):
         validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['strike']] = str(exc)
         invalid_inputs.append('strike')
     try:
+        maximum_distance = valid.positivefloat(
+            request.POST.get('maximum_distance'))
+    except Exception as exc:
+        validation_errs[
+            ARISTOTLE_FORM_PLACEHOLDERS['maximum_distance']] = str(exc)
+        invalid_inputs.append('maximum_distance')
+    try:
         trt = request.POST.get('trt')
     except Exception as exc:
         validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['trt']] = str(exc)
@@ -737,10 +745,29 @@ def aristotle_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    # FIXME: run aristotle calculation
-    response_data = dict(
-        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike,
-        trt=trt)
+    expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
+    smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
+    rupdic = str(dict(
+        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike))
+    inputs = {'exposure': [expo],
+              'site_model': [smodel],
+              'job_ini': '<in-memory>'}
+    # TODO: should we add form fields also for truncation_level,
+    #       number_of_ground_motion_fields and asset_hazard_distance?
+    params = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
+                  maximum_distance=str(maximum_distance),
+                  tectonic_region_type=trt,
+                  truncation_level='3.0',
+                  number_of_ground_motion_fields='10',
+                  asset_hazard_distance='50',
+                  inputs=inputs)
+    [jobctx] = engine.create_jobs(
+        [params],
+        config.distribution.log_level, None, utils.get_user(request), None)
+    proc = mp.Process(target=engine.run_jobs, args=([jobctx],))
+    proc.start()
+
+    response_data = dict(status='created', job_id=jobctx.calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
