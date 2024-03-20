@@ -932,7 +932,7 @@ class Exposure(object):
         for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
         adf = assets_df.rename(columns=rename)
-        exp.build_mesh(adf)
+        exp.build_mesh(adf, update_tagcol=False)
         return exp
 
     @staticmethod
@@ -988,7 +988,7 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def build_mesh(self, assets_df):
+    def build_mesh(self, assets_df, update_tagcol=True):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
@@ -1007,7 +1007,7 @@ class Exposure(object):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
-            elif name in self.tagcol.tagnames:
+            elif name in self.tagcol.tagnames and update_tagcol:
                 assets_df[name] = self.tagcol.get_tagi(name, assets_df)
 
         assets_df.sort_values(['lon', 'lat'], inplace=True)

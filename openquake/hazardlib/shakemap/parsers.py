@@ -210,8 +210,8 @@ def get_rupture_dict(id):
     """
     url = SHAKEMAP_URL.format(id)
     logging.info('Downloading %s', url)
-    contents = json.loads(urlopen(url).read())[
-        'properties']['products']['shakemap'][-1]['contents']
+    js = json.loads(urlopen(url).read())
+    contents = js['properties']['products']['shakemap'][0]['contents']
     if 'download/rupture.json' not in contents:
         raise MissingLink('There is not rupture.json for %s' % id)
     url = contents.get('download/rupture.json')['url']

@@ -58,6 +58,7 @@ from openquake.engine import engine, aelo
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
+from openquake.engine.aristotle import get_trts_around, get_countries_around
 from openquake.server import utils
 
 from django.conf import settings
@@ -613,18 +614,6 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
-def get_trts(lon, lat):
-    lonlats = numpy.array([[lon, lat]])
-    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    mosaic_model = geo.utils.geolocate(lonlats, mosaic_df)[0]
-    site_model_path = os.path.join(
-        config.directory.mosaic_dir, 'site_model.hdf5')
-    site_model = hdf5.File(site_model_path).read_df('model_trt_gsim_weight')
-    trts = set(
-        site_model[site_model['model'] == mosaic_model.encode('utf8')]['trt'])
-    return [trt.decode('utf8') for trt in trts]
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -668,7 +657,7 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    trts = get_trts(rupture_dict['lon'], rupture_dict['lat'])
+    trts = get_trts_around(rupture_dict['lon'], rupture_dict['lat'])
     rupture_dict['trts'] = trts
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -740,17 +729,6 @@ def aristotle_validate(request):
     return lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt
 
 
-def get_countries_around(rupdic, maxdist, expo, smodel):
-    """
-    :returns: (country_codes, counts) for the countries around rupdic
-    """
-    sm = readinput.get_site_model_around(smodel, rupdic, maxdist)
-    gh3 = numpy.array(sorted(set(geo.utils.geohash3(sm['lon'], sm['lat']))))
-    exposure = asset.Exposure.read_around(expo, gh3)
-    id0s, counts = numpy.unique(exposure.assets['ID_0'], return_counts=1)
-    return exposure.tagcol.ID_0[id0s]
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -769,8 +747,7 @@ def aristotle_run(request):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     rupdic = dict(
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
-    countries, counts = get_countries_around(rupdic, expo, smodel)
-
+    countries = get_countries_around(rupdic, expo, smodel)
     inputs = {'exposure': [expo], 'site_model': [smodel],'job_ini': '<in-memory>'}
     # TODO: should we add form fields also for truncation_level,
     #       number_of_ground_motion_fields and asset_hazard_distance?
@@ -784,7 +761,7 @@ def aristotle_run(request):
                       asset_hazard_distance='50',
                       country=country,
                       inputs=inputs)
-        allparams.appemd(params)
+        allparams.append(params)
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None, utils.get_user(request), None)
     proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
