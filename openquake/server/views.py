@@ -1264,6 +1264,13 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
 
 
 def get_aggrisk(calc_id):
+    """
+    Converting the aggrisk dataframe into a table like this:
+    weight,gsim,business_interruption,contents,nonstructural,occupants,structural
+    0.75,[BooreAtkinson2008],1805.78,16121.35,30162.66,6880.27,0.0537
+    0.25,[ChiouYoungs2008],2285.55,18170.28,34460.171875,8736.11,0.0674
+    1.0,Weighted Average,1925.72,16633.58,31237.03,7344.23,0.0571
+    """
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         gsim_lt = ds['full_lt/gsim_lt']
