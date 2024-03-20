@@ -2215,7 +2215,8 @@ taxo3,taxo3,1
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
-            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
+            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                    aristotle=False)
             readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
@@ -2230,7 +2231,8 @@ taxo4,taxo2,.4
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
-            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
+            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                    aristotle=False)
             readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
@@ -2244,7 +2246,8 @@ taxo3,taxo3,1
 taxo4,taxo1,.5
 '''
         inp = dict(taxonomy_mapping=gettemp(xml))
-        oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
+        oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                aristotle=False)
         lst = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
         self.assertEqual(lst, [[('?', 1)],
                                [('taxo1', 1)],
