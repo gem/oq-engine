@@ -1266,7 +1266,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        warnings=warnings))
 
 
-def get_aristotle_losses(calc_id):
+def get_aggrisk(calc_id):
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         gsim_lt = ds['full_lt/gsim_lt']
@@ -1300,7 +1300,7 @@ def get_aristotle_losses(calc_id):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aristotle(request, calc_id):
-    losses, losses_header = get_aristotle_losses(calc_id)
+    losses, losses_header = get_aggrisk(calc_id)
     losses_header = [header.capitalize().replace('_', ' ')
                      for header in losses_header]
     job = logs.dbcmd('get_job', calc_id)
@@ -1313,19 +1313,19 @@ def web_engine_get_outputs_aristotle(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def download_aristotle_losses(request, calc_id):
+def download_aggrisk(request, calc_id):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-    body, header = get_aristotle_losses(calc_id)
+    body, header = get_aggrisk(calc_id)
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(
         content_type="text/csv",
         headers={
             "Content-Disposition":
-                'attachment; filename="aristotle_losses.csv"'
+                'attachment; filename="aggrisk.csv"'
         },
     )
     writer = csv.writer(response)
