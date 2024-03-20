@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import math
 import time
 import os.path
@@ -50,6 +51,11 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
+from openquake.commands.plot import plot_single_avg_gmf
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -757,3 +763,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 msg = 'gmf_data has {:_d} rows'.format(size)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             build_hcurves(self)
+        if 'avg_gmf' in self.datastore:
+            imts = ['PGA']  # FIXME
+            calc_id = -1
+            for imt in imts:
+                plt = plot_single_avg_gmf(calc_id, imt)
+                bio = io.BytesIO()
+                plt.savefig(bio, format='png', bbox_inches='tight')
+                logging.info('Saving avg_gmf_%s' % imt)
+                __import__('pdb').set_trace()
+                self.datastore['png/avg_gmf_%s.png' % imt] = Image.open(bio)

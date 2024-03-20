@@ -110,6 +110,33 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
+def plot_single_avg_gmf(calc_id, imt):
+    [ex] = [Extractor(calc_id)]
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+    ax.set_title('Avg GMF for %s' % imt)
+    avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
+    gmf = avg_gmf[imt]
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
+    plt.colorbar(coll)
+    return plt
+
+
+def make_figure_single_avg_gmf(extractors, what):
+    """
+    $ oq plot "avg_gmf?imt=PGA"
+    """
+    [ex] = extractors
+    imt = what.split('=')[1]
+    calc_id = ex.calc_id
+    plt = plot_single_avg_gmf(calc_id, imt)
+    return plt
+
+
 def make_figure_avg_gmf(extractors, what):
     """
     $ oq plot "avg_gmf?imt=PGA"
