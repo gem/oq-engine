@@ -745,6 +745,15 @@ class EventBasedCalculator(base.HazardCalculator):
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
+        imts = list(self.oqparam.hazard_imtls)
+        calc_id = -1  # FIXME: is this the right way to get it?
+        for imt in imts:
+            plt = plot_single_avg_gmf(calc_id, imt)
+            bio = io.BytesIO()
+            plt.savefig(bio, format='png', bbox_inches='tight')
+            fig_path = f'png/avg_gmf_{imt}.png'
+            logging.info(f'Saving {fig_path} into the datastore')
+            self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam
@@ -763,13 +772,3 @@ class EventBasedCalculator(base.HazardCalculator):
                 msg = 'gmf_data has {:_d} rows'.format(size)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             build_hcurves(self)
-        if 'avg_gmf' in self.datastore:
-            imts = ['PGA']  # FIXME
-            calc_id = -1
-            for imt in imts:
-                plt = plot_single_avg_gmf(calc_id, imt)
-                bio = io.BytesIO()
-                plt.savefig(bio, format='png', bbox_inches='tight')
-                logging.info('Saving avg_gmf_%s' % imt)
-                __import__('pdb').set_trace()
-                self.datastore['png/avg_gmf_%s.png' % imt] = Image.open(bio)
