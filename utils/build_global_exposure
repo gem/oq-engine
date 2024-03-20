@@ -49,9 +49,16 @@ TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
 MOSAIC_DIR = os.path.dirname(mosaic.__file__)
+FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
+          'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
+          'OCCUPANTS_PER_ASSET', 'BUILDINGS', 'COST_STRUCTURAL_USD',
+          'LATITUDE', 'ID_0', 'ID_1'}
 
 
 def add_geohash3(array):
+    """
+    Add field "geohash3" to a structured array
+    """
     if len(array) == 0:
         return ()
     dt = array.dtype
@@ -134,12 +141,15 @@ def gen_tasks(files, monitor):
     Generate tasks of kind exposure_by_geohash for large files
     """
     for file in files:
+        # read CSV in chunks
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=file.fields, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             if len(df) == 0:
                 continue
+            if 'ID_1' not in df.columns:  # happens for many islands
+                df['ID_1'] = '???'
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
@@ -174,7 +184,7 @@ def read_world_exposure(grm_dir, dstore):
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
     for gh3, arr in smap:
-        for name in files[0].fields:
+        for name in FIELDS:
             if name in TAGS:
                 TAGS[name].append(arr[name])
             else:
@@ -227,7 +237,7 @@ def read_world_tmap(grm_dir, dstore):
         dic[fname] = '_'.join(sorted(df.index))
     n = len(dic)
     assert len(set(dic.values())) == n, sorted(dic.values())
-    for cwd, dirs, files in os.walk(grm_dir):
+    for cwd, dirs, files in os.walk(grm_dir + '/Exposure'):
         for f in files:
             if f in dic:
                 df = pandas.read_csv(os.path.join(cwd, f))

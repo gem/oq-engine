@@ -412,6 +412,9 @@ class File(h5py.File):
                     data[templ % i] = arr[(slice(None),) + i]
             else:  # scalar field
                 data[name] = arr
+        if sel:
+            for k, v in sel.items():
+                data = data[data[k] == v]
         return pandas.DataFrame.from_records(data, index=index)
 
     def save_vlen(self, key, data):  # used in SourceWriterTestCase
