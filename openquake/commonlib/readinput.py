@@ -451,8 +451,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
         sm = f['site_model'][:]
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
     xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
-    kdt = cKDTree(xyz_all)
-    idxs = kdt.query_ball_point(xyz, dist, eps=.001)
+    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
 
@@ -464,7 +463,7 @@ def get_site_model(oqparam):
         an array with fields lon, lat, vs30, ...
     """
     fnames = oqparam.inputs['site_model']
-    if len(fnames) == 1 and fnames[0].endswith('.hdf5'):
+    if oqparam.aristotle:
         rup = oqparam.rupture_dict
         # global site model close to the rupture
         dist = oqparam.maximum_distance('*')(rup['mag'])
@@ -968,12 +967,12 @@ def get_exposure(oqparam, h5=None):
     oq = oqparam
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
-        fname = fnames[0]
-        if fname.endswith('.hdf5') and oq.rupture_dict:
+        if oqparam.aristotle:
             # reading the assets around a rupture
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = Global.exposure = asset.Exposure.read_around(fname, gh3)
+            exposure = Global.exposure = asset.Exposure.read_around(
+                fnames[0], gh3, oq.country)
         else:
             exposure = Global.exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,

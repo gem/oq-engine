@@ -909,7 +909,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s):
+    def read_around(exposure_hdf5, gh3s, country=None):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -920,6 +920,10 @@ class Exposure(object):
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
             assets_df = pandas.concat(read_assets(f, start, stop)
                                       for gh3, start, stop in slices)
+            if country:
+                countries = decode(f['tagcol/ID_0'][1:])
+                idx = countries.index(country)
+                assets_df = assets_df[assets_df.ID_0 == idx]
             exp.tagcol = f['tagcol']
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
@@ -928,7 +932,7 @@ class Exposure(object):
         for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
         adf = assets_df.rename(columns=rename)
-        exp.build_mesh(adf)
+        exp.build_mesh(adf, update_tagcol=False)
         return exp
 
     @staticmethod
@@ -984,7 +988,7 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def build_mesh(self, assets_df):
+    def build_mesh(self, assets_df, update_tagcol=True):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
@@ -1003,7 +1007,7 @@ class Exposure(object):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
-            elif name in self.tagcol.tagnames:
+            elif name in self.tagcol.tagnames and update_tagcol:
                 assets_df[name] = self.tagcol.get_tagi(name, assets_df)
 
         assets_df.sort_values(['lon', 'lat'], inplace=True)
