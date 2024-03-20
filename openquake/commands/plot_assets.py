@@ -108,9 +108,10 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
         ax.legend()
     else:
         # NOTE: use following lines to add custom items without changing title
-        # ax.plot([], [], ' ', label=','.join(iso_codes))
+        # ax.plot([], [], ' ', label=', '.join(iso_codes))
         # ax.legend()
-        ax.legend(title='Countries:'+','.join(iso_codes))
+        title = 'Countries: ' + ', '.join(iso_codes)
+        ax.legend(title=title)
 
     if save_to:
         p.savefig(save_to, alpha=True, dpi=300)
