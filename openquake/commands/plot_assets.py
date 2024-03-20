@@ -100,17 +100,16 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
 
     try:
-        iso_codes = [
-            iso_code.decode('utf8')
-            for iso_code in
-            dstore['assetcol/tagcol/ID_0'][numpy.unique(assetcol['ID_0'])]]
+        ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
+        ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
     except KeyError:  # ID_0 might be missing
         ax.legend()
     else:
+        id_0_str = ', '.join([id_0.decode('utf8') for id_0 in ID_0])
         # NOTE: use following lines to add custom items without changing title
-        # ax.plot([], [], ' ', label=', '.join(iso_codes))
+        # ax.plot([], [], ' ', label=id_0_str)
         # ax.legend()
-        title = 'Countries: ' + ', '.join(iso_codes)
+        title = 'Countries: %s' % id_0_str
         ax.legend(title=title)
 
     if save_to:
