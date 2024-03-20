@@ -31,10 +31,12 @@
               </div>
               {% endif %}
               {% if avg_gmf %}
+              {% for imt in imts %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/avg_gmf_PGA.png" class="btn btn-sm">
-                  Show average ground motion field</a>
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/avg_gmf_{{imt}}.png" class="btn btn-sm">
+                  Show average GMF for {{imt}}</a>
               </div>
+              {% endfor %}
               {% endif %}
               {% if governing_mce %}
               <div class="my-pngs">
