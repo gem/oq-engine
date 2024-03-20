@@ -1158,11 +1158,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
-            avg_gmf = any([k.startswith('avg_gmf') for k in ds['png']])
-            if avg_gmf:
-                imts = list(ds['oqparam'].hazard_imtls)
-            else:
-                imts = None
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             hcurves = 'hcurves.png' in ds['png']
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
@@ -1170,6 +1166,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             governing_mce = 'governing_mce.png' in ds['png']
         else:
             hmaps = avg_gmf = hcurves = governing_mce = False
+            avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     lon = lat = vs30 = site_name = None
@@ -1179,8 +1176,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       avg_gmf=avg_gmf, imts=imts,
-                       hcurves=hcurves,
+                       avg_gmf=avg_gmf, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,

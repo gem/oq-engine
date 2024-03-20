@@ -751,7 +751,7 @@ class EventBasedCalculator(base.HazardCalculator):
             plt = plot_single_avg_gmf(calc_id, imt)
             bio = io.BytesIO()
             plt.savefig(bio, format='png', bbox_inches='tight')
-            fig_path = f'png/avg_gmf_{imt}.png'
+            fig_path = f'png/avg_gmf-{imt}.png'
             logging.info(f'Saving {fig_path} into the datastore')
             self.datastore[fig_path] = Image.open(bio)
 
