@@ -45,10 +45,9 @@ import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid, geo
+from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.risklib import asset
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -59,7 +58,7 @@ from openquake.engine import engine, aelo
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around, get_countries_around
+from openquake.engine.aristotle import get_trts_around
 from openquake.server import utils
 
 from django.conf import settings
@@ -748,23 +747,21 @@ def aristotle_run(request):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     rupdic = dict(
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
-    countries = get_countries_around(rupdic, expo, smodel)
-    inputs = {'exposure': [expo], 'site_model': [smodel],'job_ini': '<in-memory>'}
+    inputs = {'exposure': [expo], 'site_model': [smodel],
+              'job_ini': '<in-memory>'}
     # TODO: should we add form fields also for truncation_level,
     #       number_of_ground_motion_fields and asset_hazard_distance?
-    allparams = []
-    for country in countries:
-        params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
-                      maximum_distance=str(maximum_distance),
-                      tectonic_region_type=trt,
-                      truncation_level='3.0',
-                      number_of_ground_motion_fields='10',
-                      asset_hazard_distance='50',
-                      country=country,
-                      inputs=inputs)
-        allparams.append(params)
+    params = dict(calculation_mode='scenario_risk',
+                  rupture_dict=str(rupdic),
+                  maximum_distance=str(maximum_distance),
+                  tectonic_region_type=trt,
+                  truncation_level='3.0',
+                  number_of_ground_motion_fields='10',
+                  asset_hazard_distance='50',
+                  inputs=inputs)
     jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, utils.get_user(request), None)
+        [params], config.distribution.log_level, None,
+        utils.get_user(request), None)
     proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
 
