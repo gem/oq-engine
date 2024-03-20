@@ -973,7 +973,7 @@ def get_exposure(oqparam, h5=None):
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oq.country)
-            with hdf5.File(fname) as f:
+            with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
                     oq.all_cost_types = loss_types
