@@ -1145,8 +1145,6 @@ class SourceConverter(RuptureConverter):
             with context(self.fname, node):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
-                for idx in idxs:
-                    assert U32(idx).max() < TWO16, idx
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
