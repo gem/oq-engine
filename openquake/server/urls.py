@@ -22,21 +22,29 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 
+urlpatterns = []
+if settings.WEBUI:
+     urlpatterns += [
+         re_path(r'^engine/license$', views.license,
+                 name="license"),
+         re_path(r'^v1/valid/', views.validate_nrml),
+         re_path(r'^v1/available_gsims$', views.get_available_gsims),
+         re_path(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
+     ]
+     for app in settings.STANDALONE_APPS:
+         app_name = app.split('_')[1]
+         urlpatterns.append(re_path(r'^%s/' % app_name, include(
+             '%s.urls' % app, namespace='%s' % app_name)))
+
 if settings.TOOLS_ONLY:
     if settings.WEBUI:
          urlpatterns += [
              re_path(r'^$', RedirectView.as_view(
                  url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                  permanent=True)),
-             re_path(r'^engine/license$', views.license,
-                     name="license"),
          ]
-         for app in settings.STANDALONE_APPS:
-             app_name = app.split('_')[1]
-             urlpatterns.append(re_path(r'^%s/' % app_name, include(
-                 '%s.urls' % app, namespace='%s' % app_name)))
 else:
-    urlpatterns = [
+    urlpatterns += [
         re_path(r'^v1/engine_version$', views.get_engine_version),
         re_path(r'^v1/engine_latest_version$', views.get_engine_latest_version),
         re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
@@ -54,25 +62,14 @@ else:
             re_path(r'^$', RedirectView.as_view(
                 url='%s/engine/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
-            re_path(r'^engine/?$', views.web_engine, name="index"),
-            re_path(r'^engine/(\d+)/outputs$',
-                    views.web_engine_get_outputs, name="outputs"),
-            re_path(r'^engine/(\d+)/outputs_aelo$',
-                    views.web_engine_get_outputs_aelo, name="outputs_aelo"),
-            re_path(r'^engine/license$', views.license,
-                    name="license"),
         ]
-        for app in settings.STANDALONE_APPS:
-            app_name = app.split('_')[1]
-            urlpatterns.append(re_path(r'^%s/' % app_name, include(
-                '%s.urls' % app, namespace='%s' % app_name)))
 
     if settings.LOCKDOWN:
         from django.contrib import admin
         from django.contrib.auth.views import (
             LoginView, LogoutView, PasswordResetView, PasswordResetDoneView,
             PasswordResetConfirmView, PasswordResetCompleteView)
-    
+
         admin.autodiscover()
         admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
         application_mode = settings.APPLICATION_MODE.upper()
@@ -121,13 +118,13 @@ else:
                      extra_context={'application_mode': application_mode}),
                  name='password_reset_complete'),
         ]
-    
+
     if settings.WEBUI_PATHPREFIX != "":
         urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
                             include(urlpatterns))]
     else:
         urlpatterns = urlpatterns
-    
+
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines
     # from django.contrib.staticfiles.urls import staticfiles_urlpatterns
