@@ -743,9 +743,8 @@ class EventBasedCalculator(base.HazardCalculator):
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         imts = list(self.oqparam.hazard_imtls)
-        calc_id = -1  # FIXME: is this the right way to get it?
         for imt in imts:
-            plt = plot_single_avg_gmf(calc_id, imt)
+            plt = plot_avg_gmf(self.datastore.calc_id, imt)
             bio = io.BytesIO()
             plt.savefig(bio, format='png', bbox_inches='tight')
             fig_path = f'png/avg_gmf-{imt}.png'
