@@ -44,10 +44,9 @@ import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid, geo
+from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.risklib import asset
 from openquake.calculators import base
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -748,12 +747,14 @@ def aristotle_run(request):
     rupdic = dict(
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
     countries = get_countries_around(rupdic, expo, smodel)
-    inputs = {'exposure': [expo], 'site_model': [smodel],'job_ini': '<in-memory>'}
+    inputs = {'exposure': [expo], 'site_model': [smodel],
+              'job_ini': '<in-memory>'}
     # TODO: should we add form fields also for truncation_level,
     #       number_of_ground_motion_fields and asset_hazard_distance?
     allparams = []
     for country in countries:
-        params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
+        params = dict(calculation_mode='scenario_risk',
+                      rupture_dict=str(rupdic),
                       maximum_distance=str(maximum_distance),
                       tectonic_region_type=trt,
                       truncation_level='3.0',
@@ -763,7 +764,8 @@ def aristotle_run(request):
                       inputs=inputs)
         allparams.append(params)
     jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, utils.get_user(request), None)
+        allparams, config.distribution.log_level, None,
+        utils.get_user(request), None)
     proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
 
@@ -1205,6 +1207,7 @@ def get_disp_val(val):
         return '{:.3f}'.format(numpy.round(val, 3))
     else:
         return '{:.2f}'.format(numpy.round(val, 2))
+
 
 # this is extracting only the first site and it is okay
 @cross_domain_ajax

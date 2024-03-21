@@ -150,7 +150,7 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
             else:
                 RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
                 MCE[m] = RTGM_max[m]
-    facts[0] = 1. # for PGA the Prob MCE is already geometric mean
+    facts[0] = 1.  # for PGA the Prob MCE is already geometric mean
     dic = {'IMT': imts,
            'UHGM_2475yr-GM': UHGM,
            'RTGM': RTGM_max,
@@ -401,9 +401,10 @@ def process_sites(dstore, csm):
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
         if mrs.sum() == 0:
-            warning = ('Zero hazard: there are no ruptures close to the site. '
-                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
-                       ' See User Guide.')
+            warning = (
+                'Zero hazard: there are no ruptures close to the site.'
+                ' ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                ' See User Guide.')
             yield site, None, warning
 
         elif mean_rates.max() < MIN_AFE:
@@ -413,18 +414,18 @@ def process_sites(dstore, csm):
 
         elif (rtgm_df.ProbMCE.to_numpy()[1] < 0.11) or \
                 (rtgm_df.ProbMCE.to_numpy()[2] < 0.04):
-            warning = ('The MCE at the site is very low. Users may need to '
-                       ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
-                       ' to user-specified minimums (e.g., Ss=0.11g and '
-                       ' S1=0.04g). See User Guide.')
+            warning = (
+                'The MCE at the site is very low. Users may need to'
+                ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                ' to user-specified minimums (e.g., Ss=0.11g and'
+                ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
-        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
+        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disagg by rel sources
             yield site, rtgm_df, 'Only probabilistic MCE'
 
         else:
             yield site, rtgm_df, ''
-
 
 
 def calc_asce(dstore, csm, rtgm):
@@ -502,7 +503,7 @@ def main(dstore, csm):
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-    if rtgm_dfs and N == 1:# and not warnings[sid]:
+    if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
         if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
