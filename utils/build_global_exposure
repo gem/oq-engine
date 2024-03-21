@@ -126,8 +126,8 @@ def store_tagcol(dstore):
         uvals, inv, counts = numpy.unique(tagvalues, return_inverse=1, return_counts=1)
         size = len(uvals) + 1
         tagsizes.append(size)
-        logging.info('Storing %s[%d/%d]', tagname,size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv)
+        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
+        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices start from 1
         dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
         if name == 'ID_0':
             dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
