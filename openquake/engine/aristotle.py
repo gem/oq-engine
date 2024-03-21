@@ -26,7 +26,6 @@ from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.risklib import asset
-from openquake.risklib.countries import code2country
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
@@ -39,7 +38,7 @@ def get_countries_around(rupdic, maxdist, expo, smodel):
     """
     sm = readinput.get_site_model_around(smodel, rupdic, maxdist)
     gh3 = numpy.array(sorted(set(geo.utils.geohash3(sm['lon'], sm['lat']))))
-    exposure = asset.Exposure.read_around(expo, gh3)
+    exposure = readinput.Global.exposure = asset.Exposure.read_around(expo, gh3)
     id0s, counts = numpy.unique(exposure.assets['ID_0'], return_counts=1)
     return [exposure.tagcol.ID_0[i + 1] for i in id0s]
 
@@ -65,30 +64,26 @@ def main(usgs_id, maxdist='200'):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [expo], 'site_model': [smodel], 'job_ini': '<in-memory>'}
-    logging.root.handlers = []  # avoid breaking the logs
-
     rupdic = get_rupture_dict(usgs_id)
     trts = get_trts_around(rupdic['lon'], rupdic['lat'])
-    countries = get_countries_around(rupdic, maxdist, expo, smodel)
-    cnames = [code2country.get(code, code) for code in countries]
-    logging.info('Affecting %s', ' '.join(cnames))
-    allparams = []
-    for country in countries:
-        params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
-                      maximum_distance=maxdist,
-                      tectonic_region_type=trts[0],
-                      truncation_level='3.0',
-                      number_of_ground_motion_fields='10',
-                      asset_hazard_distance='50',
-                      country=country,
-                      inputs=inputs)
-        allparams.append(params)
-    jobs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, getpass.getuser(), None)
-    engine.run_jobs(jobs)
+    #countries = get_countries_around(rupdic, maxdist, expo, smodel)
+    #cnames = [code2country.get(code, code) for code in countries]
+    #print('Affecting', ' '.join(cnames))
+    params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
+                  maximum_distance=maxdist,
+                  tectonic_region_type=trts[0],
+                  truncation_level='3.0',
+                  number_of_ground_motion_fields='10',
+                  asset_hazard_distance='50',
+                  inputs=inputs)
+    logging.root.handlers = []  # avoid breaking the logs
+    [job] = engine.create_jobs(
+        [params], config.distribution.log_level, None, getpass.getuser(), None)
+    engine.run_calc(job)
+
 
 main.usgs_id = 'ShakeMap ID'
-
+main.maxdist = 'Maximum distance in km'
 
 if __name__ == '__main__':
     sap.run(main)

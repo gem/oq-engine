@@ -501,6 +501,8 @@ def nonzero(value):
     return value
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def longitude(value):
     """
     :param value: input string
@@ -509,7 +511,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = round(float_(value), 5)
+    lon = numpy.round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -517,6 +519,8 @@ def longitude(value):
     return lon
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def latitude(value):
     """
     :param value: input string
@@ -525,7 +529,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = round(float_(value), 5)
+    lat = numpy.round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:

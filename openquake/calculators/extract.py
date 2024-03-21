@@ -951,10 +951,11 @@ def extract_avg_gmf(dstore, what):
     imti = info['imt'][imt]
     sitecol = dstore['sitecol']
     avg_gmf = dstore['avg_gmf'][0, :, imti]
-    yield imt, avg_gmf[sitecol.sids]
-    yield 'sids', sitecol.sids
-    yield 'lons', sitecol.lons
-    yield 'lats', sitecol.lats
+    nonzero = avg_gmf > 0
+    yield imt, avg_gmf[sitecol.sids[nonzero]]
+    yield 'sids', sitecol.sids[nonzero]
+    yield 'lons', sitecol.lons[nonzero]
+    yield 'lats', sitecol.lats[nonzero]
 
 
 @extract.add('num_events')

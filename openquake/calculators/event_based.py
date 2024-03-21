@@ -26,7 +26,7 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import hdf5, parallel, python3compat
+from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
@@ -371,6 +371,15 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         computer = get_computer(
             cmaker, proxy, rupgeoms, srcfilter,
             station_data, station_sites)
+        G = len(cmaker.gsims)
+        M = len(cmaker.imts)
+        N = len(computer.sitecol)
+        size = 3 * G * M * N * N * 8  # sig, tau, phi
+        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
+            raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}. '
+                             'You must reduce the number of sites i.e. enlarge '
+                             'region_grid_spacing)')
         mean_covs = computer.get_mean_covs()
         for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
             for g in range(len(cmaker.gsims)):
