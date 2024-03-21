@@ -363,6 +363,15 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
+        G = len(cmaker.gsims)
+        M = len(cmaker.imts)
+        N = len(dstore['sitecol/sids'])
+        size = 3 * G * M * N * N * 8  # sig, tau, phi
+        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        if size > 1e10:
+            raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}.'
+                             'You must reduce the number of sites i.e. enlarge '
+                             'region_grid_spacing)')
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         computer = get_computer(
