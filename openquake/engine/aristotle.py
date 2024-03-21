@@ -26,7 +26,6 @@ from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.risklib import asset
-from openquake.risklib.countries import code2country
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
