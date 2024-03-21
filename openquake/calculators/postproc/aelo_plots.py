@@ -24,10 +24,7 @@ from scipy import interpolate
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
+from PIL import Image
 
 
 def import_plt():

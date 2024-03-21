@@ -52,10 +52,7 @@ from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 from openquake.commands.plot import plot_single_avg_gmf
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
+from PIL import Image
 
 U8 = numpy.uint8
 U16 = numpy.uint16

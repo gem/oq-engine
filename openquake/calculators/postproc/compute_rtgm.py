@@ -44,10 +44,6 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
