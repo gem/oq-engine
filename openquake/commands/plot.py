@@ -110,7 +110,7 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
-def plot_single_avg_gmf(calc_id, imt):
+def plot_avg_gmf(calc_id, imt):
     [ex] = [Extractor(calc_id)]
     plt = import_plt()
     fig = plt.figure()
@@ -126,21 +126,22 @@ def plot_single_avg_gmf(calc_id, imt):
     return plt
 
 
-def make_figure_single_avg_gmf(extractors, what):
+def make_figure_avg_gmf(extractors, what):
     """
     $ oq plot "avg_gmf?imt=PGA"
     """
     [ex] = extractors
     imt = what.split('=')[1]
     calc_id = ex.calc_id
-    plt = plot_single_avg_gmf(calc_id, imt)
+    plt = plot_avg_gmf(calc_id, imt)
     return plt
 
 
-def make_figure_avg_gmf(extractors, what):
+def make_figure_compare_avg_gmf(extractors, what):
     """
-    $ oq plot "avg_gmf?imt=PGA"
+    $ oq plot "compare_avg_gmf?imt=PGA"
     """
+    assert len(extractors) == 2
     plt = import_plt()
     fig = plt.figure()
     imt = what.split('=')[1]
@@ -148,17 +149,11 @@ def make_figure_avg_gmf(extractors, what):
     ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-    if len(extractors) == 2:  # compare two avg_gmf
-        ax.set_title('Delta GMF for %s' % imt)
-        ex1, ex2 = extractors
-        avg_gmf = ex1.get(what)
-        avg_gmf2 = ex2.get(what)
-        gmf = avg_gmf[imt] - avg_gmf2[imt]
-    else:  # plot a single avg_gmf
-        ax.set_title('Avg GMF for %s' % imt)
-        [ex] = extractors
-        avg_gmf = ex.get(what)
-        gmf = avg_gmf[imt]
+    ax.set_title('Delta GMF for %s' % imt)
+    ex1, ex2 = extractors
+    avg_gmf = ex1.get(what)
+    avg_gmf2 = ex2.get(what)
+    gmf = avg_gmf[imt] - avg_gmf2[imt]
     coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
     plt.colorbar(coll)
     return plt
