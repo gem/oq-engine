@@ -370,7 +370,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         logging.info('Storing %s in conditioned/gsim', humansize(size))
         if size > 1e10:
             raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}.'
-                             'You must reduce the number of sites')
+                             'You must reduce the number of sites i.e. enlarge '
+                             'region_grid_spacing)')
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         computer = get_computer(
