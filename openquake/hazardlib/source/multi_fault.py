@@ -40,6 +40,7 @@ U16 = np.uint16
 F32 = np.float32
 F64 = np.float64
 BLOCKSIZE = 5_000
+TWO16 = 2 ** 16
 # NB: if too large, very few sources will be generated and a lot of
 # memory will be used
 
@@ -248,6 +249,7 @@ def save(mfsources, sectiondict, hdf5path):
     """
     Utility to serialize MultiFaultSources and optionally computing msparams
     """
+    assert len(sectiondict) < TWO16, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_ridxs = []
     for src in mfsources:
