@@ -1329,7 +1329,7 @@ def download_aggrisk(request, calc_id):
         content_type="text/csv",
         headers={
             "Content-Disposition":
-                'attachment; filename="aggrisk.csv"'
+                'attachment; filename="aggrisk_%s.csv"' % calc_id
         },
     )
     writer = csv.writer(response)
