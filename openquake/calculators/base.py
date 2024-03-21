@@ -873,6 +873,7 @@ class HazardCalculator(BaseCalculator):
         if oq.job_type == 'risk':
             taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
             if 'ID_0' in self.assetcol.array.dtype.names:
+                # in qa_tests_data/scenario_risk/scenario_risk/conditioned
                 allcountries = numpy.array(self.assetcol.tagcol.ID_0)
                 id0s = numpy.unique(self.assetcol['ID_0'])
                 countries = allcountries[id0s]
