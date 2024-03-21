@@ -369,6 +369,12 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             cmaker, proxy, rupgeoms, srcfilter,
             station_data, station_sites)
         mean_covs = computer.get_mean_covs()
+        size = sum(arr.nbytes for arr in mean_covs)
+        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        if size > 1e10:
+            G, M, N, _ = mean_covs[0]  # gsims, IMTs, sites
+            raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}.'
+                             'You must reduce the number of sites')
         for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
             for g in range(len(cmaker.gsims)):
                 name = 'conditioned/gsim_%d/%s' % (g, key)

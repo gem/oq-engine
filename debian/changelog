@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Raised a clear error for GMF-conditioned calculations with too many sites
   * Rounding lon, lat with numpy in oqparam.sites
   * Reduced by half the data transfer in classical by using 32 bit rates
   * Fixed a bug in `oq zip` which was missing the exposure.csv files
