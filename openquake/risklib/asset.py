@@ -856,15 +856,22 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-def read_assets(hdf5file, start, stop):
+# used in aristotle calculations
+def read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
-    group = hdf5file['assets']
+    group = h5['assets']
     dic = {}
+    TAGS = {'ID_0': h5['tagcol/ID_0'][:],
+            'ID_1': h5['tagcol/ID_1'][:],
+            'OCCUPANCY': h5['tagcol/OCCUPANCY'][:],
+            'TAXONOMY': h5['tagcol/taxonomy'][:]}
     for field in group:
         if field == field.upper():
-            dic[field] = group[field][start:stop]
+            dic[field] = arr = group[field][start:stop]
+            if field in TAGS:
+                dic[field] = TAGS[field][arr]
     return pandas.DataFrame(dic)
 
 
@@ -924,7 +931,8 @@ class Exposure(object):
                 countries = decode(f['tagcol/ID_0'][1:])
                 idx = countries.index(country)
                 assets_df = assets_df[assets_df.ID_0 == idx]
-            exp.tagcol = f['tagcol']
+            tagcol = f['tagcol']
+            exp.tagcol = TagCollection(tagcol.tagnames)
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:
@@ -932,7 +940,7 @@ class Exposure(object):
         for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
         adf = assets_df.rename(columns=rename)
-        exp.build_mesh(adf, update_tagcol=False)
+        exp.build_mesh(adf)
         return exp
 
     @staticmethod
@@ -988,7 +996,7 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def build_mesh(self, assets_df, update_tagcol=True):
+    def build_mesh(self, assets_df):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
@@ -1007,7 +1015,7 @@ class Exposure(object):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
-            elif name in self.tagcol.tagnames and update_tagcol:
+            elif name in self.tagcol.tagnames:
                 assets_df[name] = self.tagcol.get_tagi(name, assets_df)
 
         assets_df.sort_values(['lon', 'lat'], inplace=True)
