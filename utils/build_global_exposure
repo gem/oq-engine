@@ -253,11 +253,14 @@ def read_world_tmap(grm_dir, dstore):
         dic[fname] = '_'.join(sorted(df.index))
     n = len(dic)
     assert len(set(dic.values())) == n, sorted(dic.values())
-    for cwd, dirs, files in os.walk(grm_dir + '/Exposure'):
+    for cwd, dirs, files in os.walk(grm_dir):
         for f in files:
             if f in dic:
                 df = pandas.read_csv(os.path.join(cwd, f))
-                dstore.create_df('tmap/' + dic[f], df)
+                try:
+                    dstore.create_df('tmap/' + dic[f], df)
+                except ValueError:  # exists already
+                    pass
     return n
 
 
