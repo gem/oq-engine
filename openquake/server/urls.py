@@ -24,34 +24,37 @@ from openquake.server import views
 
 urlpatterns = []
 if settings.WEBUI:
-     urlpatterns += [
-         re_path(r'^engine/license$', views.license,
-                 name="license"),
-         re_path(r'^v1/valid/', views.validate_nrml),
-         re_path(r'^v1/available_gsims$', views.get_available_gsims),
-         re_path(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
-     ]
-     for app in settings.STANDALONE_APPS:
-         app_name = app.split('_')[1]
-         urlpatterns.append(re_path(r'^%s/' % app_name, include(
-             '%s.urls' % app, namespace='%s' % app_name)))
+    urlpatterns += [
+        re_path(r'^engine/license$', views.license,
+                name="license"),
+        re_path(r'^v1/valid/', views.validate_nrml),
+        re_path(r'^v1/available_gsims$', views.get_available_gsims),
+        re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
+                name="ini_defaults"),
+    ]
+    for app in settings.STANDALONE_APPS:
+        app_name = app.split('_')[1]
+        urlpatterns.append(re_path(r'^%s/' % app_name, include(
+            '%s.urls' % app, namespace='%s' % app_name)))
 
 if settings.TOOLS_ONLY:
     if settings.WEBUI:
-         urlpatterns += [
-             re_path(r'^$', RedirectView.as_view(
-                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
-                 permanent=True)),
-         ]
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
+                permanent=True)),
+        ]
 else:
     urlpatterns += [
         re_path(r'^v1/engine_version$', views.get_engine_version),
-        re_path(r'^v1/engine_latest_version$', views.get_engine_latest_version),
+        re_path(r'^v1/engine_latest_version$',
+                views.get_engine_latest_version),
         re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
         re_path(r'^v1/valid/', views.validate_nrml),
         re_path(r'^v1/available_gsims$', views.get_available_gsims),
         re_path(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
-        re_path(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
+        re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
+                name="ini_defaults"),
     ]
 
     # it is useful to disable the default redirect if the usage is via API only
