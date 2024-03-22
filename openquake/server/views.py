@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 import shutil
 import json
 import string
@@ -57,7 +58,7 @@ from openquake.engine import engine, aelo
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around, get_countries_around
+from openquake.engine.aristotle import get_trts_around
 from openquake.server import utils
 
 from django.conf import settings
@@ -746,25 +747,20 @@ def aristotle_run(request):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     rupdic = dict(
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
-    countries = get_countries_around(rupdic, expo, smodel)
     inputs = {'exposure': [expo], 'site_model': [smodel],
               'job_ini': '<in-memory>'}
     # TODO: should we add form fields also for truncation_level,
     #       number_of_ground_motion_fields and asset_hazard_distance?
-    allparams = []
-    for country in countries:
-        params = dict(calculation_mode='scenario_risk',
-                      rupture_dict=str(rupdic),
-                      maximum_distance=str(maximum_distance),
-                      tectonic_region_type=trt,
-                      truncation_level='3.0',
-                      number_of_ground_motion_fields='10',
-                      asset_hazard_distance='50',
-                      country=country,
-                      inputs=inputs)
-        allparams.append(params)
+    params = dict(calculation_mode='scenario_risk',
+                  rupture_dict=str(rupdic),
+                  maximum_distance=str(maximum_distance),
+                  tectonic_region_type=trt,
+                  truncation_level='3.0',
+                  number_of_ground_motion_fields='10',
+                  asset_hazard_distance='50',
+                  inputs=inputs)
     jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None,
+        [params], config.distribution.log_level, None,
         utils.get_user(request), None)
     proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
@@ -1267,6 +1263,82 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        warnings=warnings))
+
+
+def get_aggrisk(calc_id):
+    """
+    Converting the aggrisk dataframe into a table like this:
+    weight,gsim,business_interruption,contents,nonstructural,occupants,structural
+    0.75,[BooreAtkinson2008],1805.78,16121.35,30162.66,6880.27,0.0537
+    0.25,[ChiouYoungs2008],2285.55,18170.28,34460.171875,8736.11,0.0674
+    1.0,Weighted Average,1925.72,16633.58,31237.03,7344.23,0.0571
+    """
+    job = logs.dbcmd('get_job', calc_id)
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        gsim_lt = ds['full_lt/gsim_lt']
+        aggrisk = ds.read_df('aggrisk', 'rlz_id')
+        oq = ds['oqparam']
+    loss_types = oq.loss_types
+    header = ['weight', 'gsim'] + loss_types
+    body = []
+    weighted_sum = {}
+    for idx, branch in enumerate(gsim_lt.branches):
+        row = []
+        gsim = branch.gsim
+        weight = branch.weight['default']
+        risk = aggrisk.loc[idx]
+        row.append(weight)
+        row.append(gsim)
+        for loss_id, loss in zip(risk.loss_id, risk.loss):
+            row.append(loss)
+            try:
+                weighted_sum[loss_id] += loss * weight
+            except KeyError:
+                weighted_sum[loss_id] = loss * weight
+        body.append(row)
+    row = [1.0, 'Weighted Average']
+    for loss_id in weighted_sum:
+        row.append(weighted_sum[loss_id])
+    body.append(row)
+    return body, header
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_get_outputs_aristotle(request, calc_id):
+    losses, losses_header = get_aggrisk(calc_id)
+    losses_header = [header.capitalize().replace('_', ' ')
+                     for header in losses_header]
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    # TODO: add warnings from datastore if needed
+    return render(request, "engine/get_outputs_aristotle.html",
+                  dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
+                       losses_header=losses_header, warnings=None))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def download_aggrisk(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+    body, header = get_aggrisk(calc_id)
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(
+        content_type="text/csv",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="aggrisk_%s.csv"' % calc_id
+        },
+    )
+    writer = csv.writer(response)
+    writer.writerow(header)
+    for row in body:
+        writer.writerow(row)
+    return response
 
 
 @csrf_exempt
