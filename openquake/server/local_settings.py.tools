@@ -1,21 +1,9 @@
-# This feature requires:
-#  - https://github.com/FirefighterBlu3/python-pam
-#  - https://github.com/cnobile2012/django-pam
-
-from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
+APPLICATION_MODE = 'TOOLS_ONLY'
 
 # Enable authentication
 LOCKDOWN = False
 # Disable sharing of results across users
 ACL_ON = True
-
-INSTALLED_APPS += (
-    'django_pam',
-)
-
-AUTHENTICATION_BACKENDS += (
-    'django_pam.auth.backends.PAMBackend',
-)
 
 #Static Folder
 STATIC_ROOT = ''
@@ -37,5 +25,3 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
 # TIME_ZONE = 
-
-APPLICATION_MODE = 'TOOLS_ONLY'
