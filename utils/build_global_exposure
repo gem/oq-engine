@@ -260,7 +260,7 @@ def read_world_tmap(grm_dir, dstore):
                 try:
                     dstore.create_df('tmap/' + dic[f], df)
                 except ValueError:  # exists already
-                    pass
+                    print('Repeated %s' % dic[f])
     return n
 
 
