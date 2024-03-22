@@ -98,7 +98,20 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
     w, h = maxx - minx, maxy - miny
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
-    ax.legend()
+
+    try:
+        ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
+        ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
+    except KeyError:  # ID_0 might be missing
+        ax.legend()
+    else:
+        id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
+        # NOTE: use following lines to add custom items without changing title
+        # ax.plot([], [], ' ', label=id_0_str)
+        # ax.legend()
+        title = 'Countries: %s' % id_0_str
+        ax.legend(title=title)
+
     if save_to:
         p.savefig(save_to, alpha=True, dpi=300)
         logging.info(f'Plot saved to {save_to}')
