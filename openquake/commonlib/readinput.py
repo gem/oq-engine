@@ -54,6 +54,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
+from openquake.risklib.countries import code2country
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -451,8 +452,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
         sm = f['site_model'][:]
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
     xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
-    kdt = cKDTree(xyz_all)
-    idxs = kdt.query_ball_point(xyz, dist, eps=.001)
+    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
 
@@ -464,7 +464,7 @@ def get_site_model(oqparam):
         an array with fields lon, lat, vs30, ...
     """
     fnames = oqparam.inputs['site_model']
-    if len(fnames) == 1 and fnames[0].endswith('.hdf5'):
+    if oqparam.aristotle:
         rup = oqparam.rupture_dict
         # global site model close to the rupture
         dist = oqparam.maximum_distance('*')(rup['mag'])
@@ -968,12 +968,12 @@ def get_exposure(oqparam, h5=None):
     oq = oqparam
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
-        fname = fnames[0]
-        if fname.endswith('.hdf5') and oq.rupture_dict:
+        if oqparam.aristotle:
             # reading the assets around a rupture
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = Global.exposure = asset.Exposure.read_around(fname, gh3)
+            exposure = Global.exposure = asset.Exposure.read_around(
+                fnames[0], gh3, oq.country)
         else:
             exposure = Global.exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
@@ -1106,13 +1106,49 @@ def levels_from(header):
     return levels
 
 
-def taxonomy_mapping(oqparam, taxonomies, country=None):
+def aristotle_tmap(exposure_hdf5, taxonomies, countries):
+    # returns a taxonomy mapping list
+    items = []
+    with hdf5.File(exposure_hdf5, 'r') as exp:
+        for key in exp['tmap']:
+            if set(key.split('_')) & countries:
+                df = exp.read_df('tmap/' + key)
+                items.append((key, df))
+    assert items, 'Could not find any taxonomy mapping for %s' % countries
+    if len(items) > 1:
+        cs = [code2country.get(code, code) for code in countries]
+        raise ValueError('Found more than one taxonomy mapping for %s' % cs)
+
+    lst = [[("?", 1)]]
+    df = items[0][1]
+    dic = dict(list(df.groupby('taxonomy')))
+    taxonomies = taxonomies[1:]  # strip '?'
+    missing = set(taxonomies) - set(dic)
+    if missing:
+        raise InvalidFile(
+            'The taxonomy strings %s are in the exposure but not in '
+            'the taxonomy mapping' % missing)
+    risk_id = 'risk_id' if 'risk_id' in df.columns else 'conversion'
+    for taxo in taxonomies:
+        recs = dic[taxo]
+        lst.append([(rec[risk_id], rec['weight'])
+                    for r, rec in recs.iterrows()])
+    return lst
+
+
+def taxonomy_mapping(oqparam, taxonomies, countries=()):
     """
     :param oqparam: OqParam instance
     :param taxonomies: array of unique taxonomies as strings
+    :param countries: array of country codes (possibly empty)
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
-    if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
+    if oqparam.aristotle:
+        cs = [code2country.get(code, code) for code in countries]
+        logging.info('Reading the taxonomy mapping for %s', cs)
+        lst = aristotle_tmap(oqparam.inputs['exposure'][0], taxonomies, set(countries))
+        return {lt: lst for lt in oqparam.loss_types}
+    elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         lst = [[(taxo, 1)] for taxo in taxonomies]
         return {lt: lst for lt in oqparam.loss_types}
     fname = oqparam.inputs['taxonomy_mapping']

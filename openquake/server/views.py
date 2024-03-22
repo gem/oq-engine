@@ -44,7 +44,7 @@ import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid, geo
+from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
@@ -57,6 +57,7 @@ from openquake.engine import engine, aelo
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
+from openquake.engine.aristotle import get_trts_around, get_countries_around
 from openquake.server import utils
 
 from django.conf import settings
@@ -612,18 +613,6 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
-def get_trts(lon, lat):
-    lonlats = numpy.array([[lon, lat]])
-    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    mosaic_model = geo.utils.geolocate(lonlats, mosaic_df)[0]
-    site_model_path = os.path.join(
-        config.directory.mosaic_dir, 'site_model.hdf5')
-    site_model = hdf5.File(site_model_path).read_df('model_trt_gsim_weight')
-    trts = set(
-        site_model[site_model['model'] == mosaic_model.encode('utf8')]['trt'])
-    return [trt.decode('utf8') for trt in trts]
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -667,23 +656,14 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    trts = get_trts(rupture_dict['lon'], rupture_dict['lat'])
+    trts = get_trts_around(rupture_dict['lon'], rupture_dict['lat'])
     rupture_dict['trts'] = trts
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def aristotle_run(request):
-    """
-    Run an ARISTOTLE calculation.
-
-    :param request:
-        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
-    """
+def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
     try:
@@ -745,29 +725,51 @@ def aristotle_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    return lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_run(request):
+    """
+    Run an ARISTOTLE calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
+    """
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt = res
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
-    rupdic = str(dict(
-        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike))
-    inputs = {'exposure': [expo],
-              'site_model': [smodel],
+    rupdic = dict(
+        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
+    countries = get_countries_around(rupdic, expo, smodel)
+    inputs = {'exposure': [expo], 'site_model': [smodel],
               'job_ini': '<in-memory>'}
     # TODO: should we add form fields also for truncation_level,
     #       number_of_ground_motion_fields and asset_hazard_distance?
-    params = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
-                  maximum_distance=str(maximum_distance),
-                  tectonic_region_type=trt,
-                  truncation_level='3.0',
-                  number_of_ground_motion_fields='10',
-                  asset_hazard_distance='50',
-                  inputs=inputs)
-    [jobctx] = engine.create_jobs(
-        [params],
-        config.distribution.log_level, None, utils.get_user(request), None)
-    proc = mp.Process(target=engine.run_jobs, args=([jobctx],))
+    allparams = []
+    for country in countries:
+        params = dict(calculation_mode='scenario_risk',
+                      rupture_dict=str(rupdic),
+                      maximum_distance=str(maximum_distance),
+                      tectonic_region_type=trt,
+                      truncation_level='3.0',
+                      number_of_ground_motion_fields='10',
+                      asset_hazard_distance='50',
+                      country=country,
+                      inputs=inputs)
+        allparams.append(params)
+    jobctxs = engine.create_jobs(
+        allparams, config.distribution.log_level, None,
+        utils.get_user(request), None)
+    proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
 
-    response_data = dict(status='created', job_id=jobctx.calc_id)
+    response_data = dict(status='created', job_id=jobctxs[-1].calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -1158,13 +1160,15 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             hcurves = 'hcurves.png' in ds['png']
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
-            hmaps = hcurves = governing_mce = False
+            hmaps = avg_gmf = hcurves = governing_mce = False
+            avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     lon = lat = vs30 = site_name = None
@@ -1174,7 +1178,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       hcurves=hcurves,
+                       avg_gmf=avg_gmf, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
@@ -1203,6 +1207,7 @@ def get_disp_val(val):
         return '{:.3f}'.format(numpy.round(val, 3))
     else:
         return '{:.2f}'.format(numpy.round(val, 2))
+
 
 # this is extracting only the first site and it is okay
 @cross_domain_ajax

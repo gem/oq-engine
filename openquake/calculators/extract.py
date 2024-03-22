@@ -949,12 +949,16 @@ def extract_avg_gmf(dstore, what):
     info = get_info(dstore)
     [imt] = qdict['imt']
     imti = info['imt'][imt]
-    sitecol = dstore['sitecol']
+    try:
+        sitecol = dstore['complete']
+    except KeyError:
+        sitecol = dstore['sitecol']
     avg_gmf = dstore['avg_gmf'][0, :, imti]
-    yield imt, avg_gmf[sitecol.sids]
-    yield 'sids', sitecol.sids
-    yield 'lons', sitecol.lons
-    yield 'lats', sitecol.lats
+    nonzero = avg_gmf > 0
+    yield imt, avg_gmf[sitecol.sids[nonzero]]
+    yield 'sids', sitecol.sids[nonzero]
+    yield 'lons', sitecol.lons[nonzero]
+    yield 'lats', sitecol.lats[nonzero]
 
 
 @extract.add('num_events')

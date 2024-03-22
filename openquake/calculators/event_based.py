@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import math
 import time
 import os.path
@@ -25,7 +26,7 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import hdf5, parallel, python3compat
+from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
@@ -50,6 +51,8 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
+from openquake.commands.plot import plot_avg_gmf
+from PIL import Image
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -368,6 +371,15 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         computer = get_computer(
             cmaker, proxy, rupgeoms, srcfilter,
             station_data, station_sites)
+        G = len(cmaker.gsims)
+        M = len(cmaker.imts)
+        N = len(computer.sitecol)
+        size = 3 * G * M * N * N * 8  # sig, tau, phi
+        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
+            raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}. '
+                             'You must reduce the number of sites i.e. enlarge '
+                             'region_grid_spacing)')
         mean_covs = computer.get_mean_covs()
         for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
             for g in range(len(cmaker.gsims)):
@@ -739,6 +751,14 @@ class EventBasedCalculator(base.HazardCalculator):
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
+        imts = list(self.oqparam.hazard_imtls)
+        for imt in imts:
+            plt = plot_avg_gmf(self.datastore.calc_id, imt)
+            bio = io.BytesIO()
+            plt.savefig(bio, format='png', bbox_inches='tight')
+            fig_path = f'png/avg_gmf-{imt}.png'
+            logging.info(f'Saving {fig_path} into the datastore')
+            self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam
