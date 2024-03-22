@@ -18,6 +18,7 @@
 """
 Master script for running an ARISTOTLE analysis
 """
+import sys
 import os
 import getpass
 import logging
@@ -56,19 +57,32 @@ def get_trts_around(lon, lat):
     return [trt.decode('utf8') for trt in df.trt.unique()]
 
 
-def main(usgs_id, maxdist='200'):
+def trivial_callback(
+        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
+    if exc:
+        sys.exit('There was an error: %s' % exc)
+    print('Finished job %d correctly' % job_id)
+
+
+def main(usgs_id, maxdist='200',
+         job_owner_email=None,
+         outputs_uri=None,
+         jobctx=None,
+         callback=trivial_callback,
+         ):
     """
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
+    warnings = []
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [expo], 'site_model': [smodel], 'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(usgs_id)
     trts = get_trts_around(rupdic['lon'], rupdic['lat'])
-    #countries = get_countries_around(rupdic, maxdist, expo, smodel)
-    #cnames = [code2country.get(code, code) for code in countries]
-    #print('Affecting', ' '.join(cnames))
+    # countries = get_countries_around(rupdic, maxdist, expo, smodel)
+    # cnames = [code2country.get(code, code) for code in countries]
+    # print('Affecting', ' '.join(cnames))
     params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
                   maximum_distance=maxdist,
                   tectonic_region_type=trts[0],
@@ -79,7 +93,14 @@ def main(usgs_id, maxdist='200'):
     logging.root.handlers = []  # avoid breaking the logs
     [job] = engine.create_jobs(
         [params], config.distribution.log_level, None, getpass.getuser(), None)
-    engine.run_calc(job)
+    try:
+        engine.run_calc(job)
+    except Exception as exc:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=exc, warnings=warnings)
+    else:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=None, warnings=warnings)
 
 
 main.usgs_id = 'ShakeMap ID'

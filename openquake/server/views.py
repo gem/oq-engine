@@ -54,7 +54,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo
+from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
@@ -614,6 +614,28 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+def aristotle_callback(
+        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
+    # TODO: check if we can unify the aelo and aristotle callbacks
+    if not job_owner_email:
+        return
+    from_email = 'aristotlenoreply@openquake.org'
+    to = [job_owner_email]
+    reply_to = 'aristotlesupport@openquake.org'
+    lon, lat = inputs['sites'].split()
+    body = (f"Input values: {inputs}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
+    if exc:
+        subject = f'Job {job_id} failed'
+        body += f'There was an error running job {job_id}:\n{exc}'
+    else:
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -737,7 +759,8 @@ def aristotle_run(request):
     Run an ARISTOTLE calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
+        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake,
+        dip, strike, maximum_distance, trt
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
@@ -762,25 +785,44 @@ def aristotle_run(request):
     jobctxs = engine.create_jobs(
         [params], config.distribution.log_level, None,
         utils.get_user(request), None)
-    proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
-    proc.start()
 
-    response_data = dict(status='created', job_id=jobctxs[-1].calc_id)
+    job_id = jobctxs[-1].calc_id
+
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_aristotle', args=[job_id]))
+
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+
+    response_data = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+
+    job_owner_email = request.user.email
+    if not job_owner_email:
+        response_data['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the following'
+            ' link: %s. If the job fails, the error traceback will be'
+            ' accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    proc = mp.Process(target=aristotle.main, args=(
+        job_owner_email, outputs_uri_web, jobctxs, aristotle_callback))
+    proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def aelo_run(request):
-    """
-    Run an AELO calculation.
-
-    :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
-    """
+def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
     try:
@@ -818,6 +860,23 @@ def aelo_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    return lon, lat, vs30, siteid
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aelo_run(request):
+    """
+    Run an AELO calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+    """
+    res = aelo_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat, vs30, siteid = res
 
     # build a LogContext object associated to a database job
     try:
