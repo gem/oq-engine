@@ -26,10 +26,7 @@ import logging
 import operator
 import numpy
 import pandas
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
+from PIL import Image
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
