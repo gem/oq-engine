@@ -65,6 +65,11 @@ else:
             re_path(r'^$', RedirectView.as_view(
                 url='%s/engine/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
+            re_path(r'^engine/?$', views.web_engine, name="index"),
+            re_path(r'^engine/(\d+)/outputs$',
+                views.web_engine_get_outputs, name="outputs"),
+            re_path(r'^engine/(\d+)/outputs_aelo$',
+                views.web_engine_get_outputs_aelo, name="outputs_aelo"),
         ]
 
     if settings.LOCKDOWN:
