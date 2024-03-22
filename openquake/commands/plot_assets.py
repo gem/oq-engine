@@ -105,7 +105,7 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
     except KeyError:  # ID_0 might be missing
         ax.legend()
     else:
-        id_0_str = ', '.join([id_0.decode('utf8') for id_0 in ID_0])
+        id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
         # NOTE: use following lines to add custom items without changing title
         # ax.plot([], [], ' ', label=id_0_str)
         # ax.legend()
