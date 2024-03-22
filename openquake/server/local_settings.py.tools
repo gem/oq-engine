@@ -38,4 +38,4 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # system time zone.
 # TIME_ZONE = 
 
-TOOLS_ONLY = True
+APPLICATION_MODE = 'TOOLS_ONLY'

@@ -37,7 +37,7 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.TOOLS_ONLY:
+if settings.APPLICATION_MODE.upper() == 'TOOLS_ONLY':
     if settings.WEBUI:
         urlpatterns += [
             re_path(r'^$', RedirectView.as_view(
@@ -67,10 +67,13 @@ else:
                 permanent=True)),
             re_path(r'^engine/?$', views.web_engine, name="index"),
             re_path(r'^engine/(\d+)/outputs$',
-                views.web_engine_get_outputs, name="outputs"),
-            re_path(r'^engine/(\d+)/outputs_aelo$',
-                views.web_engine_get_outputs_aelo, name="outputs_aelo"),
+                    views.web_engine_get_outputs, name="outputs"),
         ]
+        if settings.APPLICATION_MODE.upper() == 'AELO':
+            urlpatterns.append(
+                re_path(r'^engine/(\d+)/outputs_aelo$',
+                        views.web_engine_get_outputs_aelo,
+                        name="outputs_aelo"))
 
     if settings.LOCKDOWN:
         from django.contrib import admin
