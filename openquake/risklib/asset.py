@@ -857,7 +857,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
 
 
 # used in aristotle calculations
-def read_assets(h5, start, stop):
+def aristotle_read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -872,7 +872,11 @@ def read_assets(h5, start, stop):
             dic[field] = arr = group[field][start:stop]
             if field in TAGS:
                 dic[field] = TAGS[field][arr]
-    return pandas.DataFrame(dic)
+    df = pandas.DataFrame(dic)
+    df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
+                           df.OCCUPANTS_PER_ASSET_NIGHT +
+                           df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
+    return df
 
 
 class Exposure(object):
@@ -925,7 +929,7 @@ class Exposure(object):
             exp = f['exposure']
             sbg = f['assets/slice_by_gh3'][:]
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
-            assets_df = pandas.concat(read_assets(f, start, stop)
+            assets_df = pandas.concat(aristotle_read_assets(f, start, stop)
                                       for gh3, start, stop in slices)
             if country:
                 countries = decode(f['tagcol/ID_0'][1:])
