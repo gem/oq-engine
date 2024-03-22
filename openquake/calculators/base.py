@@ -32,7 +32,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, hdf5
-from openquake.baselib import performance, parallel, python3compat
+from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)

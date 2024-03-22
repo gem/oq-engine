@@ -1106,10 +1106,12 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(exposure_hdf5, taxonomies, countries):
+def aristotle_tmap(oqparam, taxonomies, countries):
     # returns a taxonomy mapping list
     items = []
-    with hdf5.File(exposure_hdf5, 'r') as exp:
+    with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
+        oqparam.all_cost_types = exp['crm'].attrs['loss_types']
+        oqparam.minimum_asset_loss = {lt: 0. for lt in oqparam.all_cost_types}
         for key in exp['tmap']:
             if set(key.split('_')) & countries:
                 df = exp.read_df('tmap/' + key)
@@ -1146,7 +1148,7 @@ def taxonomy_mapping(oqparam, taxonomies, countries=()):
     if oqparam.aristotle:
         cs = [code2country.get(code, code) for code in countries]
         logging.info('Reading the taxonomy mapping for %s', cs)
-        lst = aristotle_tmap(oqparam.inputs['exposure'][0], taxonomies, set(countries))
+        lst = aristotle_tmap(oqparam, taxonomies, set(countries))
         return {lt: lst for lt in oqparam.loss_types}
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         lst = [[(taxo, 1)] for taxo in taxonomies]
