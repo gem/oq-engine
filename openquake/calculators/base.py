@@ -689,10 +689,9 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        (self.sitecol,
-         self.assetcol,
-         discarded) = readinput.get_sitecol_assetcol(
-            oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+        self.sitecol, self.assetcol, discarded = \
+            readinput.get_sitecol_assetcol(
+                oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
         if len(discarded):

@@ -920,7 +920,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s, country=None):
+    def read_around(exposure_hdf5, gh3s):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -931,11 +931,8 @@ class Exposure(object):
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
             assets_df = pandas.concat(aristotle_read_assets(f, start, stop)
                                       for gh3, start, stop in slices)
-            if country:
-                countries = decode(f['tagcol/ID_0'][1:])
-                idx = countries.index(country)
-                assets_df = assets_df[assets_df.ID_0 == idx]
             tagcol = f['tagcol']
+            # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
             exp.tagcol = TagCollection(tagcol.tagnames)
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'

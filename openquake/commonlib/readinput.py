@@ -973,7 +973,7 @@ def get_exposure(oqparam, h5=None):
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(
-                fnames[0], gh3, oq.country)
+                fnames[0], gh3)
         else:
             exposure = Global.exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
