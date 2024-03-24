@@ -1146,7 +1146,7 @@ def taxonomy_mapping(oqparam, taxdic, countries=()):
     """
     if oqparam.aristotle:
         cs = [code2country.get(code, code) for code in countries]
-        logging.info('Reading the taxonomy mapping for %s', cs)
+        logging.warning('Reading the taxonomy mapping for %s', cs)
         out = aristotle_tmap(oqparam, taxdic, set(countries))
         return {lt: out for lt in oqparam.loss_types}
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
