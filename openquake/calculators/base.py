@@ -31,7 +31,7 @@ import psutil
 import numpy
 import pandas
 
-from openquake.baselib import general, hdf5
+from openquake.baselib import general, hdf5, python3compat
 from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
@@ -870,8 +870,11 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
+            # the decode below is used in aristotle calculations
+            taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
+            uniq = numpy.unique(self.assetcol['taxonomy'])
+            taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
+                      if taxi in uniq}
             if 'ID_0' in self.assetcol.array.dtype.names:
                 # in qa_tests_data/scenario_risk/scenario_risk/conditioned
                 allcountries = numpy.array(self.assetcol.tagcol.ID_0)
