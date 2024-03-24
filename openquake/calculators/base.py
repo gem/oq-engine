@@ -870,11 +870,8 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            if oq.aristotle:
-                alltaxs = numpy.array(self.assetcol.tagcol.taxonomy)
-                taxs = alltaxs[numpy.unique(self.assetcol['taxonomy'])]
-            else:
-                taxs = self.assetcol.tagcol.taxonomy
+            taxonomies = self.assetcol.tagcol.taxonomy[1:]
+            taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
             if 'ID_0' in self.assetcol.array.dtype.names:
                 # in qa_tests_data/scenario_risk/scenario_risk/conditioned
                 allcountries = numpy.array(self.assetcol.tagcol.ID_0)
@@ -882,12 +879,12 @@ class HazardCalculator(BaseCalculator):
                 countries = allcountries[id0s]
             else:
                 countries = ()
-            tmap = readinput.taxonomy_mapping(self.oqparam, taxs, countries)
+            tmap = readinput.taxonomy_mapping(self.oqparam, taxdic, countries)
             self.crmodel.set_tmap(tmap)
             taxonomies = set()
             for ln in oq.loss_types:
-                for items in self.crmodel.tmap[ln]:
-                    for taxo, weight in items:
+                for values in self.crmodel.tmap[ln].values():
+                    for taxo, weight in values:
                         if taxo != '?':
                             taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
@@ -1058,8 +1055,9 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
-            self.crmodel.tmap = readinput.taxonomy_mapping(
-                self.oqparam, self.assetcol.tagcol.taxonomy)
+            taxonomies = self.assetcol.tagcol.taxonomy[1:]
+            taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxdic)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

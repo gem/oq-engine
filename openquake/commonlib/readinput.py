@@ -1106,7 +1106,7 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxonomies, countries):
+def aristotle_tmap(oqparam, taxdic, countries):
     # returns a taxonomy mapping list
     items = []
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
@@ -1121,46 +1121,45 @@ def aristotle_tmap(oqparam, taxonomies, countries):
         cs = [code2country.get(code, code) for code in countries]
         raise ValueError('Found more than one taxonomy mapping for %s' % cs)
 
-    lst = [[("?", 1)]]
+    out = {0: [("?", 1)]}
     df = items[0][1]
     dic = dict(list(df.groupby('taxonomy')))
-    taxonomies = taxonomies[1:]  # strip '?'
-    missing = set(taxonomies) - set(dic)
+    missing = set(taxdic.values()) - set(dic)
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping' % missing)
     risk_id = 'risk_id' if 'risk_id' in df.columns else 'conversion'
-    for taxo in taxonomies:
+    for taxi, taxo in taxdic.items():
         recs = dic[taxo]
-        lst.append([(rec[risk_id], rec['weight'])
-                    for r, rec in recs.iterrows()])
-    return lst
+        out[taxi] = [(rec[risk_id], rec['weight'])
+                     for r, rec in recs.iterrows()]
+    return out
 
 
-def taxonomy_mapping(oqparam, taxonomies, countries=()):
+def taxonomy_mapping(oqparam, taxdic, countries=()):
     """
     :param oqparam: OqParam instance
-    :param taxonomies: array of unique taxonomies as strings
+    :param taxdic: array of unique taxdic as strings
     :param countries: array of country codes (possibly empty)
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
     if oqparam.aristotle:
         cs = [code2country.get(code, code) for code in countries]
         logging.info('Reading the taxonomy mapping for %s', cs)
-        lst = aristotle_tmap(oqparam, taxonomies, set(countries))
-        return {lt: lst for lt in oqparam.loss_types}
+        out = aristotle_tmap(oqparam, taxdic, set(countries))
+        return {lt: out for lt in oqparam.loss_types}
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        lst = [[(taxo, 1)] for taxo in taxonomies]
-        return {lt: lst for lt in oqparam.loss_types}
+        out = {taxi: [(taxo, 1)] for taxi, taxo in taxdic.items()}
+        return {lt: out for lt in oqparam.loss_types}
     fname = oqparam.inputs['taxonomy_mapping']
     if isinstance(fname, str):  # same file for all loss_types
         fname = {lt: fname for lt in oqparam.loss_types}
-    return {lt: _taxonomy_mapping(fname[lt], taxonomies)
+    return {lt: _taxonomy_mapping(fname[lt], taxdic)
             for lt in oqparam.loss_types}
 
 
-def _taxonomy_mapping(filename, taxonomies):
+def _taxonomy_mapping(filename, taxdic):
     try:
         tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
     except Exception as e:
@@ -1173,21 +1172,20 @@ def _taxonomy_mapping(filename, taxonomies):
     # NB: conversion was the old name in the header for engine <= 3.12
     risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
     dic = dict(list(tmap_df.groupby('taxonomy')))
-    taxonomies = taxonomies[1:]  # strip '?'
-    missing = set(taxonomies) - set(dic)
+    missing = set(taxdic.values()) - set(dic)
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping file %s' % (missing, filename))
-    lst = [[("?", 1)]]
-    for taxo in taxonomies:
+    out = {0: [("?", 1)]}
+    for taxi, taxo in taxdic.items():
         recs = dic[taxo]
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-        lst.append([(rec[risk_id], rec['weight'])
-                    for r, rec in recs.iterrows()])
-    return lst
+        out[taxi] = [(rec[risk_id], rec['weight'])
+                     for r, rec in recs.iterrows()]
+    return out
 
 
 def get_pmap_from_csv(oqparam, fnames):

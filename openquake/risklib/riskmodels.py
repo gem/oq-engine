@@ -565,13 +565,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                     consequence, tagname = byname.split('_by_')
                     # the taxonomy map is a dictionary loss_type ->
                     # [[(risk_taxon, weight]),...] for each asset taxonomy
-                    for pairs in tmap[loss_type][1:]:  # strip [('?', 1)]
+                    for pairs in tmap[loss_type].values():
                         for risk_t, weight in pairs:
-                            try:
-                                coeffs[risk_t][loss_type]
-                            except KeyError as err:
-                                raise InvalidFile(
-                                    'Missing %s in\n%s' % (err, cfs))
+                            if risk_t != '?':
+                                try:
+                                    coeffs[risk_t][loss_type]
+                                except KeyError as err:
+                                    raise InvalidFile(
+                                        'Missing %s in\n%s' % (err, cfs))
 
     def check_risk_ids(self, inputs):
         """
@@ -598,9 +599,10 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 rms = []
                 if self.tmap:
-                    for pairs in self.tmap[lt][1:]:
+                    for pairs in self.tmap[lt].values():
                         for risk_id, weight in pairs:
-                            rms.append(self._riskmodels[risk_id])
+                            if risk_id != '?':
+                                rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
