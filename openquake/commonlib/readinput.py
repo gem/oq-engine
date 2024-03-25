@@ -1176,7 +1176,7 @@ def _taxonomy_mapping(filename, taxdic):
                             {'taxonomy', 'risk_id', 'weight'})
     # NB: conversion was the old name in the header for engine <= 3.12
     risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
-    dic = dict(list(tmap_df.groupby('taxonomy')))
+    dic = {k: v for k, v in tmap_df.groupby('taxonomy')}
     missing = set(taxdic.values()) - set(dic)
     if missing:
         raise InvalidFile(
