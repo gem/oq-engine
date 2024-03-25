@@ -22,13 +22,18 @@ import logging
 import shapely
 import numpy
 import pandas
+import fiona
+from shapely.geometry import MultiPolygon, shape
 from scipy.stats import linregress
+from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
+from openquake.qa_tests_data import global_risk
+from openquake.hmtk.plotting.patch import PolygonPatch
 
 
 def import_plt():
@@ -110,7 +115,7 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
-def plot_avg_gmf(calc_id, imt):
+def plot_avg_gmf(calc_id, imt, shapefile_path=None):
     [ex] = [Extractor(calc_id)]
     plt = import_plt()
     fig = plt.figure()
@@ -118,11 +123,49 @@ def plot_avg_gmf(calc_id, imt):
     ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-    ax.set_title('Avg GMF for %s' % imt)
+    dstore = datastore.read(calc_id)
+    title = 'Avg GMF for %s' % imt
+    if 'assetcol' in dstore:
+        try:
+            assetcol = dstore['assetcol'][()]
+        except AttributeError:
+            assetcol = dstore['assetcol'].array
+        try:
+            ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
+            ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
+        except KeyError:  # ID_0 might be missing
+            pass
+        else:
+            id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
+            title += ' (Countries: %s)' % id_0_str
+    ax.set_title(title)
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
     plt.colorbar(coll)
+
+    if shapefile_path is None:
+        shapefile_dir = os.path.dirname(global_risk.__file__)
+        shapefile_path = os.path.join(
+            shapefile_dir, 'geoBoundariesCGAZ_ADM0.shp')
+    polys = [shape(pol['geometry']) for pol in fiona.open(shapefile_path)]
+    cm = plt.get_cmap('RdBu')
+    num_colours = len(polys)
+    for idx, poly in enumerate(polys):
+        colour = cm(1. * idx / num_colours)
+        if isinstance(poly, MultiPolygon):
+            for onepoly in poly.geoms:
+                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
+        else:
+            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
+
+    minx = avg_gmf['lons'].min()
+    maxx = avg_gmf['lons'].max()
+    miny = avg_gmf['lats'].min()
+    maxy = avg_gmf['lats'].max()
+    w, h = maxx - minx, maxy - miny
+    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
+    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
     return plt
 
 
