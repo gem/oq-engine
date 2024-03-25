@@ -912,7 +912,11 @@ def extract_gmf_npz(dstore, what):
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
     rlzi = dstore['events'][eid]['rlz_id']
-    sites = get_sites(dstore['sitecol'])
+    try:
+        complete = dstore['complete']
+    except KeyError:
+        complete = dstore['sitecol']
+    sites = get_sites(complete)
     n = len(sites)
     try:
         df = dstore.read_df('gmf_data', 'eid').loc[eid]
