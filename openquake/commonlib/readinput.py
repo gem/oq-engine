@@ -1145,7 +1145,7 @@ def aristotle_tmap(oqparam, taxdic, countries):
 def taxonomy_mapping(oqparam, taxdic, countries=()):
     """
     :param oqparam: OqParam instance
-    :param taxdic: array of unique taxdic as strings
+    :param taxdic: dictionary taxi (integer) -> taxo (string)
     :param countries: array of country codes (possibly empty)
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
