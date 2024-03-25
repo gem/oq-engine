@@ -408,9 +408,10 @@ def export_gmf_data_csv(ekey, dstore):
 
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
-    complete = dstore['sitecol']
     if 'complete' in dstore:
         complete = dstore['complete']
+    else:
+        complete = dstore['sitecol']
     names = complete.array.dtype.names
     arr = complete[['lon', 'lat']]
     if 'custom_site_id' in names:
