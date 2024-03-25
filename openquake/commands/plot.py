@@ -115,35 +115,8 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
-def plot_avg_gmf(calc_id, imt, shapefile_path=None):
-    [ex] = [Extractor(calc_id)]
+def add_borders(ax, shapefile_path):
     plt = import_plt()
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    ax.grid(True)
-    ax.set_xlabel('Lon')
-    ax.set_ylabel('Lat')
-    dstore = datastore.read(calc_id)
-    title = 'Avg GMF for %s' % imt
-    if 'assetcol' in dstore:
-        try:
-            assetcol = dstore['assetcol'][()]
-        except AttributeError:
-            assetcol = dstore['assetcol'].array
-        try:
-            ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
-            ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
-        except KeyError:  # ID_0 might be missing
-            pass
-        else:
-            id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
-            title += ' (Countries: %s)' % id_0_str
-    ax.set_title(title)
-    avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
-    gmf = avg_gmf[imt]
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
-    plt.colorbar(coll)
-
     if shapefile_path is None:
         shapefile_dir = os.path.dirname(global_risk.__file__)
         shapefile_path = os.path.join(
@@ -158,6 +131,55 @@ def plot_avg_gmf(calc_id, imt, shapefile_path=None):
                 ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
         else:
             ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
+    return ax
+
+
+def get_assetcol(calc_id):
+    assetcol = None
+    dstore = datastore.read(calc_id)
+    if 'assetcol' in dstore:
+        try:
+            assetcol = dstore['assetcol'][()]
+        except AttributeError:
+            assetcol = dstore['assetcol'].array
+    return assetcol
+
+
+def get_country_iso_codes(calc_id, assetcol):
+    dstore = datastore.read(calc_id)
+    try:
+        ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
+        ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
+    except KeyError:  # ID_0 might be missing
+        id_0_str = None
+    else:
+        id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
+    return id_0_str
+
+
+def plot_avg_gmf(calc_id, imt, shapefile_path=None):
+    [ex] = [Extractor(calc_id)]
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+
+    title = 'Avg GMF for %s' % imt
+    assetcol = get_assetcol(calc_id)
+    if assetcol is not None:
+        country_iso_codes = get_country_iso_codes(calc_id, assetcol)
+        if country_iso_codes is not None:
+            title += ' (Countries: %s)' % country_iso_codes
+    ax.set_title(title)
+
+    avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
+    gmf = avg_gmf[imt]
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
+    plt.colorbar(coll)
+
+    ax = add_borders(ax, shapefile_path)
 
     minx = avg_gmf['lons'].min()
     maxx = avg_gmf['lons'].max()
