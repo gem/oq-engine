@@ -1142,6 +1142,7 @@ def aristotle_tmap(oqparam, taxdic, countries):
     return out
 
 
+# tested in TaxonomyMappingTestCase
 def taxonomy_mapping(oqparam, taxdic, countries=()):
     """
     :param oqparam: OqParam instance
