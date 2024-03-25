@@ -1117,9 +1117,10 @@ def aristotle_tmap(oqparam, taxdic, countries):
                 df = exp.read_df('tmap/' + key)
                 items.append((key, df))
     assert items, 'Could not find any taxonomy mapping for %s' % countries
-    if len(items) > 1:
+    n = len(items)
+    if n > 1:
         cs = [code2country.get(code, code) for code in countries]
-        raise ValueError('Found more than one taxonomy mapping for %s' % cs)
+        raise ValueError('Found %d taxonomy mappings for %s' % (n, cs))
 
     out = {0: [("?", 1)]}
     df = items[0][1]
@@ -1131,9 +1132,8 @@ def aristotle_tmap(oqparam, taxdic, countries):
             'the taxonomy mapping' % missing)
     risk_id = 'risk_id' if 'risk_id' in df.columns else 'conversion'
     for taxi, taxo in taxdic.items():
-        recs = dic[taxo]
         out[taxi] = [(rec[risk_id], rec['weight'])
-                     for r, rec in recs.iterrows()]
+                     for r, rec in dic[taxo].iterrows()]
     return out
 
 

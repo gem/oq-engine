@@ -291,18 +291,23 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     expo = os.path.join(mosaic_dir, 'exposure.hdf5')
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
-        logging.warning('Processing %s', rupdic['rupture_usgs_id'])
+        usgs_id = rupdic['rupture_usgs_id']
+        logging.warning('Processing %s', usgs_id)
         trts = get_trts_around(rupdic['lon'], rupdic['lat'])
         rupdic = str(rupdic)
         inputs = {'exposure': [expo], 'site_model': [smodel],
                   'job_ini': '<in-memory>'}
-        dic = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
+        dic = dict(calculation_mode='scenario_risk',
+                   description=usgs_id, rupture_dict=rupdic,
                    maximum_distance='200', number_of_ground_motion_fields='100',
                    tectonic_region_type=trts[0], inputs=inputs)
         logging.root.handlers = []  # avoid breaking the logs
         jobs = engine.create_jobs([dic], config.distribution.log_level,
                                   None, getpass.getuser(), None)
-        engine.run_jobs(jobs)
+        try:
+            engine.run_jobs(jobs)
+        except:
+            pass
 
 aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
 aristotle.rupfname = 'Filename with planar ruptures'
