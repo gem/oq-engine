@@ -183,7 +183,7 @@ def _get_hypocentral_depth_term(C, ctx):
     Returns the hypocentral depth scaling term defined in equations 21 - 23
     """
     #print
-    print(f"hypo_depth: {ctx.hypo_depth}")
+    #print(f"hypo_depth: {ctx.hypo_depth}")
     fhyp_h = np.clip(ctx.hypo_depth - 7.0, 0., 13.)
     fhyp_m = C["c17"] + (C["c18"] - C["c17"]) * (ctx.mag - 5.5)
     fhyp_m[ctx.mag <= 5.5] = C["c17"]
@@ -265,7 +265,7 @@ def _get_style_of_faulting_term(C, ctx):
     frv[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1.
     fnm[(ctx.rake > -150.) & (ctx.rake < -30.)] = 1.
     #print
-    print(f"frv: {frv} fnm: {fnm}")
+    #print(f"frv: {frv} fnm: {fnm}")
     fflt_f = C["c8"] * frv + C["c9"] * fnm
     fflt_m = ctx.mag - 4.5
     fflt_m[ctx.mag <= 4.5] = 0.
@@ -312,15 +312,15 @@ def get_mean_values(SJ, C, ctx, a1100=None):
         temp_z2pt5 = _select_basin_model(SJ, 1100.0) * \
             np.ones_like(temp_vs30)
     #print check f-term values
-    print("mag_term: " + str(_get_magnitude_term(C, ctx.mag)))
-    print("geom_att_term: " + str(_get_geometric_attenuation_term(C, ctx.mag, ctx.rrup)))
-    print("style_fault_term: " + str(_get_style_of_faulting_term(C, ctx)))
-    print("hangwall_term: " + str(_get_hanging_wall_term(C, ctx)))
-    print("shall_site_term: " + str(_get_shallow_site_response_term(SJ, C, temp_vs30, a1100)))
-    print("basin_term: " + str(_get_basin_response_term(SJ, C, temp_z2pt5)))
-    print("hypodepth_term: " + str(_get_hypocentral_depth_term(C, ctx)))
-    print("faultdip_term: " + str(_get_fault_dip_term(C, ctx)))
-    print("anel_att_term: "  + str(_get_anelastic_attenuation_term(C, ctx.rrup)))
+    #print("mag_term: " + str(_get_magnitude_term(C, ctx.mag)))
+    #print("geom_att_term: " + str(_get_geometric_attenuation_term(C, ctx.mag, ctx.rrup)))
+    #print("style_fault_term: " + str(_get_style_of_faulting_term(C, ctx)))
+    #print("hangwall_term: " + str(_get_hanging_wall_term(C, ctx)))
+    #print("shall_site_term: " + str(_get_shallow_site_response_term(SJ, C, temp_vs30, a1100)))
+    #print("basin_term: " + str(_get_basin_response_term(SJ, C, temp_z2pt5)))
+    #print("hypodepth_term: " + str(_get_hypocentral_depth_term(C, ctx)))
+    #print("faultdip_term: " + str(_get_fault_dip_term(C, ctx)))
+    #print("anel_att_term: "  + str(_get_anelastic_attenuation_term(C, ctx.rrup)))
 
     return (_get_magnitude_term(C, ctx.mag) +
             _get_geometric_attenuation_term(C, ctx.mag, ctx.rrup) +
@@ -450,21 +450,22 @@ class CampbellBozorgnia2019_IA_CAV(GMPE):
             _update_ctx(self, ctx)
 
         #print check what is ctx?
-        print('CTX; ' + 'type:' + str(type(ctx)))
-        for field in ctx.dtype.names:
-            for value in ctx[field]:
-                print(f"Field: {field}, DataType: {ctx[field].dtype}, Value: {value}")
-            print()
+        #print('CTX; ' + 'type:' + str(type(ctx)))
+        # for field in ctx.dtype.names:
+        #     for value in ctx[field]:
+        #         #print(f"Field: {field}, DataType: {ctx[field].dtype}, Value: {value}")
+        #     #print()
 
-        print(str(ctx))
+        #print(str(ctx))
 
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx))
+        #print(f"pga110: {pga1100}")
         for m, imt in enumerate(imts):
             #print
-            print("m: " + str(m))
-            print("imt: " + str(imt) + '\n')
+            #print("m: " + str(m))
+            #print("imt: " + str(imt) + '\n')
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
             mean[m] = get_mean_values(self.SJ, C, ctx, pga1100)
@@ -478,7 +479,7 @@ class CampbellBozorgnia2019_IA_CAV(GMPE):
                 mean[m, idx] = pga[idx]
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
-            print(str(imt) + ': ' + str(np.exp(mean[m])))
+            #print(str(imt) + ': ' + str(np.exp(mean[m])))
 
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
@@ -506,12 +507,12 @@ class CampbellBozorgnia2019_IA_CAV(GMPE):
                 (_get_philny(C, ctx.mag))**2. + alpha**2. * _get_philny(C_PGA, ctx.mag) ** 2.
                 + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * (_get_philny(C, ctx.mag)) * _get_philny(C_PGA, ctx.mag))
             #print check phi calc
-            print(f'phi calc: phi_lnyb={phi_lnyb} philnAF={C["philnAF"]} alpha={alpha} phi_lnpga_b={phi_lnpga_b} rholnpga={_get_rholnpga(C, ctx.mag)}')
+            #print(f'phi calc: phi_lnyb={phi_lnyb} philnAF={C["philnAF"]} alpha={alpha} phi_lnpga_b={phi_lnpga_b} rholnpga={_get_rholnpga(C, ctx.mag)}')
             sig[m] = np.sqrt(t**2 + p**2)
             tau[m] = t
             phi[m] = p
             #print check sigma tau phi
-            print(f"sigma: {sig[m]} tau: {tau[m]} phi: {phi[m]}")
+            #print(f"sigma: {sig[m]} tau: {tau[m]} phi: {phi[m]}")
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT        c0      c1      c2       c3       c4       c5      c6      c7      c8       c9     c10     c11     c12     c13       c14      c15     c16      c17      c18       c19       c20   Dc20      a2      h1      h2       h3       h5       h6    k1       k2      k3    phi1    phi2    tau1    tau2   rho1pga   rho2pga   philnAF
