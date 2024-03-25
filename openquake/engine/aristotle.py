@@ -92,7 +92,7 @@ def main(usgs_id, maxdist='200'):
                   inputs=inputs)
     logging.root.handlers = []  # avoid breaking the logs
     for key in tmap_keys:
-        print('Using taxonomy mapping for %s', key)
+        print('Using taxonomy mapping for %s' % key)
         params['countries'] = key.replace('_', ' ')
         jobs = engine.create_jobs(
             [params], config.distribution.log_level, None,
