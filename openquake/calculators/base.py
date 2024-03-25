@@ -884,6 +884,7 @@ class HazardCalculator(BaseCalculator):
                 countries = ()
             tmap = readinput.taxonomy_mapping(self.oqparam, taxdic, countries)
             self.crmodel.set_tmap(tmap)
+
             taxonomies = set()
             for ln in oq.loss_types:
                 for values in self.crmodel.tmap[ln].values():
@@ -891,6 +892,7 @@ class HazardCalculator(BaseCalculator):
                         if taxo != '?':
                             taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
+            # (exercised in test_missing_taxonomy)
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
                 raise RuntimeError(
