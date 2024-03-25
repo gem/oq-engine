@@ -83,7 +83,7 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
     if country_iso_codes is not None:
         # NOTE: use following lines to add custom items without changing title
-        # ax.plot([], [], ' ', label=countries)
+        # ax.plot([], [], ' ', label=country_iso_codes)
         # ax.legend()
         title = 'Countries: %s' % country_iso_codes
         ax.legend(title=title)
