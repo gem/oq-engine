@@ -17,11 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements the comprehensive test suite for the Campbell & Bozorgnia (2014)
+Implements the comprehensive test suite for the Campbell & Bozorgnia (2019)
 NGA-West2 GMPE
 Test data generated using the Excel file published as supplementary material
-with the V/H Earthquake Spectra paper from the same authors:
-https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
+with the IA and CAV paper from the same authors:
+https://journals.sagepub.com/doi/abs/10.1193/090818EQS212M
 
 # Take note of the following bug in the 'HOR Spectrum (PSA)' Sheet of
 # the supplemental Excel file:
@@ -30,7 +30,7 @@ https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
 #   * A1100 should refer to Z2.5 (VS30=1100) in Cell B48, not constant in A48.
 """
 
-from openquake.hazardlib.gsim.campbell_bozorgnia_2019_IA_CAV import (
+from openquake.hazardlib.gsim.campbell_bozorgnia_2019_ia_cav import (
     CampbellBozorgnia2019_IA_CAV,
 )
 
