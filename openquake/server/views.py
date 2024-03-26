@@ -54,7 +54,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo
+from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
@@ -749,8 +749,8 @@ def aristotle_run(request):
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
     inputs = {'exposure': [expo], 'site_model': [smodel],
               'job_ini': '<in-memory>'}
-    # TODO: should we add form fields also for truncation_level,
-    #       number_of_ground_motion_fields and asset_hazard_distance?
+    # TODO: add form fields also for truncation_level,
+    #       number_of_ground_motion_fields and asset_hazard_distance
     params = dict(calculation_mode='scenario_risk',
                   rupture_dict=str(rupdic),
                   maximum_distance=str(maximum_distance),
@@ -759,8 +759,17 @@ def aristotle_run(request):
                   number_of_ground_motion_fields='10',
                   asset_hazard_distance='50',
                   inputs=inputs)
+    oq = readinput.get_oqparam(params)
+    sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
+    countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
+    tmap_keys = aristotle.get_tmap_keys(expo, countries)
+    allparams = []
+    for key in tmap_keys:
+        params['countries'] = key.replace('_', ' ')
+        allparams.append(params.copy())
     jobctxs = engine.create_jobs(
-        [params], config.distribution.log_level, None,
+        allparams, config.distribution.log_level, None,
         utils.get_user(request), None)
     proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
     proc.start()
