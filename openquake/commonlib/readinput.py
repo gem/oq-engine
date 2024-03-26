@@ -1115,8 +1115,6 @@ def aristotle_tmap(oqparam, taxdic, countries):
     # returns a taxonomy mapping list
     items = []
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
-        #oqparam.all_cost_types = exp['crm'].attrs['loss_types']
-        #oqparam.minimum_asset_loss = {lt: 0. for lt in oqparam.all_cost_types}
         for key in exp['tmap']:
             if set(key.split('_')) & countries:
                 df = exp.read_df('tmap/' + key)
