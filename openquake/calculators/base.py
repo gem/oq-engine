@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import io
 import os
 import sys
 import abc
@@ -30,7 +31,9 @@ from shapely import wkt
 import psutil
 import numpy
 import pandas
+from PIL import Image
 
+from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, python3compat
 from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
@@ -784,6 +787,16 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
 
+    def _plot_assets(self):
+        if os.environ.get('OQ_APPLICATION_MODE'):
+            plt = plot_assets(self.datastore.calc_id, show=False,
+                              assets_only=True)
+            bio = io.BytesIO()
+            plt.savefig(bio, format='png', bbox_inches='tight')
+            fig_path = 'png/assets.png'
+            logging.info(f'Saving {fig_path} into the datastore')
+            self.datastore[fig_path] = Image.open(bio)
+
     def _read_risk_data(self):
         # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
@@ -816,6 +829,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            self._plot_assets()
             self.datastore['exposure'] = exposure
             if hasattr(readinput.Global.exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
@@ -833,10 +847,12 @@ class HazardCalculator(BaseCalculator):
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
+                self._plot_assets()
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
+                self._plot_assets()
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:

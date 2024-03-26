@@ -1154,13 +1154,14 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
             hcurves = 'hcurves.png' in ds['png']
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
-            hmaps = avg_gmf = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1171,7 +1172,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       avg_gmf=avg_gmf, hcurves=hcurves,
+                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
@@ -1313,7 +1314,9 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
         else:
+            assets = False
             avg_gmf = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     if 'warnings' in ds:
@@ -1325,7 +1328,7 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
-                       avg_gmf=avg_gmf, warnings=warnings))
+                       avg_gmf=avg_gmf, assets=assets, warnings=warnings))
 
 
 @cross_domain_ajax

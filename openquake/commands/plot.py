@@ -26,6 +26,7 @@ import fiona
 from shapely.geometry import MultiPolygon, shape
 from scipy.stats import linregress
 from openquake.commonlib import datastore
+from openquake.commonlib.readinput import read_countries_df
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
@@ -118,10 +119,9 @@ def make_figure_uhs_cluster(extractors, what):
 def add_borders(ax, shapefile_path):
     plt = import_plt()
     if shapefile_path is None:
-        shapefile_dir = os.path.dirname(global_risk.__file__)
-        shapefile_path = os.path.join(
-            shapefile_dir, 'geoBoundariesCGAZ_ADM0.shp')
-    polys = [shape(pol['geometry']) for pol in fiona.open(shapefile_path)]
+        polys = read_countries_df(buffer=0)['geom']
+    else:
+        polys = [shape(pol['geometry']) for pol in fiona.open(shapefile_path)]
     cm = plt.get_cmap('RdBu')
     num_colours = len(polys)
     for idx, poly in enumerate(polys):
