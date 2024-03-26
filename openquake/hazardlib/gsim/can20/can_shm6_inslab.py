@@ -187,7 +187,7 @@ def site_amplification(ctx, imt, pga1100):
         imt_per = 0 if imt == PGV() else imt.period
 
         BSSA14_Vs = _get_site_scaling(
-            '', "nobasin", C, pga760, sites_lt1100, imt_per, [])
+            '', "nobasin", C, np.exp(pga760), sites_lt1100, imt_per, [])
         BSSA14_1100 = _get_linear_site_term(C, np.array([1100.0]))
         F_lt1100 = BSSA14_Vs - BSSA14_1100
 
@@ -587,7 +587,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
 
             pga1100 = _compute_mean_ga(self.COEFFS[PGA()], g, ctx, PGA())
 
-            mean[m] += site_amplification(ctx, imt, np.exp(pga1100))
+            mean[m] += site_amplification(ctx, imt, pga1100)
 
             # add extrapolation factor if outside SA range 0.04 - 5.0
             if extrapolate:
