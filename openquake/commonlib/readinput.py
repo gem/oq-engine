@@ -969,7 +969,6 @@ def get_exposure(oqparam, h5=None):
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
-            assert oqparam.countries
             # reading the assets around a rupture
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
