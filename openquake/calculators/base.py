@@ -31,8 +31,8 @@ import psutil
 import numpy
 import pandas
 
-from openquake.baselib import general, hdf5
-from openquake.baselib import performance, parallel, python3compat
+from openquake.baselib import general, hdf5, python3compat
+from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -689,10 +689,9 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        (self.sitecol,
-         self.assetcol,
-         discarded) = readinput.get_sitecol_assetcol(
-            oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+        self.sitecol, self.assetcol, discarded = \
+            readinput.get_sitecol_assetcol(
+                oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
         if len(discarded):
@@ -871,16 +870,29 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            taxs = python3compat.decode(self.assetcol.tagcol.taxonomy)
-            tmap = readinput.taxonomy_mapping(self.oqparam, taxs)
+            # the decode below is used in aristotle calculations
+            taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
+            uniq = numpy.unique(self.assetcol['taxonomy'])
+            taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
+                      if taxi in uniq}
+            if 'ID_0' in self.assetcol.array.dtype.names:
+                # in qa_tests_data/scenario_risk/scenario_risk/conditioned
+                allcountries = numpy.array(self.assetcol.tagcol.ID_0)
+                id0s = numpy.unique(self.assetcol['ID_0'])
+                countries = allcountries[id0s]
+            else:
+                countries = ()
+            tmap = readinput.taxonomy_mapping(oq, taxdic, countries)
             self.crmodel.set_tmap(tmap)
+
             taxonomies = set()
             for ln in oq.loss_types:
-                for items in self.crmodel.tmap[ln]:
-                    for taxo, weight in items:
+                for values in self.crmodel.tmap[ln].values():
+                    for taxo, weight in values:
                         if taxo != '?':
                             taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
+            # (exercised in test_missing_taxonomy)
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
                 raise RuntimeError(
@@ -1048,8 +1060,9 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
-            self.crmodel.tmap = readinput.taxonomy_mapping(
-                self.oqparam, self.assetcol.tagcol.taxonomy)
+            taxonomies = self.assetcol.tagcol.taxonomy[1:]
+            taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxdic)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

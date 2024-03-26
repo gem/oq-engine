@@ -912,7 +912,11 @@ def extract_gmf_npz(dstore, what):
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
     rlzi = dstore['events'][eid]['rlz_id']
-    sites = get_sites(dstore['sitecol'])
+    try:
+        complete = dstore['complete']
+    except KeyError:
+        complete = dstore['sitecol']
+    sites = get_sites(complete)
     n = len(sites)
     try:
         df = dstore.read_df('gmf_data', 'eid').loc[eid]
@@ -949,12 +953,16 @@ def extract_avg_gmf(dstore, what):
     info = get_info(dstore)
     [imt] = qdict['imt']
     imti = info['imt'][imt]
-    sitecol = dstore['sitecol']
+    try:
+        sitecol = dstore['complete']
+    except KeyError:
+        sitecol = dstore['sitecol']
     avg_gmf = dstore['avg_gmf'][0, :, imti]
-    yield imt, avg_gmf[sitecol.sids]
-    yield 'sids', sitecol.sids
-    yield 'lons', sitecol.lons
-    yield 'lats', sitecol.lats
+    nonzero = avg_gmf > 0
+    yield imt, avg_gmf[sitecol.sids[nonzero]]
+    yield 'sids', sitecol.sids[nonzero]
+    yield 'lons', sitecol.lons[nonzero]
+    yield 'lats', sitecol.lats[nonzero]
 
 
 @extract.add('num_events')

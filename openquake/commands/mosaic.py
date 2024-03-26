@@ -30,6 +30,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
+from openquake.engine.aristotle import get_trts_around
 from openquake.engine.aelo import get_params_from
 from openquake.hazardlib.geo.utils import geolocate
 
@@ -276,29 +277,39 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-def aristotle(datadir, rupfname=FAMOUS):
+def aristotle(mosaic_dir='', rupfname=FAMOUS):
     """
     Run Aristotle calculations starting from a file with planar
     ruptures (by default "famous_ruptures.csv"). You must pass
     a directory containing two files site_model.hdf5 and exposure.hdf5
     with a well defined structure.
     """
-    smodel = os.path.join(datadir, 'site_model.hdf5')
-    expo = os.path.join(datadir, 'exposure.hdf5')
-    allparams = []
+    if not mosaic_dir and not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    mosaic_dir = mosaic_dir or config.directory.mosaic_dir
+    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
+    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
     for i, row in pandas.read_csv(rupfname).iterrows():
-        rupdic = str(row.to_dict())
+        rupdic = row.to_dict()
+        usgs_id = rupdic['rupture_usgs_id']
+        logging.warning('Processing %s', usgs_id)
+        trts = get_trts_around(rupdic['lon'], rupdic['lat'])
+        rupdic = str(rupdic)
         inputs = {'exposure': [expo], 'site_model': [smodel],
                   'job_ini': '<in-memory>'}
-        dic = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
-                   maximum_distance='100', number_of_ground_motion_fields='100',
-                   inputs=inputs)
-        allparams.append(dic)
-    jobs = engine.create_jobs(allparams, config.distribution.log_level,
-                              None, getpass.getuser(), None)
-    engine.run_jobs(jobs)
+        dic = dict(calculation_mode='scenario_risk',
+                   description=usgs_id, rupture_dict=rupdic,
+                   maximum_distance='200', number_of_ground_motion_fields='100',
+                   tectonic_region_type=trts[0], inputs=inputs)
+        logging.root.handlers = []  # avoid breaking the logs
+        jobs = engine.create_jobs([dic], config.distribution.log_level,
+                                  None, getpass.getuser(), None)
+        try:
+            engine.run_jobs(jobs)
+        except:
+            pass
 
-aristotle.datadir = 'Directory containing site_model.hdf5 and exposure.hdf5'
+aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
 aristotle.rupfname = 'Filename with planar ruptures'
     
 # ################################## main ################################## #

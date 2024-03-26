@@ -327,3 +327,18 @@ tr.asce_output {
 .calc-list-btn {
     width: 56px;
 }
+
+table#aristotle-losses {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table#aristotle-losses th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+#aristotle-losses-download {
+  margin-top: 10px;
+}
