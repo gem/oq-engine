@@ -751,7 +751,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
-        imts = list(self.oqparam.hazard_imtls)
+        imts = list(self.oqparam.imtls)
         for imt in imts:
             plt = plot_avg_gmf(self.datastore.calc_id, imt)
             bio = io.BytesIO()

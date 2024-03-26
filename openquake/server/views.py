@@ -1319,11 +1319,25 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     losses_header = [header.capitalize().replace('_', ' ')
                      for header in losses_header]
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    warnings = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        if 'png' in ds:
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+        else:
+            avg_gmf = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    # TODO: add warnings from datastore if needed
+    if 'warnings' in ds:
+        ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+        if warnings is None:
+            warnings = ds_warnings
+        else:
+            warnings += '\n' + ds_warnings
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
-                       losses_header=losses_header, warnings=None))
+                       losses_header=losses_header,
+                       avg_gmf=avg_gmf, warnings=warnings))
 
 
 @cross_domain_ajax
