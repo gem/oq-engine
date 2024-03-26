@@ -233,7 +233,7 @@ class _GeographicObjects(object):
 
     def assoc2(self, exp, assoc_dist, region, mode):
         """
-        Associated a list of assets by site to the site collection used
+        Associated an exposure to the site collection used
         to instantiate GeographicObjects.
 
         :param exp: Exposure instance

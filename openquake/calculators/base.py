@@ -882,7 +882,7 @@ class HazardCalculator(BaseCalculator):
                 countries = allcountries[id0s]
             else:
                 countries = ()
-            tmap = readinput.taxonomy_mapping(self.oqparam, taxdic, countries)
+            tmap = readinput.taxonomy_mapping(oq, taxdic, countries)
             self.crmodel.set_tmap(tmap)
 
             taxonomies = set()

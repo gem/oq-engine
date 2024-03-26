@@ -25,22 +25,10 @@ import numpy
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
-from openquake.risklib import asset
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
-
-def get_countries_around(rupdic, maxdist, expo, smodel):
-    """
-    :returns: (country_codes, counts) for the countries around rupdic
-    """
-    sm = readinput.get_site_model_around(smodel, rupdic, maxdist)
-    gh3 = numpy.array(sorted(set(geo.utils.geohash3(sm['lon'], sm['lat']))))
-    exposure = readinput.Global.exposure = asset.Exposure.read_around(expo, gh3)
-    id0s, counts = numpy.unique(exposure.assets['ID_0'], return_counts=1)
-    return [exposure.tagcol.ID_0[i + 1] for i in id0s]
 
 
 def get_trts_around(lon, lat):
@@ -57,6 +45,18 @@ def get_trts_around(lon, lat):
     return [trt.decode('utf8') for trt in df.trt.unique()]
 
 
+def get_tmap_keys(exposure_hdf5, countries):
+    """
+    :returns: list of taxonomy mappings as keys in the the "tmap" data group
+    """
+    keys = []
+    with hdf5.File(exposure_hdf5, 'r') as exp:
+        for key in exp['tmap']:
+            if set(key.split('_')) & countries:
+                keys.append(key)
+    return keys
+
+
 def main(usgs_id, maxdist='200'):
     """
     This script is meant to be called from the WebUI in production mode,
@@ -69,9 +69,6 @@ def main(usgs_id, maxdist='200'):
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(usgs_id)
     trts = get_trts_around(rupdic['lon'], rupdic['lat'])
-    #countries = get_countries_around(rupdic, maxdist, expo, smodel)
-    #cnames = [code2country.get(code, code) for code in countries]
-    #print('Affecting', ' '.join(cnames))
     params = dict(calculation_mode='scenario_risk', rupture_dict=str(rupdic),
                   maximum_distance=maxdist,
                   tectonic_region_type=trts[0],
@@ -79,10 +76,19 @@ def main(usgs_id, maxdist='200'):
                   number_of_ground_motion_fields='10',
                   asset_hazard_distance='50',
                   inputs=inputs)
+    oq = readinput.get_oqparam(params)
+    sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
+    countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
+    tmap_keys = get_tmap_keys(expo, countries)
     logging.root.handlers = []  # avoid breaking the logs
-    [job] = engine.create_jobs(
-        [params], config.distribution.log_level, None, getpass.getuser(), None)
-    engine.run_calc(job)
+    for key in tmap_keys:
+        print('Using taxonomy mapping for %s' % key)
+        params['countries'] = key.replace('_', ' ')
+        jobs = engine.create_jobs(
+            [params], config.distribution.log_level, None,
+            getpass.getuser(), None)
+        engine.run_jobs(jobs)
 
 
 main.usgs_id = 'ShakeMap ID'

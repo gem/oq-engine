@@ -37,7 +37,6 @@ from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
 from openquake.risklib import asset, scientific
-from openquake.risklib.countries import code2country
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -100,7 +99,8 @@ asset_correlation:
 
 asset_hazard_distance:
   In km, used in risk calculations to print a warning when there are assets
-  too distant from the hazard sites.
+  too distant from the hazard sites. In multi_risk calculations can be a
+  dictionary: asset_hazard_distance = {'ASH': 50, 'LAVA': 10, ...}
   Example: *asset_hazard_distance = 5*.
   Default: 15
 
@@ -192,10 +192,10 @@ coordinate_bin_width:
   Example: *coordinate_bin_width = 1.0*.
   Default: 100 degrees, meaning don't disaggregate by lon, lat
 
-country:
+countries:
   Used to restrict the exposure to a single country in Aristotle mode.
-  Example: *country = ITA*.
-  Default: None
+  Example: *countries = ITA*.
+  Default: ()
 
 cross_correlation:
   When used in Conditional Spectrum calculation is the name of a cross
@@ -973,7 +973,7 @@ class OqParam(valid.ParamSet):
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
-    country = valid.Param(valid.Choice(*code2country), None)
+    countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')

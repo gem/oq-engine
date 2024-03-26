@@ -973,7 +973,7 @@ def get_exposure(oqparam, h5=None):
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(
-                fnames[0], gh3)
+                fnames[0], gh3, oqparam.countries)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1042,7 +1042,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :returns: (site collection, asset collection, discarded)
     """
     exp = Global.exposure
-    if exp is None:  # not read already
+    if exp is None or oqparam.countries:  # not read already
         exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
@@ -1115,8 +1115,8 @@ def aristotle_tmap(oqparam, taxdic, countries):
     # returns a taxonomy mapping list
     items = []
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
-        oqparam.all_cost_types = exp['crm'].attrs['loss_types']
-        oqparam.minimum_asset_loss = {lt: 0. for lt in oqparam.all_cost_types}
+        #oqparam.all_cost_types = exp['crm'].attrs['loss_types']
+        #oqparam.minimum_asset_loss = {lt: 0. for lt in oqparam.all_cost_types}
         for key in exp['tmap']:
             if set(key.split('_')) & countries:
                 df = exp.read_df('tmap/' + key)
@@ -1153,7 +1153,12 @@ def taxonomy_mapping(oqparam, taxdic, countries=()):
     if oqparam.aristotle:
         cs = [code2country.get(code, code) for code in countries]
         logging.warning('Reading the taxonomy mapping for %s', cs)
-        out = aristotle_tmap(oqparam, taxdic, set(countries))
+        if oqparam.countries:
+            # filter down to countries with the same tmap
+            countries = set(countries) & set(oqparam.countries)
+        else:
+            countries = set(countries)
+        out = aristotle_tmap(oqparam, taxdic, countries)
         return {lt: out for lt in oqparam.loss_types}
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         out = {taxi: [(taxo, 1)] for taxi, taxo in taxdic.items()}
