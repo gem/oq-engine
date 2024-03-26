@@ -57,7 +57,7 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def main(usgs_id, maxdist='200'):
+def main(usgs_id, maxdist='300'):
     """
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
@@ -74,7 +74,7 @@ def main(usgs_id, maxdist='200'):
                   tectonic_region_type=trts[0],
                   truncation_level='3.0',
                   number_of_ground_motion_fields='10',
-                  asset_hazard_distance='50',
+                  asset_hazard_distance='15',
                   inputs=inputs)
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
