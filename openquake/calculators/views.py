@@ -1666,3 +1666,17 @@ def view_sites_by_country(token, dstore):
     are defined as in the file geoBoundariesCGAZ_ADM0.shp
     """
     return dstore['sitecol'].by_country()
+
+
+@view.add('aggrisk')
+def view_aggrisk(token, dstore):
+    """
+    Returns a table with the aggregate risk by realization and loss type
+    """
+    df = dstore.read_df('aggrisk', sel={'agg_id': 0})
+    dt = [(lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
+    rlzs = df.rlz_id.unique()
+    arr = numpy.zeros(rlzs.max() + 1, dt)
+    for rlz, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+        arr[rlz][LOSSTYPE[loss_id]] = loss
+    return arr
