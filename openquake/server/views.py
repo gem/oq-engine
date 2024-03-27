@@ -684,9 +684,10 @@ def aristotle_validate(request):
         'number_of_ground_motion_fields': valid.positiveint,
         'asset_hazard_distance': valid.positivefloat,
     }
+    params = {}
     for fieldname, validation_func in field_validation.items():
         try:
-            locals()[fieldname] = validation_func(request.POST.get(fieldname))
+            params[fieldname] = validation_func(request.POST.get(fieldname))
         except Exception as exc:
             validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
@@ -702,15 +703,7 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    # FIXME: I tried using a list comprehension like
-    # return [locals()[fieldname] for fieldname in field_validation]
-    # but it did not work
-    return (locals()['lon'], locals()['lat'], locals()['dep'], locals()['mag'],
-            locals()['rake'], locals()['dip'], locals()['strike'],
-            locals()['maximum_distance'], locals()['trt'],
-            locals()['truncation_level'],
-            locals()['number_of_ground_motion_fields'],
-            locals()['asset_hazard_distance'])
+    return params.values()
 
 
 @csrf_exempt
