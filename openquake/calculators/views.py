@@ -32,7 +32,7 @@ import pandas
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg)
-from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
+from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
@@ -1191,7 +1191,7 @@ def view_calc_risk(token, dstore):
                                 int(oq.asset_correlation))
 
     mon = Monitor()
-    outs = []#ebr.gen_outputs(gmf_df, crmodel, rng, mon)
+    outs = []  # ebr.gen_outputs(gmf_df, crmodel, rng, mon)
     sids = gmf_df.sid.to_numpy()
     assets = assetcol.to_dframe()
     for taxo in assets.taxonomy.unique():
@@ -1209,7 +1209,7 @@ def view_calc_risk(token, dstore):
     alt['agg_keys'] = decode(agg_keys[alt.agg_id])
     del alt['agg_id']
     return alt
-    
+
 
 @view.add('event_loss_table')
 def view_event_loss_table(token, dstore):
@@ -1232,10 +1232,10 @@ def view_event_loss_table(token, dstore):
 @view.add('risk_by_event')
 def view_risk_by_event(token, dstore):
     """There are two possibilities:
-  
+
     $ oq show risk_by_event:<loss_type>
     $ oq show risk_by_event:<event_id>
-    
+
     In both cases displays the top 30 losses of the aggregate loss
     table as a TSV, for all events or only the given event.
     """
@@ -1620,7 +1620,7 @@ def _drate(df, imt, src):
 def _irate(df, imt, src, iml, imls):
     subdf = df[(df.imt == imt) & (df.src_id == src)]
     interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
-                       numpy.log(subdf.value))
+                          numpy.log(subdf.value))
     return numpy.exp(interp)
 
 
@@ -1643,8 +1643,8 @@ def compare_disagg_rates(token, dstore):
             srcs_out.append(src)
             drates.append(_drate(mean_disagg_df, imt, src))
             irates.append(_irate(mean_rates_df, imt, src, iml, imls))
-    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 
-                             'disagg_rate': drates, 
+    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out,
+                             'disagg_rate': drates,
                              'interp_rate': irates}
                             ).sort_values(['imt', 'src'])
 
@@ -1666,3 +1666,28 @@ def view_sites_by_country(token, dstore):
     are defined as in the file geoBoundariesCGAZ_ADM0.shp
     """
     return dstore['sitecol'].by_country()
+
+
+@view.add('aggrisk')
+def view_aggrisk(token, dstore):
+    """
+    Returns a table with the aggregate risk by realization and loss type
+    """
+    gsim_lt = dstore['full_lt/gsim_lt']
+    gsims = [br.gsim for br in gsim_lt.branches]
+    ws = [br.weight['default'] for br in gsim_lt.branches]
+    df = dstore.read_df('aggrisk', sel={'agg_id': 0})
+    dt = [('gsim', vstr), ('weight', float)] + [
+        (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
+    rlzs = df.rlz_id.unique()
+    arr = numpy.zeros(rlzs.max() + 2, dt)
+    AVG = rlzs.max() + 1
+    for rlz, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+        lt = LOSSTYPE[loss_id]
+        arr[rlz]['gsim'] = gsims[rlz]
+        arr[rlz]['weight'] = ws[rlz]
+        arr[rlz][lt] = loss
+        arr[AVG][lt] += loss * ws[rlz]
+    arr[AVG]['gsim'] = 'Average'
+    arr[AVG]['weight'] = 1
+    return arr

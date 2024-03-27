@@ -973,7 +973,7 @@ def get_exposure(oqparam, h5=None):
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(
-                fnames[0], gh3, oq.country)
+                fnames[0], gh3, oqparam.countries)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1042,7 +1042,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :returns: (site collection, asset collection, discarded)
     """
     exp = Global.exposure
-    if exp is None:  # not read already
+    if exp is None or oqparam.countries:  # not read already
         exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
@@ -1111,59 +1111,64 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(exposure_hdf5, taxonomies, countries):
+def aristotle_tmap(oqparam, taxdic, countries):
     # returns a taxonomy mapping list
     items = []
-    with hdf5.File(exposure_hdf5, 'r') as exp:
+    with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
         for key in exp['tmap']:
             if set(key.split('_')) & countries:
                 df = exp.read_df('tmap/' + key)
                 items.append((key, df))
     assert items, 'Could not find any taxonomy mapping for %s' % countries
-    if len(items) > 1:
+    n = len(items)
+    if n > 1:
         cs = [code2country.get(code, code) for code in countries]
-        raise ValueError('Found more than one taxonomy mapping for %s' % cs)
+        raise ValueError('Found %d taxonomy mappings for %s' % (n, cs))
 
-    lst = [[("?", 1)]]
+    out = {0: [("?", 1)]}
     df = items[0][1]
     dic = dict(list(df.groupby('taxonomy')))
-    taxonomies = taxonomies[1:]  # strip '?'
-    missing = set(taxonomies) - set(dic)
+    missing = set(taxdic.values()) - set(dic)
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping' % missing)
     risk_id = 'risk_id' if 'risk_id' in df.columns else 'conversion'
-    for taxo in taxonomies:
-        recs = dic[taxo]
-        lst.append([(rec[risk_id], rec['weight'])
-                    for r, rec in recs.iterrows()])
-    return lst
+    for taxi, taxo in taxdic.items():
+        out[taxi] = [(rec[risk_id], rec['weight'])
+                     for r, rec in dic[taxo].iterrows()]
+    return out
 
 
-def taxonomy_mapping(oqparam, taxonomies, countries=()):
+# tested in TaxonomyMappingTestCase
+def taxonomy_mapping(oqparam, taxdic, countries=()):
     """
     :param oqparam: OqParam instance
-    :param taxonomies: array of unique taxonomies as strings
+    :param taxdic: dictionary taxi (integer) -> taxo (string)
     :param countries: array of country codes (possibly empty)
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
     if oqparam.aristotle:
         cs = [code2country.get(code, code) for code in countries]
-        logging.info('Reading the taxonomy mapping for %s', cs)
-        lst = aristotle_tmap(oqparam.inputs['exposure'][0], taxonomies, set(countries))
-        return {lt: lst for lt in oqparam.loss_types}
+        logging.warning('Reading the taxonomy mapping for %s', cs)
+        if oqparam.countries:
+            # filter down to countries with the same tmap
+            countries = set(countries) & set(oqparam.countries)
+        else:
+            countries = set(countries)
+        out = aristotle_tmap(oqparam, taxdic, countries)
+        return {lt: out for lt in oqparam.loss_types}
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        lst = [[(taxo, 1)] for taxo in taxonomies]
-        return {lt: lst for lt in oqparam.loss_types}
+        out = {taxi: [(taxo, 1)] for taxi, taxo in taxdic.items()}
+        return {lt: out for lt in oqparam.loss_types}
     fname = oqparam.inputs['taxonomy_mapping']
     if isinstance(fname, str):  # same file for all loss_types
         fname = {lt: fname for lt in oqparam.loss_types}
-    return {lt: _taxonomy_mapping(fname[lt], taxonomies)
+    return {lt: _taxonomy_mapping(fname[lt], taxdic)
             for lt in oqparam.loss_types}
 
 
-def _taxonomy_mapping(filename, taxonomies):
+def _taxonomy_mapping(filename, taxdic):
     try:
         tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
     except Exception as e:
@@ -1175,22 +1180,21 @@ def _taxonomy_mapping(filename, taxonomies):
                             {'taxonomy', 'risk_id', 'weight'})
     # NB: conversion was the old name in the header for engine <= 3.12
     risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
-    dic = dict(list(tmap_df.groupby('taxonomy')))
-    taxonomies = taxonomies[1:]  # strip '?'
-    missing = set(taxonomies) - set(dic)
+    dic = {k: v for k, v in tmap_df.groupby('taxonomy')}
+    missing = set(taxdic.values()) - set(dic)
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping file %s' % (missing, filename))
-    lst = [[("?", 1)]]
-    for taxo in taxonomies:
+    out = {0: [("?", 1)]}
+    for taxi, taxo in taxdic.items():
         recs = dic[taxo]
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-        lst.append([(rec[risk_id], rec['weight'])
-                    for r, rec in recs.iterrows()])
-    return lst
+        out[taxi] = [(rec[risk_id], rec['weight'])
+                     for r, rec in recs.iterrows()]
+    return out
 
 
 def get_pmap_from_csv(oqparam, fnames):

@@ -48,7 +48,7 @@ from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
@@ -113,6 +113,9 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'strike': 'Strike',
     'maximum_distance': 'Maximum distance',
     'trt': 'Tectonic region type',
+    'truncation_level': 'Truncation level',
+    'number_of_ground_motion_fields': 'Number of ground motion fields',
+    'asset_hazard_distance': 'Asset hazard distance',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -689,53 +692,27 @@ def aristotle_get_rupture_data(request):
 def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
-    try:
-        lon = valid.longitude(request.POST.get('lon'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lon']] = str(exc)
-        invalid_inputs.append('lon')
-    try:
-        lat = valid.latitude(request.POST.get('lat'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lat']] = str(exc)
-        invalid_inputs.append('lat')
-    try:
-        dep = valid.positivefloat(request.POST.get('dep'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dep']] = str(exc)
-        invalid_inputs.append('dep')
-    try:
-        mag = valid.positivefloat(request.POST.get('mag'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['mag']] = str(exc)
-        invalid_inputs.append('mag')
-    try:
-        rake = valid.positivefloat(request.POST.get('rake'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['rake']] = str(exc)
-        invalid_inputs.append('rake')
-    try:
-        dip = valid.positivefloat(request.POST.get('dip'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dip']] = str(exc)
-        invalid_inputs.append('dip')
-    try:
-        strike = valid.positivefloat(request.POST.get('strike'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['strike']] = str(exc)
-        invalid_inputs.append('strike')
-    try:
-        maximum_distance = valid.positivefloat(
-            request.POST.get('maximum_distance'))
-    except Exception as exc:
-        validation_errs[
-            ARISTOTLE_FORM_PLACEHOLDERS['maximum_distance']] = str(exc)
-        invalid_inputs.append('maximum_distance')
-    try:
-        trt = request.POST.get('trt')
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['trt']] = str(exc)
-        invalid_inputs.append('trt')
+    field_validation = {
+        'lon': valid.longitude,
+        'lat': valid.latitude,
+        'dep': valid.positivefloat,
+        'mag': valid.positivefloat,
+        'rake': valid.positivefloat,
+        'dip': valid.positivefloat,
+        'strike': valid.positivefloat,
+        'maximum_distance': valid.positivefloat,
+        'trt': valid.utf8,
+        'truncation_level': valid.positivefloat,
+        'number_of_ground_motion_fields': valid.positiveint,
+        'asset_hazard_distance': valid.positivefloat,
+    }
+    params = {}
+    for fieldname, validation_func in field_validation.items():
+        try:
+            params[fieldname] = validation_func(request.POST.get(fieldname))
+        except Exception as exc:
+            validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
+            invalid_inputs.append(fieldname)
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -748,7 +725,7 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt
+    return params.values()
 
 
 @csrf_exempt
@@ -759,31 +736,43 @@ def aristotle_run(request):
     Run an ARISTOTLE calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake,
-        dip, strike, maximum_distance, trt
+        a `django.http.HttpRequest` object containing
+        lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+        truncation_level, number_of_ground_motion_fields,
+        asset_hazard_distance
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt = res
+    (lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+     truncation_level, number_of_ground_motion_fields,
+     asset_hazard_distance) = res
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     rupdic = dict(
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
     inputs = {'exposure': [expo], 'site_model': [smodel],
               'job_ini': '<in-memory>'}
-    # TODO: should we add form fields also for truncation_level,
-    #       number_of_ground_motion_fields and asset_hazard_distance?
     params = dict(calculation_mode='scenario_risk',
                   rupture_dict=str(rupdic),
                   maximum_distance=str(maximum_distance),
                   tectonic_region_type=trt,
-                  truncation_level='3.0',
-                  number_of_ground_motion_fields='10',
-                  asset_hazard_distance='50',
+                  truncation_level=str(truncation_level),
+                  number_of_ground_motion_fields=str(
+                      number_of_ground_motion_fields),
+                  asset_hazard_distance=str(asset_hazard_distance),
                   inputs=inputs)
+    oq = readinput.get_oqparam(params)
+    sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
+    countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
+    tmap_keys = aristotle.get_tmap_keys(expo, countries)
+    allparams = []
+    for key in tmap_keys:
+        params['countries'] = key.replace('_', ' ')
+        allparams.append(params.copy())
     jobctxs = engine.create_jobs(
-        [params], config.distribution.log_level, None,
+        allparams, config.distribution.log_level, None,
         utils.get_user(request), None)
 
     job_id = jobctxs[-1].calc_id
@@ -1216,13 +1205,14 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
             hcurves = 'hcurves.png' in ds['png']
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
-            hmaps = avg_gmf = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1233,7 +1223,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       avg_gmf=avg_gmf, hcurves=hcurves,
+                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
@@ -1324,56 +1314,34 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        warnings=warnings))
 
 
-def get_aggrisk(calc_id):
-    """
-    Converting the aggrisk dataframe into a table like this:
-    weight,gsim,business_interruption,contents,nonstructural,occupants,structural
-    0.75,[BooreAtkinson2008],1805.78,16121.35,30162.66,6880.27,0.0537
-    0.25,[ChiouYoungs2008],2285.55,18170.28,34460.171875,8736.11,0.0674
-    1.0,Weighted Average,1925.72,16633.58,31237.03,7344.23,0.0571
-    """
-    job = logs.dbcmd('get_job', calc_id)
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        gsim_lt = ds['full_lt/gsim_lt']
-        aggrisk = ds.read_df('aggrisk', 'rlz_id')
-        oq = ds['oqparam']
-    loss_types = oq.loss_types
-    header = ['weight', 'gsim'] + loss_types
-    body = []
-    weighted_sum = {}
-    for idx, branch in enumerate(gsim_lt.branches):
-        row = []
-        gsim = branch.gsim
-        weight = branch.weight['default']
-        risk = aggrisk.loc[idx]
-        row.append(weight)
-        row.append(gsim)
-        for loss_id, loss in zip(risk.loss_id, risk.loss):
-            row.append(loss)
-            try:
-                weighted_sum[loss_id] += loss * weight
-            except KeyError:
-                weighted_sum[loss_id] = loss * weight
-        body.append(row)
-    row = [1.0, 'Weighted Average']
-    for loss_id in weighted_sum:
-        row.append(weighted_sum[loss_id])
-    body.append(row)
-    return body, header
-
-
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aristotle(request, calc_id):
-    losses, losses_header = get_aggrisk(calc_id)
-    losses_header = [header.capitalize().replace('_', ' ')
-                     for header in losses_header]
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    warnings = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
+        losses_header = [header.capitalize().replace('_', ' ')
+                         for header in losses.dtype.names]
+        if 'png' in ds:
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
+        else:
+            assets = False
+            avg_gmf = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    # TODO: add warnings from datastore if needed
+    if 'warnings' in ds:
+        ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+        if warnings is None:
+            warnings = ds_warnings
+        else:
+            warnings += '\n' + ds_warnings
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
-                       losses_header=losses_header, warnings=None))
+                       losses_header=losses_header,
+                       avg_gmf=avg_gmf, assets=assets, warnings=warnings))
 
 
 @cross_domain_ajax
@@ -1384,7 +1352,8 @@ def download_aggrisk(request, calc_id):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-    body, header = get_aggrisk(calc_id)
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(
         content_type="text/csv",
@@ -1394,8 +1363,8 @@ def download_aggrisk(request, calc_id):
         },
     )
     writer = csv.writer(response)
-    writer.writerow(header)
-    for row in body:
+    writer.writerow(losses.dtype.names)
+    for row in losses:
         writer.writerow(row)
     return response
 

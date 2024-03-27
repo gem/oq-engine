@@ -856,16 +856,30 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-def read_assets(hdf5file, start, stop):
+# used in aristotle calculations
+def aristotle_read_assets(h5, countries, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
-    group = hdf5file['assets']
+    group = h5['assets']
     dic = {}
+    TAGS = {'ID_0': numpy.array(decode(h5['tagcol/ID_0'][:])),
+            'ID_1': numpy.array(decode(h5['tagcol/ID_1'][:])),
+            'OCCUPANCY': numpy.array(decode(h5['tagcol/OCCUPANCY'][:])),
+            'TAXONOMY': numpy.array(decode(h5['tagcol/taxonomy'][:]))}
     for field in group:
         if field == field.upper():
-            dic[field] = group[field][start:stop]
-    return pandas.DataFrame(dic)
+            dic[field] = arr = group[field][start:stop]
+            if field in TAGS:
+                # go back from indices to strings
+                dic[field] = TAGS[field][arr]
+    df = pandas.DataFrame(dic)
+    if countries:
+        df = df[numpy.isin(df.ID_0, countries)]
+    df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
+                           df.OCCUPANTS_PER_ASSET_NIGHT +
+                           df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
+    return df
 
 
 class Exposure(object):
@@ -909,7 +923,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s, country=None):
+    def read_around(exposure_hdf5, gh3s, countries=()):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -918,13 +932,12 @@ class Exposure(object):
             exp = f['exposure']
             sbg = f['assets/slice_by_gh3'][:]
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
-            assets_df = pandas.concat(read_assets(f, start, stop)
-                                      for gh3, start, stop in slices)
-            if country:
-                countries = decode(f['tagcol/ID_0'][1:])
-                idx = countries.index(country)
-                assets_df = assets_df[assets_df.ID_0 == idx]
-            exp.tagcol = f['tagcol']
+            assets_df = pandas.concat(
+                aristotle_read_assets(f, countries, start, stop)
+                for gh3, start, stop in slices)
+            tagcol = f['tagcol']
+            # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
+            exp.tagcol = TagCollection(tagcol.tagnames)
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:
@@ -932,7 +945,7 @@ class Exposure(object):
         for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
         adf = assets_df.rename(columns=rename)
-        exp.build_mesh(adf, update_tagcol=False)
+        exp.build_mesh(adf)
         return exp
 
     @staticmethod
@@ -988,7 +1001,7 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def build_mesh(self, assets_df, update_tagcol=True):
+    def build_mesh(self, assets_df):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
@@ -1007,7 +1020,7 @@ class Exposure(object):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
-            elif name in self.tagcol.tagnames and update_tagcol:
+            elif name in self.tagcol.tagnames:
                 assets_df[name] = self.tagcol.get_tagi(name, assets_df)
 
         assets_df.sort_values(['lon', 'lat'], inplace=True)

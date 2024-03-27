@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import io
 import os
 import sys
 import abc
@@ -30,9 +31,11 @@ from shapely import wkt
 import psutil
 import numpy
 import pandas
+from PIL import Image
 
-from openquake.baselib import general, hdf5
-from openquake.baselib import performance, parallel, python3compat
+from openquake.commands.plot_assets import main as plot_assets
+from openquake.baselib import general, hdf5, python3compat
+from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -689,10 +692,9 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        (self.sitecol,
-         self.assetcol,
-         discarded) = readinput.get_sitecol_assetcol(
-            oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+        self.sitecol, self.assetcol, discarded = \
+            readinput.get_sitecol_assetcol(
+                oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
         if len(discarded):
@@ -785,6 +787,16 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
 
+    def _plot_assets(self):
+        if os.environ.get('OQ_APPLICATION_MODE'):
+            plt = plot_assets(self.datastore.calc_id, show=False,
+                              assets_only=True)
+            bio = io.BytesIO()
+            plt.savefig(bio, format='png', bbox_inches='tight')
+            fig_path = 'png/assets.png'
+            logging.info(f'Saving {fig_path} into the datastore')
+            self.datastore[fig_path] = Image.open(bio)
+
     def _read_risk_data(self):
         # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
@@ -871,7 +883,11 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            taxs = self.assetcol.tagcol.taxonomy
+            # the decode below is used in aristotle calculations
+            taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
+            uniq = numpy.unique(self.assetcol['taxonomy'])
+            taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
+                      if taxi in uniq}
             if 'ID_0' in self.assetcol.array.dtype.names:
                 # in qa_tests_data/scenario_risk/scenario_risk/conditioned
                 allcountries = numpy.array(self.assetcol.tagcol.ID_0)
@@ -879,15 +895,17 @@ class HazardCalculator(BaseCalculator):
                 countries = allcountries[id0s]
             else:
                 countries = ()
-            tmap = readinput.taxonomy_mapping(self.oqparam, taxs, countries)
+            tmap = readinput.taxonomy_mapping(oq, taxdic, countries)
             self.crmodel.set_tmap(tmap)
+
             taxonomies = set()
             for ln in oq.loss_types:
-                for items in self.crmodel.tmap[ln]:
-                    for taxo, weight in items:
+                for values in self.crmodel.tmap[ln].values():
+                    for taxo, weight in values:
                         if taxo != '?':
                             taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
+            # (exercised in test_missing_taxonomy)
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
                 raise RuntimeError(
@@ -961,6 +979,7 @@ class HazardCalculator(BaseCalculator):
             save_agg_values(
                 self.datastore, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
+            self._plot_assets()
 
     def store_rlz_info(self, rel_ruptures):
         """
@@ -1055,8 +1074,9 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
-            self.crmodel.tmap = readinput.taxonomy_mapping(
-                self.oqparam, self.assetcol.tagcol.taxonomy)
+            taxonomies = self.assetcol.tagcol.taxonomy[1:]
+            taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxdic)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
