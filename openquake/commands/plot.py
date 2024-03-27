@@ -22,8 +22,7 @@ import logging
 import shapely
 import numpy
 import pandas
-import fiona
-from shapely.geometry import MultiPolygon, shape
+from shapely.geometry import MultiPolygon
 from scipy.stats import linregress
 from openquake.commonlib import datastore
 from openquake.commonlib.readinput import read_countries_df
@@ -33,7 +32,6 @@ from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
-from openquake.qa_tests_data import global_risk
 from openquake.hmtk.plotting.patch import PolygonPatch
 
 
@@ -116,12 +114,9 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
-def add_borders(ax, shapefile_path):
+def add_borders(ax):
     plt = import_plt()
-    if shapefile_path is None:
-        polys = read_countries_df(buffer=0)['geom']
-    else:
-        polys = [shape(pol['geometry']) for pol in fiona.open(shapefile_path)]
+    polys = read_countries_df(buffer=0)['geom']
     cm = plt.get_cmap('RdBu')
     num_colours = len(polys)
     for idx, poly in enumerate(polys):
@@ -157,7 +152,7 @@ def get_country_iso_codes(calc_id, assetcol):
     return id_0_str
 
 
-def plot_avg_gmf(calc_id, imt, shapefile_path=None):
+def plot_avg_gmf(calc_id, imt):
     [ex] = [Extractor(calc_id)]
     plt = import_plt()
     fig = plt.figure()
@@ -179,7 +174,7 @@ def plot_avg_gmf(calc_id, imt, shapefile_path=None):
     coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
     plt.colorbar(coll)
 
-    ax = add_borders(ax, shapefile_path)
+    ax = add_borders(ax)
 
     minx = avg_gmf['lons'].min()
     maxx = avg_gmf['lons'].max()

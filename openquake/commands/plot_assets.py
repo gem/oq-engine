@@ -25,7 +25,7 @@ from openquake.commands.plot import (
     add_borders, get_assetcol, get_country_iso_codes)
 
 
-def main(calc_id: int = -1, site_model=False, shapefile_path=None,
+def main(calc_id: int = -1, site_model=False,
          save_to=None, *, show=True, assets_only=False):
     """
     Plot the sites and the assets
@@ -68,7 +68,7 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded')
 
-    ax = add_borders(ax, shapefile_path)
+    ax = add_borders(ax)
 
     if region:
         minx, miny, maxx, maxy = region_geom.bounds
@@ -101,7 +101,6 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
 
 main.calc_id = 'a computation id'
 main.site_model = 'plot the site model too'
-main.shapefile_path = 'a shapefile with country/region borders'
 main.save_to = 'save the plot to this filename'
 main.show = 'show the plot'
 main.assets_only = 'display assets only (without sites and discarded)'
