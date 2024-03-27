@@ -48,7 +48,7 @@ from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
@@ -1256,55 +1256,17 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        warnings=warnings))
 
 
-def get_aggrisk(calc_id):
-    """
-    Converting the aggrisk dataframe into a table like this:
-    weight,gsim,business_interruption,contents,nonstructural,occupants,structural
-    0.75,[BooreAtkinson2008],1805.78,16121.35,30162.66,6880.27,0.0537
-    0.25,[ChiouYoungs2008],2285.55,18170.28,34460.171875,8736.11,0.0674
-    1.0,Weighted Average,1925.72,16633.58,31237.03,7344.23,0.0571
-    """
-    job = logs.dbcmd('get_job', calc_id)
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        gsim_lt = ds['full_lt/gsim_lt']
-        aggrisk = ds.read_df('aggrisk', 'rlz_id')
-        oq = ds['oqparam']
-    loss_types = oq.loss_types
-    header = ['weight', 'gsim'] + loss_types
-    body = []
-    weighted_sum = {}
-    for idx, branch in enumerate(gsim_lt.branches):
-        row = []
-        gsim = branch.gsim
-        weight = branch.weight['default']
-        risk = aggrisk.loc[idx]
-        row.append(weight)
-        row.append(gsim)
-        for loss_id, loss in zip(risk.loss_id, risk.loss):
-            row.append(loss)
-            try:
-                weighted_sum[loss_id] += loss * weight
-            except KeyError:
-                weighted_sum[loss_id] = loss * weight
-        body.append(row)
-    row = [1.0, 'Weighted Average']
-    for loss_id in weighted_sum:
-        row.append(weighted_sum[loss_id])
-    body.append(row)
-    return body, header
-
-
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aristotle(request, calc_id):
-    losses, losses_header = get_aggrisk(calc_id)
-    losses_header = [header.capitalize().replace('_', ' ')
-                     for header in losses_header]
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
+        losses_header = [header.capitalize().replace('_', ' ')
+                         for header in losses.dtype.names]
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             assets = 'assets.png' in ds['png']
@@ -1332,7 +1294,8 @@ def download_aggrisk(request, calc_id):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-    body, header = get_aggrisk(calc_id)
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(
         content_type="text/csv",
@@ -1342,8 +1305,8 @@ def download_aggrisk(request, calc_id):
         },
     )
     writer = csv.writer(response)
-    writer.writerow(header)
-    for row in body:
+    writer.writerow(losses.dtype.names)
+    for row in losses:
         writer.writerow(row)
     return response
 
