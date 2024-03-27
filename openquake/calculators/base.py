@@ -829,7 +829,6 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
-            self._plot_assets()
             self.datastore['exposure'] = exposure
             if hasattr(readinput.Global.exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
@@ -847,12 +846,10 @@ class HazardCalculator(BaseCalculator):
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
-                self._plot_assets()
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
-                self._plot_assets()
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
@@ -982,6 +979,7 @@ class HazardCalculator(BaseCalculator):
             save_agg_values(
                 self.datastore, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
+            self._plot_assets()
 
     def store_rlz_info(self, rel_ruptures):
         """
