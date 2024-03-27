@@ -104,6 +104,18 @@
                 </select>
               </div>
               <div class="aristotle_form_row">
+                <label for"truncation_level">{{ aristotle_form_placeholders.truncation_level }}</label>
+                <input class="aristotle-input" type="text" id="truncation_level" name="truncation_level" placeholder="{{ aristotle_form_placeholders.truncation_level }}" value="3"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"number_of_ground_motion_fields">{{ aristotle_form_placeholders.number_of_ground_motion_fields }}</label>
+                <input class="aristotle-input" type="text" id="number_of_ground_motion_fields" name="number_of_ground_motion_fields" placeholder="{{ aristotle_form_placeholders.number_of_ground_motion_fields }}" value="100"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"asset_hazard_distance">{{ aristotle_form_placeholders.asset_hazard_distance }}</label>
+                <input class="aristotle-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ aristotle_form_placeholders.asset_hazard_distance }}" value="15"/>
+              </div>
+              <div class="aristotle_form_row">
                 <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>
                 <!-- <input type="submit"> -->
               </div>

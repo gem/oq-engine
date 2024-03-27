@@ -377,9 +377,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         size = 3 * G * M * N * N * 8  # sig, tau, phi
         logging.info('Storing %s in conditioned/gsim', humansize(size))
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
-            raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}. '
-                             'You must reduce the number of sites i.e. enlarge '
-                             'region_grid_spacing)')
+            raise ValueError(
+                f'The calculation is too large: {G=}, {M=}, {N=}. '
+                'You must reduce the number of sites i.e. enlarge '
+                'region_grid_spacing)')
         mean_covs = computer.get_mean_covs()
         for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
             for g in range(len(cmaker.gsims)):
@@ -751,14 +752,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
-        imts = list(self.oqparam.imtls)
-        for imt in imts:
-            plt = plot_avg_gmf(self.datastore.calc_id, imt)
-            bio = io.BytesIO()
-            plt.savefig(bio, format='png', bbox_inches='tight')
-            fig_path = f'png/avg_gmf-{imt}.png'
-            logging.info(f'Saving {fig_path} into the datastore')
-            self.datastore[fig_path] = Image.open(bio)
+        # make avg_gmf plots only if running via the webui
+        if os.environ.get('OQ_APPLICATION_MODE'):
+            imts = list(self.oqparam.imtls)
+            for imt in imts:
+                plt = plot_avg_gmf(self.datastore.calc_id, imt)
+                bio = io.BytesIO()
+                plt.savefig(bio, format='png', bbox_inches='tight')
+                fig_path = f'png/avg_gmf-{imt}.png'
+                logging.info(f'Saving {fig_path} into the datastore')
+                self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam

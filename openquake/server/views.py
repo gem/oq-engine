@@ -113,6 +113,9 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'strike': 'Strike',
     'maximum_distance': 'Maximum distance',
     'trt': 'Tectonic region type',
+    'truncation_level': 'Truncation level',
+    'number_of_ground_motion_fields': 'Number of ground motion fields',
+    'asset_hazard_distance': 'Asset hazard distance',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -667,53 +670,27 @@ def aristotle_get_rupture_data(request):
 def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
-    try:
-        lon = valid.longitude(request.POST.get('lon'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lon']] = str(exc)
-        invalid_inputs.append('lon')
-    try:
-        lat = valid.latitude(request.POST.get('lat'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lat']] = str(exc)
-        invalid_inputs.append('lat')
-    try:
-        dep = valid.positivefloat(request.POST.get('dep'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dep']] = str(exc)
-        invalid_inputs.append('dep')
-    try:
-        mag = valid.positivefloat(request.POST.get('mag'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['mag']] = str(exc)
-        invalid_inputs.append('mag')
-    try:
-        rake = valid.positivefloat(request.POST.get('rake'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['rake']] = str(exc)
-        invalid_inputs.append('rake')
-    try:
-        dip = valid.positivefloat(request.POST.get('dip'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['dip']] = str(exc)
-        invalid_inputs.append('dip')
-    try:
-        strike = valid.positivefloat(request.POST.get('strike'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['strike']] = str(exc)
-        invalid_inputs.append('strike')
-    try:
-        maximum_distance = valid.positivefloat(
-            request.POST.get('maximum_distance'))
-    except Exception as exc:
-        validation_errs[
-            ARISTOTLE_FORM_PLACEHOLDERS['maximum_distance']] = str(exc)
-        invalid_inputs.append('maximum_distance')
-    try:
-        trt = request.POST.get('trt')
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['trt']] = str(exc)
-        invalid_inputs.append('trt')
+    field_validation = {
+        'lon': valid.longitude,
+        'lat': valid.latitude,
+        'dep': valid.positivefloat,
+        'mag': valid.positivefloat,
+        'rake': valid.positivefloat,
+        'dip': valid.positivefloat,
+        'strike': valid.positivefloat,
+        'maximum_distance': valid.positivefloat,
+        'trt': valid.utf8,
+        'truncation_level': valid.positivefloat,
+        'number_of_ground_motion_fields': valid.positiveint,
+        'asset_hazard_distance': valid.positivefloat,
+    }
+    params = {}
+    for fieldname, validation_func in field_validation.items():
+        try:
+            params[fieldname] = validation_func(request.POST.get(fieldname))
+        except Exception as exc:
+            validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
+            invalid_inputs.append(fieldname)
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -726,7 +703,7 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt
+    return params.values()
 
 
 @csrf_exempt
@@ -737,27 +714,31 @@ def aristotle_run(request):
     Run an ARISTOTLE calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, dep, mag, rake
+        a `django.http.HttpRequest` object containing
+        lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+        truncation_level, number_of_ground_motion_fields,
+        asset_hazard_distance
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt = res
+    (lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+     truncation_level, number_of_ground_motion_fields,
+     asset_hazard_distance) = res
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     rupdic = dict(
         lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
     inputs = {'exposure': [expo], 'site_model': [smodel],
               'job_ini': '<in-memory>'}
-    # TODO: add form fields also for truncation_level,
-    #       number_of_ground_motion_fields and asset_hazard_distance
     params = dict(calculation_mode='scenario_risk',
                   rupture_dict=str(rupdic),
                   maximum_distance=str(maximum_distance),
                   tectonic_region_type=trt,
-                  truncation_level='3.0',
-                  number_of_ground_motion_fields='10',
-                  asset_hazard_distance='50',
+                  truncation_level=str(truncation_level),
+                  number_of_ground_motion_fields=str(
+                      number_of_ground_motion_fields),
+                  asset_hazard_distance=str(asset_hazard_distance),
                   inputs=inputs)
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
@@ -1166,13 +1147,14 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
             hcurves = 'hcurves.png' in ds['png']
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
-            hmaps = avg_gmf = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1183,7 +1165,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       avg_gmf=avg_gmf, hcurves=hcurves,
+                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
@@ -1325,7 +1307,9 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
         else:
+            assets = False
             avg_gmf = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     if 'warnings' in ds:
@@ -1337,7 +1321,7 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
-                       avg_gmf=avg_gmf, warnings=warnings))
+                       avg_gmf=avg_gmf, assets=assets, warnings=warnings))
 
 
 @cross_domain_ajax
