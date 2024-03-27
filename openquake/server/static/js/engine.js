@@ -571,6 +571,7 @@
             });
             $("#aristotle_run_form").submit(function (event) {
                 $('#submit_aristotle_calc').prop('disabled', true);
+                $('#submit_aristotle_calc').text('Processing...');
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
@@ -605,6 +606,7 @@
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aristotle_calc').prop('disabled', false);
+                    $('#submit_aristotle_calc').text('Submit');
                 });
                 event.preventDefault();
             });
