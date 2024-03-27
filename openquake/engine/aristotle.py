@@ -104,11 +104,12 @@ def main(usgs_id, maxdist='300',
             getpass.getuser(), None)
         try:
             engine.run_jobs(jobs)
+            # FIXME: is jobs[0] the right thing to pass to the callback?
         except Exception as exc:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+            callback(jobs[0].calc_id, job_owner_email, outputs_uri, inputs,
                      exc=exc, warnings=warnings)
         else:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+            callback(jobs[0].calc_id, job_owner_email, outputs_uri, inputs,
                      exc=None, warnings=warnings)
 
 
