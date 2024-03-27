@@ -41,8 +41,8 @@ def get_trts_around(lon, lat):
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     with hdf5.File(smodel) as f:
-       df = f.read_df('model_trt_gsim_weight',
-                      sel={'model': mosaic_model.encode()})
+        df = f.read_df('model_trt_gsim_weight',
+                       sel={'model': mosaic_model.encode()})
     return [trt.decode('utf8') for trt in df.trt.unique()]
 
 
