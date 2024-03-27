@@ -96,29 +96,20 @@ def main(usgs_id, maxdist='300',
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(expo, countries)
     logging.root.handlers = []  # avoid breaking the logs
-    [job] = engine.create_jobs(
-        [params], config.distribution.log_level, None, getpass.getuser(), None)
-    try:
-        engine.run_calc(job)
-    except Exception as exc:
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=exc, warnings=warnings)
-    else:
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=None, warnings=warnings)
-||||||| 522ca11642
-    [job] = engine.create_jobs(
-        [params], config.distribution.log_level, None, getpass.getuser(), None)
-    engine.run_calc(job)
-=======
     for key in tmap_keys:
         print('Using taxonomy mapping for %s' % key)
         params['countries'] = key.replace('_', ' ')
         jobs = engine.create_jobs(
             [params], config.distribution.log_level, None,
             getpass.getuser(), None)
-        engine.run_jobs(jobs)
->>>>>>> origin/master
+        try:
+            engine.run_jobs(jobs)
+        except Exception as exc:
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                     exc=exc, warnings=warnings)
+        else:
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                     exc=None, warnings=warnings)
 
 
 main.usgs_id = 'ShakeMap ID'
