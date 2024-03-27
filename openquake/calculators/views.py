@@ -1191,7 +1191,7 @@ def view_calc_risk(token, dstore):
                                 int(oq.asset_correlation))
 
     mon = Monitor()
-    outs = []#ebr.gen_outputs(gmf_df, crmodel, rng, mon)
+    outs = []  # ebr.gen_outputs(gmf_df, crmodel, rng, mon)
     sids = gmf_df.sid.to_numpy()
     assets = assetcol.to_dframe()
     for taxo in assets.taxonomy.unique():
@@ -1209,7 +1209,7 @@ def view_calc_risk(token, dstore):
     alt['agg_keys'] = decode(agg_keys[alt.agg_id])
     del alt['agg_id']
     return alt
-    
+
 
 @view.add('event_loss_table')
 def view_event_loss_table(token, dstore):
@@ -1232,10 +1232,10 @@ def view_event_loss_table(token, dstore):
 @view.add('risk_by_event')
 def view_risk_by_event(token, dstore):
     """There are two possibilities:
-  
+
     $ oq show risk_by_event:<loss_type>
     $ oq show risk_by_event:<event_id>
-    
+
     In both cases displays the top 30 losses of the aggregate loss
     table as a TSV, for all events or only the given event.
     """
@@ -1620,7 +1620,7 @@ def _drate(df, imt, src):
 def _irate(df, imt, src, iml, imls):
     subdf = df[(df.imt == imt) & (df.src_id == src)]
     interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
-                       numpy.log(subdf.value))
+                          numpy.log(subdf.value))
     return numpy.exp(interp)
 
 
@@ -1643,8 +1643,8 @@ def compare_disagg_rates(token, dstore):
             srcs_out.append(src)
             drates.append(_drate(mean_disagg_df, imt, src))
             irates.append(_irate(mean_rates_df, imt, src, iml, imls))
-    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 
-                             'disagg_rate': drates, 
+    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out,
+                             'disagg_rate': drates,
                              'interp_rate': irates}
                             ).sort_values(['imt', 'src'])
 
@@ -1689,4 +1689,5 @@ def view_aggrisk(token, dstore):
         arr[rlz][lt] = loss
         arr[AVG][lt] += loss * ws[rlz]
     arr[AVG]['gsim'] = 'Average'
+    arr[AVG]['weight'] = 1
     return arr
