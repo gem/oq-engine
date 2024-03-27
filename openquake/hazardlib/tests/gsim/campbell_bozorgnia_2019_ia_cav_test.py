@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,14 +32,22 @@ https://journals.sagepub.com/doi/abs/10.1193/090818EQS212M
 
 from openquake.hazardlib.gsim.campbell_bozorgnia_2019_ia_cav import (
     CampbellBozorgnia2019_IA_CAV,
+    CampbellBozorgnia2019_IA_CAV_JapanSite,
+    CampbellBozorgnia2019_IA_CAV_HighQ,
+    CampbellBozorgnia2019_IA_CAV_HighQ_JapanSite,
+    CampbellBozorgnia2019_IA_CAV_LowQ,
+    CampbellBozorgnia2019_IA_CAV_LowQ_JapanSite
 )
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class CampbellBozorgnia2014_IA_CAVTestCase(BaseGSIMTestCase):
+class CampbellBozorgnia2019_IA_CAV_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CampbellBozorgnia2019_IA_CAV
     MEAN_FILE = 'CB19/CB2019_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019_STD_TOTAL.csv'
 
 
     def test_all(self):
@@ -48,6 +56,42 @@ class CampbellBozorgnia2014_IA_CAVTestCase(BaseGSIMTestCase):
                    self.STD_INTER_FILE,
                    self.STD_TOTAL_FILE,
                    max_discrep_percentage=0.1)
+
+class CampbellBozorgnia2019_IA_CAV_JapanSite_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
+    GSIM_CLASS = CampbellBozorgnia2019_IA_CAV_JapanSite
+    MEAN_FILE = 'CB19/CB2019_JAPAN_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019_JAPAN_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019_JAPAN_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019_JAPAN_STD_TOTAL.csv'
+
+class CampbellBozorgnia2019_IA_CAV_HighQ_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
+    GSIM_CLASS = CampbellBozorgnia2019_IA_CAV_HighQ
+    MEAN_FILE = 'CB19/CB2019_HIGHQ_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019_HIGHQ_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019_HIGHQ_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019_HIGHQ_STD_TOTAL.csv'
+
+class CampbellBozorgnia2019_IA_CAV_HighQ_JapanSite_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
+    GSIM_CLASS = CampbellBozorgnia2019_IA_CAV_HighQ_JapanSite
+    MEAN_FILE = 'CB19/CB2019_HIGHQ_JAPAN_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019_HIGHQ_JAPAN_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019_HIGHQ_JAPAN_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019_HIGHQ_JAPAN_STD_TOTAL.csv'
+
+class CampbellBozorgnia2019_IA_CAV_LowQ_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
+    GSIM_CLASS = CampbellBozorgnia2019_IA_CAV_LowQ
+    MEAN_FILE = 'CB19/CB2019_LOWQ_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019_LOWQ_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019_LOWQ_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019_LOWQ_STD_TOTAL.csv'
+
+class CampbellBozorgnia2019_IA_CAV_LowQ_JapanSite_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
+    GSIM_CLASS = CampbellBozorgnia2019_IA_CAV_LowQ_JapanSite
+    MEAN_FILE = 'CB19/CB2019_LOWQ_JAPAN_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019_LOWQ_JAPAN_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019_LOWQ_JAPAN_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019_LOWQ_JAPAN_STD_TOTAL.csv'
+
 
 
 

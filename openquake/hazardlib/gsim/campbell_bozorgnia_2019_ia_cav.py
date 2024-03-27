@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2019-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,12 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`CampbellBozorgnia2014`
-               :class:`CampbellBozorgnia2014HighQ`
-               :class:`CampbellBozorgnia2014LowQ`
-               :class:`CampbellBozorgnia2014JapanSite`
-               :class:`CampbellBozorgnia2014HighQJapanSite`
-               :class:`CampbellBozorgnia2014LowQJapanSite`
+Module exports :class:`CampbellBozorgnia2019`
+               :class:`CampbellBozorgnia2019HighQ`
+               :class:`CampbellBozorgnia2019LowQ`
+               :class:`CampbellBozorgnia2019JapanSite`
+               :class:`CampbellBozorgnia2019HighQJapanSite`
+               :class:`CampbellBozorgnia2019LowQJapanSite`
 """
 import numpy as np
 from numpy import exp, radians, cos
@@ -392,10 +392,10 @@ def _get_rholnpga(C, mag):
 class CampbellBozorgnia2019_IA_CAV(GMPE):
     """
     Implements NGA-West 2 GMPE developed by Kenneth W. Campbell and Yousef
-    Bozorgnia, published as "NGA-West2 Ground Motion Model for the Average
-    Horizontal Components of PGA, PGV, and 5 % Damped Linear Acceleration
-    Response Spectra" (2014, Earthquake Spectra, Volume 30, Number 3,
-    pages 1087 - 1115).
+    Bozorgnia, published as "Ground motion models for the horizontal components
+    of Arias intensity (AI) and cumulative absolute velocity (CAV) using the 
+    NGA-West2 database" (2019, Earthquake Spectra, Volume 35, Number 3,
+    pages 1289-1310).
     """
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -523,10 +523,10 @@ class CampbellBozorgnia2019_IA_CAV(GMPE):
     """)
 
 
-class CampbellBozorgnia2019HighQ(CampbellBozorgnia2019_IA_CAV):
+class CampbellBozorgnia2019_IA_CAV_HighQ(CampbellBozorgnia2019_IA_CAV):
     """
 
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for regions with
+    Implements the Campbell & Bozorgnia (2019) NGA-West2 GMPE for regions with
     low attenuation (high quality factor, Q) (i.e. China, Turkey)
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -538,9 +538,9 @@ class CampbellBozorgnia2019HighQ(CampbellBozorgnia2019_IA_CAV):
     """)
 
 
-class CampbellBozorgnia2019LowQ(CampbellBozorgnia2019_IA_CAV):
+class CampbellBozorgnia2019_IA_CAV_LowQ(CampbellBozorgnia2019_IA_CAV):
     """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for regions with
+    Implements the Campbell & Bozorgnia (2019) NGA-West2 GMPE for regions with
     high attenuation (low quality factor, Q) (i.e. Japan, Italy)
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -552,26 +552,26 @@ class CampbellBozorgnia2019LowQ(CampbellBozorgnia2019_IA_CAV):
     """)
 
 
-class CampbellBozorgnia2019JapanSite(CampbellBozorgnia2019_IA_CAV):
+class CampbellBozorgnia2019_IA_CAV_JapanSite(CampbellBozorgnia2019_IA_CAV):
     """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for the case in
+    Implements the Campbell & Bozorgnia (2019) NGA-West2 GMPE for the case in
     which the "Japan" shallow site response term is activited
     """
     SJ = 1
 
 
-class CampbellBozorgnia2019HighQJapanSite(CampbellBozorgnia2019HighQ):
+class CampbellBozorgnia2019_IA_CAV_HighQ_JapanSite(CampbellBozorgnia2019_IA_CAV_HighQ):
     """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE, for the low
+    Implements the Campbell & Bozorgnia (2019) NGA-West2 GMPE, for the low
     attenuation (high quality factor) coefficients, for the case in which
     the "Japan" shallow site response term is activited
     """
     SJ = 1
 
 
-class CampbellBozorgnia2019LowQJapanSite(CampbellBozorgnia2019LowQ):
+class CampbellBozorgnia2019_IA_CAV_LowQ_JapanSite(CampbellBozorgnia2019_IA_CAV_LowQ):
     """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE, for the high
+    Implements the Campbell & Bozorgnia (2019) NGA-West2 GMPE, for the high
     attenuation (low quality factor) coefficients, for the case in which
     the "Japan" shallow site response term is activited
     """
