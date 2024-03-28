@@ -754,6 +754,7 @@ def aristotle_run(request):
     allparams = []
     for key in tmap_keys:
         params['countries'] = key.replace('_', ' ')
+        params['description'] = f'({lat}, {lon}) M{mag}: {params["countries"]}'
         allparams.append(params.copy())
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None,
