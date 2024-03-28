@@ -47,6 +47,7 @@ from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -741,7 +742,12 @@ def aristotle_run(request):
                   asset_hazard_distance=str(asset_hazard_distance),
                   inputs=inputs)
     oq = readinput.get_oqparam(params)
-    sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+    try:
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+    except SiteAssociationError as exc:
+        response_data = {"status": "failed", "error_msg": str(exc)}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=406)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = aristotle.get_tmap_keys(expo, countries)
