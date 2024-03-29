@@ -49,24 +49,25 @@ def main(calc_id: int = -1, site_model=False,
         pp = PolygonPatch(region_geom, alpha=0.1)
         ax.add_patch(pp)
     ax.grid(True)
+    markersize = 18
     if site_model and 'site_model' in dstore:
         sm = dstore['site_model']
         sm_lons, sm_lats = sm['lon'], sm['lat']
         if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
         p.scatter(sm_lons, sm_lats, marker='.', color='orange',
-                  label='site model')
+                  label='site model', s=markersize)
     # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
     #           color='gray', label='grid')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
-              label='assets')
+              label='assets', s=markersize)
     if not assets_only:
         p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
-                  label='sites')
+                  label='sites', s=markersize)
         if 'discarded' in dstore:
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
-                      label='discarded')
+                      label='discarded', s=markersize)
 
     ax = add_borders(ax)
 
