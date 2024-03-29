@@ -59,16 +59,15 @@ def get_tmap_keys(exposure_hdf5, countries):
 
 
 def trivial_callback(
-        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
+        job_id, job_owner_email, outputs_uri, params, exc=None, warnings=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
-    print('Finished job %d correctly' % job_id)
+    print('Finished job %d correctly. Params: %s' % (job_id, params))
 
 
 def main(usgs_id, maxdist='300',
          job_owner_email=None,
          outputs_uri=None,
-         jobctx=None,
          callback=trivial_callback,
          ):
     """
@@ -104,13 +103,14 @@ def main(usgs_id, maxdist='300',
             getpass.getuser(), None)
         try:
             engine.run_jobs(jobs)
-            # FIXME: is jobs[0] the right thing to pass to the callback?
         except Exception as exc:
-            callback(jobs[0].calc_id, job_owner_email, outputs_uri, inputs,
-                     exc=exc, warnings=warnings)
+            for job in jobs:
+                callback(job.calc_id, job_owner_email, outputs_uri, params,
+                         exc=exc, warnings=warnings)
         else:
-            callback(jobs[0].calc_id, job_owner_email, outputs_uri, inputs,
-                     exc=None, warnings=warnings)
+            for job in jobs:
+                callback(job.calc_id, job_owner_email, outputs_uri, params,
+                         exc=None, warnings=warnings)
 
 
 main.usgs_id = 'ShakeMap ID'
