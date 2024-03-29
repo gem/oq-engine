@@ -105,6 +105,11 @@ else:
                 'registration/password_reset_email_aelo.txt')
             subject_template_name = (
                 'registration/password_reset_subject_aelo.txt')
+        if application_mode == 'ARISTOTLE':
+            email_template_name = (
+                'registration/password_reset_email_aristotle.txt')
+            subject_template_name = (
+                'registration/password_reset_subject_aristotle.txt')
         else:
             email_template_name = (
                 'registration/password_reset_email.txt')
