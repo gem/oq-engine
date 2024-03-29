@@ -573,6 +573,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = {
+                    shakemap_id: $("#shakemap_id").val(),
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     dep: $("#dep").val(),
