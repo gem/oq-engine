@@ -59,7 +59,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around
+from openquake.engine.aristotle import get_trts_around, get_aristotle_allparams
 from openquake.server import utils
 
 from django.conf import settings
@@ -619,7 +619,8 @@ def aelo_callback(
 
 
 def aristotle_callback(
-        job_id, job_owner_email, outputs_uri, params, exc=None, warnings=None):
+        job_ids, params, job_owner_email, outputs_uri_dic, exc=None,
+        warnings=None):
     if not job_owner_email:
         return
     from_email = 'aristotlenoreply@openquake.org'
@@ -630,11 +631,12 @@ def aristotle_callback(
         for warning in warnings:
             body += warning + '\n'
     if exc:
+        job_id = job_ids[0]
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
-        subject = f'Job {job_id} finished correctly'
-        body += (f'Please find the results here:\n{outputs_uri}')
+        subject = f'Job(s) {job_ids} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri_dic}')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
@@ -747,49 +749,28 @@ def aristotle_run(request):
     (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance) = res
-    expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
-    smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
-    rupdic = dict(
-        lon=lon, lat=lat, dep=dep, mag=mag,
-        rake=rake, dip=dip, strike=strike)
-    inputs = {'exposure': [expo], 'site_model': [smodel],
-              'job_ini': '<in-memory>'}
-    params = dict(calculation_mode='scenario_risk',
-                  rupture_dict=str(rupdic),
-                  maximum_distance=str(maximum_distance),
-                  tectonic_region_type=trt,
-                  truncation_level=str(truncation_level),
-                  number_of_ground_motion_fields=str(
-                      number_of_ground_motion_fields),
-                  asset_hazard_distance=str(asset_hazard_distance),
-                  inputs=inputs)
-    oq = readinput.get_oqparam(params)
+
+    warnings = []
     try:
-        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        allparams = get_aristotle_allparams(
+            shakemap_id, lon, lat, dep, mag, rake, dip, strike,
+            maximum_distance, trt, truncation_level,
+            number_of_ground_motion_fields, asset_hazard_distance)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=406)
-    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
-    countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = aristotle.get_tmap_keys(expo, countries)
-    allparams = []
-    for key in tmap_keys:
-        params['countries'] = key.replace('_', ' ')
-        relevant_countries = ', '.join(
-            [country for country in key.split('_') if country in countries])
-        params['description'] = (
-            f'{shakemap_id} ({lat}, {lon}) M{mag} {relevant_countries}')
-        allparams.append(params.copy())
+
+    user = utils.get_user(request)
     jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None,
-        utils.get_user(request), None)
+        allparams, config.distribution.log_level, None, user, None)
 
     response_data = {}
 
     job_owner_email = request.user.email
+    outputs_uri_dic = {}
     for jobctx in jobctxs:
-        job_id = jobctxs.calc_id
+        job_id = jobctx.calc_id
 
         outputs_uri_web = request.build_absolute_uri(
             reverse('outputs_aristotle', args=[job_id]))
@@ -802,6 +783,7 @@ def aristotle_run(request):
         response_data[job_id] = dict(
             status='created', outputs_uri=outputs_uri_api,
             log_uri=log_uri, traceback_uri=traceback_uri)
+        outputs_uri_dic[job_id] = outputs_uri_web  # FIXME: api?
         if not job_owner_email:
             response_data[job_id]['WARNING'] = (
                 'No email address is speficied for your user account,'
@@ -811,9 +793,20 @@ def aristotle_run(request):
                 ' will be accessible at the following link: %s'
                 % (outputs_uri_api, traceback_uri))
 
-    proc = mp.Process(target=engine.run_jobs, args=(jobctxs,
-        job_owner_email, outputs_uri_web, jobctxs, aristotle_callback))
-    proc.start()
+    job_ids = [job.calc_id for job in jobctxs]
+    try:
+        engine.run_jobs(jobctxs)
+    except Exception as exc:
+        # FIXME: we need to notify the error for the single failed job
+        for job in jobctxs:
+            aristotle_callback(
+                [job.calc_id], allparams, job_owner_email, outputs_uri_dic,
+                exc=exc, warnings=warnings)
+    else:
+        # NOTE: notifying the completion of all jobs at once
+        aristotle_callback(
+            job_ids, allparams, job_owner_email, outputs_uri_dic,
+            exc=None, warnings=warnings)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
