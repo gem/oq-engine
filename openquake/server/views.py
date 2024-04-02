@@ -692,6 +692,7 @@ def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
+        'shakemap_id': valid.simple_id,
         'lon': valid.longitude,
         'lat': valid.latitude,
         'dep': valid.positivefloat,
@@ -743,13 +744,14 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+    (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance) = res
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     rupdic = dict(
-        lon=lon, lat=lat, dep=dep, mag=mag, rake=rake, dip=dip, strike=strike)
+        lon=lon, lat=lat, dep=dep, mag=mag,
+        rake=rake, dip=dip, strike=strike)
     inputs = {'exposure': [expo], 'site_model': [smodel],
               'job_ini': '<in-memory>'}
     params = dict(calculation_mode='scenario_risk',
@@ -776,7 +778,8 @@ def aristotle_run(request):
         params['countries'] = key.replace('_', ' ')
         relevant_countries = ', '.join(
             [country for country in key.split('_') if country in countries])
-        params['description'] = f'({lat}, {lon}) M{mag}: {relevant_countries}'
+        params['description'] = (
+            f'{shakemap_id} ({lat}, {lon}) M{mag} {relevant_countries}')
         allparams.append(params.copy())
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None,
@@ -1325,6 +1328,7 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
+    description = job.description
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses = views.view('aggrisk', ds)
@@ -1344,7 +1348,8 @@ def web_engine_get_outputs_aristotle(request, calc_id):
         else:
             warnings += '\n' + ds_warnings
     return render(request, "engine/get_outputs_aristotle.html",
-                  dict(calc_id=calc_id, size_mb=size_mb, losses=losses,
+                  dict(calc_id=calc_id, description=description,
+                       size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        avg_gmf=avg_gmf, assets=assets, warnings=warnings))
 
