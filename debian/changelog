@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Forbidden characters .:; in the branchID
+
   [Michal Kolaj]
   * Fixed a couple bugs in the Canadians GMPEs (can_shm6_inslab) causing wrong
     means

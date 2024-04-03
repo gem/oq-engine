@@ -346,6 +346,21 @@ def reduce_full(full_lt, rlz_clusters):
     return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
 
 
+def check_branchID(branchID, fname):
+    """
+    Forbids invalid characters .:; used in fragmentno
+    """
+    if '.' in branchID:
+        raise InvalidFile('%s: branchID %s contains an invalid "."' %
+                          (fname, branchID))
+    elif ':' in branchID:
+        raise InvalidFile('%s: branchID %s contains an invalid ":"' %
+                          (fname, branchID))
+    if ';' in branchID:
+        raise InvalidFile('%s: branchID %s contains an invalid ";"' %
+                          (fname, branchID))
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
@@ -567,6 +582,7 @@ class SourceModelLogicTree(object):
             raise InvalidFile(
                 msg % (self.filename, bs_id, len(branches), len(BASE183)))
         for brno, branchnode in enumerate(branches):
+            check_branchID(branchnode['branchID'], self.filename)
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
