@@ -758,12 +758,12 @@ def aristotle_run(request):
     (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance) = res
-    readinput.Global.reset()  # reset the cache
     try:
         allparams = get_aristotle_allparams(
             shakemap_id, lon, lat, dep, mag, rake, dip, strike,
             maximum_distance, trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance)
+            number_of_ground_motion_fields, asset_hazard_distance,
+            reset_cache=True)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),

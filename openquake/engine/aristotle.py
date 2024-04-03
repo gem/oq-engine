@@ -68,7 +68,7 @@ def trivial_callback(
 def get_aristotle_allparams(
         usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance):
+        asset_hazard_distance, reset_cache=True):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     # two use cases: 1) only usgs_id is passed;
@@ -95,6 +95,8 @@ def get_aristotle_allparams(
         asset_hazard_distance=str(asset_hazard_distance),
         inputs=inputs)
     oq = readinput.get_oqparam(params)
+    if reset_cache:
+        readinput.Global.reset()  # reset the cache
     sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
@@ -128,7 +130,7 @@ def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
         allparams = get_aristotle_allparams(
             usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance,
             trt, truncation_level, number_of_ground_motion_fields,
-            asset_hazard_distance)
+            asset_hazard_distance, reset_cache=False)
         jobctxs = engine.create_jobs(
             allparams, config.distribution.log_level, None, user, None)
     for job_idx, job in enumerate(jobctxs):
