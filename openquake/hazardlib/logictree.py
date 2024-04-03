@@ -356,7 +356,7 @@ def check_branchID(branchID, fname):
     elif ':' in branchID:
         raise InvalidFile('%s: branchID %s contains an invalid ":"' %
                           (fname, branchID))
-    if ';' in branchID:
+    elif ';' in branchID:
         raise InvalidFile('%s: branchID %s contains an invalid ";"' %
                           (fname, branchID))
 

@@ -113,7 +113,6 @@ class MultiFaultSource(BaseSeismicSource):
             try:
                 return h5[key][:]
             except KeyError:
-                import pdb; pdb.set_trace()
                 raise KeyError(f'{key} not found in {self.hdf5path}')
 
     def set_msparams(self, secparams, close_sec=None, ry0=False,
