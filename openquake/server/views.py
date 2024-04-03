@@ -758,7 +758,7 @@ def aristotle_run(request):
     (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance) = res
-
+    readinput.Global.reset()  # reset the cache
     try:
         allparams = get_aristotle_allparams(
             shakemap_id, lon, lat, dep, mag, rake, dip, strike,
