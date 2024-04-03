@@ -1042,7 +1042,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :returns: (site collection, asset collection, discarded)
     """
     exp = Global.exposure
-    if exp is None or oqparam.countries:  # not read already
+    if exp is None:  # not read already
         exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:

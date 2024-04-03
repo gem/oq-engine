@@ -744,6 +744,7 @@ def aristotle_run(request):
                   asset_hazard_distance=str(asset_hazard_distance),
                   inputs=inputs)
     oq = readinput.get_oqparam(params)
+    readinput.Global.reset()  # reset the cache
     try:
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
     except SiteAssociationError as exc:
@@ -756,10 +757,10 @@ def aristotle_run(request):
     allparams = []
     for key in tmap_keys:
         params['countries'] = key.replace('_', ' ')
-        relevant_countries = ', '.join(
-            [country for country in key.split('_') if country in countries])
+        contries_per_tmap = ', '.join(
+            country for country in key.split('_') if country in countries)
         params['description'] = (
-            f'{shakemap_id} ({lat}, {lon}) M{mag} {relevant_countries}')
+            f'{shakemap_id} ({lat}, {lon}) M{mag} {contries_per_tmap}')
         allparams.append(params.copy())
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None,
