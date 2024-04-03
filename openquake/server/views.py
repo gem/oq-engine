@@ -744,6 +744,7 @@ def aristotle_run(request):
                   asset_hazard_distance=str(asset_hazard_distance),
                   inputs=inputs)
     oq = readinput.get_oqparam(params)
+    readinput.Global.reset()  # reset the cache
     try:
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
     except SiteAssociationError as exc:
