@@ -619,24 +619,33 @@ def aelo_callback(
 
 
 def aristotle_callback(
-        job_ids, params, job_owner_email, outputs_uri_dic, exc=None,
-        warnings=None):
+        job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
     if not job_owner_email:
         return
+
+    params_to_print = ''
+    for key, val in params.items():
+        if key not in ['calculation_mode', 'inputs', 'job_ini',
+                       'hazard_calculation_id']:
+            if key == 'rupture_dict':
+                params_to_print += params[key] + '\n'
+            else:
+                params_to_print += f'{key}: {val}\n'
+
     from_email = 'aristotlenoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aristotlesupport@openquake.org'
-    body = (f"Input parameters: {params}\n\n")
+    body = (f"Input parameters:\n{params_to_print}\n\n")
     if warnings is not None:
         for warning in warnings:
             body += warning + '\n'
     if exc:
-        job_id = job_ids[0]
+        job_id = job_id
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
-        subject = f'Job(s) {job_ids} finished correctly'
-        body += (f'Please find the results here:\n{outputs_uri_dic}')
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
@@ -750,7 +759,6 @@ def aristotle_run(request):
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance) = res
 
-    warnings = []
     try:
         allparams = get_aristotle_allparams(
             shakemap_id, lon, lat, dep, mag, rake, dip, strike,
@@ -765,11 +773,8 @@ def aristotle_run(request):
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None, user, None)
 
-    response_data = {}
-
     job_owner_email = request.user.email
-    outputs_uri_dic = {}
-    for jobctx in jobctxs:
+    for job_idx, jobctx in enumerate(jobctxs):
         job_id = jobctx.calc_id
 
         outputs_uri_web = request.build_absolute_uri(
@@ -780,12 +785,11 @@ def aristotle_run(request):
             reverse('log', args=[job_id, '0', '']))
         traceback_uri = request.build_absolute_uri(
             reverse('traceback', args=[job_id]))
-        response_data[job_id] = dict(
-            status='created', outputs_uri=outputs_uri_api,
+        response_data = dict(
+            status='created', job_id=job_id, outputs_uri=outputs_uri_api,
             log_uri=log_uri, traceback_uri=traceback_uri)
-        outputs_uri_dic[job_id] = outputs_uri_web  # FIXME: api?
         if not job_owner_email:
-            response_data[job_id]['WARNING'] = (
+            response_data['WARNING'] = (
                 'No email address is speficied for your user account,'
                 ' therefore email notifications will be disabled. As soon as'
                 ' the job completes, you can access its outputs at the'
@@ -793,20 +797,16 @@ def aristotle_run(request):
                 ' will be accessible at the following link: %s'
                 % (outputs_uri_api, traceback_uri))
 
-    job_ids = [job.calc_id for job in jobctxs]
-    try:
-        engine.run_jobs(jobctxs)
-    except Exception as exc:
-        # FIXME: we need to notify the error for the single failed job
-        for job in jobctxs:
-            aristotle_callback(
-                [job.calc_id], allparams, job_owner_email, outputs_uri_dic,
-                exc=exc, warnings=warnings)
-    else:
-        # NOTE: notifying the completion of all jobs at once
-        aristotle_callback(
-            job_ids, allparams, job_owner_email, outputs_uri_dic,
-            exc=None, warnings=warnings)
+        # spawn the Aristotle main process
+        proc = mp.Process(
+            target=aristotle.main,
+            args=(
+                shakemap_id, lon, lat, dep, mag, rake, dip, strike,
+                maximum_distance, trt, truncation_level,
+                number_of_ground_motion_fields, asset_hazard_distance,
+                job_owner_email, outputs_uri_web,
+                allparams, [jobctx], aristotle_callback))
+        proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)

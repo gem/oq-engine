@@ -58,10 +58,11 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def trivial_callback(job_ids, params, exc=None):
+def trivial_callback(
+        job_id, params, job_owner_email, outputs_uri, exc=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
-    print('Finished job(s) %d correctly. Params: %s' % (job_ids, params))
+    print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
 def get_aristotle_allparams(
@@ -70,7 +71,9 @@ def get_aristotle_allparams(
         asset_hazard_distance):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
-    if lon is None:  # FIXME: is it a proper check?
+    # two use cases: 1) only usgs_id is passed;
+    #                2) rupdic params are passed (including lon)
+    if lon is None:
         rupdic = get_rupture_dict(usgs_id)
     else:
         rupdic = dict(
@@ -101,10 +104,11 @@ def get_aristotle_allparams(
     for key in tmap_keys:
         print('Using taxonomy mapping for %s' % key)
         params['countries'] = key.replace('_', ' ')
-        relevant_countries = ', '.join(
+        countries_per_tmap = ', '.join(
             [country for country in key.split('_') if country in countries])
         params['description'] = (
-            f'{usgs_id} ({lat}, {lon}) M{mag} {relevant_countries}')
+            f'{usgs_id} ({rupdic["lat"]}, {rupdic["lon"]}) M{rupdic["mag"]}'
+            f' {countries_per_tmap}')
         allparams.append(params.copy())
     return allparams
 
@@ -112,28 +116,30 @@ def get_aristotle_allparams(
 def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
          strike='0', maximum_distance='300', trt=None, truncation_level='3',
          number_of_ground_motion_fields='10', asset_hazard_distance='15',
-         ):
+         job_owner_email=None, outputs_uri=None, allparams=None, jobctxs=None,
+         callback=trivial_callback):
     """
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    user = getpass.getuser()
-    allparams = get_aristotle_allparams(
-        usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
-        truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance)
-    jobs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, user, None)
-    job_ids = [job.calc_id for job in jobs]
-    try:
-        engine.run_jobs(jobs)
-    except Exception as exc:
-        # FIXME: we need to notify the error for the single failed job
-        for job in jobs:
-            trivial_callback(job_ids, allparams, exc=exc)
-    else:
-        # NOTE: notifying the completion of all jobs at once
-        trivial_callback(job_ids, allparams, exc=None)
+    if jobctxs is None:
+        # in  testing mode create a new job context
+        user = getpass.getuser()
+        allparams = get_aristotle_allparams(
+            usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance,
+            trt, truncation_level, number_of_ground_motion_fields,
+            asset_hazard_distance)
+        jobctxs = engine.create_jobs(
+            allparams, config.distribution.log_level, None, user, None)
+    for job_idx, job in enumerate(jobctxs):
+        try:
+            engine.run_jobs([job])
+        except Exception as exc:
+            callback(job.calc_id, allparams[job_idx], job_owner_email,
+                     outputs_uri, exc=exc)
+        else:
+            callback(job.calc_id, allparams[job_idx], job_owner_email,
+                     outputs_uri, exc=None)
 
 
 main.usgs_id = 'ShakeMap ID'
