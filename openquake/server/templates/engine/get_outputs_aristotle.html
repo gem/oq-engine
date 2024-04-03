@@ -66,9 +66,9 @@
             <td {% if forloop.counter == 2 %}style="border-right: 2px solid black; text-align: left;"{% else %}style="text-align: right;"{% endif %}>
               {% if item|stringformat:"s"|floatformat %}
                 {% if forloop.counter == 2 %}
-                {{ item|stringformat:"s"|floatformat:"6" }}
+                {{ item|floatformat:"6" }}
                 {% else %}
-                {{ item|stringformat:"s"|floatformat:"0g" }}
+                {{ item|floatformat:"0g" }}
                 {% endif %}
               {% else %}
                 {{ item|stringformat:"s" }}
