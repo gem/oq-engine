@@ -226,6 +226,17 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 if not os.environ.get('OQ_APPLICATION_MODE'):
     os.environ['OQ_APPLICATION_MODE'] = APPLICATION_MODE
 
+if APPLICATION_MODE.upper() in ('TOOLS_ONLY',):
+    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'cookie_consent',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
+    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.append('django.template.context_processors.request')
+    COOKIE_CONSENT_NAME = "cookie_consent"
+    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
+    COOKIE_CONSENT_LOG_ENABLED = False
+
 if TEST and APPLICATION_MODE.upper() in ('AELO', 'ARISTOTLE'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.

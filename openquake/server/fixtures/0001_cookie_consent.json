@@ -1,0 +1,64 @@
+[
+{
+    "model": "cookie_consent.cookiegroup",
+    "pk": 2,
+    "fields": {
+        "varname": "social",
+        "name": "Social media",
+        "description": "Used to collect anonymous statistics.",
+        "is_required": false,
+        "is_deletable": true,
+        "ordering": 0,
+        "created": "2022-03-17T14:29:13.596Z"
+    }
+},
+{
+    "model": "cookie_consent.cookiegroup",
+    "pk": 3,
+    "fields": {
+        "varname": "required",
+        "name": "Required cookies",
+        "description": "These cookies are necessary for the website to function properly.",
+        "is_required": true,
+        "is_deletable": true,
+        "ordering": 0,
+        "created": "2022-03-17T15:04:22.896Z"
+    }
+},
+{
+    "model": "cookie_consent.cookie",
+    "pk": 2,
+    "fields": {
+        "cookiegroup": 2,
+        "name": "*",
+        "description": "",
+        "path": "/",
+        "domain": ".google.com",
+        "created": "2022-03-17T15:03:38.616Z"
+    }
+},
+{
+    "model": "cookie_consent.cookie",
+    "pk": 3,
+    "fields": {
+        "cookiegroup": 3,
+        "name": "csrftoken",
+        "description": "",
+        "path": "/",
+        "domain": "",
+        "created": "2022-03-17T15:05:07.063Z"
+    }
+},
+{
+    "model": "cookie_consent.cookie",
+    "pk": 4,
+    "fields": {
+        "cookiegroup": 3,
+        "name": "sessionid",
+        "description": "",
+        "path": "/",
+        "domain": "",
+        "created": "2022-03-17T15:05:21.282Z"
+    }
+}
+]

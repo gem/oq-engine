@@ -59,6 +59,7 @@ if settings.APPLICATION_MODE.upper() == 'TOOLS_ONLY':
             re_path(r'^$', RedirectView.as_view(
                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
+            path("cookies/", include("cookie_consent.urls")),
         ]
 else:
     urlpatterns += [
