@@ -225,10 +225,10 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 if not os.environ.get('OQ_APPLICATION_MODE'):
     os.environ['OQ_APPLICATION_MODE'] = APPLICATION_MODE
 
-if APPLICATION_MODE not in APPLICATION_MODES:
+if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
     raise ValueError(
-        f'Invalid APPLICATION_MODE: "{APPLICATION_MODE}". It must be'
-        f'one of {APPLICATION_MODES}')
+        f'Invalid application mode: "{APPLICATION_MODE}". It must be'
+        f' one of {APPLICATION_MODES}')
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
