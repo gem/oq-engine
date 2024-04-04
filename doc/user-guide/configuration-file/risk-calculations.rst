@@ -500,11 +500,6 @@ After the calculation is completed, a message similar to the following will be d
 All of the different ways of running a scenario damage calculation as illustrated through the examples of the previous 
 section are also applicable to the scenario risk calculator, though the examples are not repeated here.
 
-A few additional parameters related to the event based risk calculator that may be useful for controlling specific 
-aspects of the calculation are listed below:
-
-- ``ignore_covs``: this parameter controls the propagation of vulnerability uncertainty to losses. The vulnerability functions using continuous distributions (such as the lognormal distribution or beta distribution) to characterize the uncertainty in the loss ratio conditional on the shaking intensity level, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels. They are used to build the so called *Epsilon* matrix within the engine, which is how loss ratios are sampled from the distribution for each asset. There is clearly a performance penalty associated with the propagation of uncertainty in the vulnerability to losses. The *Epsilon* matrix has to be computed and stored, and then the worker processes have to read it, which involves large quantities of data transfer and memory usage. Setting ``ignore_covs = true`` in the job file will result in the engine using just the mean loss ratio conditioned on the shaking intensity and ignoring the uncertainty. This tradeoff of not propagating the vulnerabilty uncertainty to the loss estimates can lead to a significant boost in performance and tractability. The default value of ``ignore_covs`` is ``false``.
-
 .. _classical-psd-calculator:
 
 *************************************************
