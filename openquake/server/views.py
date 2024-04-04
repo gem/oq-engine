@@ -700,6 +700,45 @@ def aristotle_get_rupture_data(request):
                         status=200)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_get_trts(request):
+    """
+    Retrieve tectonic region types given geographic coordinates
+
+    :param request:
+        a `django.http.HttpRequest` object containing lat and lon
+    """
+    # TODO: add validation
+    validation_errs = {}
+    invalid_inputs = []
+    try:
+        lon = valid.longitude(request.POST.get('lon'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lon']] = str(exc)
+        invalid_inputs.append('lon')
+    try:
+        lat = valid.latitude(request.POST.get('lat'))
+    except Exception as exc:
+        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lat']] = str(exc)
+        invalid_inputs.append('lat')
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+    trts = get_trts_around(lon, lat)
+    return HttpResponse(content=json.dumps(trts), content_type=JSON,
+                        status=200)
+
+
 def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
