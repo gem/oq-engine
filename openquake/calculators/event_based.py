@@ -67,7 +67,8 @@ rup_dt = numpy.dtype(
 
 
 def rup_weight(rup):
-    return math.ceil(rup['nsites'] / 100)
+    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
+    return math.ceil((rup['nsites'] or 1) / 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
