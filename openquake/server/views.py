@@ -660,25 +660,10 @@ def aristotle_get_rupture_data(request):
     :param request:
         a `django.http.HttpRequest` object containing shakemap_id
     """
-    # TODO: add validation
-    validation_errs = {}
-    invalid_inputs = []
-    try:
-        shakemap_id = valid.simple_id(request.POST.get('shakemap_id'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['shakemap_id']] = str(exc)
-        invalid_inputs.append('shakemap_id')
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    (shakemap_id,) = res
     try:
         rupture_dict = get_rupture_dict(shakemap_id)
     except Exception as exc:
@@ -710,30 +695,10 @@ def aristotle_get_trts(request):
     :param request:
         a `django.http.HttpRequest` object containing lat and lon
     """
-    # TODO: add validation
-    validation_errs = {}
-    invalid_inputs = []
-    try:
-        lon = valid.longitude(request.POST.get('lon'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lon']] = str(exc)
-        invalid_inputs.append('lon')
-    try:
-        lat = valid.latitude(request.POST.get('lat'))
-    except Exception as exc:
-        validation_errs[ARISTOTLE_FORM_PLACEHOLDERS['lat']] = str(exc)
-        invalid_inputs.append('lat')
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat = res
     trts = get_trts_around(lon, lat)
     return HttpResponse(content=json.dumps(trts), content_type=JSON,
                         status=200)
@@ -760,6 +725,8 @@ def aristotle_validate(request):
     }
     params = {}
     for fieldname, validation_func in field_validation.items():
+        if fieldname not in request.POST:
+            continue
         try:
             params[fieldname] = validation_func(request.POST.get(fieldname))
         except Exception as exc:
