@@ -120,7 +120,7 @@ def oq_server_context_processor(request):
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
     context['server_name'] = settings.SERVER_NAME
-    context['tools_only'] = settings.APPLICATION_MODE.upper() == 'TOOLS_ONLY'
+    context['tools_only'] = settings.APPLICATION_MODE == 'TOOLS_ONLY'
     context['announcements'] = announcements
     return context
 

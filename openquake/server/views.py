@@ -1191,7 +1191,7 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    application_mode = settings.APPLICATION_MODE.upper()
+    application_mode = settings.APPLICATION_MODE
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
@@ -1204,7 +1204,7 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    application_mode = settings.APPLICATION_MODE.upper()
+    application_mode = settings.APPLICATION_MODE
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
