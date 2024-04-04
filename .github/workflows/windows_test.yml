@@ -105,7 +105,7 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd D:\a\oq-engine\oq-engine
-          $Env:OQ_APPLICATION_MODE='public'
+          $Env:OQ_APPLICATION_MODE='PUBLIC'
           # -v 2 also logs the test names
           python .\openquake\server\manage.py test -v 2 tests.test_public_mode
 
@@ -117,7 +117,7 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd D:\a\oq-engine\oq-engine
-          $Env:OQ_APPLICATION_MODE='read_only'
+          $Env:OQ_APPLICATION_MODE='READ_ONLY'
           # -v 2 also logs the test names
           python .\openquake\server\manage.py test -v 2 tests.test_read_only_mode
 
