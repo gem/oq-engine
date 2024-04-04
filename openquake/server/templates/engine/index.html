@@ -87,6 +87,14 @@
                 <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}"/>
               </div>
               <div class="aristotle_form_row">
+                <button id="aristotle_get_trts_btn" type="button" class="btn" style="margin-bottom: 5px;">Retrieve tectonic region types</button>
+              </div>
+              <div class="aristotle_form_row">
+                <label for="trt">{{ aristotle_form_placeholders.trt }}</label>
+                <select name="trt" id="trt">
+                </select>
+              </div>
+              <div class="aristotle_form_row">
                 <label for"dip">{{ aristotle_form_placeholders.dip }}</label>
                 <input class="aristotle-input" type="text" id="dip" name="dip" placeholder="{{ aristotle_form_placeholders.dip }}" value="90"/>
               </div>
@@ -97,11 +105,6 @@
               <div class="aristotle_form_row">
                 <label for"maximum_distance">{{ aristotle_form_placeholders.maximum_distance }}</label>
                 <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="300"/>
-              </div>
-              <div class="aristotle_form_row">
-                <label for="trt">{{ aristotle_form_placeholders.trt }}</label>
-                <select name="trt" id="trt">
-                </select>
               </div>
               <div class="aristotle_form_row">
                 <label for"truncation_level">{{ aristotle_form_placeholders.truncation_level }}</label>
