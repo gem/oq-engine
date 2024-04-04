@@ -68,7 +68,7 @@ def trivial_callback(
 def get_aristotle_allparams(
         usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, reset_cache=True):
+        asset_hazard_distance, ses_seed, reset_cache=True):
     smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     # two use cases: 1) only usgs_id is passed;
@@ -93,6 +93,7 @@ def get_aristotle_allparams(
         truncation_level=str(truncation_level),
         number_of_ground_motion_fields=str(number_of_ground_motion_fields),
         asset_hazard_distance=str(asset_hazard_distance),
+        ses_seed=str(ses_seed),
         inputs=inputs)
     oq = readinput.get_oqparam(params)
     if reset_cache:
@@ -118,7 +119,8 @@ def get_aristotle_allparams(
 def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
          strike='0', maximum_distance='300', trt=None, truncation_level='3',
          number_of_ground_motion_fields='10', asset_hazard_distance='15',
-         job_owner_email=None, outputs_uri=None, allparams=None, jobctxs=None,
+         ses_seed='42', job_owner_email=None, outputs_uri=None, allparams=None,
+         jobctxs=None,
          callback=trivial_callback):
     """
     This script is meant to be called from the WebUI in production mode,
@@ -130,7 +132,7 @@ def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
         allparams = get_aristotle_allparams(
             usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance,
             trt, truncation_level, number_of_ground_motion_fields,
-            asset_hazard_distance, reset_cache=False)
+            asset_hazard_distance, ses_seed, reset_cache=False)
         jobctxs = engine.create_jobs(
             allparams, config.distribution.log_level, None, user, None)
     for job_idx, job in enumerate(jobctxs):
@@ -157,6 +159,7 @@ main.trt = 'Tectonic region type'
 main.truncation_level = 'Truncation level'
 main.number_of_ground_motion_fields = 'Number of ground motion fields'
 main.asset_hazard_distance = 'Asset hazard distance'
+main.ses_seed = 'SES seed'
 
 if __name__ == '__main__':
     sap.run(main)

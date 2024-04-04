@@ -585,7 +585,8 @@
                     trt: $('#trt').val(),
                     truncation_level: $('#truncation_level').val(),
                     number_of_ground_motion_fields: $('#number_of_ground_motion_fields').val(),
-                    asset_hazard_distance: $('#asset_hazard_distance').val()
+                    asset_hazard_distance: $('#asset_hazard_distance').val(),
+                    ses_seed: $('#ses_seed').val()
                 };
                 $.ajax({
                     type: "POST",

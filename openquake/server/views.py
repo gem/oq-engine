@@ -117,6 +117,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'truncation_level': 'Truncation level',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance',
+    'ses_seed': 'SES seed',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -716,6 +717,7 @@ def aristotle_validate(request):
         'truncation_level': valid.positivefloat,
         'number_of_ground_motion_fields': valid.positiveint,
         'asset_hazard_distance': valid.positivefloat,
+        'ses_seed': valid.positiveint,
     }
     params = {}
     for fieldname, validation_func in field_validation.items():
@@ -750,19 +752,19 @@ def aristotle_run(request):
         a `django.http.HttpRequest` object containing
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance
+        asset_hazard_distance, ses_seed
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance) = res
+     asset_hazard_distance, ses_seed) = res
     try:
         allparams = get_aristotle_allparams(
             shakemap_id, lon, lat, dep, mag, rake, dip, strike,
             maximum_distance, trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance,
+            number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
             reset_cache=True)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
@@ -804,7 +806,7 @@ def aristotle_run(request):
                 shakemap_id, lon, lat, dep, mag, rake, dip, strike,
                 maximum_distance, trt, truncation_level,
                 number_of_ground_motion_fields, asset_hazard_distance,
-                job_owner_email, outputs_uri_web,
+                ses_seed, job_owner_email, outputs_uri_web,
                 allparams, [jobctx], aristotle_callback))
         proc.start()
 
