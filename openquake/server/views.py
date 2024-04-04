@@ -59,7 +59,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around
+from openquake.engine.aristotle import get_trts_around, get_aristotle_allparams
 from openquake.server import utils
 
 from django.conf import settings
@@ -117,6 +117,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'truncation_level': 'Truncation level',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance',
+    'ses_seed': 'SES seed',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -618,6 +619,37 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+def aristotle_callback(
+        job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
+    if not job_owner_email:
+        return
+
+    params_to_print = ''
+    for key, val in params.items():
+        if key not in ['calculation_mode', 'inputs', 'job_ini',
+                       'hazard_calculation_id']:
+            if key == 'rupture_dict':
+                params_to_print += params[key] + '\n'
+            else:
+                params_to_print += f'{key}: {val}\n'
+
+    from_email = 'aristotlenoreply@openquake.org'
+    to = [job_owner_email]
+    reply_to = 'aristotlesupport@openquake.org'
+    body = (f"Input parameters:\n{params_to_print}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
+    if exc:
+        job_id = job_id
+        subject = f'Job {job_id} failed'
+        body += f'There was an error running job {job_id}:\n{exc}'
+    else:
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -685,6 +717,7 @@ def aristotle_validate(request):
         'truncation_level': valid.positivefloat,
         'number_of_ground_motion_fields': valid.positiveint,
         'asset_hazard_distance': valid.positivefloat,
+        'ses_seed': valid.positiveint,
     }
     params = {}
     for fieldname, validation_func in field_validation.items():
@@ -719,71 +752,68 @@ def aristotle_run(request):
         a `django.http.HttpRequest` object containing
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance
+        asset_hazard_distance, ses_seed
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance) = res
-    expo = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
-    smodel = os.path.join(config.directory.mosaic_dir, 'site_model.hdf5')
-    rupdic = dict(
-        lon=lon, lat=lat, dep=dep, mag=mag,
-        rake=rake, dip=dip, strike=strike)
-    inputs = {'exposure': [expo], 'site_model': [smodel],
-              'job_ini': '<in-memory>'}
-    params = dict(calculation_mode='scenario_risk',
-                  rupture_dict=str(rupdic),
-                  maximum_distance=str(maximum_distance),
-                  tectonic_region_type=trt,
-                  truncation_level=str(truncation_level),
-                  number_of_ground_motion_fields=str(
-                      number_of_ground_motion_fields),
-                  asset_hazard_distance=str(asset_hazard_distance),
-                  inputs=inputs)
-    oq = readinput.get_oqparam(params)
-    readinput.Global.reset()  # reset the cache
+     asset_hazard_distance, ses_seed) = res
     try:
-        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        allparams = get_aristotle_allparams(
+            shakemap_id, lon, lat, dep, mag, rake, dip, strike,
+            maximum_distance, trt, truncation_level,
+            number_of_ground_motion_fields, asset_hazard_distance, ses_seed)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=406)
-    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
-    countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = aristotle.get_tmap_keys(expo, countries)
-    allparams = []
-    for key in tmap_keys:
-        params['countries'] = key.replace('_', ' ')
-        contries_per_tmap = ', '.join(
-            country for country in key.split('_') if country in countries)
-        params['description'] = (
-            f'{shakemap_id} ({lat}, {lon}) M{mag} {contries_per_tmap}')
-        allparams.append(params.copy())
-    jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None,
-        utils.get_user(request), None)
-    proc = mp.Process(target=engine.run_jobs, args=(jobctxs,))
-    proc.start()
 
-    response_data = dict(status='created', job_id=jobctxs[-1].calc_id)
+    user = utils.get_user(request)
+    jobctxs = engine.create_jobs(
+        allparams, config.distribution.log_level, None, user, None)
+
+    job_owner_email = request.user.email
+    for job_idx, jobctx in enumerate(jobctxs):
+        job_id = jobctx.calc_id
+
+        outputs_uri_web = request.build_absolute_uri(
+            reverse('outputs_aristotle', args=[job_id]))
+        outputs_uri_api = request.build_absolute_uri(
+            reverse('results', args=[job_id]))
+        log_uri = request.build_absolute_uri(
+            reverse('log', args=[job_id, '0', '']))
+        traceback_uri = request.build_absolute_uri(
+            reverse('traceback', args=[job_id]))
+        response_data = dict(
+            status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+            log_uri=log_uri, traceback_uri=traceback_uri)
+        if not job_owner_email:
+            response_data['WARNING'] = (
+                'No email address is speficied for your user account,'
+                ' therefore email notifications will be disabled. As soon as'
+                ' the job completes, you can access its outputs at the'
+                ' following link: %s. If the job fails, the error traceback'
+                ' will be accessible at the following link: %s'
+                % (outputs_uri_api, traceback_uri))
+
+        # spawn the Aristotle main process
+        proc = mp.Process(
+            target=aristotle.main,
+            args=(
+                shakemap_id, lon, lat, dep, mag, rake, dip, strike,
+                maximum_distance, trt, truncation_level,
+                number_of_ground_motion_fields, asset_hazard_distance,
+                ses_seed, job_owner_email, outputs_uri_web,
+                allparams, [jobctx], aristotle_callback))
+        proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def aelo_run(request):
-    """
-    Run an AELO calculation.
-
-    :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
-    """
+def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
     try:
@@ -821,6 +851,23 @@ def aelo_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    return lon, lat, vs30, siteid
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aelo_run(request):
+    """
+    Run an AELO calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+    """
+    res = aelo_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat, vs30, siteid = res
 
     # build a LogContext object associated to a database job
     try:

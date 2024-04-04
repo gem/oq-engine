@@ -63,9 +63,13 @@
       {% for row in losses %}
         <tr {% if forloop.last %}style="border-top: 2px solid black;"{% endif%}>
           {% for item in row %}
-            <td {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>
+            <td {% if forloop.counter == 2 %}style="border-right: 2px solid black; text-align: left;"{% else %}style="text-align: right;"{% endif %}>
               {% if item|stringformat:"s"|floatformat %}
-                {{ item|stringformat:"s"|floatformat:"2" }}
+                {% if forloop.counter == 2 %}
+                {{ item|floatformat:"6" }}
+                {% else %}
+                {{ item|floatformat:"2g" }}
+                {% endif %}
               {% else %}
                 {{ item|stringformat:"s" }}
               {% endif %}
