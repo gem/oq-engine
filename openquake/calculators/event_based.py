@@ -67,7 +67,8 @@ rup_dt = numpy.dtype(
 
 
 def rup_weight(rup):
-    return math.ceil(rup['nsites'] / 100)
+    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
+    return math.ceil((rup['nsites'] or 1) / 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -339,6 +340,14 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
+    try:
+        vs30 = sitecol.vs30
+    except ValueError:  # in scenario test_case_14
+        pass
+    else:
+        if numpy.isnan(vs30).any():
+            raise ValueError('The vs30 is NaN, missing site model '
+                             'or site parameter')
     set_mags(oq, dstore)
     rups = dstore['ruptures'][:]
     logging.info('Reading {:_d} ruptures'.format(len(rups)))
