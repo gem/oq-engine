@@ -788,7 +788,7 @@ class HazardCalculator(BaseCalculator):
                                      'gzip', **attrs)
 
     def _plot_assets(self):
-        if os.environ.get('OQ_APPLICATION_MODE'):
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             plt = plot_assets(self.datastore.calc_id, show=False,
                               assets_only=True)
             bio = io.BytesIO()

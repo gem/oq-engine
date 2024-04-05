@@ -762,7 +762,7 @@ class EventBasedCalculator(base.HazardCalculator):
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
-        if os.environ.get('OQ_APPLICATION_MODE'):
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             imts = list(self.oqparam.imtls)
             for imt in imts:
                 plt = plot_avg_gmf(self.datastore.calc_id, imt)
