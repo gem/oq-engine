@@ -97,6 +97,37 @@ def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
     return eid_sid_rlz
 
 
+def calc_gmf_simplified(ebrupture, sitecol, cmaker):
+    """
+    A simplified version of the GmfComputer for event based calculations.
+    Used only for pedagogical purposes.
+    """
+    N = len(sitecol)
+    M = len(cmaker.imtls)
+    [ctx] = cmaker.get_ctx_iter([ebrupture.rupture], sitecol)
+    mean, sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
+    rlzs = numpy.concatenate(list(cmaker.gsims.values()))
+    eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
+    rng = numpy.random.default_rng(ebrupture.seed)
+    cross_correl = NoCrossCorrelation(cmaker.truncation_level)
+    ccdist = cross_correl.distribution
+    gmfs = []
+    for g, (gs, rlzs) in enumerate(cmaker.gsims.items()):
+        idxs, = numpy.where(numpy.isin(rlz, rlzs))
+        E = len(idxs)
+        # build arrays of random numbers of shape (M, N, E) and (M, E)
+        intra_eps = [ccdist.rvs((N, E), rng) for _ in range(M)]
+        eps = numpy.zeros((E, M), F32)
+        eps[idxs] = cross_correl.get_inter_eps(cmaker.imtls, E, rng).T
+        gmf = numpy.zeros((M, N, E))
+        for m, imt in enumerate(cmaker.imtls):
+            intra_res = phi[g, m, :, None] * intra_eps  # shape (N, E)
+            inter_res = tau[g, m, :, None] * eps[idxs, m]  # shape (N, E)
+            gmf[m] = numpy.exp(mean[g, m, :, None] + intra_res + inter_res)
+        gmfs.append(gmf)
+    return numpy.concatenate(gmfs)  # shape (M, N, E)
+
+
 class GmfComputer(object):
     """
     Given an earthquake rupture, the GmfComputer computes
