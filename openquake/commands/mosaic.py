@@ -30,7 +30,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
-from openquake.engine.aristotle import get_trts_around
+from openquake.engine.aristotle import main as aristotle_main
 from openquake.engine.aelo import get_params_from
 from openquake.hazardlib.geo.utils import geolocate
 
@@ -277,6 +277,12 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
+def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
+    if exc:
+        logging.error(str(exc), exc_info=True)
+
+
+
 def aristotle(mosaic_dir='', rupfname=FAMOUS):
     """
     Run Aristotle calculations starting from a file with planar
@@ -286,28 +292,28 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     """
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
-    mosaic_dir = mosaic_dir or config.directory.mosaic_dir
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
+    trt = None
+    dip = 90
+    strike = 0
+    maximum_distance = 300
+    truncation_level = 3
+    number_of_ground_motion_fields = 10
+    asset_hazard_distance = 15
+    ses_seed = 42
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
         usgs_id = rupdic['rupture_usgs_id']
-        logging.warning('Processing %s', usgs_id)
-        trts = get_trts_around(rupdic['lon'], rupdic['lat'])
-        rupdic = str(rupdic)
-        inputs = {'exposure': [expo], 'site_model': [smodel],
-                  'job_ini': '<in-memory>'}
-        dic = dict(calculation_mode='scenario_risk',
-                   description=usgs_id, rupture_dict=rupdic,
-                   maximum_distance='200', number_of_ground_motion_fields='100',
-                   tectonic_region_type=trts[0], inputs=inputs)
-        logging.root.handlers = []  # avoid breaking the logs
-        jobs = engine.create_jobs([dic], config.distribution.log_level,
-                                  None, getpass.getuser(), None)
-        try:
-            engine.run_jobs(jobs)
-        except:
-            pass
+        aristotle_main(usgs_id,
+                       rupdic['lon'],
+                       rupdic['lat'],
+                       rupdic['dep'],
+                       rupdic['mag'],
+                       rupdic['rake'],
+                       dip, strike, maximum_distance, trt,
+                       truncation_level, number_of_ground_motion_fields,
+                       asset_hazard_distance, ses_seed,
+                       callback=callback)
+
 
 aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
 aristotle.rupfname = 'Filename with planar ruptures'
