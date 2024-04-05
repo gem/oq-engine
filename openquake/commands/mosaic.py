@@ -47,6 +47,7 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
+
 def fix(asce, siteid):
     dic = json.loads(asce.decode('ascii'))
     dic = {k: v if isinstance(v, str) else round(v, 2)
@@ -107,7 +108,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    sites_df['model']= geolocate(lonlats, mosaic_df)
+    sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
     for model, df in sites_df.groupby('model'):
@@ -150,7 +151,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
-    print('Total time: %.1f minutes' % dt) 
+    print('Total time: %.1f minutes' % dt)
     if not a07dics or not a41dics:
         # serious problem to debug
         breakpoint()
@@ -207,7 +208,8 @@ MIN_DIST = 0.
 
 
 def build_params(model, trunclevel, mindist, extreme_gmv, gmf):
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(
+        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     # change the parameters to produce an eff_time of 100,000 years
     itime = int(round(float(params['investigation_time'])))
@@ -280,7 +282,6 @@ sample_rups.slowest = 'profile and show the slowest operations'
 def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
     if exc:
         logging.error(str(exc), exc_info=True)
-
 
 
 def aristotle(mosaic_dir='', rupfname=FAMOUS):
