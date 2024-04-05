@@ -313,12 +313,13 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
                        dip, strike, maximum_distance, trt,
                        truncation_level, number_of_ground_motion_fields,
                        asset_hazard_distance, ses_seed,
-                       callback=callback)
+                       callback=callback,
+                       mosaic_dir=mosaic_dir)
 
 
 aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
 aristotle.rupfname = 'Filename with planar ruptures'
-    
+
 # ################################## main ################################## #
 
 main = dict(run_site=run_site, aristotle=aristotle,
