@@ -100,7 +100,35 @@ def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
 def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     """
     A simplified version of the GmfComputer for event based calculations.
-    Used only for pedagogical purposes.
+    Used only for pedagogical purposes. Here is an example of usage:
+
+    from unittest.mock import Mock
+    import numpy
+    from openquake.hazardlib import valid, contexts, site, geo
+    from openquake.hazardlib.source.rupture import EBRupture, build_planar
+    from openquake.hazardlib.calc.gmf import calc_gmf_simplified, GmfComputer
+
+    imts = ['PGA']
+    rlzs = numpy.arange(3, dtype=numpy.uint32)
+    rlzs_by_gsim = {valid.gsim('BooreAtkinson2008'): rlzs}
+    lons = [0., 0.]
+    lats = [0., 1.]
+    siteparams = Mock(reference_vs30_value=760.)
+    sitecol = site.SiteCollection.from_points(lons, lats, sitemodel=siteparams)
+    hypo = geo.point.Point(0, .5, 20)
+    rup = build_planar(hypo, mag=7., rake=0.)
+    cmaker = contexts.simple_cmaker(rlzs_by_gsim, imts, truncation_level=3.)
+    ebr = EBRupture(rup, 0, 0, n_occ=2, id=1)
+    ebr.seed = 42
+    print(cmaker)
+    print(sitecol.array)
+    print(ebr)
+
+    gmfa = calc_gmf_simplified(ebr, sitecol, cmaker)
+    print(gmfa) # numbers considering the full site collection
+    sites = site.SiteCollection.from_points([0], [1], sitemodel=siteparams)
+    gmfa = calc_gmf_simplified(ebr, sites, cmaker)
+    print(gmfa)  # different numbers considering half of the site collection
     """
     N = len(sitecol)
     M = len(cmaker.imtls)
