@@ -279,9 +279,17 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
+aristotle_res = dict(count_errors=0, res_list=[])
+
+
 def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
+    job = logs.dbcmd('get_job', job_id)
+    description = job.description
+    error = ''
     if exc:
-        logging.error(str(exc), exc_info=True)
+        aristotle_res['count_errors'] += 1
+        error = str(exc)
+    aristotle_res['res_list'].append((job_id, description, error))
 
 
 def aristotle(mosaic_dir='', rupfname=FAMOUS):
@@ -301,6 +309,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     number_of_ground_motion_fields = 10
     asset_hazard_distance = 15
     ses_seed = 42
+    t0 = time.time()
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
         usgs_id = rupdic['rupture_usgs_id']
@@ -315,6 +324,12 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
                        asset_hazard_distance, ses_seed,
                        callback=callback,
                        mosaic_dir=mosaic_dir)
+    header = ['job_id', 'description', 'error']
+    print(views.text_table(aristotle_res['res_list'], header, ext='org'))
+    dt = (time.time() - t0) / 60
+    print('Total time: %.1f minutes' % dt)
+    if aristotle_res['count_errors']:
+        sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
 
 
 aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
