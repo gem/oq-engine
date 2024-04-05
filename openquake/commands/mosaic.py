@@ -47,6 +47,7 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
+
 def fix(asce, siteid):
     dic = json.loads(asce.decode('ascii'))
     dic = {k: v if isinstance(v, str) else round(v, 2)
@@ -107,7 +108,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    sites_df['model']= geolocate(lonlats, mosaic_df)
+    sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
     for model, df in sites_df.groupby('model'):
@@ -150,7 +151,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
-    print('Total time: %.1f minutes' % dt) 
+    print('Total time: %.1f minutes' % dt)
     if not a07dics or not a41dics:
         # serious problem to debug
         breakpoint()
@@ -207,7 +208,8 @@ MIN_DIST = 0.
 
 
 def build_params(model, trunclevel, mindist, extreme_gmv, gmf):
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(
+        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     # change the parameters to produce an eff_time of 100,000 years
     itime = int(round(float(params['investigation_time'])))
@@ -277,10 +279,17 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
-    if exc:
-        logging.error(str(exc), exc_info=True)
+aristotle_res = dict(count_errors=0, res_list=[])
 
+
+def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
+    job = logs.dbcmd('get_job', job_id)
+    description = job.description
+    error = ''
+    if exc:
+        aristotle_res['count_errors'] += 1
+        error = str(exc)
+    aristotle_res['res_list'].append((job_id, description, error))
 
 
 def aristotle(mosaic_dir='', rupfname=FAMOUS):
@@ -300,6 +309,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     number_of_ground_motion_fields = 10
     asset_hazard_distance = 15
     ses_seed = 42
+    t0 = time.time()
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
         usgs_id = rupdic['rupture_usgs_id']
@@ -312,12 +322,19 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
                        dip, strike, maximum_distance, trt,
                        truncation_level, number_of_ground_motion_fields,
                        asset_hazard_distance, ses_seed,
-                       callback=callback)
+                       callback=callback,
+                       mosaic_dir=mosaic_dir)
+    header = ['job_id', 'description', 'error']
+    print(views.text_table(aristotle_res['res_list'], header, ext='org'))
+    dt = (time.time() - t0) / 60
+    print('Total time: %.1f minutes' % dt)
+    if aristotle_res['count_errors']:
+        sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
 
 
 aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
 aristotle.rupfname = 'Filename with planar ruptures'
-    
+
 # ################################## main ################################## #
 
 main = dict(run_site=run_site, aristotle=aristotle,

@@ -678,7 +678,8 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    trts = get_trts_around(rupture_dict['lon'], rupture_dict['lat'])
+    trts = get_trts_around(
+        rupture_dict['lon'], rupture_dict['lat'], config.directory.mosaic_dir)
     rupture_dict['trts'] = trts
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -699,7 +700,7 @@ def aristotle_get_trts(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat = res
-    trts = get_trts_around(lon, lat)
+    trts = get_trts_around(lon, lat, config.directory.mosaic_dir)
     return HttpResponse(content=json.dumps(trts), content_type=JSON,
                         status=200)
 
@@ -770,7 +771,8 @@ def aristotle_run(request):
         allparams = get_aristotle_allparams(
             shakemap_id, lon, lat, dep, mag, rake, dip, strike,
             maximum_distance, trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance, ses_seed)
+            number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
+            config.directory.mosaic_dir)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
