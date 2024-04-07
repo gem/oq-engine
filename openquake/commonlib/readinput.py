@@ -357,12 +357,12 @@ def get_mesh(oqparam, h5=None):
     exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
-        return mesh
+        return mesh, exposure
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
             mesh, pmap = get_pmap_from_csv(oqparam, fname)
-            return mesh
+            return mesh, exposure
         raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
@@ -384,7 +384,7 @@ def get_mesh(oqparam, h5=None):
             logging.info('Inferring the hazard grid')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
-            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
+            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats)), exposure
         except Exception:
             raise ValueError(
                 'Could not discretize region with grid spacing '
@@ -401,7 +401,7 @@ def get_mesh(oqparam, h5=None):
         mesh = exposure.mesh
     else:
         mesh = None
-    return mesh
+    return mesh, exposure
 
 
 def get_poor_site_model(fname):
@@ -567,13 +567,13 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
-    mesh = get_mesh(oqparam, h5)
+    mesh, exp = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
-        return
+        return None
     else:  # use the default site params
         if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
                 or 'shakemap' in oqparam.inputs):
@@ -624,6 +624,7 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+    sitecol.exposure = exp
     return sitecol
 
 
@@ -642,7 +643,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
         return logictree.GsimLogicTree.from_(oqparam.gsim)
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    key = (gsim_file,) + tuple(sorted(trts))
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -1012,10 +1012,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
-    exp = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+    try:
+        exp = haz_sitecol.exposure
+    except AttributeError:
+        exp = get_exposure(oqparam)
+
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
