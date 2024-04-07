@@ -346,13 +346,15 @@ def get_csv_header(fname, sep=','):
     return first, f
 
 
-def get_mesh(oqparam, h5=None):
+def get_mesh_exp(oqparam, h5=None):
     """
     Extract the mesh of points to compute from the sites,
     the sites_csv, the region, the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        a pair (mesh, exposure) both of which can be None
     """
     exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
@@ -567,7 +569,7 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
-    mesh, exp = get_mesh(oqparam, h5)
+    mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])

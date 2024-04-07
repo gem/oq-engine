@@ -138,7 +138,7 @@ export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_mesh(oq)
+            readinput.get_mesh_exp(oq)
         self.assertIn('site_id not sequential from zero', str(ctx.exception))
         os.unlink(sites_csv)
 
