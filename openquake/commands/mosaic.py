@@ -311,6 +311,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     asset_hazard_distance = 15
     ses_seed = 42
     t0 = time.time()
+    rake = 0.
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
         usgs_id = rupdic['rupture_usgs_id']
@@ -319,7 +320,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
                        rupdic['lat'],
                        rupdic['dep'],
                        rupdic['mag'],
-                       rupdic['rake'],
+                       rake,
                        dip, strike, maximum_distance, trt,
                        truncation_level, number_of_ground_motion_fields,
                        asset_hazard_distance, ses_seed,
