@@ -130,8 +130,6 @@ def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
     and from the command-line in testing mode.
     """
     if jobctxs is None:
-        # in  testing mode create a new job context
-        user = getpass.getuser()
         try:
             allparams = get_aristotle_allparams(
                 usgs_id, lon, lat, dep, mag, rake, dip, strike,
@@ -141,6 +139,8 @@ def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
         except Exception as exc:
             callback(None, dict(usgs_id=usgs_id), job_owner_email,
                      outputs_uri, exc=exc)
+        # in  testing mode create a new job context
+        user = getpass.getuser()
         jobctxs = engine.create_jobs(
             allparams, config.distribution.log_level, None, user, None)
     for job_idx, job in enumerate(jobctxs):
