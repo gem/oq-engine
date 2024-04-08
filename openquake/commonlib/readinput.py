@@ -67,32 +67,6 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
-class Global:
-    """
-    Global variables to be reset at the end of each calculation/test
-    """
-    pmap = None
-    # set as side effect when the user reads hazard_curves from a file
-    # the hazard curves format does not split the site locations from the data
-    # (an unhappy legacy design choice that I fixed in the GMFs CSV format
-    # only) thus this hack is necessary, otherwise we would have to parse the
-    # file twice
-
-    exposure = None
-    # set as side effect when the user reads the site mesh; this hack is
-    # necessary, otherwise we would have to parse the exposure twice
-
-    gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
-    # populated when reading the gsim_logic_tree file; otherwise we would
-    # have to parse the file multiple times
-
-    @classmethod
-    def reset(cls):
-        cls.pmap = None
-        cls.exposure = None
-        cls.gsim_lt_cache.clear()
-
-
 class DuplicatedPoint(Exception):
     """
     Raised when reading a CSV file with duplicated (lon, lat) pairs
@@ -372,33 +346,33 @@ def get_csv_header(fname, sep=','):
     return first, f
 
 
-def get_mesh(oqparam, h5=None):
+def get_mesh_exp(oqparam, h5=None):
     """
     Extract the mesh of points to compute from the sites,
     the sites_csv, the region, the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        a pair (mesh, exposure) both of which can be None
     """
-    if 'exposure' in oqparam.inputs and Global.exposure is None:
-        # read it only once
-        Global.exposure = get_exposure(oqparam, h5)
+    exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
-        return mesh
+        return mesh, exposure
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
-            mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
-            return mesh
+            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+            return mesh, exposure
         raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
-        elif Global.exposure:
+        elif exposure:
             # in case of implicit grid the exposure takes precedence over
             # the site model
-            poly = Global.exposure.mesh.get_convex_hull()
+            poly = exposure.mesh.get_convex_hull()
         elif 'site_model' in oqparam.inputs:
             # this happens in event_based/case_19, where there is an implicit
             # grid over the site model
@@ -412,7 +386,7 @@ def get_mesh(oqparam, h5=None):
             logging.info('Inferring the hazard grid')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
-            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
+            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats)), exposure
         except Exception:
             raise ValueError(
                 'Could not discretize region with grid spacing '
@@ -426,10 +400,10 @@ def get_mesh(oqparam, h5=None):
             h5['site_model'] = sm
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
-        mesh = Global.exposure.mesh
+        mesh = exposure.mesh
     else:
         mesh = None
-    return mesh
+    return mesh, exposure
 
 
 def get_poor_site_model(fname):
@@ -595,13 +569,13 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
-    mesh = get_mesh(oqparam, h5)
+    mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
-        return
+        return None
     else:  # use the default site params
         if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
                 or 'shakemap' in oqparam.inputs):
@@ -652,6 +626,7 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+    sitecol.exposure = exp
     return sitecol
 
 
@@ -670,9 +645,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
         return logictree.GsimLogicTree.from_(oqparam.gsim)
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    key = (gsim_file,) + tuple(sorted(trts))
-    if key in Global.gsim_lt_cache:
-        return Global.gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -701,7 +673,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
     if oqparam.collapse_gsim_logic_tree:
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
-    Global.gsim_lt_cache[key] = gsim_lt
     if trts != ('*',):  # not in get_input_files
         no_vect = get_no_vect(gsim_lt)
         if no_vect:
@@ -966,13 +937,15 @@ def get_exposure(oqparam, h5=None):
         an :class:`Exposure` instance or a compatible AssetCollection
     """
     oq = oqparam
+    if 'exposure' not in oq.inputs:
+        return
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
             # reading the assets around a rupture
             sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = Global.exposure = asset.Exposure.read_around(
+            exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
@@ -980,7 +953,7 @@ def get_exposure(oqparam, h5=None):
                     oq.all_cost_types = loss_types
                     oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
-            exposure = Global.exposure = asset.Exposure.read_all(
+            exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
                 oq.ignore_missing_costs,
                 errors='ignore' if oq.ignore_encoding_errors else None,
@@ -1041,12 +1014,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
-    exp = Global.exposure
-    if exp is None:  # not read already
-        exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+    try:
+        exp = haz_sitecol.exposure
+    except AttributeError:
+        exp = get_exposure(oqparam)
+
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
@@ -1100,7 +1075,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
             # tested in scenario_risk/test_case_8
             gh = sitecol.complete.geohash(8)
             sitecol.complete.add_col('custom_site_id', 'S8', gh)
-    return sitecol, assetcol, discarded
+    return sitecol, assetcol, discarded, exp
 
 
 def levels_from(header):
@@ -1228,9 +1203,9 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    Global.pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
-    Global.pmap.array = data.reshape(N, L, 1)
-    return mesh, Global.pmap
+    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap.array = data.reshape(N, L, 1)
+    return mesh, pmap
 
 
 tag2code = {'multiFaultSource': b'F',
@@ -1376,7 +1351,7 @@ def get_reinsurance(oqparam, assetcol=None):
     :returns: (policy_df, treaty_df, field_map)
     """
     if assetcol is None:
-        sitecol, assetcol, discarded = get_sitecol_assetcol(oqparam)
+        sitecol, assetcol, discarded, exp = get_sitecol_assetcol(oqparam)
     [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
     # make sure the first aggregate by is policy
     if oqparam.aggregate_by[0] != ['policy']:

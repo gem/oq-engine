@@ -96,8 +96,7 @@ def get_aristotle_allparams(
         ses_seed=str(ses_seed),
         inputs=inputs)
     oq = readinput.get_oqparam(params)
-    readinput.Global.reset()  # reset the cache
-    sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(expo, countries)
