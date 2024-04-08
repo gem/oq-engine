@@ -666,6 +666,9 @@ def aristotle_get_rupture_data(request):
     (shakemap_id,) = res
     try:
         rupture_dict = get_rupture_dict(shakemap_id)
+        trts = get_trts_around(
+            rupture_dict['lon'], rupture_dict['lat'],
+            config.directory.mosaic_dir)
     except Exception as exc:
         if '404: Not Found' in str(exc):
             error_msg = f'Shakemap id "{shakemap_id}" was not found'
@@ -678,8 +681,6 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    trts = get_trts_around(
-        rupture_dict['lon'], rupture_dict['lat'], config.directory.mosaic_dir)
     rupture_dict['trts'] = trts
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,

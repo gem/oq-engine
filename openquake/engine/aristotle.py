@@ -129,10 +129,15 @@ def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
     if jobctxs is None:
         # in  testing mode create a new job context
         user = getpass.getuser()
-        allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance,
-            trt, truncation_level, number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed, mosaic_dir)
+        try:
+            allparams = get_aristotle_allparams(
+                usgs_id, lon, lat, dep, mag, rake, dip, strike,
+                maximum_distance, trt, truncation_level,
+                number_of_ground_motion_fields, asset_hazard_distance,
+                ses_seed, mosaic_dir)
+        except Exception as exc:
+            callback(None, dict(usgs_id=usgs_id), job_owner_email,
+                     outputs_uri, exc=exc)
         jobctxs = engine.create_jobs(
             allparams, config.distribution.log_level, None, user, None)
     for job_idx, job in enumerate(jobctxs):
