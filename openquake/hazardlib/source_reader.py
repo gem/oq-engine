@@ -177,6 +177,18 @@ def _fix_dupl_ids(src_groups):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
 
+def check_branchID(branchID):
+    """
+    Forbids invalid characters .:; used in fragmentno
+    """
+    if '.' in branchID:
+        raise InvalidFile('branchID %r contains an invalid "."' % branchID)
+    elif ':' in branchID:
+        raise InvalidFile('branchID %r contains an invalid ":"' % branchID)
+    elif ';' in branchID:
+        raise InvalidFile('branchID %r contains an invalid ";"' % branchID)
+
+
 def check_duplicates(smdict, strict):
     # check_duplicates in the same file
     for sm in smdict.values():
@@ -333,6 +345,7 @@ def find_false_duplicates(smdict):
             if len(gb) > 1:
                 for same_checksum in gb.values():
                     for src in same_checksum:
+                        check_branchID(src.branch)
                         src.source_id += '!%s' % src.branch
                 found.append(srcid)
     return found
