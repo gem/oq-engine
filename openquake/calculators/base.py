@@ -263,7 +263,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         del os.environ['OQ_DISTRIBUTE']
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
-                readinput.Global.reset()
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname):
@@ -585,7 +584,9 @@ class HazardCalculator(BaseCalculator):
                 oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            df = (~readinput.Global.pmap).to_dframe()
+            mesh, pmap = readinput.get_pmap_from_csv(
+                oq, oq.inputs['hazard_curves'])
+            df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
@@ -692,7 +693,7 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        self.sitecol, self.assetcol, discarded = \
+        self.sitecol, self.assetcol, discarded, exposure = \
             readinput.get_sitecol_assetcol(
                 oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
         # this is overriding the sitecol in test_case_miriam
@@ -715,7 +716,7 @@ class HazardCalculator(BaseCalculator):
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['reinsurance'].items())
-        return readinput.Global.exposure
+        return exposure
 
     def load_insurance_data(self, lt_fnames):
         """
@@ -830,7 +831,7 @@ class HazardCalculator(BaseCalculator):
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['exposure'] = exposure
-            if hasattr(readinput.Global.exposure, 'exposures'):
+            if hasattr(exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
                     exposure.exposures, hdf5.vstr)
         elif 'assetcol' in self.datastore.parent:
