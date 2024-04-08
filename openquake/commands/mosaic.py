@@ -287,6 +287,7 @@ def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
     description = job.description
     error = ''
     if exc:
+        logging.error(str(exc), exc_info=True)
         aristotle_res['count_errors'] += 1
         error = str(exc)
     aristotle_res['res_list'].append((job_id, description, error))
