@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Managed duplicated multi fault sources in event based for the New
+    Zealand model
   * Forbidden characters .:; in the branchID
 
   [Michal Kolaj]
