@@ -44,8 +44,8 @@ def get_trts_around(rupdic, mosaic_dir):
     with hdf5.File(smodel) as f:
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
-    logging.info('Considering %s %s: (%s, %s)',
-                 rupdic['usgs_id'], mosaic_model.encode(), lon, lat)
+    logging.info('Considering %s[%s]: (%s, %s)',
+                 rupdic['usgs_id'], mosaic_model, lon, lat)
     return [trt.decode('utf8') for trt in df.trt.unique()]
 
 
