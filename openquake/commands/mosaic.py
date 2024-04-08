@@ -283,8 +283,11 @@ aristotle_res = dict(count_errors=0, res_list=[])
 
 
 def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
-    job = logs.dbcmd('get_job', job_id)
-    description = job.description
+    if job_id is not None:
+        job = logs.dbcmd('get_job', job_id)
+        description = job.description
+    else:
+        description = params['usgs_id']
     error = ''
     if exc:
         logging.error(str(exc), exc_info=True)
