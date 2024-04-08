@@ -139,6 +139,7 @@ def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
         except Exception as exc:
             callback(None, dict(usgs_id=usgs_id), job_owner_email,
                      outputs_uri, exc=exc)
+            return
         # in  testing mode create a new job context
         user = getpass.getuser()
         jobctxs = engine.create_jobs(
