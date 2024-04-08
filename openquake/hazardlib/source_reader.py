@@ -165,6 +165,8 @@ def read_source_model(fname, branch, converter, monitor):
 
 # NB: in classical this is called after reduce_sources, so ";" is not
 # added if the same source appears multiple times, len(srcs) == 1
+# in event based instead identical sources can appear multiple times
+# but will have different seeds and produce different rupture sets
 def _fix_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
@@ -260,7 +262,6 @@ def get_csm(oq, full_lt, dstore=None):
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
     check_duplicates(smdict, strict=oq.disagg_by_src)
-    fix_geometry_sections(smdict, dstore)
 
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
@@ -299,6 +300,9 @@ def get_csm(oq, full_lt, dstore=None):
         lst = [('grp_id', int), ('probability', float)]
         dstore.create_dset('grp_probability', numpy.array(probs, lst),
                            fillvalue=None)
+
+    # must be called *after* _fix_dupl_ids
+    fix_geometry_sections(smdict, csm, dstore)
     return csm
 
 
@@ -351,22 +355,17 @@ def find_false_duplicates(smdict):
     return found
 
 
-def fix_geometry_sections(smdict, dstore):
+def fix_geometry_sections(smdict, csm, dstore):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
     """
     gmodels = []
-    smodels = []
     gfiles = []
     for fname, mod in smdict.items():
         if isinstance(mod, nrml.GeometryModel):
             gmodels.append(mod)
             gfiles.append(fname)
-        elif isinstance(mod, nrml.SourceModel):
-            smodels.append(mod)
-        else:
-            raise RuntimeError('Unknown model %s' % mod)
 
     # merge and reorder the sections
     sec_ids = []
@@ -381,11 +380,10 @@ def fix_geometry_sections(smdict, dstore):
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
         mfsources = []
-        for smod in smodels:
-            for sg in smod.src_groups:
-                for src in sg:
-                    if src.code == b'F':
-                        mfsources.append(src)
+        for sg in csm.src_groups:
+            for src in sg:
+                if src.code == b'F':
+                    mfsources.append(src)
         save(mfsources, sections, dstore.tempname)
 
 
