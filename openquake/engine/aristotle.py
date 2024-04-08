@@ -32,10 +32,11 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_trts_around(lon, lat, mosaic_dir):
+def get_trts_around(rupdic, mosaic_dir):
     """
     :returns: list of TRTs for the mosaic model covering lon, lat
     """
+    lon, lat = rupdic['lon'], rupdic['lat']
     lonlats = numpy.array([[lon, lat]])
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
@@ -43,6 +44,8 @@ def get_trts_around(lon, lat, mosaic_dir):
     with hdf5.File(smodel) as f:
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
+    logging.info('Considering %s[%s]: (%s, %s)',
+                 rupdic['usgs_id'], mosaic_model, lon, lat)
     return [trt.decode('utf8') for trt in df.trt.unique()]
 
 
@@ -78,12 +81,12 @@ def get_aristotle_allparams(
     else:
         rupdic = dict(
             lon=lon, lat=lat, dep=dep, mag=mag,
-            rake=rake, dip=dip, strike=strike)
+            rake=rake, dip=dip, strike=strike, usgs_id=usgs_id)
     inputs = {'exposure': [expo],
               'site_model': [smodel],
               'job_ini': '<in-memory>'}
     if trt is None:
-        trts = get_trts_around(rupdic['lon'], rupdic['lat'], mosaic_dir)
+        trts = get_trts_around(rupdic, mosaic_dir)
         trt = trts[0]
     params = dict(
         calculation_mode='scenario_risk',

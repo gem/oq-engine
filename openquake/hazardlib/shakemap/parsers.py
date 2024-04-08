@@ -220,7 +220,7 @@ def get_rupture_dict(id):
     url = contents.get('download/rupture.json')['url']
     md = json.loads(urlopen(url).read())['metadata']
     return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake']}
+            'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id}
 
 
 def get_array_usgs_id(kind, id):
