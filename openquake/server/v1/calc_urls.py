@@ -35,22 +35,23 @@ urlpatterns = [
     re_path(r'^result/(\d+)$', views.calc_result),
     re_path(r'^(\d+)/result/list$', views.calc_results),
 ]
-if settings.APPLICATION_MODE.upper() == 'AELO':
+if settings.APPLICATION_MODE == 'AELO':
     urlpatterns.extend([
         re_path(r'^aelo_run$', views.aelo_run),
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
     ])
-elif settings.APPLICATION_MODE.upper() == 'ARISTOTLE':
+elif settings.APPLICATION_MODE == 'ARISTOTLE':
     urlpatterns.extend([
         re_path(r'^aristotle_get_rupture_data$',
                 views.aristotle_get_rupture_data),
+        re_path(r'^aristotle_get_trts$', views.aristotle_get_trts),
         re_path(r'^aristotle_run$', views.aristotle_run),
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^(\d+)/download_aggrisk$', views.download_aggrisk),
     ])
-elif settings.APPLICATION_MODE.upper() != 'READ_ONLY':
+elif settings.APPLICATION_MODE != 'READ_ONLY':
     urlpatterns.extend([
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),

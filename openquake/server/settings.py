@@ -178,8 +178,7 @@ SERVER_NAME = socket.gethostname()
 APPLICATION_MODES = [
     'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY']
 
-# case insensitive
-APPLICATION_MODE = 'public'
+APPLICATION_MODE = 'PUBLIC'
 
 # Set to True if using NGINX or some other reverse proxy
 # Externally visible url and port number is different from Django visible
@@ -226,7 +225,12 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 if not os.environ.get('OQ_APPLICATION_MODE'):
     os.environ['OQ_APPLICATION_MODE'] = APPLICATION_MODE
 
-if TEST and APPLICATION_MODE.upper() in ('AELO', 'ARISTOTLE'):
+if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
+    raise ValueError(
+        f'Invalid application mode: "{APPLICATION_MODE}". It must be'
+        f' one of {APPLICATION_MODES}')
+
+if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
@@ -234,12 +238,12 @@ if TEST and APPLICATION_MODE.upper() in ('AELO', 'ARISTOTLE'):
     #        parallel
     EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
 
-if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
 
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
-if LOCKDOWN and APPLICATION_MODE.upper() in ('AELO', 'ARISTOTLE'):
+if LOCKDOWN and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     # check essential constants are defined
     try:
         EMAIL_BACKEND  # noqa

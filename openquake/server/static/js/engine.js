@@ -566,6 +566,41 @@
                 });
                 event.preventDefault();
             });
+            $("#aristotle_get_trts_btn").click(function (event) {
+                $('#aristotle_get_trts_btn').prop('disabled', true);
+                $('#aristotle_get_trts_btn').text('Retrieving tectonic region types...');
+                var formData = {
+                    lat: $("#lat").val(),
+                    lon: $("#lon").val(),
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aristotle_get_trts",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                }).done(function (trts) {
+                    // console.log(data);
+                    $('#trt').empty();
+                    $.each(trts, function(index, trt) {
+                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                    });
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function () {
+                    $('#aristotle_get_trts_btn').prop('disabled', false);
+                    $('#aristotle_get_trts_btn').text('Retrieve tectonic region types');
+                });
+                event.preventDefault();
+            });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
@@ -585,7 +620,8 @@
                     trt: $('#trt').val(),
                     truncation_level: $('#truncation_level').val(),
                     number_of_ground_motion_fields: $('#number_of_ground_motion_fields').val(),
-                    asset_hazard_distance: $('#asset_hazard_distance').val()
+                    asset_hazard_distance: $('#asset_hazard_distance').val(),
+                    ses_seed: $('#ses_seed').val()
                 };
                 $.ajax({
                     type: "POST",

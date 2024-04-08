@@ -87,6 +87,14 @@
                 <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}"/>
               </div>
               <div class="aristotle_form_row">
+                <button id="aristotle_get_trts_btn" type="button" class="btn" style="margin-bottom: 5px;">Retrieve tectonic region types</button>
+              </div>
+              <div class="aristotle_form_row">
+                <label for="trt">{{ aristotle_form_placeholders.trt }}</label>
+                <select name="trt" id="trt">
+                </select>
+              </div>
+              <div class="aristotle_form_row">
                 <label for"dip">{{ aristotle_form_placeholders.dip }}</label>
                 <input class="aristotle-input" type="text" id="dip" name="dip" placeholder="{{ aristotle_form_placeholders.dip }}" value="90"/>
               </div>
@@ -99,11 +107,6 @@
                 <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="300"/>
               </div>
               <div class="aristotle_form_row">
-                <label for="trt">{{ aristotle_form_placeholders.trt }}</label>
-                <select name="trt" id="trt">
-                </select>
-              </div>
-              <div class="aristotle_form_row">
                 <label for"truncation_level">{{ aristotle_form_placeholders.truncation_level }}</label>
                 <input class="aristotle-input" type="text" id="truncation_level" name="truncation_level" placeholder="{{ aristotle_form_placeholders.truncation_level }}" value="3"/>
               </div>
@@ -114,6 +117,10 @@
               <div class="aristotle_form_row">
                 <label for"asset_hazard_distance">{{ aristotle_form_placeholders.asset_hazard_distance }}</label>
                 <input class="aristotle-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ aristotle_form_placeholders.asset_hazard_distance }}" value="15"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"ses_seed">{{ aristotle_form_placeholders.ses_seed }}</label>
+                <input class="aristotle-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ aristotle_form_placeholders.ses_seed }}" value="42"/>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>

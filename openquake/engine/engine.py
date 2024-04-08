@@ -245,6 +245,7 @@ def run_calc(log):
     """
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
+    readinput.Global.reset()  # reset the cache
     dist = parallel.oq_distribute()
     with log:
         # check the available memory before starting

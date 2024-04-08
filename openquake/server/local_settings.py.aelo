@@ -1,6 +1,6 @@
 import os
 
-APPLICATION_MODE = 'aelo'
+APPLICATION_MODE = 'AELO'
 
 # # Static Folder
 # STATIC_ROOT = ''
