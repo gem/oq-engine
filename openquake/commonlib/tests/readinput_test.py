@@ -583,5 +583,5 @@ class ReadGeometryTestCase(unittest.TestCase):
         self.assertEqual(len(risk_df), 218)
         sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
         t1 = time.time()
-        self.assertEqual(len(sites_df), 90)
+        self.assertEqual(len(sites_df), 110)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
