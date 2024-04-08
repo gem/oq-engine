@@ -49,7 +49,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = readinput.read_mosaic_df()
+    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
     lonlats = valid.coordinates(inputs['sites'])
     models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if len(set(models)) > 1:

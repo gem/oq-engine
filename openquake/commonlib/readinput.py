@@ -1496,7 +1496,7 @@ def read_geometries(fname, code, buffer=0):
     return pandas.DataFrame(dict(code=codes, geom=geoms))
 
 
-def read_mosaic_df(buffer=0.1):
+def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """

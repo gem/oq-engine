@@ -39,6 +39,8 @@ def get_trts_around(lon, lat, mosaic_dir):
     lonlats = numpy.array([[lon, lat]])
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
+    if mosaic_model == '???':
+        raise ValueError(f'({lon}, {lat}) is not covered by the mosaic!')
     smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
     with hdf5.File(smodel) as f:
         df = f.read_df('model_trt_gsim_weight',
