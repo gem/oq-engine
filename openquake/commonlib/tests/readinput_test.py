@@ -575,7 +575,7 @@ class ReadGeometryTestCase(unittest.TestCase):
         lonlats = sites_df[['lon', 'lat']].to_numpy()
         sites_df['code'] = geolocate(lonlats, geom_df)
         t1 = time.time()
-        self.assertEqual(len(sites_df), 90)
+        self.assertEqual(len(sites_df), 110)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
 
         t0 = time.time()
