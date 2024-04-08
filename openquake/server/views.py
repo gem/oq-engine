@@ -678,8 +678,7 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    trts = get_trts_around(
-        rupture_dict['lon'], rupture_dict['lat'], config.directory.mosaic_dir)
+    trts = get_trts_around(rupture_dict, config.directory.mosaic_dir)
     rupture_dict['trts'] = trts
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
