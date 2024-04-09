@@ -211,7 +211,12 @@ def get_rupture_dict(id):
     logging.info('Downloading %s', url)
     js = json.loads(urlopen(url).read())
     mag = js['properties']['mag']
-    for shakemap in reversed(js['properties']['products']['shakemap']):
+    products = js['properties']['products']
+    try:
+        shakemap = products['shakemap']
+    except KeyError:
+        raise MissingLink('There is no shakemap info for %s' % id)
+    for shakemap in reversed(shakemap):
         contents = shakemap['contents']
         if 'download/rupture.json' in contents:
             break
@@ -220,6 +225,7 @@ def get_rupture_dict(id):
             ff = js['properties']['products']['finite-fault']
         except KeyError:
             raise MissingLink('There is no finite-fault info for %s' % id)
+        logging.info('Getting finite-fault properties')
         p = ff['properties']
         rupdic = {'lon': p['longitude'], 'lat': p['latitude'],
                   'dep': p['depth'],
