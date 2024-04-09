@@ -215,7 +215,7 @@ def get_rupture_dict(id):
         contents = shakemap['contents']
         if 'download/rupture.json' in contents:
             break
-    else:
+    else:  # missing rupture.json
         try:
             ff = js['properties']['products']['finite-fault']
         except KeyError:
