@@ -66,6 +66,7 @@ def get_tmap_keys(exposure_hdf5, countries):
 def trivial_callback(
         job_id, params, job_owner_email, outputs_uri, exc=None):
     if exc:
+        logging.error('', exc_info=True)
         sys.exit('There was an error: %s' % exc)
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
