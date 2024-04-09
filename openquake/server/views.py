@@ -666,7 +666,8 @@ def aristotle_get_rupture_data(request):
     (usgs_id,) = res
     try:
         rupture_dict = get_rupture_dict(usgs_id)
-        trts = get_trts_around(rupture_dict, config.directory.mosaic_dir)
+        trts, mosaic_model = get_trts_around(
+            rupture_dict, config.directory.mosaic_dir)
     except Exception as exc:
         if '404: Not Found' in str(exc):
             error_msg = f'USGS ID "{usgs_id}" was not found'
@@ -680,6 +681,7 @@ def aristotle_get_rupture_data(request):
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupture_dict['trts'] = trts
+    rupture_dict['mosaic_model'] = mosaic_model
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -699,9 +701,18 @@ def aristotle_get_trts(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat = res
-    trts = get_trts_around(dict(lon=lon, lat=lat), config.directory.mosaic_dir)
-    return HttpResponse(content=json.dumps(trts), content_type=JSON,
-                        status=200)
+    try:
+        trts, mosaic_model = get_trts_around(
+            dict(lon=lon, lat=lat), config.directory.mosaic_dir)
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    else:
+        response_data = dict(trts=trts, mosaic_model=mosaic_model)
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=200)
 
 
 def aristotle_validate(request):

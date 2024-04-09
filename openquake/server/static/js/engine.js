@@ -530,6 +530,7 @@
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
+                $('#mosaic_model').text('');
                 var formData = {
                     usgs_id: $("#usgs_id").val(),
                 };
@@ -546,6 +547,7 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
+                    $('#mosaic_model').text('(' + data.lat + ', ' + data.lon + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
                         $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
@@ -569,6 +571,7 @@
             $("#aristotle_get_trts_btn").click(function (event) {
                 $('#aristotle_get_trts_btn').prop('disabled', true);
                 $('#aristotle_get_trts_btn').text('Retrieving tectonic region types...');
+                $('#mosaic_model').text('');
                 var formData = {
                     lat: $("#lat").val(),
                     lon: $("#lon").val(),
@@ -579,8 +582,10 @@
                     data: formData,
                     dataType: "json",
                     encode: true,
-                }).done(function (trts) {
+                }).done(function (data) {
                     // console.log(data);
+                    $('#mosaic_model').text('(' + $("#lat").val() + ', ' + $("#lon").val() + ')' + ' is covered by model ' + data.mosaic_model);
+                    trts = data.trts;
                     $('#trt').empty();
                     $.each(trts, function(index, trt) {
                         $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
