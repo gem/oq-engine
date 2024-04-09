@@ -531,7 +531,7 @@
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
                 var formData = {
-                    shakemap_id: $("#shakemap_id").val(),
+                    usgs_id: $("#usgs_id").val(),
                 };
                 $.ajax({
                     type: "POST",
@@ -608,7 +608,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = {
-                    shakemap_id: $("#shakemap_id").val(),
+                    usgs_id: $("#usgs_id").val(),
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     dep: $("#dep").val(),

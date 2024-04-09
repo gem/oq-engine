@@ -56,8 +56,8 @@
             <form id="aristotle_get_rupture_form" method="post">
               {% csrf_token %}
               <div class="aristotle_form_row">
-                <label for"shakemap_id">{{ aristotle_form_placeholders.shakemap_id }}</label>
-                <input class="aristotle-input" type="text" id="shakemap_id" name="shakemap_id" placeholder="{{ aristotle_form_placeholders.shakemap_id }}" value="us6000jllz"/>
+                <label for"usgs_id">{{ aristotle_form_placeholders.usgs_id }}</label>
+                <input class="aristotle-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ aristotle_form_placeholders.usgs_id }}" value="us6000jllz"/>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
@@ -67,12 +67,12 @@
             <form id="aristotle_run_form" method="post">
               {% csrf_token %}
               <div class="aristotle_form_row">
-                <label for"lat">{{ aristotle_form_placeholders.lat }}</label>
-                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}"/>
-              </div>
-              <div class="aristotle_form_row">
                 <label for"lon">{{ aristotle_form_placeholders.lon }}</label>
                 <input class="aristotle-input" type="text" id="lon" name="lon" placeholder="{{ aristotle_form_placeholders.lon }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"lat">{{ aristotle_form_placeholders.lat }}</label>
+                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}"/>
               </div>
               <div class="aristotle_form_row">
                 <label for"dep">{{ aristotle_form_placeholders.dep }}</label>
