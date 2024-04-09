@@ -34,7 +34,7 @@ import zipfile
 from shapely.geometry import Polygon
 import numpy
 from openquake.baselib.node import node_from_xml
-
+from openquake.hazardlib import geo, valid
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -200,7 +200,6 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
         raise FileNotFoundError(
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
-
 def get_rupture_dict(id):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
@@ -211,12 +210,21 @@ def get_rupture_dict(id):
     url = SHAKEMAP_URL.format(id)
     logging.info('Downloading %s', url)
     js = json.loads(urlopen(url).read())
+    mag = js['properties']['mag']
     for shakemap in reversed(js['properties']['products']['shakemap']):
         contents = shakemap['contents']
         if 'download/rupture.json' in contents:
             break
     else:
-        raise MissingLink('There is not rupture.json for %s' % id)
+        try:
+            ff = js['properties']['products']['finite-fault']
+        except KeyError:
+            raise MissingLink('There is no finite-fault info for %s' % id)
+        p = ff['properties']
+        rupdic = {'lon': p['longitude'], 'lat': p['latitude'],
+                  'dep': p['depth'],
+                  'mag': mag, 'rake': 0., 'usgs_id': id}
+        return rupdic
     url = contents.get('download/rupture.json')['url']
     md = json.loads(urlopen(url).read())['metadata']
     return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
