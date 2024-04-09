@@ -34,7 +34,6 @@ import zipfile
 from shapely.geometry import Polygon
 import numpy
 from openquake.baselib.node import node_from_xml
-from openquake.hazardlib import geo, valid
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -208,30 +207,36 @@ def get_rupture_dict(id):
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
     url = SHAKEMAP_URL.format(id)
-    logging.info('Downloading %s', url)
+    print('Downloading %s' % url)
     js = json.loads(urlopen(url).read())
     mag = js['properties']['mag']
     products = js['properties']['products']
     try:
         shakemap = products['shakemap']
     except KeyError:
-        raise MissingLink('There is no shakemap info for %s' % id)
+        try:
+             products['finite-fault']
+        except KeyError:
+            raise MissingLink('There is no finite-fault info for %s' % id)
+        else:
+            shakemap = []
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
         if 'download/rupture.json' in contents:
             break
     else:  # missing rupture.json
         try:
-            ff = js['properties']['products']['finite-fault']
+            ff = products['finite-fault']
         except KeyError:
             raise MissingLink('There is no finite-fault info for %s' % id)
-        logging.info('Getting finite-fault properties')
+        print('Getting finite-fault properties')
         p = ff['properties']
         rupdic = {'lon': p['longitude'], 'lat': p['latitude'],
                   'dep': p['depth'],
                   'mag': mag, 'rake': 0., 'usgs_id': id}
         return rupdic
     url = contents.get('download/rupture.json')['url']
+    print('Downloading rupture.json')
     md = json.loads(urlopen(url).read())['metadata']
     return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id}
