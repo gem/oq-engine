@@ -567,7 +567,7 @@ class ReadGeometryTestCase(unittest.TestCase):
     def test(self):
         t0 = time.time()
         mosaic_dir = os.path.dirname(mosaic.__file__)
-        geom_df = readinput.read_mosaic_df(buffer=0.1)
+        geom_df = readinput.read_mosaic_df(buffer=0.5)
         self.assertEqual(len(geom_df), 30)
         sites_df = pandas.read_csv(
             os.path.join(mosaic_dir, 'famous_ruptures.csv'),
