@@ -176,7 +176,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 SERVER_NAME = socket.gethostname()
 
 APPLICATION_MODES = [
-    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY']
+    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
 
 APPLICATION_MODE = 'PUBLIC'
 
@@ -229,6 +229,17 @@ if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
     raise ValueError(
         f'Invalid application mode: "{APPLICATION_MODE}". It must be'
         f' one of {APPLICATION_MODES}')
+
+if APPLICATION_MODE in ('TOOLS_ONLY',):
+    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'cookie_consent',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
+    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.append('django.template.context_processors.request')
+    COOKIE_CONSENT_NAME = "cookie_consent"
+    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
+    COOKIE_CONSENT_LOG_ENABLED = False
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
