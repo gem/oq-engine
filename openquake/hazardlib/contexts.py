@@ -1256,6 +1256,7 @@ class ContextMaker(object):
             self.horiz_comp_to_geom_mean(out)
         return out
 
+    # not used right now
     def get_att_curves(self, site, msr, mag, aratio=1., strike=0.,
                        dip=45., rake=-90):
         """

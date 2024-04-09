@@ -896,6 +896,7 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     return rup
 
 
+# use a hard-coded MSR
 def _width_length(mag, rake):
     assert rake is None or -180 <= rake <= 180, rake
     if rake is None:
