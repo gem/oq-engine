@@ -327,5 +327,3 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_32.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
-
-
