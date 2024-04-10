@@ -38,7 +38,7 @@ def get_trts_around(rupdic, mosaic_dir):
     """
     lon, lat = rupdic['lon'], rupdic['lat']
     lonlats = numpy.array([[lon, lat]])
-    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
+    mosaic_df = readinput.read_mosaic_df(buffer=1)
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
     if mosaic_model == '???':
         raise ValueError(f'({lon}, {lat}) is not covered by the mosaic!')

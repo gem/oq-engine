@@ -502,7 +502,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df(buffer=0.1).set_index('code')
+            mosaic_df = readinput.read_mosaic_df(buffer=.1).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
@@ -595,7 +595,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
         if oq.rupture_dict:
-            mosaic_df = readinput.read_mosaic_df(buffer=0.1)
+            mosaic_df = readinput.read_mosaic_df(buffer=1)
             lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
             sitemodel = oq.inputs.get('site_model', [''])[0]
