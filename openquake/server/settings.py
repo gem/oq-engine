@@ -240,7 +240,8 @@ if APPLICATION_MODE in ('TOOLS_ONLY',):
     # add middleware for corsheader        
     for app_cors in ('corsheaders.middleware.CorsMiddleware',):
         if app_cors not in MIDDLEWARE:
-        
+            MIDDLEWARE += (app_cors,)
+
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.append('django.template.context_processors.request')
     COOKIE_CONSENT_NAME = "cookie_consent"
