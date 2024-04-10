@@ -530,8 +530,9 @@
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
+                $('#mosaic_model').text('');
                 var formData = {
-                    shakemap_id: $("#shakemap_id").val(),
+                    usgs_id: $("#usgs_id").val(),
                 };
                 $.ajax({
                     type: "POST",
@@ -541,11 +542,12 @@
                     encode: true,
                 }).done(function (data) {
                     // console.log(data);
-                    $('#lat').val(data.lat);
                     $('#lon').val(data.lon);
+                    $('#lat').val(data.lat);
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
+                    $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
                         $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
@@ -569,18 +571,21 @@
             $("#aristotle_get_trts_btn").click(function (event) {
                 $('#aristotle_get_trts_btn').prop('disabled', true);
                 $('#aristotle_get_trts_btn').text('Retrieving tectonic region types...');
+                $('#mosaic_model').text('');
                 var formData = {
-                    lat: $("#lat").val(),
                     lon: $("#lon").val(),
+                    lat: $("#lat").val()
                 };
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_trts",
                     data: formData,
                     dataType: "json",
-                    encode: true,
-                }).done(function (trts) {
+                    encode: true
+                }).done(function (data) {
                     // console.log(data);
+                    $('#mosaic_model').text('(' + $("#lon").val() + ', ' + $("#lat").val() + ')' + ' is covered by model ' + data.mosaic_model);
+                    trts = data.trts;
                     $('#trt').empty();
                     $.each(trts, function(index, trt) {
                         $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
@@ -608,7 +613,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = {
-                    shakemap_id: $("#shakemap_id").val(),
+                    usgs_id: $("#usgs_id").val(),
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     dep: $("#dep").val(),
@@ -628,7 +633,7 @@
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",
                     data: formData,
                     dataType: "json",
-                    encode: true,
+                    encode: true
                 }).done(function (data) {
                     console.log(data);
                 }).error(function (data) {

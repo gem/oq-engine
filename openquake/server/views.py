@@ -104,7 +104,7 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
-    'shakemap_id': 'Shakemap ID',
+    'usgs_id': 'USGS ID',
     'lon': 'Longitude',
     'lat': 'Latitude',
     'dep': 'Depth',
@@ -655,23 +655,24 @@ def aristotle_callback(
 @require_http_methods(['POST'])
 def aristotle_get_rupture_data(request):
     """
-    Retrieve rupture parameters corresponding to a given shakemap id
+    Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing shakemap_id
+        a `django.http.HttpRequest` object containing usgs_id
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (shakemap_id,) = res
+    (usgs_id,) = res
     try:
-        rupture_dict = get_rupture_dict(shakemap_id)
-        trts = get_trts_around(rupture_dict, config.directory.mosaic_dir)
+        rupture_dict = get_rupture_dict(usgs_id)
+        trts, mosaic_model = get_trts_around(
+            rupture_dict, config.directory.mosaic_dir)
     except Exception as exc:
         if '404: Not Found' in str(exc):
-            error_msg = f'Shakemap id "{shakemap_id}" was not found'
+            error_msg = f'USGS ID "{usgs_id}" was not found'
         elif 'There is not rupture.json' in str(exc):
-            error_msg = (f'Shakemap id "{shakemap_id}" was found, but it'
+            error_msg = (f'USGS ID "{usgs_id}" was found, but it'
                          f' has no associated rupture data')
         else:
             error_msg = str(exc)
@@ -680,6 +681,7 @@ def aristotle_get_rupture_data(request):
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupture_dict['trts'] = trts
+    rupture_dict['mosaic_model'] = mosaic_model
     response_data = rupture_dict
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -693,22 +695,31 @@ def aristotle_get_trts(request):
     Retrieve tectonic region types given geographic coordinates
 
     :param request:
-        a `django.http.HttpRequest` object containing lat and lon
+        a `django.http.HttpRequest` object containing lon and lat
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat = res
-    trts = get_trts_around(lon, lat, config.directory.mosaic_dir)
-    return HttpResponse(content=json.dumps(trts), content_type=JSON,
-                        status=200)
+    try:
+        trts, mosaic_model = get_trts_around(
+            dict(lon=lon, lat=lat), config.directory.mosaic_dir)
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    else:
+        response_data = dict(trts=trts, mosaic_model=mosaic_model)
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=200)
 
 
 def aristotle_validate(request):
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
-        'shakemap_id': valid.simple_id,
+        'usgs_id': valid.simple_id,
         'lon': valid.longitude,
         'lat': valid.latitude,
         'dep': valid.positivefloat,
@@ -763,12 +774,12 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (shakemap_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+    (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
     try:
         allparams = get_aristotle_allparams(
-            shakemap_id, lon, lat, dep, mag, rake, dip, strike,
+            usgs_id, lon, lat, dep, mag, rake, dip, strike,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
             config.directory.mosaic_dir)
@@ -809,7 +820,7 @@ def aristotle_run(request):
         proc = mp.Process(
             target=aristotle.main,
             args=(
-                shakemap_id, lon, lat, dep, mag, rake, dip, strike,
+                usgs_id, lon, lat, dep, mag, rake, dip, strike,
                 maximum_distance, trt, truncation_level,
                 number_of_ground_motion_fields, asset_hazard_distance,
                 ses_seed, job_owner_email, outputs_uri_web,

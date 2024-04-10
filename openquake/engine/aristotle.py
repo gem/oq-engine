@@ -37,6 +37,7 @@ def get_trts_around(rupdic, mosaic_dir):
     :returns: list of TRTs for the mosaic model covering lon, lat
     """
     lon, lat = rupdic['lon'], rupdic['lat']
+    usgs_id = rupdic.get('usgs_id', '')
     lonlats = numpy.array([[lon, lat]])
     mosaic_df = readinput.read_mosaic_df(buffer=1)
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
@@ -47,8 +48,9 @@ def get_trts_around(rupdic, mosaic_dir):
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
     logging.info('Considering %s[%s]: (%s, %s)',
-                 rupdic['usgs_id'], mosaic_model, lon, lat)
-    return [trt.decode('utf8') for trt in df.trt.unique()]
+                 usgs_id, mosaic_model, lon, lat)
+    trts = [trt.decode('utf8') for trt in df.trt.unique()]
+    return trts, mosaic_model
 
 
 def get_tmap_keys(exposure_hdf5, countries):
@@ -89,7 +91,7 @@ def get_aristotle_allparams(
               'site_model': [smodel],
               'job_ini': '<in-memory>'}
     if trt is None:
-        trts = get_trts_around(rupdic, mosaic_dir)
+        trts, _ = get_trts_around(rupdic, mosaic_dir)
         trt = trts[0]
     params = dict(
         calculation_mode='scenario_risk',
