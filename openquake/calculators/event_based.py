@@ -417,9 +417,20 @@ def set_mags(oq, dstore):
     Set the attribute oq.mags_by_trt
     """
     if 'source_mags' in dstore:
+        # classical or event_based
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
+    elif 'ruptures' in dstore:
+        # scenario
+        trts = dstore['full_lt'].trts
+        ruptures = dstore['ruptures'][:]
+        dic = {}
+        for trti, trt in enumerate(trts):
+            rups = ruptures[ruptures['trt_smr'] == trti]
+            mags = numpy.unique(numpy.round(rups['mag'], 2))
+            dic[trt] = ['%.02f' % mag for mag in mags]
+        oq.mags_by_trt = dic
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):

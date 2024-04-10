@@ -296,6 +296,7 @@ class ModifiableGMPE(GMPE):
         Set the .mean_table and .sig_table attributes on the underlying gmpe
         """
         if hasattr(self.gmpe, 'set_tables'):
+            assert len(mags)
             self.gmpe.set_tables(mags, imts)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
