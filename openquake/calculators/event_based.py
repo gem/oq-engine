@@ -417,9 +417,20 @@ def set_mags(oq, dstore):
     Set the attribute oq.mags_by_trt
     """
     if 'source_mags' in dstore:
+        # classical or event_based
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
+    elif 'ruptures' in dstore:
+        # scenario
+        trts = dstore['full_lt'].trts
+        ruptures = dstore['ruptures'][:]
+        dic = {}
+        for trti, trt in enumerate(trts):
+            rups = ruptures[ruptures['trt_smr'] == trti]
+            mags = numpy.unique(numpy.round(rups['mag'], 2))
+            dic[trt] = ['%.02f' % mag for mag in mags]
+        oq.mags_by_trt = dic
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
@@ -502,7 +513,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df(buffer=0.1).set_index('code')
+            mosaic_df = readinput.read_mosaic_df(buffer=.1).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
@@ -595,7 +606,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
         if oq.rupture_dict:
-            mosaic_df = readinput.read_mosaic_df(buffer=0.1)
+            mosaic_df = readinput.read_mosaic_df(buffer=1)
             lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
             sitemodel = oq.inputs.get('site_model', [''])[0]
