@@ -527,6 +527,18 @@
             });
 
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
+            $('#lon').on('input', function() {
+                $('#mosaic_model').empty();
+                var lon = $(this).val().trim();
+                var lat = $('#lat').val().trim();
+                $('#aristotle_get_trts_btn').prop('disabled', lon === '' || lat === '');
+            });
+            $('#lat').on('input', function() {
+                $('#mosaic_model').empty();
+                var lat = $(this).val().trim();
+                var lon = $('#lon').val().trim();
+                $('#aristotle_get_trts_btn').prop('disabled', lon === '' || lat === '');
+            });
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
