@@ -420,6 +420,10 @@ def set_mags(oq, dstore):
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
+    elif 'ruptures' in dstore:
+        [trt] = dstore['full_lt'].trts
+        mags = numpy.unique(numpy.round(dstore['ruptures']['mag'], 2))
+        oq.mags_by_trt = {trt: ['%.02f' % mag for mag in mags]}
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
