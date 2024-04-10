@@ -37,10 +37,7 @@ def get_trts_around(rupdic, mosaic_dir):
     :returns: list of TRTs for the mosaic model covering lon, lat
     """
     lon, lat = rupdic['lon'], rupdic['lat']
-    if 'usgs_id' in rupdic:
-        usgs_id = rupdic['usgs_id']
-    else:
-        usgs_id = ''
+    usgs_id = rupdic.get('usgs_id', '')
     lonlats = numpy.array([[lon, lat]])
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
