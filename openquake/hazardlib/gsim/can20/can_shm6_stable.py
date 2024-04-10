@@ -17,7 +17,6 @@ models for the 6th Generation Seismic Hazard Model of Canada. 12th Canadian
 Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import os
-import io
 import numpy as np
 import pandas as pd
 import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
@@ -32,7 +31,7 @@ from openquake.hazardlib.gsim.gmpe_table import _get_mean, _get_stddev
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     BooreAtkinson2008 as BA08
 
-dirname = os.path.dirname(__file__)
+dirname = os.path.abspath(os.path.dirname(__file__))
 BASE_PATH_AA13 = os.path.join(dirname, 'AA13')
 BASE_PATH_NGAE = os.path.join(dirname, 'NGA-East-13')
 
@@ -146,13 +145,7 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         """
         subm = kwargs['submodel']
         fname = os.path.join(BASE_PATH_AA13, f'ENA_{subm}_cl450.hdf5')
-        if isinstance(fname, io.BytesIO):
-            # magic happening in the engine when reading the gsim from HDF5
-            pass
-        else:
-            # fname is really a filename (absolute in the engine)
-            kwargs['gmpe_table'] = os.path.join(
-                os.path.dirname(__file__), fname)
+        kwargs['gmpe_table'] = fname
         super().__init__(**kwargs)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -466,18 +459,8 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
         """
         subm = kwargs['submodel']
         fname = f'SHM6-trial_NGA-East_Model_{subm}_AA13_sigma.vs3000.hdf5'
-        fname = os.path.join(BASE_PATH_NGAE, fname)
-        if isinstance(fname, io.BytesIO):
-            # magic happening in the engine when reading the gsim from HDF5
-            pass
-        else:
-            # fname is really a filename (absolute in the engine)
-            kwargs['gmpe_table'] = os.path.join(
-                os.path.dirname(__file__), fname)
+        kwargs['gmpe_table'] = os.path.join(BASE_PATH_NGAE, fname)
         super().__init__(**kwargs)
-        #self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        #self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-        #    'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
