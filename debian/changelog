@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `avg_losses-stats` exporter in the case of a single realization
   * Managed duplicated multi fault sources in event based for the New
     Zealand model
   * Forbidden characters .:; in the branchID
