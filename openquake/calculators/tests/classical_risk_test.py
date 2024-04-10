@@ -32,6 +32,9 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps.csv', fname)
 
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+
     def test_case_3(self):
         self.run_calc(case_3.__file__, 'job.ini', exports='csv')
         [fname] = export(('loss_curves/rlz-0/sid-0', 'csv'),

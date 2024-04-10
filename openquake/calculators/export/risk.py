@@ -174,7 +174,11 @@ def export_aggrisk_stats(ekey, dstore):
 def _get_data(dstore, dskey, loss_types, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
-        weights = dstore['weights'][()]
+        try:
+            weights = dstore['weights'][()]
+        except KeyError:
+            # there is single realization, like in classical_risk/case_2
+            weights = [1.]
         if dskey in set(dstore):  # precomputed
             rlzs_or_stats = list(stats)
             statfuncs = [stats[ros] for ros in stats]
