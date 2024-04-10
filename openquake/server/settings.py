@@ -231,10 +231,16 @@ if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
         f' one of {APPLICATION_MODES}')
 
 if APPLICATION_MODE in ('TOOLS_ONLY',):
+    # add installed_apps for cookie-consent and corsheader
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent',):
+                'cookie_consent', 'corsheaders',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
+            
+    # add middleware for corsheader        
+    for app_cors in ('corsheaders.middleware.CorsMiddleware',):
+        if app_cors not in MIDDLEWARE:
+        
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.append('django.template.context_processors.request')
     COOKIE_CONSENT_NAME = "cookie_consent"
