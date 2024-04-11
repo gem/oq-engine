@@ -206,7 +206,8 @@ class MultiFaultSource(BaseSeismicSource):
                 srcid,
                 self.name,
                 self.tectonic_region_type,
-                self._rupture_idxs[slc],
+                self._rupture_idxs[slc] if hasattr(
+                    self, '_rupture_idxs') else [],  # tested in test_ucerf
                 self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc],
