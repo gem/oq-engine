@@ -308,14 +308,12 @@ class Atkinson2022Crust(GMPE):
     # define constant parameters
     suffix = "crust"
 
-    def __init__(self, epistemic="Central", modified_sigma=False, **kwargs):
+    def __init__(self, epistemic="Central", modified_sigma=False):
         """
         Aditional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__(
-            epistemic=epistemic, modified_sigma=modified_sigma, **kwargs
-        )
+        super().__init__()
         self.epistemic = epistemic
         self.modified_sigma = modified_sigma
 

@@ -293,7 +293,6 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
         basin=None,
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
-        **kwargs,
     ):
         """
         Enable setting regions to prevent messy overriding
@@ -305,7 +304,6 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             basin=basin,
             sigma_mu_epsilon=sigma_mu_epsilon,
             modified_sigma=modified_sigma,
-            **kwargs,
         )
         self.modified_sigma = modified_sigma
         self.sigma_mu_epsilon = sigma_mu_epsilon

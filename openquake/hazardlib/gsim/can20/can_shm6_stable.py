@@ -139,14 +139,12 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def __init__(self, **kwargs):
+    def __init__(self, submodel):
         """
         submodel is one of: "low", "central" or "high"
         """
-        subm = kwargs['submodel']
-        fname = os.path.join(BASE_PATH_AA13, f'ENA_{subm}_cl450.hdf5')
-        kwargs['gmpe_table'] = fname
-        super().__init__(**kwargs)
+        fname = os.path.join(BASE_PATH_AA13, f'ENA_{submodel}_cl450.hdf5')
+        super().__init__(fname)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -452,15 +450,14 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     REQUIRES_DISTANCES = {'rhypo'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def __init__(self, **kwargs):
+    def __init__(self, submodel):
         """
         Submodel is one of: "01", "02", "03", "04", "05", "06", "07", "08",
                             "09", "10", "11", "12", "13"
         """
-        subm = kwargs['submodel']
-        fname = f'SHM6-trial_NGA-East_Model_{subm}_AA13_sigma.vs3000.hdf5'
-        kwargs['gmpe_table'] = os.path.join(BASE_PATH_NGAE, fname)
-        super().__init__(**kwargs)
+        fname = f'SHM6-trial_NGA-East_Model_{submodel}_AA13_sigma.vs3000.hdf5'
+        gmpe_table = os.path.join(BASE_PATH_NGAE, fname)
+        super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
