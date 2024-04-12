@@ -666,8 +666,8 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0):
+        super().__init__()
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\

@@ -471,8 +471,8 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
-    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
+    def __init__(self, sigma_mu_epsilon=0.0):
+        super().__init__()
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

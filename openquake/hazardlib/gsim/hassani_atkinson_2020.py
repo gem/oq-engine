@@ -247,13 +247,11 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_ATTRIBUTES = {'kappa', 'backarc', 'forearc_ne', 'forearc_sw'}
 
-    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
-                 **kwargs):
+    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0):
         """
         Aditional parameters.
         """
-        super().__init__(kappa=kappa, backarc=backarc, forearc_ne=forearc_ne,
-                         forearc_sw=forearc_sw, **kwargs)
+        super().__init__()
         # kappa parameter
         self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw

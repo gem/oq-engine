@@ -404,13 +404,12 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
-        self.kwargs = kwargs
-        self.estimate_ztor = int(kwargs.get('estimate_ztor', 0))
-        self.estimate_width = int(kwargs.get('estimate_width', 0))
-        self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
+    def __init__(self, sigma_mu_epsilon=0.0, estimate_ztor=0,
+                 estimate_width=0, estimate_hypo_depth=0):
+        self.estimate_ztor = int(estimate_ztor)
+        self.estimate_width = int(estimate_width)
+        self.estimate_hypo_depth = int(estimate_hypo_depth)
         self.sigma_mu_epsilon = sigma_mu_epsilon
-
         if self.estimate_width:
             # To estimate a width, the GMPE needs Zbot
             self.REQUIRES_RUPTURE_PARAMETERS |= {"zbot"}
