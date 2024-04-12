@@ -335,8 +335,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
             # Get standard deviations
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
-                    C, C_PGA, imt, ctx.vs30, pga1100
-                )
+                    C, C_PGA, imt, ctx.vs30, pga1100)
             else:
                 tau[m] = C["tau"]
                 phi[m] = C["phi"]

@@ -285,14 +285,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
     FABA_ALL_MODELS = {}  # overridden in BCHydro
 
     def __init__(self, ergodic=True, theta6_adjustment=0, sigma_mu_epsilon=0.,
-                 faba_taper_model='Step'):
+                 faba_taper_model='Step', **faba_args):
         super().__init__()
         self.ergodic = ergodic
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
         faba_type = faba_taper_model
         if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
-            self.faba_model = self.FABA_ALL_MODELS[faba_type]()
+            self.faba_model = self.FABA_ALL_MODELS[faba_type](**faba_args)
         else:
             self.faba_model = None
 
