@@ -1239,6 +1239,11 @@ class OqParam(valid.ParamSet):
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
+            extra = set(self.minimum_magnitude) - set(self.maximum_distance)
+            if extra:
+                raise InvalidFile('%s: minimum_magnitude contains %s which is '
+                                  'not in the maximum_distance' %
+                                  (self.inputs['job_ini'], extra))
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
 
