@@ -108,14 +108,13 @@ class NBCC2015_AA13(GMPETable):
 
     def __init__(self, gmpe_table, REQUIRES_DISTANCES,
                  DEFINED_FOR_TECTONIC_REGION_TYPE):
-        fname = gmpe_table
-        if isinstance(fname, io.BytesIO):
+        if isinstance(gmpe_table, io.BytesIO):
             # magic happening in the engine when reading the gsim from HDF5
             pass
         else:
             # fname is really a filename (absolute in the engine)
             gmpe_table = os.path.join(
-                BASE_PATH_AA13, os.path.basename(fname))
+                BASE_PATH_AA13, os.path.basename(gmpe_table))
         super().__init__(gmpe_table)
         self.REQUIRES_DISTANCES = frozenset(REQUIRES_DISTANCES)
         self.DEFINED_FOR_TECTONIC_REGION_TYPE = \

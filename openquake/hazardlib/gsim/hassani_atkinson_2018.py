@@ -199,7 +199,6 @@ class HassaniAtkinson2018(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def __init__(self, d_sigma, kappa0, gamma_fle=None):
-        super().__init__()
         self.d_sigma = d_sigma
         self.kappa0 = kappa0
 

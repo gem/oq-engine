@@ -180,20 +180,12 @@ class GMPETable(GMPE):
 
     kind = "base"
 
-    @property
-    def filename(self):
-        """
-        Full pathname of the underlying HDF5 table
-        """
-        return self.gmpe_table
-
     def __init__(self, gmpe_table):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        self.gmpe_table = gmpe_table
-        super().__init__()
+        self.gmpe_table = self.filename = gmpe_table
         # populated by the ContextManager once imts and magnitudes are known
         with h5py.File(self.filename, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])

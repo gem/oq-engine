@@ -437,8 +437,6 @@ class KothaEtAl2020(GMPE):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
-                         c3_epsilon=c3_epsilon, ergodic=ergodic)
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
@@ -580,7 +578,7 @@ class KothaEtAl2020regional(KothaEtAl2020):
         """
         Instantiate setting the dl2l and c3 terms.
         """
-        super().__init__()
+        super().__init__()  # important
         self.delta_l2l_epsilon = delta_l2l_epsilon
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic

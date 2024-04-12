@@ -426,7 +426,6 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
         initializing the class, this overrides the kappa0 value assigned to
         the site.
         """
-        super().__init__()
         self.kappa0 = kappa0
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

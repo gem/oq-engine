@@ -274,7 +274,6 @@ class BooreEtAl2014(GMPE):
     kind = "base"
 
     def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0):
-        super().__init__()
         self.region = region
         self.sof = sof
         self.sigma_mu_epsilon = sigma_mu_epsilon
