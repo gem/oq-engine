@@ -1892,17 +1892,14 @@ class OqParam(valid.ParamSet):
         """
         if 'gsim_logic_tree' not in self.inputs:
             return True  # disable the check
-        gsim_lt = self.inputs['gsim_logic_tree']
+        gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts
         trts = set(self.maximum_distance)
-        unknown = ', '.join(trts - self._trts - {'default'})
+        unknown = ', '.join(trts - self._trts - set(self.minimum_magnitude)
+                            - {'default'})
         if unknown:
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
-        for trt, val in self.maximum_distance.items():
-            if trt not in self._trts and trt != 'default':
-                self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
-                return False
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
