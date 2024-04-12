@@ -227,15 +227,19 @@ class IntegrationDistance(dict):
         >>> maxdist.cut({'default': 5.})
         >>> maxdist
         {'default': [(5.0, 87.5), (8.0, 200.0)]}
+
+        >>> maxdist = IntegrationDistance.new('200')
+        >>> maxdist.cut({"Active Shallow Crust": 5.2, "default": 4.})
+        >>> maxdist
+        {'default': [(4.0, 200.0), (10.2, 200)], 'Active Shallow Crust': [(5.2, 200.0), (10.2, 200)]}
         """
-        all_trts = set(self) | set(min_mag_by_trt)
         if 'default' not in self:
             maxval = max(self.values(),
                          key=lambda val: max(dist for mag, dist in val))
             self['default'] = maxval
         if 'default' not in min_mag_by_trt:
             min_mag_by_trt['default'] = min(min_mag_by_trt.values())
-        for trt in all_trts:
+        for trt in set(self) | set(min_mag_by_trt):
             min_mag = getdefault(min_mag_by_trt, trt)
             if not min_mag:
                 continue
