@@ -154,7 +154,8 @@ class MetaGSIM(abc.ABCMeta):
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         self = type.__call__(cls, **kwargs)
-        self.kwargs = kwargs
+        if not hasattr(self, 'kwargs'):
+            self.kwargs = kwargs
         if mixture_model is not None:
             self.mixture_model = mixture_model
         return self
@@ -286,7 +287,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
-        # self.kwargs = kwargs
         cls = self.__class__
         if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (
