@@ -170,8 +170,8 @@ class AkkarEtAlRjb2014(GMPE):
 
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
+        super().__init__()
         [self.kind] = self.REQUIRES_DISTANCES
         self.adjustment_factor = np.log(adjustment_factor)
 
