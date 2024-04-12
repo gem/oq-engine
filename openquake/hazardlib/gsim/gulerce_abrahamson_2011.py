@@ -210,8 +210,8 @@ class GulerceAbrahamson2011(GMPE):
     #: using https://apps.automeris.io/wpd/ . Only SA is covered.
     non_verified = True
 
-    def __init__(self, gmpe_name, **kwargs):
-        super().__init__(gmpe_name=gmpe_name, **kwargs)
+    def __init__(self, gmpe_name):
+        super().__init__()
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 

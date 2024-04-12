@@ -198,9 +198,8 @@ class HassaniAtkinson2018(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def __init__(self, d_sigma, kappa0, gamma_fle=None, **kwargs):
-        super().__init__(d_sigma=d_sigma, kappa0=kappa0, gamma_fle=gamma_fle,
-                         **kwargs)
+    def __init__(self, d_sigma, kappa0, gamma_fle=None):
+        super().__init__()
         self.d_sigma = d_sigma
         self.kappa0 = kappa0
 

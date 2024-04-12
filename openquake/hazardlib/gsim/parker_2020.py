@@ -335,14 +335,12 @@ class ParkerEtAl2020SInter(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None,
-                 **kwargs):
+    def __init__(self, region=None, saturation_region=None, basin=None):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
-        super().__init__(region=region, saturation_region=saturation_region,
-                         basin=basin, **kwargs)
+        super().__init__()
         self.region = region
         if saturation_region is None:
             self.saturation_region = region
