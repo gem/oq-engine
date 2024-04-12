@@ -123,7 +123,7 @@ class TestZhao2016PErg(unittest.TestCase):
 
         # Get implementations of Zhao et al. (2016) intra-slab GMM
         volc_arc_fname = DATA_FOLDER
-        self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
+        self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_file=volc_arc_fname)
         self.gmm = ZhaoEtAl2016SSlab()
 
     def test01(self):
