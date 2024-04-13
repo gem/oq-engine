@@ -501,7 +501,7 @@ class GMPE(GroundShakingIntensityModel):
         elif hasattr(self, "mixture_model"):
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
-                mean_stdi = numpy.array(mean_std)  # a copy
+                mean_stdi = mean_std.copy()
                 mean_stdi[1] *= f  # multiply stddev by factor
                 out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
         else:  # regular case
