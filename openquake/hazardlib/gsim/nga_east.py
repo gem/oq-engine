@@ -707,10 +707,8 @@ class NGAEastGMPE(GMPETable):
                     self.phi_s2ss_quantile)
 
         self.site_epsilon = site_epsilon
-        fname = gmpe_table
-        if not isinstance(fname, io.BytesIO):  # real path name
-            gmpe_table = os.path.join(
-                self.PATH, os.path.basename(fname))
+        if not isinstance(gmpe_table, io.BytesIO):  # real path name
+            gmpe_table = os.path.join(self.PATH, os.path.basename(gmpe_table))
             assert os.path.exists(gmpe_table), gmpe_table
         super().__init__(gmpe_table)
 

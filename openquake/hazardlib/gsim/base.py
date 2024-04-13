@@ -156,6 +156,9 @@ class MetaGSIM(abc.ABCMeta):
         self = type.__call__(cls, **kwargs)
         if not hasattr(self, 'kwargs'):
             self.kwargs = kwargs
+        if hasattr(self, 'gmpe_table'):
+            # used in NGAEast to set the full pathname
+            self.kwargs['gmpe_table'] = self.gmpe_table
         if mixture_model is not None:
             self.mixture_model = mixture_model
         return self

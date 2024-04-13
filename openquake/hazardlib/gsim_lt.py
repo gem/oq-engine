@@ -281,8 +281,7 @@ class GsimLogicTree(object):
                             if v is None:  # if volc_arc_file is None
                                 pass
                             else:
-                                fname = (gsim.gmpe_table if dirname == 'fake'
-                                         else os.path.join(dirname, v))
+                                fname = os.path.join(dirname, v)
                                 with open(fname, 'rb') as f:
                                     dic[os.path.basename(v)] = f.read()
         return numpy.array(branches, dt), dic
