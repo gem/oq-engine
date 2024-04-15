@@ -23,7 +23,7 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 import numpy
 import shapely
 
-from openquake.baselib.python3compat import round
+#from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
@@ -154,15 +154,15 @@ class ComplexFaultSurface(BaseSurface):
         # position vectors associated with upper left and right corners (if
         # both angles are less then 90 degrees then the surface is correctly
         # defined)
-        ul = edges[0].points[0]
+        u1 = edges[0].points[0]
         u2 = edges[0].points[1]
-        bl = edges[-1].points[0]
+        b1 = edges[-1].points[0]
         b2 = edges[-1].points[1]
         
         ul, ur, bl, br = spherical_to_cartesian(
-            [ul.longitude, u2.longitude, bl.longitude, b2.longitude],
-            [ul.latitude, u2.latitude, bl.latitude, b2.latitude],
-            [ul.depth, b2.depth, bl.depth, b2.depth],
+            [u1.longitude, u2.longitude, b1.longitude, b2.longitude],
+            [u1.latitude, u2.latitude, b1.latitude, b2.latitude],
+            [u1.depth, b2.depth, b1.depth, b2.depth],
         )
 
         top_edge = ur - ul
@@ -180,10 +180,10 @@ class ComplexFaultSurface(BaseSurface):
 
         # rounding to 1st digit, to avoid ValueError raised for floating point
         # imprecision
-        angle_ul = round(
+        angle_ul = numpy.round(
             numpy.degrees(numpy.arccos(numpy.dot(ul, left_cross_top))), 1
         )
-        angle_ur = round(
+        angle_ur = numpy.round(
             numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
         )
 
@@ -288,7 +288,7 @@ class ComplexFaultSurface(BaseSurface):
         cls.check_fault_data(edges, mesh_spacing)
         surface_nodes = [complex_fault_node(edges)]
         mean_length = numpy.mean([edge.get_length() for edge in edges])
-        num_hor_points = int(round(mean_length / mesh_spacing)) + 1
+        num_hor_points = int(numpy.round(mean_length / mesh_spacing)) + 1
         if num_hor_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
@@ -299,7 +299,7 @@ class ComplexFaultSurface(BaseSurface):
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
         mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
-        num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+        num_vert_points = int(numpy.round(mean_width / mesh_spacing)) + 1
         if num_vert_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean width %.1f km' %
