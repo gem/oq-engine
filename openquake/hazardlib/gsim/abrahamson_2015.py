@@ -286,7 +286,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     def __init__(self, ergodic=True, theta6_adjustment=0, sigma_mu_epsilon=0.,
                  faba_taper_model='Step', **faba_args):
-        super().__init__()
         self.ergodic = ergodic
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon

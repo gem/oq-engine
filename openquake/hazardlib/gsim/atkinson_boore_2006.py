@@ -414,7 +414,6 @@ class AtkinsonBoore2006(GMPE):
 
     def __init__(self, mag_eq="NA", scale_fac=0):
         assert mag_eq in "Mblg87 Mblg96 Mw NA", mag_eq
-        super().__init__()
         self.mag_eq = mag_eq
         self.scale_fac = scale_fac
 

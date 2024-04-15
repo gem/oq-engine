@@ -117,7 +117,6 @@ class BindiEtAl2017Rjb(GMPE):
     REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, adjustment_factor=1.0):
-        super().__init__()
         self.adjustment_factor = np.log(float(adjustment_factor))
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

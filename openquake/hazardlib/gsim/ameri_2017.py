@@ -243,7 +243,6 @@ class AmeriEtAl2017Rjb(GMPE):
     kind = "rjb"
 
     def __init__(self, norm_stress_drop=0.1, adjustment_factor=1.0):
-        super().__init__()
         self.norm_stress_drop = norm_stress_drop
         self.adjustment_factor = np.log(adjustment_factor)
 

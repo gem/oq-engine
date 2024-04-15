@@ -209,7 +209,6 @@ class BozorgniaCampbell2016(GMPE):
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
     def __init__(self, SJ=0, sgn=0):
-        super().__init__()
         self.SJ = SJ
         self.sgn = sgn
 

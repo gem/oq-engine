@@ -625,7 +625,6 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
                  sigma_mu_epsilon=0.0):
-        super().__init__()
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region

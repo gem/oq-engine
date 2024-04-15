@@ -464,7 +464,6 @@ class AbrahamsonEtAl2014(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
     def __init__(self, sigma_mu_epsilon=0.0, region=None):
-        super().__init__()
         self.region = region
         assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
         self.sigma_mu_epsilon = sigma_mu_epsilon
