@@ -340,7 +340,6 @@ class ParkerEtAl2020SInter(GMPE):
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
-        super().__init__()
         self.region = region
         if saturation_region is None:
             self.saturation_region = region

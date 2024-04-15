@@ -250,7 +250,6 @@ class PitilakisEtAl2018(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
     def __init__(self, gmpe_name, reference_velocity=None, **extra_args):
-        super().__init__()
         if isinstance(gmpe_name, str):
             self.gsim = registry[gmpe_name](**extra_args)
         else:

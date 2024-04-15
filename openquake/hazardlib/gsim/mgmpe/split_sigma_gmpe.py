@@ -80,7 +80,6 @@ class SplitSigmaGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, within_absolute=None, between_absolute=None):
-        super().__init__()
         # Create the original GMPE
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()

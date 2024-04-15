@@ -313,7 +313,6 @@ class Atkinson2022Crust(GMPE):
         Aditional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__()
         self.epistemic = epistemic
         self.modified_sigma = modified_sigma
 

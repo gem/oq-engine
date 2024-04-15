@@ -281,7 +281,6 @@ class AlAtikSigmaModel(GMPE):
                  tau_quantile=None, phi_ss_quantile=None,
                  phi_s2ss_quantile=None, phi_s2ss_model=None,
                  kappa_file=None, kappa_val=None):
-        super().__init__()
         self.tau_model = tau_model
         self.phi_model = phi_model
         self.phi_s2ss_model = phi_s2ss_model

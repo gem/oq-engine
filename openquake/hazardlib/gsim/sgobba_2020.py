@@ -222,7 +222,6 @@ class SgobbaEtAl2020(GMPE):
 
     def __init__(self, event_id=None, directionality=False, cluster=None,
                  site=False, bedrock=False):
-        super().__init__()
         self.event_id = event_id
         self.directionality = directionality
         self.cluster = cluster
