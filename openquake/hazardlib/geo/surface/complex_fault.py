@@ -141,13 +141,14 @@ class ComplexFaultSurface(BaseSurface):
     @classmethod
     def check_aki_richards_convention(cls, edges):
         """
-        Verify that surface (as defined by corner points) conforms with Aki and
+        Verify that surface conforms with Aki and
         Richard convention (i.e. surface dips right of surface strike)
+        Test with 2 adjacent edges to allow for very large, curved surfaces
 
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        # 1) extract 4 points of surface mesh 
+        # 1) extract 4 points of surface mesh from adjacent edges 
         # 2) compute cross products between left and right edges and top edge
         # (these define vectors normal to the surface)
         # 3) compute dot products between cross product results and
@@ -155,14 +156,14 @@ class ComplexFaultSurface(BaseSurface):
         # both angles are less then 90 degrees then the surface is correctly
         # defined)
         ul = edges[0].points[0]
-        u2 = edges[0].points[1]
+        u1 = edges[0].points[1]
         bl = edges[-1].points[0]
-        b2 = edges[-1].points[1]
+        b1 = edges[-1].points[1]
         
         ul, ur, bl, br = spherical_to_cartesian(
-            [ul.longitude, u2.longitude, bl.longitude, b2.longitude],
-            [ul.latitude, u2.latitude, bl.latitude, b2.latitude],
-            [ul.depth, b2.depth, bl.depth, b2.depth],
+            [ul.longitude, u1.longitude, bl.longitude, b1.longitude],
+            [ul.latitude, u1.latitude, bl.latitude, b1.latitude],
+            [ul.depth, b1.depth, bl.depth, b1.depth],
         )
 
         top_edge = ur - ul
@@ -261,7 +262,6 @@ class ComplexFaultSurface(BaseSurface):
             raise ValueError("mesh spacing must be positive")
 
         cls.check_surface_validity(edges)
-        #cls._check_edges(edges)
         cls.check_aki_richards_convention(edges)
 
     @classmethod
