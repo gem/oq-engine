@@ -692,7 +692,7 @@ class KuehnEtAl2020SInter(GMPE):
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
-            self.gmpe_table = True  # enable split by mag
+            self.gmpe_table = None  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:

@@ -224,7 +224,7 @@ class HassaniAtkinson2020SInter(GMPE):
     """
     Hassani Atkinson (2020) for Subduction Interface.
     """
-    gmpe_table = True  # use split_by_mag
+    gmpe_table = None  # use split_by_mag
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 

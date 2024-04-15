@@ -263,7 +263,7 @@ class AlAtikSigmaModel(GMPE):
         kappa value corresponding to a column header in kappa_file
     """
     adapted = True
-    gmpe_table = True  # use split_by_mag
+    gmpe_table = None  # use split_by_mag
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
