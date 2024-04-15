@@ -491,10 +491,9 @@ class Stafford2022(GMPE):
         adjust_cg1=True,
     ):
         """
-        Aditional parameter for epistemic central,
+        Additional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__()
         self.mu_branch = mu_branch
         self.sigma_branch = sigma_branch
         self.adjust_c1 = adjust_c1
