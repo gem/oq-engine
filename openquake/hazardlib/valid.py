@@ -184,6 +184,8 @@ def gsim(value, basedir=''):
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
     gs = gsim_class(**kwargs)
+    if 'mixture_model' in kwargs:
+        gs.mixture_model = kwargs['mixture_model']
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
