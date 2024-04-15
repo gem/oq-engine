@@ -32,8 +32,6 @@ from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
-from pyproj import Proj, CRS
-
 def edge_node(name, points):
     """
     :param name: 'faultTopEdge', 'intermediateEdge' or 'faultBottomEdge'
@@ -136,7 +134,6 @@ class ComplexFaultSurface(BaseSurface):
         if self.strike is None:
             self.get_dip()  # this should cache strike value
         return self.strike
-
             
     @classmethod
     def check_aki_richards_convention(cls, edges):
@@ -193,7 +190,6 @@ class ComplexFaultSurface(BaseSurface):
                 "Surface does not conform with Aki & Richards convention"
             )
             
-
     @classmethod
     def check_surface_validity(cls, edges):
         """
