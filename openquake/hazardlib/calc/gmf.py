@@ -68,6 +68,7 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
     for m in range(M):
         iml = max_iml[m]
         for n in range(N):
+            # capping the gmv at the median value if val > max_iml[m]
             maxval = exp(mean[m, n], m!=mmi_index)
             for e in range(E):
                 val = array[n, m, e]
@@ -94,6 +95,65 @@ def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
                 eid_sid_rlz[2, idx] = rlz
                 idx += 1
     return eid_sid_rlz
+
+
+def calc_gmf_simplified(ebrupture, sitecol, cmaker):
+    """
+    A simplified version of the GmfComputer for event based calculations.
+    Used only for pedagogical purposes. Here is an example of usage:
+
+    from unittest.mock import Mock
+    import numpy
+    from openquake.hazardlib import valid, contexts, site, geo
+    from openquake.hazardlib.source.rupture import EBRupture, build_planar
+    from openquake.hazardlib.calc.gmf import calc_gmf_simplified, GmfComputer
+
+    imts = ['PGA']
+    rlzs = numpy.arange(3, dtype=numpy.uint32)
+    rlzs_by_gsim = {valid.gsim('BooreAtkinson2008'): rlzs}
+    lons = [0., 0.]
+    lats = [0., 1.]
+    siteparams = Mock(reference_vs30_value=760.)
+    sitecol = site.SiteCollection.from_points(lons, lats, sitemodel=siteparams)
+    hypo = geo.point.Point(0, .5, 20)
+    rup = build_planar(hypo, mag=7., rake=0.)
+    cmaker = contexts.simple_cmaker(rlzs_by_gsim, imts, truncation_level=3.)
+    ebr = EBRupture(rup, 0, 0, n_occ=2, id=1)
+    ebr.seed = 42
+    print(cmaker)
+    print(sitecol.array)
+    print(ebr)
+
+    gmfa = calc_gmf_simplified(ebr, sitecol, cmaker)
+    print(gmfa) # numbers considering the full site collection
+    sites = site.SiteCollection.from_points([0], [1], sitemodel=siteparams)
+    gmfa = calc_gmf_simplified(ebr, sites, cmaker)
+    print(gmfa)  # different numbers considering half of the site collection
+    """
+    N = len(sitecol)
+    M = len(cmaker.imtls)
+    [ctx] = cmaker.get_ctx_iter([ebrupture.rupture], sitecol)
+    mean, sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
+    rlzs = numpy.concatenate(list(cmaker.gsims.values()))
+    eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
+    rng = numpy.random.default_rng(ebrupture.seed)
+    cross_correl = NoCrossCorrelation(cmaker.truncation_level)
+    ccdist = cross_correl.distribution
+    gmfs = []
+    for g, (gs, rlzs) in enumerate(cmaker.gsims.items()):
+        idxs, = numpy.where(numpy.isin(rlz, rlzs))
+        E = len(idxs)
+        # build arrays of random numbers of shape (M, N, E) and (M, E)
+        intra_eps = [ccdist.rvs((N, E), rng) for _ in range(M)]
+        eps = numpy.zeros((E, M), F32)
+        eps[idxs] = cross_correl.get_inter_eps(cmaker.imtls, E, rng).T
+        gmf = numpy.zeros((M, N, E))
+        for m, imt in enumerate(cmaker.imtls):
+            intra_res = phi[g, m, :, None] * intra_eps  # shape (N, E)
+            inter_res = tau[g, m, :, None] * eps[idxs, m]  # shape (N, E)
+            gmf[m] = numpy.exp(mean[g, m, :, None] + intra_res + inter_res)
+        gmfs.append(gmf)
+    return numpy.concatenate(gmfs)  # shape (M, N, E)
 
 
 class GmfComputer(object):

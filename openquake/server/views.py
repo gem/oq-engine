@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 import shutil
 import json
 import string
@@ -45,17 +46,20 @@ import numpy
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo
+from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
+from openquake.engine.aristotle import get_trts_around, get_aristotle_allparams
 from openquake.server import utils
 
 from django.conf import settings
@@ -93,10 +97,27 @@ KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
 AELO_FORM_PLACEHOLDERS = {
+    'lon': 'Longitude (max. 5 decimal places)',
+    'lat': 'Latitude (max. 5 decimal places)',
+    'vs30': 'Vs30 (fixed at 760 m/s)',
+    'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)'
+}
+
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'usgs_id': 'USGS ID',
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30 (fixed at 760 m/s)',
-    'siteid': 'Site name',
+    'dep': 'Depth',
+    'mag': 'Magnitude',
+    'rake': 'Rake',
+    'dip': 'Dip',
+    'strike': 'Strike',
+    'maximum_distance': 'Maximum distance',
+    'trt': 'Tectonic region type',
+    'truncation_level': 'Truncation level',
+    'number_of_ground_motion_fields': 'Number of ground motion fields',
+    'asset_hazard_distance': 'Asset hazard distance',
+    'ses_seed': 'SES seed',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -406,7 +427,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host) in calc_data:
+         parent_id, size_mb, host, start_time) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -417,11 +438,15 @@ def calc_list(request, id=None):
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
+        start_time_str = (
+            start_time.strftime("%Y-%m-%d, %H:%M:%S") + " "
+            + settings.TIME_ZONE)
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable, size_mb=size_mb))
+                 parent_id=parent_id, abortable=abortable, size_mb=size_mb,
+                 start_time=start_time_str))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -579,7 +604,8 @@ def aelo_callback(
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
-    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+    lon, lat = inputs['sites'].split()
+    body = (f"Input values: lon = {lon}, lat = {lat},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
     if warnings is not None:
         for warning in warnings:
@@ -593,16 +619,219 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+def aristotle_callback(
+        job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
+    if not job_owner_email:
+        return
+
+    params_to_print = ''
+    for key, val in params.items():
+        if key not in ['calculation_mode', 'inputs', 'job_ini',
+                       'hazard_calculation_id']:
+            if key == 'rupture_dict':
+                params_to_print += params[key] + '\n'
+            else:
+                params_to_print += f'{key}: {val}\n'
+
+    from_email = 'aristotlenoreply@openquake.org'
+    to = [job_owner_email]
+    reply_to = 'aristotlesupport@openquake.org'
+    body = (f"Input parameters:\n{params_to_print}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
+    if exc:
+        job_id = job_id
+        subject = f'Job {job_id} failed'
+        body += f'There was an error running job {job_id}:\n{exc}'
+    else:
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def aelo_run(request):
+def aristotle_get_rupture_data(request):
     """
-    Run an AELO calculation.
+    Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+        a `django.http.HttpRequest` object containing usgs_id
     """
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    (usgs_id,) = res
+    try:
+        rupture_dict = get_rupture_dict(usgs_id)
+        trts, mosaic_model = get_trts_around(
+            rupture_dict, config.directory.mosaic_dir)
+    except Exception as exc:
+        if '404: Not Found' in str(exc):
+            error_msg = f'USGS ID "{usgs_id}" was not found'
+        elif 'There is not rupture.json' in str(exc):
+            error_msg = (f'USGS ID "{usgs_id}" was found, but it'
+                         f' has no associated rupture data')
+        else:
+            error_msg = str(exc)
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': error_msg}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    rupture_dict['trts'] = trts
+    rupture_dict['mosaic_model'] = mosaic_model
+    response_data = rupture_dict
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_get_trts(request):
+    """
+    Retrieve tectonic region types given geographic coordinates
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon and lat
+    """
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat = res
+    try:
+        trts, mosaic_model = get_trts_around(
+            dict(lon=lon, lat=lat), config.directory.mosaic_dir)
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    else:
+        response_data = dict(trts=trts, mosaic_model=mosaic_model)
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=200)
+
+
+def aristotle_validate(request):
+    validation_errs = {}
+    invalid_inputs = []
+    field_validation = {
+        'usgs_id': valid.simple_id,
+        'lon': valid.longitude,
+        'lat': valid.latitude,
+        'dep': valid.positivefloat,
+        'mag': valid.positivefloat,
+        'rake': valid.positivefloat,
+        'dip': valid.positivefloat,
+        'strike': valid.positivefloat,
+        'maximum_distance': valid.positivefloat,
+        'trt': valid.utf8,
+        'truncation_level': valid.positivefloat,
+        'number_of_ground_motion_fields': valid.positiveint,
+        'asset_hazard_distance': valid.positivefloat,
+        'ses_seed': valid.positiveint,
+    }
+    params = {}
+    for fieldname, validation_func in field_validation.items():
+        if fieldname not in request.POST:
+            continue
+        try:
+            params[fieldname] = validation_func(request.POST.get(fieldname))
+        except Exception as exc:
+            validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
+            invalid_inputs.append(fieldname)
+
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+    return params.values()
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_run(request):
+    """
+    Run an ARISTOTLE calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing
+        lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+        truncation_level, number_of_ground_motion_fields,
+        asset_hazard_distance, ses_seed
+    """
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+     truncation_level, number_of_ground_motion_fields,
+     asset_hazard_distance, ses_seed) = res
+    try:
+        allparams = get_aristotle_allparams(
+            usgs_id, lon, lat, dep, mag, rake, dip, strike,
+            maximum_distance, trt, truncation_level,
+            number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
+            config.directory.mosaic_dir)
+    except SiteAssociationError as exc:
+        response_data = {"status": "failed", "error_msg": str(exc)}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=406)
+
+    user = utils.get_user(request)
+    jobctxs = engine.create_jobs(
+        allparams, config.distribution.log_level, None, user, None)
+
+    job_owner_email = request.user.email
+    for job_idx, jobctx in enumerate(jobctxs):
+        job_id = jobctx.calc_id
+
+        outputs_uri_web = request.build_absolute_uri(
+            reverse('outputs_aristotle', args=[job_id]))
+        outputs_uri_api = request.build_absolute_uri(
+            reverse('results', args=[job_id]))
+        log_uri = request.build_absolute_uri(
+            reverse('log', args=[job_id, '0', '']))
+        traceback_uri = request.build_absolute_uri(
+            reverse('traceback', args=[job_id]))
+        response_data = dict(
+            status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+            log_uri=log_uri, traceback_uri=traceback_uri)
+        if not job_owner_email:
+            response_data['WARNING'] = (
+                'No email address is speficied for your user account,'
+                ' therefore email notifications will be disabled. As soon as'
+                ' the job completes, you can access its outputs at the'
+                ' following link: %s. If the job fails, the error traceback'
+                ' will be accessible at the following link: %s'
+                % (outputs_uri_api, traceback_uri))
+
+        # spawn the Aristotle main process
+        proc = mp.Process(
+            target=aristotle.main,
+            args=(
+                usgs_id, lon, lat, dep, mag, rake, dip, strike,
+                maximum_distance, trt, truncation_level,
+                number_of_ground_motion_fields, asset_hazard_distance,
+                ses_seed, job_owner_email, outputs_uri_web,
+                allparams, [jobctx], aristotle_callback))
+        proc.start()
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
+def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
     try:
@@ -621,7 +850,11 @@ def aelo_run(request):
         validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     try:
-        siteid = valid.simple_id(request.POST.get('siteid'))
+        siteid = request.POST.get('siteid')
+        if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
+            raise ValueError(
+                "site name can not be longer than %s characters" %
+                settings.MAX_AELO_SITE_NAME_LEN)
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
         invalid_inputs.append('siteid')
@@ -636,11 +869,28 @@ def aelo_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    return lon, lat, vs30, siteid
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aelo_run(request):
+    """
+    Run an AELO calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+    """
+    res = aelo_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat, vs30, siteid = res
 
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid),
+            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
@@ -953,10 +1203,12 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    application_mode = settings.APPLICATION_MODE.upper()
+    application_mode = settings.APPLICATION_MODE
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
+    elif application_mode == 'ARISTOTLE':
+        params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
     return render(
         request, "engine/index.html", params)
 
@@ -964,19 +1216,24 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    application_mode = settings.APPLICATION_MODE.upper()
+    application_mode = settings.APPLICATION_MODE
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
             hcurves = 'hcurves.png' in ds['png']
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
-            hmaps = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = False
+            avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     lon = lat = vs30 = site_name = None
@@ -986,7 +1243,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       hcurves=hcurves,
+                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
@@ -1003,6 +1260,21 @@ def is_model_preliminary(ds):
         return False
 
 
+def get_disp_val(val):
+    # gets the value displayed in the webui according to the rounding rules
+    if val >= 1.0:
+        return '{:.2f}'.format(numpy.round(val, 2))
+    elif val < 0.0001:
+        return f'{val:.1f}'
+    elif val < 0.01:
+        return '{:.4f}'.format(numpy.round(val, 4))
+    elif val < 0.1:
+        return '{:.3f}'.format(numpy.round(val, 3))
+    else:
+        return '{:.2f}'.format(numpy.round(val, 2))
+
+
+# this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
@@ -1011,13 +1283,16 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07 = asce41 = None
     asce07_with_units = {}
     asce41_with_units = {}
-    ASCE_VIEW_DECIMALS = 2
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if is_model_preliminary(ds):
             warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
-            asce07_js = ds['asce07'][()].decode('utf8')
+            try:
+                asce07_js = ds['asce07'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
             for key, value in asce07.items():
                 if key not in ('PGA', 'Ss', 'S1'):
@@ -1026,13 +1301,15 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce07_with_units[key] = value
                 elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce07_with_units[key + ' (-)'] = (
-                        f'{value:.{ASCE_VIEW_DECIMALS}}')
+                    asce07_with_units[key + ' (-)'] = get_disp_val(value)
                 else:
-                    asce07_with_units[key + ' (g)'] = (
-                        f'{value:.{ASCE_VIEW_DECIMALS}}')
+                    asce07_with_units[key + ' (g)'] = get_disp_val(value)
         if 'asce41' in ds:
-            asce41_js = ds['asce41'][()].decode('utf8')
+            try:
+                asce41_js = ds['asce41'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 if not key.startswith('BSE'):
@@ -1040,13 +1317,12 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 if not isinstance(value, float):
                     asce41_with_units[key] = value
                 else:
-                    asce41_with_units[key + ' (g)'] = (
-                        f'{value:.{ASCE_VIEW_DECIMALS}}')
+                    asce41_with_units[key + ' (g)'] = get_disp_val(value)
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         if 'warnings' in ds:
-            ds_warnings = ds['warnings'][()].decode('utf8')
+            ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
                 warnings = ds_warnings
             else:
@@ -1056,6 +1332,63 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        warnings=warnings))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_get_outputs_aristotle(request, calc_id):
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    description = job.description
+    warnings = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
+        losses_header = [header.capitalize().replace('_', ' ')
+                         for header in losses.dtype.names]
+        if 'png' in ds:
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
+        else:
+            assets = False
+            avg_gmf = []
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    if 'warnings' in ds:
+        ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+        if warnings is None:
+            warnings = ds_warnings
+        else:
+            warnings += '\n' + ds_warnings
+    return render(request, "engine/get_outputs_aristotle.html",
+                  dict(calc_id=calc_id, description=description,
+                       size_mb=size_mb, losses=losses,
+                       losses_header=losses_header,
+                       avg_gmf=avg_gmf, assets=assets, warnings=warnings))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def download_aggrisk(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(
+        content_type="text/csv",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="aggrisk_%s.csv"' % calc_id
+        },
+    )
+    writer = csv.writer(response)
+    writer.writerow(losses.dtype.names)
+    for row in losses:
+        writer.writerow(row)
+    return response
 
 
 @csrf_exempt

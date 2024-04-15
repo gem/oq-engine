@@ -28,9 +28,10 @@ from scipy import stats
 from shapely.geometry import Polygon
 
 from openquake.baselib.node import Node
+from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo.line import _resample
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.line import _resample, Line
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -115,11 +116,15 @@ class KiteSurface(BaseSurface):
     def get_surface_boundaries(self):
         return self._get_external_boundary()
 
-    def get_tor(self):
+    @cached_property
+    # this is cached since it can be called multiple times for the same
+    # surface (in multi fault sources)
+    def tor(self):
         """
         Provides longitude and latitude coordinates of the vertical surface
         projection of the top of rupture. This is used in the GC2 method to
-        compute the Rx and Ry0 distances.
+        compute the Rx and Ry0 distances. NB: keep_corners is used to reduce
+        the line, with a tolerance of 1 km.
 
         One important note here. The kite fault surface uses a rectangular
         mesh to describe the geometry of the rupture; some nodes can be NaN.
@@ -129,11 +134,13 @@ class KiteSurface(BaseSurface):
             latitudes
         """
         chk = np.isfinite(self.mesh.lons)
-        iro = (chk).argmax(axis=0)
-        ico = np.arange(0, self.mesh.lons.shape[1])
+        iro = chk.argmax(axis=0)
+        ico = np.arange(self.mesh.lons.shape[1])
         ico = ico[iro <= 1]
         iro = iro[iro <= 1]
-        return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+        # top_left, top_right coordinates
+        lo, la = self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+        return Line.from_vectors(lo, la).keep_corners(delta=1.)
 
     def is_vertical(self):
         """ True if all the profiles, and hence the surface, are vertical """
@@ -444,7 +451,6 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
-
         # Fix profiles
         rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
@@ -544,6 +550,13 @@ class KiteSurface(BaseSurface):
         # each cell the centroid as 3d vector in a Cartesian space, the length
         # width (size along column of points) in km and the area in km2.
         return None, None, None, area
+
+    def __str__(self):
+        if hasattr(self, 'idx'):  # multisurface index
+            idx = ' idx=%d' % self.idx
+        else:
+            idx = ''
+        return '<%s%s>' % (self.__class__.__name__, idx)
 
 
 def geom_to_kite(geom):
@@ -707,7 +720,6 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     :returns:
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
-
     # Compute information needed for the geographic projection
     proj = _get_proj_from_profiles(rprof)
 
@@ -828,7 +840,6 @@ def _fix_right_hand(msh):
     tmp = msh[0, :, 0]
     idx = np.isfinite(tmp)
     top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
-    avg_azi = top.average_azimuth()
 
     # Compute the strike of the surface
     coo = msh.reshape(-1, 3)
@@ -838,7 +849,7 @@ def _fix_right_hand(msh):
     strike = grdd.get_strike()
 
     # Check if we need to flip the grid
-    if not np.abs(_angles_diff(strike, avg_azi)) < 60:
+    if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
 
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.flip(msh, axis=1)
@@ -847,11 +858,10 @@ def _fix_right_hand(msh):
         tmp = nmsh[0, :, 0]
         idx = np.isfinite(tmp)
         top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
-        avg_azi_new = top.average_azimuth()
 
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
-        assert np.abs(_angles_diff(strike, avg_azi_new)) < 60, msg
+        assert np.abs(_angles_diff(strike, top.azimuth)) < 60, msg
         return nmsh
 
     return msh
@@ -1065,7 +1075,8 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
             # If the edge starts with the first index
             if i_from == unique[0]:
-                tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
+                line = Line.from_coo(parr[cseg[0]:cseg[1], cseg[2]])
+                tmp = _resample(line, sd, True)
 
                 if len(tmp) < 3:
                     tmp = tmp[:, :]

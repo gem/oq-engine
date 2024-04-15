@@ -22,13 +22,17 @@ import logging
 import shapely
 import numpy
 import pandas
+from shapely.geometry import MultiPolygon
 from scipy.stats import linregress
+from openquake.commonlib import datastore
+from openquake.commonlib.readinput import read_countries_df
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
+from openquake.hmtk.plotting.patch import PolygonPatch
 
 
 def import_plt():
@@ -110,27 +114,108 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
+def add_borders(ax):
+    plt = import_plt()
+    polys = read_countries_df(buffer=0)['geom']
+    cm = plt.get_cmap('RdBu')
+    num_colours = len(polys)
+    for idx, poly in enumerate(polys):
+        colour = cm(1. * idx / num_colours)
+        if isinstance(poly, MultiPolygon):
+            for onepoly in poly.geoms:
+                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
+        else:
+            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
+    return ax
+
+
+def get_assetcol(calc_id):
+    assetcol = None
+    dstore = datastore.read(calc_id)
+    if 'assetcol' in dstore:
+        try:
+            assetcol = dstore['assetcol'][()]
+        except AttributeError:
+            assetcol = dstore['assetcol'].array
+    return assetcol
+
+
+def get_country_iso_codes(calc_id, assetcol):
+    dstore = datastore.read(calc_id)
+    try:
+        ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
+        ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
+    except KeyError:  # ID_0 might be missing
+        id_0_str = None
+    else:
+        id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
+    return id_0_str
+
+
+def plot_avg_gmf(calc_id, imt):
+    [ex] = [Extractor(calc_id)]
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+
+    title = 'Avg GMF for %s' % imt
+    assetcol = get_assetcol(calc_id)
+    if assetcol is not None:
+        country_iso_codes = get_country_iso_codes(calc_id, assetcol)
+        if country_iso_codes is not None:
+            title += ' (Countries: %s)' % country_iso_codes
+    ax.set_title(title)
+
+    avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
+    gmf = avg_gmf[imt]
+    markersize = 5
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
+                      s=markersize)
+    plt.colorbar(coll)
+
+    ax = add_borders(ax)
+
+    minx = avg_gmf['lons'].min()
+    maxx = avg_gmf['lons'].max()
+    miny = avg_gmf['lats'].min()
+    maxy = avg_gmf['lats'].max()
+    w, h = maxx - minx, maxy - miny
+    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
+    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
+    return plt
+
+
 def make_figure_avg_gmf(extractors, what):
     """
     $ oq plot "avg_gmf?imt=PGA"
     """
+    [ex] = extractors
+    imt = what.split('=')[1]
+    calc_id = ex.calc_id
+    plt = plot_avg_gmf(calc_id, imt)
+    return plt
+
+
+def make_figure_compare_avg_gmf(extractors, what):
+    """
+    $ oq plot "compare_avg_gmf?imt=PGA"
+    """
+    assert len(extractors) == 2
     plt = import_plt()
     fig = plt.figure()
     imt = what.split('=')[1]
     ax = fig.add_subplot(1, 1, 1)
     ax.grid(True)
-    ax.set_title('Avg GMF for %s' % imt)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-    if len(extractors) == 2:  # compare two avg_gmf
-        ex1, ex2 = extractors
-        avg_gmf = ex1.get(what)
-        avg_gmf2 = ex2.get(what)
-        gmf = avg_gmf[imt] - avg_gmf2[imt]
-    else:  # plot a single avg_gmf
-        [ex] = extractors
-        avg_gmf = ex.get(what)
-        gmf = avg_gmf[imt]
+    ax.set_title('Delta GMF for %s' % imt)
+    ex1, ex2 = extractors
+    avg_gmf = ex1.get(what)
+    avg_gmf2 = ex2.get(what)
+    gmf = avg_gmf[imt] - avg_gmf2[imt]
     coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet')
     plt.colorbar(coll)
     return plt

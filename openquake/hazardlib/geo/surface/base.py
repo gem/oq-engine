@@ -143,7 +143,7 @@ class BaseSurface:
 
     def __init__(self, mesh=None):
         self.mesh = mesh
-        self.suid = None
+        self.idx = None
 
     def get_min_distance(self, mesh):
         """
@@ -318,7 +318,7 @@ class BaseSurface:
             dep = numpy.min(top_edge.depths)
             return dep
 
-    def _get_top_edge_centroid(self):
+    def get_top_edge_centroid(self):
         """
         Return :class:`~openquake.hazardlib.geo.point.Point` representing the
         surface's top edge centroid.
@@ -350,7 +350,8 @@ class BaseSurface:
             Values are floats in decimal degrees.
         """
         mesh = _get_finite_mesh(self.mesh)
-        return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
+        return utils.get_spherical_bounding_box(
+            mesh.lons.flatten(), mesh.lats.flatten())
 
     def get_middle_point(self):
         """

@@ -856,16 +856,30 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-def read_assets(hdf5file, start, stop):
+# used in aristotle calculations
+def aristotle_read_assets(h5, countries, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
-    group = hdf5file['assets']
+    group = h5['assets']
     dic = {}
+    TAGS = {'ID_0': numpy.array(decode(h5['tagcol/ID_0'][:])),
+            'ID_1': numpy.array(decode(h5['tagcol/ID_1'][:])),
+            'OCCUPANCY': numpy.array(decode(h5['tagcol/OCCUPANCY'][:])),
+            'TAXONOMY': numpy.array(decode(h5['tagcol/taxonomy'][:]))}
     for field in group:
         if field == field.upper():
-            dic[field] = group[field][start:stop]
-    return pandas.DataFrame(dic)
+            dic[field] = arr = group[field][start:stop]
+            if field in TAGS:
+                # go back from indices to strings
+                dic[field] = TAGS[field][arr]
+    df = pandas.DataFrame(dic)
+    if countries:
+        df = df[numpy.isin(df.ID_0, countries)]
+    df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
+                           df.OCCUPANTS_PER_ASSET_NIGHT +
+                           df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
+    return df
 
 
 class Exposure(object):
@@ -909,7 +923,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s):
+    def read_around(exposure_hdf5, gh3s, countries=()):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -918,9 +932,12 @@ class Exposure(object):
             exp = f['exposure']
             sbg = f['assets/slice_by_gh3'][:]
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
-            assets_df = pandas.concat(read_assets(f, start, stop)
-                                      for gh3, start, stop in slices)
-            exp.tagcol = f['tagcol']
+            assets_df = pandas.concat(
+                aristotle_read_assets(f, countries, start, stop)
+                for gh3, start, stop in slices)
+            tagcol = f['tagcol']
+            # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
+            exp.tagcol = TagCollection(tagcol.tagnames)
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:

@@ -408,22 +408,23 @@ def export_gmf_data_csv(ekey, dstore):
 
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
-    sitecol = dstore['sitecol']
     if 'complete' in dstore:
-        sitecol.complete = dstore['complete']
-    names = sitecol.array.dtype.names
-    arr = sitecol[['lon', 'lat']]
+        complete = dstore['complete']
+    else:
+        complete = dstore['sitecol']
+    names = complete.array.dtype.names
+    arr = complete[['lon', 'lat']]
     if 'custom_site_id' in names:
         sites = util.compose_arrays(
-            sitecol.custom_site_id, arr, 'custom_site_id')
+            complete.custom_site_id, arr, 'custom_site_id')
     else:
-        sites = util.compose_arrays(sitecol.sids, arr, 'site_id')
+        sites = util.compose_arrays(complete.sids, arr, 'site_id')
     writers.write_csv(f, sites, comment=dstore.metadata)
 
     # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
-        df['csi'] = decode(sitecol.complete.custom_site_id[df.sid])
+        df['csi'] = decode(complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
         del df['sid']
     else:
@@ -574,6 +575,7 @@ def export_mean_rates_by_src(ekey, dstore):
     return fnames
 
 
+# this exports only the first site and it is okay
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
@@ -716,9 +718,10 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
+# NB: this is exporting only the first site and it is okay
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
-    js = dstore[ekey[0]][()].decode('utf8')
+    js = dstore[ekey[0]][0].decode('utf8')
     sitecol = dstore['sitecol']
     dic = json.loads(js)
     writer = writers.CsvWriter(fmt='%.5f')
@@ -733,9 +736,10 @@ def export_asce(ekey, dstore):
     return [fname]
 
 
+# NB: exporting only the site #0; this is okay
 @export.add(('mag_dst_eps_sig', 'csv'))
 def export_mag_dst_eps_sig(ekey, dstore):
-    data = dstore[ekey[0]][:]
+    data = dstore[ekey[0] + '/0'][:]
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt='%.5f')
     fname = dstore.export_path('%s.csv' % ekey[0])

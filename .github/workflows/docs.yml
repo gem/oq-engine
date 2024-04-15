@@ -87,9 +87,9 @@ jobs:
           echo "HD_REF: $GITHUB_HD_REF"
           echo "BS_REF: $GITHUB_BS_REF"
       - name: Check out the codebase
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up Python 3.11
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
       - name: Upgrade pip and install requirements
@@ -101,6 +101,11 @@ jobs:
         run: |
           pip install -e .[dev]
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
+      - name: Check consistency between debian/changelog and CONTRIBUTORS.txt
+        shell: bash
+        run: |
+          ./helpers/changelog2ghrel.sh --check
+
       - name: Make docs and rsync to docs.openquake.org
         shell: bash
         env:

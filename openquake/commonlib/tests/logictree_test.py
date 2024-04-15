@@ -2205,7 +2205,7 @@ class ReduceLtTestCase(unittest.TestCase):
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
-    taxonomies = '? taxo1 taxo2 taxo3 taxo4'.split()
+    taxonomies = {1: 'taxo1', 2: 'taxo2', 3: 'taxo3', 4: 'taxo4'}
 
     def test_missing_taxo(self):
         xml = '''taxonomy,conversion,weight
@@ -2215,7 +2215,8 @@ taxo3,taxo3,1
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
-            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
+            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                    aristotle=False)
             readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
@@ -2230,7 +2231,8 @@ taxo4,taxo2,.4
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
-            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
+            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                    aristotle=False)
             readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
@@ -2244,13 +2246,14 @@ taxo3,taxo3,1
 taxo4,taxo1,.5
 '''
         inp = dict(taxonomy_mapping=gettemp(xml))
-        oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
-        lst = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
-        self.assertEqual(lst, [[('?', 1)],
-                               [('taxo1', 1)],
-                               [('taxo2', 1)],
-                               [('taxo3', 1)],
-                               [('taxo2', 0.5), ('taxo1', 0.5)]])
+        oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                aristotle=False)
+        dic = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
+        self.assertEqual(dic, {0: [('?', 1)],
+                               1: [('taxo1', 1.0)],
+                               2: [('taxo2', 1.0)],
+                               3: [('taxo3', 1.0)],
+                               4: [('taxo2', 0.5), ('taxo1', 0.5)]})
 
 
 def teardown_module():

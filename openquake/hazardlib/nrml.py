@@ -74,7 +74,6 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
-import logging
 import operator
 import collections.abc
 

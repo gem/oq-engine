@@ -168,7 +168,7 @@ agg_id
 
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_1.__file__, 'job2.ini',
-                          insurance_csv="{'structural': 'policy_ins_ko.csv'}")
+                          insurance_file="{'structural': 'policy_ins_ko.csv'}")
         self.assertIn(
             "Please check deductible values. Values larger than the insurance"
             " limit were found for asset(s) {3}.",
@@ -607,9 +607,6 @@ agg_id
 class ReinsuranceTestCase(CalculatorTestCase):
 
     def test_reinsurance_gmfs(self):
-        # many tests have to be kept together since the parallelization
-        # does not work with h5py.ExternalLink (used here to read gmfs.hdf5)
-
         rf = "{'structural+nonstructural': 'no_reinsurance.xml'}"
         self.run_calc(reinsurance_1.__file__, 'job.ini', reinsurance_file=rf)
         [fname] = export(('reinsurance-risk_by_event', 'csv'),

@@ -525,5 +525,147 @@
             $("#aelo_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
+
+            // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
+            $('#lon').on('input', function() {
+                $('#mosaic_model').empty();
+                var lon = $(this).val().trim();
+                var lat = $('#lat').val().trim();
+                $('#aristotle_get_trts_btn').prop('disabled', lon === '' || lat === '');
+            });
+            $('#lat').on('input', function() {
+                $('#mosaic_model').empty();
+                var lat = $(this).val().trim();
+                var lon = $('#lon').val().trim();
+                $('#aristotle_get_trts_btn').prop('disabled', lon === '' || lat === '');
+            });
+            $("#aristotle_get_rupture_form").submit(function (event) {
+                $('#submit_aristotle_get_rupture').prop('disabled', true);
+                $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
+                $('#mosaic_model').text('');
+                var formData = {
+                    usgs_id: $("#usgs_id").val(),
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                }).done(function (data) {
+                    // console.log(data);
+                    $('#lon').val(data.lon);
+                    $('#lat').val(data.lat);
+                    $('#dep').val(data.dep);
+                    $('#mag').val(data.mag);
+                    $('#rake').val(data.rake);
+                    $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
+                    $('#trt').empty();
+                    $.each(data.trts, function(index, trt) {
+                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                    });
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function () {
+                    $('#submit_aristotle_get_rupture').prop('disabled', false);
+                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                });
+                event.preventDefault();
+            });
+            $("#aristotle_get_trts_btn").click(function (event) {
+                $('#aristotle_get_trts_btn').prop('disabled', true);
+                $('#aristotle_get_trts_btn').text('Retrieving tectonic region types...');
+                $('#mosaic_model').text('');
+                var formData = {
+                    lon: $("#lon").val(),
+                    lat: $("#lat").val()
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aristotle_get_trts",
+                    data: formData,
+                    dataType: "json",
+                    encode: true
+                }).done(function (data) {
+                    // console.log(data);
+                    $('#mosaic_model').text('(' + $("#lon").val() + ', ' + $("#lat").val() + ')' + ' is covered by model ' + data.mosaic_model);
+                    trts = data.trts;
+                    $('#trt').empty();
+                    $.each(trts, function(index, trt) {
+                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                    });
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function () {
+                    $('#aristotle_get_trts_btn').prop('disabled', false);
+                    $('#aristotle_get_trts_btn').text('Retrieve tectonic region types');
+                });
+                event.preventDefault();
+            });
+            $("#aristotle_run_form > input").click(function() {
+                $(this).css("background-color", "white");
+            });
+            $("#aristotle_run_form").submit(function (event) {
+                $('#submit_aristotle_calc').prop('disabled', true);
+                $('#submit_aristotle_calc').text('Processing...');
+                var formData = {
+                    usgs_id: $("#usgs_id").val(),
+                    lon: $("#lon").val(),
+                    lat: $("#lat").val(),
+                    dep: $("#dep").val(),
+                    mag: $("#mag").val(),
+                    rake: $("#rake").val(),
+                    dip: $("#dip").val(),
+                    strike: $("#strike").val(),
+                    maximum_distance: $("#maximum_distance").val(),
+                    trt: $('#trt').val(),
+                    truncation_level: $('#truncation_level').val(),
+                    number_of_ground_motion_fields: $('#number_of_ground_motion_fields').val(),
+                    asset_hazard_distance: $('#asset_hazard_distance').val(),
+                    ses_seed: $('#ses_seed').val()
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aristotle_run",
+                    data: formData,
+                    dataType: "json",
+                    encode: true
+                }).done(function (data) {
+                    console.log(data);
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aristotle_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function () {
+                    $('#submit_aristotle_calc').prop('disabled', false);
+                    $('#submit_aristotle_calc').text('Submit');
+                });
+                event.preventDefault();
+            });
+            $("#aristotle_run_form > input").click(function() {
+                $(this).css("background-color", "white");
+            });
         });
 })($, Backbone, _, gem_oq_server_url);

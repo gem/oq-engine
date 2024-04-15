@@ -116,14 +116,13 @@ def read_cmaker_df(gsim, csvfnames):
     cmap = {}
     for col in df.columns:
         try:
-            im = str(imt.from_string(col.upper()))
+            im = str(imt.from_string(col if col.startswith("AvgSA")
+                                     else col.upper()))
         except KeyError:
             pass
         else:
             imts.append(im)
             cmap[col] = im
-    if gsim.__class__.__name__.endswith('AvgSA'):  # special case
-        imts.append('AvgSA')
     assert imts
     imtls = {im: [0] for im in sorted(imts)}
     trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE

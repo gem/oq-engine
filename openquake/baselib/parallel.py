@@ -206,11 +206,12 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version, shortlist, mp as mp_context)
+    gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
 
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
+MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
@@ -319,6 +320,8 @@ class Pickled(object):
 
     :param obj: the object to pickle
     """
+    compressed = False
+
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
@@ -326,6 +329,9 @@ class Pickled(object):
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
+        self.compressed = len(self.pik) > MB and config.distribution.compress
+        if self.compressed:
+            self.pik = compress(self.pik)
 
     def __repr__(self):
         """String representation of the pickled object"""
@@ -338,7 +344,8 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return pickle.loads(self.pik)
+        pik = decompress(self.pik) if self.compressed else self.pik
+        return pickle.loads(pik)
 
 
 def get_pickled_sizes(obj):
@@ -428,7 +435,9 @@ class Result(object):
         """
         Returns the underlying value or raise the underlying exception
         """
+        t0 = time.time()
         val = self.pik.unpickle()
+        self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
@@ -601,6 +610,7 @@ class IterResult(object):
     def _iter(self):
         first_time = True
         self.counts = 0
+        self.dt = 0
         for result in self.iresults:
             msg = check_mem_usage()
             # log a warning if too much memory is used
@@ -609,7 +619,9 @@ class IterResult(object):
                 first_time = False  # warn only once
             self.nbytes += result.nbytes
             self.counts += 1
-            yield result.get()
+            out = result.get()
+            self.dt += result.dt
+            yield out
 
     def __iter__(self):
         if self.iresults == ():
@@ -620,13 +632,13 @@ class IterResult(object):
             yield from self._iter()
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
-            nb = {k: humansize(v) for k, v in reversed(items)}
+            nb = {k: humansize(v) for k, v in list(reversed(items))[:3]}
             recv = sum(self.nbytes.values())
-            msg = nb if len(nb) < 10 else {'tot': humansize(recv)}
             mean = recv / (self.counts or 1)
-            logging.info('Received %d * %s %s in %d seconds from %s',
-                         self.counts, humansize(mean), msg,
-                         time.time() - t0, self.name)
+            pu = '[unpik=%.2fs]' % self.dt
+            logging.info('Received %d * %s in %d seconds %s from %s\n%s',
+                         self.counts, humansize(mean),
+                         time.time() - t0, pu, self.name, nb)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -662,6 +674,13 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__init__).args[1:]
     else:  # instance with a __call__ method
         return inspect.getfullargspec(task_func.__call__).args[1:]
+
+
+def get_return_ip(receiver_host):
+    if receiver_host:
+        return socket.gethostbyname(receiver_host)
+    hostname = socket.gethostname()
+    return socket.gethostbyname(hostname)
 
 
 class Starmap(object):
@@ -792,16 +811,14 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        if self.distribute in ('no', 'processpool'):
+        if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = socket.gethostbyname(
-                config.dbserver.receiver_host or socket.gethostname())
+            self.return_ip = get_return_ip(config.dbserver.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
-        self.t0 = time.time()
 
     def log_percent(self):
         """
@@ -825,7 +842,6 @@ class Starmap(object):
         """
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
-            self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -919,9 +935,8 @@ class Starmap(object):
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
-        if nbytes > 1E5:
-            logging.info('Sent %d %s tasks, %s in %d seconds', len(self.tasks),
-                         self.name, humansize(nbytes), time.time() - self.t0)
+        logging.warning('Sent %d %s tasks, %s', len(self.tasks),
+                        self.name, humansize(nbytes))
 
         isocket = iter(self.socket)  # read from the PULL socket
         finished = set()

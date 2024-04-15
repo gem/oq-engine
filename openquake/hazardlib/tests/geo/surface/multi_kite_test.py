@@ -139,23 +139,13 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         self.coo = np.array([[-0.1, 0.0], [0.0, 0.1]])
         self.mesh = Mesh(self.coo[:, 0], self.coo[:, 1])
 
-    def test_areas(self):
-        """ Compute the areas of surfaces """
-        length = geodetic_distance(0.0, 0.0, 0.3, 0.0)
-        expected = np.array([length * 20.0, 10 * 14.14])
-        computed = self.msrf._get_areas()
-        msg = 'Multi fault surface: areas are wrong'
-        np.testing.assert_almost_equal(expected, computed, err_msg=msg,
-                                       decimal=-1)
-
     def test_width(self):
         """ Compute the width of a multifault surface with 2 sections"""
         computed = self.msrf.get_width()
         # The width of the first surface is about 20 km while the second one
         # is about 14 km. The total width is the weighted mean of the width of
         # each section (weight proportional to the area)
-        smm = np.sum(self.msrf.areas)
-        expected = (20.0*self.msrf.areas[0] + 14.14*self.msrf.areas[1]) / smm
+        expected = 18.9624446256761
         perc_diff = abs(computed - expected) / computed * 100
         msg = f'Multi fault surface: width is wrong. % diff {perc_diff}'
         self.assertTrue(perc_diff < 0.2, msg=msg)
@@ -211,12 +201,10 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_edge_set(self):
         # The vertexes of the expected edges are the first and last vertexes of
         # the topmost row of the mesh
-        expected = [np.array([[-70.33, 19.65, 0.],
-                              [-70.57740671, 19.66979434, 0.0]]),
-                    np.array([[-70.10327766, 19.67957463, 0.0],
-                              [-70.33, 19.65, 0.0]])]
-        self.msrf._set_tor()
-
+        expected = [np.array([[-70.1, 19.68, 0.],
+                              [-70.32703837, 19.65038823, 0.0]]),
+                    np.array([[-70.33, 19.65, 0.0],
+                              [-70.57740671, 19.66979434, 0.0]])]
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             for sfc in self.msrf.surfaces:
@@ -224,13 +212,14 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                 mesh = sfc.mesh
                 ax.plot(mesh.lons, mesh.lats, '.', color=col)
                 ax.plot(mesh.lons[0, :],  mesh.lats[0, :], lw=3)
-            for line in self.msrf.tors.lines:
+            for line in self.msrf.tor.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], 'x-r')
             plt.show()
 
         # Note that method is executed when the object is initialized
-        for es, expct in zip(self.msrf.tors.lines, expected):
-            np.testing.assert_array_almost_equal(es.coo, expct, decimal=2)
+        for idx, expct in zip(self.msrf.tor.soidx, expected):
+            coo = self.msrf.tor.lines[idx].coo
+            np.testing.assert_array_almost_equal(coo, expct, decimal=2)
 
     def test_get_strike(self):
         # Since the two surfaces dip to the north, we expect the strike to
@@ -256,18 +245,18 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         a1 = self.msrf.surfaces[0].get_area()
         a2 = self.msrf.surfaces[1].get_area()
         area = self.msrf.get_area()
-        aae(a1 + a2, area)
+        aae(a1 + a2, area, decimal=4)
 
     def test_get_bounding_box(self):
-        bb = self.msrf.get_bounding_box()
+        west, east, north, south = self.msrf.get_bounding_box()
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
-            ax.plot([bb.west, bb.east, bb.east, bb.west],
-                    [bb.south, bb.south, bb.north, bb.north], '-')
+            ax.plot([west, east, east, west],
+                    [south, south, north, north], '-')
             ax.plot(self.los[0], self.las[0], '.')
             ax.plot(self.los[1], self.las[1], '.')
             plt.show()
-        aae([bb.west, bb.east, bb.south, bb.north],
+        aae([west, east, south, north],
             [-70.5772, -70.1032, 19.650, 19.7405], decimal=2)
 
     def test_get_middle_point(self):
@@ -338,15 +327,15 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_ry0(self):
 
         # Results visually inspected
+        assert len(self.mesh) == 28000
         dst = self.msrf.get_ry0_distance(self.mesh)
 
         if PLOTTING:
             title = f'{type(self).__name__} - Ry0'
             fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
-            for line in self.msrf.tors.lines:
+            for line in self.msrf.tor.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
-            self.msrf.tors._set_origin()
-            ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
+            ax.plot(self.msrf.tor.olon, self.msrf.tor.olat, 'o')
             plt.show()
 
         # Saving data
@@ -389,10 +378,6 @@ class NZLTestCase(unittest.TestCase):
         self.msrf2 = MultiSurface(sfcs2)
 
     def test_nzl_tors(self):
-
-        # Set the rupture traces
-        self.msrf._set_tor()
-
         if PLOTTING:
             # Plotting profiles and surfaces
             _, ax = plt.subplots(1, 1)
@@ -401,7 +386,7 @@ class NZLTestCase(unittest.TestCase):
                 for pro in sfc.profiles:
                     ax.plot(pro.coo[:, 0], pro.coo[:, 1], '--b')
             # Plotting traces
-            for line in self.msrf.tors.lines:
+            for line in self.msrf.tor.lines:
                 col = np.random.rand(3)
                 coo = line.coo
                 ax.plot(coo[:, 0], coo[:, 1], color=col)

@@ -18,8 +18,6 @@
 
 from typing import Union
 import numpy as np
-import gzip
-import os
 
 try:
     import onnxruntime
@@ -650,6 +648,7 @@ def todorovic_silva_2022_nonparametric_general(
     dw: Union[float, np.ndarray],
     wtd: Union[float, np.ndarray],
     precip: Union[float, np.ndarray],
+    session,
 ) -> Union[float, np.ndarray]:
     """
     Returns the binary class output (i.e, 0 or 1) which indicates liquefaction
@@ -674,6 +673,8 @@ def todorovic_silva_2022_nonparametric_general(
         Global water table depth, measured in m
     :param precip:
         Mean annual precipitation, measured in mm
+    :param session:
+        A Pickable ONNX Runtime Inference Session with the trained model loaded
 
     :returns:
         out_class: output 0 or 1, i.e., liquefaction nonoccurrence
@@ -682,17 +683,10 @@ def todorovic_silva_2022_nonparametric_general(
     """
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
-    model_file = "data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz"
-    model_path = os.path.join(os.path.dirname(__file__), model_file)
-    with gzip.open(model_path, "rb") as gzipped_file:
-        file = gzipped_file.read()
-        session = onnxruntime.InferenceSession(
-            file, providers=onnxruntime.get_available_providers()
-        )
-        results = session.run(None, {"X": matrix})
-        out_class = results[0]
-        out_prob = [p[1] for p in results[1]]
-        return out_class, out_prob
+    results = session.run(None, {"X": matrix})
+    out_class = results[0]
+    out_prob = [p[1] for p in results[1]]
+    return out_class, out_prob
 
 
 def _hazus_magnitude_correction_factor(
@@ -706,9 +700,7 @@ def _hazus_magnitude_correction_factor(
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
     """
-    return (
-        m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
-    )
+    return m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
 
 
 def _hazus_groundwater_correction_factor(
@@ -739,9 +731,7 @@ def _hazus_conditional_liquefaction_probability(
         coeffs = coeff_table[susceptibility_category]
         liq_prob = coeffs[0] * pga - coeffs[1]
     else:
-        coeffs = [
-            coeff_table[susc_cat] for susc_cat in susceptibility_category
-        ]
+        coeffs = [coeff_table[susc_cat] for susc_cat in susceptibility_category]
         coeff_0 = np.array([c[0] for c in coeffs])
         coeff_1 = np.array([c[1] for c in coeffs])
         liq_prob = coeff_0 * pga - coeff_1
@@ -802,15 +792,11 @@ def hazus_liquefaction_probability(
         analysis, or how to compare this to other liquefaction models.
         Defaults to `True` following the HAZUS methods.
     """
-    groundwater_corr = _hazus_groundwater_correction_factor(
-        groundwater_depth, unit="m"
-    )
+    groundwater_corr = _hazus_groundwater_correction_factor(groundwater_depth, unit="m")
     mag_corr = _hazus_magnitude_correction_factor(mag)
 
     if isinstance(liq_susc_cat, str):
-        liq_susc_prob = _hazus_conditional_liquefaction_probability(
-            pga, liq_susc_cat
-        )
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
         if do_map_proportion_correction:
             map_unit_proportion = HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[
                 liq_susc_cat
@@ -818,9 +804,7 @@ def hazus_liquefaction_probability(
         else:
             map_unit_proportion = 1.0
     else:
-        liq_susc_prob = _hazus_conditional_liquefaction_probability(
-            pga, liq_susc_cat
-        )
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
 
         if do_map_proportion_correction:
             map_unit_proportion = np.array(

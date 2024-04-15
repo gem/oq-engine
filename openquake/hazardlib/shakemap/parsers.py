@@ -35,7 +35,6 @@ from shapely.geometry import Polygon
 import numpy
 from openquake.baselib.node import node_from_xml
 
-
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
@@ -200,10 +199,55 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
         raise FileNotFoundError(
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
+def get_rupture_dict(id):
+    """
+    Download a rupture from the USGS site given a ShakeMap ID.
+
+    :param id: ShakeMap ID
+    :returns: a dictionary with keys lon, lat, dep, mag, rake
+    """
+    url = SHAKEMAP_URL.format(id)
+    print('Downloading %s' % url)
+    js = json.loads(urlopen(url).read())
+    mag = js['properties']['mag']
+    products = js['properties']['products']
+    try:
+        shakemap = products['shakemap']
+    except KeyError:
+        try:
+             products['finite-fault']
+        except KeyError:
+            raise MissingLink('There is no finite-fault info for %s' % id)
+        else:
+            shakemap = []
+    for shakemap in reversed(shakemap):
+        contents = shakemap['contents']
+        if 'download/rupture.json' in contents:
+            break
+    else:  # missing rupture.json
+        try:
+            ff = products['finite-fault']
+        except KeyError:
+            raise MissingLink('There is no finite-fault info for %s' % id)
+        print('Getting finite-fault properties')
+        p = ff['properties']
+        rupdic = {'lon': p['longitude'], 'lat': p['latitude'],
+                  'dep': p['depth'],
+                  'mag': mag, 'rake': 0., 'usgs_id': id}
+        return rupdic
+    url = contents.get('download/rupture.json')['url']
+    print('Downloading rupture.json')
+    md = json.loads(urlopen(url).read())['metadata']
+    return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
+            'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id}
+
 
 def get_array_usgs_id(kind, id):
     """
-    Download a ShakeMap from the USGS site
+    Download a ShakeMap from the USGS site.
+
+    :param kind: the string "usgs_id", for API compatibility
+    :param id: ShakeMap ID
     """
     url = SHAKEMAP_URL.format(id)
     logging.info('Downloading %s', url)

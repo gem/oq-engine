@@ -20,7 +20,7 @@ import os
 import unittest
 import numpy
 
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, gettemp
 from openquake.hazardlib import read_input, calc, site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
@@ -29,9 +29,11 @@ from openquake.hazardlib.contexts import (
     Effect, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
+from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.source.rupture import \
     get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
+from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
@@ -58,6 +60,11 @@ BASE_PATH = os.path.dirname(__file__)
 
 def rms(delta):
     return numpy.sqrt((delta**2).sum())
+
+
+def set_msparams(src, sectiondict):
+    secparams = build_secparams(sectiondict.values())
+    src.set_msparams(secparams, ry0=True)
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -91,7 +98,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc1, pmf)
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.25, -0.1, 0.0)),
                                 Site(Point(-0.1, 0.0, 0.0))])
         dsts = get_distances(rup, sites, param)
@@ -119,7 +126,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc2, pmf)
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.25, -0.6, 0.0))])
         dsts = get_distances(rup, sites, param)
 
@@ -149,7 +156,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rups = [r for r in src.iter_ruptures()]
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.0, 0.0, 0.0)),
                                 Site(Point(-0.2, 0.0, 0.0))])
         dsts = get_distances(rups[0], sites, param)
@@ -397,13 +404,9 @@ class GetCtxs01TestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
-        src = ssm[0][0]
-        sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
-        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                            for idxs in src.rupture_idxs]
-        src.set_sections(sections)
-        self.src = src
+        self.src = ssm[0][0]
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        set_msparams(self.src, geom.sections)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
@@ -417,6 +420,7 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # extract magnitude 7 context
         [ctx] = cm.get_ctx_iter(self.src, self.sitec)
+
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -454,13 +458,9 @@ class GetCtxs02TestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
-        src = ssm[0][0]
-        sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
-        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                            for idxs in src.rupture_idxs]
-        src.set_sections(sections)
-        self.src = src
+        self.src = ssm[0][0]
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        set_msparams(self.src, geom.sections)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,

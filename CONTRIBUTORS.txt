@@ -71,7 +71,7 @@ Elena Manea              (@manea)               August 2021
 Shreyasvi Chandrasekhar  (@Shreyasvi91)         November 2021
 Giuseppina Tusa          (@gtus23)              December 2021
 Miguel Leonardo-Suárez   (@mleonardos)          December 2021
-Manuela Villani          (@mvillani)            January 2022
+Manuela Villani          (@ManuelaVillani)      January 2022
 Prajakta Jadhav          (@Prajakta-Jadhav-25)  February 2022
 Dharma Wijewickreme      (@Dharma-Wijewickreme) February 2022
 Tom Son                  (@SnowNooDLe)          March 2022
@@ -83,7 +83,8 @@ Claudio Schill           (@claudio525)          June 2023
 Astha Poudel             (@asthapoudel)         July 2023
 Lana Todorovic           (@LanaTodorovic93)     August 2023
 Christopher Brooks       (@CB-quakemodel)       September 2023
-Manuela Villani          (@ManuelaVillani)      September 2023
+Chris di Caprio          (@chrisdicaprio)       January 2024
+Michal Kolaj             (@MichalKolaj)         March 2024
 
 Project management
 ------------------

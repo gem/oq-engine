@@ -6,8 +6,6 @@ on:
         description: Git Ref
         default: master
         required: true
-  schedule:
-    - cron: "0 13 * * *"
 
 jobs:
 
@@ -32,10 +30,10 @@ jobs:
     steps:
   # This Checkout use git-ref keyword from dispatch
     - name: Clone Repository (Master)
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       if: github.event.inputs.git-ref == ''
     - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}

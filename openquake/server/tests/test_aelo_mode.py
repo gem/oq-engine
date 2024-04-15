@@ -33,9 +33,12 @@ import csv
 import logging
 
 import django
+from django.apps import apps
 from django.test import Client
+from django.conf import settings
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
+from openquake.server.views import get_disp_val
 
 django.setup()
 try:
@@ -201,10 +204,12 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.aelo_invalid_input(params, 'float -800.0 < 0')
 
     def test_aelo_invalid_siteid(self):
-        params = dict(lon='-86', lat='12', vs30='800', siteid='CCA SITE')
+        siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
+        params = dict(lon='-86', lat='12', vs30='800', siteid=siteid)
         self.aelo_invalid_input(
-            params, "Invalid ID 'CCA SITE': the only accepted chars are"
-            ' ^[\\w_\\-:]+$')
+            params,
+            "site name can not be longer than %s characters" %
+            settings.MAX_AELO_SITE_NAME_LEN)
 
     def test_aelo_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
@@ -215,3 +220,26 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         assert resp.status_code == 404, resp
+
+    def test_announcement(self):
+        # NOTE: this test might be moved to the currently missing
+        #       test_restricted_mode.py. Anyway, both the AELO and the
+        #       RESTRICTED modes imply LOCKDOWN=True and add the announcements
+        #       app to the INSTALLED_APPS.
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
+        announcement = announcement_model(
+            title='TEST TITLE', content='Test content', show=False)
+        announcement.save()
+        announcement.delete()
+
+    def test_displayed_values(self):
+
+        test_vals_in = [0.0000, 0.30164, 1.10043, 0.00101, 0.00113, 0.00115,
+                     0.0101, 0.0109, 0.0110, 0.1234, 0.126, 0.109, 0.101,
+                     0.991, 0.999, 1.001, 1.011, 1.101, 1.1009, 1.5000]
+        expected = ['0.0', '0.30', '1.10', '0.0010', '0.0011', '0.0012','0.010',
+                    '0.011', '0.011', '0.12', '0.13', '0.11', '0.10', '0.99',
+                    '1.00', '1.00', '1.01', '1.10','1.10', '1.50']
+        computed = [get_disp_val(v) for v in test_vals_in]
+        assert expected == computed

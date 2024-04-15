@@ -266,11 +266,11 @@ def run_calc(log):
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
-        check_obsolete_version(oqparam.calculation_mode)
-        # NB: disabling the warning should be done only for users with
-        # an updated LTS version, but we are doing it for all users
-        # if obsolete_msg:
-        #    logging.warning(obsolete_msg)
+        obsolete_msg = check_obsolete_version(oqparam.calculation_mode)
+        # NB: the warning should not be logged for users with
+        # an updated LTS version
+        if obsolete_msg:
+            logging.warning(obsolete_msg)
         calc.from_engine = True
         if dist == 'zmq':
             set_concurrent_tasks_default(calc)
@@ -281,13 +281,13 @@ def run_calc(log):
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
+        calc.datastore.close()
+        outs = '\n'.join(logs.dbcmd('list_outputs', log.calc_id, False))
+        logging.info(outs)
         path = calc.datastore.filename
         size = general.humansize(getsize(path))
-        logging.info('Stored %s on %s in %d seconds',
-                     size, path, time.time() - t0)
-        calc.datastore.close()
-        for line in logs.dbcmd('list_outputs', log.calc_id, False):
-            general.safeprint(line)
+        logging.info(
+            'Stored %s on %s in %d seconds', size, path, time.time() - t0)
         # sanity check to make sure that the logging on file is working
         if (log.log_file and log.log_file != os.devnull and
                 getsize(log.log_file) == 0):
@@ -369,8 +369,8 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         How many jobs to run concurrently (default num_cores/4)
     """
     if concurrent_jobs is None:
-        # // 8 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 8 or 1
+        # // 10 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 10 or 1
 
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     orig_dist = parallel.oq_distribute()

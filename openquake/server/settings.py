@@ -175,10 +175,10 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
-APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO', 'READ_ONLY']
+APPLICATION_MODES = [
+    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
 
-# case insensitive
-APPLICATION_MODE = 'public'
+APPLICATION_MODE = 'PUBLIC'
 
 # Set to True if using NGINX or some other reverse proxy
 # Externally visible url and port number is different from Django visible
@@ -187,6 +187,8 @@ USE_REVERSE_PROXY = False
 
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
+
+MAX_AELO_SITE_NAME_LEN = 256
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
@@ -220,8 +222,26 @@ except ImportError:
 # NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
+if not os.environ.get('OQ_APPLICATION_MODE'):
+    os.environ['OQ_APPLICATION_MODE'] = APPLICATION_MODE
 
-if TEST and APPLICATION_MODE.upper() == 'AELO':
+if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
+    raise ValueError(
+        f'Invalid application mode: "{APPLICATION_MODE}". It must be'
+        f' one of {APPLICATION_MODES}')
+
+if APPLICATION_MODE in ('TOOLS_ONLY',):
+    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'cookie_consent',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
+    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.append('django.template.context_processors.request')
+    COOKIE_CONSENT_NAME = "cookie_consent"
+    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
+    COOKIE_CONSENT_LOG_ENABLED = False
+
+if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
@@ -229,12 +249,12 @@ if TEST and APPLICATION_MODE.upper() == 'AELO':
     #        parallel
     EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
 
-if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
 
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
-if LOCKDOWN and APPLICATION_MODE == 'AELO':
+if LOCKDOWN and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     # check essential constants are defined
     try:
         EMAIL_BACKEND  # noqa
@@ -305,6 +325,7 @@ if LOCKDOWN:
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
+        'openquake.server.announcements',
         )
 
     # Official documentation suggests to override the entire TEMPLATES

@@ -60,6 +60,38 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
 mp = multiprocessing.get_context('spawn')
 
 
+class Cache(dict):
+    miss = 0
+    tot = 0
+
+    @property
+    def hit(self):
+        return self.tot - self.miss
+
+    @property
+    def speedup(self):
+        return self.tot / self.miss
+
+    def __setitem__(self, key, val):
+        dict.__setitem__(self, key, val)
+        self.miss += 1
+
+    def __getitem__(self, key):
+        self.tot += 1
+        return dict.__getitem__(self, key)
+
+    def getsize(self):
+        """
+        :returns: the size in bytes of the cache values
+        """
+        return sum(getsizeof(val) for val in self.values())
+
+    def __str__(self):
+        templ = '<Cache hit=%d, miss=%d, speedup=%.1f, size=%s>'
+        return templ % (self.hit, self.miss, self.speedup,
+                        humansize(self.getsize()))
+
+
 def duplicated(items):
     """
     :returns: the list of duplicated keys, possibly empty
@@ -1377,6 +1409,9 @@ def getsizeof(o, ids=None):
     ids = ids or set()
     if id(o) in ids:
         return 0
+
+    if hasattr(o, 'nbytes'):
+        return o.nbytes
 
     nbytes = sys.getsizeof(o)
     ids.add(id(o))

@@ -20,12 +20,13 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+import pandas
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, CODE32,
-    spherical_to_cartesian, get_middle_point)
+    fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
+    spherical_to_cartesian, get_middle_point, geolocate)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -185,7 +186,7 @@ site_param_dt = {
     'ch_phis2s06': numpy.float64,
     'ch_phiss03': numpy.float64,
     'ch_phiss06': numpy.float64,
-    'fpeak': numpy.float64,
+    'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
     'THV': numpy.float64,
     'PHV': numpy.float64,
@@ -342,7 +343,7 @@ class SiteCollection(object):
         """
         sfc = rup.surface
         if point == 'TC':
-            pnt = sfc._get_top_edge_centroid()
+            pnt = sfc.get_top_edge_centroid()
             lon, lat = pnt.x, pnt.y
         elif point == 'BC':
             lon, lat = get_middle_point(
@@ -555,7 +556,9 @@ class SiteCollection(object):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        if hint > len(self):
+        if hint <= 1:
+            return [self]
+        elif hint > len(self):
             hint = len(self)
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
@@ -563,6 +566,21 @@ class SiteCollection(object):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.complete.array[sids]
             sc.complete = self.complete
+            tiles.append(sc)
+        return tiles
+
+    def split_by_gh3(self):
+        """
+        Split a SiteCollection into a set of tiles with the same geohash3
+        """
+        gh3s = geohash3(self.lons, self.lats)
+        gb = pandas.DataFrame(dict(sid=self.sids, gh3=gh3s)).groupby('gh3')
+        tiles = []
+        for gh3, df in gb:
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.complete.array[df.sid]
+            sc.complete = self.complete
+            sc.gh3 = gh3
             tiles.append(sc)
         return tiles
 
@@ -693,6 +711,25 @@ class SiteCollection(object):
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def by_country(self):
+        """
+        Returns a table with the number of sites per country. The countries
+        are defined as in the file geoBoundariesCGAZ_ADM0.shp
+        """
+        from openquake.commonlib import readinput
+        geom_df = readinput.read_countries_df()
+        lonlats = numpy.zeros((len(self), 2), numpy.float32)
+        lonlats[:, 0] = self.lons
+        lonlats[:, 1] = self.lats
+        codes = geolocate(lonlats, geom_df)
+        uni, cnt = numpy.unique(codes, return_counts=True)
+        out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
+                                     ('num_sites', int)])
+        out['country'] = uni
+        out['num_sites'] = cnt
+        out.sort(order='num_sites')
+        return out
 
     def geohash(self, length):
         """

@@ -146,6 +146,10 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         tiles = cll.split_max(1)  # 2 tiles of 1 site each
         self.assertEqual(len(tiles), 2)
 
+        # test split_by_gh3
+        tiles = cll.split_by_gh3()
+        self.assertEqual([t.gh3 for t in tiles], [7415, 24765])
+
         # test geohash
         assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))
 

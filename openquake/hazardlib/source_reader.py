@@ -20,22 +20,21 @@ import os.path
 import pickle
 import operator
 import logging
-import collections
-import gzip
 import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
-from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
+U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
-by_id = operator.attrgetter('source_id')
+bybranch = operator.attrgetter('branch')
 
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
@@ -58,21 +57,33 @@ def check_unique(ids, msg='', strict=True):
     """
     Raise a DuplicatedID exception if there are duplicated IDs
     """
+    if isinstance(ids, dict):  # ids by key
+        all_ids = sum(ids.values(), [])
+        unique, counts = numpy.unique(all_ids, return_counts=True)
+        for dupl in unique[counts > 1]:
+            keys = [k for k in ids if dupl in ids[k]]
+            if keys:
+                errmsg = '%r appears in %s %s' % (dupl, keys, msg)
+                if strict:
+                    raise nrml.DuplicatedID(errmsg)
+                else:
+                    logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
+        return
     unique, counts = numpy.unique(ids, return_counts=True)
     for u, c in zip(unique, counts):
         if c > 1:
-            errmsg = '%s %s' % (u, msg)
+            errmsg = '%r appears %d times %s' % (u, c, msg)
             if strict:
                 raise nrml.DuplicatedID(errmsg)
             else:
-                logging.error('*' * 60 + ' DuplicatedID:\n' + errmsg)
+                logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
 
 
-def gzpik(obj):
+def zpik(obj):
     """
-    gzip and pickle a python object
+    zip and pickle a python object
     """
-    gz = gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    gz = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
     return numpy.frombuffer(gz, numpy.uint8)
 
 
@@ -154,6 +165,8 @@ def read_source_model(fname, branch, converter, monitor):
 
 # NB: in classical this is called after reduce_sources, so ";" is not
 # added if the same source appears multiple times, len(srcs) == 1
+# in event based instead identical sources can appear multiple times
+# but will have different seeds and produce different rupture sets
 def _fix_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
@@ -165,6 +178,52 @@ def _fix_dupl_ids(src_groups):
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
+
+def check_branchID(branchID):
+    """
+    Forbids invalid characters .:; used in fragmentno
+    """
+    if '.' in branchID:
+        raise InvalidFile('branchID %r contains an invalid "."' % branchID)
+    elif ':' in branchID:
+        raise InvalidFile('branchID %r contains an invalid ":"' % branchID)
+    elif ';' in branchID:
+        raise InvalidFile('branchID %r contains an invalid ";"' % branchID)
+
+
+def check_duplicates(smdict, strict):
+    # check_duplicates in the same file
+    for sm in smdict.values():
+        srcids = []
+        for sg in sm.src_groups:
+            srcids.extend(src.source_id for src in sg)
+            if sg.src_interdep == 'mutex':
+                # mutex sources in the same group must have all the same
+                # basename, i.e. the colon convention must be used
+                basenames = set(map(basename, sg))
+                assert len(basenames) == 1, basenames
+        check_unique(srcids, 'in ' + sm.fname, strict)
+
+    # check duplicates in different files but in the same branch
+    # the problem was discovered in the DOM model
+    for branch, sms in general.groupby(smdict.values(), bybranch).items():
+        srcids = general.AccumDict(accum=[])
+        fnames = []
+        for sm in sms:
+            if isinstance(sm, nrml.GeometryModel):
+                # the section IDs are not checked since they not count
+                # as real sources
+                continue
+            for sg in sm.src_groups:
+                srcids[sm.fname].extend(src.source_id for src in sg)
+            fnames.append(sm.fname)
+        check_unique(srcids, 'in branch %s' % branch, strict=strict)
+
+    found = find_false_duplicates(smdict)
+    if found:
+        logging.warning('Found different sources with same ID %s',
+                        general.shortlist(found))
+    
 
 def get_csm(oq, full_lt, dstore=None):
     """
@@ -202,28 +261,10 @@ def get_csm(oq, full_lt, dstore=None):
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
-    fix_geometry_sections(smdict, dstore)
-
-    # check_duplicates
-    for sm in smdict.values():
-        srcids = []
-        for sg in sm.src_groups:
-            srcids.extend(src.source_id for src in sg)
-            if sg.src_interdep == 'mutex':
-                # mutex sources in the same group must have all the same
-                # basename, i.e. the colon convention must be used
-                basenames = set(map(basename, sg))
-                assert len(basenames) == 1, basenames
-        check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
-
-    found = find_false_duplicates(smdict)
-    if found:
-        logging.warning('Found different sources with same ID %s',
-                        general.shortlist(found))
+    check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
-    logging.info('Done')
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
@@ -232,25 +273,36 @@ def get_csm(oq, full_lt, dstore=None):
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     if oq.sites and len(oq.sites) == 1:
-        # disable wkt in single-site calculations
+        # disable wkt in single-site calculations to avoid excessive slowdown
         set_wkt = False
     else:
         set_wkt = True
+        logging.info('Setting src._wkt')
+
     csm = _get_csm(full_lt, groups, is_event_based, set_wkt)
+    out = []
+    probs = []
     for sg in csm.src_groups:
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
-            dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
-                      ('num_ruptures', int), ('mutex_weight', float)]
-            out = []
             segments = []
             for src in sg:
                 segments.append(int(src.source_id.split(':')[1]))
-                t = (src.source_id, src.count_ruptures(),
-                     src.grp_id, src.mutex_weight)
+                t = (src.source_id, src.grp_id,
+                     src.count_ruptures(),src.mutex_weight)
                 out.append(t)
+            probs.append((src.grp_id, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
-            dstore.create_dset('src_mutex', numpy.array(out, dtlist),
-                               fillvalue=None)
+    if out:
+        dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
+                  ('num_ruptures', int), ('mutex_weight', float)]
+        dstore.create_dset('src_mutex', numpy.array(out, dtlist),
+                           fillvalue=None)
+        lst = [('grp_id', int), ('probability', float)]
+        dstore.create_dset('grp_probability', numpy.array(probs, lst),
+                           fillvalue=None)
+
+    # must be called *after* _fix_dupl_ids
+    fix_geometry_sections(smdict, csm, dstore)
     return csm
 
 
@@ -297,27 +349,23 @@ def find_false_duplicates(smdict):
             if len(gb) > 1:
                 for same_checksum in gb.values():
                     for src in same_checksum:
+                        check_branchID(src.branch)
                         src.source_id += '!%s' % src.branch
                 found.append(srcid)
     return found
 
 
-def fix_geometry_sections(smdict, dstore):
+def fix_geometry_sections(smdict, csm, dstore):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
     """
     gmodels = []
-    smodels = []
     gfiles = []
     for fname, mod in smdict.items():
         if isinstance(mod, nrml.GeometryModel):
             gmodels.append(mod)
             gfiles.append(fname)
-        elif isinstance(mod, nrml.SourceModel):
-            smodels.append(mod)
-        else:
-            raise RuntimeError('Unknown model %s' % mod)
 
     # merge and reorder the sections
     sec_ids = []
@@ -326,34 +374,17 @@ def fix_geometry_sections(smdict, dstore):
         sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    s2i = {suid: i for i, suid in enumerate(sections)}
-    for idx, sec in enumerate(sections.values()):
-        sec.suid = idx
+
     if sections:
+        # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
-        with hdf5.File(dstore.tempname, 'w') as h5:
-            h5.save_vlen('multi_fault_sections',
-                         [kite_to_geom(sec) for sec in sections.values()])
-
-    # fix the MultiFaultSources
-    section_idxs = []
-    for smod in smodels:
-        for sg in smod.src_groups:
+        mfsources = []
+        for sg in csm.src_groups:
             for src in sg:
-                if hasattr(src, 'set_sections'):
-                    if not sections:
-                        raise RuntimeError('Missing geometryModel files!')
-                    if dstore:
-                        src.hdf5path = dstore.tempname
-                    src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                                        for idxs in src.rupture_idxs]
-                    for idxs in src.rupture_idxs:
-                        section_idxs.extend(idxs)
-    cnt = collections.Counter(section_idxs)
-    if cnt:
-        mean_counts = numpy.mean(list(cnt.values()))
-        logging.info('Section multiplicity = %.1f', mean_counts)
+                if src.code == b'F':
+                    mfsources.append(src)
+        save(mfsources, sections, dstore.tempname)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
@@ -454,8 +485,8 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                 # dataset); this is slow
                 msg = ('src "{}" has {:_d} underlying meshes with a total '
                        'of {:_d} points!')
-                for src in sources:
-                    # check on MultiFaultSources and NonParametricSources
+                for src in [s for s in sources if s.code == b'N']:
+                    # check on NonParametricSources
                     mesh_size = getattr(src, 'mesh_size', 0)
                     if mesh_size > 1E6:
                         logging.warning(msg.format(
@@ -468,8 +499,16 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                 src._wkt = src.wkt()
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
+
+    # optionally sample the sources
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
+        if ss:
+            srcs = []
+            for src in sg:
+                srcs.extend(calc.filters.split_source(src))
+            sg.sources = general.random_filter(srcs, float(ss)) or [srcs[0]]
     return CompositeSourceModel(full_lt, src_groups)
 
 
@@ -641,8 +680,8 @@ class CompositeSourceModel:
         G = len(self.src_groups)
         arr = numpy.zeros(G + 1, hdf5.vuint8)
         for grp_id, grp in enumerate(self.src_groups):
-            arr[grp_id] = gzpik(grp)
-        arr[G] = gzpik(self.source_info)
+            arr[grp_id] = zpik(grp)
+        arr[G] = zpik(self.source_info)
         size = sum(len(val) for val in arr)
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
@@ -650,7 +689,7 @@ class CompositeSourceModel:
 
     # tested in case_36
     def __fromh5__(self, arr, attrs):
-        objs = [pickle.loads(gzip.decompress(a.tobytes())) for a in arr]
+        objs = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
         self.src_groups = objs[:-1]
         self.source_info = objs[-1]
 

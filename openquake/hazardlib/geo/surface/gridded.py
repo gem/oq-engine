@@ -46,7 +46,7 @@ class GriddedSurface(BaseSurface):
 
     def __init__(self, mesh=None):
         self.mesh = mesh
-        self.suid = None
+        self.idx = None
         self.strike = None
         self.dip = None
 
@@ -85,7 +85,8 @@ class GriddedSurface(BaseSurface):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        return utils.get_spherical_bounding_box(self.mesh.lons, self.mesh.lats)
+        return utils.get_spherical_bounding_box(
+            self.mesh.lons.flatten(), self.mesh.lats.flatten())
 
     def get_surface_boundaries(self):
         """
@@ -169,11 +170,12 @@ class GriddedSurface(BaseSurface):
                 self.mesh.lons.flatten(), self.mesh.lats.flatten()))
 
         # Project the coordinates
-        coo = np.zeros((len(self.mesh.lons.flat), 3))
-        tmp = np.transpose(proj(self.mesh.lons.flat, self.mesh.lats.flat))
+        lons, lats = self.mesh.lons.flatten(), self.mesh.lats.flatten()
+        coo = np.zeros((len(lons), 3))
+        tmp = np.transpose(proj(lons, lats))
         coo[:, 0] = tmp[:, 0]
         coo[:, 1] = tmp[:, 1]
-        coo[:, 2] = self.mesh.depths.flat
+        coo[:, 2] = self.mesh.depths.flatten()
         coo[:, 2] *= -1
         pnt0, vers = geo_utils.plane_fit(coo)
 

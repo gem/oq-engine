@@ -36,7 +36,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84)
+    case_78, case_80, case_81, case_82, case_83, case_84, case_86)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -167,7 +167,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertGreater(self.calc.ntiles, 2)
+        self.assertGreater(max(self.calc.ntiles), 2)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -528,9 +528,12 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_65(self):
         # multiFaultSource with infer_occur_rates=true
-        self.run_calc(case_65.__file__, 'job.ini')
+        self.run_calc(case_65.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_65.__file__, 'job.ini', hazard_calculation_id=hc_id)
         rates = self.calc.datastore['rup/occurrence_rate'][:]
-        aac(rates, [0.356675, 0.105361], atol=5e-7)
+        aac(rates, [0.105361, 0.356675], atol=5e-7)
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
@@ -539,7 +542,8 @@ class ClassicalTestCase(CalculatorTestCase):
         csm = self.calc.datastore['_csm']
         tmpname = general.gettemp()
         [src] = csm.src_groups[0].sources
-        src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
+        src._rupture_idxs = [
+            tuple(map(str, idxs)) for idxs in src.rupture_idxs]
         out = write_source_model(tmpname, csm.src_groups)
         self.assertEqual(out[0], tmpname)
         self.assertEqual(out[1], tmpname + '.hdf5')
@@ -608,15 +612,20 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_75(self):
+        # test for duplicated section IDs
+        with self.assertRaises(nrml.DuplicatedID):
+            self.run_calc(case_75.__file__, 'job.ini',
+                          source_model_logic_tree_file='wrong_ssmLT.xml')
+
         # test calculation with multi-fault
         self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
-        # test for duplicated section IDs
-        with self.assertRaises(nrml.DuplicatedID):
-            self.run_calc(case_75.__file__, 'job.ini',
-                          source_model_logic_tree_file='wrong_ssmLT.xml')
+        # test contexts
+        ctx = view('rup:ufc3mean_0', self.calc.datastore)
+        fname = general.gettemp(text_table(ctx, ext='org'))
+        self.assertEqualFiles('expected/context.org', fname)
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs
@@ -709,3 +718,18 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_84.__file__, 'job.ini')
         [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rbs.csv', f)
+
+    def test_case_86(self):
+        # Comparing the revised indirect GMPE and the direct AvgSA GMPE
+        # for AvgSA at multiple spectral periods
+        self.assert_curves_ok([
+            'hazard_curve-mean-AvgSA(0.1).csv',
+            'hazard_curve-mean-AvgSA(0.75).csv',
+            'hazard_curve-mean-AvgSA(2.0).csv',
+            'hazard_curve-rlz-000-AvgSA(0.1).csv',
+            'hazard_curve-rlz-000-AvgSA(0.75).csv',
+            'hazard_curve-rlz-000-AvgSA(2.0).csv',
+            'hazard_curve-rlz-001-AvgSA(0.1).csv',
+            'hazard_curve-rlz-001-AvgSA(0.75).csv',
+            'hazard_curve-rlz-001-AvgSA(2.0).csv'],
+            case_86.__file__)

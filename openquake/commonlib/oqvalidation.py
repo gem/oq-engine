@@ -99,7 +99,8 @@ asset_correlation:
 
 asset_hazard_distance:
   In km, used in risk calculations to print a warning when there are assets
-  too distant from the hazard sites.
+  too distant from the hazard sites. In multi_risk calculations can be a
+  dictionary: asset_hazard_distance = {'ASH': 50, 'LAVA': 10, ...}
   Example: *asset_hazard_distance = 5*.
   Default: 15
 
@@ -190,6 +191,11 @@ coordinate_bin_width:
   Used in disaggregation calculations.
   Example: *coordinate_bin_width = 1.0*.
   Default: 100 degrees, meaning don't disaggregate by lon, lat
+
+countries:
+  Used to restrict the exposure to a single country in Aristotle mode.
+  Example: *countries = ITA*.
+  Default: ()
 
 cross_correlation:
   When used in Conditional Spectrum calculation is the name of a cross
@@ -675,7 +681,7 @@ rlz_index:
   Default: None
 
 rupture_dict:
-  Dictionary with rupture parameters lon, lat, dep, mag, rake, strike., dip
+  Dictionary with rupture parameters lon, lat, dep, mag, rake, strike, dip
   Example: *rupture_dict = {'lon': 10, 'lat': 20, 'dep': 10, 'mag': 6, 'rake': 0}*
   Default: {}
 
@@ -790,6 +796,11 @@ steps_per_interval:
   Example: *steps_per_interval = 4*.
   Default: 1
 
+tectonic_region_type:
+   Used to specify a tectonic region type.
+   Example: *tectonic_region_type = Active Shallow Crust*.
+   Default: '*'
+
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
   Valid choices are "day", "night", "transit".
@@ -900,7 +911,7 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-        'source_model_logic_tree', 'hazard_curves',
+        'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
@@ -962,6 +973,7 @@ class OqParam(valid.ParamSet):
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
+    countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
@@ -1018,7 +1030,7 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
+    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
@@ -1090,6 +1102,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
+    tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(str, 'avg')
     time_per_task = valid.Param(valid.positivefloat, 1200)
     # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR
@@ -1097,7 +1110,7 @@ class OqParam(valid.ParamSet):
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
-    vs30_tolerance = valid.Param(valid.positiveint, 0)
+    vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
     @property
@@ -1413,6 +1426,8 @@ class OqParam(valid.ParamSet):
                 imts.add("FAS")
             elif imt.startswith("DRVT"):
                 imts.add("DRVT")
+            elif imt.startswith("AvgSA"):
+                imts.add("AvgSA")
             else:
                 imts.add(im.string)
         for gsim in gsims:
@@ -1727,6 +1742,15 @@ class OqParam(valid.ParamSet):
             return None
         return cls()
 
+    @property
+    def aristotle(self):
+        """
+        Return True if we are in Aristotle mode, i.e. there is an HDF5
+        exposure with a known structure
+        """
+        exposures = self.inputs.get('exposure', [])
+        return exposures and exposures[0].endswith('.hdf5')
+
     def get_kinds(self, kind, R):
         """
         Yield 'rlz-000', 'rlz-001', ...', 'mean', 'quantile-0.1', ...
@@ -1868,17 +1892,14 @@ class OqParam(valid.ParamSet):
         """
         if 'gsim_logic_tree' not in self.inputs:
             return True  # disable the check
-        gsim_lt = self.inputs['gsim_logic_tree']
+        gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts
         trts = set(self.maximum_distance)
-        unknown = ', '.join(trts - self._trts - {'default'})
+        unknown = ', '.join(trts - self._trts - set(self.minimum_magnitude)
+                            - {'default'})
         if unknown:
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
-        for trt, val in self.maximum_distance.items():
-            if trt not in self._trts and trt != 'default':
-                self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
-                return False
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
@@ -1949,8 +1970,8 @@ class OqParam(valid.ParamSet):
                 os.path.join(self.input_dir, self.export_dir))
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
-            logging.warning('export_dir not specified. Using export_dir=%s'
-                            % self.export_dir)
+            logging.info('export_dir not specified. Using export_dir=%s'
+                         % self.export_dir)
             return True
         if not os.path.exists(self.export_dir):
             try:

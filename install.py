@@ -277,11 +277,6 @@ def before_checks(inst, venv, port, remove, usage):
     if port:
         inst.DBPORT = int(port)
 
-    # check python version
-    if PYVER < (3, 9, 0):
-        sys.exit('Error: you need at least Python 3.9, but you have %s' %
-                 '.'.join(map(str, sys.version_info)))
-
     # check platform
     if ((inst is server and sys.platform != 'linux') or (
             inst is devel_server and sys.platform != 'linux')):

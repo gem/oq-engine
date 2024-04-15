@@ -37,6 +37,7 @@ from openquake.hazardlib.source.multi_fault import MultiFaultSource
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2**16
 EPSILON = 1E-12
 source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -566,7 +567,7 @@ class RuptureConverter(object):
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
                     self.rupture_mesh_spacing, sec_id=sec_id)
-            else:
+            else:  # normally found in sections.xml
                 surfaces = []
                 for prof in profs:
                     surfaces.append(geo.KiteSurface.from_profiles(
@@ -1147,7 +1148,7 @@ class SourceConverter(RuptureConverter):
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
-                                   dic['mag'], dic['rake'],
+                                   mags, dic['rake'],
                                    self.investigation_time,
                                    self.infer_occur_rates)
             return mfs

@@ -846,7 +846,7 @@ def get_ruptures(fname_csv):
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
-        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
+        meshes = [F32(m) for m in json.loads(row['mesh'])]  # 3D arrays
         num_surfaces = len(meshes)
         shapes = []
         points = []
@@ -883,6 +883,20 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
+def get_planar_from_corners(corners, mag, rake, trt, msr=None):
+    """
+    :returns: a BaseRupture with a PlanarSurface
+    """
+    if msr is None:
+        from openquake.hazardlib.scalerel.wc1994 import WC1994
+        msr = WC1994()
+    surf = PlanarSurface.from_corner_points(*corners)
+    hc = surf.get_middle_point()
+    rup = BaseRupture(mag, rake, trt, hc, surf)
+    rup.rup_id = 0
+    return rup
+
+
 def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     """
     :returns: a BaseRupture with a PlanarSurface built around the site
@@ -896,6 +910,7 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     return rup
 
 
+# use a hard-coded MSR
 def _width_length(mag, rake):
     assert rake is None or -180 <= rake <= 180, rake
     if rake is None:
@@ -912,13 +927,13 @@ def _width_length(mag, rake):
         return 10.0 ** (-1.14 + 0.35 * mag), 10.0 ** (-1.88 + 0.50 * mag)
 
 
+# copied from the Input Preparation Toolkit (IPT) algorithm
 def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     """
     Build a rupture with a PlanarSurface suitable for scenario calculations
     """
     # copying the algorithm used in PlanarSurface.from_hypocenter
     # with a fixed Magnitude-Scaling Relationship
-
     rdip = math.radians(dip)
     rup_width, rup_length = _width_length(mag, rake)
     # calculate the height of the rupture being projected
@@ -957,6 +972,7 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
         hor_dist, vertical_increment, azimuth=(strike + 180 - theta) % 360)
     bottom_right = rupture_center.point_at(
         hor_dist, vertical_increment, azimuth=(strike + theta) % 360)
+    # print(dip, strike, top_left, top_right, bottom_left, bottom_right)
     surf = PlanarSurface(strike, dip, top_left, top_right,
                          bottom_right, bottom_left)
     rup = BaseRupture(mag, rake, trt, hypocenter, surf)

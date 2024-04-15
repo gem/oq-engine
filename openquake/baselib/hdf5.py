@@ -259,33 +259,17 @@ def is_ok(value, expected):
     return value == expected
 
 
-def decode_lol(lol):
-    """
-    :returns: a list of lists of decoded values
-    """
-    if len(lol) and len(lol[0]) and isinstance(lol[0][0], bytes):
-        return [decode(lst) for lst in lol]
-    else:
-        return lol
-
-
-def extract_cols(datagrp, sel, slc, columns):
+def extract_cols(datagrp, sel, slices, columns):
     """
     :param datagrp: something like and HDF5 data group
     :param sel: dictionary column name -> value specifying a selection
-    :param slc: a slice object specifying the rows considered
+    :param slices: list of slices
     :param columns: the full list of column names
     :returns: a dictionary col -> array of values
     """
-    first = columns[0]
-    nrows = len(datagrp[first])
-    if slc.start is None and slc.stop is None:  # split in slices
-        slcs = general.gen_slices(0, nrows, MAX_ROWS)
-    else:
-        slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
-    for slc in slcs:
-        if sel:
+    if sel:
+        for slc in slices:
             ok = slice(None)
             dic = {col: datagrp[col][slc] for col in sel}
             for col in sel:
@@ -295,10 +279,16 @@ def extract_cols(datagrp, sel, slc, columns):
                     ok &= is_ok(dic[col], sel[col])
             for col in columns:
                 acc[col].append(datagrp[col][slc][ok])
-        else:  # avoid making unneeded copies
-            for col in columns:
-                acc[col].append(datagrp[col][slc])
-    return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
+    else:  # avoid making unneeded copies
+        for col in columns:
+            dset = datagrp[col]
+            for slc in slices:
+                acc[col].append(dset[slc])
+    for k, vs in acc.items():
+        acc[k] = arr = numpy.concatenate(vs, dtype=vs[0].dtype)
+        if len(arr) and isinstance(arr[0], bytes):
+            acc[k] = numpy.array(decode(arr))
+    return acc
 
 
 class File(h5py.File):
@@ -374,12 +364,13 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
-    def read_df(self, key, index=None, sel=(), slc=slice(None)):
+    def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
         """
         :param key: name of the structured dataset
         :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
         :param slc: slice object to extract a slice of the dataset
+        :param slices: an array of shape (N, 2) with start,stop indices
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
@@ -389,7 +380,14 @@ class File(h5py.File):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = extract_cols(dset, sel, slc, columns)
+            if len(slices):
+                slcs = [slice(s0, s1) for s0, s1 in slices]
+            elif slc.start is None and slc.stop is None:  # split in slices
+                slcs = list(general.gen_slices(
+                    0, len(dset[columns[0]]), MAX_ROWS))
+            else:
+                slcs = [slc]
+            dic = extract_cols(dset, sel, slcs, columns)
             if index is None:
                 return pandas.DataFrame(dic)
             else:
@@ -414,6 +412,9 @@ class File(h5py.File):
                     data[templ % i] = arr[(slice(None),) + i]
             else:  # scalar field
                 data[name] = arr
+        if sel:
+            for k, v in sel.items():
+                data = data[data[k] == v]
         return pandas.DataFrame.from_records(data, index=index)
 
     def save_vlen(self, key, data):  # used in SourceWriterTestCase

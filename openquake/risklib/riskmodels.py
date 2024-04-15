@@ -397,7 +397,7 @@ class RiskModel(object):
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type]
         return vf(asset_df, gmf_df, col, rndgen,
-                  self.minimum_asset_loss[loss_type])
+                  self.minimum_asset_loss.get(loss_type, 0.))
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -508,13 +508,15 @@ class CompositeRiskModel(collections.abc.Mapping):
     """
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam):
+    def read(cls, dstore, oqparam, tmap=None):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
         risklist = RiskFuncList()
-        risklist.limit_states = dstore.get_attr('crm', 'limit_states')
+        if hasattr(dstore, 'get_attr'):
+            # missing only in Aristotle mode, where dstore is an hdf5.File
+            risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
         for rf_json in df.riskfunc:
             rf = hdf5.json_to_obj(rf_json)
@@ -532,7 +534,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = ast.literal_eval(dstore.get_attr('crm', 'tmap'))
+        crm.tmap = tmap or ast.literal_eval(dstore.get_attr('crm', 'tmap'))
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -563,13 +565,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                     consequence, tagname = byname.split('_by_')
                     # the taxonomy map is a dictionary loss_type ->
                     # [[(risk_taxon, weight]),...] for each asset taxonomy
-                    for pairs in tmap[loss_type][1:]:  # strip [('?', 1)]
+                    for pairs in tmap[loss_type].values():
                         for risk_t, weight in pairs:
-                            try:
-                                coeffs[risk_t][loss_type]
-                            except KeyError as err:
-                                raise InvalidFile(
-                                    'Missing %s in\n%s' % (err, cfs))
+                            if risk_t != '?':
+                                try:
+                                    coeffs[risk_t][loss_type]
+                                except KeyError as err:
+                                    raise InvalidFile(
+                                        'Missing %s in\n%s' % (err, cfs))
 
     def check_risk_ids(self, inputs):
         """
@@ -596,9 +599,10 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 rms = []
                 if self.tmap:
-                    for pairs in self.tmap[lt][1:]:
+                    for pairs in self.tmap[lt].values():
                         for risk_id, weight in pairs:
-                            rms.append(self._riskmodels[risk_id])
+                            if risk_id != '?':
+                                rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
@@ -713,7 +717,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):  # vulnerability
                     iml[rf.imt].append(rf.imls[0])
-        if sum(oq.minimum_intensity.values()) == 0 and iml:
+        if oq.aristotle:
+            pass  # don't set minimum_intensity
+        elif sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
 
     def eid_dmg_dt(self):
