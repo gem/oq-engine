@@ -281,7 +281,6 @@ class GsimLogicTree(object):
                             if v is None:  # if volc_arc_file is None
                                 pass
                             else:
-                                import pdb; pdb.set_trace()
                                 fname = os.path.join(dirname, v)
                                 with open(fname, 'rb') as f:
                                     dic[os.path.basename(v)] = f.read()
