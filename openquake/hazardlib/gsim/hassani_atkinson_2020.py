@@ -251,7 +251,6 @@ class HassaniAtkinson2020SInter(GMPE):
         """
         Aditional parameters.
         """
-        super().__init__()
         # kappa parameter
         self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw

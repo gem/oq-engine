@@ -472,7 +472,6 @@ class ChiouYoungs2014(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
     def __init__(self, sigma_mu_epsilon=0.0):
-        super().__init__()
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -483,7 +482,8 @@ class ChiouYoungs2014(GMPE):
         """
         name = self.__class__.__name__
         # reference to page 1144, PSA might need PGA value
-        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(name, self.COEFFS[PGA()], ctx)
+        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
+            name, self.COEFFS[PGA()], ctx)
         for m, imt in enumerate(imts):
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
@@ -493,8 +493,8 @@ class ChiouYoungs2014(GMPE):
                 imt_mean, imt_sig, imt_tau, imt_phi = \
                     get_mean_stddevs(name, self.COEFFS[imt], ctx)
                 # reference to page 1144
-                # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
-                # when it falls below the predicted PGA
+                # Predicted PSA value at T ≤ 0.3s should be set equal to the
+                # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean

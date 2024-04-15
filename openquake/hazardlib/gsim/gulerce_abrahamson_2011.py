@@ -211,7 +211,6 @@ class GulerceAbrahamson2011(GMPE):
     non_verified = True
 
     def __init__(self, gmpe_name):
-        super().__init__()
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 

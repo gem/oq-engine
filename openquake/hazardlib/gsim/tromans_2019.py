@@ -250,7 +250,6 @@ class TromansEtAl2019(GMPE):
     def __init__(self, gmpe_name, branch="central", sigma_mu_epsilon=0.0,
                  homoskedastic_sigma=False,  scaling_factor=None,
                  vskappa=None, phi_ds2s=True):
-        super().__init__()
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
         for name in uppernames:

@@ -75,7 +75,6 @@ class NSHMP2014(base.GMPE):
         # are given in terms of Rrup, so both are required in the subclass
         self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES | {'rrup'})
         self.gsim = cls()  # underlying gsim
-        super().__init__()
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
