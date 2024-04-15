@@ -31,8 +31,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
-from openquake.hazardlib.geo.geodetic import azimuth
-from openquake.hazardlib.geo.utils import plane_fit
 
 from pyproj import Proj, CRS
 
@@ -161,8 +159,6 @@ class ComplexFaultSurface(BaseSurface):
         bl = edges[-1].points[0]
         b2 = edges[-1].points[1]
         
-        print("points to test: ", ul, u2, bl, b2)
-        
         ul, ur, bl, br = spherical_to_cartesian(
             [ul.longitude, u2.longitude, bl.longitude, b2.longitude],
             [ul.latitude, u2.latitude, bl.latitude, b2.latitude],
@@ -192,67 +188,10 @@ class ComplexFaultSurface(BaseSurface):
         )
 
         if (angle_ul > 90) or (angle_ur > 90):
-            print("angles: ", angle_ul, angle_ur)
             raise ValueError(
                 "Surface does not conform with Aki & Richards convention"
             )
             
-    @classmethod        
-    def _check_edges(cls, edges):
-        """
-        This checks that all the edges follow the right hand rule
-        :param list edges:
-            The list of edges to be analysed.
-        :return:
-            An instance of :class:`numpy.ndarray` of cardinality equal to the
-            number of edges. Where integers are positive, the edges need to be
-            flipped.
-        """
-
-        # Check the input
-        if len(edges) < 1:
-            return None
-
-        # Create a matrix of points
-        pnts = []
-        for edge in edges:
-            pnts += [[pnt.longitude, pnt.latitude, pnt.depth]
-                     for pnt in edge.points]
-        pnts = numpy.array(pnts)
-
-        # Project the points using Lambert Conic Conformal
-        fmt = "+proj=lcc +lon_0={:f} +lat_1={:f} +lat_2={:f}"
-        mla = numpy.mean(pnts[:, 1])
-        srs = CRS.from_proj4(fmt.format(numpy.mean(pnts[:, 0]), mla - 10, mla + 10))
-        p = Proj(srs)
-
-        # From m to km
-        x, y = p(pnts[:, 0], pnts[:, 1])
-        x = x / 1e3  # m -> km
-        y = y / 1e3  # m -> km
-
-        # Fit the plane
-        tmp = numpy.vstack((x.flatten(), y.flatten(), pnts[:, 2].flatten())).T
-        _, ppar = plane_fit(tmp)
-
-        # Analyse the edges
-        chks = []
-        for edge in edges:
-
-            epnts = numpy.array([[pnt.longitude, pnt.latitude, pnt.depth] for pnt in
-                              edge.points[0:2]])
-            ex, ey = p(epnts[:, 0], epnts[:, 1])
-            ex = ex / 1e3
-            ey = ey / 1e3
-
-            # Check the edge direction Vs the perpendicular to the plane
-            idx = [0, -1]
-            edgv = numpy.array([numpy.diff(ex[idx])[0], numpy.diff(ey[idx])[0]])
-            chks.append(numpy.sign(numpy.cross(ppar[:2], edgv)))
-        
-            if numpy.any(numpy.greater(chks, 0)):
-                print("some edges do not conform to Aki and Richards convention", print(numpy.array(chks)))
-              
 
     @classmethod
     def check_surface_validity(cls, edges):
