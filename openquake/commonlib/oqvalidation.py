@@ -35,7 +35,7 @@ from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree
+from openquake.hazardlib.gsim_lt import get_trts
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -1291,12 +1291,7 @@ class OqParam(valid.ParamSet):
                                   ' must be no `gsim` key' % job_ini)
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            gsim_lt = logictree.GsimLogicTree(path, ['*'])
-
-            # check the IMTs vs the GSIMs
-            self._trts = set(gsim_lt.values)
-            for gsims in gsim_lt.values.values():
-                self.check_gsims(gsims)
+            self._trts = get_trts(path)
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
