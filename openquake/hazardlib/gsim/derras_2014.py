@@ -284,6 +284,5 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     REQUIRES_DISTANCES = {'rjb', 'rhypo'}
     REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "hypo_depth", "width"}
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
         self.adjustment_factor = np.log(adjustment_factor)

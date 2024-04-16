@@ -442,7 +442,8 @@ class Stafford2022(GMPE):
     """
     Implements Backbone model developed by Peter Stafford for NZ NSHM revision.
     For more details see Peter Stafford's GNS report.
-    The base model implementation remains the same as for Chiou and Youngs (2014).
+    The base model implementation remains the same as for Chiou and Youngs
+    (2014).
 
     Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
@@ -464,10 +465,7 @@ class Stafford2022(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
@@ -491,21 +489,11 @@ class Stafford2022(GMPE):
         adjust_chm=True,
         adjust_c7=True,
         adjust_cg1=True,
-        **kwargs,
     ):
         """
-        Aditional parameter for epistemic central,
+        Additional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__(
-            mu_branch=mu_branch,
-            sigma_branch=sigma_branch,
-            adjust_c1=adjust_c1,
-            adjust_chm=adjust_chm,
-            adjust_c7=adjust_c7,
-            adjust_cg1=adjust_cg1,
-            **kwargs,
-        )
         self.mu_branch = mu_branch
         self.sigma_branch = sigma_branch
         self.adjust_c1 = adjust_c1

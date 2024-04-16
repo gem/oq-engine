@@ -211,21 +211,22 @@ class ESHM20Craton(GMPE):
     #: Defined for a reference velocity of 3000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 3000.0
 
-    def __init__(self, **kwargs):
+    def __init__(self, epsilon=0, tau_model="global", phi_model="global",
+                 ergodic=True, tau_quantile=None, phi_ss_quantile=None,
+                 site_epsilon=0.):
         """
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
         uncertainty model ('global', 'cena_constant', 'cena'), and the quantile
         of the epistemic uncertainty model (float in the range 0 to 1, or None)
         """
-        super().__init__(**kwargs)
-        self.epsilon = kwargs.get("epsilon", 0.0)
-        self.tau_model = kwargs.get("tau_model", "global")
-        self.phi_model = kwargs.get("phi_model", "global")
-        self.ergodic = kwargs.get("ergodic", True)
-        self.tau_quantile = kwargs.get("tau_quantile", None)
-        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", None)
-        self.site_epsilon = kwargs.get("site_epsilon", 0.0)
+        self.epsilon = epsilon
+        self.tau_model = tau_model
+        self.phi_model = phi_model
+        self.ergodic = ergodic
+        self.tau_quantile = tau_quantile
+        self.phi_ss_quantile = phi_ss_quantile
+        self.site_epsilon = site_epsilon
         self.PHI_S2SS = None
         # define the standard deviation model from the NGA East aleatory
         # uncertainty model according to the calibrations specified by the user

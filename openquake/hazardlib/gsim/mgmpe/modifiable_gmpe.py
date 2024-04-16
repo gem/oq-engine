@@ -226,8 +226,6 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
@@ -236,7 +234,8 @@ class ModifiableGMPE(GMPE):
             if k not in g:
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
-        self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
+        if hasattr(self.gmpe, 'gmpe_table'):
+            self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
 
         if ('set_between_epsilon' in self.params or
