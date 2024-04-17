@@ -253,22 +253,17 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         m_b=None,
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
-        **kwargs,
     ):
         super().__init__(
             region=region,
             m_b=m_b,
-            sigma_mu_epsilon=sigma_mu_epsilon,
-            modified_sigma=modified_sigma,
-            **kwargs,
-        )
+            sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
-            self.REQUIRES_SITES_PARAMETERS = (
+            self.REQUIRES_SITES_PARAMETERS = \
                 self.__class__.REQUIRES_SITES_PARAMETERS
-            )
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -340,8 +335,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
             # Get standard deviations
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
-                    C, C_PGA, imt, ctx.vs30, pga1100
-                )
+                    C, C_PGA, imt, ctx.vs30, pga1100)
             else:
                 tau[m] = C["tau"]
                 phi[m] = C["phi"]

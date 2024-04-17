@@ -414,6 +414,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 3)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
         # error for missing intensity_measure_types
         with self.assertRaises(InvalidFile) as ctx:

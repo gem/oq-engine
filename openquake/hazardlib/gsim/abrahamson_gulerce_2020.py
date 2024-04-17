@@ -624,8 +624,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1000.0
 
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
-                 sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(**kwargs)
+                 sigma_mu_epsilon=0.0):
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region

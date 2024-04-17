@@ -151,6 +151,18 @@ class MetaGSIM(abc.ABCMeta):
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
+    def __call__(cls, **kwargs):
+        mixture_model = kwargs.pop('mixture_model', None)
+        self = type.__call__(cls, **kwargs)
+        if not hasattr(self, 'kwargs'):
+            self.kwargs = kwargs
+        if hasattr(self, 'gmpe_table'):
+            # used in NGAEast to set the full pathname
+            self.kwargs['gmpe_table'] = self.gmpe_table
+        if mixture_model is not None:
+            self.mixture_model = mixture_model
+        return self
+
 
 @functools.total_ordering
 class GroundShakingIntensityModel(metaclass=MetaGSIM):
@@ -278,7 +290,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
         cls = self.__class__
         if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (
@@ -490,7 +501,7 @@ class GMPE(GroundShakingIntensityModel):
         elif hasattr(self, "mixture_model"):
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
-                mean_stdi = numpy.array(mean_std)  # a copy
+                mean_stdi = mean_std.copy()
                 mean_stdi[1] *= f  # multiply stddev by factor
                 out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
         else:  # regular case

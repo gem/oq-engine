@@ -106,15 +106,12 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
         ergodic=True,
         apply_usa_adjustment=False,
         sigma_mu_epsilon=0.0,
-        **kwargs,
     ):
         super().__init__(
             region=region,
             ergodic=ergodic,
             apply_usa_adjustment=apply_usa_adjustment,
-            sigma_mu_epsilon=sigma_mu_epsilon,
-            **kwargs,
-        )
+            sigma_mu_epsilon=sigma_mu_epsilon)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
