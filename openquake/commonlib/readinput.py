@@ -445,9 +445,7 @@ def get_site_model(oqparam, h5=None):
         dist = oqparam.maximum_distance('*')(rup['mag'])
         return get_site_model_around(fnames[0], rup, dist)
 
-    req_site_params = get_gsim_lt(oqparam).req_site_params
-    if 'amplification' in oqparam.inputs:
-        req_site_params.add('ampcode')
+    req_site_params = oqparam.req_site_params
     arrays = []
     sm_fieldsets = {}
     for fname in fnames:
@@ -479,7 +477,7 @@ def get_site_model(oqparam, h5=None):
                     'Found duplicate sites %s in %s' % (dupl, fname))
 
             # used global parameters is local ones are missing
-            params = sorted(set(sm.dtype.names) | req_site_params)
+            params = sorted(set(sm.dtype.names) | set(req_site_params))
             z = numpy.zeros(
                 len(sm), [(p, site.site_param_dt[p]) for p in params])
             for name in z.dtype.names:
@@ -500,7 +498,7 @@ def get_site_model(oqparam, h5=None):
 
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
-        missing = req_site_params - set(params[0])
+        missing = set(req_site_params) - set(params[0])
         if 'vs30measured' in missing:  # use a default of False
             missing -= {'vs30measured'}
             for param in params:
@@ -572,9 +570,7 @@ def get_site_collection(oqparam, h5=None):
                 or 'shakemap' in oqparam.inputs):
             req_site_params = set()   # no parameters are required
         else:
-            req_site_params = get_gsim_lt(oqparam).req_site_params
-        if 'amplification' in oqparam.inputs:
-            req_site_params.add('ampcode')
+            req_site_params = oqparam.req_site_params
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
             sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and

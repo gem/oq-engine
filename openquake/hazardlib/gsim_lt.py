@@ -148,6 +148,7 @@ def keyno(branch_id, bsno, brno):
     return BASE183[brno] + str(bsno)
 
 
+# not used
 def get_trts(gsim_logic_tree_file):
     """
     Parse the file and returns the full set of tectonic region types

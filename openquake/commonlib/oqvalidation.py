@@ -35,7 +35,7 @@ from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
-from openquake.hazardlib.gsim_lt import get_trts
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -1291,10 +1291,17 @@ class OqParam(valid.ParamSet):
                                   ' must be no `gsim` key' % job_ini)
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            self._trts = get_trts(path) - {
-                trt.strip() for trt in self.discard_trts.split(',')}
+            gsim_lt = GsimLogicTree(path, ['*'])
+            # check the GSIMs
+            self._trts = set()
+            discard = {trt.strip() for trt in self.discard_trts.split(',')}
+            for trt, gsims in gsim_lt.values.items():
+                if trt not in discard:
+                    self.check_gsims(gsims)
+                    self._trts.add(trt)
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
+        self.req_site_params = sorted(self.req_site_params)
 
         # check inputs
         unknown = set(self.inputs) - self.KNOWN_INPUTS
@@ -1407,6 +1414,13 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
+        if not hasattr(self, 'req_site_params'):
+            self.req_site_params = set()
+        for gsim in gsims:
+            self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+        if 'amplification' in self.inputs:
+            self.req_site_params.add('ampcode')
+
         has_sites = self.sites is not None or 'site_model' in self.inputs
         if not has_sites:
             return
@@ -1426,6 +1440,7 @@ class OqParam(valid.ParamSet):
                 imts.add("AvgSA")
             else:
                 imts.add(im.string)
+
         for gsim in gsims:
             if (hasattr(gsim, 'weight') or
                     self.calculation_mode == 'aftershock'):
