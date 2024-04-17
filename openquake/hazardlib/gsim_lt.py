@@ -220,6 +220,7 @@ class GsimLogicTree(object):
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
+        # print('---------------', fname)
         self.filename = fname
         trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
