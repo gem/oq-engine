@@ -395,9 +395,7 @@ def get_mesh_exp(oqparam, h5=None):
     # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
         logging.info('Extracting the hazard sites from the site model')
-        sm = get_site_model(oqparam)
-        if h5:
-            h5['site_model'] = sm
+        sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
         mesh = exposure.mesh
@@ -430,13 +428,16 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     return sm[idxs]
 
 
-def get_site_model(oqparam):
+def get_site_model(oqparam, h5=None):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    if h5 and 'site_model' in h5:
+        return h5['site_model'][:]
+
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
         rup = oqparam.rupture_dict
@@ -543,7 +544,11 @@ def get_site_model(oqparam):
                     f'Fields {fieldsets_diff} present in'
                     f' {this_sm_fname} were not found in {other_sm_fname}')
 
-    return numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    sm = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    if h5:
+        h5['site_model'] = sm
+    return sm
+
 
 
 def get_no_vect(gsim_lt):
@@ -589,7 +594,7 @@ def get_site_collection(oqparam, h5=None):
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
-            sm = get_site_model(oqparam)
+            sm = get_site_model(oqparam, h5)
             if len(sm) > len(mesh):  # the association will happen in base.py
                 sm = oqparam
         else:
@@ -943,7 +948,7 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
             # reading the assets around a rupture
-            sm = get_site_model(oq)
+            sm = get_site_model(oq, h5)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)

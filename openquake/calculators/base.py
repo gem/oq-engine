@@ -822,9 +822,6 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol, _dctx = self.cmaker.filter(haz_sitecol, self.rup)
                 haz_sitecol.make_complete()
 
-            if 'site_model' in oq.inputs:
-                self.datastore['site_model'] = readinput.get_site_model(oq)
-
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
@@ -927,7 +924,7 @@ class HazardCalculator(BaseCalculator):
             if 'site_model' in oq.inputs:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
-                sm = readinput.get_site_model(oq)
+                sm = readinput.get_site_model(oq, self.datastore.hdf5)
                 if oq.prefer_global_site_params:
                     self.sitecol.set_global_params(oq)
                 else:
