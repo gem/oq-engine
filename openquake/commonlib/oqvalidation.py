@@ -1301,6 +1301,11 @@ class OqParam(valid.ParamSet):
                     self._trts.add(trt)
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
+        else:
+            raise InvalidFile('%(job_ini)s: missing gsim or '
+                              'gsim_logic_tree_file' % self.inputs)
+        if 'amplification' in self.inputs:
+            self.req_site_params.add('ampcode')
         self.req_site_params = sorted(self.req_site_params)
 
         # check inputs
@@ -1418,8 +1423,6 @@ class OqParam(valid.ParamSet):
             self.req_site_params = set()
         for gsim in gsims:
             self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
-        if 'amplification' in self.inputs:
-            self.req_site_params.add('ampcode')
 
         has_sites = self.sites is not None or 'site_model' in self.inputs
         if not has_sites:
