@@ -1285,6 +1285,7 @@ class OqParam(valid.ParamSet):
                              % (self.inputs['job_ini'], self.calculation_mode))
 
         # check the gsim_logic_tree
+        self.req_site_params = set()
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
                 raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
@@ -1419,8 +1420,6 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        if not hasattr(self, 'req_site_params'):
-            self.req_site_params = set()
         for gsim in gsims:
             self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
 
