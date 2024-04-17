@@ -1291,7 +1291,8 @@ class OqParam(valid.ParamSet):
                                   ' must be no `gsim` key' % job_ini)
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            self._trts = get_trts(path)
+            self._trts = get_trts(path) - {
+                trt.strip() for trt in self.discard_trts.split(',')}
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
