@@ -30,7 +30,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import TRT, StdDev
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE
-from openquake.baselib.python3compat import round
+from numpy import round
 
 
 _get_mean = CallableDict()
@@ -97,16 +97,16 @@ def _return_tables(self, mag, imt, which):
         iml_table = iml_table.reshape([n_d, n_m])
     else:
         if which == "IMLs":
-            periods = self.imls["T"][:]
+            periods = self.imls["T"][:].astype(np.float32)
             iml_table = self.imls["SA"][:]
         else:
-            periods = self.stddev["T"][:]
+            periods = self.stddev["T"][:].astype(np.float32)
             iml_table = self.stddev["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
-        if (round(imt.period, 7) < low_period) or (
-                round(imt.period, 7) > high_period):
+        period = round(np.float32(imt.period), 7)
+        if period < low_period or period > high_period:
             raise ValueError("Spectral period %.3f outside of valid range "
                              "(%.3f to %.3f)" % (imt.period, periods[0],
                                                  periods[-1]))
