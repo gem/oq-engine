@@ -23,7 +23,7 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 import numpy
 import shapely
 
-from openquake.baselib.python3compat import round
+#from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
@@ -178,10 +178,10 @@ class ComplexFaultSurface(BaseSurface):
 
         # rounding to 1st digit, to avoid ValueError raised for floating point
         # imprecision
-        angle_ul = round(
+        angle_ul = numpy.round(
             numpy.degrees(numpy.arccos(numpy.dot(ul, left_cross_top))), 1
         )
-        angle_ur = round(
+        angle_ur = numpy.round(
             numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
         )
 
@@ -284,7 +284,7 @@ class ComplexFaultSurface(BaseSurface):
         cls.check_fault_data(edges, mesh_spacing)
         surface_nodes = [complex_fault_node(edges)]
         mean_length = numpy.mean([edge.get_length() for edge in edges])
-        num_hor_points = int(round(mean_length / mesh_spacing)) + 1
+        num_hor_points = int(numpy.round(mean_length / mesh_spacing)) + 1
         if num_hor_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
@@ -295,7 +295,7 @@ class ComplexFaultSurface(BaseSurface):
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
         mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
-        num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+        num_vert_points = int(numpy.round(mean_width / mesh_spacing)) + 1
         if num_vert_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean width %.1f km' %
