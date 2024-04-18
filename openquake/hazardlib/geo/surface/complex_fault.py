@@ -23,7 +23,7 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 import numpy
 import shapely
 
-from openquake.baselib.python3compat import round
+#from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
@@ -31,7 +31,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
-
 
 def edge_node(name, points):
     """
@@ -135,17 +134,18 @@ class ComplexFaultSurface(BaseSurface):
         if self.strike is None:
             self.get_dip()  # this should cache strike value
         return self.strike
-
+            
     @classmethod
     def check_aki_richards_convention(cls, edges):
         """
-        Verify that surface (as defined by corner points) conforms with Aki and
+        Verify that surface conforms with Aki and
         Richard convention (i.e. surface dips right of surface strike)
+        Test with 2 adjacent edges to allow for very large, curved surfaces
 
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        # 1) extract 4 corner points of surface mesh
+        # 1) extract 4 points of surface mesh from adjacent edges 
         # 2) compute cross products between left and right edges and top edge
         # (these define vectors normal to the surface)
         # 3) compute dot products between cross product results and
@@ -153,13 +153,14 @@ class ComplexFaultSurface(BaseSurface):
         # both angles are less then 90 degrees then the surface is correctly
         # defined)
         ul = edges[0].points[0]
-        ur = edges[0].points[-1]
+        u1 = edges[0].points[1]
         bl = edges[-1].points[0]
-        br = edges[-1].points[-1]
+        b1 = edges[-1].points[1]
+        
         ul, ur, bl, br = spherical_to_cartesian(
-            [ul.longitude, ur.longitude, bl.longitude, br.longitude],
-            [ul.latitude, ur.latitude, bl.latitude, br.latitude],
-            [ul.depth, ur.depth, bl.depth, br.depth],
+            [ul.longitude, u1.longitude, bl.longitude, b1.longitude],
+            [ul.latitude, u1.latitude, bl.latitude, b1.latitude],
+            [ul.depth, b1.depth, bl.depth, b1.depth],
         )
 
         top_edge = ur - ul
@@ -177,10 +178,10 @@ class ComplexFaultSurface(BaseSurface):
 
         # rounding to 1st digit, to avoid ValueError raised for floating point
         # imprecision
-        angle_ul = round(
+        angle_ul = numpy.round(
             numpy.degrees(numpy.arccos(numpy.dot(ul, left_cross_top))), 1
         )
-        angle_ur = round(
+        angle_ur = numpy.round(
             numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
         )
 
@@ -188,7 +189,7 @@ class ComplexFaultSurface(BaseSurface):
             raise ValueError(
                 "Surface does not conform with Aki & Richards convention"
             )
-
+            
     @classmethod
     def check_surface_validity(cls, edges):
         """
@@ -283,7 +284,7 @@ class ComplexFaultSurface(BaseSurface):
         cls.check_fault_data(edges, mesh_spacing)
         surface_nodes = [complex_fault_node(edges)]
         mean_length = numpy.mean([edge.get_length() for edge in edges])
-        num_hor_points = int(round(mean_length / mesh_spacing)) + 1
+        num_hor_points = int(numpy.round(mean_length / mesh_spacing)) + 1
         if num_hor_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
@@ -294,7 +295,7 @@ class ComplexFaultSurface(BaseSurface):
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
         mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
-        num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+        num_vert_points = int(numpy.round(mean_width / mesh_spacing)) + 1
         if num_vert_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean width %.1f km' %
