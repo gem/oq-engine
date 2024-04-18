@@ -122,23 +122,23 @@ def get_aristotle_allparams(
     return allparams
 
 
-def main_web(allparams, jobctxs, maximum_distance='300', trt=None,
-             truncation_level='3', number_of_ground_motion_fields='10',
-             asset_hazard_distance='15', ses_seed='42', job_owner_email=None,
-             outputs_uri=None,
-             callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
+def main_web(
+        allparams, jobctxs, maximum_distance='300', trt=None,
+        truncation_level='3', number_of_ground_motion_fields='10',
+        asset_hazard_distance='15', ses_seed='42',
+        job_owner_email=None, outputs_uri=None,
+        callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
     """
     This script is meant to be called from the WebUI
     """
-    for job_idx, job in enumerate(jobctxs):
+    for params, job in zip(allparams, jobctxs):
         try:
             engine.run_jobs([job])
         except Exception as exc:
-            callback(job.calc_id, allparams[job_idx], job_owner_email,
+            callback(job.calc_id, params, job_owner_email,
                      outputs_uri, exc=exc)
-        else:
-            callback(job.calc_id, allparams[job_idx], job_owner_email,
-                     outputs_uri, exc=None)
+        else:  # success
+            callback(job.calc_id, params, job_owner_email, outputs_uri)
 
 
 def main_cmd(
