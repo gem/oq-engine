@@ -469,8 +469,8 @@ events. The probability of a ground motion exceedance over a reduced
 model space is computed simply as 1 minus the probabilty of
 non-exceedance over the remaining model space dimensions.
 
-Comparison between OpenQuake engine disaggregation and *traditional* disaggregation
-***********************************************************************************
+Comparison between OpenQuake engine disaggregation and traditional disaggregation
+*********************************************************************************
 
 The traditional disaggregation analysis as commonly known in
 literature (e.g. Bazzurro and Cornell, 1999)
