@@ -543,14 +543,18 @@
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
                 $('#mosaic_model').text('');
-                var formData = {
-                    usgs_id: $("#usgs_id").val(),
+                var jsonData = {
+                    usgs_id: $("#usgs_id").val()
                 };
+                var formData = new FormData();
+                formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
+                formData.append('data', JSON.stringify(jsonData));
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
                     data: formData,
-                    dataType: "json",
+                    processData: false,
+                    contentType: false,
                     encode: true,
                 }).done(function (data) {
                     // console.log(data);
@@ -579,6 +583,9 @@
                     $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
                 });
                 event.preventDefault();
+            });
+            $('#clearFile').click(function() {
+                $('#rupture_file_input').val('');
             });
             $("#aristotle_get_trts_btn").click(function (event) {
                 $('#aristotle_get_trts_btn').prop('disabled', true);
