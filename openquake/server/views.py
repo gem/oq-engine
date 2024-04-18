@@ -777,9 +777,10 @@ def aristotle_run(request):
     (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
+    rupture_file = None # to be set from the upload form
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike,
+            usgs_id, lon, lat, dep, mag, rake, dip, strike, rupture_file,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
             config.directory.mosaic_dir)
