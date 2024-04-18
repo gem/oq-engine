@@ -282,7 +282,7 @@ sample_rups.slowest = 'profile and show the slowest operations'
 aristotle_res = dict(count_errors=0, res_list=[])
 
 
-def callback(job_id, params, job_owner_email, outputs_uri, exc=None):
+def callback(job_id, params, exc=None):
     if job_id is not None:
         job = logs.dbcmd('get_job', job_id)
         description = job.description
