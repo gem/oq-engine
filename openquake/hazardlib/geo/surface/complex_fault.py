@@ -23,7 +23,6 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 import numpy
 import shapely
 
-#from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
