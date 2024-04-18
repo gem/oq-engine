@@ -30,7 +30,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
-from openquake.engine.aristotle import main as aristotle_main
+from openquake.engine.aristotle import main_cmd
 from openquake.engine.aelo import get_params_from
 from openquake.hazardlib.geo.utils import geolocate
 
@@ -318,17 +318,16 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
         usgs_id = rupdic['rupture_usgs_id']
-        aristotle_main(usgs_id,
-                       rupdic['lon'],
-                       rupdic['lat'],
-                       rupdic['dep'],
-                       rupdic['mag'],
-                       rake,
-                       dip, strike, maximum_distance, trt,
-                       truncation_level, number_of_ground_motion_fields,
-                       asset_hazard_distance, ses_seed,
-                       callback=callback,
-                       mosaic_dir=mosaic_dir)
+        main_cmd(usgs_id,
+                 rupdic['lon'],
+                 rupdic['lat'],
+                 rupdic['dep'],
+                 rupdic['mag'],
+                 rake, dip, strike, maximum_distance, trt,
+                 truncation_level, number_of_ground_motion_fields,
+                 asset_hazard_distance, ses_seed,
+                 callback=callback,
+                 mosaic_dir=mosaic_dir)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
