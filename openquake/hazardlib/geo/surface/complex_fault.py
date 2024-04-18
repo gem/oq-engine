@@ -159,35 +159,32 @@ class ComplexFaultSurface(BaseSurface):
         ul, ur, bl, br = spherical_to_cartesian(
             [ul.longitude, u1.longitude, bl.longitude, b1.longitude],
             [ul.latitude, u1.latitude, bl.latitude, b1.latitude],
-            [ul.depth, b1.depth, bl.depth, b1.depth],
-        )
+            [ul.depth, b1.depth, bl.depth, b1.depth])
 
         top_edge = ur - ul
         left_edge = bl - ul
         right_edge = br - ur
         left_cross_top = numpy.cross(left_edge, top_edge)
         right_cross_top = numpy.cross(right_edge, top_edge)
+        if (left_cross_top == 0).all() or (right_cross_top == 0).all():
+            return  # avoid division by zero
 
-        left_cross_top /= numpy.sqrt(numpy.dot(left_cross_top, left_cross_top))
-        right_cross_top /= numpy.sqrt(
-            numpy.dot(right_cross_top, right_cross_top)
-        )
-        ul /= numpy.sqrt(numpy.dot(ul, ul))
-        ur /= numpy.sqrt(numpy.dot(ur, ur))
+        left_cross_top /= numpy.sqrt(left_cross_top @ left_cross_top)
+        right_cross_top /= numpy.sqrt(right_cross_top @ right_cross_top)
+
+        ul /= numpy.sqrt(ul @ ul)
+        ur /= numpy.sqrt(ur @ ur)
 
         # rounding to 1st digit, to avoid ValueError raised for floating point
         # imprecision
         angle_ul = numpy.round(
-            numpy.degrees(numpy.arccos(numpy.dot(ul, left_cross_top))), 1
-        )
+            numpy.degrees(numpy.arccos(ul @ left_cross_top)), 1)
         angle_ur = numpy.round(
-            numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
-        )
+            numpy.degrees(numpy.arccos(ur @ right_cross_top)), 1)
 
         if (angle_ul > 90) or (angle_ur > 90):
             raise ValueError(
-                "Surface does not conform with Aki & Richards convention"
-            )
+                "Surface does not conform with Aki & Richards convention")
             
     @classmethod
     def check_surface_validity(cls, edges):
