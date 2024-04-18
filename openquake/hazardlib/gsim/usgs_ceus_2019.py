@@ -215,7 +215,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     """
     For the "core" NGA East set the table is provided in the code in a
     subdirectory fixed to the path of the present file. The GMPE table option
-    is therefore no longer needed
+    is therefore no longer needed if a GSIM alias is used. 
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
