@@ -97,10 +97,10 @@ def _return_tables(self, mag, imt, which):
         iml_table = iml_table.reshape([n_d, n_m])
     else:
         if which == "IMLs":
-            periods = self.imls["T"][:]
+            periods = self.imls["T"][:].astype(np.float32)
             iml_table = self.imls["SA"][:]
         else:
-            periods = self.stddev["T"][:]
+            periods = self.stddev["T"][:].astype(np.float32)
             iml_table = self.stddev["SA"][:]
 
         low_period = round(periods[0], 7)
