@@ -793,9 +793,8 @@ def aristotle_run(request):
         allparams, config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
-    for job_idx, jobctx in enumerate(jobctxs):
+    for jobctx in jobctxs:
         job_id = jobctx.calc_id
-
         outputs_uri_web = request.build_absolute_uri(
             reverse('outputs_aristotle', args=[job_id]))
         outputs_uri_api = request.build_absolute_uri(
@@ -818,13 +817,13 @@ def aristotle_run(request):
 
         # spawn the Aristotle main process
         proc = mp.Process(
-            target=aristotle.main,
+            target=aristotle.main_web,
             args=(
-                usgs_id, lon, lat, dep, mag, rake, dip, strike,
+                allparams, [jobctx],
                 maximum_distance, trt, truncation_level,
                 number_of_ground_motion_fields, asset_hazard_distance,
                 ses_seed, job_owner_email, outputs_uri_web,
-                allparams, [jobctx], aristotle_callback))
+                aristotle_callback))
         proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
