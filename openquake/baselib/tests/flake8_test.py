@@ -42,9 +42,14 @@ def _long_funcs(module, maxlen):
     tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
+            dotname = '%s.%s' % (module.__name__, node.name)
+            args = node.args.args
+            if len(args) > 16:
+                raise SyntaxError('%s has more than 16 arguments: %s'
+                                  % (dotname, [a.arg for a in args]))
             numlines = node.end_lineno - node.lineno + 1
             if numlines > maxlen:
-                out.append((module.__name__ + '.' + node.name, numlines))
+                out.append((dotname, numlines))
     return out
 
 
