@@ -332,6 +332,138 @@ def plotMT(
     return _plot(p, f, iso, collect, colors)
 
 
+def _plot1(p, rgb1, colors, collect):
+    for i in range(p.j):
+        p.xp1[i] = p.x[i]
+        p.yp1[i] = p.y[i]
+    if p.azi[0][0] - p.azi[0][1] > np.pi:
+        p.azi[0][0] -= np.pi * 2.0
+    elif p.azi[0][1] - p.azi[0][0] > np.pi:
+        p.azi[0][0] += np.pi * 2.0
+    if p.azi[0][0] < p.azi[0][1]:
+        az = p.azi[0][1] - D2R
+        while az > p.azi[0][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            p.yp1[i] = p.y0 + p.radius_size * co
+            i += 1
+            az -= D2R
+    else:
+        az = p.azi[0][1] + D2R
+        while az < p.azi[0][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            p.yp1[i] = p.y0 + p.radius_size * co
+            i += 1
+            az += D2R
+    collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
+    colors.append(rgb1)
+    for i in range(p.j2):
+        p.xp2[i] = p.x2[i]
+        p.yp2[i] = p.y2[i]
+    if p.azi[1][0] - p.azi[1][1] > np.pi:
+        p.azi[1][0] -= np.pi * 2.0
+    elif p.azi[1][1] - p.azi[1][0] > np.pi:
+        p.azi[1][0] += np.pi * 2.0
+    if p.azi[1][0] < p.azi[1][1]:
+        az = p.azi[1][1] - D2R
+        while az > p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az -= D2R
+    else:
+        az = p.azi[1][1] + D2R
+        while az < p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az += D2R
+    collect.append(xy2patch(p.xp2[:i], p.yp2[:i], p.res, p.xy))
+    colors.append(rgb1)
+    return colors, collect
+
+
+def _plot2(p, rgb1, colors, collect):
+    for i in range(p.j3):
+        p.xp1[i] = p.x3[i]
+        p.yp1[i] = p.y3[i]
+    for ii in range(p.j):
+        p.xp1[i] = p.x[ii]
+        i += 1
+        p.yp1[i] = p.y[ii]
+    if p.big_iso:
+        ii = p.j2 - 1
+        while ii >= 0:
+            p.xp1[i] = p.x2[ii]
+            i += 1
+            p.yp1[i] = p.y2[ii]
+            ii -= 1
+        collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
+        colors.append(rgb1)
+        return colors, collect
+
+    if p.azi[2][0] - p.azi[0][1] > np.pi:
+        p.azi[2][0] -= np.pi * 2.0
+    elif p.azi[0][1] - p.azi[2][0] > np.pi:
+        p.azi[2][0] += np.pi * 2.0
+    if p.azi[2][0] < p.azi[0][1]:
+        az = p.azi[0][1] - D2R
+        while az > p.azi[2][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp1[i] = p.y0 + p.radius_size * co
+            az -= D2R
+    else:
+        az = p.azi[0][1] + D2R
+        while az < p.azi[2][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp1[i] = p.y0 + p.radius_size * co
+            az += D2R
+    collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
+    colors.append(rgb1)
+
+    for i in range(p.j2):
+        p.xp2[i] = p.x2[i]
+        p.yp2[i] = p.y2[i]
+    if p.azi[1][0] - p.azi[1][1] > np.pi:
+        p.azi[1][0] -= np.pi * 2.0
+    elif p.azi[1][1] - p.azi[1][0] > np.pi:
+        p.azi[1][0] += np.pi * 2.0
+    if p.azi[1][0] < p.azi[1][1]:
+        az = p.azi[1][1] - D2R
+        while az > p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az -= D2R
+    else:
+        az = p.azi[1][1] + D2R
+        while az < p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az += D2R
+    collect.append(xy2patch(p.xp2[:i], p.yp2[:i], p.res, p.xy))
+    colors.append(rgb1)
+    return colors, collect
+
+
 def _plot(p, f, iso, collect, colors):
     # Cliff Frohlich, Seismological Research letters,
     # Vol 7, Number 1, January-February, 1996
@@ -448,133 +580,9 @@ def _plot(p, f, iso, collect, colors):
         colors.append(rgb1)
         return colors, collect
     elif p.n == 1:
-        for i in range(p.j):
-            p.xp1[i] = p.x[i]
-            p.yp1[i] = p.y[i]
-        if p.azi[0][0] - p.azi[0][1] > np.pi:
-            p.azi[0][0] -= np.pi * 2.0
-        elif p.azi[0][1] - p.azi[0][0] > np.pi:
-            p.azi[0][0] += np.pi * 2.0
-        if p.azi[0][0] < p.azi[0][1]:
-            az = p.azi[0][1] - D2R
-            while az > p.azi[0][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp1[i] = p.x0 + p.radius_size * si
-                p.yp1[i] = p.y0 + p.radius_size * co
-                i += 1
-                az -= D2R
-        else:
-            az = p.azi[0][1] + D2R
-            while az < p.azi[0][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp1[i] = p.x0 + p.radius_size * si
-                p.yp1[i] = p.y0 + p.radius_size * co
-                i += 1
-                az += D2R
-        collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
-        colors.append(rgb1)
-        for i in range(p.j2):
-            p.xp2[i] = p.x2[i]
-            p.yp2[i] = p.y2[i]
-        if p.azi[1][0] - p.azi[1][1] > np.pi:
-            p.azi[1][0] -= np.pi * 2.0
-        elif p.azi[1][1] - p.azi[1][0] > np.pi:
-            p.azi[1][0] += np.pi * 2.0
-        if p.azi[1][0] < p.azi[1][1]:
-            az = p.azi[1][1] - D2R
-            while az > p.azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp2[i] = p.x0 + p.radius_size * si
-                i += 1
-                p.yp2[i] = p.y0 + p.radius_size * co
-                az -= D2R
-        else:
-            az = p.azi[1][1] + D2R
-            while az < p.azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp2[i] = p.x0 + p.radius_size * si
-                i += 1
-                p.yp2[i] = p.y0 + p.radius_size * co
-                az += D2R
-        collect.append(xy2patch(p.xp2[:i], p.yp2[:i], p.res, p.xy))
-        colors.append(rgb1)
-        return colors, collect
+        return _plot1(p, rgb1, colors, collect)
     elif p.n == 2:
-        for i in range(p.j3):
-            p.xp1[i] = p.x3[i]
-            p.yp1[i] = p.y3[i]
-        for ii in range(p.j):
-            p.xp1[i] = p.x[ii]
-            i += 1
-            p.yp1[i] = p.y[ii]
-        if p.big_iso:
-            ii = p.j2 - 1
-            while ii >= 0:
-                p.xp1[i] = p.x2[ii]
-                i += 1
-                p.yp1[i] = p.y2[ii]
-                ii -= 1
-            collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
-            colors.append(rgb1)
-            return colors, collect
-
-        if p.azi[2][0] - p.azi[0][1] > np.pi:
-            p.azi[2][0] -= np.pi * 2.0
-        elif p.azi[0][1] - p.azi[2][0] > np.pi:
-            p.azi[2][0] += np.pi * 2.0
-        if p.azi[2][0] < p.azi[0][1]:
-            az = p.azi[0][1] - D2R
-            while az > p.azi[2][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp1[i] = p.x0 + p.radius_size * si
-                i += 1
-                p.yp1[i] = p.y0 + p.radius_size * co
-                az -= D2R
-        else:
-            az = p.azi[0][1] + D2R
-            while az < p.azi[2][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp1[i] = p.x0 + p.radius_size * si
-                i += 1
-                p.yp1[i] = p.y0 + p.radius_size * co
-                az += D2R
-        collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
-        colors.append(rgb1)
-
-        for i in range(p.j2):
-            p.xp2[i] = p.x2[i]
-            p.yp2[i] = p.y2[i]
-        if p.azi[1][0] - p.azi[1][1] > np.pi:
-            p.azi[1][0] -= np.pi * 2.0
-        elif p.azi[1][1] - p.azi[1][0] > np.pi:
-            p.azi[1][0] += np.pi * 2.0
-        if p.azi[1][0] < p.azi[1][1]:
-            az = p.azi[1][1] - D2R
-            while az > p.azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp2[i] = p.x0 + p.radius_size * si
-                i += 1
-                p.yp2[i] = p.y0 + p.radius_size * co
-                az -= D2R
-        else:
-            az = p.azi[1][1] + D2R
-            while az < p.azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                p.xp2[i] = p.x0 + p.radius_size * si
-                i += 1
-                p.yp2[i] = p.y0 + p.radius_size * co
-                az += D2R
-        collect.append(xy2patch(p.xp2[:i], p.yp2[:i], p.res, p.xy))
-        colors.append(rgb1)
-        return colors, collect
+        return _plot2(p, rgb1, colors, collect)
 
 
 def plotDC(np1, size=200, xy=(0, 0), width=200):
