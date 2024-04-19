@@ -112,12 +112,6 @@ def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
         raise InvalidFile(
             '%s (row %d): a negative deductible was found' % (
                 policyfname, indices[0] + 2))
-    _check_treaties(fields, dframe, policyidx, fname, policyfname,
-                    treaties, treaty_types)
-
-
-def _check_treaties(fields, dframe, policyidx, fname, policyfname,
-                    treaties, treaty_types):
     prop_treaties = []
     for treaty, treaty_type in zip(treaties, treaty_types):
         if treaty_type == 'prop':
@@ -148,7 +142,6 @@ def _check_treaties(fields, dframe, policyidx, fname, policyfname,
                 ' It must be >= 0 and <= 1' % (
                     policyfname, i+2, np.round(treaty_sum, 5)))
     # replace policy names with policy indices starting from 1
-    key = fields[0]
     dframe[key] = [policyidx[pol] for pol in dframe[key]]
     for no, field in enumerate(fields):
         if field not in dframe.columns:
