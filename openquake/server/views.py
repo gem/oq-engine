@@ -678,10 +678,6 @@ def aristotle_get_rupture_data(request):
         usgs_id = ''
     try:
         if rupture_file:
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-            with open(temp_file.name, 'wb') as destination:
-                for chunk in rupture_file.chunks():
-                    destination.write(chunk)
             [rup_node] = nrml.read(rupture_file.temporary_file_path())
             conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
             rup = conv.convert_node(rup_node)
