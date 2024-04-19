@@ -805,7 +805,12 @@ def aristotle_run(request):
     (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
-    rupture_file = None  # to be set from the upload form
+    # NOTE: in the current approach, the rupture file is used to pre-populate
+    # the editable rupture fields, then it is not used below anymore. Another
+    # approach could be to disable the editable rupture fields if a rupture
+    # model xml is provided, then to pass the rupture file to
+    # get_aristotle_allparams below
+    rupture_file = None
     try:
         allparams = get_aristotle_allparams(
             usgs_id, lon, lat, dep, mag, rake, dip, strike, rupture_file,
