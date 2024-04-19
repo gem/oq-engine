@@ -693,22 +693,19 @@ def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
                 [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
             ignore_index=True)
 
-        # To store the sum of performance indicator at nodal level to calulate
+        # To store the sum of performance indicator at nodal level to calculate
         # the average afterwards
         pcl_table1 = pcl_table.drop(columns=['NS0', 'NS'])
-        pcl_table1 = pcl_table1.reset_index()
-        taz_cl = pd.concat(
-            (taz_cl, pcl_table1)).groupby('id', as_index=False).sum()
+        taz_cl = pd.concat((taz_cl, pcl_table1.reset_index())).groupby(
+            'id', as_index=False).sum()
 
         wcl_table1 = wcl_table.drop(columns=['WS0', 'WS'])
-        wcl_table1 = wcl_table1.reset_index()
-        taz_cl = pd.concat(
-            (taz_cl, wcl_table1)).groupby('id', as_index=False).sum()
+        taz_cl = pd.concat((taz_cl, wcl_table1.reset_index())).groupby(
+            'id', as_index=False).sum()
 
         eff_table1 = eff_table.drop(columns=['Eff0', 'Eff'])
-        eff_table1 = eff_table1.reset_index()
-        node_el = pd.concat(
-            (node_el, eff_table1)).groupby('id', as_index=False).sum()
+        node_el = pd.concat((node_el, eff_table1.reset_index())).groupby(
+            'id', as_index=False).sum()
 
     return (taz_cl, node_el, event_connectivity_loss_pcl,
             event_connectivity_loss_wcl, event_connectivity_loss_eff)
