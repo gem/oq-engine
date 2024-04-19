@@ -478,7 +478,6 @@ def _update_azi(p, f, iso):
     cab = np.cos(p.a[b] * D2R)
     sam = np.sin(p.a[m] * D2R)
     cam = np.cos(p.a[m] * D2R)
-
     for i in range(360):
         fir = i * D2R
         s2alphan = (2.0 + 2.0 * iso) / float(

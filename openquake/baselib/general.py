@@ -1530,17 +1530,27 @@ def agg_probs(*probs):
 
 
 class Param:
-    """Container class for a set of parameters with defaults"""
-    @classmethod
-    def new(cls, **defaults):
-        param = cls()
-        vars(param).update(defaults)
-        return param
+    """
+    Container class for a set of parameters with defaults
+
+    >>> p = Param(a=1, b=2)
+    >>> p.a = 3
+    >>> p.a, p.b
+    (3, 2)
+    >>> p.c = 4
+    Traceback (most recent call last):
+      ...
+    AttributeError: Unknown parameter c
+    """
+    def __init__(self, **defaults):
+        for k, v in defaults.items():
+            self.__dict__[k] = v
 
     def __setattr__(self, name, value):
-        if name in vars(self):
-            object.__new__(self, name, value)
-        raise AttributeError('Unknown parameter %s' % name)
+        if name in self.__dict__:
+            object.__setattr__(self, name, value)
+        else:
+            raise AttributeError('Unknown parameter %s' % name)
 
 
 class RecordBuilder(object):
