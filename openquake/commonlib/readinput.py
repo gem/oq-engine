@@ -428,6 +428,52 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     return sm[idxs]
 
 
+def _smparse(fname, oqparam, arrays, sm_fieldsets):
+    # check if the file is a list of lon,lat without header
+    with open(fname, encoding='utf-8-sig') as f:
+        lon, *rest = next(f).split(',')
+        try:
+            valid.longitude(lon)
+        except ValueError:  # has a header
+            sm = hdf5.read_csv(fname, site.site_param_dt).array
+        else:
+            sm = get_poor_site_model(fname)
+
+    sm_fieldsets[fname] = set(sm.dtype.names)
+    # make sure site_id starts from 0, if given
+    if 'site_id' in sm.dtype.names:
+        if (sm['site_id'] != numpy.arange(len(sm))).any():
+            raise InvalidFile('%s: site_id not sequential from zero'
+                              % fname)
+
+    # round coordinates and check for duplicate points
+    sm['lon'] = numpy.round(sm['lon'], 5)
+    sm['lat'] = numpy.round(sm['lat'], 5)
+    dupl = get_duplicates(sm, 'lon', 'lat')
+    if dupl:
+        raise InvalidFile(
+            'Found duplicate sites %s in %s' % (dupl, fname))
+
+    # used global parameters is local ones are missing
+    params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
+    z = numpy.zeros(
+        len(sm), [(p, site.site_param_dt[p]) for p in params])
+    for name in z.dtype.names:
+        try:
+            z[name] = sm[name]
+        except ValueError:  # missing, use the global parameter
+            # exercised in the test classical/case_28
+            value = getattr(oqparam, site.param[name])
+            if isinstance(value, float) and numpy.isnan(value):
+                raise InvalidFile(
+                    f"{oqparam.inputs['job_ini']}: "
+                    f"{site.param[name]} not specified")
+            if name == 'vs30measured':  # special case
+                value = value == 'measured'
+            z[name] = value
+    arrays.append(z)
+
+
 def get_site_model(oqparam, h5=None):
     """
     :param oqparam:
@@ -445,60 +491,17 @@ def get_site_model(oqparam, h5=None):
         dist = oqparam.maximum_distance('*')(rup['mag'])
         return get_site_model_around(fnames[0], rup, dist)
 
-    req_site_params = oqparam.req_site_params
+    #req_site_params = oqparam.req_site_params
     arrays = []
     sm_fieldsets = {}
     for fname in fnames:
         if isinstance(fname, str) and not fname.endswith('.xml'):
-
-            # check if the file is a list of lon,lat without header
-            with open(fname, encoding='utf-8-sig') as f:
-                lon, *rest = next(f).split(',')
-                try:
-                    valid.longitude(lon)
-                except ValueError:  # has a header
-                    sm = hdf5.read_csv(fname, site.site_param_dt).array
-                else:
-                    sm = get_poor_site_model(fname)
-
-            sm_fieldsets[fname] = set(sm.dtype.names)
-            # make sure site_id starts from 0, if given
-            if 'site_id' in sm.dtype.names:
-                if (sm['site_id'] != numpy.arange(len(sm))).any():
-                    raise InvalidFile('%s: site_id not sequential from zero'
-                                      % fname)
-
-            # round coordinates and check for duplicate points
-            sm['lon'] = numpy.round(sm['lon'], 5)
-            sm['lat'] = numpy.round(sm['lat'], 5)
-            dupl = get_duplicates(sm, 'lon', 'lat')
-            if dupl:
-                raise InvalidFile(
-                    'Found duplicate sites %s in %s' % (dupl, fname))
-
-            # used global parameters is local ones are missing
-            params = sorted(set(sm.dtype.names) | set(req_site_params))
-            z = numpy.zeros(
-                len(sm), [(p, site.site_param_dt[p]) for p in params])
-            for name in z.dtype.names:
-                try:
-                    z[name] = sm[name]
-                except ValueError:  # missing, use the global parameter
-                    # exercised in the test classical/case_28
-                    value = getattr(oqparam, site.param[name])
-                    if isinstance(value, float) and numpy.isnan(value):
-                        raise InvalidFile(
-                            f"{oqparam.inputs['job_ini']}: "
-                            f"{site.param[name]} not specified")
-                    if name == 'vs30measured':  # special case
-                        value = value == 'measured'
-                    z[name] = value
-            arrays.append(z)
+            _smparse(fname, oqparam, arrays, sm_fieldsets)
             continue
 
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
-        missing = set(req_site_params) - set(params[0])
+        missing = set(oqparam.req_site_params) - set(params[0])
         if 'vs30measured' in missing:  # use a default of False
             missing -= {'vs30measured'}
             for param in params:
