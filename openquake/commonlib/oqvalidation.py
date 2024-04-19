@@ -1178,7 +1178,6 @@ class OqParam(valid.ParamSet):
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
-
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
@@ -1242,6 +1241,10 @@ class OqParam(valid.ParamSet):
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
 
+        self.check_hazard(job_ini)
+        self.check_risk(job_ini)
+
+    def check_risk(self, job_ini):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
@@ -1359,6 +1362,7 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and not self.hazard_calculation_id:
                 raise InvalidFile('%s: missing investigation_time' % job_ini)
 
+    def check_hazard(self, job_ini):
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
