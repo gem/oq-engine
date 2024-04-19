@@ -663,7 +663,7 @@ def aristotle_get_rupture_data(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (usgs_id,) = res
+    (_, usgs_id) = res
     try:
         rupture_dict = get_rupture_dict(usgs_id)
         trts, mosaic_model = get_trts_around(
@@ -735,14 +735,21 @@ def aristotle_validate(request):
         'ses_seed': valid.positiveint,
     }
     params = {}
+    rupdic = dict(lon=None, lat=None, dep=None,
+                  mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():
         if fieldname not in request.POST:
             continue
         try:
-            params[fieldname] = validation_func(request.POST.get(fieldname))
+            value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
             validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
+            continue
+        if fieldname in rupdic:
+            rupdic[fieldname] = value
+        else:
+            params[fieldname] = value
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -755,7 +762,7 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return params.values()
+    return rupdic, *params.values()
 
 
 @csrf_exempt
@@ -774,13 +781,13 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+    (rupture_dict, usgs_id, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
     rupture_file = None # to be set from the upload form
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike, rupture_file,
+            usgs_id, rupture_file, rupture_dict,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
             config.directory.mosaic_dir)

@@ -74,9 +74,8 @@ def trivial_callback(
 
 
 def get_aristotle_allparams(
-        usgs_id, lon, lat, dep, mag, rake, dip, strike, rupture_file,
-        maximum_distance, trt,
-        truncation_level, number_of_ground_motion_fields,
+        usgs_id, rupture_file, rupture_dict,
+        maximum_distance, trt, truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed, mosaic_dir):
     smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(mosaic_dir, 'exposure.hdf5')
@@ -97,12 +96,11 @@ def get_aristotle_allparams(
                       mag=rup.mag, rake=rup.rake,
                       strike=rup.surface.get_strike(),
                       dip=rup.surface.get_dip(), usgs_id=usgs_id)
-    elif lon is None:
+    elif rupture_dict is None:
         rupdic = get_rupture_dict(usgs_id)
     else:
-        rupdic = dict(
-            lon=lon, lat=lat, dep=dep, mag=mag,
-            rake=rake, dip=dip, strike=strike, usgs_id=usgs_id)
+        rupdic = rupture_dict.copy()
+        rupdic['usgs_id'] = usgs_id
     if trt is None:
         trts, _ = get_trts_around(rupdic, mosaic_dir)
         trt = trts[0]
@@ -156,8 +154,7 @@ def main_web(
 
 
 def main_cmd(
-        usgs_id, rupture_file=None, lon=None, lat=None, dep=None, mag=None,
-        rake='0', dip='90', strike='0',
+        usgs_id, rupture_file=None, rupture_dict=None,
         maximum_distance='300', trt=None, truncation_level='3',
         number_of_ground_motion_fields='10', asset_hazard_distance='15',
         ses_seed='42',
@@ -167,8 +164,8 @@ def main_cmd(
     """
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike,
-            rupture_file, maximum_distance, trt, truncation_level,
+            usgs_id, rupture_file, rupture_dict,
+            maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, mosaic_dir)
     except Exception as exc:
