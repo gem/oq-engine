@@ -50,6 +50,10 @@ class Tbl:
     event_connectivity_loss_pcl: pd.DataFrame
     event_connectivity_loss_wcl: pd.DataFrame
     event_connectivity_loss_eff: pd.DataFrame
+    avg_connectivity_loss_ccl = 0
+    avg_connectivity_loss_pcl = 0
+    avg_connectivity_loss_wcl = 0
+    avg_connectivity_loss_eff = 0
 
 
 def get_exposure_df(dstore):
@@ -212,47 +216,45 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
                          demand_nodes, source_nodes, damage_df, g_type,
                          calculation_mode):
     demand_nodes_analysis_results = {}
-    (dem_cl, node_el, event_connectivity_loss_ccl,
-        event_connectivity_loss_pcl, event_connectivity_loss_wcl,
-        event_connectivity_loss_eff) = ELWCLPCLCCL_demand(
+    t = ELWCLPCLCCL_demand(
         exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
         damage_df, g_type)
-    sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
-    sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
-    sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-    sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
+    sum_connectivity_loss_ccl = t.event_connectivity_loss_ccl['CCL'].sum()
+    sum_connectivity_loss_pcl = t.event_connectivity_loss_pcl['PCL'].sum()
+    sum_connectivity_loss_wcl = t.event_connectivity_loss_wcl['WCL'].sum()
+    sum_connectivity_loss_eff = t.event_connectivity_loss_eff['EL'].sum()
 
     if calculation_mode == "event_based_damage":
         inv_time = dstore["oqparam"].investigation_time
         ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
         num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
         eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
-        avg_connectivity_loss_ccl = (
+        t.avg_connectivity_loss_ccl = (
             sum_connectivity_loss_ccl / eff_inv_time)
-        avg_connectivity_loss_pcl = (
+        t.avg_connectivity_loss_pcl = (
             sum_connectivity_loss_pcl / eff_inv_time)
-        avg_connectivity_loss_wcl = (
+        t.avg_connectivity_loss_wcl = (
             sum_connectivity_loss_wcl / eff_inv_time)
-        avg_connectivity_loss_eff = (
+        t.avg_connectivity_loss_eff = (
             sum_connectivity_loss_eff / eff_inv_time)
-        dem_cl["Isolation_node"] /= eff_inv_time
-        dem_cl["PCL_node"] /= eff_inv_time
-        dem_cl["WCL_node"] /= eff_inv_time
-        node_el["EL"] /= eff_inv_time
+        t.dem_cl["Isolation_node"] /= eff_inv_time
+        t.dem_cl["PCL_node"] /= eff_inv_time
+        t.dem_cl["WCL_node"] /= eff_inv_time
+        t.node_el["EL"] /= eff_inv_time
 
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
-        avg_connectivity_loss_ccl = sum_connectivity_loss_ccl / num_events
-        avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
-        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
-        avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-        dem_cl["Isolation_node"] /= num_events
-        dem_cl["PCL_node"] /= num_events
-        dem_cl["WCL_node"] /= num_events
-        node_el["EL"] /= num_events
+        t.avg_connectivity_loss_ccl = sum_connectivity_loss_ccl / num_events
+        t.avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
+        t.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
+        t.avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
+        t.dem_cl["Isolation_node"] /= num_events
+        t.dem_cl["PCL_node"] /= num_events
+        t.dem_cl["WCL_node"] /= num_events
+        t.node_el["EL"] /= num_events
 
-    dem_cl.drop(columns=['ordinal'], inplace=True)
-    node_el.drop(columns=['ordinal'], inplace=True)
+    t.dem_cl.drop(columns=['ordinal'], inplace=True)
+    t.node_el.drop(columns=['ordinal'], inplace=True)
 
     for result in [
             'avg_connectivity_loss_ccl', 'avg_connectivity_loss_pcl',
@@ -260,7 +262,7 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
             'event_connectivity_loss_ccl', 'event_connectivity_loss_pcl',
             'event_connectivity_loss_wcl', 'event_connectivity_loss_eff',
             'dem_cl', 'node_el']:
-        demand_nodes_analysis_results[result] = locals()[result]
+        demand_nodes_analysis_results[result] = getattr(t, result)
 
     return demand_nodes_analysis_results
 
@@ -572,9 +574,7 @@ def ELWCLPCLCCL_demand(expo_df, G_original, eff_nodes, demand_nodes,
         t.node_el = pd.concat((t.node_el, eff_table1.reset_index())).groupby(
             'id', as_index=False).sum()
 
-    return (t.dem_cl, t.node_el, t.event_connectivity_loss_ccl,
-            t.event_connectivity_loss_pcl, t.event_connectivity_loss_wcl,
-            t.event_connectivity_loss_eff)
+    return t
 
 
 def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
