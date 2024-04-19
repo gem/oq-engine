@@ -464,23 +464,7 @@ def _plot2(p, rgb1, colors, collect):
     return colors, collect
 
 
-def _plot(p, f, iso, collect, colors):
-    # Cliff Frohlich, Seismological Research letters,
-    # Vol 7, Number 1, January-February, 1996
-    # Unless the isotropic parameter lies in the range
-    # between -1 and 1 - f there will be no nodes whatsoever
-
-    if iso < -1:
-        cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
-        collect.append(cir)
-        colors.append("w")
-        return colors, collect
-    elif iso > 1 - f:
-        cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
-        collect.append(cir)
-        colors.append("b")
-        return colors, collect
-
+def _update_azi(p, f, iso):
     b, d, m = p.b, p.d, p.m
     spd = np.sin(p.p[d] * D2R)
     cpd = np.cos(p.p[d] * D2R)
@@ -564,6 +548,25 @@ def _plot(p, f, iso, collect, colors):
                     p.j3 += 1
                 azp = az
     p.azi[p.n][1] = az
+
+
+def _plot(p, f, iso, collect, colors):
+    # Cliff Frohlich, Seismological Research letters,
+    # Vol 7, Number 1, January-February, 1996
+    # Unless the isotropic parameter lies in the range
+    # between -1 and 1 - f there will be no nodes whatsoever
+    if iso < -1:
+        cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
+        collect.append(cir)
+        colors.append("w")
+        return colors, collect
+    elif iso > 1 - f:
+        cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
+        collect.append(cir)
+        colors.append("b")
+        return colors, collect
+
+    _update_azi(p, f, iso)
 
     if p.v[1] < 0.0:
         rgb1 = "b"
