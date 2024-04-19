@@ -631,8 +631,14 @@
             $("#aristotle_run_form").submit(function (event) {
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
+                var usgs_id;
+                if ($('#rupture_file_input')[0].files.length == 0) {
+                    usgs_id = $("#usgs_id").val();
+                } else {
+                    usgs_id = 'FromXML';
+                }
                 var formData = {
-                    usgs_id: $("#usgs_id").val(),
+                    usgs_id: usgs_id,
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     dep: $("#dep").val(),
