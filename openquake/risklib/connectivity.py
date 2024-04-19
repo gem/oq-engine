@@ -38,7 +38,7 @@ import logging
 @dataclass
 class Tbl:
     """
-    Connectivity tables
+    Connectivity outputs
     """
     dem_cl: pd.DataFrame
     node_el: pd.DataFrame
@@ -54,6 +54,33 @@ class Tbl:
     avg_connectivity_loss_pcl = 0
     avg_connectivity_loss_wcl = 0
     avg_connectivity_loss_eff = 0
+
+    @classmethod
+    def new(cls, expo_df, nodes, eff_nodes, kind):
+        assert kind in 'taz demand', kind
+        t0 = expo_df[expo_df['purpose'].str.lower() == kind].iloc[:, 0:1]
+        t1 = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
+
+        t2 = pd.DataFrame({'id': nodes})
+        t2.set_index('id', inplace=True)
+        t3 = pd.DataFrame({'id': nodes})
+        t3.set_index('id', inplace=True)
+        t4 = pd.DataFrame({'id': nodes})
+        t4.set_index('id', inplace=True)
+        t5 = pd.DataFrame({'id': eff_nodes})
+        t5.set_index('id', inplace=True)
+
+        # Create empty dataframes with columns "event_id" and
+        # "CCL"/"PCL"/"WCL"/"EL"
+        t6 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'CCL': pd.Series(dtype=float)})
+        t7 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
+        t8 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
+        t9 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
+        return cls(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
 
 
 def get_exposure_df(dstore):
@@ -442,29 +469,7 @@ def ELWCLPCLCCL_demand(expo_df, G_original, eff_nodes, demand_nodes,
 
     # To store the information of the performance indicators at connectivity
     # level
-    t0 = expo_df[expo_df['purpose'].str.lower() == 'demand'].iloc[:, 0:1]
-    t1 = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
-    t2 = pd.DataFrame({'id': demand_nodes})
-    t2.set_index('id', inplace=True)
-    t3 = pd.DataFrame({'id': demand_nodes})
-    t3.set_index('id', inplace=True)
-    t4 = pd.DataFrame({'id': demand_nodes})
-    t4.set_index('id', inplace=True)
-    t5 = pd.DataFrame({'id': eff_nodes})
-    t5.set_index('id', inplace=True)
-
-    # Create empty dataframes with columns "event_id" and
-    # "CCL"/"PCL"/"WCL"/"EL"
-    t6 = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'CCL': pd.Series(dtype=float)})
-    t7 = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
-    t8 = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
-    t9 = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
-
-    t = Tbl(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
+    t = Tbl.new(expo_df, demand_nodes, eff_nodes, 'demand')
 
     # To check the the values for each node before the earthquake event
 
@@ -594,10 +599,8 @@ def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
 
     # To store the information of the performance indicators at connectivity
     # level
-    taz_cl = expo_df[
-        expo_df['purpose'].str.lower() == 'taz'].iloc[:, 0:1]
-    node_el = expo_df[
-        expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
+    taz_cl = expo_df[expo_df['purpose'].str.lower() == 'taz'].iloc[:, 0:1]
+    node_el = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
     pcl_table = pd.DataFrame({'id': TAZ_nodes})
     wcl_table = pd.DataFrame({'id': TAZ_nodes})
