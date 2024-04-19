@@ -20,9 +20,8 @@ import os
 import shutil
 import numpy
 from openquake.baselib import InvalidFile
-from openquake.qa_tests_data.scenario_damage import case_15
 from openquake.qa_tests_data.infrastructure_risk import (
-    five_nodes_demsup_directed, five_nodes_demsup_directedunweighted,
+    case_15, five_nodes_demsup_directed, five_nodes_demsup_directedunweighted,
     five_nodes_demsup_multidirected, demand_supply, directed, eff_loss_random,
     multidirected, multigraph, undirected)
 from openquake.calculators.export import export
