@@ -159,6 +159,7 @@ def zhu_etal_2015_general(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+    pga = np.clip(pga, 1e-5, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -221,6 +222,7 @@ def zhu_etal_2017_coastal(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv)
         + vs30_coeff * np.log(vs30)
@@ -291,6 +293,7 @@ def zhu_etal_2017_general(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv_scaling_factor * pgv)
         + vs30_coeff * np.log(vs30)
@@ -362,7 +365,7 @@ def rashidian_baise_2020(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-
+    pgv = np.clip(pgv, 1e-5, None)
     precip = np.where(precip > 1700, 1700, precip)
     prob_liq, _, _ = zhu_etal_2017_general(
         pgv,
@@ -383,8 +386,7 @@ def rashidian_baise_2020(
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s. Additionally, Rashidian and Baise (2020)
     # assign zero to the probability when PGA < 0.1 g.
-    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
-    prob_liq = np.where(pga < 0.1, 0, prob_liq)
+    prob_liq = np.where((pgv < 3.0) | (vs30 > 620) | (pga < 0.1), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
     return prob_liq, out_class, LSE
@@ -446,7 +448,7 @@ def allstadt_etal_2022(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-    pgv = np.where(pgv > 150, 150, pgv)
+    pgv = np.clip(np.where(pgv > 150, 150, pgv), 1e-5, None)
     precip = np.where(precip > 2500, 2500, precip)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
     prob_liq, _, _ = rashidian_baise_2020(
@@ -464,10 +466,10 @@ def allstadt_etal_2022(
         wtd_coeff=wtd_coeff,
         precip_coeff=precip_coeff,
     )
-    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
-    prob_liq = np.where(pga < 0.1, 0, prob_liq)
+    prob_liq = np.where((pgv < 3.0) | (vs30 > 620) | (pga < 0.1), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    LSE = np.where(LSE < 0.5, 0, LSE)
     return prob_liq, out_class, LSE
 
 
@@ -516,7 +518,7 @@ def akhlagi_etal_2021_model_a(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv)
         + tri_coeff * np.sqrt(tri)
@@ -576,7 +578,7 @@ def akhlagi_etal_2021_model_b(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv)
         + vs30_coeff * np.log(vs30)
@@ -630,6 +632,7 @@ def bozzoni_etal_2021_europe(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+    pga = np.clip(pga, 1e-5, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -736,18 +739,7 @@ def _hazus_conditional_liquefaction_probability(
         coeff_1 = np.array([c[1] for c in coeffs])
         liq_prob = coeff_0 * pga - coeff_1
 
-    # TODO: Refactor below using np.clip
-    if np.isscalar(liq_prob):
-        if liq_prob <= 0:
-            liq_prob = 0.0
-        elif liq_prob >= 1:
-            liq_prob = 1.0
-        else:
-            liq_prob = liq_prob
-    else:
-        liq_prob = liq_prob
-        liq_prob[liq_prob < 0.0] = 0.0
-        liq_prob[liq_prob > 1.0] = 1.0
+    liq_prob = np.clip(liq_prob, 0.0, 1.0)
 
     return liq_prob
 
