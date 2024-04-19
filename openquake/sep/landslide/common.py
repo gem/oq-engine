@@ -57,11 +57,7 @@ def static_factor_of_safety(
     soil_weight = 9.81 * soil_dry_density
     water_weight = 9.81 * water_density
 
-    if np.isscalar(slope):
-        if slope == 0.0:
-            slope = 1e-5
-    else:
-        slope[slope == 0.0] = 1e-5
+    slope = np.where(slope == 0.0, 1e-5, slope)
 
     r_slope = np.radians(slope)
     r_fric_ang = np.radians(friction_angle)
