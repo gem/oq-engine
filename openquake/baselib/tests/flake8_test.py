@@ -179,6 +179,8 @@ def test_forbid_long_funcs():
                                  'openquake.risklib',
                                  'openquake.calculators',
                                  'openquake.engine',
+                                 #'openquake.hmtk',
+                                 'openquake.sep',
                                  ], 100)
     if long_funcs:
         raise RuntimeError(long_funcs)
