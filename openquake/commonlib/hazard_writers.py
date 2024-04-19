@@ -245,6 +245,74 @@ def sub_elems(elem, rup, *names):
             et.SubElement(elem, name).text = '%.7e' % value
 
 
+def add_fault(rup, rup_elem):
+    # rup is from a simple or complex fault source
+    # the rup geometry is represented by a mesh of 3D
+    # points
+    mesh_elem = et.SubElement(rup_elem, 'mesh')
+
+    # we assume the mesh components (lons, lats, depths)
+    # are of uniform shape
+    for i, row in enumerate(rup.lons):
+        for j, col in enumerate(row):
+            node_elem = et.SubElement(mesh_elem, 'node')
+            node_elem.set('row', str(i))
+            node_elem.set('col', str(j))
+            node_elem.set('lon', str(rup.lons[i][j]))
+            node_elem.set('lat', str(rup.lats[i][j]))
+            node_elem.set('depth', str(rup.depths[i][j]))
+
+    # if we never entered the loop above, it's possible
+    # that i and j will be undefined
+    mesh_elem.set('rows', str(i + 1))
+    mesh_elem.set('cols', str(j + 1))
+
+
+def add_gridded(rup, rup_elem):
+    # the rup geometry is represented by a mesh of (1, N) points
+    mesh_elem = et.SubElement(rup_elem, 'mesh')
+    for j, _ in enumerate(rup.lons):
+        node_elem = et.SubElement(mesh_elem, 'node')
+        node_elem.set('row', '0')
+        node_elem.set('col', str(j))
+        node_elem.set('lon', str(rup.lons[j]))
+        node_elem.set('lat', str(rup.lats[j]))
+        node_elem.set('depth', str(rup.depths[j]))
+
+
+def add_multi(rup, rup_elem):
+    # the arrays lons, lats and depths contain 4*N elements,
+    # where N is the number of planar surfaces contained in the
+    # multisurface; each planar surface if characterised by 4
+    # vertices top_left, top_right, bottom_left, bottom_right
+    assert len(rup.lons) % 4 == 0
+    assert len(rup.lons) == len(rup.lats) == len(rup.depths)
+    for offset in range(len(rup.lons) // 4):
+        # looping on the coordinates of the sub surfaces, one
+        # planar surface at the time
+        start = offset * 4
+        end = offset * 4 + 4
+        lons = rup.lons[start:end]  # 4 lons of the current surface
+        lats = rup.lats[start:end]  # 4 lats of the current surface
+        depths = rup.depths[start:end]  # 4 depths
+
+        ps_elem = et.SubElement(
+            rup_elem, 'planarSurface')
+
+        top_left, top_right, bottom_left, bottom_right = \
+            zip(lons, lats, depths)
+
+        for el_name, corner in (
+                ('topLeft', top_left),
+                ('topRight', top_right),
+                ('bottomLeft', bottom_left),
+                ('bottomRight', bottom_right)):
+            corner_elem = et.SubElement(ps_elem, el_name)
+            corner_elem.set('lon', '%.7f' % corner[0])
+            corner_elem.set('lat', '%.7f' % corner[1])
+            corner_elem.set('depth', '%.7f' % corner[2])
+
+
 def rupture_to_element(rup, parent=None):
     """
     Convert a rupture object into an Element object.
@@ -268,71 +336,13 @@ def rupture_to_element(rup, parent=None):
     h = rup.hypocenter
     et.SubElement(rup_elem, 'hypocenter', dict(lon=h.x, lat=h.y, depth=h.z))
     if rup.is_from_fault_source:
-        # rup is from a simple or complex fault source
-        # the rup geometry is represented by a mesh of 3D
-        # points
-        mesh_elem = et.SubElement(rup_elem, 'mesh')
-
-        # we assume the mesh components (lons, lats, depths)
-        # are of uniform shape
-        for i, row in enumerate(rup.lons):
-            for j, col in enumerate(row):
-                node_elem = et.SubElement(mesh_elem, 'node')
-                node_elem.set('row', str(i))
-                node_elem.set('col', str(j))
-                node_elem.set('lon', str(rup.lons[i][j]))
-                node_elem.set('lat', str(rup.lats[i][j]))
-                node_elem.set('depth', str(rup.depths[i][j]))
-
-        # if we never entered the loop above, it's possible
-        # that i and j will be undefined
-        mesh_elem.set('rows', str(i + 1))
-        mesh_elem.set('cols', str(j + 1))
+        add_fault(rup, rup_elem)
     elif rup.is_gridded_surface:
-        # the rup geometry is represented by a mesh of (1, N) points
-        mesh_elem = et.SubElement(rup_elem, 'mesh')
-        for j, _ in enumerate(rup.lons):
-            node_elem = et.SubElement(mesh_elem, 'node')
-            node_elem.set('row', '0')
-            node_elem.set('col', str(j))
-            node_elem.set('lon', str(rup.lons[j]))
-            node_elem.set('lat', str(rup.lats[j]))
-            node_elem.set('depth', str(rup.depths[j]))
+        add_gridded(rup, rup_elem)
     else:
         # rupture is from a multi surface fault source
         if rup.is_multi_surface:
-            # the arrays lons, lats and depths contain 4*N elements,
-            # where N is the number of planar surfaces contained in the
-            # multisurface; each planar surface if characterised by 4
-            # vertices top_left, top_right, bottom_left, bottom_right
-            assert len(rup.lons) % 4 == 0
-            assert len(rup.lons) == len(rup.lats) == len(rup.depths)
-
-            for offset in range(len(rup.lons) // 4):
-                # looping on the coordinates of the sub surfaces, one
-                # planar surface at the time
-                start = offset * 4
-                end = offset * 4 + 4
-                lons = rup.lons[start:end]  # 4 lons of the current surface
-                lats = rup.lats[start:end]  # 4 lats of the current surface
-                depths = rup.depths[start:end]  # 4 depths
-
-                ps_elem = et.SubElement(
-                    rup_elem, 'planarSurface')
-
-                top_left, top_right, bottom_left, bottom_right = \
-                    zip(lons, lats, depths)
-
-                for el_name, corner in (
-                        ('topLeft', top_left),
-                        ('topRight', top_right),
-                        ('bottomLeft', bottom_left),
-                        ('bottomRight', bottom_right)):
-
-                    corner_elem = et.SubElement(ps_elem, el_name)
-                    corner_elem.set('lon', '%.7f' % corner[0])
-                    corner_elem.set('lat', '%.7f' % corner[1])
-                    corner_elem.set('depth', '%.7f' % corner[2])
+            add_multi(rup, rup_elem)
         else:
             # rupture is from a point or area source
             # the rupture geometry is represented by four 3D
