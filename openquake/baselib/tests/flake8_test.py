@@ -168,8 +168,12 @@ def test_csv(OVERWRITE=False):
 
 
 def test_forbid_long_funcs():
-    long_funcs = get_long_funcs(['openquake.hazardlib',
+    long_funcs = get_long_funcs(['openquake.baselib',
+                                 'openquake.hazardlib',
                                  'openquake.commonlib',
+                                 'openquake.risklib',
+                                 'openquake.calculators',
+                                 'openquake.engine',
                                  ], 100)
     if long_funcs:
         raise RuntimeError(long_funcs)

@@ -227,7 +227,8 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black',
+             alpha=0.85)
 
     if update_dstore:
         bio = io.BytesIO()
@@ -235,6 +236,52 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
         dstore['png/governing_mce.png'] = Image.open(bio)
     return plt
 
+
+def _plot(ax, ax1, site_idx, m, imls, imls_o,
+          mrs, rtgm_probmce, afe_target, fact):
+    out_contr_all = {}
+    for i, src in enumerate(mrs.src_id):
+        # get contribution at target level for that source
+        afes = mrs[site_idx, m, :, i]
+        if (afes == 0).all():
+            continue
+        afe_uhgm = _find_afe_target(
+            imls, numpy.clip(afes, 1E-15, numpy.inf), rtgm_probmce[m])
+        # get % contribution of that source
+        contr_source = afe_uhgm / afe_target
+        out_contr_all[i] = contr_source * 100
+
+    # identify contribution of largest contributor, make color scale
+    largest_contr = max(out_contr_all.values())
+    sample = sum(val > fact*largest_contr
+                 for val in out_contr_all.values())
+    viridis = mpl.colormaps['viridis'].reversed().resampled(sample)
+
+    # find and plot the sources, highlighting the ones that contribute more
+    # than 10% of largest contributor
+    # use j to only add the "other sources" label once
+    # use i to cycle through the colors for the major source contributors
+    i = j = 0
+    for ind in out_contr_all:
+        afes = mrs[site_idx, m, :, ind]
+        # if it's not a big contributor, plot in silver
+        if out_contr_all[ind] <= fact * largest_contr:
+            if j == 0:
+                ax[m].loglog(imls, afes, 'silver', linewidth=0.7,
+                             label='other sources')
+                ax1.loglog(imls_o, afes, 'silver', linewidth=0.7,
+                           label='other source')
+                j += 1
+            else:
+                ax[m].loglog(imls, afes, 'silver', linewidth=0.7)
+                ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
+        # if it is, plot in color
+        else:
+            ax[m].loglog(imls, afes, c=viridis(i),
+                         label=str(mrs.src_id[ind]))
+            ax1.loglog(imls_o, afes, c=viridis(i),
+                       label=str(mrs.src_id[ind]))
+            i += 1
 
 def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
@@ -262,7 +309,6 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     fact = 0.1
     mrs = dstore['mean_rates_by_src']  # (site_id, imt, lvl, src_id)
     for m, imt in enumerate(imtls):
-        out_contr_all = {}
         fig1, ax1 = plt.subplots()
 
         # annual frequency of exceedance:
@@ -294,49 +340,9 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
                    zorder=3)
         ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
                    linewidth=2, zorder=3)
+        _plot(ax, ax1, site_idx, m, imls, imls_o,
+              mrs, rtgm_probmce, afe_target, fact)
 
-        for i, src in enumerate(mrs.src_id):
-            # get contribution at target level for that source
-            afes = mrs[site_idx, m, :, i]
-            if (afes == 0).all():
-                continue
-            afe_uhgm = _find_afe_target(
-                imls, numpy.clip(afes, 1E-15, numpy.inf), rtgm_probmce[m])
-            # get % contribution of that source
-            contr_source = afe_uhgm/afe_target
-            out_contr_all[i] = contr_source * 100
-
-        # identify contribution of largest contributor, make color scale
-        largest_contr = max(out_contr_all.values())
-        sample = sum(val > fact*largest_contr
-                     for val in out_contr_all.values())
-        viridis = mpl.colormaps['viridis'].reversed().resampled(sample)
-
-        # find and plot the sources, highlighting the ones that contribute more
-        # than 10% of largest contributor
-        # use j to only add the "other sources" label once
-        # use i to cycle through the colors for the major source contributors
-        i = j = 0
-        for ind in out_contr_all:
-            afes = mrs[site_idx, m, :, ind]
-            # if it's not a big contributor, plot in silver
-            if out_contr_all[ind] <= fact * largest_contr:
-                if j == 0:
-                    ax[m].loglog(imls, afes, 'silver', linewidth=0.7,
-                                 label='other sources')
-                    ax1.loglog(imls_o, afes, 'silver', linewidth=0.7,
-                               label='other source')
-                    j += 1
-                else:
-                    ax[m].loglog(imls, afes, 'silver', linewidth=0.7)
-                    ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
-            # if it is, plot in color
-            else:
-                ax[m].loglog(imls, afes, c=viridis(i),
-                             label=str(mrs.src_id[ind]))
-                ax1.loglog(imls_o, afes, c=viridis(i),
-                           label=str(mrs.src_id[ind]))
-                i += 1
         # populate subplot - maximum component
         ax[m].grid('both')
         ax[m].set_xlabel(imt+' (g)', fontsize=16)
@@ -347,8 +353,10 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
 
         # add user guide message
         if m==2:
-            message = 'See WebUI User Guide for complete explanation of plot contents.'
-            ax[m].text(0.0105, 0.000000506, message, fontsize='small', color='black', alpha=0.85 ) 
+            message = ('See WebUI User Guide for complete explanation '
+                       'of plot contents.')
+            ax[m].text(0.0105, 0.000000506, message, fontsize='small',
+                       color='black', alpha=0.85 ) 
 
         # populate single imt plots - geometric mean
         ax1.grid('both')
