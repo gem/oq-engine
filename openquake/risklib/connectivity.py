@@ -57,7 +57,7 @@ class Out:
 
     @classmethod
     def new(cls, expo_df, nodes, eff_nodes, kind):
-        assert kind in 'taz demand', kind
+        assert kind in ('taz', 'demand'), kind
         t0 = expo_df[expo_df['purpose'].str.lower() == kind].iloc[:, 0:1]
         t1 = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
