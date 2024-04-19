@@ -18,6 +18,7 @@
 
 import os.path
 import logging
+from dataclasses import dataclass
 import numpy
 import pandas
 
@@ -35,6 +36,23 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+
+@dataclass
+class Inp:
+    asset_df: pandas.DataFrame
+    gmf_df: pandas.DataFrame
+    aggids: list
+    allrlzs: list
+    sec_sims: list
+    float_dmg_dist: bool
+    master_seed: int
+    crmodel: object
+    loss_types: list
+    time_event: float
+    ci: dict
+    K: int
+    R: int
+    Dc: int
 
 
 def zero_dmgcsq(A, R, crmodel):
@@ -66,42 +84,103 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def event_based_damage(df, oqparam, dstore, monitor):
+def _update(inp, dmgcsq, dddict):
+    eids = inp.gmf_df.eid.to_numpy()
+    if inp.R > 1:
+        rlzs = inp.allrlzs[eids]
+    if inp.sec_sims or not inp.float_dmg_dist:
+        rng = scientific.MultiEventRNG(
+            inp.master_seed, numpy.unique(eids))
+    for prob_field, num_sims in inp.sec_sims:
+        probs = inp.gmf_df[prob_field].to_numpy()   # LiqProb
+        if not inp.float_dmg_dist:
+            dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
+    for taxo, adf in inp.asset_df.groupby('taxonomy'):
+        out = inp.crmodel.get_output(adf, inp.gmf_df)
+        aids = adf.index.to_numpy()
+        assets = adf.to_records()
+        if inp.float_dmg_dist:
+            number = assets['value-number']
+        else:
+            number = U32(assets['value-number'])
+        for lti, lt in enumerate(inp.loss_types):
+            fractions = out[lt]
+            Asid, E, D = fractions.shape
+            assert len(eids) == E
+            d3 = numpy.zeros((Asid, E, inp.Dc), F32)
+            if inp.float_dmg_dist:
+                d3[:, :, :D] = fractions
+                for a in range(Asid):
+                    d3[a] *= number[a]
+            else:
+                # this is a performance distaster; for instance
+                # the Messina test in oq-risk-tests becomes 12x
+                # slower even if it has only 25_736 assets
+                d3[:, :, :D] = rng.discrete_dmg_dist(
+                    eids, fractions, number)
+
+            # secondary perils and consequences
+            for a, asset in enumerate(assets):
+                if inp.sec_sims:
+                    for d in range(1, D):
+                        # doing the mean on the secondary simulations
+                        if inp.float_dmg_dist:
+                            d3[a, :, d] *= probs
+                        else:
+                            d3[a, :, d] *= dprobs
+
+                csq = inp.crmodel.compute_csq(
+                    asset, d3[a, :, :D] / number[a], lt,
+                    inp.time_event)
+                for name, values in csq.items():
+                    d3[a, :, inp.ci[name]] = values
+            if inp.R == 1:
+                dmgcsq[aids, 0, lti] += d3.sum(axis=1)
+            else:
+                for e, rlz in enumerate(rlzs):
+                    dmgcsq[aids, rlz, lti] += d3[:, e]
+            tot = d3.sum(axis=0)  # sum on the assets
+            for e, eid in enumerate(eids):
+                dddict[eid, inp.K][lti] += tot[e]
+                if inp.K:
+                    for kids in inp.aggids:
+                        for a, aid in enumerate(aids):
+                            dddict[eid, kids[aid]][lti] += d3[a, e]
+
+
+def event_based_damage(df, oq, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param oqparam: parameters coming from the job.ini
+    :param oq: parameters coming from the job.ini
     :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
-    K = oqparam.K
     with monitor('reading gmf_data'):
-        if oqparam.parentdir:
+        if oq.parentdir:
             dstore = datastore.read(
-                oqparam.hdf5path, parentdir=oqparam.parentdir)
+                oq.hdf5path, parentdir=oq.parentdir)
         else:
             dstore.open('r')
         assetcol = dstore['assetcol']
-        if K:
+        if oq.K:
             # TODO: move this in the controller!
             aggids, _ = assetcol.build_aggids(
-                oqparam.aggregate_by, oqparam.max_aggregations)
+                oq.aggregate_by, oq.max_aggregations)
         else:
             aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
-    master_seed = oqparam.master_seed
-    sec_sims = oqparam.secondary_simulations.items()
+    sec_sims = oq.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(len(assetcol), oqparam.R, crmodel)
+    dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
     A, R, L, Dc = dmgcsq.shape
-    D = len(crmodel.damage_states)
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
-    loss_types = crmodel.oqparam.loss_types
-    assert len(loss_types) == L
-    float_dmg_dist = oqparam.float_dmg_dist  # True by default
+    else:
+        allrlzs = [0]
+    assert len(oq.loss_types) == L
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -109,68 +188,12 @@ def event_based_damage(df, oqparam, dstore, monitor):
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
                 continue
-            eids = gmf_df.eid.to_numpy()
-            if R > 1:
-                rlzs = allrlzs[eids]
-            if sec_sims or not float_dmg_dist:
-                rng = scientific.MultiEventRNG(
-                    master_seed, numpy.unique(eids))
-            for prob_field, num_sims in sec_sims:
-                probs = gmf_df[prob_field].to_numpy()   # LiqProb
-                if not float_dmg_dist:
-                    dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
-            for taxo, adf in asset_df.groupby('taxonomy'):
-                out = crmodel.get_output(adf, gmf_df)
-                aids = adf.index.to_numpy()
-                assets = adf.to_records()
-                if float_dmg_dist:
-                    number = assets['value-number']
-                else:
-                    number = U32(assets['value-number'])
-                for lti, lt in enumerate(loss_types):
-                    fractions = out[lt]
-                    Asid, E, D = fractions.shape
-                    assert len(eids) == E
-                    d3 = numpy.zeros((Asid, E, Dc), F32)
-                    if float_dmg_dist:
-                        d3[:, :, :D] = fractions
-                        for a in range(Asid):
-                            d3[a] *= number[a]
-                    else:
-                        # this is a performance distaster; for instance
-                        # the Messina test in oq-risk-tests becomes 12x
-                        # slower even if it has only 25_736 assets
-                        d3[:, :, :D] = rng.discrete_dmg_dist(
-                            eids, fractions, number)
-
-                    # secondary perils and consequences
-                    for a, asset in enumerate(assets):
-                        if sec_sims:
-                            for d in range(1, D):
-                                # doing the mean on the secondary simulations
-                                if float_dmg_dist:
-                                    d3[a, :, d] *= probs
-                                else:
-                                    d3[a, :, d] *= dprobs
-
-                        csq = crmodel.compute_csq(
-                            asset, d3[a, :, :D] / number[a], lt,
-                            oqparam.time_event)
-                        for name, values in csq.items():
-                            d3[a, :, ci[name]] = values
-                    if R == 1:
-                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
-                    else:
-                        for e, rlz in enumerate(rlzs):
-                            dmgcsq[aids, rlz, lti] += d3[:, e]
-                    tot = d3.sum(axis=0)  # sum on the assets
-                    for e, eid in enumerate(eids):
-                        dddict[eid, K][lti] += tot[e]
-                        if K:
-                            for kids in aggids:
-                                for a, aid in enumerate(aids):
-                                    dddict[eid, kids[aid]][lti] += d3[a, e]
-    return _dframe(dddict, ci, loss_types), dmgcsq
+            inp = Inp(asset_df, gmf_df, aggids, allrlzs, sec_sims,
+                      oq.float_dmg_dist, oq.master_seed, crmodel,
+                      oq.loss_types, oq.time_event, ci,
+                      oq.K, R, Dc)
+            _update(inp, dmgcsq, dddict)
+    return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
 
 def _dframe(adic, ci, loss_types):
