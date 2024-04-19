@@ -436,7 +436,7 @@ def plotMT(
     collect.append(cir)
     colors.append(rgb2)
     if n == 0:
-        collect.append(xy2patch(x[0:360], y[0:360], res, xy))
+        collect.append(xy2patch(x[:360], y[:360], res, xy))
         colors.append(rgb1)
         return colors, collect
     elif n == 1:
@@ -465,7 +465,7 @@ def plotMT(
                 yp1[i] = y0 + radius_size * co
                 i += 1
                 az += D2R
-        collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
+        collect.append(xy2patch(xp1[:i], yp1[:i], res, xy))
         colors.append(rgb1)
         for i in range(j2):
             xp2[i] = x2[i]
@@ -492,7 +492,7 @@ def plotMT(
                 i += 1
                 yp2[i] = y0 + radius_size * co
                 az += D2R
-        collect.append(xy2patch(xp2[0:i], yp2[0:i], res, xy))
+        collect.append(xy2patch(xp2[:i], yp2[:i], res, xy))
         colors.append(rgb1)
         return colors, collect
     elif n == 2:
@@ -510,7 +510,7 @@ def plotMT(
                 i += 1
                 yp1[i] = y2[ii]
                 ii -= 1
-            collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
+            collect.append(xy2patch(xp1[:i], yp1[:i], res, xy))
             colors.append(rgb1)
             return colors, collect
 
@@ -536,7 +536,7 @@ def plotMT(
                 i += 1
                 yp1[i] = y0 + radius_size * co
                 az += D2R
-        collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
+        collect.append(xy2patch(xp1[:i], yp1[:i], res, xy))
         colors.append(rgb1)
 
         for i in range(j2):
@@ -564,7 +564,7 @@ def plotMT(
                 i += 1
                 yp2[i] = y0 + radius_size * co
                 az += D2R
-        collect.append(xy2patch(xp2[0:i], yp2[0:i], res, xy))
+        collect.append(xy2patch(xp2[:i], yp2[:i], res, xy))
         colors.append(rgb1)
         return colors, collect
 
