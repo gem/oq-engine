@@ -1242,7 +1242,34 @@ class OqParam(valid.ParamSet):
             self.maximum_distance.cut(self.minimum_magnitude)
 
         self.check_hazard(job_ini)
+        self.check_gsim_lt(job_ini)
         self.check_risk(job_ini)
+
+    def check_gsim_lt(self, job_ini):
+        # check the gsim_logic_tree and set req_site_params
+        self.req_site_params = set()
+        if self.inputs.get('gsim_logic_tree'):
+            if self.gsim != '[FromFile]':
+                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
+                                  ' must be no `gsim` key' % job_ini)
+            path = os.path.join(
+                self.base_path, self.inputs['gsim_logic_tree'])
+            gsim_lt = GsimLogicTree(path, ['*'])
+            # check the GSIMs
+            self._trts = set()
+            discard = {trt.strip() for trt in self.discard_trts.split(',')}
+            for trt, gsims in gsim_lt.values.items():
+                if trt not in discard:
+                    self.check_gsims(gsims)
+                    self._trts.add(trt)
+        elif self.gsim:
+            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
+        else:
+            raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
+                              % job_ini)
+        if 'amplification' in self.inputs:
+            self.req_site_params.add('ampcode')
+        self.req_site_params = sorted(self.req_site_params)
 
     def check_risk(self, job_ini):
         # checks for risk
@@ -1287,71 +1314,16 @@ class OqParam(valid.ParamSet):
             raise ValueError('%s: there cannot be investigation_time in %s'
                              % (self.inputs['job_ini'], self.calculation_mode))
 
-        # check the gsim_logic_tree
-        self.req_site_params = set()
-        if self.inputs.get('gsim_logic_tree'):
-            if self.gsim != '[FromFile]':
-                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
-                                  ' must be no `gsim` key' % job_ini)
-            path = os.path.join(
-                self.base_path, self.inputs['gsim_logic_tree'])
-            gsim_lt = GsimLogicTree(path, ['*'])
-            # check the GSIMs
-            self._trts = set()
-            discard = {trt.strip() for trt in self.discard_trts.split(',')}
-            for trt, gsims in gsim_lt.values.items():
-                if trt not in discard:
-                    self.check_gsims(gsims)
-                    self._trts.add(trt)
-        elif self.gsim:
-            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
-        else:
-            raise InvalidFile('%(job_ini)s: missing gsim or '
-                              'gsim_logic_tree_file' % self.inputs)
-        if 'amplification' in self.inputs:
-            self.req_site_params.add('ampcode')
-        self.req_site_params = sorted(self.req_site_params)
-
         # check inputs
         unknown = set(self.inputs) - self.KNOWN_INPUTS
         if unknown:
             raise ValueError('Unknown key %s_file in %s' %
-                             (unknown.pop(), self.inputs['job_ini']))
+                             (unknown.pop(), job_ini))
 
         # check return_periods vs poes
         if self.return_periods and not self.poes and self.investigation_time:
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
-
-        # checks for disaggregation
-        if self.calculation_mode == 'disaggregation':
-            if not self.poes_disagg and self.poes:
-                self.poes_disagg = self.poes
-            elif not self.poes and self.poes_disagg:
-                self.poes = self.poes_disagg
-            elif self.poes != self.poes_disagg:
-                raise InvalidFile(
-                    'poes_disagg != poes: %s!=%s in %s' %
-                    (self.poes_disagg, self.poes, self.inputs['job_ini']))
-            if not self.poes_disagg and not self.iml_disagg:
-                raise InvalidFile('poes_disagg or iml_disagg must be set '
-                                  'in %(job_ini)s' % self.inputs)
-            elif self.poes_disagg and self.iml_disagg:
-                raise InvalidFile(
-                    '%s: iml_disagg and poes_disagg cannot be set '
-                    'at the same time' % job_ini)
-            if not self.disagg_bin_edges:
-                for k in ('mag_bin_width', 'distance_bin_width',
-                          'coordinate_bin_width', 'num_epsilon_bins'):
-                    if k not in vars(self):
-                        raise InvalidFile(
-                            '%s must be set in %s' % (k, job_ini))
-            if self.disagg_outputs and not any(
-                    'Eps' in out for out in self.disagg_outputs):
-                self.num_epsilon_bins = 1
-            if self.rlz_index is not None and self.num_rlzs_disagg != 1:
-                raise InvalidFile('%s: you cannot set rlzs_index and '
-                                  'num_rlzs_disagg at the same time' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
@@ -1390,6 +1362,36 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
+
+        # checks for disaggregation
+        if self.calculation_mode == 'disaggregation':
+            if not self.poes_disagg and self.poes:
+                self.poes_disagg = self.poes
+            elif not self.poes and self.poes_disagg:
+                self.poes = self.poes_disagg
+            elif self.poes != self.poes_disagg:
+                raise InvalidFile(
+                    'poes_disagg != poes: %s!=%s in %s' %
+                    (self.poes_disagg, self.poes, self.inputs['job_ini']))
+            if not self.poes_disagg and not self.iml_disagg:
+                raise InvalidFile('poes_disagg or iml_disagg must be set '
+                                  'in %(job_ini)s' % self.inputs)
+            elif self.poes_disagg and self.iml_disagg:
+                raise InvalidFile(
+                    '%s: iml_disagg and poes_disagg cannot be set '
+                    'at the same time' % job_ini)
+            if not self.disagg_bin_edges:
+                for k in ('mag_bin_width', 'distance_bin_width',
+                          'coordinate_bin_width', 'num_epsilon_bins'):
+                    if k not in vars(self):
+                        raise InvalidFile(
+                            '%s must be set in %s' % (k, job_ini))
+            if self.disagg_outputs and not any(
+                    'Eps' in out for out in self.disagg_outputs):
+                self.num_epsilon_bins = 1
+            if self.rlz_index is not None and self.num_rlzs_disagg != 1:
+                raise InvalidFile('%s: you cannot set rlzs_index and '
+                                  'num_rlzs_disagg at the same time' % job_ini)
 
     def validate(self):
         """
