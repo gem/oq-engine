@@ -488,7 +488,8 @@ class HazardCalculator(BaseCalculator):
                 logging.warning(msg)
             else:
                 raise MemoryError('You have only %.1f GB available' % avail)
-        self._read_risk_data()
+        self._read_risk1()
+        self._read_risk2()
         self.check_overflow()  # check if self.sitecol is too large
 
         if ('amplification' in oq.inputs and
@@ -798,7 +799,7 @@ class HazardCalculator(BaseCalculator):
             logging.info(f'Saving {fig_path} into the datastore')
             self.datastore[fig_path] = Image.open(bio)
 
-    def _read_risk_data(self):
+    def _read_risk1(self):
         # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
@@ -880,6 +881,8 @@ class HazardCalculator(BaseCalculator):
                     'hazard was computed with time_event=%s' % (
                         oq.time_event, oq_hazard.time_event))
 
+    def _read_risk2(self):
+        oq = self.oqparam
         if oq.job_type == 'risk':
             # the decode below is used in aristotle calculations
             taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
