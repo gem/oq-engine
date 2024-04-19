@@ -296,7 +296,7 @@ def plotMT(
     v[2] = P.val
 
     vi = (v[0] + v[1] + v[2]) / 3.0
-    for i in range(0, 3):
+    for i in range(3):
         v[i] = v[i] - vi
 
     radius_size = size * 0.5
@@ -355,7 +355,7 @@ def plotMT(
     sam = np.sin(a[m] * D2R)
     cam = np.cos(a[m] * D2R)
 
-    for i in range(0, 360):
+    for i in range(360):
         fir = i * D2R
         s2alphan = (2.0 + 2.0 * iso) / float(
             3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir)
@@ -440,7 +440,7 @@ def plotMT(
         colors.append(rgb1)
         return colors, collect
     elif n == 1:
-        for i in range(0, j):
+        for i in range(j):
             xp1[i] = x[i]
             yp1[i] = y[i]
         if azi[0][0] - azi[0][1] > np.pi:
@@ -467,7 +467,7 @@ def plotMT(
                 az += D2R
         collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
         colors.append(rgb1)
-        for i in range(0, j2):
+        for i in range(j2):
             xp2[i] = x2[i]
             yp2[i] = y2[i]
         if azi[1][0] - azi[1][1] > np.pi:
@@ -496,10 +496,10 @@ def plotMT(
         colors.append(rgb1)
         return colors, collect
     elif n == 2:
-        for i in range(0, j3):
+        for i in range(j3):
             xp1[i] = x3[i]
             yp1[i] = y3[i]
-        for ii in range(0, j):
+        for ii in range(j):
             xp1[i] = x[ii]
             i += 1
             yp1[i] = y[ii]
@@ -539,7 +539,7 @@ def plotMT(
         collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
         colors.append(rgb1)
 
-        for i in range(0, j2):
+        for i in range(j2):
             xp2[i] = x2[i]
             yp2[i] = y2[i]
         if azi[1][0] - azi[1][1] > np.pi:
@@ -608,7 +608,7 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
         D2 = 89.9999
 
     # arange checked for numerical stablility, np.pi is not multiple of 0.1
-    phi = np.arange(0, np.pi, 0.01)
+    phi = np.arange(np.pi, 0.01)
     l1 = np.sqrt(
         np.power(90 - D1, 2)
         / (
@@ -887,7 +887,7 @@ def MT2Axes(mt):
     (D, V) = np.linalg.eigh(mt.mt)
     pl = np.arcsin(-V[0])
     az = np.arctan2(V[2], -V[1])
-    for i in range(0, 3):
+    for i in range(3):
         if pl[i] <= 0:
             pl[i] = -pl[i]
             az[i] += np.pi
