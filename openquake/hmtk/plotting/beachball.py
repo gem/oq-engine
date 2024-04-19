@@ -36,60 +36,9 @@ R2D = 180 / np.pi
 EPSILON = 0.00001
 
 
-def Beach(
-    fm,
-    linewidth=2,
-    facecolor="b",
-    bgcolor="w",
-    edgecolor="k",
-    alpha=1.0,
-    xy=(0, 0),
-    width=200,
-    size=100,
-    nofill=False,
-    zorder=100,
-    axes=None,
-):
-    """
-    Return a beach ball as a collection which can be connected to an
-    current matplotlib axes instance (ax.add_collection).
-
-    S1, D1, and R1, the strike, dip and rake of one of the focal planes, can
-    be vectors of multiple focal mechanisms.
-
-    :param fm: Focal mechanism that is either number of mechanisms (NM) by 3
-        (strike, dip, and rake) or NM x 6 (M11, M22, M33, M12, M13, M23 - the
-        six independent components of the moment tensor, where the coordinate
-        system is 1,2,3 = Up,South,East which equals r,theta,phi). The strike
-        is of the first plane, clockwise relative to north.
-        The dip is of the first plane, defined clockwise and perpendicular to
-        strike, relative to horizontal such that 0 is horizontal and 90 is
-        vertical. The rake is of the first focal plane solution. 90 moves the
-        hanging wall up-dip (thrust), 0 moves it in the strike direction
-        (left-lateral), -90 moves it down-dip (normal), and 180 moves it
-        opposite to strike (right-lateral).
-    :param facecolor: Color to use for quadrants of tension; can be a string,
-        e.g. ``'r'``, ``'b'`` or three component color vector, [R G B].
-        Defaults to ``'b'`` (blue).
-    :param bgcolor: The background color. Defaults to ``'w'`` (white).
-    :param edgecolor: Color of the edges. Defaults to ``'k'`` (black).
-    :param alpha: The alpha level of the beach ball. Defaults to ``1.0``
-        (opaque).
-    :param xy: Origin position of the beach ball as tuple. Defaults to
-        ``(0, 0)``.
-    :type width: int or tuple
-    :param width: Symbol size of beach ball, or tuple for elliptically
-        shaped patches. Defaults to size ``200``.
-    :param size: Controls the number of interpolation points for the
-        curves. Minimum is automatically set to ``100``.
-    :param nofill: Do not fill the beach ball, but only plot the planes.
-    :param zorder: Set zorder. Artists with lower zorder values are drawn
-        first.
-    :type axes: :class:`matplotlib.axes.Axes`
-    :param axes: Used to make beach balls circular on non-scaled axes. Also
-        maintains the aspect ratio when resizing the figure. Will not add
-        the returned collection to the axes instance.
-    """
+def Beach(fm, linewidth=2, facecolor="b", bgcolor="w", edgecolor="k",
+    alpha=1.0, xy=(0, 0), width=200, size=100, nofill=False, zorder=100,
+    axes=None):
     # check if one or two widths are specified (Circle or Ellipse)
     try:
         assert len(width) == 2
@@ -156,23 +105,50 @@ def Beach(
     col.set_zorder(zorder)
     return col
 
+Beach.__doc__ = """\
+Return a beach ball as a collection which can be connected to an
+current matplotlib axes instance (ax.add_collection).
 
-def Beachball(
-    fm,
-    linewidth=2,
-    facecolor="b",
-    bgcolor="w",
-    edgecolor="k",
-    alpha=1.0,
-    xy=(0, 0),
-    width=200,
-    size=100,
-    nofill=False,
-    zorder=100,
-    outfile=None,
-    format=None,
-    fig=None,
-):
+S1, D1, and R1, the strike, dip and rake of one of the focal planes, can
+be vectors of multiple focal mechanisms.
+
+:param fm: Focal mechanism that is either number of mechanisms (NM) by 3
+    (strike, dip, and rake) or NM x 6 (M11, M22, M33, M12, M13, M23 - the
+    six independent components of the moment tensor, where the coordinate
+    system is 1,2,3 = Up,South,East which equals r,theta,phi). The strike
+    is of the first plane, clockwise relative to north.
+    The dip is of the first plane, defined clockwise and perpendicular to
+    strike, relative to horizontal such that 0 is horizontal and 90 is
+    vertical. The rake is of the first focal plane solution. 90 moves the
+    hanging wall up-dip (thrust), 0 moves it in the strike direction
+    (left-lateral), -90 moves it down-dip (normal), and 180 moves it
+    opposite to strike (right-lateral).
+:param facecolor: Color to use for quadrants of tension; can be a string,
+    e.g. ``'r'``, ``'b'`` or three component color vector, [R G B].
+    Defaults to ``'b'`` (blue).
+:param bgcolor: The background color. Defaults to ``'w'`` (white).
+:param edgecolor: Color of the edges. Defaults to ``'k'`` (black).
+:param alpha: The alpha level of the beach ball. Defaults to ``1.0``
+    (opaque).
+:param xy: Origin position of the beach ball as tuple. Defaults to
+    ``(0, 0)``.
+:type width: int or tuple
+:param width: Symbol size of beach ball, or tuple for elliptically
+    shaped patches. Defaults to size ``200``.
+:param size: Controls the number of interpolation points for the
+    curves. Minimum is automatically set to ``100``.
+:param nofill: Do not fill the beach ball, but only plot the planes.
+:param zorder: Set zorder. Artists with lower zorder values are drawn
+    first.
+:type axes: :class:`matplotlib.axes.Axes`
+:param axes: Used to make beach balls circular on non-scaled axes. Also
+    maintains the aspect ratio when resizing the figure. Will not add
+    the returned collection to the axes instance."""
+
+
+def Beachball(fm, linewidth=2, facecolor="b", bgcolor="w", edgecolor="k",
+    alpha=1.0, xy=(0, 0), width=200, size=100, nofill=False, zorder=100,
+    outfile=None, format=None, fig=None):
     """
     Draws a beach ball diagram of an earthquake focal mechanism.
 
