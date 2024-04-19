@@ -65,7 +65,12 @@ def zip(arg, *args):
     return builtins.zip(arg, *args)
 
 
+# NB: using numpy.round would be advisable, but it would break
+# plenty of tests, including the AELO tests, so it is a no go
 def round(x, d=0):
+    """
+    Python2-compatible round function
+    """
     p = 10 ** d
     return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
