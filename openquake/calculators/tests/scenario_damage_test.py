@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14, case_16, case_17, case_18)
+    case_14, case_15, case_16, case_17, case_18)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -254,6 +254,21 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertIn(
             "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
             str(ctx.exception))
+
+    def test_case_15(self):
+        # infrastructure risk
+        # NB: missing 'infra-taz_cl'
+        output_kinds = ('infra-avg_loss',
+                        'infra-node_el',
+                        'infra-dem_cl',
+                        'infra-event_ccl',
+                        'infra-event_pcl',
+                        'infra-event_wcl',
+                        'infra-event_efl')
+        out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
+        for kind in output_kinds:
+            [fname] = out[(kind, 'csv')]
+            self.assertEqualFiles(f'expected/{kind}.csv', fname)
 
     def test_case_16(self):
         # inconsistent IDs between fragility and consequence in set_tmap
