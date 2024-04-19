@@ -40,7 +40,7 @@ class Tbl:
     """
     Connectivity outputs
     """
-    dem_cl: pd.DataFrame
+    cl: pd.DataFrame
     node_el: pd.DataFrame
     ccl_table: pd.DataFrame
     pcl_table: pd.DataFrame
@@ -209,8 +209,8 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
             sum_connectivity_loss_pcl / eff_inv_time)
         t.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl/eff_inv_time
         t.avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
-        t.dem_cl["PCL_node"] /= eff_inv_time
-        t.dem_cl["WCL_node"] /= eff_inv_time
+        t.cl["PCL_node"] /= eff_inv_time
+        t.cl["WCL_node"] /= eff_inv_time
         t.node_el["EL"] /= eff_inv_time
 
     elif calculation_mode == "scenario_damage":
@@ -218,11 +218,11 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
         t.avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
         t.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
         t.avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events
-        t.dem_cl["PCL_node"] /= num_events
-        t.dem_cl["WCL_node"] /= num_events
+        t.cl["PCL_node"] /= num_events
+        t.cl["WCL_node"] /= num_events
         t.node_el["EL"] /= num_events
 
-    t.dem_cl.drop(columns=['ordinal'], inplace=True)
+    t.cl.drop(columns=['ordinal'], inplace=True)
     t.node_el.drop(columns=['ordinal'], inplace=True)
 
     for result in [
@@ -230,8 +230,8 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
             'avg_connectivity_loss_eff',
             'event_connectivity_loss_pcl', 'event_connectivity_loss_wcl',
             'event_connectivity_loss_eff',
-            'dem_cl', 'node_el']:
-        key = 'taz_cl' if result == 'dem_cl' else result
+            'cl', 'node_el']:
+        key = 'taz_cl' if result == 'cl' else result
         taz_nodes_analysis_results[key] = getattr(t, result)
 
     return taz_nodes_analysis_results
@@ -262,9 +262,9 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
             sum_connectivity_loss_wcl / eff_inv_time)
         t.avg_connectivity_loss_eff = (
             sum_connectivity_loss_eff / eff_inv_time)
-        t.dem_cl["Isolation_node"] /= eff_inv_time
-        t.dem_cl["PCL_node"] /= eff_inv_time
-        t.dem_cl["WCL_node"] /= eff_inv_time
+        t.cl["Isolation_node"] /= eff_inv_time
+        t.cl["PCL_node"] /= eff_inv_time
+        t.cl["WCL_node"] /= eff_inv_time
         t.node_el["EL"] /= eff_inv_time
 
     elif calculation_mode == "scenario_damage":
@@ -273,12 +273,12 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
         t.avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
         t.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
         t.avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-        t.dem_cl["Isolation_node"] /= num_events
-        t.dem_cl["PCL_node"] /= num_events
-        t.dem_cl["WCL_node"] /= num_events
+        t.cl["Isolation_node"] /= num_events
+        t.cl["PCL_node"] /= num_events
+        t.cl["WCL_node"] /= num_events
         t.node_el["EL"] /= num_events
 
-    t.dem_cl.drop(columns=['ordinal'], inplace=True)
+    t.cl.drop(columns=['ordinal'], inplace=True)
     t.node_el.drop(columns=['ordinal'], inplace=True)
 
     for result in [
@@ -286,8 +286,9 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
             'avg_connectivity_loss_wcl', 'avg_connectivity_loss_eff',
             'event_connectivity_loss_ccl', 'event_connectivity_loss_pcl',
             'event_connectivity_loss_wcl', 'event_connectivity_loss_eff',
-            'dem_cl', 'node_el']:
-        demand_nodes_analysis_results[result] = getattr(t, result)
+            'cl', 'node_el']:
+        key = 'dem_cl' if result == 'cl' else result
+        demand_nodes_analysis_results[key] = getattr(t, result)
 
     return demand_nodes_analysis_results
 
@@ -572,15 +573,15 @@ def update_demand(t, event_id, event_damage_df, G_original, g_type,
     # the average afterwards
     t.ccl_table['Isolation_node'] = 1 - t.ccl_table['CNS']
     ccl_table1 = t.ccl_table.drop(columns=['CNO', 'CNS'])
-    t.dem_cl = pd.concat((t.dem_cl, ccl_table1.reset_index())).groupby(
+    t.cl = pd.concat((t.cl, ccl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
 
     pcl_table1 = t.pcl_table.drop(columns=['NS0', 'NS'])
-    t.dem_cl = pd.concat((t.dem_cl, pcl_table1.reset_index())).groupby(
+    t.cl = pd.concat((t.cl, pcl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
 
     wcl_table1 = t.wcl_table.drop(columns=['WS0', 'WS'])
-    t.dem_cl = pd.concat((t.dem_cl, wcl_table1.reset_index())).groupby(
+    t.cl = pd.concat((t.cl, wcl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
 
     eff_table1 = t.eff_table.drop(columns=['Eff0', 'Eff'])
@@ -680,11 +681,11 @@ def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
         # To store the sum of performance indicator at nodal level to calculate
         # the average afterwards
         pcl_table1 = t.pcl_table.drop(columns=['NS0', 'NS'])
-        t.dem_cl = pd.concat((t.dem_cl, pcl_table1.reset_index())).groupby(
+        t.cl = pd.concat((t.cl, pcl_table1.reset_index())).groupby(
             'id', as_index=False).sum()
 
         wcl_table1 = t.wcl_table.drop(columns=['WS0', 'WS'])
-        t.dem_cl = pd.concat((t.dem_cl, wcl_table1.reset_index())).groupby(
+        t.cl = pd.concat((t.cl, wcl_table1.reset_index())).groupby(
             'id', as_index=False).sum()
 
         eff_table1 = t.eff_table.drop(columns=['Eff0', 'Eff'])
