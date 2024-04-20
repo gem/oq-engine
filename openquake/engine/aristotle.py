@@ -134,12 +134,9 @@ def get_aristotle_allparams(
     return allparams
 
 
-def main_web(
-        allparams, jobctxs, maximum_distance='300', trt=None,
-        truncation_level='3', number_of_ground_motion_fields='10',
-        asset_hazard_distance='15', ses_seed='42',
-        job_owner_email=None, outputs_uri=None,
-        callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
+def main_web(allparams, jobctxs,
+             job_owner_email=None, outputs_uri=None,
+             callback=trivial_callback):
     """
     This script is meant to be called from the WebUI
     """

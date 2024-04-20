@@ -789,7 +789,8 @@ def aristotle_run(request):
         allparams = get_aristotle_allparams(
             usgs_id, rupture_file, rupture_dict,
             maximum_distance, trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
+            number_of_ground_motion_fields,
+            asset_hazard_distance, ses_seed,
             config.directory.mosaic_dir)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
@@ -826,12 +827,8 @@ def aristotle_run(request):
         # spawn the Aristotle main process
         proc = mp.Process(
             target=aristotle.main_web,
-            args=(
-                allparams, [jobctx],
-                maximum_distance, trt, truncation_level,
-                number_of_ground_motion_fields, asset_hazard_distance,
-                ses_seed, job_owner_email, outputs_uri_web,
-                aristotle_callback))
+            args=(allparams, [jobctx], job_owner_email, outputs_uri_web,
+                  aristotle_callback))
         proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
