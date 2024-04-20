@@ -315,6 +315,9 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     rupture_file = None
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
+        rupdic['rake'] = 0.
+        rupdic['dip'] = 90.
+        rupdic['strike'] = 0.
         usgs_id = rupdic['rupture_usgs_id']
         main_cmd(usgs_id, rupture_file, rupdic,
                  maximum_distance, trt,

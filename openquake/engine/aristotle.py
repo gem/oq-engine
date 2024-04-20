@@ -182,13 +182,6 @@ def main_cmd(
 
 main_cmd.usgs_id = 'ShakeMap ID'
 main_cmd.rupture_file = 'XML file with the rupture model'
-main_cmd.lon = 'Longitude'
-main_cmd.lat = 'Latitude'
-main_cmd.dep = 'Dep'
-main_cmd.mag = 'Magnitude'
-main_cmd.rake = 'Rake'
-main_cmd.dip = 'Dip'
-main_cmd.strike = 'Strike'
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.trt = 'Tectonic region type'
 main_cmd.truncation_level = 'Truncation level'
