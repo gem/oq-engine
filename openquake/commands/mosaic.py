@@ -319,12 +319,12 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
         rupdic['dip'] = 90.
         rupdic['strike'] = 0.
         usgs_id = rupdic['usgs_id']
-        main_cmd(usgs_id, rupture_file, rupdic,
-                 maximum_distance, trt,
-                 truncation_level, number_of_ground_motion_fields,
-                 asset_hazard_distance, ses_seed,
-                 callback=callback,
-                 mosaic_dir=mosaic_dir)
+        main_cmd(usgs_id, rupture_file, rupdic, callback,
+                 maximum_distance=maximum_distance,
+                 trt=trt, truncation_level=truncation_level,
+                 number_of_ground_motion_fields=number_of_ground_motion_fields,
+                 asset_hazard_distance=asset_hazard_distance,
+                 ses_seed=ses_seed, mosaic_dir=mosaic_dir)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60

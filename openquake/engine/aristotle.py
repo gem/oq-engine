@@ -150,12 +150,11 @@ def main_web(allparams, jobctxs,
             callback(job.calc_id, params, job_owner_email, outputs_uri)
 
 
-def main_cmd(
-        usgs_id, rupture_file=None, rupture_dict=None,
-        maximum_distance='300', trt=None, truncation_level='3',
-        number_of_ground_motion_fields='10', asset_hazard_distance='15',
-        ses_seed='42',
-        callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
+def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
+             callback=trivial_callback, *,
+             maximum_distance='300', trt=None, truncation_level='3',
+             number_of_ground_motion_fields='10', asset_hazard_distance='15',
+             ses_seed='42', mosaic_dir=config.directory.mosaic_dir):
     """
     This script is meant to be called from the command-line
     """
@@ -181,7 +180,9 @@ def main_cmd(
             callback(job.calc_id, params, exc=None)
 
 main_cmd.usgs_id = 'ShakeMap ID'
-main_cmd.rupture_file = 'XML file with the rupture model'
+main_cmd.rupture_file = 'XML file with the rupture model (optional)'
+main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
+main_cmd.callback = ''
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.trt = 'Tectonic region type'
 main_cmd.truncation_level = 'Truncation level'
