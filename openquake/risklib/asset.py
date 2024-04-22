@@ -564,6 +564,7 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('type', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
+
 # The fields in the exposure are complicated. For the global
 # risk model you will have things like the following:
 # fields = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
@@ -1030,7 +1031,8 @@ class Exposure(object):
         ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
         assets_df['site_id'] = sids
         mesh = geo.Mesh(ll[:, 0], ll[:, 1])
-        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
+        logging.info(
+            'Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
         names = set(assets_df.columns)
         # vfields can be ['value-business_interruption', 'value-contents',

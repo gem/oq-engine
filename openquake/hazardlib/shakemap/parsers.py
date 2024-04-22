@@ -199,7 +199,8 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
         raise FileNotFoundError(
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
-def get_rupture_dict(id):
+
+def download_rupture_dict(id):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
@@ -215,7 +216,7 @@ def get_rupture_dict(id):
         shakemap = products['shakemap']
     except KeyError:
         try:
-             products['finite-fault']
+            products['finite-fault']
         except KeyError:
             raise MissingLink('There is no finite-fault info for %s' % id)
         else:

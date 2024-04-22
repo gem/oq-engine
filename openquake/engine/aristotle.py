@@ -25,7 +25,7 @@ import logging
 import numpy
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
@@ -178,6 +178,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
             callback(job.calc_id, params, exc=exc)
         else:
             callback(job.calc_id, params, exc=None)
+
 
 main_cmd.usgs_id = 'ShakeMap ID'
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
