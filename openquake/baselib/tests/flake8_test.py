@@ -47,7 +47,9 @@ def _long_funcs(module, maxlen):
             if len(args) > 16:
                 raise SyntaxError('%s has more than 16 arguments: %s'
                                   % (dotname, [a.arg for a in args]))
-            numlines = node.end_lineno - node.lineno + 1
+            doc = ast.get_docstring(node)
+            doclines = 0 if doc is None else doc.count('\n') + 1
+            numlines = node.end_lineno - node.lineno - doclines
             if numlines > maxlen:
                 out.append((dotname, numlines))
     return out
@@ -181,6 +183,6 @@ def test_forbid_long_funcs():
                                  'openquake.engine',
                                  'openquake.hmtk',
                                  'openquake.sep',
-                                 ], 100)
+                                 ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)

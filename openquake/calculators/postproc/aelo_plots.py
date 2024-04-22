@@ -21,6 +21,7 @@ import numpy
 import json
 import matplotlib as mpl
 from scipy import interpolate
+from openquake.baselib.general import Param
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
@@ -283,6 +284,78 @@ def _plot(ax, ax1, site_idx, m, imls, imls_o,
                        label=str(mrs.src_id[ind]))
             i += 1
 
+
+def _plot_m(plt, ax, m, imt, p, dstore):
+    # identify the sources that have a contribution > than fact (here 10%) of
+    # the largest contributor;
+    fig1, ax1 = plt.subplots()
+
+    # annual frequency of exceedance:
+    T = from_string(imt).period
+    f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
+    imls_o = p.imtls[imt]
+    imls = numpy.array([iml*f for iml in imls_o])
+    # have to compute everything for max comp. and for geom. mean
+    RTGM = p.rtgm_probmce[m]
+    RTGM_o = p.rtgm_probmce[m] / f
+    afe_target = _find_afe_target(imls, p.AFE[m], RTGM)
+    afe_target_o = _find_afe_target(imls_o, p.AFE[m], RTGM_o)
+
+    # populate 3-panel plot
+    ax[m].loglog(imls, p.AFE[m], 'k', label=_get_label(imt),
+                 linewidth=2, zorder=3)
+    ax[m].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
+                 linewidth=2, zorder=3)
+    ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2,
+                 zorder=3)
+    ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
+                 linewidth=2, zorder=3)
+    # populate individual plots
+    ax1.loglog(imls_o, p.AFE[m], 'k', label=imt + ' - Geom. mean',
+               linewidth=2, zorder=3)
+    ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
+               'k--', linewidth=2, zorder=3)
+    ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2,
+               zorder=3)
+    ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
+               linewidth=2, zorder=3)
+    _plot(ax, ax1, p.site_idx, m, imls, imls_o,
+          p.mrs, p.rtgm_probmce, afe_target, p.fact)
+
+    # populate subplot - maximum component
+    ax[m].grid('both')
+    ax[m].set_xlabel(imt+' (g)', fontsize=16)
+    ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
+    ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
+    ax[m].set_ylim([10E-6, 1.1])
+    ax[m].set_xlim([0.01, 4])
+
+    # add user guide message
+    if m == 2:
+        message = ('See WebUI User Guide for complete explanation '
+                   'of plot contents.')
+        ax[m].text(0.0105, 0.000000506, message, fontsize='small',
+                   color='black', alpha=0.85 ) 
+
+    # populate single imt plots - geometric mean
+    ax1.grid('both')
+    ax1.set_xlabel(imt+' (g)', fontsize=16)
+    ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
+    ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
+    ax1.set_ylim([10E-6, 1.1])
+    ax1.set_xlim([0.01, 4])
+
+    if p.update_dstore:
+        # save single imt plot
+        bio1 = io.BytesIO()
+        fig1.savefig(bio1, format='png', bbox_inches='tight')
+        # keep these in webui until we finish checks and have a command
+        # line exporter, then we can change the name to _{imt} and they
+        # will not appear in the webui
+        dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
+    fig1.tight_layout()
+
+
 def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
@@ -292,8 +365,6 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     if (rtgm_df.RTGM == 0).all():
         return
 
-    # get the IML for the 2475 RP
-    rtgm_probmce = rtgm_df['ProbMCE']
     # get hazard curves, put into rates
     AFE = []
     mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
@@ -303,79 +374,15 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
 
     plt = import_plt()
     fig, ax = plt.subplots(3, figsize=(8, 15))
-
-    # identify the sources that have a contribution > than fact (here 10%) of
-    # the largest contributor;
-    fact = 0.1
-    mrs = dstore['mean_rates_by_src']  # (site_id, imt, lvl, src_id)
+    p = Param(AFE=AFE,
+              fact=0.1,
+              imtls=imtls,
+              site_idx=site_idx,
+              update_dstore=update_dstore,
+              rtgm_probmce=rtgm_df['ProbMCE'],
+              mrs=dstore['mean_rates_by_src'])
     for m, imt in enumerate(imtls):
-        fig1, ax1 = plt.subplots()
-
-        # annual frequency of exceedance:
-        T = from_string(imt).period
-        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
-        imls_o = imtls[imt]
-        imls = numpy.array([iml*f for iml in imls_o])
-        # have to compute everything for max comp. and for geom. mean
-        RTGM = rtgm_probmce[m]
-        RTGM_o = rtgm_probmce[m] / f
-        afe_target = _find_afe_target(imls, AFE[m], RTGM)
-        afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
-
-        # populate 3-panel plot
-        ax[m].loglog(imls, AFE[m], 'k', label=_get_label(imt),
-                     linewidth=2, zorder=3)
-        ax[m].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
-                     linewidth=2, zorder=3)
-        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2,
-                     zorder=3)
-        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
-                     linewidth=2, zorder=3)
-        # populate individual plots
-        ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
-                   linewidth=2, zorder=3)
-        ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
-                   'k--', linewidth=2, zorder=3)
-        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2,
-                   zorder=3)
-        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
-                   linewidth=2, zorder=3)
-        _plot(ax, ax1, site_idx, m, imls, imls_o,
-              mrs, rtgm_probmce, afe_target, fact)
-
-        # populate subplot - maximum component
-        ax[m].grid('both')
-        ax[m].set_xlabel(imt+' (g)', fontsize=16)
-        ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
-        ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
-        ax[m].set_ylim([10E-6, 1.1])
-        ax[m].set_xlim([0.01, 4])
-
-        # add user guide message
-        if m==2:
-            message = ('See WebUI User Guide for complete explanation '
-                       'of plot contents.')
-            ax[m].text(0.0105, 0.000000506, message, fontsize='small',
-                       color='black', alpha=0.85 ) 
-
-        # populate single imt plots - geometric mean
-        ax1.grid('both')
-        ax1.set_xlabel(imt+' (g)', fontsize=16)
-        ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
-        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
-        ax1.set_ylim([10E-6, 1.1])
-        ax1.set_xlim([0.01, 4])
-
-        if update_dstore:
-            # save single imt plot
-            bio1 = io.BytesIO()
-            fig1.savefig(bio1, format='png', bbox_inches='tight')
-            # keep these in webui until we finish checks and have a command
-            # line exporter, then we can change the name to _{imt} and they
-            # will not appear in the webui
-            dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
-        fig1.tight_layout()
-
+        _plot_m(plt, ax, m, imt, p, dstore)
     if update_dstore:
         # save triple plot
         bio = io.BytesIO()
