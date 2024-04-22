@@ -490,6 +490,7 @@ class HazardCalculator(BaseCalculator):
                 raise MemoryError('You have only %.1f GB available' % avail)
         self._read_risk1()
         self._read_risk2()
+        self._read_risk3()
         self.check_overflow()  # check if self.sitecol is too large
 
         if ('amplification' in oq.inputs and
@@ -930,6 +931,8 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
 
+    def _read_risk3(self):
+        oq = self.oqparam
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
                 assoc_dist = (oq.region_grid_spacing * 1.414

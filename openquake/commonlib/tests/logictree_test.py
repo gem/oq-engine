@@ -1573,8 +1573,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.area = openquake.hazardlib.source.AreaSource(
             source_id='area', name='area',
             tectonic_region_type=
@@ -1594,8 +1593,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                  openquake.hazardlib.geo.Point(0, 1),
                  openquake.hazardlib.geo.Point(1, 0)]),
             area_discretization=10, rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.simple_fault = openquake.hazardlib.source.SimpleFaultSource(
             source_id='simple_fault', name='simple fault',
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
@@ -1609,8 +1607,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 [openquake.hazardlib.geo.Point(0, 0),
                  openquake.hazardlib.geo.Point(1, 1)]),
             dip=45, rake=180,
-            temporal_occurrence_model=PoissonTOM(50.)
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.complex_fault = openquake.hazardlib.source.ComplexFaultSource(
             source_id='complex_fault', name='complex fault',
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
@@ -1625,13 +1622,11 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 openquake.hazardlib.geo.Line(
                     [openquake.hazardlib.geo.Point(0, 0, 2),
                      openquake.hazardlib.geo.Point(1, 1, 2)])],
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
 
         lons = numpy.array([-1., 1., -1., 1.])
         lats = numpy.array([0., 0., 0., 0.])
         depths = numpy.array([0., 0., 10., 10.])
-
         points = [openquake.hazardlib.geo.Point(lon, lat, depth)
                   for lon, lat, depth in
                   zip(lons, lats, depths)]
