@@ -45,8 +45,7 @@ import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid, sourceconverter
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
@@ -59,7 +58,8 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around, get_aristotle_allparams
+from openquake.engine.aristotle import (
+    get_trts_around, get_aristotle_allparams, get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings
@@ -661,25 +661,15 @@ def aristotle_get_rupture_data(request):
     :param request:
         a `django.http.HttpRequest` object containing usgs_id
     """
-    rupture_file = request.FILES.get('rupture_file')
-    usgs_id = request.POST.get('usgs_id')
-    if rupture_file:
-        [rup_node] = nrml.read(rupture_file.temporary_file_path())
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        rup = conv.convert_node(rup_node)
-        rup.tectonic_region_type = '*'
-        hp = rup.hypocenter
-        rupdic = dict(
-            lon=hp.x, lat=hp.y, dep=hp.z,
-            mag=rup.mag, rake=rup.rake,
-            strike=rup.surface.get_strike(),
-            dip=rup.surface.get_dip(), usgs_id=usgs_id)
-    else:
-        rupdic = get_rupture_dict(usgs_id)
+    res = aristotle_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    [rupdic] = res
     try:
         trts, mosaic_model = get_trts_around(
             rupdic, config.directory.mosaic_dir)
     except Exception as exc:
+        usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
             error_msg = f'USGS ID "{usgs_id}" was not found'
         elif 'There is not rupture.json' in str(exc):
@@ -698,35 +688,12 @@ def aristotle_get_rupture_data(request):
                         status=200)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def aristotle_get_trts(request):
-    """
-    Retrieve tectonic region types given geographic coordinates
-
-    :param request:
-        a `django.http.HttpRequest` object containing lon and lat
-    """
-    res = aristotle_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    lon, lat = res
-    try:
-        trts, mosaic_model = get_trts_around(
-            dict(lon=lon, lat=lat), config.directory.mosaic_dir)
-    except Exception as exc:
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': str(exc)}
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
-    else:
-        response_data = dict(trts=trts, mosaic_model=mosaic_model)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=200)
-
-
 def aristotle_validate(request):
+    # this is called by aristotle_get_rupture_data and aristotle_run.
+    # In the first case the form contains only usgs_id and rupture_file and
+    # returns rupdic only.
+    # In the second case the form contains all fields and it returns rupdic
+    # plus the calculation parameters (like maximum_ditance, etc.)
     rupture_file = request.FILES.get('rupture_file')
     if rupture_file:
         rupture_path = rupture_file.temporary_file_path()
@@ -756,8 +723,8 @@ def aristotle_validate(request):
         'ses_seed': valid.positiveint,
     }
     params = {}
-    rupdic = dict(lon=None, lat=None, dep=None,
-                  mag=None, rake=None, dip=None, strike=None)
+    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
+               dep=None, mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():
         if fieldname not in request.POST:
             continue
@@ -767,8 +734,8 @@ def aristotle_validate(request):
             validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
             continue
-        if fieldname in rupdic:
-            rupdic[fieldname] = value
+        if fieldname in dic:
+            dic[fieldname] = value
         else:
             params[fieldname] = value
 
@@ -783,7 +750,8 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return rupdic, rupture_path, *params.values()
+    rupdic = get_rupture_dict(dic)
+    return rupdic, *params.values()
 
 
 @csrf_exempt
@@ -802,12 +770,12 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupture_dict, rupture_path, usgs_id, maximum_distance, trt,
+    (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, rupture_path, rupture_dict,
+            rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
