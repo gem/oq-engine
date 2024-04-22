@@ -74,8 +74,12 @@ def trivial_callback(
 
 
 def get_rupture_dict(dic):
-    rupture_file = dic.get('rupture_file')
+    """
+    :param dic: a dictionary with keys usgs_id and rupture_file
+    :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
+    """
     usgs_id = dic['usgs_id']
+    rupture_file = dic['rupture_file']
     if rupture_file:
         [rup_node] = nrml.read(rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
@@ -85,28 +89,27 @@ def get_rupture_dict(dic):
         rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
                       mag=rup.mag, rake=rup.rake,
                       strike=rup.surface.get_strike(),
-                      dip=rup.surface.get_dip(), usgs_id=usgs_id,
+                      dip=rup.surface.get_dip(),
+                      usgs_id=usgs_id,
                       rupture_file=rupture_file)
     else:
         rupdic = download_rupture_dict(usgs_id)
     return rupdic
 
 
-def get_aristotle_allparams(
-        rupture_dict,
-        maximum_distance, trt, truncation_level,
-        number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, mosaic_dir):
+def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
+                            truncation_level, number_of_ground_motion_fields,
+                            asset_hazard_distance, ses_seed, mosaic_dir):
+    """
+    :returns: a list of dictionaries suitable for an Aristotle calculation
+    """
     smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(mosaic_dir, 'exposure.hdf5')
-    # there use cases: 1) only usgs_id is passed;
-    #                  2) rupdic params are passed (including lon)
-    #                  3) rupture_file is passed
     inputs = {'exposure': [expo],
               'site_model': [smodel],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict)
-    rupture_file = rupture_dict['rupture_file']
+    rupture_file = rupdic['rupture_file']
     if rupture_file:
         inputs['rupture_model'] = rupture_file
     if trt is None:

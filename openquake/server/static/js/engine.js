@@ -591,7 +591,8 @@
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());
-                formData.append('number_of_ground_motion_fields', $('#number_of_ground_motion_fields').val());
+                formData.append('number_of_ground_motion_fields',
+                                $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
                 $.ajax({
