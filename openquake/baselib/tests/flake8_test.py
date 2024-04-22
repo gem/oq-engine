@@ -42,32 +42,43 @@ def _long_funcs(module, maxlen):
     tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
-            numlines = node.end_lineno - node.lineno + 1
+            dotname = '%s.%s' % (module.__name__, node.name)
+            args = node.args.args
+            if len(args) > 16:
+                raise SyntaxError('%s has more than 16 arguments: %s'
+                                  % (dotname, [a.arg for a in args]))
+            doc = ast.get_docstring(node)
+            doclines = 0 if doc is None else doc.count('\n') + 1
+            numlines = node.end_lineno - node.lineno - doclines
             if numlines > maxlen:
-                out.append((module.__name__ + '.' + node.name, numlines))
+                out.append((dotname, numlines))
     return out
 
 
-def get_long_funcs(mod_or_pkg, maxlen):
-    mod_or_pkg = importlib.import_module(mod_or_pkg)
+def get_long_funcs(mod_or_pkgs, maxlen):
+    """
+    :returns: functions longer than maxlen
+    """
     out = set()
-    if hasattr(mod_or_pkg, '__path__'):  # is a package
-        [pkg_path] = mod_or_pkg.__path__
-        n = len(pkg_path)
-        for cwd, dirs, files in os.walk(pkg_path):
-            if all(os.path.basename(f) != '__init__.py' for f in files):
-                # the current working directory is not a subpackage
-                continue
-            for f in files:
-                if f.endswith('.py'):
-                    # convert PKGPATH/subpackage/module.py -> subpackage.module
-                    # works at any level of nesting
-                    name = (mod_or_pkg.__name__ + cwd[n:].replace(os.sep, '.') +
-                            '.' + os.path.basename(f[:-3]))
-                    mod = importlib.import_module(name)
-                    out.update(_long_funcs(mod, maxlen))
-    else:  # is a module
-        out.update(_long_funcs(mod_or_pkg, maxlen))
+    for mod_or_pkg in mod_or_pkgs:
+        mod_or_pkg = importlib.import_module(mod_or_pkg)
+        if hasattr(mod_or_pkg, '__path__'):  # is a package
+            [pkg_path] = mod_or_pkg.__path__
+            n = len(pkg_path)
+            for cwd, dirs, files in os.walk(pkg_path):
+                if all(os.path.basename(f) != '__init__.py' for f in files):
+                    # the current working directory is not a subpackage
+                    continue
+                for f in files:
+                    if f.endswith('.py'):
+                        # PKGPATH/subpackage/module.py -> subpackage.module
+                        # works at any level of nesting
+                        name = (mod_or_pkg.__name__ + cwd[n:].replace(
+                            os.sep, '.') + '.' + os.path.basename(f[:-3]))
+                        mod = importlib.import_module(name)
+                        out.update(_long_funcs(mod, maxlen))
+        else:  # is a module
+            out.update(_long_funcs(mod_or_pkg, maxlen))
     return sorted(out, key=lambda x: x[1], reverse=True)
 
 
@@ -164,5 +175,14 @@ def test_csv(OVERWRITE=False):
 
 
 def test_forbid_long_funcs():
-    long_funcs = get_long_funcs('openquake.hazardlib', 100)
-    assert not long_funcs, long_funcs
+    long_funcs = get_long_funcs(['openquake.baselib',
+                                 'openquake.hazardlib',
+                                 'openquake.commonlib',
+                                 'openquake.risklib',
+                                 'openquake.calculators',
+                                 'openquake.engine',
+                                 'openquake.hmtk',
+                                 'openquake.sep',
+                                 ], 90)
+    if long_funcs:
+        raise RuntimeError(long_funcs)

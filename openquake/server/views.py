@@ -662,36 +662,23 @@ def aristotle_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_file = request.FILES.get('rupture_file')
-    json_data = json.loads(request.POST.get('data', '{}'))
-    if rupture_file and json_data['usgs_id']:
-        error_msg = (
-            'You can provide either rupture model XML or USGS ID (not both)')
-        response_data = {'status': 'failed', 'error_msg': error_msg}
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
-    if not rupture_file:
-        res = aristotle_validate(json_data)
-        if isinstance(res, HttpResponse):  # error
-            return res
-        (usgs_id,) = res
+    usgs_id = request.POST.get('usgs_id')
+    if rupture_file:
+        [rup_node] = nrml.read(rupture_file.temporary_file_path())
+        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'
+        hp = rup.hypocenter
+        rupdic = dict(
+            lon=hp.x, lat=hp.y, dep=hp.z,
+            mag=rup.mag, rake=rup.rake,
+            strike=rup.surface.get_strike(),
+            dip=rup.surface.get_dip(), usgs_id=usgs_id)
     else:
-        usgs_id = ''
+        rupdic = get_rupture_dict(usgs_id)
     try:
-        if rupture_file:
-            [rup_node] = nrml.read(rupture_file.temporary_file_path())
-            conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-            rup = conv.convert_node(rup_node)
-            rup.tectonic_region_type = '*'
-            hp = rup.hypocenter
-            rupture_dict = dict(
-                lon=hp.x, lat=hp.y, dep=hp.z,
-                mag=rup.mag, rake=rup.rake,
-                strike=rup.surface.get_strike(),
-                dip=rup.surface.get_dip(), usgs_id=usgs_id)
-        else:
-            rupture_dict = get_rupture_dict(usgs_id)
         trts, mosaic_model = get_trts_around(
-            rupture_dict, config.directory.mosaic_dir)
+            rupdic, config.directory.mosaic_dir)
     except Exception as exc:
         if '404: Not Found' in str(exc):
             error_msg = f'USGS ID "{usgs_id}" was not found'
@@ -704,9 +691,9 @@ def aristotle_get_rupture_data(request):
                          'error_msg': error_msg}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    rupture_dict['trts'] = trts
-    rupture_dict['mosaic_model'] = mosaic_model
-    response_data = rupture_dict
+    rupdic['trts'] = trts
+    rupdic['mosaic_model'] = mosaic_model
+    response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
@@ -739,11 +726,8 @@ def aristotle_get_trts(request):
             content=json.dumps(response_data), content_type=JSON, status=200)
 
 
-def aristotle_validate(request_or_dict):
-    if isinstance(request_or_dict, dict):
-        dic = request_or_dict
-    else:
-        dic = request_or_dict.POST
+def aristotle_validate(request):
+    rupture_file = request.FILES.get('rupture_file')
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -763,14 +747,21 @@ def aristotle_validate(request_or_dict):
         'ses_seed': valid.positiveint,
     }
     params = {}
+    rupdic = dict(lon=None, lat=None, dep=None,
+                  mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():
-        if fieldname not in dic:
+        if fieldname not in request.POST:
             continue
         try:
-            params[fieldname] = validation_func(dic.get(fieldname))
+            value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
             validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
+            continue
+        if fieldname in rupdic:
+            rupdic[fieldname] = value
+        else:
+            params[fieldname] = value
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -783,7 +774,7 @@ def aristotle_validate(request_or_dict):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return params.values()
+    return rupdic, *params.values()
 
 
 @csrf_exempt
@@ -802,7 +793,7 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+    (rupture_dict, usgs_id, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
     # NOTE: in the current approach, the rupture file is used to pre-populate
@@ -813,9 +804,10 @@ def aristotle_run(request):
     rupture_file = None
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike, rupture_file,
+            usgs_id, rupture_file, rupture_dict,
             maximum_distance, trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
+            number_of_ground_motion_fields,
+            asset_hazard_distance, ses_seed,
             config.directory.mosaic_dir)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
@@ -852,12 +844,8 @@ def aristotle_run(request):
         # spawn the Aristotle main process
         proc = mp.Process(
             target=aristotle.main_web,
-            args=(
-                allparams, [jobctx],
-                maximum_distance, trt, truncation_level,
-                number_of_ground_motion_fields, asset_hazard_distance,
-                ses_seed, job_owner_email, outputs_uri_web,
-                aristotle_callback))
+            args=(allparams, [jobctx], job_owner_email, outputs_uri_web,
+                  aristotle_callback))
         proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,

@@ -1178,7 +1178,6 @@ class OqParam(valid.ParamSet):
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
-
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
@@ -1242,6 +1241,37 @@ class OqParam(valid.ParamSet):
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
 
+        self.check_hazard(job_ini)
+        self.check_gsim_lt(job_ini)
+        self.check_risk(job_ini)
+
+    def check_gsim_lt(self, job_ini):
+        # check the gsim_logic_tree and set req_site_params
+        self.req_site_params = set()
+        if self.inputs.get('gsim_logic_tree'):
+            if self.gsim != '[FromFile]':
+                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
+                                  ' must be no `gsim` key' % job_ini)
+            path = os.path.join(
+                self.base_path, self.inputs['gsim_logic_tree'])
+            gsim_lt = GsimLogicTree(path, ['*'])
+            # check the GSIMs
+            self._trts = set()
+            discard = {trt.strip() for trt in self.discard_trts.split(',')}
+            for trt, gsims in gsim_lt.values.items():
+                if trt not in discard:
+                    self.check_gsims(gsims)
+                    self._trts.add(trt)
+        elif self.gsim:
+            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
+        else:
+            raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
+                              % job_ini)
+        if 'amplification' in self.inputs:
+            self.req_site_params.add('ampcode')
+        self.req_site_params = sorted(self.req_site_params)
+
+    def check_risk(self, job_ini):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
@@ -1284,41 +1314,54 @@ class OqParam(valid.ParamSet):
             raise ValueError('%s: there cannot be investigation_time in %s'
                              % (self.inputs['job_ini'], self.calculation_mode))
 
-        # check the gsim_logic_tree
-        self.req_site_params = set()
-        if self.inputs.get('gsim_logic_tree'):
-            if self.gsim != '[FromFile]':
-                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
-                                  ' must be no `gsim` key' % job_ini)
-            path = os.path.join(
-                self.base_path, self.inputs['gsim_logic_tree'])
-            gsim_lt = GsimLogicTree(path, ['*'])
-            # check the GSIMs
-            self._trts = set()
-            discard = {trt.strip() for trt in self.discard_trts.split(',')}
-            for trt, gsims in gsim_lt.values.items():
-                if trt not in discard:
-                    self.check_gsims(gsims)
-                    self._trts.add(trt)
-        elif self.gsim:
-            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
-        else:
-            raise InvalidFile('%(job_ini)s: missing gsim or '
-                              'gsim_logic_tree_file' % self.inputs)
-        if 'amplification' in self.inputs:
-            self.req_site_params.add('ampcode')
-        self.req_site_params = sorted(self.req_site_params)
-
         # check inputs
         unknown = set(self.inputs) - self.KNOWN_INPUTS
         if unknown:
             raise ValueError('Unknown key %s_file in %s' %
-                             (unknown.pop(), self.inputs['job_ini']))
+                             (unknown.pop(), job_ini))
 
         # check return_periods vs poes
         if self.return_periods and not self.poes and self.investigation_time:
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
+
+        # checks for classical_damage
+        if self.calculation_mode == 'classical_damage':
+            if self.conditional_loss_poes:
+                raise InvalidFile(
+                    '%s: conditional_loss_poes are not defined '
+                    'for classical_damage calculations' % job_ini)
+            if not self.investigation_time and not self.hazard_calculation_id:
+                raise InvalidFile('%s: missing investigation_time' % job_ini)
+
+    def check_hazard(self, job_ini):
+        # check for GMFs from file
+        if (self.inputs.get('gmfs', '').endswith('.csv')
+                and 'site_model' not in self.inputs and self.sites is None):
+            raise InvalidFile('%s: You forgot to specify a site_model'
+                              % job_ini)
+        elif self.inputs.get('gmfs', '').endswith('.xml'):
+            raise InvalidFile('%s: GMFs in XML are not supported anymore'
+                              % job_ini)
+
+        # checks for event_based
+        if 'event_based' in self.calculation_mode:
+            if self.ps_grid_spacing:
+                logging.warning('ps_grid_spacing is ignored in event_based '
+                                'calculations"')
+
+            if self.ses_per_logic_tree_path >= TWO32:
+                raise ValueError('ses_per_logic_tree_path too big: %d' %
+                                 self.ses_per_logic_tree_path)
+            if self.number_of_logic_tree_samples >= TWO16:
+                raise ValueError('number_of_logic_tree_samples too big: %d' %
+                                 self.number_of_logic_tree_samples)
+
+        # check for amplification
+        if ('amplification' in self.inputs and self.imtls and
+                self.calculation_mode in ['classical', 'classical_risk',
+                                          'disaggregation']):
+            check_same_levels(self.imtls)
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -1349,43 +1392,6 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
-
-        # checks for classical_damage
-        if self.calculation_mode == 'classical_damage':
-            if self.conditional_loss_poes:
-                raise InvalidFile(
-                    '%s: conditional_loss_poes are not defined '
-                    'for classical_damage calculations' % job_ini)
-            if not self.investigation_time and not self.hazard_calculation_id:
-                raise InvalidFile('%s: missing investigation_time' % job_ini)
-
-        # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv')
-                and 'site_model' not in self.inputs and self.sites is None):
-            raise InvalidFile('%s: You forgot to specify a site_model'
-                              % job_ini)
-        elif self.inputs.get('gmfs', '').endswith('.xml'):
-            raise InvalidFile('%s: GMFs in XML are not supported anymore'
-                              % job_ini)
-
-        # checks for event_based
-        if 'event_based' in self.calculation_mode:
-            if self.ps_grid_spacing:
-                logging.warning('ps_grid_spacing is ignored in event_based '
-                                'calculations"')
-
-            if self.ses_per_logic_tree_path >= TWO32:
-                raise ValueError('ses_per_logic_tree_path too big: %d' %
-                                 self.ses_per_logic_tree_path)
-            if self.number_of_logic_tree_samples >= TWO16:
-                raise ValueError('number_of_logic_tree_samples too big: %d' %
-                                 self.number_of_logic_tree_samples)
-
-        # check for amplification
-        if ('amplification' in self.inputs and self.imtls and
-                self.calculation_mode in ['classical', 'classical_risk',
-                                          'disaggregation']):
-            check_same_levels(self.imtls)
 
     def validate(self):
         """

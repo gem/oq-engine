@@ -488,7 +488,9 @@ class HazardCalculator(BaseCalculator):
                 logging.warning(msg)
             else:
                 raise MemoryError('You have only %.1f GB available' % avail)
-        self._read_risk_data()
+        self._read_risk1()
+        self._read_risk2()
+        self._read_risk3()
         self.check_overflow()  # check if self.sitecol is too large
 
         if ('amplification' in oq.inputs and
@@ -595,48 +597,7 @@ class HazardCalculator(BaseCalculator):
             self.save_crmodel()
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
-            parent = datastore.read(oq.hazard_calculation_id)
-            oqparent = parent['oqparam']
-            if 'weights' in parent:
-                weights = numpy.unique(parent['weights'][:])
-                if (oq.job_type == 'risk' and oq.collect_rlzs and
-                        len(weights) > 1):
-                    raise ValueError(
-                        'collect_rlzs=true can be specified only if '
-                        'the realizations have identical weights')
-            if oqparent.imtls:
-                check_imtls(self.oqparam.imtls, oqparent.imtls)
-            self.check_precalc(oqparent.calculation_mode)
-            self.datastore.parent = parent
-            # copy missing parameters from the parent
-            if 'concurrent_tasks' not in vars(self.oqparam):
-                self.oqparam.concurrent_tasks = (
-                    self.oqparam.__class__.concurrent_tasks.default)
-            params = {name: value for name, value in
-                      vars(parent['oqparam']).items()
-                      if name not in vars(self.oqparam)
-                      and name != 'ground_motion_fields'}
-            if params:
-                self.save_params(**params)
-            with self.monitor('importing inputs', measuremem=True):
-                self.read_inputs()
-            oqp = parent['oqparam']
-            if oqp.investigation_time != oq.investigation_time:
-                raise ValueError(
-                    'The parent calculation was using investigation_time=%s'
-                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
-            if hstats != rstats:
-                raise ValueError(
-                    'The parent calculation had stats %s != %s' %
-                    (hstats, rstats))
-            sec_imts = set(oq.sec_imts)
-            missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-            if oqp.imtls and missing_imts:
-                raise ValueError(
-                    'The parent calculation is missing the IMT(s) %s' %
-                    ', '.join(missing_imts))
-            self.save_crmodel()
+            self.pre_execute_from_parent()
         elif self.__class__.precalc:
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
@@ -653,6 +614,54 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
                 self.save_crmodel()
+
+    def pre_execute_from_parent(self):
+        """
+        Read data from the parent calculation and perform some checks
+        """
+        oq = self.oqparam
+        parent = datastore.read(oq.hazard_calculation_id)
+        oqparent = parent['oqparam']
+        if 'weights' in parent:
+            weights = numpy.unique(parent['weights'][:])
+            if (oq.job_type == 'risk' and oq.collect_rlzs and
+                    len(weights) > 1):
+                raise ValueError(
+                    'collect_rlzs=true can be specified only if '
+                    'the realizations have identical weights')
+        if oqparent.imtls:
+            check_imtls(oq.imtls, oqparent.imtls)
+        self.check_precalc(oqparent.calculation_mode)
+        self.datastore.parent = parent
+        # copy missing parameters from the parent
+        if 'concurrent_tasks' not in vars(self.oqparam):
+            self.oqparam.concurrent_tasks = (
+                self.oqparam.__class__.concurrent_tasks.default)
+        params = {name: value for name, value in
+                  vars(parent['oqparam']).items()
+                  if name not in vars(self.oqparam)
+                  and name != 'ground_motion_fields'}
+        if params:
+            self.save_params(**params)
+        with self.monitor('importing inputs', measuremem=True):
+            self.read_inputs()
+        oqp = parent['oqparam']
+        if oqp.investigation_time != oq.investigation_time:
+            raise ValueError(
+                'The parent calculation was using investigation_time=%s'
+                ' != %s' % (oqp.investigation_time, oq.investigation_time))
+        hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
+        if hstats != rstats:
+            raise ValueError(
+                'The parent calculation had stats %s != %s' %
+                (hstats, rstats))
+        sec_imts = set(oq.sec_imts)
+        missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
+        if oqp.imtls and missing_imts:
+            raise ValueError(
+                'The parent calculation is missing the IMT(s) %s' %
+                ', '.join(missing_imts))
+        self.save_crmodel()
 
     def init(self):
         """
@@ -798,7 +807,7 @@ class HazardCalculator(BaseCalculator):
             logging.info(f'Saving {fig_path} into the datastore')
             self.datastore[fig_path] = Image.open(bio)
 
-    def _read_risk_data(self):
+    def _read_risk1(self):
         # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
@@ -880,6 +889,8 @@ class HazardCalculator(BaseCalculator):
                     'hazard was computed with time_event=%s' % (
                         oq.time_event, oq_hazard.time_event))
 
+    def _read_risk2(self):
+        oq = self.oqparam
         if oq.job_type == 'risk':
             # the decode below is used in aristotle calculations
             taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
@@ -920,6 +931,8 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
 
+    def _read_risk3(self):
+        oq = self.oqparam
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
                 assoc_dist = (oq.region_grid_spacing * 1.414

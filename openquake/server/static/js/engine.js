@@ -527,28 +527,13 @@
             });
 
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
-            $('#lon').on('input', function() {
-                $('#mosaic_model').empty();
-                var lon = $(this).val().trim();
-                var lat = $('#lat').val().trim();
-                $('#aristotle_get_trts_btn').prop('disabled', lon === '' || lat === '');
-            });
-            $('#lat').on('input', function() {
-                $('#mosaic_model').empty();
-                var lat = $(this).val().trim();
-                var lon = $('#lon').val().trim();
-                $('#aristotle_get_trts_btn').prop('disabled', lon === '' || lat === '');
-            });
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
                 $('#mosaic_model').text('');
-                var jsonData = {
-                    usgs_id: $("#usgs_id").val()
-                };
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
-                formData.append('data', JSON.stringify(jsonData));
+                formData.append('usgs_id', $("#usgs_id").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
@@ -587,58 +572,14 @@
             $('#clearFile').click(function() {
                 $('#rupture_file_input').val('');
             });
-            $("#aristotle_get_trts_btn").click(function (event) {
-                $('#aristotle_get_trts_btn').prop('disabled', true);
-                $('#aristotle_get_trts_btn').text('Retrieving tectonic region types...');
-                $('#mosaic_model').text('');
-                var formData = {
-                    lon: $("#lon").val(),
-                    lat: $("#lat").val()
-                };
-                $.ajax({
-                    type: "POST",
-                    url: gem_oq_server_url + "/v1/calc/aristotle_get_trts",
-                    data: formData,
-                    dataType: "json",
-                    encode: true
-                }).done(function (data) {
-                    // console.log(data);
-                    $('#mosaic_model').text('(' + $("#lon").val() + ', ' + $("#lat").val() + ')' + ' is covered by model ' + data.mosaic_model);
-                    trts = data.trts;
-                    $('#trt').empty();
-                    $.each(trts, function(index, trt) {
-                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
-                    });
-                }).error(function (data) {
-                    var resp = JSON.parse(data.responseText);
-                    if ("invalid_inputs" in resp) {
-                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
-                            var input_id = resp.invalid_inputs[i];
-                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
-                        }
-                    }
-                    var err_msg = resp.error_msg;
-                    diaerror.show(false, "Error", err_msg);
-                }).always(function () {
-                    $('#aristotle_get_trts_btn').prop('disabled', false);
-                    $('#aristotle_get_trts_btn').text('Retrieve tectonic region types');
-                });
-                event.preventDefault();
-            });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
             $("#aristotle_run_form").submit(function (event) {
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
-                var usgs_id;
-                if ($('#rupture_file_input')[0].files.length == 0) {
-                    usgs_id = $("#usgs_id").val();
-                } else {
-                    usgs_id = 'FromXML';
-                }
                 var formData = {
-                    usgs_id: usgs_id,
+                    usgs_id: $("#usgs_id").val(),
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     dep: $("#dep").val(),

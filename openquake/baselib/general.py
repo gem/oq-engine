@@ -1529,6 +1529,30 @@ def agg_probs(*probs):
     return 1. - acc
 
 
+class Param:
+    """
+    Container class for a set of parameters with defaults
+
+    >>> p = Param(a=1, b=2)
+    >>> p.a = 3
+    >>> p.a, p.b
+    (3, 2)
+    >>> p.c = 4
+    Traceback (most recent call last):
+      ...
+    AttributeError: Unknown parameter c
+    """
+    def __init__(self, **defaults):
+        for k, v in defaults.items():
+            self.__dict__[k] = v
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__:
+            object.__setattr__(self, name, value)
+        else:
+            raise AttributeError('Unknown parameter %s' % name)
+
+
 class RecordBuilder(object):
     """
     Builder for numpy records or arrays.
