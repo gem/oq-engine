@@ -625,6 +625,19 @@ def aristotle_callback(
     if not job_owner_email:
         return
 
+    # Example of body:
+    # Input parameters:
+    # {'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0, 'mag': 7.8, 'rake': 0.0,
+    #  'usgs_id': 'us6000jllz', 'rupture_file': None}
+    # maximum_distance: 20.0
+    # tectonic_region_type: Active Shallow Crust
+    # truncation_level: 3.0
+    # number_of_ground_motion_fields: 100
+    # asset_hazard_distance: 15.0
+    # ses_seed: 42
+    # countries: TUR
+    # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
+
     params_to_print = ''
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',

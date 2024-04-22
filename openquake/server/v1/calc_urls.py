@@ -45,7 +45,6 @@ elif settings.APPLICATION_MODE == 'ARISTOTLE':
     urlpatterns.extend([
         re_path(r'^aristotle_get_rupture_data$',
                 views.aristotle_get_rupture_data),
-        re_path(r'^aristotle_get_trts$', views.aristotle_get_trts),
         re_path(r'^aristotle_run$', views.aristotle_run),
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
