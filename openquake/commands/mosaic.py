@@ -318,6 +318,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
         rupdic['rake'] = 0.
         rupdic['dip'] = 90.
         rupdic['strike'] = 0.
+        rupdic['rupture_file'] = None
         usgs_id = rupdic['usgs_id']
         main_cmd(usgs_id, rupture_file, rupdic, callback,
                  maximum_distance=maximum_distance,
