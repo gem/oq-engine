@@ -29,6 +29,7 @@ from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
+from openquake.hazardlib.geo.utils import SiteAssociationError
 
 U8 = numpy.uint8
 U32 = numpy.uint32
@@ -933,6 +934,9 @@ class Exposure(object):
             exp = f['exposure']
             sbg = f['assets/slice_by_gh3'][:]
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
+            if len(slices) == 0:
+                raise SiteAssociationError(
+                    'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
                 aristotle_read_assets(f, countries, start, stop)
                 for gh3, start, stop in slices)
