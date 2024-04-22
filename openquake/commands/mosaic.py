@@ -318,7 +318,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
         rupdic['rake'] = 0.
         rupdic['dip'] = 90.
         rupdic['strike'] = 0.
-        usgs_id = rupdic['rupture_usgs_id']
+        usgs_id = rupdic['usgs_id']
         main_cmd(usgs_id, rupture_file, rupdic,
                  maximum_distance, trt,
                  truncation_level, number_of_ground_motion_fields,
