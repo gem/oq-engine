@@ -728,6 +728,15 @@ def aristotle_get_trts(request):
 
 def aristotle_validate(request):
     rupture_file = request.FILES.get('rupture_file')
+    if rupture_file:
+        rupture_path = rupture_file.temporary_file_path()
+        # NOTE: by default, Django deletes all the uploaded temporary files
+        # (tracked in request._files) when the request is destroyed. We need to
+        # prevent this from happening, because the engine has to read the
+        # rupture_file from the process that runs the calculation
+        del request._files['rupture_file']
+    else:
+        rupture_path = None
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -774,7 +783,7 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return rupdic, *params.values()
+    return rupdic, rupture_path, *params.values()
 
 
 @csrf_exempt
@@ -793,18 +802,12 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupture_dict, usgs_id, maximum_distance, trt,
+    (rupture_dict, rupture_path, usgs_id, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
-    # NOTE: in the current approach, the rupture file is used to pre-populate
-    # the editable rupture fields, then it is not used below anymore. Another
-    # approach could be to disable the editable rupture fields if a rupture
-    # model xml is provided, then to pass the rupture file to
-    # get_aristotle_allparams below
-    rupture_file = None
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, rupture_file, rupture_dict,
+            usgs_id, rupture_path, rupture_dict,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,

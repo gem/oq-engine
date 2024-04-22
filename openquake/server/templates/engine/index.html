@@ -69,7 +69,7 @@
                 <!-- <input type="submit"> -->
               </div>
             </form>
-            <form id="aristotle_run_form" method="post">
+            <form id="aristotle_run_form" method="post" enctype="multipart/form-data">
               {% csrf_token %}
               <div class="aristotle_form_row">
                 <label for"lon">{{ aristotle_form_placeholders.lon }}</label>

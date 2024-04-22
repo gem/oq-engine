@@ -578,27 +578,28 @@
             $("#aristotle_run_form").submit(function (event) {
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
-                var formData = {
-                    usgs_id: $("#usgs_id").val(),
-                    lon: $("#lon").val(),
-                    lat: $("#lat").val(),
-                    dep: $("#dep").val(),
-                    mag: $("#mag").val(),
-                    rake: $("#rake").val(),
-                    dip: $("#dip").val(),
-                    strike: $("#strike").val(),
-                    maximum_distance: $("#maximum_distance").val(),
-                    trt: $('#trt').val(),
-                    truncation_level: $('#truncation_level').val(),
-                    number_of_ground_motion_fields: $('#number_of_ground_motion_fields').val(),
-                    asset_hazard_distance: $('#asset_hazard_distance').val(),
-                    ses_seed: $('#ses_seed').val()
-                };
+                var formData = new FormData();
+                formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
+                formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('lon', $("#lon").val());
+                formData.append('lat', $("#lat").val());
+                formData.append('dep', $("#dep").val());
+                formData.append('mag', $("#mag").val());
+                formData.append('rake', $("#rake").val());
+                formData.append('dip', $("#dip").val());
+                formData.append('strike', $("#strike").val());
+                formData.append('maximum_distance', $("#maximum_distance").val());
+                formData.append('trt', $('#trt').val());
+                formData.append('truncation_level', $('#truncation_level').val());
+                formData.append('number_of_ground_motion_fields', $('#number_of_ground_motion_fields').val());
+                formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
+                formData.append('ses_seed', $('#ses_seed').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",
                     data: formData,
-                    dataType: "json",
+                    processData: false,
+                    contentType: false,
                     encode: true
                 }).done(function (data) {
                     console.log(data);
