@@ -669,24 +669,25 @@ def get_gsim_lt(oqparam, trts=('*',)):
 
 def get_rupture(oqparam):
     """
-    Read the `rupture_model` XML file and by filter the site collection
+    Read the `rupture_model` XML file or the `rupture_dict` dictionary
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an hazardlib rupture
     """
-    if oqparam.rupture_dict:
+    rupture_model = oqparam.inputs.get('rupture_model')
+    if rupture_model:
+        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
+    else:  # assume rupture_dict
         r = oqparam.rupture_dict
         hypo = Point(r['lon'], r['lat'], r['dep'])
         rup = source.rupture.build_planar(
             hypo, r['mag'], r.get('rake'),
             r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
-    else:
-        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
-        rup = conv.convert_node(rup_node)
-        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
     return rup
 
 

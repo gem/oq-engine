@@ -115,6 +115,7 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         trt = trts[0]
     params = dict(
         calculation_mode='scenario_risk',
+        rupture_dict=str(rupdic),
         maximum_distance=str(maximum_distance),
         tectonic_region_type=trt,
         truncation_level=str(truncation_level),
@@ -124,8 +125,6 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         inputs=inputs)
     if rupture_file:
         inputs['rupture_model'] = rupture_file
-    else:
-        params['rupture_dict'] = str(rupdic)
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
