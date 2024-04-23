@@ -104,8 +104,8 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
+    'usgs_id': 'Rupture identifier (USGS ID or custom)',
     'rupture_file': 'Rupture model XML',
-    'usgs_id': 'USGS ID',
     'lon': 'Longitude',
     'lat': 'Latitude',
     'dep': 'Depth',
