@@ -1,16 +1,18 @@
 .. _working-with-the-dstore:
 
-Working with the dstore
-=======================
+Working with the datastore
+==========================
 
-Advanced users could find useful to work directly with the dstore*.
-The use of the dstore is consider experimental as the structure may change across versions.
-Here we document some of the most common operations for end-users.
+Advanced users could find useful to work directly with the datastore.
+The use of the datastore is consider experimental as the structure may
+change across versions.  Here we document some of the most common
+operations for end-users.
 
-Read dstore with python
------------------------
+Reading the datastore with python
+---------------------------------
 
-Read the dstore for a given calculation id and list availabe datastore keys::
+Read the datastore for a given calculation id and list
+the availabe datastore keys::
 
 	>> from openquake.commonlib.datastore import read
 	>> dstore = read(calc_id)
@@ -28,8 +30,9 @@ Extract the parameters used in the calculation::
 Reading outputs with pandas
 ---------------------------
 
-If you are a scientist familiar with Pandas, you will be happy to know that it is possible to process the engine outputs 
-with it. Here we will give a couple of examples
+If you are a scientist familiar with Pandas, you will be happy to know
+that it is possible to process the engine outputs with it. Here we
+will give a couple of examples
 
 Hazard curves
 ~~~~~~~~~~~~~
