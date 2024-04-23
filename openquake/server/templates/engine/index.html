@@ -53,42 +53,43 @@
               WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
             </h3>
             {% endif %}
-            <form id="aristotle_get_rupture_form" method="post">
+            <form id="aristotle_get_rupture_form" method="post" enctype="multipart/form-data">
               {% csrf_token %}
               <div class="aristotle_form_row">
                 <label for"usgs_id">{{ aristotle_form_placeholders.usgs_id }}</label>
                 <input class="aristotle-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ aristotle_form_placeholders.usgs_id }}" value="us6000jllz"/>
               </div>
               <div class="aristotle_form_row">
+                <label for"rupture_file">{{ aristotle_form_placeholders.rupture_file }}</label>
+                <input class="aristotle-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ aristotle_form_placeholders.rupture_file }}" >
+                <button type="button" id="clearFile">Clear File</button>
+              </div>
+              <div class="aristotle_form_row">
                 <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
                 <!-- <input type="submit"> -->
               </div>
             </form>
-            <form id="aristotle_run_form" method="post">
+            <form id="aristotle_run_form" method="post" enctype="multipart/form-data">
               {% csrf_token %}
               <div class="aristotle_form_row">
                 <label for"lon">{{ aristotle_form_placeholders.lon }}</label>
-                <input class="aristotle-input" type="text" id="lon" name="lon" placeholder="{{ aristotle_form_placeholders.lon }}"/>
+                <input class="aristotle-input" type="text" id="lon" name="lon" placeholder="{{ aristotle_form_placeholders.lon }}" disabled />
               </div>
               <div class="aristotle_form_row">
                 <label for"lat">{{ aristotle_form_placeholders.lat }}</label>
-                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}"/>
+                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}" disabled />
               </div>
               <div class="aristotle_form_row">
                 <label for"dep">{{ aristotle_form_placeholders.dep }}</label>
-                <input class="aristotle-input" type="text" id="dep" name="dep" placeholder="{{ aristotle_form_placeholders.dep }}"/>
+                <input class="aristotle-input" type="text" id="dep" name="dep" placeholder="{{ aristotle_form_placeholders.dep }}" disabled />
               </div>
               <div class="aristotle_form_row">
                 <label for"mag">{{ aristotle_form_placeholders.mag }}</label>
-                <input class="aristotle-input" type="text" id="mag" name="mag" placeholder="{{ aristotle_form_placeholders.mag }}"/>
+                <input class="aristotle-input" type="text" id="mag" name="mag" placeholder="{{ aristotle_form_placeholders.mag }}" disabled />
               </div>
               <div class="aristotle_form_row">
                 <label for"rake">{{ aristotle_form_placeholders.rake }}</label>
-                <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}"/>
-              </div>
-              <div class="aristotle_form_row">
-                <button id="aristotle_get_trts_btn" type="button" class="btn" style="margin-bottom: 5px;" disabled>Retrieve tectonic region types</button>
-                <span id='mosaic_model'/>
+                <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}" disabled />
               </div>
               <div class="aristotle_form_row">
                 <label for="trt">{{ aristotle_form_placeholders.trt }}</label>

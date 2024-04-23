@@ -199,7 +199,8 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
         raise FileNotFoundError(
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
-def get_rupture_dict(id):
+
+def download_rupture_dict(id):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
@@ -215,7 +216,7 @@ def get_rupture_dict(id):
         shakemap = products['shakemap']
     except KeyError:
         try:
-             products['finite-fault']
+            products['finite-fault']
         except KeyError:
             raise MissingLink('There is no finite-fault info for %s' % id)
         else:
@@ -233,13 +234,14 @@ def get_rupture_dict(id):
         p = ff['properties']
         rupdic = {'lon': p['longitude'], 'lat': p['latitude'],
                   'dep': p['depth'],
-                  'mag': mag, 'rake': 0., 'usgs_id': id}
+                  'mag': mag, 'rake': 0., 'usgs_id': id, 'rupture_file': None}
         return rupdic
     url = contents.get('download/rupture.json')['url']
     print('Downloading rupture.json')
     md = json.loads(urlopen(url).read())['metadata']
     return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id}
+            'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id,
+            'rupture_file': None}
 
 
 def get_array_usgs_id(kind, id):

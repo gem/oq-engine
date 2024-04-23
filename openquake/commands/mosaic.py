@@ -306,28 +306,26 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = None
-    dip = 90
-    strike = 0
     maximum_distance = 300
     truncation_level = 3
     number_of_ground_motion_fields = 10
     asset_hazard_distance = 15
     ses_seed = 42
     t0 = time.time()
-    rake = 0.
     rupture_file = None
     for i, row in pandas.read_csv(rupfname).iterrows():
         rupdic = row.to_dict()
-        usgs_id = rupdic['rupture_usgs_id']
-        main_cmd(usgs_id, rupture_file,
-                 rupdic['lon'], rupdic['lat'],
-                 rupdic['dep'], rupdic['mag'],
-                 rake, dip, strike,
-                 maximum_distance, trt,
-                 truncation_level, number_of_ground_motion_fields,
-                 asset_hazard_distance, ses_seed,
-                 callback=callback,
-                 mosaic_dir=mosaic_dir)
+        rupdic['rake'] = 0.
+        rupdic['dip'] = 90.
+        rupdic['strike'] = 0.
+        rupdic['rupture_file'] = None
+        usgs_id = rupdic['usgs_id']
+        main_cmd(usgs_id, rupture_file, rupdic, callback,
+                 maximum_distance=maximum_distance,
+                 trt=trt, truncation_level=truncation_level,
+                 number_of_ground_motion_fields=number_of_ground_motion_fields,
+                 asset_hazard_distance=asset_hazard_distance,
+                 ses_seed=ses_seed, mosaic_dir=mosaic_dir)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60

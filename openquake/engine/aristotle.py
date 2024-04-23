@@ -25,7 +25,7 @@ import logging
 import numpy
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
@@ -73,36 +73,43 @@ def trivial_callback(
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
-def get_aristotle_allparams(
-        usgs_id, lon, lat, dep, mag, rake, dip, strike, rupture_file,
-        maximum_distance, trt,
-        truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, mosaic_dir):
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
-    # there use cases: 1) only usgs_id is passed;
-    #                  2) rupdic params are passed (including lon)
-    #                  3) rupture_file is passed
-    inputs = {'exposure': [expo],
-              'site_model': [smodel],
-              'job_ini': '<in-memory>'}
+def get_rupture_dict(dic):
+    """
+    :param dic: a dictionary with keys usgs_id and rupture_file
+    :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
+    """
+    usgs_id = dic['usgs_id']
+    rupture_file = dic['rupture_file']
     if rupture_file:
         [rup_node] = nrml.read(rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'
-        inputs['rupture_model'] = rupture_file
         hp = rup.hypocenter
         rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
                       mag=rup.mag, rake=rup.rake,
                       strike=rup.surface.get_strike(),
-                      dip=rup.surface.get_dip(), usgs_id=usgs_id)
-    elif lon is None:
-        rupdic = get_rupture_dict(usgs_id)
+                      dip=rup.surface.get_dip(),
+                      usgs_id=usgs_id,
+                      rupture_file=rupture_file)
     else:
-        rupdic = dict(
-            lon=lon, lat=lat, dep=dep, mag=mag,
-            rake=rake, dip=dip, strike=strike, usgs_id=usgs_id)
+        rupdic = download_rupture_dict(usgs_id)
+    return rupdic
+
+
+def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
+                            truncation_level, number_of_ground_motion_fields,
+                            asset_hazard_distance, ses_seed, mosaic_dir):
+    """
+    :returns: a list of dictionaries suitable for an Aristotle calculation
+    """
+    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
+    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
+    inputs = {'exposure': [expo],
+              'site_model': [smodel],
+              'job_ini': '<in-memory>'}
+    rupdic = get_rupture_dict(rupture_dict)
+    rupture_file = rupdic.pop('rupture_file')
     if trt is None:
         trts, _ = get_trts_around(rupdic, mosaic_dir)
         trt = trts[0]
@@ -116,7 +123,8 @@ def get_aristotle_allparams(
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
-
+    if rupture_file:
+        inputs['rupture_model'] = rupture_file
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
@@ -130,18 +138,15 @@ def get_aristotle_allparams(
         countries_per_tmap = ', '.join(
             [country for country in key.split('_') if country in countries])
         params['description'] = (
-            f'{usgs_id} ({rupdic["lat"]}, {rupdic["lon"]}) M{rupdic["mag"]}'
-            f' {countries_per_tmap}')
+            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+            f' M{rupdic["mag"]} {countries_per_tmap}')
         allparams.append(params.copy())
     return allparams
 
 
-def main_web(
-        allparams, jobctxs, maximum_distance='300', trt=None,
-        truncation_level='3', number_of_ground_motion_fields='10',
-        asset_hazard_distance='15', ses_seed='42',
-        job_owner_email=None, outputs_uri=None,
-        callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
+def main_web(allparams, jobctxs,
+             job_owner_email=None, outputs_uri=None,
+             callback=trivial_callback):
     """
     This script is meant to be called from the WebUI
     """
@@ -155,20 +160,20 @@ def main_web(
             callback(job.calc_id, params, job_owner_email, outputs_uri)
 
 
-def main_cmd(
-        usgs_id, rupture_file=None, lon=None, lat=None, dep=None, mag=None,
-        rake='0', dip='90', strike='0',
-        maximum_distance='300', trt=None, truncation_level='3',
-        number_of_ground_motion_fields='10', asset_hazard_distance='15',
-        ses_seed='42',
-        callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
+def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
+             callback=trivial_callback, *,
+             maximum_distance='300', trt=None, truncation_level='3',
+             number_of_ground_motion_fields='10', asset_hazard_distance='15',
+             ses_seed='42', mosaic_dir=config.directory.mosaic_dir):
     """
     This script is meant to be called from the command-line
     """
+    if rupture_dict is None:
+        rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike,
-            rupture_file, maximum_distance, trt, truncation_level,
+            rupture_dict,
+            maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, mosaic_dir)
     except Exception as exc:
@@ -186,15 +191,11 @@ def main_cmd(
         else:
             callback(job.calc_id, params, exc=None)
 
-main_cmd.usgs_id = 'ShakeMap ID'
-main_cmd.rupture_file = 'XML file with the rupture model'
-main_cmd.lon = 'Longitude'
-main_cmd.lat = 'Latitude'
-main_cmd.dep = 'Dep'
-main_cmd.mag = 'Magnitude'
-main_cmd.rake = 'Rake'
-main_cmd.dip = 'Dip'
-main_cmd.strike = 'Strike'
+
+main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
+main_cmd.rupture_file = 'XML file with the rupture model (optional)'
+main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
+main_cmd.callback = ''
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.trt = 'Tectonic region type'
 main_cmd.truncation_level = 'Truncation level'

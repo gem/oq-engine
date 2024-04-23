@@ -422,8 +422,9 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
+    hypo = rup.hypocenter
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
     idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
@@ -486,9 +487,9 @@ def get_site_model(oqparam, h5=None):
 
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
-        rup = oqparam.rupture_dict
+        rup = get_rupture(oqparam)
         # global site model close to the rupture
-        dist = oqparam.maximum_distance('*')(rup['mag'])
+        dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
     #req_site_params = oqparam.req_site_params
@@ -668,24 +669,25 @@ def get_gsim_lt(oqparam, trts=('*',)):
 
 def get_rupture(oqparam):
     """
-    Read the `rupture_model` XML file and by filter the site collection
+    Read the `rupture_model` XML file or the `rupture_dict` dictionary
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an hazardlib rupture
     """
-    if oqparam.rupture_dict:
+    rupture_model = oqparam.inputs.get('rupture_model')
+    if rupture_model:
+        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
+    else:  # assume rupture_dict
         r = oqparam.rupture_dict
         hypo = Point(r['lon'], r['lat'], r['dep'])
         rup = source.rupture.build_planar(
             hypo, r['mag'], r.get('rake'),
             r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
-    else:
-        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
-        rup = conv.convert_node(rup_node)
-        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
     return rup
 
 

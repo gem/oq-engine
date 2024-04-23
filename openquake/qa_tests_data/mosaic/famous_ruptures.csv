@@ -1,4 +1,4 @@
-rupture_usgs_id,lon,lat,dep,mag
+usgs_id,lon,lat,dep,mag
 us7000kp2i,-73.5111,4.4177,10.0,6.1
 us7000f93v,-99.78,16.82,10.0,7.1
 us6000f65h,-73.4822,18.4335,10.0,7.2

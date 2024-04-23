@@ -42,9 +42,16 @@ def _long_funcs(module, maxlen):
     tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
-            numlines = node.end_lineno - node.lineno + 1
+            dotname = '%s.%s' % (module.__name__, node.name)
+            args = node.args.args
+            if len(args) > 16:
+                raise SyntaxError('%s has more than 16 arguments: %s'
+                                  % (dotname, [a.arg for a in args]))
+            doc = ast.get_docstring(node)
+            doclines = 0 if doc is None else doc.count('\n') + 1
+            numlines = node.end_lineno - node.lineno - doclines
             if numlines > maxlen:
-                out.append((module.__name__ + '.' + node.name, numlines))
+                out.append((dotname, numlines))
     return out
 
 
@@ -168,8 +175,14 @@ def test_csv(OVERWRITE=False):
 
 
 def test_forbid_long_funcs():
-    long_funcs = get_long_funcs(['openquake.hazardlib',
+    long_funcs = get_long_funcs(['openquake.baselib',
+                                 'openquake.hazardlib',
                                  'openquake.commonlib',
-                                 ], 100)
+                                 'openquake.risklib',
+                                 'openquake.calculators',
+                                 'openquake.engine',
+                                 'openquake.hmtk',
+                                 'openquake.sep',
+                                 ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)

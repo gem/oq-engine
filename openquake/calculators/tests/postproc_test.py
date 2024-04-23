@@ -36,6 +36,73 @@ PLOT = False
 
 aae = np.testing.assert_almost_equal
 
+        
+def _test_indirect(ctx, cmaker, imts, crosscorr, mrd, c1, c2, afo1, afo2):
+    # Bin edges
+    lefts = [-3, -2, 1, 2]
+    numb = [80, 80, 10]
+    be_mea = get_uneven_bins_edges(lefts, numb)
+    be_sig = np.arange(0.50, 0.90, 0.01)
+
+    # Compute the MRD
+    mon = Monitor('multivariate')
+    mrdi = calc_mean_rate_dist(ctx, 1, cmaker, crosscorr,
+                               imts[0], imts[1], be_mea, be_sig, mon)
+
+    # Compute marginal
+    marg1 = mrdi.sum(axis=0)
+    marg2 = mrdi.sum(axis=1)
+
+    marg1 = np.average(marg1, axis=2, weights=[0.5, 0.5])[:, 0]
+    marg2 = np.average(marg2, axis=2, weights=[0.5, 0.5])[:, 0]
+    mrdi = np.average(mrdi, axis=3, weights=[0.5, 0.5])[:, :, 0]
+
+    c1_mask = (c1 > 1e-5) & (c1 < 1e-2)
+    c2_mask = (c2 > 1e-5) & (c2 < 1e-2)
+
+    # Test - Note that in this case we restain the test to the part of
+    # the hazard curve which has better coverage since the marginals
+    # computed using the indirect methos show a slight underestimation of
+    # the rate of occurrence
+    np.testing.assert_almost_equal(marg1[c1_mask], afo1[c1_mask], decimal=3)
+    np.testing.assert_almost_equal(marg2[c2_mask], afo2[c2_mask], decimal=3)
+
+    if PLOT:
+        min_afo = np.min(afo1[afo1>1e-10])
+        min_afo = np.min([np.min(afo2[afo2>1e-10]), min_afo])
+        max_afo = np.max(afo1)
+        max_afo = np.max([np.max(afo2), max_afo])
+
+        plt.title('Indirect method test')
+        plt.plot(c1, afo1, label=f'HC {imts[0]}')
+        plt.plot(c1, marg1, 'o', mfc='None')
+        plt.plot(c2, afo2, label=f'HC {imts[1]}')
+        plt.plot(c2, marg2, 'o', mfc='None', )
+        plt.xlabel('Spectral Acceleration, S$_a$ [g]')
+        plt.ylabel('Annual Rate of Occurrence')
+        plt.legend()
+        plt.grid(which='minor', ls=':', color='lightgrey')
+        plt.grid(which='major', ls='--', color='grey')
+        plt.ylim([min_afo, max_afo])
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.show()
+
+    ## test_compare
+    be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
+    be_sig = np.arange(0.50, 0.70, 0.01)
+    if PLOT:
+        fig, axs = plt.subplots(1, 1)
+        fig.set_size_inches(9, 6)
+        plt1 = plt.contourf(np.log(c1), np.log(c2), mrd[:, :])
+        _ = plt.contour(np.log(c1), np.log(c2), mrdi[:, :],
+                        colors='orange', linestyles='dashed')
+        _ = plt.colorbar(mappable=plt1)
+        _ = plt.title('MRD')
+        axs.set_xlabel(f'{imts[0]}')
+        axs.set_ylabel(f'{imts[1]}')
+        plt.show()
+
 
 class PostProcTestCase(CalculatorTestCase):
 
@@ -121,72 +188,8 @@ class PostProcTestCase(CalculatorTestCase):
             plt.yscale('log')
             plt.show()
 
-        ## test_indirect
-
-        # Bin edges
-        lefts = [-3, -2, 1, 2]
-        numb = [80, 80, 10]
-        be_mea = get_uneven_bins_edges(lefts, numb)
-        be_sig = np.arange(0.50, 0.90, 0.01)
-
-        # Compute the MRD
-        mon = Monitor('multivariate')
-        mrdi = calc_mean_rate_dist(ctx, 1, cmaker, self.crosscorr,
-                                   imts[0], imts[1], be_mea, be_sig, mon)
-
-        # Compute marginal
-        marg1 = mrdi.sum(axis=0)
-        marg2 = mrdi.sum(axis=1)
-
-        marg1 = np.average(marg1, axis=2, weights=[0.5, 0.5])[:, 0]
-        marg2 = np.average(marg2, axis=2, weights=[0.5, 0.5])[:, 0]
-        mrdi = np.average(mrdi, axis=3, weights=[0.5, 0.5])[:, :, 0]
-
-        c1_mask = (c1 > 1e-5) & (c1 < 1e-2)
-        c2_mask = (c2 > 1e-5) & (c2 < 1e-2)
-
-        # Test - Note that in this case we restain the test to the part of
-        # the hazard curve which has better coverage since the marginals
-        # computed using the indirect methos show a slight underestimation of
-        # the rate of occurrence
-        np.testing.assert_almost_equal(marg1[c1_mask], afo1[c1_mask], decimal=3)
-        np.testing.assert_almost_equal(marg2[c2_mask], afo2[c2_mask], decimal=3)
-
-        if PLOT:
-            min_afo = np.min(afo1[afo1>1e-10])
-            min_afo = np.min([np.min(afo2[afo2>1e-10]), min_afo])
-            max_afo = np.max(afo1)
-            max_afo = np.max([np.max(afo2), max_afo])
-
-            plt.title('Indirect method test')
-            plt.plot(c1, afo1, label=f'HC {imts[0]}')
-            plt.plot(c1, marg1, 'o', mfc='None')
-            plt.plot(c2, afo2, label=f'HC {imts[1]}')
-            plt.plot(c2, marg2, 'o', mfc='None', )
-            plt.xlabel('Spectral Acceleration, S$_a$ [g]')
-            plt.ylabel('Annual Rate of Occurrence')
-            plt.legend()
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.ylim([min_afo, max_afo])
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.show()
-
-        ## test_compare
-        be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
-        be_sig = np.arange(0.50, 0.70, 0.01)
-        if PLOT:
-            fig, axs = plt.subplots(1, 1)
-            fig.set_size_inches(9, 6)
-            plt1 = plt.contourf(np.log(c1), np.log(c2), mrd[:, :])
-            _ = plt.contour(np.log(c1), np.log(c2), mrdi[:, :],
-                            colors='orange', linestyles='dashed')
-            _ = plt.colorbar(mappable=plt1)
-            _ = plt.title('MRD')
-            axs.set_xlabel(f'{imts[0]}')
-            axs.set_ylabel(f'{imts[1]}')
-            plt.show()
+        _test_indirect(ctx, cmaker, imts, self.crosscorr,
+                       mrd, c1, c2, afo1, afo2)
 
     def test_rtgm(self):
         self.run_calc(case_rtgm.__file__, 'job.ini')
