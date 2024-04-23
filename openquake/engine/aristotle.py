@@ -109,15 +109,12 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
               'site_model': [smodel],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict)
-    rupture_file = rupdic['rupture_file']
-    if rupture_file:
-        inputs['rupture_model'] = rupture_file
+    rupture_file = rupdic.pop('rupture_file')
     if trt is None:
         trts, _ = get_trts_around(rupdic, mosaic_dir)
         trt = trts[0]
     params = dict(
         calculation_mode='scenario_risk',
-        rupture_dict=str(rupdic),
         maximum_distance=str(maximum_distance),
         tectonic_region_type=trt,
         truncation_level=str(truncation_level),
@@ -125,7 +122,10 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
-
+    if rupture_file:
+        inputs['rupture_model'] = rupture_file
+    else:
+        params['rupture_dict'] = str(rupdic)
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
