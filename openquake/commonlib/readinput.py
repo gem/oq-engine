@@ -422,8 +422,9 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
+    hypo = rup.hypocenter
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
     idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
@@ -486,9 +487,9 @@ def get_site_model(oqparam, h5=None):
 
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
-        rup = oqparam.rupture_dict
+        rup = get_rupture(oqparam)
         # global site model close to the rupture
-        dist = oqparam.maximum_distance('*')(rup['mag'])
+        dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
     #req_site_params = oqparam.req_site_params

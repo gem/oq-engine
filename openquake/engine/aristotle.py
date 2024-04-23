@@ -193,7 +193,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
             callback(job.calc_id, params, exc=None)
 
 
-main_cmd.usgs_id = 'ShakeMap ID'
+main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
 main_cmd.callback = ''
