@@ -92,6 +92,8 @@ def get_rupture_dict(dic):
                       dip=rup.surface.get_dip(),
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
+    elif 'lon' in dic:  # when called from `oq mosaic aristotle`
+        rupdic = dic
     else:
         rupdic = download_rupture_dict(usgs_id)
     return rupdic
@@ -172,8 +174,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
         allparams = get_aristotle_allparams(
-            rupture_dict,
-            maximum_distance, trt, truncation_level,
+            rupture_dict, maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, mosaic_dir)
     except Exception as exc:
