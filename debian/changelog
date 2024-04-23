@@ -12,6 +12,8 @@
     means
 
   [Michele Simionato, Paolo Tormene]
+  * Extended the engine and the WebUI to accept a rupture_file
+    in the contexts of the Aristotle project
   * Extended the engine and the WebUI to run scenario_risk calculations
     from USGS ruptures in the contexts of the Aristotle project
 

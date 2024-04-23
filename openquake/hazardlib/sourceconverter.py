@@ -1515,6 +1515,8 @@ class RowConverter(SourceConverter):
         elif kind == 'planarSurface':
             geom = '3D MultiPolygon'
             coords = [_planar(surface) for surface in node.surface]
+        else:
+            raise NotImplementedError(kind)
         return Row(
             node['id'],
             node['name'],
