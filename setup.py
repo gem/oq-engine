@@ -82,7 +82,15 @@ extras_require = {
         'silx',
         'sphinx==6.2',
         'sphinx-theme',
+        'sphinx_design',
+        'sphinxcontrib.images',
+        'sphinxcontrib.youtube',
+        'sphinx-rtd-theme',
+        'sphinx_copybutton',
         'pydata-sphinx-theme',
+        'pydata_sphinx_theme',
+        'myst-parser',
+        'pygments-csv-lexer',
     ]
 }
 
