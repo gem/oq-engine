@@ -1,10 +1,10 @@
 ## Coding Guidelines
 
 If you want to contribute to OpenQuake (for instance with a new GMPE) you
-must install the engine in [development mode](installing/development.md)
+must install the engine in [development mode](../getting-started/installation-instructions/development.md)
 and open a pull request towards the [engine repository](https://github.com/gem/oq-engine/). You also need to [update the changelog](updating-the-changelog.md).
 Notice that the code you contribute will be released under the
-[GNU Affero General Public License v3.0](../LICENSE).
+[GNU Affero General Public License v3.0](../../LICENSE).
 
 **Code Reviews**
 
