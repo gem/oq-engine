@@ -346,7 +346,7 @@ jobs:
               echo "$ddown_doc" > dot_ddown_doc.json
 
           fi
-          # set +x
+          set +x
 
           if [ "$DOCS_SSH" ]; then
               gpg --version
