@@ -373,6 +373,7 @@ jobs:
               echo "SKIP: publish dropdown version descriptions"
           fi
 
+          sudo rm /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
 
           echo "Make OpenQuake Manual (HTML and PDF)"
