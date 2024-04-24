@@ -24,7 +24,8 @@ release = "v1.0.0"
 try:
     import subprocess
     import re
-    vcs_branch = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
+    vcs_branch = subprocess.run(
+        ['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
     vcs_branch = vcs_branch.stdout.decode('utf-8').rstrip()
     it_is_master = False
     if vcs_branch == 'master' or vcs_branch == 'vers-adv-man2':
@@ -66,6 +67,9 @@ rst_epilog = """
 extensions = []
 
 templates_path = ["_templates"]
+# NOTE: whats-new.md is a placeholder that will be renamed to whats-new-X.Y.md,
+# so it is not in any toc of the documentation and we need to exclude it in
+# order to avoid a sphinx warning while building the documentation
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store",
                     "release-notes/whats-new.md"]
 
@@ -92,8 +96,10 @@ html_theme_options = {
     "navbar_start": ["navbar-logo", "version-switcher"],
     "switcher": {
         "json_url": json_url_path,
-#        "version_match": "development" if it_is_master is True else '.'.join(version.split('.')[0:2])
-         "version_match": "master"
+        # "version_match": (
+        #     "development" if it_is_master is True else '.'.join(
+        #         version.split('.')[0:2])
+        "version_match": "master"
     },
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
