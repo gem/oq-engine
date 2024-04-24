@@ -92,7 +92,7 @@ like the following for the realizations:
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :name: lst:output_disagg_rlzs_Mag
 
       #,,,,,"generated_by='OpenQuake engine 3.20.0-git41d16a6e0a'...
@@ -112,7 +112,7 @@ The statistical exporter will produce the following for the means:
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :name: lst:output_disagg_mean_Mag
 
       ,,,,"generated_by='OpenQuake engine 3.20.0-git41d16a6e0a'...
@@ -139,7 +139,7 @@ For instance for the realization magnitude output you will get
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :name: lst:output_disagg_rlzs_traditional_Mag
 
       #,,,,,"generated_by='OpenQuake engine 3.20.0-git41d16a6e0a'...

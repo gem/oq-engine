@@ -81,7 +81,7 @@ give the values for each site.
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :number-lines:
       :name: lst:output_hazard_map_csv
 
@@ -93,7 +93,7 @@ give the values for each site.
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :number-lines:
       :name: lst:output_uhs
 
