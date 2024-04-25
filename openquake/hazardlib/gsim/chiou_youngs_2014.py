@@ -288,6 +288,9 @@ def get_linear_site_term(clsname, C, ctx):
 
 
 def get_region(clsname):
+    """
+    Returns the region parameter
+    """
     if clsname.endswith("Italy"):
         return "ITA"
     elif clsname.endswith("Japan"):
@@ -299,8 +302,10 @@ def get_region(clsname):
     
     
 def _get_delta_cm(conf, imt):
-    # See equation A19 in Boore et al. (2022)
-
+    """
+    Return the delta_cm parameter as defined by equation A19 in Boore et al.
+    (2022) for the host-to-target region source-scaling adjustment. 
+    """
     # If the stress parameters are not defined at the instantiation level, the
     # conf dictionary does not contain the source_function_table
     source_function_table = conf.get('source_function_table', None)
@@ -324,7 +329,8 @@ def _get_delta_cm(conf, imt):
 
 def get_delta_c1(rrup, imt, mag):
     """
-    Return the delta_c1 parameter as proposed by Boore et al. (2022)
+    Return the delta_c1 long-period adjustment parameter as defined by equation
+    2 of Boore et al.(2022).
     """
     # Initialise output
     delta_c1 = np.zeros_like(mag)
@@ -360,9 +366,8 @@ def get_delta_c1(rrup, imt, mag):
 def get_ln_y_ref(clsname, C, ctx, conf):
     """
     Returns the ground motion on the reference rock, described fully by
-    Equation 11 in CY14eqs (page 1131).
+    Equation 11 in CY14 (page 1131).
     """
-
     # Read configuration parameters
     imt = conf.get('imt')
     add_delta_c1 = conf.get('add_delta_c1')
@@ -509,7 +514,6 @@ def get_mean_stddevs(name, C, ctx, imt, conf):
     """
     Return mean and standard deviation values
     """
-
     # Get ground motion on reference rock
     ln_y_ref = get_ln_y_ref(name, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
@@ -772,7 +776,7 @@ def get_mean_stddevs_inv(name, C, ctx):
     Return mean and standard deviation values
     """
     conf = {'use_hw': True}
-
+    
     # Get ground motion on reference rock. Note that in this case the hanging
     # wall correction is turned off
     ln_y_ref = get_ln_y_ref(name, C, ctx, conf)
@@ -789,7 +793,7 @@ def get_mean_stddevs_inv(name, C, ctx):
     # Get linear amplification term
     f_lin = get_linear_site_term(name, C, ctx)
 
-    # Set nonlinear amplification term
+    # Get nonlinear amplification term
     f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
     # Add the site amplification (only linear component)
@@ -805,12 +809,18 @@ def get_mean_stddevs_inv(name, C, ctx):
 class ChiouYoungs2014Inversion(ChiouYoungs2014):
     """
     Implements the version of the CY14 model as described in the Stafford et
-    al. (2022) paper publiched on EQS.
+    al. (2022).
+    
+    Stafford P. J., Boore D. M., Youngs R. R., Bommer J. J. (2022), Host-Region
+    Parameters for an Adjustable Model for Crustal Earthquakes to Facilitate
+    the Implementation of the Backbone Approach to Building Ground-Motion Logic
+    Trees in Probabilistic Seismic Hazard Analysis, Earthquake Spectra, 38(2),
+    917 - 949, DOI:10.1177/87552930211063221
     """
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Overriding the original `compute` method
+        Overriding the original `compute` method (we use get_mean_stddevs_inv)
+        instead of get_mean_stddevs)
         """
         name = self.__class__.__name__
 
