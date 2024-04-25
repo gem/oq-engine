@@ -20,7 +20,8 @@ import numpy as np
 import copy
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect,
-    ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
+    ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan,
+    ChiouYoungs2014Inversion)
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     _get_delta_cm, get_magnitude_scaling)
@@ -199,14 +200,18 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
         np.testing.assert_allclose(gmf, [[2.2739506], [3.3840923]])
 
 
-class BooreEtAl2022StressParameter(BaseGSIMTestCase):
-
-    def test_stress_adjustment(self):
-        
+class BooreEtAl2022Adjustments(BaseGSIMTestCase):
+    """
+    Test the adjustments to CY14 as proposed in Boore et al. (2022).
+    """
+    def test_stress_and_gamma_adjustments(self):
+        """
+        Test the stres adjustment and the gamma adjustment.
+        """
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
         gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120)
-
+        
         # Settings
         imt_str = 'SA(0.1)'
         imt = from_string('SA(0.1)')
@@ -239,7 +244,7 @@ class BooreEtAl2022StressParameter(BaseGSIMTestCase):
         msg += f"than the expected one {expected_delta_cm}"
         self.assertAlmostEqual(delta_cm, expected_delta_cm, msg=msg)
 
-        # Test scaling term
+        # Test stress scaling term
         C = gmm_ori.COEFFS[imt]
         scalf_adj = get_magnitude_scaling(C, ctxs_adj[0].mag, delta_cm)
         expected_scalf_adj = np.array([0.665226, 0.665226])
@@ -247,3 +252,7 @@ class BooreEtAl2022StressParameter(BaseGSIMTestCase):
         msg += f"than the expected one {expected_scalf_adj}"
         np.testing.assert_almost_equal(
             scalf_adj, expected_scalf_adj, err_msg=msg)
+        
+        #TODO
+        # Gamma adjustment once implemented in cy14
+        # Expected vs predicted (here on in qa tests?)
