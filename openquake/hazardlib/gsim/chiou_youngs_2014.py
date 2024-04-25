@@ -581,7 +581,6 @@ class ChiouYoungs2014(GMPE):
     def __init__(self, sigma_mu_epsilon=0.0, use_hw=True, add_delta_c1=False,
                  alpha_nm=1.0, stress_par_host=None, stress_par_target=None,
                  delta_gamma_tab=None):
-        self.sigma_mu_epsilon = sigma_mu_epsilon
         super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
                          use_hw=use_hw,
                          add_delta_c1=add_delta_c1,
@@ -589,6 +588,7 @@ class ChiouYoungs2014(GMPE):
                          stress_par_host=stress_par_host,
                          stress_par_target=stress_par_target,
                          delta_gamma_tab=delta_gamma_tab)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
 
         # Adding into the conf dictionary
         self.conf = {}
