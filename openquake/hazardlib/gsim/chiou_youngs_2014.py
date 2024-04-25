@@ -580,7 +580,7 @@ class ChiouYoungs2014(GMPE):
         
     def __init__(self, sigma_mu_epsilon=0.0, use_hw=True, add_delta_c1=False,
                  alpha_nm=1.0, stress_par_host=None, stress_par_target=None,
-                 delta_gamma_tab=None, **kwargs):
+                 delta_gamma_tab=None):
         self.sigma_mu_epsilon = sigma_mu_epsilon
         super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
                          use_hw=use_hw,
@@ -588,8 +588,7 @@ class ChiouYoungs2014(GMPE):
                          alpha_nm=alpha_nm,
                          stress_par_host=stress_par_host,
                          stress_par_target=stress_par_target,
-                         delta_gamma_tab=delta_gamma_tab,
-                         **kwargs)
+                         delta_gamma_tab=delta_gamma_tab)
 
         # Adding into the conf dictionary
         self.conf = {}
@@ -649,6 +648,7 @@ class ChiouYoungs2014(GMPE):
             self.conf['imt'] = imt
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
@@ -659,6 +659,7 @@ class ChiouYoungs2014(GMPE):
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
