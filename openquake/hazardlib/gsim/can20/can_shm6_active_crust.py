@@ -167,7 +167,7 @@ def get_mean_stddevs_cy14(name, C, ctx):
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = CY14.get_ln_y_ref(name, C, ctx)
+    ln_y_ref = CY14.get_ln_y_ref(name, C, ctx, conf={})
     y_ref = np.exp(ln_y_ref)
 
     # Set basin depth to 0
