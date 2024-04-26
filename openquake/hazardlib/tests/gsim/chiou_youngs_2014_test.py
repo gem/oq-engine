@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import numpy as np
 import copy
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
@@ -24,7 +25,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     ChiouYoungs2014Inversion)
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
-    _get_delta_cm, get_magnitude_scaling)
+    _get_delta_cm, get_magnitude_scaling, _get_delta_g)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.calc.gmf import ground_motion_fields
@@ -37,6 +38,9 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
+
+path_adj_table = os.path.join(os.path.dirname(__file__), '..', '..', 'gsim',
+                              'chiou_youngs_2014_path_adjustment_table.txt')
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
@@ -204,13 +208,20 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
     """
     Test the adjustments to CY14 as proposed in Boore et al. (2022).
     """
-    def test_stress_and_gamma_adjustments(self):
+    def test_stress_and_path_adjustments(self):
         """
-        Test the stres adjustment and the gamma adjustment.
+        Test the stress adjustment and the path adjustment.
+        
+        Note the path adjustment table provided in openquake.hazardlib.gsims
+        corresponds to the values provided in Table 2 for the central branch
+        (branch 3). The computation of adjustments for other periods requires
+        undertaking of the process detailed in pp. 3071 to pp. 3073.
         """
+        
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
-        gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120)
+        gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120,
+                                  delta_gamma_tab=path_adj_table)
         
         # Settings
         imt_str = 'SA(0.1)'
@@ -239,7 +250,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
 
         # Test delta_cm term
         delta_cm = _get_delta_cm(gmm_adj.conf, imt)
-        expected_delta_cm = 0.149652555  # from hand-made calc
+        expected_delta_cm = 0.149652555  # From hand-made calc
         msg = f"The value of the computed delta_cm {delta_cm} is different \n"
         msg += f"than the expected one {expected_delta_cm}"
         self.assertAlmostEqual(delta_cm, expected_delta_cm, msg=msg)
@@ -252,7 +263,20 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         msg += f"than the expected one {expected_scalf_adj}"
         np.testing.assert_almost_equal(
             scalf_adj, expected_scalf_adj, err_msg=msg)
-        
+
+        # Test delta_g term
+        path_adj = _get_delta_g(gmm_adj.conf['delta_gamma_tab'], ctxs_adj, imt)
+        expected_path_adj = np.array([-0.0065052, -0.0065052]) # Value is
+                                                               # obtained from
+                                                               # central branch
+                                                               # (branch 3) of
+                                                               # table 2 for
+                                                               # SA(0.1) when
+                                                               # using eq 13
+        msg = f"The value of the path adjustment {path_adj} is different \n"
+        msg += f"than the expected one {expected_path_adj}"
+        np.testing.assert_almost_equal(
+            path_adj, expected_path_adj, err_msg=msg)
+    
         #TODO
-        # Gamma adjustment once implemented in cy14
         # Expected vs predicted (here on in qa tests?)

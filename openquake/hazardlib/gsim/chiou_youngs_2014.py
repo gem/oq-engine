@@ -37,7 +37,6 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
-
 def _get_centered_cdpp(clsname, ctx):
     """
     Returns the centred dpp term (zero by default)
@@ -189,7 +188,7 @@ get_far_field_distance_scaling = CallableDict()
 
 
 @get_far_field_distance_scaling.add("CAL")
-def get_far_field_distance_scaling_1(region, C, mag, rrup):
+def get_far_field_distance_scaling_1(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for California and other regions
@@ -199,11 +198,12 @@ def get_far_field_distance_scaling_1(region, C, mag, rrup):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
     # Get the magnitude dependent term
     f_rm = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
+    f_rm = f_rm + delta_g # Adjust path if delta_g from Boore et al. (2022)
     return f_r + f_rm * rrup
 
 
 @get_far_field_distance_scaling.add("JPN")
-def get_far_field_distance_scaling_2(region, C, mag, rrup):
+def get_far_field_distance_scaling_2(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for Japan
@@ -217,11 +217,13 @@ def get_far_field_distance_scaling_2(region, C, mag, rrup):
             np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
     # Apply adjustment factor for Japan
     f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
+    f_rm = f_rm + delta_g # Adjust path if delta_g from Boore et al. (2022)
+    
     return f_r + f_rm
 
 
 @get_far_field_distance_scaling.add("ITA")
-def get_far_field_distance_scaling_3(region, C, mag, rrup):
+def get_far_field_distance_scaling_3(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for Italy
@@ -235,11 +237,12 @@ def get_far_field_distance_scaling_3(region, C, mag, rrup):
             np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
     # Apply adjustment factor for Italy
     f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
+    f_rm = f_rm + delta_g # Adjust path if delta_g from Boore et al. (2022)
     return f_r + f_rm
 
 
 @get_far_field_distance_scaling.add("WEN")
-def get_far_field_distance_scaling_4(region, C, mag, rrup):
+def get_far_field_distance_scaling_4(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for Wenchuan
@@ -251,6 +254,8 @@ def get_far_field_distance_scaling_4(region, C, mag, rrup):
     # Get the magnitude dependent term
     f_rm = (C["cg1"] + C["cg2"] /
             np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    # Adjust path if delta_g from Boore et al. (2022)
+    f_rm = f_rm + delta_g 
     # Apply adjustment factor for Wenchuan
     return f_r + (f_rm * C["gwn"])
 
@@ -301,32 +306,6 @@ def get_region(clsname):
         return "CAL"
     
     
-def _get_delta_cm(conf, imt):
-    """
-    Return the delta_cm parameter as defined by equation A19 in Boore et al.
-    (2022) for the host-to-target region source-scaling adjustment. 
-    """
-    # If the stress parameters are not defined at the instantiation level, the
-    # conf dictionary does not contain the source_function_table
-    source_function_table = conf.get('source_function_table', None)
-
-    # Get stress params
-    stress_par_host = conf.get('stress_par_host')
-    stress_par_targ = conf.get('stress_par_target')
-    C = source_function_table[imt]
-
-    # Compute chi
-    if stress_par_targ > stress_par_host:
-        chi = C['chi_delta_pos']
-    else:
-        chi = C['chi_delta_neg']
-
-    # Compute delta_cm
-    delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
-
-    return delta_cm
-
-
 def get_delta_c1(rrup, imt, mag):
     """
     Return the delta_c1 long-period adjustment parameter as defined by equation
@@ -361,7 +340,48 @@ def get_delta_c1(rrup, imt, mag):
                 np.log(float(imt.period)/tb[idx]), 0)**2
 
     return delta_c1
+    
 
+def _get_delta_cm(conf, imt):
+    """
+    Return the delta_cm parameter as defined by equation A19 in Boore et al.
+    (2022) for the host-to-target region source-scaling adjustment. 
+    """
+    # If the stress parameters are not defined at the instantiation level, the
+    # conf dictionary does not contain the source_function_table
+    source_function_table = conf.get('source_function_table', None)
+    
+    # Get stress params
+    stress_par_host = conf.get('stress_par_host')
+    stress_par_targ = conf.get('stress_par_target')
+    C = source_function_table[imt]
+
+    # Compute chi
+    if stress_par_targ > stress_par_host:
+        chi = C['chi_delta_pos']
+    else:
+        chi = C['chi_delta_neg']
+
+    # Compute delta_cm
+    delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
+
+    return delta_cm
+
+
+def _get_delta_g(delta_gamma_tab, ctx, imt):
+    """
+    Returns the delta_g parameter as defined by equation 13 in Boore et al.
+    (2022) for the host-to-target region path adjustment
+    """
+    # Get coefficients for imt
+    C = delta_gamma_tab[imt]
+    
+    # Compute delta_g (magnitude-dependent)
+    delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
+        ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
+    
+    return delta_g
+    
 
 def get_ln_y_ref(clsname, C, ctx, conf):
     """
@@ -374,17 +394,19 @@ def get_ln_y_ref(clsname, C, ctx, conf):
     use_hw = conf.get('use_hw')
     alpha_nm = conf.get('alpha_nm')
 
-    # TODO not yet used
-    delta_gamma_tab = conf.get('delta_gamma_tab')
-
     # Get the region name from the name of the class
     region = get_region(clsname)
     delta_ztor = _get_centered_ztor(ctx)
 
-    # Delta CM is the correction factor for stress
+    # If stress correction required get delta cm
     delta_cm = 0
     if 'source_function_table' in conf:
         delta_cm = _get_delta_cm(conf, imt)
+
+    # If path correction required get delta g
+    delta_g = 0
+    if 'delta_gamma_tab' in conf:
+        delta_g = _get_delta_g(conf['delta_gamma_tab'], ctx, imt)
 
     # Compute median ground motion:
     # - The `get_magnitude_scaling` function when `delta_cm` ≠ 0 applies a
@@ -394,11 +416,14 @@ def get_ln_y_ref(clsname, C, ctx, conf):
     # - The `get_source_scaling_terms` function applies a correction to
     #   ground motion for the style of faulting as per Boore et al. (2022;
     #   eq. 5). The `alpha_nm` is provided at the instantiation level.
+    # - The `get_far_field_distance_scaling` function applies a correction to
+    #   ground motion for anelastic attenuation as per Boore et al. (2022)
     out = (get_stress_scaling(C) +
            get_magnitude_scaling(C, ctx.mag, delta_cm) +
            get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm) +
            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
-           get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
+           get_far_field_distance_scaling(
+               region, C, ctx.mag, ctx.rrup, delta_g) +
            get_directivity(clsname, C, ctx))
 
     # Adjust ground-motion for the hanging wall effect
@@ -543,14 +568,34 @@ def get_mean_stddevs(name, C, ctx, imt, conf):
 
 class ChiouYoungs2014(GMPE):
     """
-    Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
+    Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs.
 
     Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
     Response Spectra, Earthquake Spectra, 30(3), 1117 - 1153,
     DOI: 10.1193/072813EQS219M
+    
+    :param sigma_mu_epsilon:
+        Epsilon for the statistical uncertainty term.
+    :param use_hw:
+        Bool which if true turns on the hanging-wall effect.
+    :poram add_delta_c1:
+        Long-period adjustment parameter as described in Boore et al. (2022)
+        backbone paper.
+    :param alpha_nm:
+        Style-of-faulting correction for normal-faulting as described in Boore
+        et al. (2022) backbone paper. This correction is magnitude independent.
+    :param stress_par_host:
+        Stress parameter for the host-region in bars. Used in Boore et al.
+        (2022) backbone methodology.
+    :param stress_par_target:
+        Stress parameter for the target-region in bars. Used in Boore et
+        al. (2022) backbone methodology.
+    :param delta_gamma_tab:
+        Filename containing path adjustments as described in Boore et al.
+        (2022) backbone paper.
     """
-    adapted = False  # overridden in acme_2019
+    adapted = False  # Overridden in acme_2019
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -596,13 +641,12 @@ class ChiouYoungs2014(GMPE):
 
         # Adding into the conf dictionary
         self.conf = {}
-        self.conf['use_hw'] = use_hw
+        self.conf['use_hw'] = use_hw 
         self.conf['alpha_nm'] = alpha_nm
         self.conf['add_delta_c1'] = add_delta_c1
         self.conf['stress_par_host'] = stress_par_host
         self.conf['stress_par_target'] = stress_par_target
-        self.conf['delta_gamma_tab'] = delta_gamma_tab
-
+        
         # The file with the `source function table` has a structure similar to
         # a traditional coefficient table. The columns in the `source function
         # table` are:
@@ -629,12 +673,10 @@ class ChiouYoungs2014(GMPE):
         # - c1              param
         # - c2              param
         # - c3              param
-        self.delta_gamma_tab = None
         if delta_gamma_tab is not None:
             with open(delta_gamma_tab, encoding='utf8') as f:
-                tmp = f.readlines()
-            self.delta_gamma_tab = CoeffsTable(sa_damping=5, table=tmp)
-        # TODO this correction is not yet implemented!
+                tmp = f.read()
+            self.conf['delta_gamma_tab'] = CoeffsTable(sa_damping=5, table=tmp)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -643,7 +685,7 @@ class ChiouYoungs2014(GMPE):
         for spec of input and result values.
         """
         name = self.__class__.__name__
-        # reference to page 1144, PSA might need PGA value
+        # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
             name, self.COEFFS[PGA()], ctx, PGA(), self.conf)
@@ -657,7 +699,7 @@ class ChiouYoungs2014(GMPE):
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     name, self.COEFFS[imt], ctx, imt, self.conf)
-                # reference to page 1144
+                # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
