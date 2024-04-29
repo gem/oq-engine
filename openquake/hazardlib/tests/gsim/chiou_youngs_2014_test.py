@@ -216,8 +216,11 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         """
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
-        gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120,
-                                  delta_gamma_tab=path_adj_table)
+        gmm_adj_src = ChiouYoungs2014(stress_par_host=100,
+                                      stress_par_target=120)
+        gmm_adj_all = ChiouYoungs2014(stress_par_host=100,
+                                      stress_par_target=120,
+                                      delta_gamma_tab=path_adj_table)
         
         # Settings
         imt_str = 'SA(0.1)'
@@ -235,21 +238,31 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         ctxs_ori = list(ctxm_ori.get_ctx_iter(rups, SiteCollection([site1])))
         ctxs_ori = ctxs_ori[0]
         
-        # ContextMaker for the ADJUSTED version of CY14
-        ctxm_adj = ContextMaker('fake', [gmm_adj], oqp)
-        ctxs_adj = list(ctxm_adj.get_ctx_iter(rups, SiteCollection([site1])))
-        ctxs_adj = ctxs_adj[0]
+        # ContextMaker for the SOURCE ADJUSTED version of CY14
+        ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
+        ctxs_adj_src = list(ctxm_adj_src.get_ctx_iter(rups,
+                                                      SiteCollection([site1])))
+        ctxs_adj_src = ctxs_adj_src[0]
+    
+        # ContextMaker for the SOURCE AND PATH ADJUSTED version of CY14
+        ctxm_adj_all = ContextMaker('fake', [gmm_adj_all], oqp)
+        ctxs_adj_all = list(ctxm_adj_all.get_ctx_iter(rups,
+                                                      SiteCollection([site1])))
+        ctxs_adj_all = ctxs_adj_all[0]
     
         # Compute median values of ground motion
         [mea_ori, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
-        [mea_adj, _, _, _] = ctxm_adj.get_mean_stds([ctxs_adj])
-        
+        [mea_adj_src, _, _, _] = ctxm_adj_src.get_mean_stds([ctxs_adj_src])
+        [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
+    
         # Check adjusted values are as expected
-        expected_adj = np.array([0.05307926, 0.05307926])
-        self.assertEqual(mea_adj.all(), expected_adj.all())
+        expected_adj_src = np.array([-2.5796011, -2.5796011])    
+        expected_adj_all = np.array([-2.935969, -2.935969])
+        self.assertEqual(mea_adj_src.all(), expected_adj_src.all())
+        self.assertEqual(mea_adj_all.all(), expected_adj_all.all())
         
         # Test delta_cm term
-        delta_cm = _get_delta_cm(gmm_adj.conf, imt)
+        delta_cm = _get_delta_cm(gmm_adj_all.conf, imt)
         expected_delta_cm = 0.149652555  # From hand-made calc
         msg = f"The value of the computed delta_cm {delta_cm} is different \n"
         msg += f"than the expected one {expected_delta_cm}"
@@ -257,7 +270,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
 
         # Test stress scaling term
         C = gmm_ori.COEFFS[imt]
-        scalf_adj = get_magnitude_scaling(C, ctxs_adj[0].mag, delta_cm)
+        scalf_adj = get_magnitude_scaling(C, ctxs_adj_all[0].mag, delta_cm)
         expected_scalf_adj = np.array([0.665226, 0.665226])
         msg = f"The value of the scaling factor {scalf_adj} is different \n"
         msg += f"than the expected one {expected_scalf_adj}"
@@ -265,7 +278,8 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
             scalf_adj, expected_scalf_adj, err_msg=msg)
 
         # Test delta_g term
-        path_adj = _get_delta_g(gmm_adj.conf['delta_gamma_tab'], ctxs_adj, imt)
+        path_adj = _get_delta_g(gmm_adj_all.conf['delta_gamma_tab'],
+                                ctxs_adj_all, imt)
         expected_path_adj = np.array([-0.0065052, -0.0065052]) # Value is
                                                                # obtained from
                                                                # central branch
