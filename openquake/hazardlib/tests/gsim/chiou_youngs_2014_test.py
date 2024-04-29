@@ -210,7 +210,9 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
     def test_stress_and_path_adjustments(self):
         """
         Test the stress adjustment and the path adjustment terms as described
-        within Boore et al. (2022).
+        within Boore et al. (2022). The path adjustment table is taken from
+        table 2 of the paper, which uses Idaho as the target region - we take
+        the central branch (branch 3) values for use in these unit tests.
         """
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
