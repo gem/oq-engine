@@ -44,5 +44,4 @@ oq commands.
    advanced-calculations
    working-with-the-dstore
    useful-oq-commands
-   faq
    extras/index
