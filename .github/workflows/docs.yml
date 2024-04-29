@@ -380,6 +380,7 @@ jobs:
           # PAY ATTENTION: engine folder is 'doc', not 'docs'
           # cd doc && make html && make latexpdf
           cd doc && make html 2>&1 | tee full.log
+          # NOTE: without '|| true' the action would fail if there are no warnings
           grep WARNING < full.log > warnings.log || true
           echo
           echo "=== WARNINGS ==="
