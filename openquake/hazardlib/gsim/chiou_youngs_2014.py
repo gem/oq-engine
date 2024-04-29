@@ -570,7 +570,7 @@ class ChiouYoungs2014(GMPE):
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs.
 
-    Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
+    Chiou, B. S.-J. and Youngs, R. R. (2014), "Update of the Chiou and Youngs
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
     Response Spectra, Earthquake Spectra, 30(3), 1117 - 1153,
     DOI: 10.1193/072813EQS219M
@@ -630,13 +630,8 @@ class ChiouYoungs2014(GMPE):
     def __init__(self, sigma_mu_epsilon=0.0, use_hw=True, add_delta_c1=False,
                  alpha_nm=1.0, stress_par_host=None, stress_par_target=None,
                  delta_gamma_tab=None):
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
-                         use_hw=use_hw,
-                         add_delta_c1=add_delta_c1,
-                         alpha_nm=alpha_nm,
-                         stress_par_host=stress_par_host,
-                         stress_par_target=stress_par_target,
-                         delta_gamma_tab=delta_gamma_tab)
+        
+        # Add sigma_mu_epsilon 
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
         # Adding into the conf dictionary
@@ -665,14 +660,20 @@ class ChiouYoungs2014(GMPE):
             self.conf['source_function_table'] = CoeffsTable(
                 sa_damping=5, table=tmp)
 
-        # The file with the `path adjustment table` has a structure similar to
-        # a traditional coefficient table. The columns in the `path adjustment
-        # table` are:
+        # The file with the `path adjustment table` also has a structure which
+        # is similar to traditional coefficient table. The columns in the `path
+        # adjustment table` are:
         # - IMT             the intensity measure type (either PGA or SA)
         # - c0              param
         # - c1              param
         # - c2              param
         # - c3              param
+        # Note that this table must be updated with parameters obtained for
+        # the considered target region by the user. The values provided here 
+        # are for the Idaho National Laboratory as considered in Boore et al.
+        # (2022) - the values of PGA were obtained from communication with the
+        # authors. The values for SA(0.1 s) are obtained from Table 2 (we take
+        # the central branch - branch 3).
         if delta_gamma_tab is not None:
             with open(delta_gamma_tab, encoding='utf8') as f:
                 tmp = f.read()
@@ -829,7 +830,7 @@ def get_mean_stddevs_inv(name, C, ctx):
     ctx.z1pt0 = -7.15/4.0*np.log(term1)
     dz1pt0 = np.zeros_like(ctx.vs30)
 
-    # for Z1.0 = 0.0 no deep soil correction is applied
+    # For Z1.0 = 0.0 no deep soil correction is applied
     f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
 
     # Get linear amplification term

@@ -210,14 +210,9 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
     """
     def test_stress_and_path_adjustments(self):
         """
-        Test the stress adjustment and the path adjustment.
-        
-        Note the path adjustment table provided in openquake.hazardlib.gsims
-        corresponds to the values provided in Table 2 for the central branch
-        (branch 3). The computation of adjustments for other periods requires
-        undertaking of the process detailed in pp. 3071 to pp. 3073.
+        Test the stress adjustment and the path adjustment terms as described
+        within Boore et al. (2022).
         """
-        
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
         gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120,
@@ -277,6 +272,3 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         msg += f"than the expected one {expected_path_adj}"
         np.testing.assert_almost_equal(
             path_adj, expected_path_adj, err_msg=msg)
-    
-        #TODO
-        # Expected vs predicted (here on in qa tests?)
