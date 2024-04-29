@@ -215,7 +215,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
         gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120,
-                                  delta_gamma_tab=path_adj_table)
+                                  delta_gamma_tab=path_table)
         
         # Settings
         imt_str = 'SA(0.1)'
@@ -241,7 +241,11 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         # Compute median values of ground motion
         [mea_ori, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
         [mea_adj, _, _, _] = ctxm_adj.get_mean_stds([ctxs_adj])
-
+        
+        # Check adjusted values are as expected
+        expected_adj = np.array([0.05307926, 0.05307926])
+        self.assertEqual(mea_adj.all(), expected_adj.all())
+        
         # Test delta_cm term
         delta_cm = _get_delta_cm(gmm_adj.conf, imt)
         expected_delta_cm = 0.149652555  # From hand-made calc
