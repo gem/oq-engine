@@ -21,8 +21,7 @@ import numpy as np
 import copy
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect,
-    ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan,
-    ChiouYoungs2014Inversion)
+    ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     _get_delta_cm, get_magnitude_scaling, _get_delta_g)
@@ -39,8 +38,8 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
-path_adj_table = os.path.join(os.path.dirname(__file__), 'data', 'C14adjustable',
-                              'path_adjustment_table_target_region_idaho.txt')
+path_table = os.path.join(os.path.dirname(__file__), 'data', 'C14adjustable',
+                         'path_adjustment_table_target_region_idaho.txt')
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):

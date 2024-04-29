@@ -668,12 +668,6 @@ class ChiouYoungs2014(GMPE):
         # - c1              param
         # - c2              param
         # - c3              param
-        # Note that this table must be updated with parameters obtained for
-        # the considered target region by the user. The values provided here 
-        # are for the Idaho National Laboratory as considered in Boore et al.
-        # (2022) - the values of PGA were obtained from communication with the
-        # authors. The values for SA(0.1 s) are obtained from Table 2 (we take
-        # the central branch - branch 3).
         if delta_gamma_tab is not None:
             with open(delta_gamma_tab, encoding='utf8') as f:
                 tmp = f.read()
