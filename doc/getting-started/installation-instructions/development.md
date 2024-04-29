@@ -1,5 +1,7 @@
 (development)=
 
+.. _development-installation:
+
 # Installing the OpenQuake Engine for development
 
 To develop with the OpenQuake Engine and Hazardlib an installation
