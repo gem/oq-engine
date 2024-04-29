@@ -692,6 +692,7 @@ def aristotle_get_rupture_data(request):
             error_msg = str(exc)
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': error_msg}
+        logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
@@ -901,6 +902,7 @@ def aelo_run(request):
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
+        logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     [jobctx] = engine.create_jobs(

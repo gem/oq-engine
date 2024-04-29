@@ -92,7 +92,7 @@ def get_rupture_dict(dic):
                       dip=rup.surface.get_dip(),
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
-    elif 'lon' in dic:  # when called from `oq mosaic aristotle`
+    elif dic.get('lon') is not None:  # when called from `oq mosaic aristotle`
         rupdic = dic
     else:
         rupdic = download_rupture_dict(usgs_id)
