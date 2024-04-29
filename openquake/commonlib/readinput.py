@@ -1160,6 +1160,20 @@ def _taxonomy_mapping(filename, taxdic):
     return out
 
 
+def assert_probabilities(array, fname):
+    """
+    Check that the array contains valid probabilities
+    """
+    for poe_field in (f for f in array.dtype.names if f.startswith('poe-')):
+        arr = array[poe_field]
+        if (arr > 1).any():
+            raise InvalidFile('%s: contains probabilities > 1: %s' %
+                              (fname, arr[arr > 1]))
+        if (arr < 0).any():
+            raise InvalidFile('%s: contains probabilities < 0: %s' %
+                              (fname, arr[arr < 0]))
+
+
 def get_pmap_from_csv(oqparam, fnames):
     """
     :param oqparam:
@@ -1172,7 +1186,9 @@ def get_pmap_from_csv(oqparam, fnames):
     read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     imtls = {}
     dic = {}
-    for wrapper in map(read, fnames):
+    for fname in fnames:
+        wrapper = read(fname)
+        assert_probabilities(wrapper.array, fname)
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
