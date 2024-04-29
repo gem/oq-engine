@@ -38,8 +38,8 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
-path_table = os.path.join(os.path.dirname(__file__), 'data', 'C14adjustable',
-                         'path_adjustment_table_target_region_idaho.txt')
+path_adj_table = os.path.join(os.path.dirname(__file__), 'data', 'C14adj',
+                              'path_adjustment_table_target_region_idaho.txt')
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
@@ -215,7 +215,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
         gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120,
-                                  delta_gamma_tab=path_table)
+                                  delta_gamma_tab=path_adj_table)
         
         # Settings
         imt_str = 'SA(0.1)'
