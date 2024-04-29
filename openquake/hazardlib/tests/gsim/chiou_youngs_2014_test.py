@@ -250,12 +250,12 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
                                                       SiteCollection([site1])))
         ctxs_adj_all = ctxs_adj_all[0]
     
-        # Compute median values of ground motion
+        # Compute mean values of ground motion
         [mea_ori, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
         [mea_adj_src, _, _, _] = ctxm_adj_src.get_mean_stds([ctxs_adj_src])
         [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
     
-        # Check adjusted values are as expected
+        # Check mean adjusted values are as expected
         expected_adj_src = np.array([-2.5796011, -2.5796011])    
         expected_adj_all = np.array([-2.935969, -2.935969])
         self.assertEqual(mea_adj_src.all(), expected_adj_src.all())
