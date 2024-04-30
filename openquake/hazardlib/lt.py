@@ -116,11 +116,10 @@ def complexGeom(utype, node, filename):
         node = node.complexFaultGeometry
     _validate_complex_fault_geometry(utype, node, filename)
     spacing = node["spacing"]
-    edges = []
+    all_coords = []
     for edge_node in node.nodes:
-        coords = split_coords_3d(~edge_node.LineString.posList)
-        edges.append(geo.Line([geo.Point(*p) for p in coords]))
-    return edges, spacing
+        all_coords.append(split_coords_3d(~edge_node.LineString.posList))
+    return all_coords, spacing
 
 
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
@@ -136,8 +135,10 @@ def charGeom(utype, node, filename):
                 trace, usd, lsd, dip, spacing))
         elif "complexFaultGeometry" in geom_node.tag:
             _validate_complex_fault_geometry(utype, geom_node, filename)
-            edges, spacing = parse_uncertainty(
+            all_coords, spacing = parse_uncertainty(
                 'complexFaultGeometryAbsolute', geom_node, filename)
+            edges = [geo.Line([geo.Point(*p) for p in coords])
+                     for coords in all_coords]
             surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                 edges, spacing))
         elif "planarSurface" in geom_node.tag:
@@ -244,7 +245,8 @@ def _simple_fault_geom_absolute(utype, source, value):
 
 @apply_uncertainty.add('complexFaultGeometryAbsolute')
 def _complex_fault_geom_absolute(utype, source, value):
-    edges, spacing = value
+    all_coords, spacing = value
+    edges = [geo.Line([geo.Point(*p) for p in coords]) for coords in all_coords]
     source.modify('set_geometry', dict(edges=edges, spacing=spacing))
 
 
