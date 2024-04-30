@@ -20,9 +20,9 @@
 import shutil
 import numpy
 import pandas
-from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
+from openquake.hazardlib import (
+    valid, nrml, sourceconverter, sourcewriter, logictree)
 from openquake.baselib import general
-from openquake.commonlib import logictree
 
 
 def save_bak(fname, node, num_nodes, total):

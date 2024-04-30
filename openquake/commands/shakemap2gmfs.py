@@ -19,7 +19,8 @@ import os
 import logging
 import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.commonlib import logs, logictree
+from openquake.commonlib import logs
+from openquake.hazardlib import logictree
 from openquake.commonlib.readinput import get_site_collection
 from openquake.calculators.base import calculators, store_shakemap
 
