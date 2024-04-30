@@ -122,44 +122,56 @@ def complexGeom(utype, node, filename):
     return all_coords, spacing
 
 
-@parse_uncertainty.add('characteristicFaultGeometryAbsolute')
-def charGeom(utype, node, filename):
+def to_surface(pairs):
     surfaces = []
-    for i, geom_node in enumerate(node.surface):
-        if "simpleFaultGeometry" in geom_node.tag:
-            _validate_simple_fault_geometry(utype, geom_node, filename)
-            coords, usd, lsd, dip, spacing = parse_uncertainty(
-                'simpleFaultGeometryAbsolute', geom_node, filename)
+    for i, (tag, extra) in enumerate(pairs):
+        if tag == 'simpleFaultGeometry':
+            coords, usd, lsd, dip, spacing = extra
             trace = geo.Line([geo.Point(*p) for p in coords])
             surfaces.append(geo.SimpleFaultSurface.from_fault_data(
                 trace, usd, lsd, dip, spacing))
-        elif "complexFaultGeometry" in geom_node.tag:
-            _validate_complex_fault_geometry(utype, geom_node, filename)
-            all_coords, spacing = parse_uncertainty(
-                'complexFaultGeometryAbsolute', geom_node, filename)
+        elif tag == 'complexFaultGeometry':
+            all_coords, spacing = extra
             edges = [geo.Line([geo.Point(*p) for p in coords])
                      for coords in all_coords]
             surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                 edges, spacing))
-        elif "planarSurface" in geom_node.tag:
-            _validate_planar_fault_geometry(utype, geom_node, filename)
-            nodes = []
-            for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-                nodes.append(geo.Point(getattr(geom_node, key)["lon"],
-                                       getattr(geom_node, key)["lat"],
-                                       getattr(geom_node, key)["depth"]))
-            top_left, top_right, bottom_right, bottom_left = tuple(nodes)
+        elif tag == 'planarSurface':
+            tl, tr, br, bl = extra
             surface = geo.PlanarSurface.from_corner_points(
-                top_left, top_right, bottom_right, bottom_left)
+                geo.Point(*tl), geo.Point(*tr), geo.Point(*br), geo.Point(*bl))
             surface.idx = f'{i}'
             surfaces.append(surface)
-        else:
-            raise LogicTreeError(
-                geom_node, filename, "Surface geometry type not recognised")
+
     if len(surfaces) > 1:
         return geo.MultiSurface(surfaces)
     else:
         return surfaces[0]
+
+
+@parse_uncertainty.add('characteristicFaultGeometryAbsolute')
+def charGeom(utype, node, filename):
+    pairs = []  # (tag, extra)
+    for geom_node in node.surface:
+        if "simpleFaultGeometry" in geom_node.tag:
+            _validate_simple_fault_geometry(utype, geom_node, filename)
+            extra = parse_uncertainty(
+                'simpleFaultGeometryAbsolute', geom_node, filename)
+        elif "complexFaultGeometry" in geom_node.tag:
+            _validate_complex_fault_geometry(utype, geom_node, filename)
+            extra = parse_uncertainty(
+                'complexFaultGeometryAbsolute', geom_node, filename)
+        elif "planarSurface" in geom_node.tag:
+            _validate_planar_fault_geometry(utype, geom_node, filename)
+            extra = []
+            for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
+                nd = getattr(geom_node, key)
+                extra.append((nd["lon"], nd["lat"], nd["depth"]))
+        else:
+            raise LogicTreeError(
+                geom_node, filename, "Surface geometry type not recognised")
+        pairs.append((geom_node.tag.split('}')[1], extra))
+    return pairs
 
 
 # validations
@@ -252,7 +264,7 @@ def _complex_fault_geom_absolute(utype, source, value):
 
 @apply_uncertainty.add('characteristicFaultGeometryAbsolute')
 def _char_fault_geom_absolute(utype, source, value):
-    source.modify('set_geometry', dict(surface=value))
+    source.modify('set_geometry', dict(surface=to_surface(value)))
 
 
 @apply_uncertainty.add('abGRAbsolute')
