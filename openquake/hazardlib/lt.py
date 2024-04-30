@@ -107,8 +107,7 @@ def simpleGeom(utype, node, filename):
     usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
                      ~node.dip)
     coords = split_coords_2d(~node.LineString.posList)
-    trace = geo.Line([geo.Point(*p) for p in coords])
-    return trace, usd, lsd, dip, spacing
+    return coords, usd, lsd, dip, spacing
 
 
 @parse_uncertainty.add('complexFaultGeometryAbsolute')
@@ -130,8 +129,9 @@ def charGeom(utype, node, filename):
     for i, geom_node in enumerate(node.surface):
         if "simpleFaultGeometry" in geom_node.tag:
             _validate_simple_fault_geometry(utype, geom_node, filename)
-            trace, usd, lsd, dip, spacing = parse_uncertainty(
+            coords, usd, lsd, dip, spacing = parse_uncertainty(
                 'simpleFaultGeometryAbsolute', geom_node, filename)
+            trace = geo.Line([geo.Point(*p) for p in coords])
             surfaces.append(geo.SimpleFaultSurface.from_fault_data(
                 trace, usd, lsd, dip, spacing))
         elif "complexFaultGeometry" in geom_node.tag:
@@ -234,7 +234,8 @@ def _simple_fault_dip_absolute(bset, source, value):
 
 @apply_uncertainty.add('simpleFaultGeometryAbsolute')
 def _simple_fault_geom_absolute(utype, source, value):
-    trace, usd, lsd, dip, spacing = value
+    coords, usd, lsd, dip, spacing = value
+    trace = geo.Line([geo.Point(*p) for p in coords])
     source.modify(
         'set_geometry',
         dict(fault_trace=trace, upper_seismogenic_depth=usd,

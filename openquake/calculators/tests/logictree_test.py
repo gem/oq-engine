@@ -377,6 +377,10 @@ hazard_uhs-std.csv
         self.assertEqual(list(df.columns),
                          ['site_id', 'stat', 'imt', 'value'])
 
+        # check deserialization of the logic tree
+        full_lt = self.calc.datastore['full_lt']
+        # import pdb; pdb.set_trace()
+
     def test_case_20_bis(self):
         # mean_rates_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
