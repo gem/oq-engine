@@ -28,9 +28,10 @@ from openquake.commonlib import readinput
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
+# added SA(0.1) for testing
 IMTLS = '''\
 {"PGA": logscale(0.005, 3.00, 25),
+ "SA(0.1)": logscale(0.005, 9.00, 25),
  "SA(0.2)": logscale(0.005, 9.00, 25),
  "SA(1.0)": logscale(0.005, 3.60, 25)}
 '''

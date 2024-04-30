@@ -94,7 +94,7 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_RTGM, imls = [], [], []
-    imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
+    imts = ['PGA', 'SA(0.1)', 'SA(0.2)', 'SA(1.0)']
     for imt in imts:
         # get periods and factors for converting btw geom mean and
         # maximum component
@@ -120,8 +120,8 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
-    colors = mpl.colormaps['viridis'].reversed().resampled(3)
-    patterns = ['-', '--', ':']
+    colors = mpl.colormaps['viridis'].reversed().resampled(4)
+    patterns = ['-', '-.','--', ':']
     for i, imt in enumerate(imts):
         lab = _get_label(imt)
         plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
@@ -184,12 +184,14 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    js = dstore['asce07'][site_idx].decode('utf8')
-    dic = json.loads(js)
-    MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
+    #js = dstore['asce07'][site_idx].decode('utf8')
+    #dic = json.loads(js)
+    #MCEr = [dic['PGA'], dic['S0pt1'],dic['Ss'], dic['S1']]
+    MCEr = dstore.getitem(f'g_mce/{site_idx}')[0]
+    MCEr_det = dstore.getitem(f'g_mce/{site_idx}')[1]
     T = [from_string(imt).period for imt in imtls]
 
-    limit_det = [0.5, 1.5, 0.6]
+    limit_det = [0.5, 1.37, 1.5, 0.6]
     # presenting as maximum component -> do not need conversion facts
     rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm.RTGM == 0).all():
@@ -202,7 +204,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
              linewidth=3)
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    MCEr_det = [dic['PGA_84th'], dic['Ss_84th'], dic['S1_84th']]
+    #MCEr_det = [dic['PGA_84th'], dic['S0pt1_84th'], dic['Ss_84th'], dic['S1_84th']]
     if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
         upperlim = max([rtgm_probmce[1], 1.5])
         plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
@@ -255,7 +257,7 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         AFE.append(to_rates(hcurve, window))
 
     plt = import_plt()
-    fig, ax = plt.subplots(3, figsize=(8, 15))
+    fig, ax = plt.subplots(4, figsize=(8, 15))
 
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;

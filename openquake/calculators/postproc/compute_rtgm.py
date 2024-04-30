@@ -85,10 +85,10 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
 # three imts, that are mandatory in this context. For the plot of governing
 # MCE we read imts from the imtls
-IMTS = ['PGA', 'SA(0.2)', 'SA(1.0)']
+IMTS = ['PGA', 'SA(0.1)','SA(0.2)', 'SA(1.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in IMTS]
-assert DLLs == [0.5, 1.5, 0.6]
+assert DLLs == [0.5, 1.37, 1.5, 0.6]
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
@@ -325,9 +325,10 @@ def get_mce_asce07(det_imt, DLLs, rtgm, low_haz=False):
         if not isinstance(asce07[key], str):
             asce07[key] = (
                 round(asce07[key], ASCE_DECIMALS) if asce07[key] is not None
-                else 'n.a.')
-
-    return prob_mce_out, mce, det_mce, asce07
+                else 'n.a.') 
+    gmce_df = pd.json_normalize([mce,det_imt])
+    gmce_df.index = ['mce', 'det_imt']
+    return prob_mce_out, mce, det_mce, asce07, gmce_df
 
 
 def get_asce41(dstore, mce, facts, sid):
@@ -444,14 +445,14 @@ def calc_asce(dstore, csm, rtgm):
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
-        prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
+        prob_mce_out, mce, det_mce, asce07, gmce_df = get_mce_asce07(
             det_imt, DLLs, rtgm_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
         logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
-        yield sid, mag_dst_eps_sig, asce07, asce41
+        yield sid, mag_dst_eps_sig, asce07, asce41, gmce_df
 
 
 def to_array(dic):
@@ -471,7 +472,9 @@ def main(dstore, csm):
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
+    gmce_dfs = []
     rtgm = {}
+    g_mce = {}
     for site, rtgm_df, warning in process_sites(dstore, csm):
         sid = site.id
         loc = site.location
@@ -479,12 +482,13 @@ def main(dstore, csm):
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
-            dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
-            prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
+            dummy_det = {'PGA': '', 'SA(0.1)': '', 'SA(0.2)': '', 'SA(1.0)': ''}
+            prob_mce_out, mce, det_mce, a07, gm = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, low_haz=True)
             a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
             asce07[sid] = hdf5.dumps(a07)
             asce41[sid] = hdf5.dumps(a41)
+            dstore[f'g_mce/{sid}'] = gm
         else:  # High hazard
             rtgm[sid] = rtgm_df
         warnings[sid] = warning
@@ -492,10 +496,11 @@ def main(dstore, csm):
             logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
-    for sid, mdes, a07, a41 in calc_asce(dstore, csm, rtgm):
+    for sid, mdes, a07, a41, gm in calc_asce(dstore, csm, rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
+        dstore[f'g_mce/{sid}'] = gm
 
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
