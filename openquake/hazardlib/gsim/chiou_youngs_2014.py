@@ -193,13 +193,17 @@ def get_far_field_distance_scaling_1(region, C, mag, rrup, delta_g):
     Returns the far-field distance scaling term - both magnitude and
     distance - for California and other regions
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
+    
     # Get the magnitude dependent term
     f_rm = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
-    f_rm = f_rm + delta_g # Adjust path if delta_g from Boore et al. (2022)
-    return f_r + f_rm * rrup
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = f_rm + delta_g
+    
+    return f_r + (f_rm * rrup)
 
 
 @get_far_field_distance_scaling.add("JPN")
@@ -208,16 +212,18 @@ def get_far_field_distance_scaling_2(region, C, mag, rrup, delta_g):
     Returns the far-field distance scaling term - both magnitude and
     distance - for Japan
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] + C["cg2"] /
-            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
     # Apply adjustment factor for Japan
     f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
-    f_rm = f_rm + delta_g # Adjust path if delta_g from Boore et al. (2022)
     
     return f_r + f_rm
 
@@ -228,16 +234,19 @@ def get_far_field_distance_scaling_3(region, C, mag, rrup, delta_g):
     Returns the far-field distance scaling term - both magnitude and
     distance - for Italy
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] + C["cg2"] /
-            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
     # Apply adjustment factor for Italy
     f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
-    f_rm = f_rm + delta_g # Adjust path if delta_g from Boore et al. (2022)
+    
     return f_r + f_rm
 
 
@@ -247,15 +256,16 @@ def get_far_field_distance_scaling_4(region, C, mag, rrup, delta_g):
     Returns the far-field distance scaling term - both magnitude and
     distance - for Wenchuan
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] + C["cg2"] /
-            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
-    # Adjust path if delta_g from Boore et al. (2022)
-    f_rm = f_rm + delta_g 
+    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
     # Apply adjustment factor for Wenchuan
     return f_r + (f_rm * C["gwn"])
 
