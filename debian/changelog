@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Internal: fixed the serialization of logic trees using
+    simpleFaultGeometryAbsolute, complexFaultGeometryAbsolute or
+    characteristicFaultGeometryAbsolute
+  * Added a check when importing hazard_curves.csv files: the values must be
+    probabilities
   * Internal: functions must be shorter than 100 lines and have less than
     16 arguments to enter in the engine codebase
   * Fixed scenarios with CanadaSHM6 GMPEs and ModifiableGMPE

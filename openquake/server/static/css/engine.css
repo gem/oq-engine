@@ -328,6 +328,13 @@ tr.asce_output {
     width: 56px;
 }
 
+.aristotle-losses-container {
+    width: 100%;
+    display: block;
+    overflow-x: scroll;
+    position: relative;
+}
+
 table#aristotle-losses {
     border-collapse: collapse;
     width: 100%;

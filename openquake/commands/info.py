@@ -33,12 +33,12 @@ from decorator import FunctionMaker
 from openquake.baselib import config
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, imt
+from openquake.hazardlib import gsim, nrml, imt, logictree
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logictree, logs
+from openquake.commonlib import readinput, logs
 from openquake.risklib import scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract

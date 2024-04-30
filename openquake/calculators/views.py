@@ -639,7 +639,8 @@ def stats(name, array, *extras):
     :returns: (name, mean, rel_std, min, max, len) + extras
     """
     avg = numpy.mean(array)
-    std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
+    std = 'nan' if len(array) == 1 else '%02.0f%%' % (
+        numpy.std(array) / avg * 100)
     max_ = numpy.max(array)
     return (name, len(array), avg, std, numpy.min(array), max_) + extras
 
