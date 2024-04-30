@@ -256,10 +256,10 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
     
         # Check mean adjusted values are as expected
-        expected_adj_src = np.array([-2.5796011, -2.5796011])    
-        expected_adj_all = np.array([-2.935969, -2.935969])
-        self.assertEqual(mea_adj_src.all(), expected_adj_src.all())
-        self.assertEqual(mea_adj_all.all(), expected_adj_all.all())
+        expected_adj_src = -2.5796011    
+        expected_adj_all = -2.935969
+        self.assertAlmostEqual(mea_adj_src[0][0][0], expected_adj_src)
+        self.assertAlmostEqual(mea_adj_all[0][0][0], expected_adj_all)
         
         # Test delta_cm term
         delta_cm = _get_delta_cm(gmm_adj_all.conf, imt)
