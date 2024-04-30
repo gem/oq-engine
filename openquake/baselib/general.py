@@ -30,6 +30,7 @@ import socket
 import random
 import atexit
 import zipfile
+import logging
 import platform
 import builtins
 import operator
@@ -492,7 +493,6 @@ def engine_version():
 def extract_dependencies(lines):
     for line in lines:
         longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
-        print(longname)
         try:
             pkg, version, *other = longname.split('-')
         except ValueError:  # for instance a comment
@@ -535,7 +535,9 @@ def check_dependencies():
             lines = f.readlines()
         for pkg, expected in extract_dependencies(lines):
             version = __import__(pkg).__version__
-            print(pkg, version, expected)
+            if version != expected:
+                logging.warning('%s is at version %s but we need %s' %
+                                (pkg, version, expected))
 
 
 def run_in_process(code, *args):
