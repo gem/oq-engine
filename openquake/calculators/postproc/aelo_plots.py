@@ -94,7 +94,11 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_RTGM, imls = [], [], []
-    imts = ['PGA', 'SA(0.1)', 'SA(0.2)', 'SA(1.0)']
+    #imts = ['PGA', 'SA(0.1)', 'SA(0.2)', 'SA(1.0)']
+    imts = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
+        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
+        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
+
     for imt in imts:
         # get periods and factors for converting btw geom mean and
         # maximum component
@@ -120,11 +124,11 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
-    colors = mpl.colormaps['viridis'].reversed().resampled(4)
+    colors = mpl.colormaps['viridis'].reversed().resampled(22)
     patterns = ['-', '-.','--', ':']
     for i, imt in enumerate(imts):
         lab = _get_label(imt)
-        plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
+        plt.loglog(imls[i], AFE[i], color=colors(i),
                    label=lab, linewidth=3, zorder=1)
         
         if plot_mce:
@@ -182,6 +186,9 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     """
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
+    imts = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
+        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
+        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
     imtls = dinfo['imtls']
     plt = import_plt()
     #js = dstore['asce07'][site_idx].decode('utf8')
@@ -190,8 +197,8 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     MCEr = dstore.getitem(f'g_mce/{site_idx}')[0]
     MCEr_det = dstore.getitem(f'g_mce/{site_idx}')[1]
     T = [from_string(imt).period for imt in imtls]
-
-    limit_det = [0.5, 1.37, 1.5, 0.6]
+    limit_det = [0.5, 0.66, 0.68, 0.75, 0.95, 1.21, 1.37, 1.53, 1.5, 1.4,
+                 1.3, 1.14, 1.01, 0.76, 0.6, 0.41, 0.31, 0.21, 0.16, 0.13, 0.08, 0.052]
     # presenting as maximum component -> do not need conversion facts
     rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm.RTGM == 0).all():
@@ -241,6 +248,9 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
 def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
+    imts = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
+        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
+        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
     imtls = dinfo['imtls']
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
@@ -257,7 +267,7 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         AFE.append(to_rates(hcurve, window))
 
     plt = import_plt()
-    fig, ax = plt.subplots(4, figsize=(8, 15))
+    fig, ax = plt.subplots(22, figsize=(8, 15))
 
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;
@@ -277,7 +287,6 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         RTGM_o = rtgm_probmce[m] / f
         afe_target = _find_afe_target(imls, AFE[m], RTGM)
         afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
-
         # populate 3-panel plot
         ax[m].loglog(imls, AFE[m], 'k', label=_get_label(imt),
                      linewidth=2, zorder=3)

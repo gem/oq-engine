@@ -85,10 +85,12 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
 # three imts, that are mandatory in this context. For the plot of governing
 # MCE we read imts from the imtls
-IMTS = ['PGA', 'SA(0.1)','SA(0.2)', 'SA(1.0)']
+IMTS = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
+        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
+        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in IMTS]
-assert DLLs == [0.5, 1.37, 1.5, 0.6]
+assert DLLs == [0.5, 0.66, 0.68, 0.75, 0.95, 1.21, 1.37, 1.53, 1.5, 1.4, 1.3, 1.14, 1.01, 0.76, 0.6, 0.41, 0.31, 0.21, 0.16, 0.13, 0.08, 0.052]
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 

@@ -31,9 +31,27 @@ CDIR = os.path.dirname(__file__)  # openquake/engine
 # added SA(0.1) for testing
 IMTLS = '''\
 {"PGA": logscale(0.005, 3.00, 25),
+ "SA(0.01)": logscale(0.005, 9.00, 25),
+ "SA(0.02)": logscale(0.005, 9.00, 25),
+ "SA(0.03)": logscale(0.005, 9.00, 25),
+ "SA(0.05)": logscale(0.005, 9.00, 25),
+ "SA(0.075)": logscale(0.005, 9.00, 25),
  "SA(0.1)": logscale(0.005, 9.00, 25),
+ "SA(0.15)": logscale(0.005, 9.00, 25),
  "SA(0.2)": logscale(0.005, 9.00, 25),
- "SA(1.0)": logscale(0.005, 3.60, 25)}
+ "SA(0.25)": logscale(0.005, 9.00, 25),
+ "SA(0.3)": logscale(0.005, 8.00, 25),
+ "SA(0.4)": logscale(0.005, 7.00, 25),
+ "SA(0.5)": logscale(0.005, 6.00, 25),
+ "SA(0.75)": logscale(0.005, 5.00, 25),
+ "SA(1.0)": logscale(0.005, 3.00, 25),
+ "SA(1.5)": logscale(0.005, 3.00, 25),
+ "SA(2.0)": logscale(0.005, 3.00, 25),
+ "SA(3.0)": logscale(0.005, 2.00, 25),
+ "SA(4.0)": logscale(0.005, 2.00, 25),
+ "SA(5.0)": logscale(0.005, 1.00, 25),
+ "SA(7.5)": logscale(0.005, 1.00, 25),
+ "SA(10)": logscale(0.005, 1.00, 25)}
 '''
 
 PRELIMINARY_MODELS = ['CEA', 'CHN', 'NEA']
