@@ -198,12 +198,12 @@ def get_far_field_distance_scaling_1(region, C, mag, rrup, delta_g):
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
     
     # Get the magnitude dependent term
-    f_rm = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
+    gamma = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
     
     # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
-    f_rm = f_rm + delta_g
+    f_rm = (gamma + delta_g) * rrup
     
-    return f_r + (f_rm * rrup)
+    return f_r + f_rm
 
 
 @get_far_field_distance_scaling.add("JPN")
