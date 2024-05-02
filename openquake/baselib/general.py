@@ -31,7 +31,6 @@ import random
 import atexit
 import zipfile
 import logging
-import platform
 import builtins
 import operator
 import warnings
@@ -526,18 +525,25 @@ def check_dependencies():
     if 'git' not in engine_version():
         return  # do nothing
     pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
-    uname = platform.uname()
-    system = uname.system.lower()
+    system = sys.platform
     if system == 'linux':
-        reqfile = 'requirements-py%s-%s.txt' % (pyver, system + '64')
-        repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        with open(os.path.join(repodir, reqfile)) as f:
-            lines = f.readlines()
-        for pkg, expected in extract_dependencies(lines):
-            version = __import__(pkg).__version__
-            if version != expected:
-                logging.warning('%s is at version %s but we need %s' %
-                                (pkg, version, expected))
+        system = 'linux64'
+    elif system == 'win32':
+        system = 'win64'
+    elif system == 'darwin':
+        system = 'macos_arm64'
+    else:
+        # unsupported OS, do not check dependencies
+        return
+    reqfile = 'requirements-py%s-%s.txt' % (pyver, system)
+    repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    with open(os.path.join(repodir, reqfile)) as f:
+        lines = f.readlines()
+    for pkg, expected in extract_dependencies(lines):
+        version = __import__(pkg).__version__
+        if version != expected:
+            logging.warning('%s is at version %s but the requirements say %s' %
+                            (pkg, version, expected))
 
 
 def run_in_process(code, *args):
