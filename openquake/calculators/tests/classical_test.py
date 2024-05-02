@@ -103,6 +103,11 @@ class ClassicalTestCase(CalculatorTestCase):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_03.__file__)
 
+        # check missing vs30
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_03.__file__, 'job_wrong.ini')
+        self.assertIn('reference_vs30_value not specified', str(ctx.exception))
+
     def test_case_04(self):
         # make sure the UHS are sorted correctly
         self.run_calc(case_04.__file__, 'job.ini')
