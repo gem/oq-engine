@@ -466,6 +466,18 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Using pointsource_distance=%s',
                              oq.pointsource_distance)
 
+    def check_consequences(self):
+        oq = self.oqparam
+        names = self.assetcol.array.dtype.names
+        for consequence in self.crmodel.get_consequences():
+            if consequence == 'homeless':
+                if 'value-residents' not in names:
+                    msg = '<field oq="residents" input="OCCUPANTS_PER_ASSET"/>'
+                    fnames = '\n'.join(oq.inputs['exposure'])
+                    raise InvalidFile(
+                        "%s: Missing %s in the exposureFields node"
+                        % (fnames, msg))
+
     def read_inputs(self):
         """
         Read risk data and sources if any
@@ -491,6 +503,8 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+        if hasattr(self, 'assetcol'):
+            self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
 
         if ('amplification' in oq.inputs and

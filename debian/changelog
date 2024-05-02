@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an early check for homeless consequences
   * Improved the check for missing site parameters
   * Internal: fixed the serialization of logic trees using
     simpleFaultGeometryAbsolute, complexFaultGeometryAbsolute or

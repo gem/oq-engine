@@ -30,6 +30,7 @@ import socket
 import random
 import atexit
 import zipfile
+import logging
 import builtins
 import operator
 import warnings
@@ -486,6 +487,63 @@ def engine_version():
             # may not work properly
 
     return __version__ + gh
+
+
+def extract_dependencies(lines):
+    for line in lines:
+        longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
+        try:
+            pkg, version, *other = longname.split('-')
+        except ValueError:  # for instance a comment
+            continue
+        if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
+                   'python_pam'):
+            # not importable
+            continue
+        if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
+                   'importlib_metadata', 'zipp'):
+            # missing __version__
+            continue
+        elif pkg == 'pyzmq':
+            pkg = 'zmq'
+        elif pkg == 'Pillow':
+            pkg = 'PIL'
+        elif pkg == 'GDAL':
+            pkg = 'osgeo.gdal'
+        elif pkg == 'Django':
+            pkg = 'django'
+        elif pkg == 'pyshp':
+            pkg = 'shapefile'
+        yield pkg, version
+
+    
+def check_dependencies():
+    """
+    Print a warning if we forgot to update the dependencies.
+    Works only for development installations.
+    """
+    if 'git' not in engine_version():
+        return  # do nothing
+    pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
+    system = sys.platform
+    if system == 'linux':
+        system = 'linux64'
+    elif system == 'win32':
+        system = 'win64'
+    elif system == 'darwin':
+        system = 'macos_arm64'
+    else:
+        # unsupported OS, do not check dependencies
+        return
+    reqfile = 'requirements-py%s-%s.txt' % (pyver, system)
+    repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    with open(os.path.join(repodir, reqfile)) as f:
+        lines = f.readlines()
+    for pkg, expected in extract_dependencies(lines):
+        version = __import__(pkg).__version__
+        if version != expected:
+            logging.warning('%s is at version %s but the requirements say %s' %
+                            (pkg, version, expected))
 
 
 def run_in_process(code, *args):
