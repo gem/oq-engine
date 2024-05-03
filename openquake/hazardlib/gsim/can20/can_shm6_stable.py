@@ -314,7 +314,7 @@ def BA08_BC17(self, imt, PGArock, ctx):
 
     # log amplification factors for various IMTs at 2000 and 760 m/s
     i = np.zeros(8, dtype=object)
-    if imt == PGA() or imt == PGV():
+    if imt.period == 0:  # PGA, SA(0) or PGV
         F_2000 = np.log(BC17_amp(self, imt, ctx.mag, ctx.rrup[lt3000]))
         i[[0, 1, 2, 4, 5, 6]] = [vs_gt2000, vs_gt2000, vs == 2000,
                                     vs_lt2000gt760, vs_lt2000gt760, vs_lte760]
@@ -401,10 +401,10 @@ def BC17_amp(self, imt, ctx, dist):
     different reference-rock site conditions, Bull.Seism. Soc. Am.,
     107(1), 132–148
     """
-    if imt == PGA():
-        interpolant_mag = f_pga
-    elif imt == PGV():
+    if imt == PGV():
         interpolant_mag = f_pgv
+    elif imt.period == 0:
+        interpolant_mag = f_pga
 
     # clip values outside of BC17 range
     rrup = dist.copy()
@@ -443,7 +443,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     
     NGA_EAST_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = {'vs30'}

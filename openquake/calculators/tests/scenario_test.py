@@ -26,6 +26,7 @@ from openquake.qa_tests_data.scenario import (
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 
@@ -215,6 +216,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
+
+        # check that stations are discarded when extracting avg_gmf
+        aw = extract(self.calc.datastore, 'avg_gmf?imt=PGA')
+        self.assertEqual(len(aw.PGA), 581)
 
     def test_case_21_different_columns_stations(self):
         # conditioned gmfs
