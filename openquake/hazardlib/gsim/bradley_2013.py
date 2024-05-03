@@ -426,10 +426,10 @@ def _get_v1(imt):
     Calculates Bradley's V1 term. Equation 2 (page 1814) and 6 (page 1816)
     based on SA period
     """
-    if imt == PGA():
+    T = imt.period
+    if T == 0:
         v1 = 1800.
     else:
-        T = imt.period
         v1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
         v1 = np.clip(v1a, -np.inf, 1800.)
     return v1
