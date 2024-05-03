@@ -31,7 +31,6 @@ CDIR = os.path.dirname(__file__)  # openquake/engine
 # added SA(0.1) for testing
 IMTLS = '''\
 {"PGA": logscale(0.005, 3.00, 25),
- "SA(0.01)": logscale(0.005, 9.00, 25),
  "SA(0.02)": logscale(0.005, 9.00, 25),
  "SA(0.03)": logscale(0.005, 9.00, 25),
  "SA(0.05)": logscale(0.005, 9.00, 25),
