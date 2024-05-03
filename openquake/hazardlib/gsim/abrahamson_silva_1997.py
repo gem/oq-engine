@@ -177,7 +177,7 @@ class AbrahamsonSilva1997(GMPE):
         for m, imt in enumerate(imts):
             # compute mean for the given imt (do not repeat the calculation if
             # imt is PGA, just add the site amplification term)
-            if imt == PGA():
+            if imt.period == 0:
                 mean[m] = np.log(pga_rock) + S * _compute_f5(C, pga_rock)
             else:
                 C = self.COEFFS[imt]
