@@ -959,6 +959,7 @@ def extract_avg_gmf(dstore, what):
         sitecol = dstore['sitecol']
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
+        # discard the stations from the avg_gmf plot
         stations = dstore['station_data/site_id'][:]
         ok = ~numpy.isin(sitecol.sids, stations)
     else:
