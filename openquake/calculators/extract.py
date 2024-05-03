@@ -958,11 +958,15 @@ def extract_avg_gmf(dstore, what):
     except KeyError:
         sitecol = dstore['sitecol']
     avg_gmf = dstore['avg_gmf'][0, :, imti]
-    nonzero = avg_gmf > 0
-    yield imt, avg_gmf[sitecol.sids[nonzero]]
-    yield 'sids', sitecol.sids[nonzero]
-    yield 'lons', sitecol.lons[nonzero]
-    yield 'lats', sitecol.lats[nonzero]
+    if 'station_data' in dstore:
+        stations = dstore['station_data/site_id'][:]
+        ok = ~numpy.isin(sitecol.sids, stations)
+    else:
+        ok = avg_gmf > 0
+    yield imt, avg_gmf[sitecol.sids[ok]]
+    yield 'sids', sitecol.sids[ok]
+    yield 'lons', sitecol.lons[ok]
+    yield 'lats', sitecol.lats[ok]
 
 
 @extract.add('num_events')
