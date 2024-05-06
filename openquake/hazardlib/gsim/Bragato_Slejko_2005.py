@@ -76,13 +76,8 @@ class BragatoSlejko2005(GMPE):
             C = self.COEFFS[imt]
             imean = _compute_mean(ctx, C)
 
-            # Convert units to g,
-            # but only for PGA and SA (not PGV):
-            if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** imean) / g)
-            else:
-                # PGV 
-                mean[m] = np.log(10.0 ** imean)
+            # PGA and SA are already in g:
+            mean[m] = np.log(10.0 ** imean)
 
             # Return stddevs in terms of natural log scaling
             sig[m] = np.log(10.0 ** C['s'])
