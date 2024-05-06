@@ -1,3 +1,7 @@
+  [Marco Pagani, Christopher Brooks]
+  * Refactored Chiou and Youngs (2014) GMM to be adjustable using methodology
+  of the Boore et al (2022) paper
+
   [Michele Simionato]
   * Discarded the stations (if any) from the avg_gmf plot
   * Added an early check for homeless consequences
