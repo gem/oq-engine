@@ -175,6 +175,8 @@ def plot_avg_gmf(calc_id, imt):
     coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
                       s=markersize)
     plt.colorbar(coll)
+    sitecol = ex.get('sitecol').array
+    ax.plot(sitecol['lon'], sitecol['lat'], '+')
 
     ax = add_borders(ax)
 
