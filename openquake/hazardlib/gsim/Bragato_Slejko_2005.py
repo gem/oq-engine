@@ -37,7 +37,7 @@ def _compute_mean(ctx, C):
     """
     Functional form (i.e., equation 5 in p. 262)
     """
-    reture C['a'] + (C['b'] + C['c'] * ctx.mag) * ctx.mag + (C['d'] + C['e'] * ctx.mag**3) * np.log10(_compute_distance)
+    return C['a'] + (C['b'] + C['c'] * ctx.mag) * ctx.mag + (C['d'] + C['e'] * ctx.mag**3) * np.log10(_compute_distance)
 
 
 
