@@ -326,7 +326,7 @@ def get_ln_y_ref(
         get_stress_scaling(
             T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
         )
-        + get_magnitude_scaling(C, ctx.mag)
+        + get_magnitude_scaling(C, ctx.mag, delta_cm=0)
         + get_source_scaling_terms(
             T,
             C,
