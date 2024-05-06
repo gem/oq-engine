@@ -961,9 +961,9 @@ def extract_avg_gmf(dstore, what):
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
         stations = dstore['station_data/site_id'][:]
-        ok = ~numpy.isin(sitecol.sids, stations)
+        ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
     else:
-        ok = slice(None)
+        ok = avg_gmf > 0
     yield imt, avg_gmf[sitecol.sids[ok]]
     yield 'sids', sitecol.sids[ok]
     yield 'lons', sitecol.lons[ok]

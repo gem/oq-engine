@@ -219,7 +219,7 @@ class ScenarioTestCase(CalculatorTestCase):
 
         # check that stations are discarded when extracting avg_gmf
         aw = extract(self.calc.datastore, 'avg_gmf?imt=PGA')
-        self.assertEqual(len(aw.PGA), 581)
+        self.assertEqual(len(aw.PGA), 571)
 
     def test_case_21_different_columns_stations(self):
         # conditioned gmfs
@@ -266,8 +266,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(ds['gmf_data/sid']), 40)
         df1 = self.calc.datastore.read_df('gmf_data')
         for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
-            for g1, g2 in zip(df0[gmv], df1[gmv]):
-                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
+            for g0, g1 in zip(df0[gmv], df1[gmv]):
+                assert abs(g0-g1) < 5E-6, (gmv, g0, g1)
 
     def test_case_23(self):
         # check exposure with duplicates

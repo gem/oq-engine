@@ -1479,12 +1479,13 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         newlosses = numpy.zeros(num_events, losses.dtype)
         newlosses[num_events - num_losses:num_events] = losses
         losses = newlosses
-    periods = eff_time / numpy.arange(num_events, 0., -1)
-    num_left = sum(1 for rp in return_periods if rp < periods[0])
-    num_right = sum(1 for rp in return_periods if rp > periods[-1])
-    rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
+    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    num_left = sum(1 for rp in return_periods if rp < eperiods[0])
+    num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
+    rperiods = [rp for rp in return_periods
+                if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
-    logr, logp = numpy.log(rperiods), numpy.log(periods)
+    logr, logp = numpy.log(rperiods), numpy.log(eperiods)
     curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
     curve[P - num_right:] = numpy.nan
     return curve
