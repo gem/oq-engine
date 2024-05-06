@@ -24,13 +24,13 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 def _compute_distance(ctx, C):
     """
-    ``r = sqrt(dist**2 + C['h']**2)``
+    equation 4, p.262:
+    ``r = sqrt(d**2 + C['h']**2)``
     """
     return np.sqrt(ctx.rjb**2 + C['h']**2)
 
@@ -49,20 +49,16 @@ class BragatoSlejko2005(GMPE):
     Reference: 'Empirical Ground-Motion Attenuation Relations for the Eastern Alps in the Magnitude Range 2.5–6.3'.
     """
     
-    #: Supported intensity measure types (IMTs, only PGA, PGV and SA are considered)
+    #: Intensity measure types (IMTs, only PGA, PGV and SA are considered)
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the running vectorial composition of two horizontal components
-    #: "Vectorial addition: a_V = sqrt(max|a_NS(t)|^2 + max|a_EW(t)|^2)).
-    #: This means that the maximum ground amplitudes occur simultaneously on
-    #: the two horizontal components; this is a conservative assumption."
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
 
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total
+    #: Supported standard deviation type is the total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    #: Required rupture parameters are magnitude
+    #: Required rupture parameters is magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rjb (Repi is not considered)
@@ -85,7 +81,7 @@ class BragatoSlejko2005(GMPE):
             if imt.string.startswith(('PGA', 'SA')):
                 mean[m] = np.log((10.0 ** imean) / g)
             else:
-                # PGV (Convert from cm/s to m/s)
+                # PGV 
                 mean[m] = np.log(10.0 ** imean)
 
             # Return stddevs in terms of natural log scaling
