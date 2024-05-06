@@ -1263,6 +1263,16 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             (interest_rate * retrofitting_cost))
 
 
+def pla_factor(df):
+    """
+    Post-Loss-Amplification factor interpolator.
+    To be instantiated with a DataFrame with columns
+    return_period and pla_factor.
+    """
+    return interpolate.interp1d(df.return_period.to_numpy(),
+                                df.pla_factor.to_numpy())
+
+
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
@@ -1438,7 +1448,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
 
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
-                     sorting_idxs=None):
+                     sorting_idxs=None, pla_factor=None):
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1486,6 +1496,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
                 if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, loge = numpy.log(rperiods), numpy.log(eperiods)
+    if pla_factor:
+        losses = pla_factor(eperiods) * losses
     curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
     return curve
