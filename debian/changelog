@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Discarded the stations (if any) from the avg_gmf plot
+  * Added an early check for homeless consequences
+  * Improved the check for missing site parameters
   * Internal: fixed the serialization of logic trees using
     simpleFaultGeometryAbsolute, complexFaultGeometryAbsolute or
     characteristicFaultGeometryAbsolute

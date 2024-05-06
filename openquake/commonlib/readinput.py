@@ -463,16 +463,23 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             z[name] = sm[name]
         except ValueError:  # missing, use the global parameter
-            # exercised in the test classical/case_28
-            value = getattr(oqparam, site.param[name])
-            if isinstance(value, float) and numpy.isnan(value):
-                raise InvalidFile(
-                    f"{oqparam.inputs['job_ini']}: "
-                    f"{site.param[name]} not specified")
-            if name == 'vs30measured':  # special case
-                value = value == 'measured'
-            z[name] = value
+            # exercised in the test classical/case_28_bis
+            z[name] = check_site_param(oqparam, name)
     arrays.append(z)
+
+
+def check_site_param(oqparam, name):
+    """
+    Extract the value of the given parameter
+    """
+    value = getattr(oqparam, site.param[name])
+    if isinstance(value, float) and numpy.isnan(value):
+        raise InvalidFile(
+            f"{oqparam.inputs['job_ini']}: "
+            f"{site.param[name]} not specified")
+    elif name == 'vs30measured':  # special case
+        value = value == 'measured'
+    return value
 
 
 def get_site_model(oqparam, h5=None):
@@ -492,7 +499,6 @@ def get_site_model(oqparam, h5=None):
         dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
-    #req_site_params = oqparam.req_site_params
     arrays = []
     sm_fieldsets = {}
     for fname in fnames:
@@ -583,6 +589,12 @@ def get_site_collection(oqparam, h5=None):
             sm = get_site_model(oqparam, h5)
             if len(sm) > len(mesh):  # the association will happen in base.py
                 sm = oqparam
+        elif 'site_model' not in oqparam.inputs:
+            # check the required site parameters are not NaN
+            sm = oqparam
+            for req_site_param in req_site_params:
+                if req_site_param in site.param:
+                    check_site_param(oqparam, req_site_param)
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(

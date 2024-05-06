@@ -466,6 +466,18 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Using pointsource_distance=%s',
                              oq.pointsource_distance)
 
+    def check_consequences(self):
+        oq = self.oqparam
+        names = self.assetcol.array.dtype.names
+        for consequence in self.crmodel.get_consequences():
+            if consequence == 'homeless':
+                if 'value-residents' not in names:
+                    msg = '<field oq="residents" input="OCCUPANTS_PER_ASSET"/>'
+                    fnames = '\n'.join(oq.inputs['exposure'])
+                    raise InvalidFile(
+                        "%s: Missing %s in the exposureFields node"
+                        % (fnames, msg))
+
     def read_inputs(self):
         """
         Read risk data and sources if any
@@ -491,6 +503,8 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+        if hasattr(self, 'assetcol'):
+            self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
 
         if ('amplification' in oq.inputs and
@@ -705,6 +719,7 @@ class HazardCalculator(BaseCalculator):
         self.sitecol, self.assetcol, discarded, exposure = \
             readinput.get_sitecol_assetcol(
                 oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
         if len(discarded):
@@ -1221,7 +1236,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     data = numpy.concatenate(gmvlst)
     data.sort(order='eid')
     create_gmf_data(dstore, oqparam.get_primary_imtls(),
-                    oqparam.sec_imts, data=data)
+                    oqparam.sec_imts, data=data, N=len(sitecol.complete))
     dstore['weights'] = numpy.ones(1)
     return eids
 
@@ -1294,14 +1309,17 @@ def import_gmfs_hdf5(dstore, oqparam):
     return events['id']
 
 
-def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
+def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
-    N = 0 if data is None else data['sid'].max() + 1
+    if data is None:
+        N = 0
+    else:
+        assert N is not None  # pass len(complete) here
     items = [('sid', U32 if N == 0 else data['sid']),
              ('eid', U32 if N == 0 else data['eid'])]
     for m in range(M):
@@ -1371,7 +1389,8 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
                for s in numpy.arange(N, dtype=U32)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
-        create_gmf_data(calc.datastore, imts, data=data)
+        create_gmf_data(
+            calc.datastore, imts, data=data, N=len(sitecol.complete))
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):
