@@ -24,50 +24,89 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim import utils
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA
+
+def _compute_distance(ctx, C):
+    """
+    ``r = sqrt(dist**2 + C['h']**2)``
+    """
+    return np.sqrt(ctx.rjb**2 + C['h']**2)
+
+def _compute_mean(ctx, C):
+    """
+    Functional form (e.g., equation 5 in p. 262)
+    """
+    mean = C['a'] + (C['b'] + C['c'] * ctx.mag) * ctx.mag + (C['d'] + C['e'] * ctx.mag**3) * np.log10(_compute_distance)
+
+    reture mean
+
 
 class BragatoSlejko2005(GMPE):
     """
-    Implements the Bragato P.L. and Slejko D. (2005) GMPE for the Eastern Alps.
-    Empirical Ground-Motion Attenuation Relations for the Eastern Alps in the Magnitude Range 2.5–6.3.
+    Implements the Bragato P.L. and Slejko D. (2005) GMPE for the estimates of ONLY PGAs.
+    Reference: 'Empirical Ground-Motion Attenuation Relations for the Eastern Alps in the Magnitude Range 2.5–6.3'.
     """
 
-    #: Supported intensity measure types (IMTs)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+    #: Supported tectonic region type is 'active shallow crust'
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+    
+    #: Supported intensity measure types (IMTs, only PGA is considered)
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
-    #: Supported intensity measure component is the geometric mean of two horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = 'Geometric mean'
+    #: Supported intensity measure component is the running vectorial composition of two horizontal components
+    #: "Vectorial addition: a_V = sqrt(max|a_NS(t)|^2 + max|a_EW(t)|^2)).
+    #: This means that the maximum ground amplitudes occur simultaneously on
+    #: the two horizontal components; this is a conservative assumption."
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
 
-    #: Distance metric used
-    DISTANCE_METRIC = 'epicentral'
+    #: Supported standard deviation types are inter-event, intra-event
+    #: and total
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    #: Magnitude type used
-    MAGNITUDE_TYPE = 'ML'
+    #: Required site parameter is only Vs30
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
-    #: Required site parameters
-    REQUIRES_SITES_PARAMETERS = set()
-
-    #: Required rupture parameters
+    #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    #: Required distance measure
-    REQUIRES_DISTANCES = {'dist'}
+    #: Required distance measure is Rjb (Repi is not considered)
+    REQUIRES_DISTANCES = {'rjb'}
+    
+    #: Distance metric used
+    DISTANCE_METRIC = 'joyner-boore'
 
-    COEFFS = CoeffsTable(sa_damping=5, table="""
-    IMT    a    b    c    d    e    h    s
-    PGV    0.1  0.5 -0.6 0.02 0.1  7.0  0.3
-    PGA    0.2  0.6 -0.7 0.03 0.2  8.0  0.2
-    SA     0.3  0.7 -0.8 0.04 0.3  9.0  0.1
-    """)
+    sgn = 0
 
-    def get_mean_std(self, ctx, imt, dist):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Calculate mean and standard deviation of ground motion.
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
         """
-        coeffs = self.COEFFS[imt]
 
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = _compute_mean(ctx, C)
+
+            # Convert units to g,
+            # but only for PGA and SA (not PGV):
+            if imt.string.startswith(('PGA', 'SA')):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                # PGV
+                mean[m] = np.log(10.0 ** imean)
+
+            # Return stddevs in terms of natural log scaling
+            sig[m] = np.log(10.0 ** C['s'])
+
+            if self.sgn:
+                mean[m] += self.sgn * sig[m]
+
+_________________________________________________________________________________        
         # Compute the distance term
-        r = np.sqrt(dist**2 + coeffs['h']**2)
+        r = np.sqrt(rjb**2 + coeffs['h']**2)
         
         # Compute the mean ground motion
         mean = coeffs['a'] + (coeffs['b'] + coeffs['c'] * ctx.mag) * ctx.mag
@@ -96,3 +135,9 @@ class BragatoSlejko2005(GMPE):
             sig[m] = istd  # Assuming only one stddev type for simplicity
             tau[m] = istd * 0.5  # Example split for tau
             phi[m] = istd * 0.5  # Example split for phi
+
+
+    COEFFS = CoeffsTable(sa_damping=5, table="""
+    IMT      a     b        c      d         e    h       s
+    PGA  -3.37  1.93   -0.203  -3.02   0.00744  7.3   0.358
+    """)
