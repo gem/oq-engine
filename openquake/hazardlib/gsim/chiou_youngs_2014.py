@@ -663,7 +663,8 @@ class ChiouYoungs2014(GMPE):
         # - chi             i.e. χFS2RS in equation 6
         if stress_par_target is not None:
             cwd = pathlib.Path(__file__).parent.resolve()
-            fname = "chiou_youngs_2014_source_function_table.txt"
+            fname = os.path.join('chiou_youngs_2014',
+                                 'source_function_table.txt')
             fpath = os.path.join(cwd, fname)
             with open(fpath, encoding='utf8') as f:
                 tmp = f.read()

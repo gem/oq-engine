@@ -38,7 +38,8 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
-path_adj_table = os.path.join(os.path.dirname(__file__), 'data', 'C14adj',
+path_adj_table = os.path.join(os.path.dirname(__file__),
+                              '..', '..', 'gsim', 'chiou_youngs_2014',
                               'path_adjustment_table_target_region_idaho.txt')
 
 
