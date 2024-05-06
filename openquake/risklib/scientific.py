@@ -1485,8 +1485,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
     rperiods = [rp for rp in return_periods
                 if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
-    logr, logp = numpy.log(rperiods), numpy.log(eperiods)
-    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    logr, loge = numpy.log(rperiods), numpy.log(eperiods)
+    curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
     return curve
 
