@@ -73,13 +73,10 @@ class BragatoSlejko2005(GMPE):
 
     #: Required distance measure is Rjb (Repi is not considered)
     REQUIRES_DISTANCES = {'rjb'}
-    
-    #: Distance metric used
-    DISTANCE_METRIC = 'joyner-boore'
 
     sgn = 0
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
