@@ -1399,6 +1399,8 @@ def get_pla_factor(oqparam, minperiod=None):
     :param oqparam: an OqParam instance
     :returns: a function producing the period-dependent amplification factor
     """
+    if 'post_loss_amplification' not in oqparam.inputs:
+        return
     df = pandas.read_csv(oqparam.inputs['post_loss_amplification'])
     if minperiod is not None:
         # add minperiod with pla_factor of 1, as in the specs, see
