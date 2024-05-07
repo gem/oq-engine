@@ -1394,6 +1394,15 @@ def get_reinsurance(oqparam, assetcol=None):
     return p, t, f
 
 
+def get_pla_factor(oqparam):
+    """
+    :param oqparam: an OqParam instance
+    :returns: a function producing the period-dependent amplification factor
+    """
+    df = pandas.read_csv(oqparam.inputs['post_loss_amplification'])
+    return scientific.pla_factor(df)
+
+
 def get_input_files(oqparam):
     """
     :param oqparam: an OqParam instance

@@ -1515,7 +1515,8 @@ class LossCurvesMapsBuilder(object):
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
-                 weights, num_events, eff_time, risk_investigation_time):
+                 weights, num_events, eff_time, risk_investigation_time,
+                 pla_factor=None):
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
@@ -1527,6 +1528,7 @@ class LossCurvesMapsBuilder(object):
         else:
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
+        self.pla_factor = pla_factor
 
     # used in post_risk, for normal loss curves and reinsurance curves
     def build_curve(self, years, col, losses, agg_types, loss_type, rlzi=0):
@@ -1540,17 +1542,20 @@ class LossCurvesMapsBuilder(object):
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:
-            dic[col] = losses_by_period(losses, periods, ne, self.eff_time)
+            dic[col] = losses_by_period(losses, periods, ne, self.eff_time,
+                                        pla_factor=self.pla_factor)
         if len(years):
             gby = pandas.DataFrame(
                 dict(year=years, loss=losses)).groupby('year')
             # see specs in https://github.com/gem/oq-engine/issues/8971
             if 'aep' in agg_types_list:
                 dic[col + '_aep'] = losses_by_period(
-                    gby.loss.sum(), periods, ne, self.eff_time)
+                    gby.loss.sum(), periods, ne, self.eff_time,
+                    pla_factor=self.pla_factor)
             if 'oep' in agg_types_list:
                 dic[col + '_oep'] = losses_by_period(
-                    gby.loss.max(), periods, ne, self.eff_time)
+                    gby.loss.max(), periods, ne, self.eff_time,
+                    pla_factor=self.pla_factor)
         return dic
 
 

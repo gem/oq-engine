@@ -26,6 +26,7 @@ import functools
 import collections
 import multiprocessing
 import numpy
+import pandas
 import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
@@ -933,6 +934,7 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
+        'post_loss_amplification',
     }
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
@@ -1421,6 +1423,8 @@ class OqParam(valid.ParamSet):
 
         super().validate()
         self.check_source_model()
+        if 'post_loss_amplification' in self.inputs:
+            pandas.read_csv(self.inputs['post_loss_amplification'])
 
     def check_gsims(self, gsims):
         """
