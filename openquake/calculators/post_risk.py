@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import readinput, datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
 from openquake.calculators import base, views
@@ -169,12 +169,16 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     if num_events is None:
         num_events = numpy.bincount(
             dstore['events']['rlz_id'], minlength=len(weights))
+    max_events = num_events.max()
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        haz_time, num_events.max())
+        haz_time, max_events)  # in case_master [1, 2, 5, 10]
+    max_period = periods[-1]
+    pla_factor = readinput.get_pla_factor(oq, max_period / max_events)
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        haz_time, oq.risk_investigation_time or oq.investigation_time)
+        haz_time, oq.risk_investigation_time or oq.investigation_time,
+        pla_factor=pla_factor)
 
 
 def get_src_loss_table(dstore, loss_id):

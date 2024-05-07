@@ -23,7 +23,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.gmf_ebrisk import (
-    case_1, case_2, case_3, case_4, case_5)
+    case_1, case_2, case_3, case_4, case_5, case_6)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_2 as ebr_2)
 
@@ -107,6 +107,26 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_5.__file__, 'job.ini')
         rbe = self.calc.datastore.read_df('risk_by_event')
         self.assertEqual(len(rbe), 0)
+
+    def test_case_6(self):
+        # no amplification
+        self.run_calc(case_6.__file__, 'job.ini',
+                      post_loss_amplification_file='')
+
+        # check aggcurves-stats
+        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1e-5)
+
+        # check aggrisk-stats
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1e-5)
+
+        # post_loss_amplification
+        self.run_calc(case_6.__file__, 'job.ini')
+        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves-pla.csv', fname, delta=1e-5)
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-pla.csv', fname, delta=1e-5)
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
