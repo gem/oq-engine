@@ -906,6 +906,16 @@ def check_same_levels(imtls):
     return periods, imls
 
 
+def check_increasing(dframe, *columns):
+    """
+    Make sure the passed columns of the dataframe exists and correspond
+    to increasing numbers
+    """
+    for col in columns:
+        arr = dframe[col].to_numpy()
+        assert (numpy.diff(arr) >= 0).all(), arr
+
+
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
 
@@ -1424,7 +1434,8 @@ class OqParam(valid.ParamSet):
         super().validate()
         self.check_source_model()
         if 'post_loss_amplification' in self.inputs:
-            pandas.read_csv(self.inputs['post_loss_amplification'])
+            df = pandas.read_csv(self.inputs['post_loss_amplification'])
+            check_increasing(df, 'return_period', 'pla_factor')
 
     def check_gsims(self, gsims):
         """
