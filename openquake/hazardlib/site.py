@@ -37,7 +37,9 @@ param = dict(
     vs30='reference_vs30_value',
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
-    backarc='reference_backarc')
+    backarc='reference_backarc',
+    region='region',
+    xvf='xvf')
 
 
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5

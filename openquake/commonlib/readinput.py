@@ -472,7 +472,11 @@ def check_site_param(oqparam, name):
     """
     Extract the value of the given parameter
     """
-    value = getattr(oqparam, site.param[name])
+    longname = site.param[name]  # vs30 -> reference_vs30_value
+    value = getattr(oqparam, longname, None)
+    if value is None:
+        raise InvalidFile('Missing site_model_file specifying the parameter %s'
+                          % name)
     if isinstance(value, float) and numpy.isnan(value):
         raise InvalidFile(
             f"{oqparam.inputs['job_ini']}: "
@@ -503,9 +507,11 @@ def get_site_model(oqparam, h5=None):
     sm_fieldsets = {}
     for fname in fnames:
         if isinstance(fname, str) and not fname.endswith('.xml'):
+            # parsing site_model.csv and populating arrays
             _smparse(fname, oqparam, arrays, sm_fieldsets)
             continue
 
+        # parsing site_model.xml
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = set(oqparam.req_site_params) - set(params[0])
