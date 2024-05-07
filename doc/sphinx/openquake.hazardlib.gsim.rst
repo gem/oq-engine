@@ -662,6 +662,14 @@ geomatrix_1993
     :undoc-members:
     :show-inheritance:
 
+ghasemi_2009
+----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ghasemi_2009
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ghofrani_atkinson_2014
 ------------------------------------------------------
 
