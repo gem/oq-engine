@@ -172,14 +172,8 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     max_events = num_events.max()
     periods = return_periods or oq.return_periods or scientific.return_periods(
         haz_time, max_events)  # in case_master [1, 2, 5, 10]
-    pla_factor = readinput.get_pla_factor(oq)
-    max_period = periods[-1]  # maximum period
-    minperiod = max_period / max_events
-    if minperiod < pla_factor.x[0]:
-        pla = oq.inputs['post_loss_amplification']
-        msg = f'({max_period=}) / ({max_events=}) = {minperiod}'
-        raise ValueError('The minimum period supported by %s is %s, '
-                         'but we got %s' % (pla, pla_factor.x[0], msg))
+    max_period = periods[-1]
+    pla_factor = readinput.get_pla_factor(oq, max_period / max_events)
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
