@@ -184,6 +184,8 @@ def update(params, items, base_path):
     correctly file parameters.
     """
     for key, value in items:
+        #if value == '':
+        #    import pdb; pdb.set_trace()
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'site_model_csv', 'site_model_file',
                    'exposure_csv', 'exposure_file'):
@@ -200,6 +202,10 @@ def update(params, items, base_path):
                 assert len(fnames) in (0, 1)
                 for fname in fnames:
                     params['inputs'][input_type] = fname
+            else:
+                # remove the key if the value is empty
+                basekey, _file = key.rsplit('_', 1)
+                params['inputs'].pop(basekey, None)
         elif isinstance(value, str) and value.endswith('.hdf5'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
@@ -226,7 +232,7 @@ def check_params(cp, fname):
                 f'{fname}: parameter(s) {params_intersection} is(are) defined'
                 ' in multiple sections')
 
-
+        
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
 def get_params(job_ini, kw={}):
@@ -278,13 +284,12 @@ def get_params(job_ini, kw={}):
         fname = dic.pop('source_model_logic_tree_file')
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
-        items = list(dic.items())
+        items = dic.items()
     update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
     update(params, kw.items(), base_path)  # override on demand
-
     return params
 
 

@@ -109,14 +109,22 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(rbe), 0)
 
     def test_case_6(self):
-        # post_loss_amplification
-        self.run_calc(case_6.__file__, 'job.ini')
+        # no amplification
+        self.run_calc(case_6.__file__, 'job.ini',
+                      post_loss_amplification_file='')
 
         # check aggcurves-stats
         [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves-pla.csv', fname, delta=1e-5)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1e-5)
 
         # check aggrisk-stats
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1e-5)
+
+        # post_loss_amplification
+        self.run_calc(case_6.__file__, 'job.ini')
+        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves-pla.csv', fname, delta=1e-5)
         [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk-pla.csv', fname, delta=1e-5)
 
