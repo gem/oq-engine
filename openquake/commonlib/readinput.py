@@ -184,8 +184,6 @@ def update(params, items, base_path):
     correctly file parameters.
     """
     for key, value in items:
-        #if value == '':
-        #    import pdb; pdb.set_trace()
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'site_model_csv', 'site_model_file',
                    'exposure_csv', 'exposure_file'):
