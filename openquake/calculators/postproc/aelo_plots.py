@@ -63,9 +63,7 @@ def _find_fact_maxC(T, code):
         else:
             fact_maxC = 1.5
     elif code == 'ASCE7-22':
-        if T == 0:
-            fact_maxC = 1.
-        elif T <= 0.2:
+        if T <= 0.2:
             fact_maxC = 1.2
         elif T <= 1:
             fact_maxC = f3(T)
@@ -117,7 +115,7 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(IMT).period
-        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-22')
+        f = 1 if imt == "PGA" else _find_fact_maxC(T, 'ASCE7-22')
         imls.append([im for im in imtls[IMT]])
         imls_mc.append([im*f for im in imtls[IMT]])
         # get the IML for the 2475 RP
@@ -206,6 +204,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     """
     dinfo = get_info(dstore)
     plt = import_plt()
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     # get imls and imts, make arrays
     mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
     det_mce = mce_df['DetMCE']
@@ -215,53 +214,189 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     IMTS = [_convert_imt(i) for i in imts]
     T = [from_string(imt).period for imt in imts]
     DLL = mce_df['DLL']
-    plt.figure(figsize=(8, 6))
-    plt.rcParams.update({'font.size': 15})
-    plt.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
-    plt.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
+    ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
+    ax1.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
              linewidth=3, linestyle='-')
     if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
         upperlim = max([prob_mce[1], 1.5, det_mce[1]])
-        plt.ylim([0.01, numpy.max([prob_mce, mce, DLL]) + 0.2])
+        ax1.ylim([0.01, numpy.max([prob_mce, mce, DLL]) + 0.2])
     else:
         upperlim = max([prob_mce[1], 1.5, det_mce[1]])
-        plt.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
+        ax1.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
+                 linewidth=3, linestyle='-')
+        ax1.set_xlim([0.01, numpy.max([prob_mce,  mce, det_mce, DLL]) + 0.2])
+    ax1.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
+    ax1.grid('both')
+    ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
+    ax1.set_xlabel('Period (s)', fontsize=20)
+    ax1.legend(loc="lower left", fontsize='13')
+    ax1.set_xlim([0.005, 10])
+
+    plt.rcParams.update({'font.size': 15})
+    ax2.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
+    ax2.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
+             linewidth=3, linestyle='-')
+    if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
+        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
+        ax2.ylim([0.01, numpy.max([prob_mce, mce, DLL]) + 0.2])
+    else:
+        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
+        ax2.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
                  linewidth=3, linestyle='-')
         plt.ylim([0.01, numpy.max([prob_mce,  mce, det_mce, DLL]) + 0.2])
-    plt.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
-    plt.grid('both')
-    plt.ylabel('Spectral Acceleration (g)', fontsize=20)
-    plt.xlabel('Period (s)', fontsize=20)
-    plt.legend(loc="lower left", fontsize='13')
-    plt.xlim([0.005, 10])
-    plt.xscale('log')
-    plt.yscale('log')
+    ax2.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
+    ax2.grid('both')
+    ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
+    ax2.set_xlabel('Period (s)', fontsize=20)
+    ax2.legend(loc="upper right", fontsize='13')
+    ax2.set_xlim([-0.02, 1.2])
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
+    ax2.set_xscale('linear')
+    ax2.set_yscale('linear')
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.0075, upperlim*0.0012, message, fontsize='small', color='black', alpha=0.85)
-    
+    plt.text(0.03, -upperlim*0.45, message, fontsize='small', color='black',
+             alpha=0.85)
+
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/governing_mce.png'] = Image.open(bio)
     return plt
 
+def _plot(ax, ax1, site_idx, plot_idx, m, n, imls, imls_o,
+          mrs, rtgm_probmce, afe_target, fact):
+    out_contr_all = {}
+    for i, src in enumerate(mrs.src_id):
+        # get contribution at target level for that source
+        afes = mrs[site_idx, m, :, i]
+        if (afes == 0).all():
+            continue
+        afe_uhgm = _find_afe_target(
+            imls, numpy.clip(afes, 1E-15, numpy.inf), rtgm_probmce[m])
+        # get % contribution of that source
+        contr_source = afe_uhgm / afe_target
+        out_contr_all[i] = contr_source * 100
+
+    # identify contribution of largest contributor, make color scale
+    largest_contr = max(out_contr_all.values())
+    sample = sum(val > fact*largest_contr
+                 for val in out_contr_all.values())
+    viridis = mpl.colormaps['viridis'].reversed().resampled(sample)
+
+    # find and plot the sources, highlighting the ones that contribute more
+    # than 10% of largest contributor
+    # use j to only add the "other sources" label once
+    # use i to cycle through the colors for the major source contributors
+    i = j = 0
+    for ind in out_contr_all:
+        afes = mrs[site_idx, m, :, ind]
+        # if it's not a big contributor, plot in silver
+        if out_contr_all[ind] <= fact * largest_contr:
+            if j == 0:
+                if m in plot_idx:
+                    ax[n].loglog(imls, afes, 'silver', linewidth=0.7,
+                             label='other sources')
+                ax1.loglog(imls_o, afes, 'silver', linewidth=0.7,
+                           label='other source')
+                j += 1
+            else:
+                if m in plot_idx:
+                    ax[n].loglog(imls, afes, 'silver', linewidth=0.7)
+                ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
+        # if it is, plot in color
+        else:
+            if m in plot_idx:
+                ax[n].loglog(imls, afes, c=viridis(i),
+                         label=str(mrs.src_id[ind]))
+            ax1.loglog(imls_o, afes, c=viridis(i),label=str(mrs.src_id[ind]))
+            i += 1
+
+def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_probmce,
+                mrs, update_dstore, dstore):
+    # identify the sources that have a contribution > than fact (here 10%) of
+    # the largest contributor;
+    fig1, ax1 = plt.subplots()
+    # annual frequency of exceedance:
+    T = from_string(imt).period
+    f = 1 if imt == "PGA" else _find_fact_maxC(T, 'ASCE7-22')
+    imls_o = imtls[imt]
+    imls = numpy.array([iml*f for iml in imls_o])
+    # have to compute everything for max comp. and for geom. mean
+    RTGM = rtgm_probmce[m]
+    RTGM_o = rtgm_probmce[m] / f
+    afe_target = _find_afe_target(imls, AFE[m], RTGM)
+    afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
+
+    # populate 3-panel plot
+    if m in plot_idx:
+        ax[n].loglog(imls, AFE[m], 'k', label=_get_label(imt),
+                 linewidth=2, zorder=3)
+        ax[n].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
+                 linewidth=2, zorder=3)
+        ax[n].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2,
+                 zorder=3)
+        ax[n].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
+                 linewidth=2, zorder=3)
+    # populate individual plots
+    ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
+               linewidth=2, zorder=3)
+    ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
+               'k--', linewidth=2, zorder=3)
+    ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2,
+               zorder=3)
+    ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
+               linewidth=2, zorder=3)
+    _plot(ax, ax1, site_idx, plot_idx, m, n, imls, imls_o,
+          mrs, rtgm_probmce, afe_target, fact)
+
+    # populate subplot - maximum component
+    if m in plot_idx:
+        ax[n].grid('both')
+        ax[n].set_xlabel(imt+' (g)', fontsize=16)
+        ax[n].set_ylabel('Annual Freq. Exceedance', fontsize=16)
+        ax[n].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
+        ax[n].set_ylim([10E-6, 1.1])
+        ax[n].set_xlim([0.01, 5])
+
+    # add user guide message
+    if m == 2:
+        message = ('See WebUI User Guide for complete explanation '
+                   'of plot contents.')
+        ax[m].text(0.0105, 0.000000506, message, fontsize='small',
+                   color='black', alpha=0.85 ) 
+
+    # populate single imt plots - geometric mean
+    ax1.grid('both')
+    ax1.set_xlabel(imt+' (g)', fontsize=16)
+    ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
+    ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
+    ax1.set_ylim([10E-6, 1.1])
+    ax1.set_xlim([0.01, 5])
+    if update_dstore:
+        # save single imt plot
+        bio1 = io.BytesIO()
+        fig1.savefig(bio1, format='png', bbox_inches='tight')
+        # keep these in webui until we finish checks and have a command
+        # line exporter, then we can change the name to _{imt} and they
+        # will not appear in the webui
+        dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
+    fig1.tight_layout()
+
 
 def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
-    imts = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
-        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
-        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
     imtls = dinfo['imtls']
+    plot_idx = [0,7,13]
+    n = 0
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm_df.RTGM == 0).all():
         return
 
-    # get the IML for the 2475 RP
-    rtgm_probmce = rtgm_df['ProbMCE']
     # get hazard curves, put into rates
     AFE = []
     mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
@@ -270,118 +405,14 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         AFE.append(to_rates(hcurve, window))
 
     plt = import_plt()
-    fig, ax = plt.subplots(22, figsize=(8, 15))
-
-    # identify the sources that have a contribution > than fact (here 10%) of
-    # the largest contributor;
-    fact = 0.1
-    mrs = dstore['mean_rates_by_src']  # (site_id, imt, lvl, src_id)
+    fig, ax = plt.subplots(3, figsize=(8, 15))
+    fact=0.1
     for m, imt in enumerate(imtls):
-        out_contr_all = {}
-        fig1, ax1 = plt.subplots()
-
-        # annual frequency of exceedance:
-        T = from_string(imt).period
-        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
-        imls_o = imtls[imt]
-        imls = numpy.array([iml*f for iml in imls_o])
-        # have to compute everything for max comp. and for geom. mean
-        RTGM = rtgm_probmce[m]
-        RTGM_o = rtgm_probmce[m] / f
-        afe_target = _find_afe_target(imls, AFE[m], RTGM)
-        afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
-        # populate 3-panel plot
-        ax[m].loglog(imls, AFE[m], 'k', label=_get_label(imt),
-                     linewidth=2, zorder=3)
-        ax[m].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
-                     linewidth=2, zorder=3)
-        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2,
-                     zorder=3)
-        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
-                     linewidth=2, zorder=3)
-        # populate individual plots
-        ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
-                   linewidth=2, zorder=3)
-        ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
-                   'k--', linewidth=2, zorder=3)
-        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2,
-                   zorder=3)
-        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
-                   linewidth=2, zorder=3)
-
-        for i, src in enumerate(mrs.src_id):
-            # get contribution at target level for that source
-            afes = mrs[site_idx, m, :, i]
-            if (afes == 0).all():
-                continue
-            afe_uhgm = _find_afe_target(
-                imls, numpy.clip(afes, 1E-15, numpy.inf), rtgm_probmce[m])
-            # get % contribution of that source
-            contr_source = afe_uhgm/afe_target
-            out_contr_all[i] = contr_source * 100
-
-        # identify contribution of largest contributor, make color scale
-        largest_contr = max(out_contr_all.values())
-        sample = sum(val > fact*largest_contr
-                     for val in out_contr_all.values())
-        viridis = mpl.colormaps['viridis'].reversed().resampled(sample)
-
-        # find and plot the sources, highlighting the ones that contribute more
-        # than 10% of largest contributor
-        # use j to only add the "other sources" label once
-        # use i to cycle through the colors for the major source contributors
-        i = j = 0
-        for ind in out_contr_all:
-            afes = mrs[site_idx, m, :, ind]
-            # if it's not a big contributor, plot in silver
-            if out_contr_all[ind] <= fact * largest_contr:
-                if j == 0:
-                    ax[m].loglog(imls, afes, 'silver', linewidth=0.7,
-                                 label='other sources')
-                    ax1.loglog(imls_o, afes, 'silver', linewidth=0.7,
-                               label='other source')
-                    j += 1
-                else:
-                    ax[m].loglog(imls, afes, 'silver', linewidth=0.7)
-                    ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
-            # if it is, plot in color
-            else:
-                ax[m].loglog(imls, afes, c=viridis(i),
-                             label=str(mrs.src_id[ind]))
-                ax1.loglog(imls_o, afes, c=viridis(i),
-                           label=str(mrs.src_id[ind]))
-                i += 1
-        # populate subplot - maximum component
-        ax[m].grid('both')
-        ax[m].set_xlabel(imt+' (g)', fontsize=16)
-        ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
-        ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
-        ax[m].set_ylim([10E-6, 1.1])
-        ax[m].set_xlim([0.01, 4])
-
-        # add user guide message
-        if m==2:
-            message = 'See WebUI User Guide for complete explanation of plot contents.'
-            ax[m].text(0.0105, 0.000000506, message, fontsize='small', color='black', alpha=0.85 ) 
-
-        # populate single imt plots - geometric mean
-        ax1.grid('both')
-        ax1.set_xlabel(imt+' (g)', fontsize=16)
-        ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
-        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
-        ax1.set_ylim([10E-6, 1.1])
-        ax1.set_xlim([0.01, 4])
-
-        if update_dstore:
-            # save single imt plot
-            bio1 = io.BytesIO()
-            fig1.savefig(bio1, format='png', bbox_inches='tight')
-            # keep these in webui until we finish checks and have a command
-            # line exporter, then we can change the name to _{imt} and they
-            # will not appear in the webui
-            dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
-        fig1.tight_layout()
-
+        #print(imt)
+        _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_df['ProbMCE'],
+                dstore['mean_rates_by_src'], update_dstore, dstore)
+        if m in plot_idx:
+            n = n+1
     if update_dstore:
         # save triple plot
         bio = io.BytesIO()
