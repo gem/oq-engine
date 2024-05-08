@@ -334,22 +334,7 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-4)
 
-    def test_case_master(self):
-        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
-        # it looks like the cholesky decomposition is OS-dependent, so
-        # the GMFs are different of macOS/Ubuntu20/Ubuntu18
-        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
-        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'avg_losses-stats not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-4)
-
-        # check event loss table
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
-
+    def check_case_master(self):
         # check total variance
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
         elt_df = self.calc.datastore.read_df(
@@ -405,6 +390,24 @@ agg_id
         [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-4)
+
+    def test_case_master(self):
+        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
+        # it looks like the cholesky decomposition is OS-dependent, so
+        # the GMFs are different in macOS / Ubuntu20 / Ubuntu18
+        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'avg_losses-stats not exported?'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-4)
+
+        # check event loss table
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-4)
+
+        self.check_case_master()
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations

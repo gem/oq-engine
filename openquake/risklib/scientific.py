@@ -1263,6 +1263,16 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             (interest_rate * retrofitting_cost))
 
 
+def pla_factor(df):
+    """
+    Post-Loss-Amplification factor interpolator.
+    To be instantiated with a DataFrame with columns
+    return_period and pla_factor.
+    """
+    return interpolate.interp1d(df.return_period.to_numpy(),
+                                df.pla_factor.to_numpy())
+
+
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
@@ -1437,8 +1447,28 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
+def add_zeros(losses, num_events):
+    """
+    Add zeros on the left if there are less losses than events.
+
+    :param losses: an array of size num_losses
+    :param num_events: an integer >= num_losses
+    :returns: an array of size num_events
+    """
+    num_losses = len(losses)
+    if num_events > num_losses:
+        newlosses = numpy.zeros(num_events, losses.dtype)
+        newlosses[num_events - num_losses:num_events] = losses
+        return newlosses
+    elif num_losses == num_events:
+        return losses
+    elif num_events < num_losses:
+        raise ValueError('More losses (%d) than events (%d) ??' %
+                         (num_losses, num_events))
+
+
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
-                     sorting_idxs=None):
+                     sorting_idxs=None, pla_factor=None):
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1473,20 +1503,17 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         losses = numpy.sort(losses)
     else:
         losses = losses[sorting_idxs]
-    # num_losses < num_events: just add zeros
-    num_zeros = num_events - num_losses
-    if num_zeros:
-        newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events - num_losses:num_events] = losses
-        losses = newlosses
+    losses = add_zeros(losses, num_events)
     eperiods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
                 if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
-    logr, logp = numpy.log(rperiods), numpy.log(eperiods)
-    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    logr, loge = numpy.log(rperiods), numpy.log(eperiods)
+    if pla_factor:
+        losses = pla_factor(eperiods) * losses
+    curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
     return curve
 
@@ -1503,42 +1530,44 @@ class LossCurvesMapsBuilder(object):
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
-                 weights, num_events, eff_time, risk_investigation_time):
+                 weights, eff_time, risk_investigation_time, pla_factor=None):
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
-        self.num_events = num_events
         self.eff_time = eff_time
         if return_periods.sum() == 0:
             self.poes = 1
         else:
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
+        self.pla_factor = pla_factor
 
     # used in post_risk, for normal loss curves and reinsurance curves
-    def build_curve(self, years, col, losses, agg_types, loss_type, rlzi=0):
+    def build_curve(self, years, col, losses, agg_types, loss_type, ne):
         """
         Compute the requested curves
         (AEP and OEP curves only if years is not None)
         """
         # NB: agg_types can be the string "ep, aep, oep"
         periods = self.return_periods
-        ne = self.num_events[rlzi]
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:
-            dic[col] = losses_by_period(losses, periods, ne, self.eff_time)
+            dic[col] = losses_by_period(losses, periods, ne, self.eff_time,
+                                        pla_factor=self.pla_factor)
         if len(years):
             gby = pandas.DataFrame(
                 dict(year=years, loss=losses)).groupby('year')
             # see specs in https://github.com/gem/oq-engine/issues/8971
             if 'aep' in agg_types_list:
                 dic[col + '_aep'] = losses_by_period(
-                    gby.loss.sum(), periods, ne, self.eff_time)
+                    gby.loss.sum(), periods, ne, self.eff_time,
+                    pla_factor=self.pla_factor)
             if 'oep' in agg_types_list:
                 dic[col + '_oep'] = losses_by_period(
-                    gby.loss.max(), periods, ne, self.eff_time)
+                    gby.loss.max(), periods, ne, self.eff_time,
+                    pla_factor=self.pla_factor)
         return dic
 
 

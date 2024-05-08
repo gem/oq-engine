@@ -200,6 +200,10 @@ def update(params, items, base_path):
                 assert len(fnames) in (0, 1)
                 for fname in fnames:
                     params['inputs'][input_type] = fname
+            else:
+                # remove the key if the value is empty
+                basekey, _file = key.rsplit('_', 1)
+                params['inputs'].pop(basekey, None)
         elif isinstance(value, str) and value.endswith('.hdf5'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
@@ -226,7 +230,7 @@ def check_params(cp, fname):
                 f'{fname}: parameter(s) {params_intersection} is(are) defined'
                 ' in multiple sections')
 
-
+        
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
 def get_params(job_ini, kw={}):
@@ -278,13 +282,12 @@ def get_params(job_ini, kw={}):
         fname = dic.pop('source_model_logic_tree_file')
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
-        items = list(dic.items())
+        items = dic.items()
     update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
     update(params, kw.items(), base_path)  # override on demand
-
     return params
 
 
@@ -472,7 +475,11 @@ def check_site_param(oqparam, name):
     """
     Extract the value of the given parameter
     """
-    value = getattr(oqparam, site.param[name])
+    longname = site.param[name]  # vs30 -> reference_vs30_value
+    value = getattr(oqparam, longname, None)
+    if value is None:
+        raise InvalidFile('Missing site_model_file specifying the parameter %s'
+                          % name)
     if isinstance(value, float) and numpy.isnan(value):
         raise InvalidFile(
             f"{oqparam.inputs['job_ini']}: "
@@ -503,9 +510,11 @@ def get_site_model(oqparam, h5=None):
     sm_fieldsets = {}
     for fname in fnames:
         if isinstance(fname, str) and not fname.endswith('.xml'):
+            # parsing site_model.csv and populating arrays
             _smparse(fname, oqparam, arrays, sm_fieldsets)
             continue
 
+        # parsing site_model.xml
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = set(oqparam.req_site_params) - set(params[0])
@@ -1386,6 +1395,23 @@ def get_reinsurance(oqparam, assetcol=None):
                 raise InvalidFile('%s: for policy %s there is a deductible '
                                   'also in the exposure!' % (fname, pol))
     return p, t, f
+
+
+def get_pla_factor(oqparam, minperiod=None):
+    """
+    :param oqparam: an OqParam instance
+    :returns: a function producing the period-dependent amplification factor
+    """
+    if 'post_loss_amplification' not in oqparam.inputs:
+        return
+    df = pandas.read_csv(oqparam.inputs['post_loss_amplification'])
+    if minperiod is not None:
+        # add minperiod with pla_factor of 1, as in the specs, see
+        # https://github.com/gem/oq-engine/issues/9633
+        dic = dict(return_period=[minperiod] + df['return_period'].tolist(),
+                   pla_factor=[1.] + df['pla_factor'].tolist())
+        df = pandas.DataFrame(dic)
+    return scientific.pla_factor(df)
 
 
 def get_input_files(oqparam):

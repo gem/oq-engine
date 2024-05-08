@@ -499,6 +499,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
         self.assertEqualFiles('expected/hcurve_SA.csv', f2)
 
+        # checking missing region
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_57.__file__, 'job_wrong.ini')
+        self.assertIn('Missing site_model_file specifying the parameter region',
+                      str(ctx.exception))
+
     def test_case_60(self):
         # pointsource approx with CampbellBozorgnia2003NSHMP2007
         # the hazard curve MUST be zero; it was not originally

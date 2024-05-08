@@ -611,3 +611,25 @@ class LossesByEventTestCase(unittest.TestCase):
         print('claim', claim_curve)
         print('cession', cession_curve)
         print('retention', ret_curve)
+
+
+class PlaFactorTestCase(unittest.TestCase):
+    def test_interp(self):
+        rps = [1, 5, 10, 50, 100, 500, 1000]
+        factors = [1, 1, 1.092, 1.1738, 1.209, 1.2908, 1.326]
+        df = pandas.DataFrame(dict(return_period=rps, pla_factor=factors))
+        pla_factor = scientific.pla_factor(df)
+
+        # no interp
+        self.assertEqual(pla_factor(1), 1)
+        self.assertEqual(pla_factor(1000), 1.326)
+
+        # interp
+        self.assertEqual(pla_factor(1.1), 1.0)
+        self.assertAlmostEqual(pla_factor(900), 1.31896)
+
+        # extrap
+        with self.assertRaises(ValueError):
+            pla_factor(0.9)
+        with self.assertRaises(ValueError):
+            pla_factor(1001)
