@@ -15,7 +15,7 @@ on:
 jobs:
 
   install:
-    runs-on: windows-latest
+    runs-on: [windows-2022, windows-2019]
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
