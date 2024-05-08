@@ -2034,6 +2034,11 @@ class OqParam(valid.ParamSet):
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.job_type == 'hazard':
             return True
+
+        # there are more checks for risk calculations
+        if self.collect_rlzs and self.individual_rlzs:
+            raise InvalidFile("%s: you cannot have individual_rlzs=true with "
+                              "collect_rlzs=true" % self.inputs['job_ini'])
         if self.calculation_mode == 'event_based_damage':
             ini = self.inputs['job_ini']
             if not self.investigation_time:
