@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Backported fix to `oq extract ruptures?rup_id=XXX`
   * Backported fix to a fake error in case of a nontrivial
     maximum_distance together with a minimum_magnitude
   * Backported fixes to the Canada SHM6 GMPEs

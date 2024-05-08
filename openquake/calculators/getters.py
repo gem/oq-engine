@@ -321,12 +321,10 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     """
     rups = dstore['ruptures'][:]  # read everything in memory
     rupgeoms = dstore['rupgeoms']  # do not read everything in memory
-    idx = numpy.searchsorted(rups['id'], rup_id)
-    if idx == len(rups):
+    idxs, = numpy.where(rups['id'] == rup_id)
+    if len(idxs) == 0:
         raise ValueError(f"Missing {rup_id=}")
-    rec = rups[idx]
-    if rec['id'] != rup_id:
-        raise ValueError(f"Missing {rup_id=}")
+    [rec] = rups[idxs]
     trts = dstore.getitem('full_lt').attrs['trts']
     trt = trts[rec['trt_smr'] // TWO24]
     geom = rupgeoms[rec['geom_id']]
