@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:'Ghasemi2009' 
+Module exports :class:'GhasemiEtAl2009' 
 """
 import numpy as np
 from scipy.constants import g
@@ -69,7 +69,7 @@ def _get_site_type_dummy_variables(ctx):
     sRock[idx] = 1.0
     return sSoil, sRock
 
-class Ghasemi2009(GMPE):
+class GhasemiEtAl2009(GMPE):
     """
     Implements the PGA GMPE of H.Ghasemi, M.Zare, Y,Fukushima, K.Koketsu
     (2009a) An empirical spectral ground-motion model for Iran, 
