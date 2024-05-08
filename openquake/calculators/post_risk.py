@@ -176,7 +176,7 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     pla_factor = readinput.get_pla_factor(oq, max_period / max_events)
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
-        loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
+        loss_dt or oq.loss_dt(), weights,
         haz_time, oq.risk_investigation_time or oq.investigation_time,
         pla_factor=pla_factor)
 
@@ -231,7 +231,7 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder, aggregate_loss_curves_types):
+def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
@@ -244,7 +244,7 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
                 # col is 'losses' in the case of consequences
                 year, 'loss' if col == 'losses' else col,
                 data[col], aggregate_loss_curves_types,
-                scientific.LOSSTYPE[loss_id], rlz_id)
+                scientific.LOSSTYPE[loss_id], num_events[rlz_id])
             for col in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -288,7 +288,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
                     data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
-            build_aggcurves, (items, builder, aggtypes),
+            build_aggcurves, (items, builder, num_events, aggtypes),
             concurrent_tasks=oq.concurrent_tasks,
             h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
@@ -415,7 +415,7 @@ def build_reinsurance(dstore, oq, num_events):
             curve = {col: builder.build_curve(
                         years, col, df[col].to_numpy(),
                         oq.aggregate_loss_curves_types,
-                        'reinsurance', rlzid)
+                        'reinsurance', ne)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
