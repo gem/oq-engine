@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Using custom `hcurves` and `uhs` exporters in AELO mode
   * Raising an early error if the user forgets to specify a site_model_file
     when needed (i.e. for parameters region and xvf)
 
