@@ -1447,6 +1447,26 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
+def add_zeros(losses, num_events):
+    """
+    Add zeros on the left if there are less losses than events.
+
+    :param losses: an array of size num_losses
+    :param num_events: an integer >= num_losses
+    :returns: an array of size num_events
+    """
+    num_losses = len(losses)
+    if num_events > num_losses:
+        newlosses = numpy.zeros(num_events, losses.dtype)
+        newlosses[num_events - num_losses:num_events] = losses
+        return newlosses
+    elif num_losses == num_events:
+        return losses
+    elif num_events < num_losses:
+        raise ValueError('More losses (%d) than events (%d) ??' %
+                         (num_losses, num_events))
+
+
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
                      sorting_idxs=None, pla_factor=None):
     """
@@ -1483,12 +1503,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         losses = numpy.sort(losses)
     else:
         losses = losses[sorting_idxs]
-    # num_losses < num_events: just add zeros
-    num_zeros = num_events - num_losses
-    if num_zeros:
-        newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events - num_losses:num_events] = losses
-        losses = newlosses
+    losses = add_zeros(losses, num_events)
     eperiods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
