@@ -274,7 +274,7 @@ tr.asce_output {
 
 .aristotle_form_row label {
     display: inline-block;
-    width: 205px;
+    width: 225px;
 }
 
 .aristotle_form_row input {
@@ -326,6 +326,13 @@ tr.asce_output {
 
 .calc-list-btn {
     width: 56px;
+}
+
+.aristotle-losses-container {
+    width: 100%;
+    display: block;
+    overflow-x: scroll;
+    position: relative;
 }
 
 table#aristotle-losses {

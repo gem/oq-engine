@@ -70,23 +70,33 @@ interface for the engine on top of it, since the API is stable and kept backward
 Design principles
 -----------------
 
-The main design principle has been *simplicity*: everything has to be as simple as possible (but not simplest). The goal 
-has been to keep the engine simple enough that a single person can understand it, debug it, and extend it without 
-tremendous effort. All the rest comes from simplicity: transparency, ability to inspect and debug, modularity, 
-adaptability of the code, etc. Even efficiency: in the last three years most of the performance improvements came from 
-free, just from removing complications. When a thing is simple it is easy to make it fast. The battle for simplicity is 
-never ending, so there are still several things in the engine that are more complex than they should: we are working on 
-that.
+The main design principle has been *simplicity*: everything has to be
+as simple as possible (but not simplest). The goal has been to keep
+the engine simple enough that a single person can understand it, debug
+it, and extend it without tremendous effort. All the rest comes from
+simplicity: transparency, ability to inspect and debug, modularity,
+adaptability of the code, etc. Even efficiency: in the last three
+years most of the performance improvements came from free, just from
+removing complications. When a thing is simple it is easy to make it
+fast. The battle for simplicity is never ending, so there are still
+several things in the engine that are more complex than they should:
+we are working on that.
 
-After simplicity the second design goal has been *performance*: the engine is a number crunching application after all, 
-and we need to run massively parallel calculations taking days or weeks of runtime. Efficiency in terms of computation 
-time and memory requirements is of paramount importance, since it makes the difference between being able to run a 
-computation and being unable to do it. Being too slow to be usable should be considered as a bug.
+After simplicity the second design goal has been *performance*: the
+engine is a number crunching application after all, and we need to run
+massively parallel calculations taking days or weeks of
+runtime. Efficiency in terms of computation time and memory
+requirements is of paramount importance, since it makes the difference
+between being able to run a computation and being unable to do
+it. Being too slow to be usable should be considered as a bug.
 
-The third requirement is *reproducibility*, which is the same as testability: it is essential to have a suite of tests 
-checking that the calculators are providing the expected outputs against a set of predefined inputs. Currently we have 
-thousands of tests which are run multiple times per day in our Continuous Integration environments (GitHub Actions, 
-GitLab Pipelines), split into unit tests, end-to-end tests and long running tests.
+The third requirement is *reproducibility*, which is the same as
+testability: it is essential to have a suite of tests checking that
+the calculators are providing the expected outputs against a set of
+predefined inputs. Currently we have thousands of tests which are run
+multiple times per day in our Continuous Integration environments
+(GitHub Actions, GitLab Pipelines), split into unit tests, end-to-end
+tests and long running tests.
 
 How the parallelization works in the engine
 -------------------------------------------

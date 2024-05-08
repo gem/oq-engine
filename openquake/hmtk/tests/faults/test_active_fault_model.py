@@ -185,7 +185,9 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         )
         fault2.generate_config_set(config)
         self.model.faults = [fault1, fault2]
+        self.more_tests()
 
+    def more_tests(self):
         # Generate source model
         self.model.build_fault_model()
         self.assertEqual(len(self.model.source_model.sources), 4)

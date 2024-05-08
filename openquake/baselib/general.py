@@ -30,6 +30,7 @@ import socket
 import random
 import atexit
 import zipfile
+import logging
 import builtins
 import operator
 import warnings
@@ -486,6 +487,64 @@ def engine_version():
             # may not work properly
 
     return __version__ + gh
+
+
+def extract_dependencies(lines):
+    for line in lines:
+        longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
+        try:
+            pkg, version, *other = longname.split('-')
+        except ValueError:  # for instance a comment
+            continue
+        if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
+                   'python_pam'):
+            # not importable
+            continue
+        if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
+                   'importlib_metadata', 'zipp'):
+            # missing __version__
+            continue
+        elif pkg == 'pyzmq':
+            pkg = 'zmq'
+        elif pkg == 'Pillow':
+            pkg = 'PIL'
+        elif pkg == 'GDAL':
+            pkg = 'osgeo.gdal'
+        elif pkg == 'Django':
+            pkg = 'django'
+        elif pkg == 'pyshp':
+            pkg = 'shapefile'
+        yield pkg, version
+
+    
+def check_dependencies():
+    """
+    Print a warning if we forgot to update the dependencies.
+    Works only for development installations.
+    """
+    import openquake
+    if 'site-packages' in openquake.__path__[0]:
+        return  # do nothing for non-devel installations
+    pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
+    system = sys.platform
+    if system == 'linux':
+        system = 'linux64'
+    elif system == 'win32':
+        system = 'win64'
+    elif system == 'darwin':
+        system = 'macos_arm64'
+    else:
+        # unsupported OS, do not check dependencies
+        return
+    reqfile = 'requirements-py%s-%s.txt' % (pyver, system)
+    repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    with open(os.path.join(repodir, reqfile)) as f:
+        lines = f.readlines()
+    for pkg, expected in extract_dependencies(lines):
+        version = __import__(pkg).__version__
+        if version != expected:
+            logging.warning('%s is at version %s but the requirements say %s' %
+                            (pkg, version, expected))
 
 
 def run_in_process(code, *args):
@@ -1527,6 +1586,30 @@ def agg_probs(*probs):
     for prob in probs[1:]:
         acc *= 1. - prob
     return 1. - acc
+
+
+class Param:
+    """
+    Container class for a set of parameters with defaults
+
+    >>> p = Param(a=1, b=2)
+    >>> p.a = 3
+    >>> p.a, p.b
+    (3, 2)
+    >>> p.c = 4
+    Traceback (most recent call last):
+      ...
+    AttributeError: Unknown parameter c
+    """
+    def __init__(self, **defaults):
+        for k, v in defaults.items():
+            self.__dict__[k] = v
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__:
+            object.__setattr__(self, name, value)
+        else:
+            raise AttributeError('Unknown parameter %s' % name)
 
 
 class RecordBuilder(object):

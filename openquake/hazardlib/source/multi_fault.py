@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
-
 import numpy as np
 from typing import Union
 
@@ -207,7 +206,8 @@ class MultiFaultSource(BaseSeismicSource):
                 srcid,
                 self.name,
                 self.tectonic_region_type,
-                [],
+                self._rupture_idxs[slc] if hasattr(
+                    self, '_rupture_idxs') else [],  # tested in test_ucerf
                 self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc],
@@ -255,7 +255,7 @@ def save(mfsources, sectiondict, hdf5path):
     """
     assert len(sectiondict) < TWO16, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
-    all_ridxs = []
+    all_rids = []
     for src in mfsources:
         try:
             rids = [U16([s2i[idx] for idx in idxs])
@@ -263,13 +263,13 @@ def save(mfsources, sectiondict, hdf5path):
         except KeyError as exc:
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
-        all_ridxs.append(rids)
+        all_rids.append(rids)
         delattr(src, '_rupture_idxs')  # save memory
         src.hdf5path = hdf5path
 
     # store data
     with hdf5.File(hdf5path, 'w') as h5:
-        for src, rupture_idxs in zip(mfsources, all_ridxs):
+        for src, rupture_idxs in zip(mfsources, all_rids):
             for srcid, slc in src.gen_slices():
                 h5.save_vlen(f'{srcid}/rupture_idxs', rupture_idxs[slc])
                 h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]

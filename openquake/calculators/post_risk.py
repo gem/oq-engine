@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import readinput, datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
 from openquake.calculators import base, views
@@ -169,12 +169,16 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     if num_events is None:
         num_events = numpy.bincount(
             dstore['events']['rlz_id'], minlength=len(weights))
+    max_events = num_events.max()
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        haz_time, num_events.max())
+        haz_time, max_events)  # in case_master [1, 2, 5, 10]
+    max_period = periods[-1]
+    pla_factor = readinput.get_pla_factor(oq, max_period / max_events)
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
-        loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        haz_time, oq.risk_investigation_time or oq.investigation_time)
+        loss_dt or oq.loss_dt(), weights,
+        haz_time, oq.risk_investigation_time or oq.investigation_time,
+        pla_factor=pla_factor)
 
 
 def get_src_loss_table(dstore, loss_id):
@@ -227,7 +231,7 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder, aggregate_loss_curves_types):
+def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
@@ -240,7 +244,7 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
                 # col is 'losses' in the case of consequences
                 year, 'loss' if col == 'losses' else col,
                 data[col], aggregate_loss_curves_types,
-                scientific.LOSSTYPE[loss_id], rlz_id)
+                scientific.LOSSTYPE[loss_id], num_events[rlz_id])
             for col in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -284,7 +288,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
                     data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
-            build_aggcurves, (items, builder, aggtypes),
+            build_aggcurves, (items, builder, num_events, aggtypes),
             concurrent_tasks=oq.concurrent_tasks,
             h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
@@ -411,7 +415,7 @@ def build_reinsurance(dstore, oq, num_events):
             curve = {col: builder.build_curve(
                         years, col, df[col].to_numpy(),
                         oq.aggregate_loss_curves_types,
-                        'reinsurance', rlzid)
+                        'reinsurance', ne)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)

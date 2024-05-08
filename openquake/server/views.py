@@ -46,7 +46,6 @@ import numpy
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
@@ -59,7 +58,8 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around, get_aristotle_allparams
+from openquake.engine.aristotle import (
+    get_trts_around, get_aristotle_allparams, get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings
@@ -104,7 +104,8 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
-    'usgs_id': 'USGS ID',
+    'usgs_id': 'Rupture identifier (USGS ID or custom)',
+    'rupture_file': 'Rupture model XML',
     'lon': 'Longitude',
     'lat': 'Latitude',
     'dep': 'Depth',
@@ -624,6 +625,19 @@ def aristotle_callback(
     if not job_owner_email:
         return
 
+    # Example of body:
+    # Input parameters:
+    # {'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0, 'mag': 7.8, 'rake': 0.0,
+    #  'usgs_id': 'us6000jllz', 'rupture_file': None}
+    # maximum_distance: 20.0
+    # tectonic_region_type: Active Shallow Crust
+    # truncation_level: 3.0
+    # number_of_ground_motion_fields: 100
+    # asset_hazard_distance: 15.0
+    # ses_seed: 42
+    # countries: TUR
+    # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
+
     params_to_print = ''
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
@@ -663,12 +677,12 @@ def aristotle_get_rupture_data(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (usgs_id,) = res
+    [rupdic] = res
     try:
-        rupture_dict = get_rupture_dict(usgs_id)
         trts, mosaic_model = get_trts_around(
-            rupture_dict, config.directory.mosaic_dir)
+            rupdic, config.directory.mosaic_dir)
     except Exception as exc:
+        usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
             error_msg = f'USGS ID "{usgs_id}" was not found'
         elif 'There is not rupture.json' in str(exc):
@@ -678,44 +692,32 @@ def aristotle_get_rupture_data(request):
             error_msg = str(exc)
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': error_msg}
+        logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    rupture_dict['trts'] = trts
-    rupture_dict['mosaic_model'] = mosaic_model
-    response_data = rupture_dict
+    rupdic['trts'] = trts
+    rupdic['mosaic_model'] = mosaic_model
+    response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def aristotle_get_trts(request):
-    """
-    Retrieve tectonic region types given geographic coordinates
-
-    :param request:
-        a `django.http.HttpRequest` object containing lon and lat
-    """
-    res = aristotle_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    lon, lat = res
-    try:
-        trts, mosaic_model = get_trts_around(
-            dict(lon=lon, lat=lat), config.directory.mosaic_dir)
-    except Exception as exc:
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': str(exc)}
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
-    else:
-        response_data = dict(trts=trts, mosaic_model=mosaic_model)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=200)
-
-
 def aristotle_validate(request):
+    # this is called by aristotle_get_rupture_data and aristotle_run.
+    # In the first case the form contains only usgs_id and rupture_file and
+    # returns rupdic only.
+    # In the second case the form contains all fields and it returns rupdic
+    # plus the calculation parameters (like maximum_ditance, etc.)
+    rupture_file = request.FILES.get('rupture_file')
+    if rupture_file:
+        rupture_path = rupture_file.temporary_file_path()
+        # NOTE: by default, Django deletes all the uploaded temporary files
+        # (tracked in request._files) when the request is destroyed. We need to
+        # prevent this from happening, because the engine has to read the
+        # rupture_file from the process that runs the calculation
+        del request._files['rupture_file']
+    else:
+        rupture_path = None
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -735,14 +737,21 @@ def aristotle_validate(request):
         'ses_seed': valid.positiveint,
     }
     params = {}
+    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
+               dep=None, mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():
         if fieldname not in request.POST:
             continue
         try:
-            params[fieldname] = validation_func(request.POST.get(fieldname))
+            value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
             validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
+            continue
+        if fieldname in dic:
+            dic[fieldname] = value
+        else:
+            params[fieldname] = value
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -755,7 +764,8 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return params.values()
+    rupdic = get_rupture_dict(dic)
+    return rupdic, *params.values()
 
 
 @csrf_exempt
@@ -774,14 +784,15 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+    (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed) = res
     try:
         allparams = get_aristotle_allparams(
-            usgs_id, lon, lat, dep, mag, rake, dip, strike,
+            rupdic,
             maximum_distance, trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance, ses_seed,
+            number_of_ground_motion_fields,
+            asset_hazard_distance, ses_seed,
             config.directory.mosaic_dir)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
@@ -793,9 +804,8 @@ def aristotle_run(request):
         allparams, config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
-    for job_idx, jobctx in enumerate(jobctxs):
+    for jobctx in jobctxs:
         job_id = jobctx.calc_id
-
         outputs_uri_web = request.build_absolute_uri(
             reverse('outputs_aristotle', args=[job_id]))
         outputs_uri_api = request.build_absolute_uri(
@@ -818,13 +828,9 @@ def aristotle_run(request):
 
         # spawn the Aristotle main process
         proc = mp.Process(
-            target=aristotle.main,
-            args=(
-                usgs_id, lon, lat, dep, mag, rake, dip, strike,
-                maximum_distance, trt, truncation_level,
-                number_of_ground_motion_fields, asset_hazard_distance,
-                ses_seed, job_owner_email, outputs_uri_web,
-                allparams, [jobctx], aristotle_callback))
+            target=aristotle.main_web,
+            args=(allparams, [jobctx], job_owner_email, outputs_uri_web,
+                  aristotle_callback))
         proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -896,6 +902,7 @@ def aelo_run(request):
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
+        logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     [jobctx] = engine.create_jobs(

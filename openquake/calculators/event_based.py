@@ -37,12 +37,12 @@ from openquake.hazardlib.calc.filters import (
     nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
-from openquake.commonlib import util, logs, readinput, logictree, datastore
+from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES)
@@ -152,30 +152,6 @@ def build_hcurves(calc):
             if oq.poes:
                 [hmap] = make_hmaps([smap], oq.imtls, oq.poes)
                 ds[:, s] = hmap.array
-
-    if oq.compare_with_classical:  # compute classical curves
-        export_dir = os.path.join(oq.export_dir, 'cl')
-        if not os.path.exists(export_dir):
-            os.makedirs(export_dir)
-        oq.export_dir = export_dir
-        oq.calculation_mode = 'classical'
-        with logs.init('job', vars(oq)) as log:
-            calc.cl = ClassicalCalculator(oq, log.calc_id)
-            # TODO: perhaps it is possible to avoid reprocessing the source
-            # model, however usually this is quite fast and do not dominate
-            # the computation
-            calc.cl.run()
-            engine.expose_outputs(calc.cl.datastore)
-            all = slice(None)
-            for imt in oq.imtls:
-                cl_mean_curves = get_mean_curve(calc.datastore, imt, all)
-                eb_mean_curves = get_mean_curve(calc.datastore, imt, all)
-                calc.rdiff, index = util.max_rel_diff_index(
-                    cl_mean_curves, eb_mean_curves)
-                logging.warning(
-                    'Relative difference with the classical '
-                    'mean curves: %d%% at site index %d, imt=%s',
-                    calc.rdiff * 100, index, imt)
 
 
 # ######################## GMF calculator ############################ #
@@ -800,3 +776,28 @@ class EventBasedCalculator(base.HazardCalculator):
                 msg = 'gmf_data has {:_d} rows'.format(size)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             build_hcurves(self)
+            if oq.compare_with_classical:  # compute classical curves
+                export_dir = os.path.join(oq.export_dir, 'cl')
+                if not os.path.exists(export_dir):
+                    os.makedirs(export_dir)
+                oq.export_dir = export_dir
+                oq.calculation_mode = 'classical'
+                with logs.init(vars(oq)) as log:
+                    self.cl = ClassicalCalculator(oq, log.calc_id)
+                    # TODO: perhaps it is possible to avoid reprocessing the
+                    # source model, however usually this is quite fast and
+                    # does not dominate the computation
+                    self.cl.run()
+                    engine.expose_outputs(self.cl.datastore)
+                    all = slice(None)
+                    for imt in oq.imtls:
+                        cl_mean_curves = get_mean_curve(
+                            self.datastore, imt, all)
+                        eb_mean_curves = get_mean_curve(
+                            self.datastore, imt, all)
+                        self.rdiff, index = util.max_rel_diff_index(
+                            cl_mean_curves, eb_mean_curves)
+                        logging.warning(
+                            'Relative difference with the classical '
+                            'mean curves: %d%% at site index %d, imt=%s',
+                            self.rdiff * 100, index, imt)

@@ -1,28 +1,48 @@
 Developing with the Engine
 ==========================
 
-Some advanced users are interested in developing with the engine, usually to contribute new GMPEs and sometimes to submit 
-a bug fix. There are also users interested in implementing their own customizations of the engine. This part of the manual 
-is for them.
+Some advanced users are interested in developing with the engine,
+usually to contribute new GMPEs and sometimes to submit a bug
+fix. There are also users interested in implementing their own
+customizations of the engine. This part of the manual is for them.
 
 Prerequisites
 -------------
 
-It is assumed here that you are a competent scientific Python programmer, i.e. that you have a good familiarity with the 
-Python ecosystem (including pip and virtualenv) and its scientific stack (numpy, scipy, h5py, …). It should be noticed 
-that since engine v2.0 there is no need to know anything about databases and web development (unless you want to develop 
-on the WebUI part) so the barrier for contribution to the engine is much lower than it used to be. However, contributing 
-is still nontrivial, and it absolutely necessary to know git and the tools of Open Source development in general, in 
-particular about testing. If this is not the case, you should do some study on your own and come back later. There is a 
-huge amount of resources on the net about these topics. This manual will focus solely on the OpenQuake engine and it 
-assumes that you already know how to use it, i.e. you have read the User Manual first.
+It is assumed here that you are a competent scientific Python
+programmer, i.e. that you have a good familiarity with the Python
+ecosystem (including pip and virtualenv) and its scientific stack
+(numpy, scipy, h5py, …).
 
-Before starting, it may be useful to have an idea of the architecture of the engine and its internal components, like the 
-DbServer and the WebUI. For that you should read the :ref:`Architecture of the OpenQuake engine <architecture-of-oq-engine>` section.
+Since engine v2.0 there is no need to know anything about databases
+and web development (unless you want to develop on the WebUI part) so
+the barrier for contribution to the engine is much lower than it used
+to be. However, contributing is still nontrivial, and it absolutely
+necessary to know git and the tools of Open Source development in
+general, in particular about testing. If this is not the case, you
+should do some study on your own and come back later. There is a huge
+amount of resources on the net about these topics. Familiarity with
+the standard Python coding guidelines (PEP8) is expected.
+The engine enforces a few additional constraints:
 
-There are also external tools which are able to interact with the engine, like the QGIS plugin to run calculations and 
-visualize the outputs and the IPT tool to prepare the required input files (except the hazard models). Unless you are 
-developing for such tools you can safely ignore them.
+1. functions and methods can have at most 100 lines
+2. functions and methods can have at most 16 arguments
+
+Pull requests breaking the above constraints will break the
+automatic tests executed by GitHub, i.e. the GitHub Actions.
+
+This manual will focus solely on the OpenQuake engine and it assumes
+that you already know how to use it, i.e. you have read the User
+Manual first. It is also useful to have an idea of the architecture
+of the engine and its components, like the DbServer and the
+WebUI. For that you should read the :ref:`Architecture of the
+OpenQuake engine <architecture-of-oq-engine>` section.
+
+There are also external tools which are able to interact with the
+engine, like the QGIS plugin to run calculations and visualize the
+outputs and the IPT tool to prepare the required input files (except
+the hazard models). Unless you are developing for such tools you can
+safely ignore them.
 
 The first thing to do
 ---------------------

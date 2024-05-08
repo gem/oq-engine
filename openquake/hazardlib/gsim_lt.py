@@ -148,6 +148,19 @@ def keyno(branch_id, bsno, brno):
     return BASE183[brno] + str(bsno)
 
 
+# currently not used
+def get_trts(gsim_logic_tree_file):
+    """
+    Parse the file and returns the full set of tectonic region types
+    """
+    trts = set()
+    lt = nrml.read(gsim_logic_tree_file).logicTree
+    for nd in lt:
+        for node in bsnodes(gsim_logic_tree_file, nd):
+            trts.add(node['applyToTectonicRegionType'])
+    return trts
+
+
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`

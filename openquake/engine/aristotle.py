@@ -24,8 +24,8 @@ import getpass
 import logging
 import numpy
 from openquake.baselib import config, hdf5, sap
-from openquake.hazardlib import geo
-from openquake.hazardlib.shakemap.parsers import get_rupture_dict
+from openquake.hazardlib import geo, nrml, sourceconverter
+from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
@@ -66,30 +66,52 @@ def get_tmap_keys(exposure_hdf5, countries):
 
 
 def trivial_callback(
-        job_id, params, job_owner_email, outputs_uri, exc=None):
+        job_id, params, job_owner_email=None, outputs_uri=None, exc=None):
     if exc:
         logging.error('', exc_info=True)
         sys.exit('There was an error: %s' % exc)
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
-def get_aristotle_allparams(
-        usgs_id, lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
-        truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, mosaic_dir):
+def get_rupture_dict(dic):
+    """
+    :param dic: a dictionary with keys usgs_id and rupture_file
+    :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
+    """
+    usgs_id = dic['usgs_id']
+    rupture_file = dic['rupture_file']
+    if rupture_file:
+        [rup_node] = nrml.read(rupture_file)
+        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'
+        hp = rup.hypocenter
+        rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
+                      mag=rup.mag, rake=rup.rake,
+                      strike=rup.surface.get_strike(),
+                      dip=rup.surface.get_dip(),
+                      usgs_id=usgs_id,
+                      rupture_file=rupture_file)
+    elif dic.get('lon') is not None:  # when called from `oq mosaic aristotle`
+        rupdic = dic
+    else:
+        rupdic = download_rupture_dict(usgs_id)
+    return rupdic
+
+
+def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
+                            truncation_level, number_of_ground_motion_fields,
+                            asset_hazard_distance, ses_seed, mosaic_dir):
+    """
+    :returns: a list of dictionaries suitable for an Aristotle calculation
+    """
     smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
     expo = os.path.join(mosaic_dir, 'exposure.hdf5')
-    # two use cases: 1) only usgs_id is passed;
-    #                2) rupdic params are passed (including lon)
-    if lon is None:
-        rupdic = get_rupture_dict(usgs_id)
-    else:
-        rupdic = dict(
-            lon=lon, lat=lat, dep=dep, mag=mag,
-            rake=rake, dip=dip, strike=strike, usgs_id=usgs_id)
     inputs = {'exposure': [expo],
               'site_model': [smodel],
               'job_ini': '<in-memory>'}
+    rupdic = get_rupture_dict(rupture_dict)
+    rupture_file = rupdic.pop('rupture_file')
     if trt is None:
         trts, _ = get_trts_around(rupdic, mosaic_dir)
         trt = trts[0]
@@ -103,6 +125,8 @@ def get_aristotle_allparams(
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
+    if rupture_file:
+        inputs['rupture_model'] = rupture_file
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
@@ -116,62 +140,69 @@ def get_aristotle_allparams(
         countries_per_tmap = ', '.join(
             [country for country in key.split('_') if country in countries])
         params['description'] = (
-            f'{usgs_id} ({rupdic["lat"]}, {rupdic["lon"]}) M{rupdic["mag"]}'
-            f' {countries_per_tmap}')
+            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+            f' M{rupdic["mag"]} {countries_per_tmap}')
         allparams.append(params.copy())
     return allparams
 
 
-def main(usgs_id, lon=None, lat=None, dep=None, mag=None, rake=None, dip='90',
-         strike='0', maximum_distance='300', trt=None, truncation_level='3',
-         number_of_ground_motion_fields='10', asset_hazard_distance='15',
-         ses_seed='42', job_owner_email=None, outputs_uri=None, allparams=None,
-         jobctxs=None,
-         callback=trivial_callback, mosaic_dir=config.directory.mosaic_dir):
+def main_web(allparams, jobctxs,
+             job_owner_email=None, outputs_uri=None,
+             callback=trivial_callback):
     """
-    This script is meant to be called from the WebUI in production mode,
-    and from the command-line in testing mode.
+    This script is meant to be called from the WebUI
     """
-    if jobctxs is None:
-        try:
-            allparams = get_aristotle_allparams(
-                usgs_id, lon, lat, dep, mag, rake, dip, strike,
-                maximum_distance, trt, truncation_level,
-                number_of_ground_motion_fields, asset_hazard_distance,
-                ses_seed, mosaic_dir)
-        except Exception as exc:
-            callback(None, dict(usgs_id=usgs_id), job_owner_email,
-                     outputs_uri, exc=exc)
-            return
-        # in  testing mode create a new job context
-        user = getpass.getuser()
-        jobctxs = engine.create_jobs(
-            allparams, config.distribution.log_level, None, user, None)
-    for job_idx, job in enumerate(jobctxs):
+    for params, job in zip(allparams, jobctxs):
         try:
             engine.run_jobs([job])
         except Exception as exc:
-            callback(job.calc_id, allparams[job_idx], job_owner_email,
+            callback(job.calc_id, params, job_owner_email,
                      outputs_uri, exc=exc)
+        else:  # success
+            callback(job.calc_id, params, job_owner_email, outputs_uri)
+
+
+def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
+             callback=trivial_callback, *,
+             maximum_distance='300', trt=None, truncation_level='3',
+             number_of_ground_motion_fields='10', asset_hazard_distance='15',
+             ses_seed='42', mosaic_dir=config.directory.mosaic_dir):
+    """
+    This script is meant to be called from the command-line
+    """
+    if rupture_dict is None:
+        rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
+    try:
+        allparams = get_aristotle_allparams(
+            rupture_dict, maximum_distance, trt, truncation_level,
+            number_of_ground_motion_fields, asset_hazard_distance,
+            ses_seed, mosaic_dir)
+    except Exception as exc:
+        callback(None, dict(usgs_id=usgs_id), exc=exc)
+        return
+    # in  testing mode create new job contexts
+    user = getpass.getuser()
+    jobctxs = engine.create_jobs(
+        allparams, config.distribution.log_level, None, user, None)
+    for params, job in zip(allparams, jobctxs):
+        try:
+            engine.run_jobs([job])
+        except Exception as exc:
+            callback(job.calc_id, params, exc=exc)
         else:
-            callback(job.calc_id, allparams[job_idx], job_owner_email,
-                     outputs_uri, exc=None)
+            callback(job.calc_id, params, exc=None)
 
 
-main.usgs_id = 'ShakeMap ID'
-main.lon = 'Longitude'
-main.lat = 'Latitude'
-main.dep = 'Dep'
-main.mag = 'Magnitude'
-main.rake = 'Rake'
-main.dip = 'Dip'
-main.strike = 'Strike'
-main.maximum_distance = 'Maximum distance in km'
-main.trt = 'Tectonic region type'
-main.truncation_level = 'Truncation level'
-main.number_of_ground_motion_fields = 'Number of ground motion fields'
-main.asset_hazard_distance = 'Asset hazard distance'
-main.ses_seed = 'SES seed'
+main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
+main_cmd.rupture_file = 'XML file with the rupture model (optional)'
+main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
+main_cmd.callback = ''
+main_cmd.maximum_distance = 'Maximum distance in km'
+main_cmd.trt = 'Tectonic region type'
+main_cmd.truncation_level = 'Truncation level'
+main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
+main_cmd.asset_hazard_distance = 'Asset hazard distance'
+main_cmd.ses_seed = 'SES seed'
 
 if __name__ == '__main__':
-    sap.run(main)
+    sap.run(main_cmd)

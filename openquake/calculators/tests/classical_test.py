@@ -103,6 +103,11 @@ class ClassicalTestCase(CalculatorTestCase):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_03.__file__)
 
+        # check missing vs30
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_03.__file__, 'job_wrong.ini')
+        self.assertIn('reference_vs30_value not specified', str(ctx.exception))
+
     def test_case_04(self):
         # make sure the UHS are sorted correctly
         self.run_calc(case_04.__file__, 'job.ini')
@@ -493,6 +498,12 @@ class ClassicalTestCase(CalculatorTestCase):
         f1, f2 = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
         self.assertEqualFiles('expected/hcurve_SA.csv', f2)
+
+        # checking missing region
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_57.__file__, 'job_wrong.ini')
+        self.assertIn('Missing site_model_file specifying the parameter region',
+                      str(ctx.exception))
 
     def test_case_60(self):
         # pointsource approx with CampbellBozorgnia2003NSHMP2007
