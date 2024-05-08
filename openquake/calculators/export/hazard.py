@@ -204,11 +204,11 @@ def export_aelo_csv(key, dstore):
         arr = dstore['hmaps-stats'][0, 0]  # shape (M, P)
         M, P = arr.shape
         periods = [imt.period for imt in oq.imt_periods()]
-        array = numpy.zeros(M*P, [('period', float), ('poe', float),
-                                   ('iml', float)])
-        for p, poe in enumerate(oq.poes):
-            for m, period in enumerate(periods):
-                row = array[m*P + p]
+        array = numpy.zeros(M*P, [('poe', float), ('period', float),
+                                  ('iml', float)])
+        for m, period in enumerate(periods):
+            for p, poe in enumerate(oq.poes):
+                row = array[p*M + m]
                 row['poe'] = poe
                 row['period'] = period
                 row['iml'] = arr[m, p]
