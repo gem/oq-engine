@@ -34,6 +34,13 @@ def import_plt():
         import matplotlib.pyplot as plt
     return plt
 
+def _convert_imt(imt):
+    #Convert the imt string from the USGS format, for instance SA1P1 -> SA(1.1)
+    if imt == "PGA":
+        IMT = "PGA"
+    else:
+        IMT=imt.replace("SA", 'SA(').replace('P', '.') + ')'
+    return(IMT)
 
 def _find_fact_maxC(T, code):
     # find the factor to convert to maximum component based on
@@ -42,7 +49,7 @@ def _find_fact_maxC(T, code):
     f1 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
     f2 = interpolate.interp1d([1, 5], [1.3, 1.5])
     f3 = interpolate.interp1d([0.2, 1], [1.2, 1.25])
-    f4 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
+    f4 = interpolate.interp1d([1, 10], [1.25, 1.3])
 
     if code == 'ASCE7-16':
         if T == 0:
@@ -66,7 +73,7 @@ def _find_fact_maxC(T, code):
             fact_maxC = f4(T)
         else:
             fact_maxC = 1.5
-    return fact_maxC
+    return numpy.round(fact_maxC, 3)
 
 
 def _find_afe_target(imls, afe, sa_target):
@@ -93,60 +100,73 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     # separate imts and imls
-    AFE, afe_RTGM, imls = [], [], []
-    #imts = ['PGA', 'SA(0.1)', 'SA(0.2)', 'SA(1.0)']
-    imts = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
-        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
-        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
-
-    for imt in imts:
-        # get periods and factors for converting btw geom mean and
-        # maximum component
-        T = from_string(imt).period
-        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
-        imls.append([im*f for im in imtls[imt]])
+    AFE, afe_RTGM, imls, imls_mc = [], [], [], []
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
-    # get the IML for the 2475 RP
-    rtgm_probmce = rtgm_df['ProbMCE']
-    # get investigation time
-    window = dinfo['investigation_time']
-    # get hazard curves, put into rates
-    mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
-    for m, hcurve in enumerate(mean_hcurve):
-        AFE.append(to_rates(hcurve, window))
-        # get the AFE of the iml that will be disaggregated for each IMT
-        if rtgm_probmce[m] < imls[m][0]:
-            afe_RTGM.append(0.0)
-        else:
-            afe_RTGM.append(_find_afe_target(imls[m], AFE[m], rtgm_probmce[m]))
+    imts = rtgm_df['IMT']
+    plot_rtgm_probmce = []
+    # specify subset of imts to plot
+    plot_imt = ['PGA', 'SA0P2', 'SA1P0','SA2P0','SA5P0']
+    plot_IMT = []
+
+    for imt in plot_imt:
+         # convert imts from USGS format
+        IMT = _convert_imt(imt)
+        plot_IMT.append(IMT)
+        idx = imts.index[imts == imt]
+        # get periods and factors for converting btw geom mean and
+        # maximum component
+        T = from_string(IMT).period
+        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-22')
+        imls.append([im for im in imtls[IMT]])
+        imls_mc.append([im*f for im in imtls[IMT]])
+        # get the IML for the 2475 RP
+        rtgm_probmce = rtgm_df['ProbMCE']
+        plot_rtgm_probmce.append(rtgm_probmce[idx])
+        # get investigation time
+        window = dinfo['investigation_time']
+        # get hazard curves, put into rates
+        mean_hcurve = dstore['hcurves-stats'][site_idx, 0][idx]  # shape(M, L1)
+        for m, hcurve in enumerate(mean_hcurve):
+            AFE.append(to_rates(hcurve, window))
+            # get the AFE of the iml that will be disaggregated for each IMT
+            if rtgm_probmce[m] < imls[m][0]:
+                afe_RTGM.append(0.0)
+            else:
+                afe_RTGM.append(_find_afe_target(imls[m], AFE[m], rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
-    colors = mpl.colormaps['viridis'].reversed().resampled(22)
-    patterns = ['-', '-.','--', ':']
-    for i, imt in enumerate(imts):
-        lab = _get_label(imt)
-        plt.loglog(imls[i], AFE[i], color=colors(i),
-                   label=lab, linewidth=3, zorder=1)
+    colors = mpl.colormaps['viridis'].reversed().resampled(5)
+    patterns = ['-', '-.','--', ':','-.']
         
-        if plot_mce:
+    if plot_mce:
+        for i, imt in enumerate(plot_imt):
+            lab = _get_label(imt)
+            plt.loglog(imls_mc[i], AFE[i], color=colors(i),
+                label=plot_IMT[i], linewidth=3, zorder=1, linestyle = patterns[i])
         # plot the label only once but it must be at the end of the legend
-            if imt == imts[-1]:
-                plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                           label='Probabilistic MCE',  linewidth=2,
-                           markersize=10, zorder=3)
+            if imt == plot_imt[-1]:
+                plt.loglog([plot_rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+                        label='Probabilistic MCE',  linewidth=2,
+                        markersize=10, zorder=3)
             else:
-                plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+                plt.loglog([plot_rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
                            linewidth=2, markersize=10, zorder=3)
-            plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
+            plt.loglog([(plot_rtgm_probmce[i]-1000), plot_rtgm_probmce[i]],
                        [afe_RTGM[i], afe_RTGM[i]],
                        color='black', alpha=0.5, linestyle='--', linewidth=1.3)
         
-            plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
+            plt.loglog([plot_rtgm_probmce[i], plot_rtgm_probmce[i]],
                        [0, afe_RTGM[i]], color='black', alpha=0.5,
                        linestyle='--', linewidth=1.3)
+    else:
+        for i, imt in enumerate(plot_imt):
+            lab = _get_label(imt)
+            plt.loglog(imls[i], AFE[i], color=colors(i),
+                   label=plot_IMT[i], linewidth=3, zorder=1, linestyle = patterns[i])
+        
     # add the ASCE 41-23 RPs
     plt.axhline(0.000404, color='red', linewidth=1.7, alpha=0.2, zorder=0)
     plt.axhline(0.002105, color='red', linewidth=1.7, alpha=0.2, zorder=0)
@@ -171,7 +191,7 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     plt.ylabel('Annual frequency of exceedance', fontsize=20)
     plt.legend(loc="best", fontsize='16')
     plt.ylim([10E-6, 1.1])
-    plt.xlim([0.01, 4])
+    plt.xlim([0.01, 2])
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
@@ -185,59 +205,42 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     :returns: image of governing MCE
     """
     dinfo = get_info(dstore)
-    # get imls and imts, make arrays
-    imts = ['PGA', 'SA(0.01)','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
-        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
-        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
-    imtls = dinfo['imtls']
     plt = import_plt()
-    #js = dstore['asce07'][site_idx].decode('utf8')
-    #dic = json.loads(js)
-    #MCEr = [dic['PGA'], dic['S0pt1'],dic['Ss'], dic['S1']]
-    MCEr = dstore.getitem(f'g_mce/{site_idx}')[0]
-    MCEr_det = dstore.getitem(f'g_mce/{site_idx}')[1]
-    T = [from_string(imt).period for imt in imtls]
-    limit_det = [0.5, 0.66, 0.68, 0.75, 0.95, 1.21, 1.37, 1.53, 1.5, 1.4,
-                 1.3, 1.14, 1.01, 0.76, 0.6, 0.41, 0.31, 0.21, 0.16, 0.13, 0.08, 0.052]
-    # presenting as maximum component -> do not need conversion facts
-    rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
-    if (rtgm.RTGM == 0).all():
-        return
-    rtgm_probmce = rtgm.ProbMCE.to_numpy()
+    # get imls and imts, make arrays
+    mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
+    det_mce = mce_df['DetMCE']
+    mce = mce_df['MCE']
+    prob_mce = mce_df['ProbMCE']
+    imts = mce_df['IMT']
+    IMTS = [_convert_imt(i) for i in imts]
+    T = [from_string(imt).period for imt in imts]
+    DLL = mce_df['DLL']
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
-    plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
-    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{2/50}$',
-             linewidth=3)
-    plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
-             label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    #MCEr_det = [dic['PGA_84th'], dic['S0pt1_84th'], dic['Ss_84th'], dic['S1_84th']]
-    if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
-        upperlim = max([rtgm_probmce[1], 1.5])
-        plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
+    plt.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
+    plt.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
+             linewidth=3, linestyle='-')
+    if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
+        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
+        plt.ylim([0.01, numpy.max([prob_mce, mce, DLL]) + 0.2])
     else:
-        upperlim = max([rtgm_probmce[1], 1.5, MCEr_det[1]])
-        plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
-                 linewidth=3)
-        plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
-                 label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
-        plt.ylim(
-            [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
-    plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
-                linewidth=2, facecolors='none', edgecolors='r')
-    plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
-                label='Governing $MCE_R$', linewidth=2,
-                facecolors='none', edgecolors='r')
+        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
+        plt.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
+                 linewidth=3, linestyle='-')
+        plt.ylim([0.01, numpy.max([prob_mce,  mce, det_mce, DLL]) + 0.2])
+    plt.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
     plt.grid('both')
     plt.ylabel('Spectral Acceleration (g)', fontsize=20)
     plt.xlabel('Period (s)', fontsize=20)
-    plt.legend(loc="upper right", fontsize='13')
-    plt.xlim([-0.02, 1.2])
+    plt.legend(loc="lower left", fontsize='13')
+    plt.xlim([0.005, 10])
+    plt.xscale('log')
+    plt.yscale('log')
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85 )
-
+    plt.text(0.0075, upperlim*0.0012, message, fontsize='small', color='black', alpha=0.85)
+    
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
