@@ -1530,13 +1530,11 @@ class LossCurvesMapsBuilder(object):
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
-                 weights, num_events, eff_time, risk_investigation_time,
-                 pla_factor=None):
+                 weights, eff_time, risk_investigation_time, pla_factor=None):
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
-        self.num_events = num_events
         self.eff_time = eff_time
         if return_periods.sum() == 0:
             self.poes = 1
@@ -1546,14 +1544,13 @@ class LossCurvesMapsBuilder(object):
         self.pla_factor = pla_factor
 
     # used in post_risk, for normal loss curves and reinsurance curves
-    def build_curve(self, years, col, losses, agg_types, loss_type, rlzi=0):
+    def build_curve(self, years, col, losses, agg_types, loss_type, ne):
         """
         Compute the requested curves
         (AEP and OEP curves only if years is not None)
         """
         # NB: agg_types can be the string "ep, aep, oep"
         periods = self.return_periods
-        ne = self.num_events[rlzi]
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:
