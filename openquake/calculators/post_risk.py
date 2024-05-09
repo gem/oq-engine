@@ -36,7 +36,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 class FakeBuilder:
-    investigation_time = 0.
+    eff_time = 0.
     pla_factor = None
 
 
