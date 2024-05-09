@@ -1436,6 +1436,10 @@ class OqParam(valid.ParamSet):
         if 'post_loss_amplification' in self.inputs:
             df = pandas.read_csv(self.inputs['post_loss_amplification'])
             check_increasing(df, 'return_period', 'pla_factor')
+            if self.avg_losses:
+                raise InvalidFile(
+                    "%s: you must set avg_losses=false with "
+                    "post_loss_amplification" % self.inputs['job_ini'])
 
     def check_gsims(self, gsims):
         """
