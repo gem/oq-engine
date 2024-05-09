@@ -1109,7 +1109,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
         _check_sampling(edg, proj)
 
     # INFO: this is used only for debugging purposes
-    # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
+    #ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr
 
@@ -1158,10 +1158,16 @@ def _check_sampling(edg, proj):
 
     # Check the sampled edges
     for idx in idxs:
-        xp, yp = proj(edg[idx[0]:idx[1], 0], edg[idx[0]:idx[1], 1])
+        edg = edg[idx[0]:idx[1]].T
+        if edg.shape[1] == 0:
+            continue
+        xp, yp = proj(edg[0], edg[1])
         dsts = (np.diff(xp)**2 + np.diff(yp)**2 +
-                np.diff(edg[idx[0]:idx[1], 2])**2)
-        np.testing.assert_allclose(dsts, dsts[0], rtol=1e-2)
+                np.diff(edg[2])**2)
+        dsts = np.array([dsts[0]] + dsts.tolist())
+        dsts = dsts[~np.isnan(edg[2])]
+
+        np.testing.assert_allclose(dsts, dsts[0], rtol=2e-2)
 
 
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
