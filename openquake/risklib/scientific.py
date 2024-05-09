@@ -1447,7 +1447,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
-def fix_losses(sorted_losses, eff_time, num_events, pla_factor=None):
+def fix_losses(sorted_losses, num_events, eff_time, pla_factor=None):
     """
     :param sorted_losses: a sorted array of size num_losses
     :param num_events: an integer >= num_losses
@@ -1463,7 +1463,7 @@ def fix_losses(sorted_losses, eff_time, num_events, pla_factor=None):
     elif num_events < num_losses:
         raise ValueError('More losses (%d) than events (%d) ??' %
                          (num_losses, num_events))
-    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    eperiods = (eff_time or 0)/ numpy.arange(num_events, 0., -1)
     if pla_factor:
         losses *= pla_factor(eperiods)
     return losses, eperiods
@@ -1506,7 +1506,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         losses = numpy.sort(losses)
     else:
         losses = losses[sorting_idxs]
-    losses, eperiods = fix_losses(losses, eff_time, num_events, pla_factor)
+    losses, eperiods = fix_losses(losses, num_events, eff_time, pla_factor)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
