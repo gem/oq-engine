@@ -1,0 +1,8 @@
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weight,parent_id
+L1,22.9549,40.64355,link,1,edge,D,E,NA,5,L1
+L2,22.97612,40.63954,link1,1,edge,F,G,NA,2,L2
+L3,22.9392,40.63624,link,1,edge,A,B,NA,1,L3
+L4,22.94291,40.64309,link,1,edge,B,C,NA,2,L4
+L5,22.96224,40.64003,link,1,edge,E,F,NA,2,L5
+L6,22.94793,40.64981,link,1,edge,C,D,NA,1,L6
+L7,22.94777,40.64293,link1,1,edge,C,E,NA,3,L7

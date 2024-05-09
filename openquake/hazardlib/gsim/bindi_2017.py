@@ -116,8 +116,7 @@ class BindiEtAl2017Rjb(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
         self.adjustment_factor = np.log(float(adjustment_factor))
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -126,7 +125,7 @@ class BindiEtAl2017Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = self.REQUIRES_DISTANCES
+        dist_type = 'rjb' if "Rjb" in self.__class__.__name__ else 'rhypo'
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 

@@ -262,7 +262,7 @@ event_id,agg_id,loss
 1,     1,      5000
 1,     2,      3000
 ''')
-        expected = _df('''\
+        _df('''\
 event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
        1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
         bypolicy, byevent = by_policy_event(
@@ -787,7 +787,6 @@ class WrongInputTestCase(unittest.TestCase):
             xml.write(REINSURANCE)
         with open(cls.policyfname, 'w') as csv:
             csv.write(POLICY)
-        readinput.Global.reset()  # for independence from other tests
 
     # Checks in the policy file
 

@@ -40,8 +40,9 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless']
+KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep', 'losses', 'collapsed',
+                      'injured', 'fatalities', 'homeless', 'non_operational']
+
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1262,6 +1263,16 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             (interest_rate * retrofitting_cost))
 
 
+def pla_factor(df):
+    """
+    Post-Loss-Amplification factor interpolator.
+    To be instantiated with a DataFrame with columns
+    return_period and pla_factor.
+    """
+    return interpolate.interp1d(df.return_period.to_numpy(),
+                                df.pla_factor.to_numpy())
+
+
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
@@ -1436,8 +1447,31 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
+def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
+    """
+    :param sorted_losses: a sorted array of size num_losses
+    :param num_events: an integer >= num_losses
+    :returns: two arrays of size num_events
+    """
+    # add zeros on the left if there are less losses than events.
+    num_losses = len(sorted_losses)
+    if num_events > num_losses:
+        losses = numpy.zeros(num_events, sorted_losses.dtype)
+        losses[num_events - num_losses:num_events] = sorted_losses
+    elif num_losses == num_events:
+        losses = sorted_losses.copy()
+    elif num_events < num_losses:
+        raise ValueError('More losses (%d) than events (%d) ??' %
+                         (num_losses, num_events))
+    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    if pla_factor:
+        losses *= pla_factor(eperiods)
+    return losses, eperiods
+
+
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
-                     sorting_idxs=None):
+                     sorting_idxs=None, pla_factor=None):
+    # NB: sorting_idxs is used in test_claim
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1465,28 +1499,21 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
     if num_events is None:
         num_events = num_losses
     elif num_events < num_losses:
-        raise ValueError(
-            'There are not enough events (%d<%d) to compute the loss curve'
-            % (num_events, num_losses))
+        num_events = num_losses
     if eff_time is None:
         eff_time = return_periods[-1]
     if sorting_idxs is None:
         losses = numpy.sort(losses)
     else:
         losses = losses[sorting_idxs]
-    # num_losses < num_events: just add zeros
-    num_zeros = num_events - num_losses
-    if num_zeros:
-        newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events - num_losses:num_events] = losses
-        losses = newlosses
-    periods = eff_time / numpy.arange(num_events, 0., -1)
-    num_left = sum(1 for rp in return_periods if rp < periods[0])
-    num_right = sum(1 for rp in return_periods if rp > periods[-1])
-    rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
+    losses, eperiods = fix_losses(losses, num_events, eff_time, pla_factor)
+    num_left = sum(1 for rp in return_periods if rp < eperiods[0])
+    num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
+    rperiods = [rp for rp in return_periods
+                if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
-    logr, logp = numpy.log(rperiods), numpy.log(periods)
-    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    logr, loge = numpy.log(rperiods), numpy.log(eperiods)
+    curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
     return curve
 
@@ -1503,23 +1530,45 @@ class LossCurvesMapsBuilder(object):
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
-                 weights, num_events, eff_time, risk_investigation_time):
+                 weights, eff_time, risk_investigation_time, pla_factor=None):
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
-        self.num_events = num_events
         self.eff_time = eff_time
         if return_periods.sum() == 0:
             self.poes = 1
         else:
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
+        self.pla_factor = pla_factor
 
-    # used in post_risk
-    def build_curve(self, losses, rlzi=0):
-        return losses_by_period(
-            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+    # used in post_risk, for normal loss curves and reinsurance curves
+    def build_curve(self, years, col, losses, agg_types, loss_type, ne):
+        """
+        Compute the requested curves
+        (AEP and OEP curves only if years is not None)
+        """
+        # NB: agg_types can be the string "ep, aep, oep"
+        periods = self.return_periods
+        dic = {}
+        agg_types_list = agg_types.split(', ')
+        if 'ep' in agg_types_list:
+            dic[col] = losses_by_period(losses, periods, ne, self.eff_time,
+                                        pla_factor=self.pla_factor)
+        if len(years):
+            gby = pandas.DataFrame(
+                dict(year=years, loss=losses)).groupby('year')
+            # see specs in https://github.com/gem/oq-engine/issues/8971
+            if 'aep' in agg_types_list:
+                dic[col + '_aep'] = losses_by_period(
+                    gby.loss.sum(), periods, ne, self.eff_time,
+                    pla_factor=self.pla_factor)
+            if 'oep' in agg_types_list:
+                dic[col + '_oep'] = losses_by_period(
+                    gby.loss.max(), periods, ne, self.eff_time,
+                    pla_factor=self.pla_factor)
+        return dic
 
 
 def _agg(loss_dfs, weights=None):
@@ -1529,7 +1578,7 @@ def _agg(loss_dfs, weights=None):
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
             loss_df['loss'] *= w
-    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
+    return pandas.concat(loss_dfs).groupby(['aid', 'eid']).sum().reset_index()
 
 
 class RiskComputer(dict):
@@ -1631,7 +1680,7 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
@@ -1642,33 +1691,35 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence == 'losses':
+    if consequence.startswith(('loss', 'losses')):
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif consequence == 'collapsed':
+    elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif consequence == 'injured':
-        return dmgdist @ coeffs * asset['occupants_night']
-    elif consequence == 'fatalities':
-        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_avg']
+        return dmgdist @ coeffs * asset['value-residents']
+    else:
+        raise NotImplementedError(consequence)
 
 
-def get_agg_value(consequence, agg_values, agg_id, xltype):
+def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
-    if consequence == 'collapsed':
+    if consequence in ['collapsed', 'non_operational']:
         return aval['number']
-    elif consequence == 'injured':
-        return aval['occupants_night']
-    elif consequence == 'fatalities':
-        return aval['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return aval[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return aval['occupants_night']
-    elif consequence in ('loss', 'losses'):
+        return aval['residents']
+    elif consequence.startswith(('loss', 'losses')):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type

@@ -34,8 +34,9 @@ from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
-from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, floatdict)  # needed
+from openquake.hazardlib.calc.filters import (  # noqa
+    IntegrationDistance, floatdict
+)
 
 PRECISION = pmf.PRECISION
 
@@ -332,16 +333,16 @@ class SimpleId(object):
             raise ValueError('Invalid ID: can not be empty')
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
-                % value)
+                'Invalid ID %r: the only accepted chars are %s' % (
+                    value, self.regex))
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
                              (value, self.length))
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:"
-            % value)
+            "Invalid ID '%s': the only accepted chars are %s" % (
+                value, self.regex))
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -351,6 +352,7 @@ simple_id = SimpleId(MAX_ID_LENGTH)
 branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\-_:]+$')
+three_letters = SimpleId(3, r'^[A-Z]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
 mod_func = SimpleId(MAX_ID_LENGTH, r'[\w_]+\.[\w_]+')
@@ -499,6 +501,8 @@ def nonzero(value):
     return value
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def longitude(value):
     """
     :param value: input string
@@ -507,7 +511,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = round(float_(value), 5)
+    lon = numpy.round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -515,6 +519,8 @@ def longitude(value):
     return lon
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def latitude(value):
     """
     :param value: input string
@@ -523,7 +529,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = round(float_(value), 5)
+    lat = numpy.round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -1157,7 +1163,8 @@ def host_port(value=None):
     If value is missing returns the parameters in openquake.cfg
     """
     if not value:
-        return (config.dbserver.host, config.dbserver.port)
+        host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+        return (host, config.dbserver.port)
     host, port = value.split(':')
     return socket.gethostbyname(host), int(port)
 
@@ -1392,3 +1399,36 @@ class RjbEquivalent(object):
             repi_idx = numpy.abs(dist - self.repi).argmin()
             dists.append(self.reqv[repi_idx, mag_idx])
         return numpy.array(dists)
+
+
+def basename(src, splitchars='.:'):
+    """
+    :returns: the base name of a split source
+
+    >>> basename('SC:10;0')
+    'SC;0'
+    """
+    src_id = src if isinstance(src, str) else src.source_id
+    for char in splitchars:
+        src_id = re.sub(r'\%s\d+' % char, '', src_id)
+    return src_id
+
+
+def corename(src):
+    """
+    :param src: source object or source name
+    :returns: the core name of a source
+    """
+    src = src if isinstance(src, str) else src.source_id
+    return re.split('[!:;.]', src)[0]
+
+
+def fragmentno(src):
+    "Postfix after :.; as an integer"
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!b16'
+    fragments = re.split('[:.;]', src.source_id)
+    if len(fragments) == 1:  # no fragment number, like in AELO for NZL
+        return -1
+    fragment = fragments[1].split('!')[0]  # strip !b16
+    return int(fragment)
+

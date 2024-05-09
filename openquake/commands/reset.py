@@ -45,12 +45,13 @@ def main(yes=False):
             purge_one(calc_id, user, force=True)
         if os.access(dbpath, os.W_OK):   # single user mode
             purge_all(user)  # calculations in oqdata not in the db
-            # stop the dbserver first
-            pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGTERM)
-            time.sleep(.5)  # give time to stop
-            assert dbserver.get_status() == 'not-running'
-            print('dbserver stopped')
+            if config.dbserver.host != 'local':
+                # stop the dbserver first
+                pid = logs.dbcmd('getpid')
+                os.kill(pid, signal.SIGTERM)
+                time.sleep(.5)  # give time to stop
+                assert dbserver.get_status() == 'not-running'
+                print('dbserver stopped')
             # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)

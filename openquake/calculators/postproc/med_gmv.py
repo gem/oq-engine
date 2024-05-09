@@ -19,8 +19,9 @@
 import logging
 from openquake.baselib import parallel, python3compat
 from openquake.baselib.general import groupby
-from openquake.hazardlib.contexts import read_cmakers, basename
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.gmf import exp
+from openquake.hazardlib.valid import basename
 
 
 def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
@@ -29,7 +30,7 @@ def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
     if ctxs:
         mean = cmaker.get_mean_stds(ctxs)[0]  # shape (G, M, N)
         for m, imt in enumerate(cmaker.imtls):
-            mean[:, m] = exp(mean[:, m], imt)
+            mean[:, m] = exp(mean[:, m], imt!='MMI')
         gsims = [str(gsim) for gsim in cmaker.gsims]
         yield basename(src_frags[0]), mean, gsims
 

@@ -30,12 +30,15 @@ import string
 import unittest
 import secrets
 import csv
+import logging
 
 import django
+from django.apps import apps
 from django.test import Client
+from django.conf import settings
 from openquake.commonlib.logs import dbcmd
-from openquake.server.dbserver import get_status
 from openquake.server.tests.views_test import EngineServerTestCase
+from openquake.server.views import get_disp_val
 
 django.setup()
 try:
@@ -51,7 +54,6 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -76,7 +78,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         finally:
             cls.user.delete()
 
-    def aelo_run(self, params, failure_reason=None):
+    def aelo_run_then_remove(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
             # issues in case tests run in parallel, because we are checking the
@@ -111,7 +113,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 # # FIXME: we should use the overridden EMAIL_FILE_PATH,
                 # #        so email_dir would contain only one file
                 # email_file = os.listdir(email_dir)[0]
-                email_files = glob.glob('/tmp/app-messages/*')
+                app_msgs_dir = os.path.join(tempfile.gettempdir(),
+                                            'app-messages')
+                email_files = glob.glob(os.path.join(app_msgs_dir, '*'))
                 email_file = max(email_files, key=os.path.getctime)
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()
@@ -134,7 +138,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('Please find the results here:',
                                   email_content)
                     self.assertIn(f'engine/{job_id}/outputs', email_content)
-        self.post('%s/remove' % job_id)
+        ret = self.post('%s/remove' % job_id)
+        if ret.status_code != 200:
+            raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
 
     def get_tested_lon_lat(self, model):
         test_sites_csv = 'openquake/qa_tests_data/mosaic/test_sites.csv'
@@ -147,11 +153,11 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 raise ValueError(f'No tested site was found for {model}')
             return float(row['lon']), float(row['lat'])
 
-    def test_aelo_successful_run_CCA(self):
+    def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
         params = dict(
             lon=lon, lat=lat, vs30='800.0', siteid='CCA_SITE')
-        self.aelo_run(params)
+        self.aelo_run_then_remove(params)
 
     # NOTE: we can easily add tests for other models as follows:
 
@@ -159,13 +165,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     #     lon, lat = self.get_tested_lon_lat('EUR')
     #     params = dict(
     #         lon=lon, lat=lat, vs30='800.0', siteid='EUR_SITE')
-    #     self.aelo_run(params)
+    #     self.aelo_run_then_remove(params)
 
     # def test_aelo_successful_run_JPN(self):
     #     lon, lat = self.get_tested_lon_lat('JPN')
     #     params = dict(
     #         lon=lon, lat=lat, vs30='800.0', siteid='JPN_SITE')
-    #     self.aelo_run(params)
+    #     self.aelo_run_then_remove(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
@@ -173,10 +179,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         failure_reason = (
             f"Site at lon={params['lon']} lat={params['lat']}"
             f" is not covered by any model!")
-        self.aelo_run(params, failure_reason)
+        self.aelo_run_then_remove(params, failure_reason)
 
     def aelo_invalid_input(self, params, expected_error):
+        # NOTE: avoiding to print the expected traceback
+        logging.disable(logging.CRITICAL)
         resp = self.post('aelo_run', params)
+        logging.disable(logging.NOTSET)
         self.assertEqual(resp.status_code, 400)
         resp_dict = json.loads(resp.content.decode('utf8'))
         print(resp_dict)
@@ -195,10 +204,12 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.aelo_invalid_input(params, 'float -800.0 < 0')
 
     def test_aelo_invalid_siteid(self):
-        params = dict(lon='-86', lat='12', vs30='800', siteid='CCA SITE')
+        siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
+        params = dict(lon='-86', lat='12', vs30='800', siteid=siteid)
         self.aelo_invalid_input(
             params,
-            "Invalid ID 'CCA SITE': the only accepted chars are a-zA-Z0-9_-:")
+            "site name can not be longer than %s characters" %
+            settings.MAX_AELO_SITE_NAME_LEN)
 
     def test_aelo_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
@@ -209,3 +220,26 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         assert resp.status_code == 404, resp
+
+    def test_announcement(self):
+        # NOTE: this test might be moved to the currently missing
+        #       test_restricted_mode.py. Anyway, both the AELO and the
+        #       RESTRICTED modes imply LOCKDOWN=True and add the announcements
+        #       app to the INSTALLED_APPS.
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
+        announcement = announcement_model(
+            title='TEST TITLE', content='Test content', show=False)
+        announcement.save()
+        announcement.delete()
+
+    def test_displayed_values(self):
+
+        test_vals_in = [0.0000, 0.30164, 1.10043, 0.00101, 0.00113, 0.00115,
+                     0.0101, 0.0109, 0.0110, 0.1234, 0.126, 0.109, 0.101,
+                     0.991, 0.999, 1.001, 1.011, 1.101, 1.1009, 1.5000]
+        expected = ['0.0', '0.30', '1.10', '0.0010', '0.0011', '0.0012','0.010',
+                    '0.011', '0.011', '0.12', '0.13', '0.11', '0.10', '0.99',
+                    '1.00', '1.00', '1.01', '1.10','1.10', '1.50']
+        computed = [get_disp_val(v) for v in test_vals_in]
+        assert expected == computed

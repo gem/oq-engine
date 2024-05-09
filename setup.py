@@ -21,8 +21,8 @@ import re
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 6):
-    sys.exit('Sorry, Python < 3.6 is not supported')
+if sys.version_info < (3, 9):
+    sys.exit('Sorry, Python < 3.9 is not supported')
 
 
 def get_version():
@@ -65,26 +65,22 @@ install_requires = [
     'shapely >=1.7',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django >=3.2',
+    'django >=4.2, <5',
     'matplotlib',
     'requests >=2.20',
     'toml >=0.10.2',
     'pyproj >=1.9',
+    'alpha_shapes >= 1.1.0'
 ]
 
+# NOTE: to build documentation, see doc/requirements.txt
 extras_require = {
-    'osgeo':  [
-        'GDAL >= 2.4',
-    ],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5',
         'pdbpp',
         'ipython',
         'silx',
-        'sphinx==4.4',
-        'sphinx-theme',
-        'pydata-sphinx-theme',
     ]
 }
 

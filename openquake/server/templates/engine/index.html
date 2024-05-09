@@ -16,6 +16,7 @@
   {% endblock nav-items %}
 
   {% block main %}
+  {{ block.super }}
   <div class="content-wrap">
     <div class="container">
       <div class="row">
@@ -23,7 +24,7 @@
           <div id="new-release-box" class="alert alert-warning">
           </div>
           {% if application_mode == 'AELO' %}
-          <div>
+          <div class="span12">
             <h2>Run an AELO calculation</h2>
             {% if not user.email %}
             <h3>
@@ -33,15 +34,100 @@
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
               <!-- <label for"lat">Latitude:</label> -->
-              <input type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
+              <input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
               <!-- <label for"lon">Longitude:</label> -->
-              <input type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
+              <input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
               <!-- <label for"vs30">Vs30:</label> -->
-              <input type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}"/>
+              <input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly />
               <!-- <label for"siteid">Site ID:</label> -->
-              <input type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
+              <input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
               <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
+            </form>
+          </div>
+          {% elif application_mode == 'ARISTOTLE' %}
+          <div class="span12">
+            <h2>Run an ARISTOTLE calculation</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
+            <form id="aristotle_get_rupture_form" method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="aristotle_form_row">
+                <label for"usgs_id">{{ aristotle_form_placeholders.usgs_id }}</label>
+                <input class="aristotle-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ aristotle_form_placeholders.usgs_id }}" value="us6000jllz"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"rupture_file">{{ aristotle_form_placeholders.rupture_file }}</label>
+                <input class="aristotle-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ aristotle_form_placeholders.rupture_file }}" >
+                <button type="button" id="clearFile">Clear File</button>
+              </div>
+              <div class="aristotle_form_row">
+                <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
+                <!-- <input type="submit"> -->
+              </div>
+            </form>
+            <form id="aristotle_run_form" method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="aristotle_form_row">
+                <label for"lon">{{ aristotle_form_placeholders.lon }}</label>
+                <input class="aristotle-input" type="text" id="lon" name="lon" placeholder="{{ aristotle_form_placeholders.lon }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"lat">{{ aristotle_form_placeholders.lat }}</label>
+                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"dep">{{ aristotle_form_placeholders.dep }}</label>
+                <input class="aristotle-input" type="text" id="dep" name="dep" placeholder="{{ aristotle_form_placeholders.dep }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"mag">{{ aristotle_form_placeholders.mag }}</label>
+                <input class="aristotle-input" type="text" id="mag" name="mag" placeholder="{{ aristotle_form_placeholders.mag }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"rake">{{ aristotle_form_placeholders.rake }}</label>
+                <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for="trt">{{ aristotle_form_placeholders.trt }}</label>
+                <select name="trt" id="trt">
+                </select>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"dip">{{ aristotle_form_placeholders.dip }}</label>
+                <input class="aristotle-input" type="text" id="dip" name="dip" placeholder="{{ aristotle_form_placeholders.dip }}" value="90"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"strike">{{ aristotle_form_placeholders.strike }}</label>
+                <input class="aristotle-input" type="text" id="strike" name="strike" placeholder="{{ aristotle_form_placeholders.strike }}" value="0"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"maximum_distance">{{ aristotle_form_placeholders.maximum_distance }}</label>
+                <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="300"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"truncation_level">{{ aristotle_form_placeholders.truncation_level }}</label>
+                <input class="aristotle-input" type="text" id="truncation_level" name="truncation_level" placeholder="{{ aristotle_form_placeholders.truncation_level }}" value="3"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"number_of_ground_motion_fields">{{ aristotle_form_placeholders.number_of_ground_motion_fields }}</label>
+                <input class="aristotle-input" type="text" id="number_of_ground_motion_fields" name="number_of_ground_motion_fields" placeholder="{{ aristotle_form_placeholders.number_of_ground_motion_fields }}" value="100"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"asset_hazard_distance">{{ aristotle_form_placeholders.asset_hazard_distance }}</label>
+                <input class="aristotle-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ aristotle_form_placeholders.asset_hazard_distance }}" value="15"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"ses_seed">{{ aristotle_form_placeholders.ses_seed }}</label>
+                <input class="aristotle-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ aristotle_form_placeholders.ses_seed }}" value="42"/>
+              </div>
+              <div class="aristotle_form_row">
+                <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>
+                <!-- <input type="submit"> -->
+              </div>
             </form>
           </div>
           {% endif %}
@@ -63,8 +149,9 @@
           <th style="width: 50px;">ID</th>
           <th style="width: 100px;">User</th>
           <th style="width: 100px;">Calculation</th>
-          <th style="width: 300px;">Description</th>
-          <th style="width: 100px;">Status</th>
+          <th style="width: 280px;">Description</th>
+          <th style="width: 100px;">Start time</th>
+          <th style="width: 70px;">Status</th>
           <th style="width: 150px;">Action</th>
         </tr>
       </thead>
@@ -76,6 +163,7 @@
           <td><%= calc.get('owner') %></td>
           <td><%= calc.get('calculation_mode') %></td>
           <td><%= calc.get('description') %></td>
+          <td><%= calc.get('start_time') %></td>
           <td>
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('is_running') == true) { %>
               <%= calc.get('status') %>
@@ -85,10 +173,10 @@
           </td>
           <td>
             <% if (calc.get('status') != 'created') { %>
-              <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log" style="margin: 2px 0 2px 0;">Console</a>
+              <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log calc-list-btn" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
                 {% if application_mode != 'READ_ONLY' %}
-                <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
+                <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Remove</a>
                 <!-- confirm_modal -->
                 <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
                 <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">
@@ -110,24 +198,24 @@
                 <!-- end confirm_modal -->
                 {% endif %}
                 <% if (calc.get('status') == 'complete') { %>
-                  <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
+                <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_aristotle{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
                   {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
                   <input type="hidden" name="calculation_type" value="risk"/>
                   <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
-                    <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Continue</span><input type="file" name="archive"/></span>
+                    <span class="btn btn-default btn-sm btn-file calc-list-btn"><span class="fileinput-new">Continue</span><input type="file" name="archive"/></span>
                   </div>
                   <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
                   </form>
                   {% endif %}
                 <% } else { %>
-                  <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
+                  <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback calc-list-btn" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
               {% if application_mode != 'READ_ONLY' %}
-              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Abort</a>
+              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Abort</a>
               <!-- confirm_modal -->
               <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
               <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">

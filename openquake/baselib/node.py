@@ -750,7 +750,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
     except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
-        if not str(fname) in msg:
+        if str(fname) not in msg:
             msg = '%s in %s' % (msg, fname)
         raise_(etype, msg, tb)
 

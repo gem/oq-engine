@@ -30,11 +30,12 @@ class PolygonCreationTestCase(unittest.TestCase):
         self.assertEqual(str(ae.exception), msg)
 
     def test_less_than_three_points(self):
-        msg = 'polygon must have at least 3 unique vertices'
+        msg = 'At least two distinct points are needed for a line!'
         self.assert_failed_creation([], ValueError, msg)
         self.assert_failed_creation([geo.Point(1, 1)], ValueError, msg)
-        self.assert_failed_creation([geo.Point(1, 1),
-                                     geo.Point(2, 1)], ValueError, msg)
+        self.assert_failed_creation(
+            [geo.Point(1, 1), geo.Point(2, 1)],
+            ValueError, 'polygon must have at least 3 unique vertices')
 
     def test_less_than_three_unique_points(self):
         msg = 'polygon must have at least 3 unique vertices'

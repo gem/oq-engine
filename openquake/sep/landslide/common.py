@@ -1,7 +1,7 @@
 from typing import Union
 
 import numpy as np
-#import xarray as xr
+# import xarray as xr
 
 
 def static_factor_of_safety(
@@ -49,8 +49,7 @@ def static_factor_of_safety(
         up the slide, in kg/m^3. Many soils are ~1500 kg/m^3, while rock is
         2500-3200 kg/m^3.
 
-    :param water_density: Density of water, 1000 kg/m^3. Can be changed just
-        'cause.
+    :param water_density: Density of water, 1000 kg/m^3.
 
     :returns: Scalar or array of the factor of safety.
     """
@@ -70,7 +69,8 @@ def static_factor_of_safety(
     term_1 = cohesion / (soil_weight * slab_thickness * np.sin(r_slope))
     term_2 = np.tan(r_fric_ang) / np.tan(r_slope)
     term_3 = (saturation_coeff * water_weight * np.tan(r_fric_ang)) / (
-        soil_weight * np.tan(r_slope))
+        soil_weight * np.tan(r_slope)
+    )
 
     return term_1 + term_2 - term_3
 
@@ -103,27 +103,29 @@ def rock_slope_static_factor_of_safety(
         of shear fractures within a substance relative to the principal
         compressive stress. It should be given in degrees. Typical values are
         30-40 degrees.
-    
-    :param relief:
+
+    :param relief: Local relief calculated based on the moving window analysis,
+        whose size is selected to best capture the major hillslope features within
+        the study area. Units are in meters.
 
     :param rock_dry_density: Density of the drained soil or rock that would make
         up the slide, in kg/m^3. Many soils are ~1500 kg/m^3, while rock is
         2500-3200 kg/m^3.
 
-    :param root_cohesion:
-
+    :param root_cohesion: Provided by the root systems of vegetated hillslopes.
+        Here, we adopted the default value of 0 root cohesion.
 
 
     """
     r_slope = np.radians(slope)
     r_friction_angle = np.radians(friction_angle)
 
-    alpha = (r_slope + r_friction_angle) / 2.0
+    beta = (r_slope + r_friction_angle) / 2.0
     h = 0.25 * relief
     y = rock_dry_density * 9.81
 
     term_1 = (2 * (cohesion + root_cohesion) * np.sin(r_slope)) / (
-        y * h * np.sin(r_slope - alpha) * np.sin(alpha)
+        y * h * np.sin(r_slope - beta) * np.sin(beta)
     )
 
-    return term_1 + (np.tan(r_friction_angle) / np.tan(alpha))
+    return term_1 + (np.tan(r_friction_angle) / np.tan(beta))

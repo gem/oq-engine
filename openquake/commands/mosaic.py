@@ -19,15 +19,22 @@
 import os
 import sys
 import time
+import json
 import logging
 import getpass
 import cProfile
+import pandas
+import collections
 from openquake.baselib import config, performance
-from openquake.commonlib import readinput, logs
+from openquake.qa_tests_data import mosaic
+from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
-from openquake.server import dbserver
 from openquake.engine import engine
+from openquake.engine.aristotle import main_cmd
 from openquake.engine.aelo import get_params_from
+from openquake.hazardlib.geo.utils import geolocate
+
+FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
 
 
 def engine_profile(jobctx, nrows):
@@ -41,11 +48,35 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
+def fix(asce, siteid):
+    dic = json.loads(asce.decode('ascii'))
+    dic = {k: v if isinstance(v, str) else round(v, 2)
+           for k, v in dic.items()}
+    dic['siteid'] = siteid
+    return dic
+
+
+def get_from(calc_id, key, ids):
+    """
+    :param calc_id: calculation ID
+    :param key: "asce41" or "asce07"
+    :param ids: site IDs
+    :returns: a list of dictionaries, one per site
+    """
+    dstore = datastore.read(calc_id)
+    model = dstore['oqparam'].description[9:12]
+    return [fix(a, model + str(id))
+            for id, a in zip(ids[model], dstore[key])]
+
+
 # ########################## run_site ############################## #
 
-def from_file(fname, concurrent_jobs=8):
+
+# NB: this is called by the action mosaic/.gitlab-ci.yml
+def from_file(fname, mosaic_dir, concurrent_jobs):
     """
-    Run a PSHA analysis on the given sites
+    Run an AELO analysis on the given sites and returns an array with
+    the ASCE-41 parameters.
 
     The CSV file must contain in each row a site identifier
     starting with the 3-character code of the mosaic model that covers it, and
@@ -59,12 +90,6 @@ def from_file(fname, concurrent_jobs=8):
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
-    * `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers
-      to be selected, excluding all others from the analysis
-    * `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be
-      excluded, selecting all the others
-    * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected
-      between those covered by each model
 
     For instance::
 
@@ -77,74 +102,87 @@ def from_file(fname, concurrent_jobs=8):
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
-    only_siteids = os.environ.get('OQ_ONLY_SITEIDS', '')
-    exclude_siteids = os.environ.get('OQ_EXCLUDE_SITEIDS', '')
-    max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
     allparams = []
-    tags = []
-    count_sites_per_model = {}
-    with open(fname) as f:
-        for line in f:
-            siteid, lon, lat = line.split(',')
-            if exclude_siteids and siteid in exclude_siteids.split(','):
-                continue
-            if only_siteids and siteid not in only_siteids.split(','):
-                continue
-            curr_model = siteid[:3]
-            if exclude_models and curr_model in exclude_models.split(','):
-                continue
-            if only_models and curr_model not in only_models.split(','):
-                continue
-            try:
-                count_sites_per_model[curr_model] += 1
-            except KeyError:
-                count_sites_per_model[curr_model] = 1
-            if (max_sites_per_model > 0 and
-                    count_sites_per_model[curr_model] > max_sites_per_model):
-                continue
-            dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
-            tags.append(siteid)
-            allparams.append(get_params_from(dic))
+    ids = {}
+    sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
+    lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
+    print('Found %d sites' % len(lonlats))
+    mosaic_df = readinput.read_mosaic_df(buffer=.1)
+    sites_df['model'] = geolocate(lonlats, mosaic_df)
+    count_sites_per_model = collections.Counter(sites_df.model)
+    print(count_sites_per_model)
+    for model, df in sites_df.groupby('model'):
+        if model in ('???', 'USA', 'GLD'):
+            continue
+        if exclude_models and model in exclude_models.split(','):
+            continue
+        if only_models and model not in only_models.split(','):
+            continue
 
-    logging.root.handlers = []
-    logctxs = engine.create_jobs(allparams, config.distribution.log_level,
-                                 None, getpass.getuser(), None)
-    for logctx, tag in zip(logctxs, tags):
-        logctx.tag = tag
+        df = df.sort_values(['Longitude', 'Latitude'])
+        ids[model] = df.ID.to_numpy()
+        sites = ','.join('%s %s' % tuple(lonlat)
+                         for lonlat in lonlats[df.index])
+        dic = dict(siteid=model + str(ids[model]), sites=sites)
+        allparams.append(get_params_from(dic, mosaic_dir))
+
+    logging.root.handlers = []  # avoid too much logging
+    loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
+    logctxs = engine.create_jobs(
+        allparams, loglevel, None, getpass.getuser(), None)
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
+    a07dics, a41dics = [], []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
             count_errors += 1
+        try:
+            a07dics.extend(get_from(logctx.calc_id, 'asce07', ids))
+            a41dics.extend(get_from(logctx.calc_id, 'asce41', ids))
+        except KeyError:
+            # AELO results could not be computed due to some error
+            continue
 
+    # printing/saving results
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
+    if not a07dics or not a41dics:
+        # serious problem to debug
+        breakpoint()
+    for name, dics in zip(['asce07', 'asce41'], [a07dics, a41dics]):
+        header = sorted(dics[0])
+        rows = [[dic[k] for k in header] for dic in dics]
+        fname = os.path.abspath(name + '.csv')
+        with open(fname, 'w') as f:
+            print(views.text_table(rows, header, ext='csv'), file=f)
+        print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
 
 
-def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = 8):
+def run_site(lonlat_or_fname, mosaic_dir=None,
+             *, hc: int = None, slowest: int = None,
+             concurrent_jobs: int = None, vs30: float = 760):
     """
-    Run a PSHA analysis on the given lon and lat or given a CSV file
-    formatted as described in the 'from_file' function
-    """
-    dbserver.ensure_on()
-    print(f'Concurrent jobs: {concurrent_jobs}')
-    if not config.directory.mosaic_dir:
-        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    Run a PSHA analysis on the given sites or given a CSV file
+    formatted as described in the 'from_file' function. For instance
 
+    # oq mosaic run_site 10,20:30,40:50,60
+    """
+    if not mosaic_dir and not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname, concurrent_jobs)
+        from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
         return
-    lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(dict(lon=lon, lat=lat))
+    sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
+    params = get_params_from(dict(sites=sites, vs30=vs30), mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -153,10 +191,13 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     else:
         engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
 
+
 run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
+run_site.mosaic_dir = 'mosaic directory'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
+run_site.vs30 = 'vs30 value for the calculation'
 
 
 # ######################### sample rups and gmfs ######################### #
@@ -166,11 +207,7 @@ TRUNC_LEVEL = -1  # do not change it
 MIN_DIST = 0.
 
 
-def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
-    dbserver.ensure_on()
-    if not config.directory.mosaic_dir:
-        sys.exit('mosaic_dir is not specified in openquake.cfg')
-
+def build_params(model, trunclevel, mindist, extreme_gmv, gmf):
     ini = os.path.join(
         config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
@@ -193,49 +230,114 @@ def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
     else:  # rups only
         params['minimum_magnitude'] = '5.0'
         params['ground_motion_fields'] = 'false'
-        del params['inputs']['site_model']
+        params['inputs'].pop('site_model', None)
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
               'investigation_time', 'minimum_magnitude', 'truncation_level',
               'minimum_distance', 'extreme_gmv'):
         logging.info('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
-    [jobctx] = engine.create_jobs([params], config.distribution.log_level,
-                                  None, getpass.getuser(), hc)
-    if slowest:
-        engine_profile(jobctx, slowest or 40)
-    else:
-        engine.run_jobs([jobctx])
+    params['mosaic_model'] = logs.get_tag(ini)
+    return params
 
 
-def sample_rups(model, *, slowest: int=None):
-    """
-    Sample the ruptures of the given model in the mosaic
-    with an effective investigation time of 100,000 years
-    """
-    _sample(model, TRUNC_LEVEL, MIN_DIST, EXTREME_GMV, slowest,
-            hc=None, gmf=False)
-sample_rups.model = '3-letter name of the model'
-sample_rups.slowest = 'profile and show the slowest operations'
-
-
-def sample_gmfs(model, *,
+def sample_rups(models, gmfs=False, *,
                 trunclevel: float = TRUNC_LEVEL,
                 mindist: float = MIN_DIST,
                 extreme_gmv: float = EXTREME_GMV,
-                hc: int = None, slowest: int=None):
+                slowest: int = None):
     """
-    Sample the gmfs of the given model in the mosaic
+    Sample the ruptures of the given models in the mosaic
     with an effective investigation time of 100,000 years
     """
-    _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf=True)
-sample_gmfs.model = '3-letter name of the model'
-sample_gmfs.trunclevel = 'truncation level (default: the one in job_vs30.ini)'
-sample_gmfs.mindist = 'minimum_distance (default: 0)'
-sample_gmfs.extreme_gmv = 'threshold above which a GMV is extreme'
-sample_gmfs.hc = 'previous hazard calculation'
-sample_gmfs.slowest = 'profile and show the slowest operations'
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
 
+    models = models.split(',')
+    hc = None
+    if len(models) == 1:
+        params = build_params(
+            models[0], trunclevel, mindist, extreme_gmv, gmfs)
+        [jobctx] = engine.create_jobs([params], config.distribution.log_level,
+                                      None, getpass.getuser(), hc)
+        if slowest:
+            engine_profile(jobctx, slowest or 40)
+        else:
+            engine.run_jobs([jobctx])
+        return
+    allparams = [build_params(model, trunclevel, mindist, extreme_gmv, gmfs)
+                 for model in models]
+    jobs = engine.create_jobs(allparams, config.distribution.log_level,
+                              None, getpass.getuser(), hc)
+    engine.run_jobs(jobs)
+
+
+sample_rups.models = '3-letter names of the models, comma-separated'
+sample_rups.trunclevel = 'truncation level (default: the one in job_vs30.ini)'
+sample_rups.mindist = 'minimum_distance (default: 0)'
+sample_rups.extreme_gmv = 'threshold above which a GMV is extreme'
+sample_rups.gmfs = 'compute GMFs'
+sample_rups.slowest = 'profile and show the slowest operations'
+
+
+aristotle_res = dict(count_errors=0, res_list=[])
+
+
+def callback(job_id, params, exc=None):
+    if job_id is not None:
+        job = logs.dbcmd('get_job', job_id)
+        description = job.description
+    else:
+        description = params['usgs_id']
+    error = ''
+    if exc:
+        logging.error(str(exc), exc_info=True)
+        aristotle_res['count_errors'] += 1
+        error = str(exc)
+    aristotle_res['res_list'].append((job_id, description, error))
+
+
+def aristotle(mosaic_dir='', rupfname=FAMOUS):
+    """
+    Run Aristotle calculations starting from a file with planar
+    ruptures (by default "famous_ruptures.csv"). You must pass
+    a directory containing two files site_model.hdf5 and exposure.hdf5
+    with a well defined structure.
+    """
+    if not mosaic_dir and not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    trt = None
+    maximum_distance = 300
+    truncation_level = 3
+    number_of_ground_motion_fields = 10
+    asset_hazard_distance = 15
+    ses_seed = 42
+    t0 = time.time()
+    rupture_file = None
+    for i, row in pandas.read_csv(rupfname).iterrows():
+        rupdic = row.to_dict()
+        rupdic['rake'] = 0.
+        rupdic['dip'] = 90.
+        rupdic['strike'] = 0.
+        rupdic['rupture_file'] = None
+        usgs_id = rupdic['usgs_id']
+        main_cmd(usgs_id, rupture_file, rupdic, callback,
+                 maximum_distance=maximum_distance,
+                 trt=trt, truncation_level=truncation_level,
+                 number_of_ground_motion_fields=number_of_ground_motion_fields,
+                 asset_hazard_distance=asset_hazard_distance,
+                 ses_seed=ses_seed, mosaic_dir=mosaic_dir)
+    header = ['job_id', 'description', 'error']
+    print(views.text_table(aristotle_res['res_list'], header, ext='org'))
+    dt = (time.time() - t0) / 60
+    print('Total time: %.1f minutes' % dt)
+    if aristotle_res['count_errors']:
+        sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
+
+
+aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
+aristotle.rupfname = 'Filename with planar ruptures'
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, sample_rups=sample_rups, sample_gmfs=sample_gmfs)
+main = dict(run_site=run_site, aristotle=aristotle,
+            sample_rups=sample_rups)

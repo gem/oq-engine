@@ -48,16 +48,20 @@
 import numpy as np
 
 from openquake.hmtk.seismicity.declusterer.base import (
-    BaseCatalogueDecluster, DECLUSTERER_METHODS)
+    BaseCatalogueDecluster,
+    DECLUSTERER_METHODS,
+)
 from openquake.hmtk.seismicity.utils import decimal_year, haversine
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import (
-    TIME_DISTANCE_WINDOW_FUNCTIONS)
+    TIME_DISTANCE_WINDOW_FUNCTIONS,
+)
 
 
 @DECLUSTERER_METHODS.add(
     "decluster",
     time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
-    time_window=float)
+    time_window=float,
+)
 class Afteran(BaseCatalogueDecluster):
     """
     This implements the Afteran algorithm as described in this paper:
@@ -83,24 +87,27 @@ class Afteran(BaseCatalogueDecluster):
         :rtype: numpy.ndarray
         """
         # Convert time window from days to decimal years
-        time_window = config['time_window'] / 365.
+        time_window = config["time_window"] / 365.0
         # Pre-processing steps are the same as for Gardner & Knopoff
         # Get relevent parameters
-        mag = catalogue.data['magnitude']
+        mag = catalogue.data["magnitude"]
         neq = np.shape(mag)[0]  # Number of earthquakes
         # Get decimal year (needed for time windows)
-        year_dec = decimal_year(catalogue.data['year'],
-                                catalogue.data['month'],
-                                catalogue.data['day'])
+        year_dec = decimal_year(
+            catalogue.data["year"],
+            catalogue.data["month"],
+            catalogue.data["day"],
+        )
         # Get space windows corresponding to each event
-        sw_space, _ = (
-            config['time_distance_window'].calc(catalogue.data['magnitude']))
+        sw_space, _ = config["time_distance_window"].calc(
+            catalogue.data["magnitude"]
+        )
 
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
         flagvector = np.zeros(neq, dtype=int)
         # Rank magnitudes into descending order
-        id0 = np.flipud(np.argsort(mag, kind='heapsort'))
+        id0 = np.flipud(np.argsort(mag, kind="heapsort"))
 
         clust_index = 0
         for imarker in id0:
@@ -108,27 +115,29 @@ class Afteran(BaseCatalogueDecluster):
             if vcl[imarker] == 0:
                 # Perform distance calculation
                 mdist = haversine(
-                    catalogue.data['longitude'],
-                    catalogue.data['latitude'],
-                    catalogue.data['longitude'][imarker],
-                    catalogue.data['latitude'][imarker]).flatten()
+                    catalogue.data["longitude"],
+                    catalogue.data["latitude"],
+                    catalogue.data["longitude"][imarker],
+                    catalogue.data["latitude"][imarker],
+                ).flatten()
 
                 # Select earthquakes inside distance window, later than
                 # mainshock and not already assigned to a cluster
                 vsel1 = np.where(
-                    np.logical_and(vcl == 0,
-                                   np.logical_and(
-                                       mdist <= sw_space[imarker],
-                                       year_dec > year_dec[imarker])))[0]
+                    np.logical_and(
+                        vcl == 0,
+                        np.logical_and(
+                            mdist <= sw_space[imarker],
+                            year_dec > year_dec[imarker],
+                        ),
+                    )
+                )[0]
                 has_aftershocks = False
                 if len(vsel1) > 0:
                     # Earthquakes after event inside distance window
                     temp_vsel1, has_aftershocks = self._find_aftershocks(
-                        vsel1,
-                        year_dec,
-                        time_window,
-                        imarker,
-                        neq)
+                        vsel1, year_dec, time_window, imarker, neq
+                    )
                     if has_aftershocks:
                         flagvector[temp_vsel1] = 1
                         vcl[temp_vsel1] = clust_index + 1
@@ -139,16 +148,17 @@ class Afteran(BaseCatalogueDecluster):
                 vsel2 = np.where(
                     np.logical_and(
                         vcl == 0,
-                        np.logical_and(mdist <= sw_space[imarker],
-                                       year_dec < year_dec[imarker])))[0]
+                        np.logical_and(
+                            mdist <= sw_space[imarker],
+                            year_dec < year_dec[imarker],
+                        ),
+                    )
+                )[0]
                 if len(vsel2) > 0:
                     # Earthquakes before event inside distance window
                     temp_vsel2, has_foreshocks = self._find_foreshocks(
-                        vsel2,
-                        year_dec,
-                        time_window,
-                        imarker,
-                        neq)
+                        vsel2, year_dec, time_window, imarker, neq
+                    )
                     if has_foreshocks:
                         flagvector[temp_vsel2] = -1
                         vcl[temp_vsel2] = clust_index + 1
@@ -161,7 +171,7 @@ class Afteran(BaseCatalogueDecluster):
         return vcl, flagvector
 
     def _find_aftershocks(self, vsel, year_dec, time_window, imarker, neq):
-        '''
+        """
         Function to identify aftershocks from a set of potential
         events inside the distance window of an earthquake.
         :param vsel: Pointer vector to the location of the events in distance
@@ -175,13 +185,12 @@ class Afteran(BaseCatalogueDecluster):
         :type imarker: Integer
         :param neq: Number of events in distance window of mainshock
         :type neq: Integer
-        '''
+        """
         temp_vsel1 = np.zeros(neq, dtype=bool)
         has_aftershocks = False
 
         # Finds the time difference between events
-        delta_time = np.diff(
-            np.hstack([year_dec[imarker], year_dec[vsel]]))
+        delta_time = np.diff(np.hstack([year_dec[imarker], year_dec[vsel]]))
         for iloc in range(0, len(vsel)):
             # If time difference between event is smaller than
             # time window - is an aftershock -> continue
@@ -197,7 +206,7 @@ class Afteran(BaseCatalogueDecluster):
         return temp_vsel1, has_aftershocks
 
     def _find_foreshocks(self, vsel, year_dec, time_window, imarker, neq):
-        '''
+        """
         Finds foreshocks from a set of potential events within
         the distance window of a mainshock.
         :param vsel: Pointer vector to the location of the events in distance
@@ -211,7 +220,7 @@ class Afteran(BaseCatalogueDecluster):
         :type imarker: Integer
         :param neq: Number of events in distance window of mainshock
         :type neq: Integer
-        '''
+        """
 
         temp_vsel2 = np.zeros(neq, dtype=bool)
         has_foreshocks = False

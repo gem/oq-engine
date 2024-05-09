@@ -118,8 +118,7 @@ class SInterCan15Mid(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        See :meth:`superclass method <.base.GMPE.compute>`
         for spec of input and result values.
         """
         mean_zh06, mean_am09, mean_ab15, mean_ga14 = contexts.get_mean_stds(

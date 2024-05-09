@@ -22,3 +22,5 @@ venv
 *.whl
 .vscode/
 .ipynb_checkpoints/
+/doc23/_build/
+/doc23/warnings.log

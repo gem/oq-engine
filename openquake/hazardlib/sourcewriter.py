@@ -661,7 +661,7 @@ def build_multi_fault_source_node(multi_fault_source):
     """
     rup_nodes = []  # multiPlanesRupture
     for rup_idxs, prbs, mag, rake in zip(
-            multi_fault_source.rupture_idxs,
+            multi_fault_source._rupture_idxs,
             multi_fault_source.probs_occur,
             multi_fault_source.mags,
             multi_fault_source.rakes):
@@ -797,8 +797,8 @@ def write_source_model(dest, sources_or_groups, name=None,
                                          compression_opts=9)
                         h[key][:] = v
                     elif k == 'rupture_idxs' and prefix:
-                        h[key] =  [' '.join(prefix + r for r in ridxs.split())
-                                   for ridxs in v]
+                        h[key] = [' '.join(prefix + r for r in ridxs.split())
+                                  for ridxs in v]
                     else:
                         h[key] = v
         out.append(dest5)

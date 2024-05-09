@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="RDN" lossCategory="structural">
+		<description>Road Network; Warning: The values for fragility curves are random and not representative just for test purpose
+</description>
+		<limitStates>minor major</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="minor">0 0 0 0</poes>
+			<poes ls="major">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="bridge" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="minor" mean="0.42" stddev="0.6"/>
+			<params ls="major" mean="0.74" stddev="0.60"/>
+		</fragilityFunction>
+		<fragilityFunction id="TAZ" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="minor">0 0 0 0</poes>
+			<poes ls="major">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="road" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="minor">0 0 0 0</poes>
+			<poes ls="major">0 0 0 0</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

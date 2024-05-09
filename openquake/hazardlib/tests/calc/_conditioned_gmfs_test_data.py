@@ -16,8 +16,8 @@
 """
 Test cases 01–10 are based on the verification tests described in the
 USGS ShakeMap 4.1 Manual.
-Ref: Worden, C. B., E. M. Thompson, M. Hearne, and D. J. Wald (2020). 
-ShakeMap Manual Online: technical manual, user’s guide, and software guide, 
+Ref: Worden, C. B., E. M. Thompson, M. Hearne, and D. J. Wald (2020).
+ShakeMap Manual Online: technical manual, user’s guide, and software guide,
 U.S. Geological Survey. DOI: https://doi.org/10.5066/F7D21VPQ, see
 https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
@@ -260,9 +260,9 @@ CASE08_C_OBS = CASE08_TAU * (1.0 - CASE08_PHI ** 2 / (
     CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
 CASE08_C_FAR = CASE08_TAU * (1.0 - 0 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
 CASE08_COV_WY_WY_WD_OBS = CASE08_PHI ** 2 * (1.0 - CASE08_PHI ** 2 / (
-    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D)) 
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
 CASE08_COV_WY_WY_WD_FAR = CASE08_PHI ** 2 * (1.0 - 0 / (
-    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D)) 
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
 CASE08_COV_Y_Y_YD_OBS = (
     CASE08_COV_WY_WY_WD_OBS + CASE08_C_OBS ** 2 * CASE08_VAR_HD_YD)
 CASE08_COV_Y_Y_YD_FAR = (
@@ -339,7 +339,7 @@ class DummySpatialCorrelationModel(BaseCorrelationModel):
     def __init__(self):
         self.cache = {}  # imt -> correlation model
 
-    def _get_correlation_matrix(self, distance_matrix, imt):        
+    def _get_correlation_matrix(self, distance_matrix, imt):
         return numpy.exp(-0.1 * distance_matrix)
 
 
@@ -364,7 +364,7 @@ class DummyCrossCorrelationWithin(CrossCorrelation):
         Ts = min(T1, T2)
         Tl = max(T1, T2)
         return Ts/Tl
-    
+
 
 class DummyCrossCorrelationBetween(CrossCorrelationBetween):
     """
@@ -387,8 +387,8 @@ class DummyCrossCorrelationBetween(CrossCorrelationBetween):
         Ts = min(T1, T2)
         Tl = max(T1, T2)
         return Ts/Tl
-    
-    def get_inter_eps(self, imts, num_events):
+
+    def get_inter_eps(self, imts, num_events, rng):
         pass
 
     def _get_correlation_matrix(self, imts):

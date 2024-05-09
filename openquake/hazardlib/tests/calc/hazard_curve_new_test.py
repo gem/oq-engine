@@ -152,7 +152,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         src.trt_smr = 0
         src.mutex_weight = 1
         group = SourceGroup(
-            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex',
+            src.tectonic_region_type, [src], 'test', 'indep', 'mutex',
             grp_probability=1.0)
         param = dict(imtls=self.imtls,
                      investigation_time=1.,

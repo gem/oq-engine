@@ -1,0 +1,5 @@
+#,,,,,"generated_by='OpenQuake engine 3.17.0-git869155eb42', start_date='2023-09-05T13:39:01', checksum=984593277, investigation_time=None, risk_investigation_time=None"
+asset_id,taxonomy,lon,lat,occupants,residents
+NO DAMAGE,ND,-116.94505,32.51463,0.00000E+00,0.00000E+00
+UNINHABITABLE,UH,-116.94505,32.51463,0.00000E+00,1.00000E+02
+COLLAPSED,CP,-116.94505,32.51463,5.66667E+01,0.00000E+00

@@ -23,7 +23,7 @@ import numpy as np
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
-SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR']
+SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR', 'Av']
 
 
 class CoeffsTable(object):
@@ -156,17 +156,12 @@ class CoeffsTable(object):
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
         self.rb = self._setup_table_from_str(table, sa_damping)
         if self.opt == 1:
-            keys = list(self._coeffs.keys())
+            keys = list(self._coeffs)
             num_coeff = len(self._coeffs[keys[0]])
             self.cmtx = np.zeros((len(self._coeffs.keys()), num_coeff))
-            periods = np.array([i.period for i in keys])
+            periods = np.array([imt.period for imt in keys])
             idxs = np.argsort(periods)
-            tmp = []
-            for i, idx in enumerate(idxs):
-                key = keys[i]
-                tmp.append(np.array(self._coeffs[key].tolist()))
-            tmp = np.array(tmp)
-            self.cmtx = tmp[idxs, :]
+            self.cmtx = np.array([self._coeffs[keys[i]].tolist() for i in idxs])
             self.periods = periods[idxs]
 
     def _setup_table_from_str(self, table, sa_damping):
@@ -180,7 +175,8 @@ class CoeffsTable(object):
         dt = RecordBuilder(**{name: 0. for name in header[1:]})
         for line in lines:
             row = line.split()
-            imt_name_or_period = row[0].upper()
+            imt_name_or_period = row[0] if row[0].startswith("AvgSA") else\
+                row[0].upper()
             if imt_name_or_period == 'SA':  # protect against stupid mistakes
                 raise ValueError('specify period as float value '
                                  'to declare SA IMT')
@@ -209,7 +205,7 @@ class CoeffsTable(object):
             if re.search('^(SA|EAS|FAS|DRVT)', imt.string):
                 tmp = np.array(self._coeffs[imt])
                 coeffs.append([tmp[i] for i in coeff_list])
-                if re.search('^(SA)', imt.string):
+                if re.search('^(SA|AvgSA)', imt.string):
                     pof.append(imt.period)
                 elif re.search('^(EAS|FAS|DRVT)', imt.string):
                     pof.append(imt.frequency)
@@ -241,7 +237,7 @@ class CoeffsTable(object):
 
         if self.opt == 0:
             max_below = min_above = None
-            for unscaled_imt in list(self.sa_coeffs):
+            for unscaled_imt in self.sa_coeffs:
                 if unscaled_imt.damping != getattr(imt, 'damping', None):
                     pass
                 elif unscaled_imt.period > imt.period:

@@ -17,13 +17,13 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
-import re
 import abc
 import zlib
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import magstr, split_source
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
@@ -49,7 +49,7 @@ def is_poissonian(src):
     :returns: True if the underlying source is poissonian, false otherwise
     """
     if src.code == b'F':  # multiFault
-        return hasattr(src, 'occur_rates')
+        return src.infer_occur_rates
     elif src.code == b'N':  # nonParametric
         return False
     return True
@@ -63,7 +63,10 @@ def poisson_sample(src, eff_num_ses, seed):
     :yields: triples (rupture, rup_id, num_occurrences)
     """
     rng = numpy.random.default_rng(seed)
-    tom = src.temporal_occurrence_model
+    if hasattr(src, 'temporal_occurrence_model'):
+        tom = src.temporal_occurrence_model
+    else:  # multifault
+        tom = PoissonTOM(src.investigation_time)
     rupids = src.offset + numpy.arange(src.num_ruptures)
     if not hasattr(src, 'nodal_plane_distribution'):
         if src.code == b'F':  # multifault
@@ -200,8 +203,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: a random seed derived from source_id and ses_seed
         """
-        baseid = re.split('!;', self.source_id)[0]
-        return zlib.crc32(baseid.encode('ascii'), ses_seed)
+        return zlib.crc32(self.source_id.encode('ascii'), ses_seed)
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
@@ -254,7 +256,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             for mag, rate in self.get_annual_occurrence_rates():
                 mags.add(mag)
         elif hasattr(self, 'mags'):  # MultiFaultSource
-            mags.update(mag for mag in self.mags if mag >= self.min_mag)
+            mags.update(self.mags)
         else:  # nonparametric
             for rup, pmf in self.data:
                 mags.add(rup.mag)

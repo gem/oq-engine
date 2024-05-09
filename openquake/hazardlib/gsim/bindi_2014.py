@@ -165,10 +165,8 @@ class BindiEtAl2014Rjb(GMPE):
 
     sof = True
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
         self.adjustment_factor = np.log(adjustment_factor)
-        [self.dist_type] = self.REQUIRES_DISTANCES
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -176,7 +174,8 @@ class BindiEtAl2014Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        dists = getattr(ctx, self.dist_type)
+        dist_type = 'rhypo' if  "Rhyp" in self.__class__.__name__ else 'rjb'
+        dists = getattr(ctx, dist_type)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = _get_mean(self.kind, self.sof, C, ctx, dists)

@@ -24,23 +24,37 @@ import unittest.mock as mock
 import logging
 import operator
 import collections
+
+import fiona
+from shapely.geometry import shape
 import numpy
 from decorator import FunctionMaker
+
 from openquake.baselib import config
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, imt
+from openquake.hazardlib import gsim, nrml, imt, logictree
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logs
 from openquake.risklib import scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
-from openquake.server.db.actions import DISPLAY_NAME
+from openquake.calculators.export import DISPLAY_NAME
+
+
+def print_features(fiona_file):
+    rows = []
+    for feature in fiona_file:
+        dic = dict(feature['properties'])
+        dic['geom'] = shape(feature['geometry']).__class__.__name__
+        header = list(dic)
+        rows.append(dic.values())
+    print(text_table(rows, header, ext='org'))
 
 
 def source_model_info(sm_nodes):
@@ -111,6 +125,13 @@ def main(what, report=False):
     if what == 'calculators':
         for calc in sorted(base.calculators):
             print(calc)
+    elif what == 'executing':
+        fields = 'id,user_name,calculation_mode,description'
+        rows = logs.dbcmd(f"SELECT {fields} FROM job WHERE status IN "
+                          "('executing', 'submitted') AND is_running=1")
+        print(fields.replace(',', '\t'))
+        for row in rows:
+            print('\t'.join(map(str, row)))
     elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
@@ -197,6 +218,9 @@ def main(what, report=False):
                 print(logictree.GsimLogicTree(what))
         else:
             print(node.to_str())
+    elif what.endswith('.shp'):
+        with fiona.open(what) as f:
+            print_features(f)
     elif what.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:

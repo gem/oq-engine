@@ -19,9 +19,8 @@ import os
 import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers, hdf5, general
+from openquake.baselib import performance, writers, hdf5
 from openquake.hazardlib import site, valid
-from openquake.hazardlib.geo.utils import _GeographicObjects
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import datastore
 
@@ -103,76 +102,79 @@ def main(
     generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
     which may be needed by your hazard model, depending on the required GSIMs.
     """
-    hdf5 = datastore.hdf5new()
-    req_site_params = {'vs30'}
-    fields = ['lon', 'lat', 'vs30']
-    if z1pt0:
-        req_site_params.add('z1pt0')
-        fields.append('z1pt0')
-    if z2pt5:
-        req_site_params.add('z2pt5')
-        fields.append('z2pt5')
-    if vs30measured:
-        req_site_params.add('vs30measured')
-        fields.append('vs30measured')
-    with performance.Monitor(measuremem=True) as mon:
-        if exposure_xml:
-            exp = Exposure.read_all(exposure_xml, check_dupl=False)
-            hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
-                exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
-            if grid_spacing:
-                grid = exp.mesh.get_convex_hull().dilate(
-                    grid_spacing).discretize(grid_spacing)
-                haz_sitecol = site.SiteCollection.from_points(
-                    grid.lons, grid.lats, req_site_params=req_site_params)
-                logging.info(
-                    'Associating exposure grid with %d locations to %d '
-                    'exposure sites', len(haz_sitecol), len(exp.mesh))
-                haz_sitecol, discarded = exp.associate(
-                    haz_sitecol, grid_spacing * SQRT2)
-                if len(discarded):
-                    logging.info('Discarded %d sites with assets '
-                                 '[use oq plot_assets]', len(discarded))
-                    hdf5['discarded'] = numpy.array(discarded)
-                haz_sitecol.make_complete()
-            else:
-                haz_sitecol = assetcol
-                discarded = []
-        elif len(sites_csv):
-            if hasattr(sites_csv, 'lon'):
-                # sites_csv can be a DataFrame when used programmatically
-                lons, lats = sites_csv.lon.to_numpy(), sites_csv.lat.to_numpy()
-            else:
-                # sites_csv is a list of filenames
-                lons, lats = [], []
-                for fname in sites_csv:
-                    check_fname(fname, 'sites_csv', output)
-                    with read(fname) as csv:
-                        for line in csv:
-                            if line.startswith('lon,lat'):  # possible header
-                                continue
-                            lon, lat = line.split(',')[:2]
-                            lons.append(valid.longitude(lon))
-                            lats.append(valid.latitude(lat))
-            haz_sitecol = site.SiteCollection.from_points(
-                lons, lats, req_site_params=req_site_params)
-            if grid_spacing:
-                grid = haz_sitecol.mesh.get_convex_hull().dilate(
-                    grid_spacing).discretize(grid_spacing)
-                haz_sitecol = site.SiteCollection.from_points(
-                    grid.lons, grid.lats, req_site_params=req_site_params)
-        else:
-            raise RuntimeError('Missing exposures or missing sites')
-        associate(haz_sitecol, vs30_csv, assoc_distance)
+    hdf5, log = datastore.build_dstore_log("prepare site model")
+    with hdf5, log:
+        req_site_params = {'vs30'}
+        fields = ['lon', 'lat', 'vs30']
         if z1pt0:
-            haz_sitecol.calculate_z1pt0()
+            req_site_params.add('z1pt0')
+            fields.append('z1pt0')
         if z2pt5:
-            haz_sitecol.calculate_z2pt5()
-        hdf5['sitecol'] = haz_sitecol
-        if output:
-            writers.write_csv(output, haz_sitecol.array[fields])
-    logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
-    logging.info(mon)
+            req_site_params.add('z2pt5')
+            fields.append('z2pt5')
+        if vs30measured:
+            req_site_params.add('vs30measured')
+            fields.append('vs30measured')
+        with performance.Monitor(measuremem=True) as mon:
+            if exposure_xml:
+                exp = Exposure.read_all(exposure_xml, check_dupl=False)
+                hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
+                    exp.mesh.lons, exp.mesh.lats,
+                    req_site_params=req_site_params)
+                if grid_spacing:
+                    grid = exp.mesh.get_convex_hull().dilate(
+                        grid_spacing).discretize(grid_spacing)
+                    haz_sitecol = site.SiteCollection.from_points(
+                        grid.lons, grid.lats, req_site_params=req_site_params)
+                    logging.info(
+                        'Associating exposure grid with %d locations to %d '
+                        'exposure sites', len(haz_sitecol), len(exp.mesh))
+                    haz_sitecol, discarded = exp.associate(
+                        haz_sitecol, grid_spacing * SQRT2)
+                    if len(discarded):
+                        logging.info('Discarded %d sites with assets '
+                                     '[use oq plot_assets]', len(discarded))
+                        hdf5['discarded'] = numpy.array(discarded)
+                    haz_sitecol.make_complete()
+                else:
+                    haz_sitecol = assetcol
+                    discarded = []
+            elif len(sites_csv):
+                if hasattr(sites_csv, 'lon'):
+                    # sites_csv can be a DataFrame when used programmatically
+                    lons = sites_csv.lon.to_numpy()
+                    lats = sites_csv.lat.to_numpy()
+                else:
+                    # sites_csv is a list of filenames
+                    lons, lats = [], []
+                    for fname in sites_csv:
+                        check_fname(fname, 'sites_csv', output)
+                        with read(fname) as csv:
+                            for line in csv:
+                                if line.startswith('lon,lat'):
+                                    continue
+                                lon, lat = line.split(',')[:2]
+                                lons.append(valid.longitude(lon))
+                                lats.append(valid.latitude(lat))
+                haz_sitecol = site.SiteCollection.from_points(
+                    lons, lats, req_site_params=req_site_params)
+                if grid_spacing:
+                    grid = haz_sitecol.mesh.get_convex_hull().dilate(
+                        grid_spacing).discretize(grid_spacing)
+                    haz_sitecol = site.SiteCollection.from_points(
+                        grid.lons, grid.lats, req_site_params=req_site_params)
+            else:
+                raise RuntimeError('Missing exposures or missing sites')
+            associate(haz_sitecol, vs30_csv, assoc_distance)
+            if z1pt0:
+                haz_sitecol.calculate_z1pt0()
+            if z2pt5:
+                haz_sitecol.calculate_z2pt5()
+            hdf5['sitecol'] = haz_sitecol
+            if output:
+                writers.write_csv(output, haz_sitecol.array[fields])
+        logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
+        logging.info(mon)
     return haz_sitecol
 
 

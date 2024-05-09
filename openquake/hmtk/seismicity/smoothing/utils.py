@@ -45,16 +45,16 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module :mod:`openquake.hmtk.seismicity.smoothing.utils` implements
 utility functions for smoothed seismicity analysis
-'''
+"""
 
 import numpy as np
 
 
 def hermann_adjustment_factors(bval, min_mag, mag_inc):
-    '''
+    """
     Returns the adjustment factors (fval, fival) proposed by Hermann (1978)
 
     :param float bval:
@@ -65,15 +65,17 @@ def hermann_adjustment_factors(bval, min_mag, mag_inc):
 
     :param non-negative float mag_inc:
         Magnitude increment of the completeness table
-    '''
+    """
 
-    fval = 10. ** (bval * min_mag)
-    fival = 10. ** (bval * (mag_inc / 2.)) - 10. ** (-bval * (mag_inc / 2.))
+    fval = 10.0 ** (bval * min_mag)
+    fival = 10.0 ** (bval * (mag_inc / 2.0)) - 10.0 ** (
+        -bval * (mag_inc / 2.0)
+    )
     return fval, fival
 
 
 def incremental_a_value(bval, min_mag, mag_inc):
-    '''
+    """
     Incremental a-value from cumulative - using the version of the
     Hermann (1979) formula described in Wesson et al. (2003)
 
@@ -85,16 +87,17 @@ def incremental_a_value(bval, min_mag, mag_inc):
 
     :param float mag_inc:
         Magnitude increment of the completeness table
-    '''
-    a_cum = 10. ** (bval * min_mag)
-    a_inc = a_cum + np.log10((10. ** (bval * mag_inc)) -
-                             (10. ** (-bval * mag_inc)))
+    """
+    a_cum = 10.0 ** (bval * min_mag)
+    a_inc = a_cum + np.log10(
+        (10.0 ** (bval * mag_inc)) - (10.0 ** (-bval * mag_inc))
+    )
 
     return a_inc
 
 
 def get_weichert_factor(beta, cmag, cyear, end_year):
-    '''
+    """
     Gets the Weichert adjustment factor for each the magnitude bins
 
     :param float beta:
@@ -111,24 +114,25 @@ def get_weichert_factor(beta, cmag, cyear, end_year):
 
     :returns:
         Weichert adjustment factor (float)
-    '''
+    """
     if len(cmag) > 1:
         # cval corresponds to the mid-point of the completeness bins
         # In the original code it requires that the magnitude bins be
         # equal sizedclass IsotropicGaussian(BaseSmoothingKernel):
-        dmag = (cmag[1:] + cmag[:-1]) / 2.
+        dmag = (cmag[1:] + cmag[:-1]) / 2.0
         cval = np.hstack([dmag, cmag[-1] + (dmag[-1] - cmag[-2])])
     else:
         # Single completeness value so Weichert factor is unity
         return 1.0 / (end_year - cyear[0] + 1), None
 
-    t_f = sum(np.exp(-beta * cval)) / sum((end_year - cyear + 1) *
-                                          np.exp(-beta * cval))
+    t_f = sum(np.exp(-beta * cval)) / sum(
+        (end_year - cyear + 1) * np.exp(-beta * cval)
+    )
     return t_f, cval
 
 
 def check_completeness_table(completeness_table, catalogue):
-    '''
+    """
     Check to ensure completeness table is in the correct format
     `completeness_table = np.array([[year_, mag_i]]) for i in number of bins`
 
@@ -141,7 +145,7 @@ def check_completeness_table(completeness_table, catalogue):
     :returns:
         Correct completeness table
 
-    '''
+    """
     if isinstance(completeness_table, np.ndarray):
         assert np.shape(completeness_table)[1] == 2
         return completeness_table
@@ -151,12 +155,18 @@ def check_completeness_table(completeness_table, catalogue):
         return np.array([[completeness_table[0], completeness_table[1]]])
     else:
         # Accepts the minimum magnitude and earliest year of the catalogue
-        return np.array([[np.min(catalogue.data['year']),
-                          np.min(catalogue.data['magnitude'])]])
+        return np.array(
+            [
+                [
+                    np.min(catalogue.data["year"]),
+                    np.min(catalogue.data["magnitude"]),
+                ]
+            ]
+        )
 
 
 def get_even_magnitude_completeness(completeness_table, catalogue=None):
-    '''
+    """
     To make the magnitudes evenly spaced, render to a constant 0.1
     magnitude unit
 
@@ -169,8 +179,8 @@ def get_even_magnitude_completeness(completeness_table, catalogue=None):
     :returns:
         Correct completeness table
 
-    '''
-    mmax = np.floor(10. * np.max(catalogue.data['magnitude'])) / 10.
+    """
+    mmax = np.floor(10.0 * np.max(catalogue.data["magnitude"])) / 10.0
     check_completeness_table(completeness_table, catalogue)
     cmag = np.hstack([completeness_table[:, 1], mmax + 0.1])
     cyear = np.hstack([completeness_table[:, 0], completeness_table[-1, 0]])
@@ -179,17 +189,18 @@ def get_even_magnitude_completeness(completeness_table, catalogue=None):
         return completeness_table, 0.1
 
     for iloc in range(0, len(cmag) - 1):
-        mrange = np.arange(np.floor(10. * cmag[iloc]) / 10.,
-                           (np.ceil(10. * cmag[iloc + 1]) / 10.),
-                           0.1)
-        temp_table = np.column_stack([
-            cyear[iloc] * np.ones(len(mrange), dtype=float),
-            mrange])
+        mrange = np.arange(
+            np.floor(10.0 * cmag[iloc]) / 10.0,
+            (np.ceil(10.0 * cmag[iloc + 1]) / 10.0),
+            0.1,
+        )
+        temp_table = np.column_stack(
+            [cyear[iloc] * np.ones(len(mrange), dtype=float), mrange]
+        )
         if iloc == 0:
             completeness_table = np.copy(temp_table)
         else:
-            completeness_table = np.vstack([completeness_table,
-                                            temp_table])
+            completeness_table = np.vstack([completeness_table, temp_table])
     # completeness_table = np.vstack([completeness_table,
     #    np.array([[cyear[-1], cmag[-1]]])])
     return completeness_table, 0.1

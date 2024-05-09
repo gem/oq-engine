@@ -20,21 +20,26 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+import pandas
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
+    fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
+    spherical_to_cartesian, get_middle_point, geolocate)
+from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
-ampcode_dt = (numpy.string_, 4)
+ampcode_dt = (numpy.bytes_, 4)
 param = dict(
     vs30measured='reference_vs30_type',
     vs30='reference_vs30_value',
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
-    backarc='reference_backarc')
+    backarc='reference_backarc',
+    region='region',
+    xvf='xvf')
 
 
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
@@ -65,6 +70,10 @@ def calculate_z2pt5(vs30):
     c1 = 7.089
     c2 = -1.144
     return numpy.exp(c1 + numpy.log(vs30) * c2)
+
+
+def rnd5(lons):
+    return numpy.round(lons, 5)
 
 
 class Site(object):
@@ -158,8 +167,8 @@ site_param_dt = {
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
-    'siteclass': (numpy.string_, 1),
-    'geohash': (numpy.string_, 6),
+    'siteclass': (numpy.bytes_, 1),
+    'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
@@ -168,12 +177,18 @@ site_param_dt = {
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
-    'ec8': (numpy.string_, 1),
-    'ec8_p18': (numpy.string_, 2),
+    'ec8': (numpy.bytes_, 1),
+    'ec8_p18': (numpy.bytes_, 2),
     'h800': numpy.float64,
-    'geology': (numpy.string_, 20),
+    'geology': (numpy.bytes_, 20),
     'amplfactor': numpy.float64,
-    'fpeak': numpy.float64,
+    'ch_ampl03': numpy.float64,
+    'ch_ampl06': numpy.float64,
+    'ch_phis2s03': numpy.float64,
+    'ch_phis2s06': numpy.float64,
+    'ch_phiss03': numpy.float64,
+    'ch_phiss06': numpy.float64,
+    'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
     'THV': numpy.float64,
     'PHV': numpy.float64,
@@ -185,16 +200,19 @@ site_param_dt = {
     'dry_density': numpy.float64,
     'Fs': numpy.float64,
     'crit_accel': numpy.float64,
-    'unit': (numpy.string_, 5),
-    'liq_susc_cat': (numpy.string_, 2),
+    'unit': (numpy.bytes_, 5),
+    'liq_susc_cat': (numpy.bytes_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'relief': numpy.float64,
     'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,
     'dwb': numpy.float64,
+    'zwb': numpy.float64,
+    'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
 
@@ -206,7 +224,7 @@ site_param_dt = {
     'T_eq': numpy.float64,
 
     # other parameters
-    'custom_site_id': (numpy.string_, 8),
+    'custom_site_id': (numpy.bytes_, 8),
     'region': numpy.uint32,
     'in_cshm': bool  # used in mcverry
 }
@@ -297,9 +315,15 @@ class SiteCollection(object):
         elif hasattr(sitemodel, 'reference_vs30_value'):
             self.set_global_params(sitemodel, req_site_params)
         else:
-            for name in sitemodel.dtype.names:
+            if hasattr(sitemodel, 'dtype'):
+                names = set(sitemodel.dtype.names)
+                sm = sitemodel
+            else:
+                sm = vars(sitemodel)
+                names = set(sm) & set(req_site_params)
+            for name in names:
                 if name not in ('lon', 'lat'):
-                    self._set(name, sitemodel[name])
+                    self._set(name, sm[name])
         dupl = get_duplicates(self.array, 'lon', 'lat')
         if dupl:
             # raise a decent error message displaying only the first 9
@@ -310,6 +334,52 @@ class SiteCollection(object):
             raise ValueError('There are %d duplicate sites %s%s' %
                              (n, items, dots))
         return self
+
+    @classmethod
+    def from_planar(cls, rup, point='TC', toward_azimuth=90,
+                    direction='positive', hdist=100, step=5.,
+                    req_site_params=()):
+        """
+        :param rup: a rupture built with `rupture.get_planar`
+        :return: a :class:`openquake.hazardlib.site.SiteCollection` instance
+        """
+        sfc = rup.surface
+        if point == 'TC':
+            pnt = sfc.get_top_edge_centroid()
+            lon, lat = pnt.x, pnt.y
+        elif point == 'BC':
+            lon, lat = get_middle_point(
+                sfc.corner_lons[2], sfc.corner_lats[2],
+                sfc.corner_lons[3], sfc.corner_lats[3])
+        else:
+            idx = {'TL': 0, 'TR': 1, 'BR': 2, 'BL': 3}[point]
+            lon = sfc.corner_lons[idx]
+            lat = sfc.corner_lats[idx]
+        depth = 0
+        vdist = 0
+        npoints = hdist / step
+        strike = rup.surface.strike
+
+        pointsp = []
+        pointsn = []
+        if direction in ['positive', 'both']:
+            azi = (strike + toward_azimuth) % 360
+            pointsp = npoints_towards(
+                lon, lat, depth, azi, hdist, vdist, npoints)
+
+        if direction in ['negative', 'both']:
+            idx = 0 if direction == 'negative' else 1
+            azi = (strike + toward_azimuth + 180) % 360
+            pointsn = npoints_towards(
+                lon, lat, depth, azi, hdist, vdist, npoints)
+
+        if len(pointsn):
+            lons = reversed(pointsn[0][idx:])
+            lats = reversed(pointsn[1][idx:])
+        else:
+            lons = pointsp[0]
+            lats = pointsp[1]
+        return cls.from_points(lons, lats, None, rup, req_site_params)
 
     def _set(self, param, value):
         if param not in self.array.dtype.names:
@@ -333,7 +403,7 @@ class SiteCollection(object):
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
         if 'backarc' in req_site_params:
             self._set('backarc', oq.reference_backarc)
-        
+
     def filtered(self, indices):
         """
         :param indices:
@@ -488,7 +558,9 @@ class SiteCollection(object):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        if hint > len(self):
+        if hint <= 1:
+            return [self]
+        elif hint > len(self):
             hint = len(self)
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
@@ -496,6 +568,21 @@ class SiteCollection(object):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.complete.array[sids]
             sc.complete = self.complete
+            tiles.append(sc)
+        return tiles
+
+    def split_by_gh3(self):
+        """
+        Split a SiteCollection into a set of tiles with the same geohash3
+        """
+        gh3s = geohash3(self.lons, self.lats)
+        gb = pandas.DataFrame(dict(sid=self.sids, gh3=gh3s)).groupby('gh3')
+        tiles = []
+        for gh3, df in gb:
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.complete.array[df.sid]
+            sc.complete = self.complete
+            sc.gh3 = gh3
             tiles.append(sc)
         return tiles
 
@@ -573,9 +660,32 @@ class SiteCollection(object):
                 continue
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
-                raise ValueError('The site parameter %s is always zero: please '
-                                 'check the site model' % param)
+                raise ValueError('The site parameter %s is always zero: please'
+                                 ' check the site model' % param)
         return site_model
+
+    def extend(self, lons, lats):
+        """
+        Extend the site collection to additional (and different) points.
+        Used for station_data in conditioned GMFs.
+        """
+        assert len(lons) == len(lats), (len(lons), len(lats))
+        orig = set(zip(rnd5(self.lons), rnd5(self.lats)))
+        new = set(zip(rnd5(lons), rnd5(lats))) - orig
+        if not new:
+            return self
+        lons, lats = zip(*sorted(new))
+        N1 = len(self)
+        N2 = len(lons)
+        array = numpy.zeros(N1 + N2, self.array.dtype)
+        array[:N1] = self.array
+        array[N1:]['sids'] = numpy.arange(N1, N1+N2)
+        array[N1:]['lon'] = lons
+        array[N1:]['lat'] = lats
+        sitecol = object.__new__(self.__class__)
+        sitecol.array = array
+        sitecol.complete = sitecol
+        return sitecol
 
     def within(self, region):
         """
@@ -603,13 +713,32 @@ class SiteCollection(object):
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
 
+    def by_country(self):
+        """
+        Returns a table with the number of sites per country. The countries
+        are defined as in the file geoBoundariesCGAZ_ADM0.shp
+        """
+        from openquake.commonlib import readinput
+        geom_df = readinput.read_countries_df()
+        lonlats = numpy.zeros((len(self), 2), numpy.float32)
+        lonlats[:, 0] = self.lons
+        lonlats[:, 1] = self.lats
+        codes = geolocate(lonlats, geom_df)
+        uni, cnt = numpy.unique(codes, return_counts=True)
+        out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
+                                     ('num_sites', int)])
+        out['country'] = uni
+        out['num_sites'] = cnt
+        out.sort(order='num_sites')
+        return out
+
     def geohash(self, length):
         """
         :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
-        l = numpy.uint8(length)
-        arr = geohash(self['lon'], self['lat'], l)
+        ln = numpy.uint8(length)
+        arr = CODE32[geohash(self['lon'], self['lat'], ln)]
         return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):

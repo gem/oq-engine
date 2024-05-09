@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="ex1" category="infrastructure" taxonomySource="">
+		<description>example</description>
+		<conversions>
+			<costTypes>
+			</costTypes>
+		</conversions>
+		<tagNames>type start_node end_node weight parent_id</tagNames>
+		<occupancyPeriods></occupancyPeriods>
+		<assets>
+			exposure_demo_nodes_missing_mandatory_column.csv
+            exposure_demo_edges_missing_mandatory_column.csv
+		</assets>
+	</exposureModel>
+</nrml>

@@ -43,11 +43,11 @@
 # The GEM Foundation, and the authors of the software, assume no liability for
 # use of the software.
 
-'''
+"""
 Module :mod:'openquake.hmtk.seismicity.max_magnitude.base' defines and abstract base
 class for instrumental estimators of maximum magnitude
 :class: openquake.hmtk.seismicity.max_magnitude.base
-'''
+"""
 
 import abc
 import numpy as np
@@ -55,32 +55,37 @@ from openquake.hmtk.registry import CatalogueFunctionRegistry
 
 
 def _get_observed_mmax(catalogue, config):
-    '''Check see if observed mmax values are input, if not then take
-    from the catalogue'''
-    if config['input_mmax']:
-        obsmax = config['input_mmax']
-        if config['input_mmax_uncertainty']:
-            return config['input_mmax'], config['input_mmax_uncertainty']
+    """Check see if observed mmax values are input, if not then take
+    from the catalogue"""
+    if config["input_mmax"]:
+        obsmax = config["input_mmax"]
+        if config["input_mmax_uncertainty"]:
+            return config["input_mmax"], config["input_mmax_uncertainty"]
         else:
-            raise ValueError('Input mmax uncertainty must be specified!')
+            raise ValueError("Input mmax uncertainty must be specified!")
 
-    max_location = np.argmax(catalogue['magnitude'])
-    obsmax = catalogue['magnitude'][max_location]
-    cond = isinstance(catalogue['sigmaMagnitude'], np.ndarray) and \
-        len(catalogue['sigmaMagnitude']) > 0 and not \
-        np.all(np.isnan(catalogue['sigmaMagnitude']))
+    max_location = np.argmax(catalogue["magnitude"])
+    obsmax = catalogue["magnitude"][max_location]
+    cond = (
+        isinstance(catalogue["sigmaMagnitude"], np.ndarray)
+        and len(catalogue["sigmaMagnitude"]) > 0
+        and not np.all(np.isnan(catalogue["sigmaMagnitude"]))
+    )
 
     if cond:
-        if not np.isnan(catalogue['sigmaMagnitude'][max_location]):
-            return obsmax, catalogue['sigmaMagnitude'][max_location]
+        if not np.isnan(catalogue["sigmaMagnitude"][max_location]):
+            return obsmax, catalogue["sigmaMagnitude"][max_location]
         else:
-            print('Uncertainty not given on observed Mmax\n'
-                  'Taking largest magnitude uncertainty found in catalogue')
-            return obsmax, np.nanmax(catalogue['sigmaMagnitude'])
-    elif config['input_mmax_uncertainty']:
-        return obsmax, config['input_mmax_uncertainty']
+            print(
+                "Uncertainty not given on observed Mmax\n"
+                "Taking largest magnitude uncertainty found in catalogue"
+            )
+            return obsmax, np.nanmax(catalogue["sigmaMagnitude"])
+    elif config["input_mmax_uncertainty"]:
+        return obsmax, config["input_mmax_uncertainty"]
     else:
-        raise ValueError('Input mmax uncertainty must be specified!')
+        raise ValueError("Input mmax uncertainty must be specified!")
+
 
 #    if not config['input_mmax']:
 #        # If maxmag is False then maxmag is maximum from magnitude list
@@ -102,22 +107,23 @@ def _get_observed_mmax(catalogue, config):
 
 
 def _get_magnitude_vector_properties(catalogue, config):
-    '''If an input minimum magnitude is given then consider catalogue
-    only above the minimum magnitude - returns corresponding properties'''
+    """If an input minimum magnitude is given then consider catalogue
+    only above the minimum magnitude - returns corresponding properties"""
 
-    mmin = config.get('input_mmin', np.min(catalogue['magnitude']))
-    neq = float(np.sum(catalogue['magnitude'] >= mmin - 1.E-7))
+    mmin = config.get("input_mmin", np.min(catalogue["magnitude"]))
+    neq = float(np.sum(catalogue["magnitude"] >= mmin - 1.0e-7))
     return neq, mmin
 
 
 class BaseMaximumMagnitude(object):
-    '''
+    """
     Abstract base class for implementation of the maximum magnitude estimation
     based on instrumental/historical seismicity
-    '''
+    """
+
     @abc.abstractmethod
     def get_mmax(self, catalogue, config):
-        '''
+        """
         Analyses the catalogue to infer the maximum magnitude from a
         statistical process
 
@@ -131,7 +137,7 @@ class BaseMaximumMagnitude(object):
         :returns:
             * Maximum magnitude (float)
             * Maximum magnitude uncertainty (float)
-        '''
+        """
 
 
 MAX_MAGNITUDE_METHODS = CatalogueFunctionRegistry()

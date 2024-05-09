@@ -19,8 +19,6 @@ on:
         description: COPR Repository development for default
         default: openquake-staging
         required: true
-  schedule:
-    - cron: "0 19 * * *"
   push:
     branches:
       - test_action_rpm

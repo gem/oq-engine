@@ -21,7 +21,6 @@ import logging
 from openquake.commonlib import logs, datastore
 from openquake.calculators.extract import WebExtractor
 from openquake.engine import engine
-from openquake.server import dbserver
 
 
 def main(calc_id):
@@ -31,7 +30,6 @@ def main(calc_id):
     NB: calc_id can be a local pathname to a datastore not already
     present in the database: in that case it is imported in the db.
     """
-    dbserver.ensure_on()
     try:
         calc_id = int(calc_id)
     except ValueError:  # assume calc_id is a pathname
@@ -57,4 +55,4 @@ def main(calc_id):
     logging.info('Imported calculation %s successfully', calc_id)
 
 
-main.calc_id = 'calculation ID or pathname'
+main.calc_id = 'calculation ID or pathname ~/oqdata/calc_XXX.hdf5'

@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import csv
 import sys
 import inspect
 import tempfile
@@ -41,6 +42,7 @@ vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
+CSVFile = collections.namedtuple('CSVFile', 'fname header fields size')
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
@@ -257,33 +259,17 @@ def is_ok(value, expected):
     return value == expected
 
 
-def decode_lol(lol):
-    """
-    :returns: a list of lists of decoded values
-    """
-    if len(lol) and len(lol[0]) and isinstance(lol[0][0], bytes):
-        return [decode(lst) for lst in lol]
-    else:
-        return lol
-
-
-def extract_cols(datagrp, sel, slc, columns):
+def extract_cols(datagrp, sel, slices, columns):
     """
     :param datagrp: something like and HDF5 data group
     :param sel: dictionary column name -> value specifying a selection
-    :param slc: a slice object specifying the rows considered
+    :param slices: list of slices
     :param columns: the full list of column names
     :returns: a dictionary col -> array of values
     """
-    first = columns[0]
-    nrows = len(datagrp[first])
-    if slc.start is None and slc.stop is None:  # split in slices
-        slcs = general.gen_slices(0, nrows, MAX_ROWS)
-    else:
-        slcs = [slc]
     acc = general.AccumDict(accum=[])  # col -> arrays
-    for slc in slcs:
-        if sel:
+    if sel:
+        for slc in slices:
             ok = slice(None)
             dic = {col: datagrp[col][slc] for col in sel}
             for col in sel:
@@ -293,10 +279,16 @@ def extract_cols(datagrp, sel, slc, columns):
                     ok &= is_ok(dic[col], sel[col])
             for col in columns:
                 acc[col].append(datagrp[col][slc][ok])
-        else:  # avoid making unneeded copies
-            for col in columns:
-                acc[col].append(datagrp[col][slc])
-    return {k: numpy.concatenate(decode_lol(vs)) for k, vs in acc.items()}
+    else:  # avoid making unneeded copies
+        for col in columns:
+            dset = datagrp[col]
+            for slc in slices:
+                acc[col].append(dset[slc])
+    for k, vs in acc.items():
+        acc[k] = arr = numpy.concatenate(vs, dtype=vs[0].dtype)
+        if len(arr) and isinstance(arr[0], bytes):
+            acc[k] = numpy.array(decode(arr))
+    return acc
 
 
 class File(h5py.File):
@@ -372,12 +364,13 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
-    def read_df(self, key, index=None, sel=(), slc=slice(None)):
+    def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
         """
         :param key: name of the structured dataset
         :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
         :param slc: slice object to extract a slice of the dataset
+        :param slices: an array of shape (N, 2) with start,stop indices
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
@@ -387,7 +380,14 @@ class File(h5py.File):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = extract_cols(dset, sel, slc, columns)
+            if len(slices):
+                slcs = [slice(s0, s1) for s0, s1 in slices]
+            elif slc.start is None and slc.stop is None:  # split in slices
+                slcs = list(general.gen_slices(
+                    0, len(dset[columns[0]]), MAX_ROWS))
+            else:
+                slcs = [slc]
+            dic = extract_cols(dset, sel, slcs, columns)
             if index is None:
                 return pandas.DataFrame(dic)
             else:
@@ -412,6 +412,9 @@ class File(h5py.File):
                     data[templ % i] = arr[(slice(None),) + i]
             else:  # scalar field
                 data[name] = arr
+        if sel:
+            for k, v in sel.items():
+                data = data[data[k] == v]
         return pandas.DataFrame.from_records(data, index=index)
 
     def save_vlen(self, key, data):  # used in SourceWriterTestCase
@@ -666,7 +669,7 @@ class ArrayWrapper(object):
             if isinstance(v, h5py.Dataset):
                 arr = v[()]
                 if isinstance(arr, INT):
-                    arr = numpy.arange(arr)  
+                    arr = numpy.arange(arr)
                 elif len(arr) and isinstance(arr[0], bytes):
                     arr = decode(arr)
                 setattr(self, k, arr)
@@ -782,7 +785,7 @@ class ArrayWrapper(object):
                 if sum(tup):
                     out.append(values + tup)
             else:
-                out.append(values + tup)
+                out.append(values + tuple(0 if x == 0 else x for x in tup))
         return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
@@ -836,7 +839,7 @@ def parse_comment(comment):
     return list(dic.items())
 
 
-def build_dt(dtypedict, names):
+def build_dt(dtypedict, names, fname):
     """
     Build a composite dtype for a list of names and dictionary
     name -> dtype with a None entry corresponding to the default dtype.
@@ -849,7 +852,8 @@ def build_dt(dtypedict, names):
             if None in dtypedict:
                 dt = dtypedict[None]
             else:
-                raise KeyError('Missing dtype for field %r' % name)
+                raise InvalidFile('%s: missing dtype for field %r' %
+                                  (fname, name))
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
@@ -868,26 +872,77 @@ def check_length(field, size):
     return check
 
 
-def _read_csv(fileobj, compositedt):
+def _read_csv(fileobj, compositedt, usecols=None):
     dic = {}
     conv = {}
     for name in compositedt.names:
-        dic[name] = dt = compositedt[name]
-        if dt.kind == 'S':  # limit of the length of byte-fields
+        dt = compositedt[name]
+        # NOTE: pandas.read_csv raises a warning and ignores a field dtype if a
+        # converter for the same field is given
+        if dt.kind == 'S':  # byte-fields
             conv[name] = check_length(name, dt.itemsize)
+        else:
+            dic[name] = dt
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
-                         dtype=dic, keep_default_na=False, na_filter=False)
-    arr = numpy.zeros(len(df), compositedt)
-    for col in df.columns:
-        arr[col] = df[col].to_numpy()
-    return arr
+                         dtype=dic, usecols=usecols,
+                         keep_default_na=False, na_filter=False)
+    return df
+
+
+def find_error(fname, errors, dtype):
+    """
+    Given a CSV file with an error, parse it with the csv.reader
+    and get a better exception including the first line with an error
+    """
+    with open(fname, encoding='utf-8-sig', errors=errors) as f:
+        reader = csv.reader(f)
+        start = 1
+        while True:
+            names = next(reader) # header
+            start += 1
+            if not names[0].startswith('#'):
+                break
+        try:
+            for i, row in enumerate(reader, start):
+                for name, val in zip(names, row):
+                    numpy.array([val], dtype[name])
+        except Exception as exc:
+            exc.lineno = i
+            exc.line = ','.join(row)
+            return exc
+
+
+def sniff(fnames, sep=',', ignore=set()):
+    """
+    Read the first line of a set of CSV files by stripping the pre-headers.
+
+    :returns: a list of CSVFile namedtuples.
+    """
+    common = None
+    files = []
+    for fname in fnames:
+        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+            while True:
+                first = next(f)
+                if first.startswith('#'):
+                    continue
+                break
+            header = first.strip().split(sep)
+            if common is None:
+                common = set(header)
+            else:
+                common &= set(header)
+            files.append(CSVFile(fname, header, common, os.path.getsize(fname)))
+    common -= ignore
+    assert common, 'There is no common header subset among %s' % fnames
+    return files
 
 
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None):
+             index=None, errors=None, usecols=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -895,6 +950,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
+    :param usecols: columns to read
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
@@ -906,17 +962,19 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
-        if isinstance(dtypedict, dict):
-            dt = build_dt(dtypedict, header)
-        else:
-            # in test_recompute dt is already a composite dtype
-            dt = dtypedict
+        dt = build_dt(dtypedict, header, fname)
         try:
-            arr = _read_csv(f, dt)
-        except KeyError:
-            raise KeyError('Missing None -> default in dtypedict')
+            df = _read_csv(f, dt, usecols)
         except Exception as exc:
-            raise InvalidFile('%s: %s' % (fname, exc))
+            err = find_error(fname, errors, dt)
+            if err:
+                raise InvalidFile('%s: %s\nline:%d:%s' %
+                                  (fname, err, err.lineno, err.line))
+            else:
+                raise InvalidFile('%s: %s' % (fname, exc))
+    arr = numpy.zeros(len(df), dt)
+    for col in df.columns:
+        arr[col] = df[col].to_numpy()
     if renamedict:
         newnames = []
         for name in arr.dtype.names:

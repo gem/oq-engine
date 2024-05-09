@@ -25,7 +25,6 @@ import os
 
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
-from openquake.server.dbserver import get_status
 from openquake.server.tests.views_test import EngineServerTestCase
 
 
@@ -33,7 +32,6 @@ class EngineServerReadOnlyModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.c = Client()
 

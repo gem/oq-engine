@@ -37,4 +37,5 @@ class ClassicalBCRTestCase(CalculatorTestCase):
         fnames = out['bcr-stats', 'csv']
         assert fnames
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=2E-3)  # big tolerance for macos

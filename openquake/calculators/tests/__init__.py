@@ -32,8 +32,6 @@ from openquake.calculators.export import export
 from openquake.baselib import general, parallel, writers
 from openquake.commonlib import datastore, readinput, oqvalidation, logs
 
-
-NOT_DARWIN = sys.platform != 'darwin'
 OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
 OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
 
@@ -47,29 +45,40 @@ def strip_calc_id(fname):
     return re.sub(r'_\d+', '', name)
 
 
+def ignore_gsd_fields(header, lines):
+    # strip columns starting with gsd_ (used when checking avg_gmf)
+    h = header.split(',')
+    for i, line in enumerate(lines):
+        stripped = [val for col, val in zip(h, line.split(','))
+                    if not col.startswith('gsd_')]
+        lines[i] = ','.join(stripped)
+    return lines
+
+
 def columns(line):
-    data = []
+    numeric_columns = []
+    textual_columns = []
     if ',' in line:  # csv file
         for column in line.split(','):
             try:
                 floats = list(map(float, column.split(' ')))
-            except ValueError:  # skip header
-                pass
+            except ValueError:
+                textual_columns.append(column)
             else:
-                data.append(numpy.array(floats))
+                numeric_columns.append(numpy.array(floats))
     elif '|' in line:  # org file
         for column in line.split('|'):
             try:
-                data.append(float(column))
+                numeric_columns.append(float(column))
             except ValueError:
-                pass  # ignore nonfloats
+                textual_columns.append(column)
     else:  # txt file
         for column in line.split(' '):
             try:
-                data.append(float(column))
+                numeric_columns.append(float(column))
             except ValueError:
-                pass  # ignore nonfloats
-    return data
+                textual_columns.append(column)
+    return numeric_columns, textual_columns
 
 
 orig_open = open
@@ -104,7 +113,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = False
+    OVERWRITE_EXPECTED = os.environ.get('OQ_OVERWRITE')
     edir = None  # will be set to a temporary directory
 
     @classmethod
@@ -127,8 +136,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq._input_files = readinput.get_input_files(oq)
         oq.validate()
-        # change this when debugging the test
-        log = logs.init('calc', params)
+        log = logs.init('job', params)
         return base.calculators(oq, log.calc_id)
 
     def run_calc(self, testfile, job_ini, **kw):
@@ -169,18 +177,22 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def practicallyEqual(self, line1, line2, delta):
+    def practicallyEqual(self, line1, line2, delta, check_text=False):
         """
         Compare lines containing numbers up to the given delta
+        If check_text is True, also textual values are compared
         """
-        columns1 = columns(line1)
-        columns2 = columns(line2)
-        for c1, c2 in zip(columns1, columns2):
+        num_columns1, txt_columns1 = columns(line1)
+        num_columns2, txt_columns2 = columns(line2)
+        for c1, c2 in zip(num_columns1, num_columns2):
             numpy.testing.assert_allclose(c1, c2, atol=delta, rtol=delta)
+        if check_text:
+            for txt_c1, txt_c2 in zip(txt_columns1, txt_columns2):
+                self.assertEqual(txt_c1, txt_c2)
 
     def assertEqualFiles(
-            self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=1E-6, lastline=None):
+            self, fname1, fname2, make_comparable=lambda header, lines: lines,
+            delta=None, lastline=None, check_text=False):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -188,6 +200,8 @@ class CalculatorTestCase(unittest.TestCase):
         but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
+        if delta is None:
+            delta = 1e-4 if sys.platform == 'darwin' else 1e-5
         expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
             expected_dir = os.path.dirname(expected)
@@ -196,23 +210,26 @@ class CalculatorTestCase(unittest.TestCase):
             open8(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        expected_lines = [line for line in open8(expected)
-                          if not line.startswith('#,')]
+        with open8(expected) as f:
+            expected_lines = [line for line in f if not line.startswith('#,')]
         comments = []
         actual_lines = []
-        for line in open8(actual).readlines()[:lastline]:
+        with open8(actual) as f:
+            lines = f.readlines()[:lastline]
+        for line in lines:
             if line.startswith('#'):
                 comments.append(line)
             else:
                 actual_lines.append(line)
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
-            if expected_lines[0][0] != '+':  # header unless .rst table
-                self.assertEqual(expected_lines[0], actual_lines[0])
-            for exp, got in zip(make_comparable(expected_lines),
-                                make_comparable(actual_lines)):
+            header = expected_lines[0]
+            if header[0] != '+':  # header unless .rst table
+                self.assertEqual(header, actual_lines[0])
+            for exp, got in zip(make_comparable(header, expected_lines),
+                                make_comparable(header, actual_lines)):
                 if delta:
-                    self.practicallyEqual(exp, got, delta)
+                    self.practicallyEqual(exp, got, delta, check_text)
                 else:
                     self.assertEqual(exp, got)
         except AssertionError:

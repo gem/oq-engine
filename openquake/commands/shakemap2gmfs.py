@@ -1,9 +1,26 @@
-
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2024, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
 import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.commonlib import logs, logictree
+from openquake.commonlib import logs
+from openquake.hazardlib import logictree
 from openquake.commonlib.readinput import get_site_collection
 from openquake.calculators.base import calculators, store_shakemap
 
@@ -38,7 +55,7 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                  site_effects=site_effects,
                  inputs={'job_ini': '<memory>',
                          'site_model': [os.path.abspath(site_model)]})
-    with logs.init("job", param) as log:
+    with logs.init(param) as log:
         oq = log.get_oqparam()
         calc = calculators(oq, log.calc_id)
         haz_sitecol = get_site_collection(oq)
