@@ -18,7 +18,6 @@
 import io
 import os
 import numpy
-import json
 import matplotlib as mpl
 from scipy import interpolate
 from openquake.hazardlib.calc.mean_rates import to_rates
@@ -34,13 +33,15 @@ def import_plt():
         import matplotlib.pyplot as plt
     return plt
 
+
 def _convert_imt(imt):
-    #Convert the imt string from the USGS format, for instance SA1P1 -> SA(1.1)
+    # Convert the imt string from USGS format, for instance SA1P1 -> SA(1.1)
     if imt == "PGA":
         IMT = "PGA"
     else:
-        IMT=imt.replace("SA", 'SA(').replace('P', '.') + ')'
-    return(IMT)
+        IMT = imt.replace("SA", 'SA(').replace('P', '.') + ')'
+    return (IMT)
+
 
 def _find_fact_maxC(T, code):
     # find the factor to convert to maximum component based on
@@ -88,7 +89,7 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False, 
+def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
                            update_dstore=False):
     """
     :param dstore: the datastore
@@ -104,11 +105,11 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     imts = rtgm_df['IMT']
     plot_rtgm_probmce = []
     # specify subset of imts to plot
-    plot_imt = ['PGA', 'SA0P2', 'SA1P0','SA2P0','SA5P0']
+    plot_imt = ['PGA', 'SA0P2', 'SA1P0', 'SA2P0', 'SA5P0']
     plot_IMT = []
 
     for imt in plot_imt:
-         # convert imts from USGS format
+        # convert imts from USGS format
         IMT = _convert_imt(imt)
         plot_IMT.append(IMT)
         idx = imts.index[imts == imt]
@@ -131,40 +132,41 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
             if rtgm_probmce[m] < imls[m][0]:
                 afe_RTGM.append(0.0)
             else:
-                afe_RTGM.append(_find_afe_target(imls[m], AFE[m], rtgm_probmce[m]))
+                afe_RTGM.append(_find_afe_target(imls[m], AFE[m],
+                                                 rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
     colors = mpl.colormaps['viridis'].reversed().resampled(5)
-    patterns = ['-', '-.','--', ':','-.']
-        
+    patterns = ['-', '-.', '--', ':', '-.']
+
     if plot_mce:
         for i, imt in enumerate(plot_imt):
-            lab = _get_label(imt)
             plt.loglog(imls_mc[i], AFE[i], color=colors(i),
-                label=plot_IMT[i], linewidth=3, zorder=1, linestyle = patterns[i])
+                       label=plot_IMT[i], linewidth=3, zorder=1,
+                       linestyle=patterns[i])
         # plot the label only once but it must be at the end of the legend
             if imt == plot_imt[-1]:
                 plt.loglog([plot_rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                        label='Probabilistic MCE',  linewidth=2,
-                        markersize=10, zorder=3)
+                           label='Probabilistic MCE',  linewidth=2,
+                           markersize=10, zorder=3)
             else:
                 plt.loglog([plot_rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
                            linewidth=2, markersize=10, zorder=3)
             plt.loglog([(plot_rtgm_probmce[i]-1000), plot_rtgm_probmce[i]],
                        [afe_RTGM[i], afe_RTGM[i]],
                        color='black', alpha=0.5, linestyle='--', linewidth=1.3)
-        
+
             plt.loglog([plot_rtgm_probmce[i], plot_rtgm_probmce[i]],
                        [0, afe_RTGM[i]], color='black', alpha=0.5,
                        linestyle='--', linewidth=1.3)
     else:
         for i, imt in enumerate(plot_imt):
-            lab = _get_label(imt)
             plt.loglog(imls[i], AFE[i], color=colors(i),
-                   label=plot_IMT[i], linewidth=3, zorder=1, linestyle = patterns[i])
-        
+                       label=plot_IMT[i], linewidth=3, zorder=1,
+                       linestyle=patterns[i])
+
     # add the ASCE 41-23 RPs
     plt.axhline(0.000404, color='red', linewidth=1.7, alpha=0.2, zorder=0)
     plt.axhline(0.002105, color='red', linewidth=1.7, alpha=0.2, zorder=0)
@@ -172,15 +174,21 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     plt.axhline(0.004453, color='red', linewidth=1.7, alpha=0.2, zorder=0)
     plt.axhline(0.013767, color='red', linewidth=1.7, alpha=0.2, zorder=0)
 
-    plt.text(0.0105, 0.000404*0.9, '2475 yr', fontsize='small', color='black', alpha=0.85 )
-    plt.text(0.0105, 0.002105*0.9, '475 yr', fontsize='small', color='black', alpha=0.85 )
-    plt.text(0.0105, 0.001025*0.9, '975 yr', fontsize='small', color='black', alpha=0.85)
-    plt.text(0.0105, 0.004453*0.9, '225 yr', fontsize='small', color='black', alpha=0.85 )
-    plt.text(0.0105, 0.013767*0.9, '72 yr', fontsize='small', color='black', alpha=0.85)
+    plt.text(0.0105, 0.000404*0.9, '2475 yr', fontsize='small', color='black',
+             alpha=0.85)
+    plt.text(0.0105, 0.002105*0.9, '475 yr', fontsize='small', color='black',
+             alpha=0.85)
+    plt.text(0.0105, 0.001025*0.9, '975 yr', fontsize='small', color='black',
+             alpha=0.85)
+    plt.text(0.0105, 0.004453*0.9, '225 yr', fontsize='small', color='black',
+             alpha=0.85)
+    plt.text(0.0105, 0.013767*0.9, '72 yr', fontsize='small', color='black',
+             alpha=0.85)
 
     # add note to see manual
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.0275, 0.00000186, message, fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0275, 0.00000186, message, fontsize='small', color='black',
+             alpha=0.85)
 
     # format plot
     plt.grid('both', alpha=0.6)
@@ -202,7 +210,6 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     :param dstore: the datastore
     :returns: image of governing MCE
     """
-    dinfo = get_info(dstore)
     plt = import_plt()
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     # get imls and imts, make arrays
@@ -211,20 +218,17 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     mce = mce_df['MCE']
     prob_mce = mce_df['ProbMCE']
     imts = mce_df['IMT']
-    IMTS = [_convert_imt(i) for i in imts]
     T = [from_string(imt).period for imt in imts]
     DLL = mce_df['DLL']
-    ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
+    ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
+             linestyle='-')
     ax1.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
              linewidth=3, linestyle='-')
-    #if any([val == 'NaN' for val in det_mce]):  # hazard is lower than DLLs
-       # upperlim =  max(prob_mce + mce + det_mce + DLL)
-    #else:
-    upperlim =  max(max(prob_mce) , max(mce) , max(det_mce) , max(DLL))
+    upperlim = max(max(prob_mce), max(mce), max(det_mce), max(DLL))
     ax1.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
-                 linewidth=3, linestyle='-')
+             linewidth=3, linestyle='-')
     ax1.set_ylim([0.01, upperlim + 0.2])
-    ax1.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
+    ax1.plot(T, mce, 'r', label='Governing MCE', linewidth=3, linestyle=':')
     ax1.grid('both')
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax1.set_xlabel('Period (s)', fontsize=20)
@@ -232,18 +236,14 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax1.set_xlim([0.005, 10])
 
     plt.rcParams.update({'font.size': 15})
-    ax2.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
+    ax2.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
+             linestyle='-')
     ax2.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
              linewidth=3, linestyle='-')
-    #if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
-        # max(prob_mce + mce + det_mce + DLL)
-        #ax2.ylim([0.01, max(prob_mce + mce + DLL) + 0.2])
-    #else:
-    #upperlim =  max(prob_mce + mce + det_mce + DLL)
     ax2.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
-                 linewidth=3, linestyle='-')
+             linewidth=3, linestyle='-')
     plt.ylim([0.01, upperlim + 0.2])
-    ax2.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
+    ax2.plot(T, mce, 'r', label='Governing MCE', linewidth=3, linestyle=':')
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax2.set_xlabel('Period (s)', fontsize=20)
@@ -263,6 +263,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
         plt.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/governing_mce.png'] = Image.open(bio)
     return plt
+
 
 def _plot(ax, ax1, site_idx, plot_idx, m, n, imls, imls_o,
           mrs, rtgm_probmce, afe_target, fact):
@@ -296,7 +297,7 @@ def _plot(ax, ax1, site_idx, plot_idx, m, n, imls, imls_o,
             if j == 0:
                 if m in plot_idx:
                     ax[n].loglog(imls, afes, 'silver', linewidth=0.7,
-                             label='other sources')
+                                 label='other sources')
                 ax1.loglog(imls_o, afes, 'silver', linewidth=0.7,
                            label='other source')
                 j += 1
@@ -308,12 +309,13 @@ def _plot(ax, ax1, site_idx, plot_idx, m, n, imls, imls_o,
         else:
             if m in plot_idx:
                 ax[n].loglog(imls, afes, c=viridis(i),
-                         label=str(mrs.src_id[ind]))
-            ax1.loglog(imls_o, afes, c=viridis(i),label=str(mrs.src_id[ind]))
+                             label=str(mrs.src_id[ind]))
+            ax1.loglog(imls_o, afes, c=viridis(i), label=str(mrs.src_id[ind]))
             i += 1
 
-def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_probmce,
-                mrs, update_dstore, dstore):
+
+def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx,
+            rtgm_probmce, mrs, update_dstore, dstore):
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;
     fig1, ax1 = plt.subplots()
@@ -331,13 +333,13 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_probm
     # populate 3-panel plot
     if m in plot_idx:
         ax[n].loglog(imls, AFE[m], 'k', label=_get_label(imt),
-                 linewidth=2, zorder=3)
+                     linewidth=2, zorder=3)
         ax[n].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
-                 linewidth=2, zorder=3)
+                     linewidth=2, zorder=3)
         ax[n].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2,
-                 zorder=3)
+                     zorder=3)
         ax[n].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
-                 linewidth=2, zorder=3)
+                     linewidth=2, zorder=3)
     # populate individual plots
     ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
                linewidth=2, zorder=3)
@@ -364,7 +366,7 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_probm
         message = ('See WebUI User Guide for complete explanation '
                    'of plot contents.')
         ax[m].text(0.0105, 0.000000506, message, fontsize='small',
-                   color='black', alpha=0.85 ) 
+                   color='black', alpha=0.85)
 
     # populate single imt plots - geometric mean
     ax1.grid('both')
@@ -388,7 +390,7 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
-    plot_idx = [0,7,13]
+    plot_idx = [0, 7, 13]
     n = 0
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
@@ -403,12 +405,13 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
 
     plt = import_plt()
     fig, ax = plt.subplots(3, figsize=(8, 15))
-    fact=0.1
+    fact = 0.1
     for m, imt in enumerate(imtls):
-        if rtgm_df['ProbMCE'][m] ==0:
+        if rtgm_df['ProbMCE'][m] == 0:
             continue
-        _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_df['ProbMCE'],
-                dstore['mean_rates_by_src'], update_dstore, dstore)
+        _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx,
+                rtgm_df['ProbMCE'], dstore['mean_rates_by_src'], update_dstore,
+                dstore)
         if m in plot_idx:
             n = n+1
     if update_dstore:

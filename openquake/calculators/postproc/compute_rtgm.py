@@ -85,15 +85,18 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
 # three imts, that are mandatory in this context. For the plot of governing
 # MCE we read imts from the imtls
-IMTS = ['PGA','SA(0.02)','SA(0.03)','SA(0.05)','SA(0.075)','SA(0.1)',
-        'SA(0.15)','SA(0.2)','SA(0.25)','SA(0.3)','SA(0.4)','SA(0.5)','SA(0.75)',
-        'SA(1.0)','SA(1.5)','SA(2.0)','SA(3.0)','SA(4.0)','SA(5.0)','SA(7.5)','SA(10.0)']
+IMTS = ['PGA', 'SA(0.02)', 'SA(0.03)', 'SA(0.05)', 'SA(0.075)', 'SA(0.1)',
+        'SA(0.15)', 'SA(0.2)', 'SA(0.25)', 'SA(0.3)', 'SA(0.4)', 'SA(0.5)',
+        'SA(0.75)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)', 'SA(4.0)',
+        'SA(5.0)', 'SA(7.5)', 'SA(10.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in IMTS]
-assert DLLs == [0.5, 0.68, 0.75, 0.95, 1.21, 1.37, 1.53, 1.5, 1.4, 1.3, 1.14, 1.01, 0.76, 0.6, 0.41, 0.31, 0.21, 0.16, 0.13, 0.08, 0.052]
+assert DLLs == [0.5, 0.68, 0.75, 0.95, 1.21, 1.37, 1.53, 1.5, 1.4, 1.3, 1.14,
+                1.01, 0.76, 0.6, 0.41, 0.31, 0.21, 0.16, 0.13, 0.08, 0.052]
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 ASCE_version = 'ASCE7-22'
+
 
 def norm_imt(imt):
     """
@@ -204,7 +207,6 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
             dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
             mag_dist_eps_sig.append((imt, src, mag, dist, eps, sigma))
     df = pd.DataFrame(dict(imt=imts, source_id=srcs, det=dets))
-    #det = df.groupby('imt').det.max()
     det = {}
     for imt in df.imt.values:
         df_sub = df[df.imt == imt]
@@ -292,11 +294,11 @@ def get_mce_asce07(det_imt, DLLs, rtgm, sid, low_haz=False):
             mce[imt] = min(prob_mce[i], det_mce[imt])
         prob_mce_out[imt] = prob_mce[i]
     dic_mce = {'IMT': IMTS,
-              'DLL': DLLs,
-              'ProbMCE': prob_mce,
-              'DetMCE': det_mce.values(),
-              'MCE': mce.values(),
-              'sid': [sid]*len(IMTS)}
+               'DLL': DLLs,
+               'ProbMCE': prob_mce,
+               'DetMCE': det_mce.values(),
+               'MCE': mce.values(),
+               'sid': [sid]*len(IMTS)}
     mce_df = pd.DataFrame(dic_mce)
     if mce['SA(0.2)'] < 0.25:
         Ss_seismicity = "Low"
@@ -344,7 +346,7 @@ def get_mce_asce07(det_imt, DLLs, rtgm, sid, low_haz=False):
         if not isinstance(asce07[key], str):
             asce07[key] = (
                 round(asce07[key], ASCE_DECIMALS) if asce07[key] is not None
-                else 'n.a.') 
+                else 'n.a.')
 
     return prob_mce_out, mce, det_mce, asce07, mce_df
 
@@ -464,8 +466,9 @@ def calc_asce(dstore, csm, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            det_imt, DLLs, rtgm_df,sid)
-        logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat, mce_df)
+            det_imt, DLLs, rtgm_df, sid)
+        logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
+                     mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
@@ -493,25 +496,32 @@ def main(dstore, csm):
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
-    dummy_det = {'PGA': '', 'SA(0.02)': '','SA(0.03)': '','SA(0.05)': '','SA(0.075)': '','SA(0.1)': '','SA(0.15)': '','SA(0.2)': '','SA(0.25)': '','SA(0.3)': '','SA(0.4)': '','SA(0.5)': '','SA(0.75)': '', 'SA(1.0)': '','SA(1.5)': '','SA(2.0)': '','SA(3.0)': '','SA(4.0)': '','SA(5.0)': '','SA(7.5)': '','SA(10)': ''}
+    dummy_det = {'PGA': '', 'SA(0.02)': '', 'SA(0.03)': '', 'SA(0.05)': '',
+                 'SA(0.075)': '', 'SA(0.1)': '', 'SA(0.15)': '', 'SA(0.2)': '',
+                 'SA(0.25)': '', 'SA(0.3)': '', 'SA(0.4)': '', 'SA(0.5)': '',
+                 'SA(0.75)': '', 'SA(1.0)': '', 'SA(1.5)': '', 'SA(2.0)': '',
+                 'SA(3.0)': '', 'SA(4.0)': '', 'SA(5.0)': '', 'SA(7.5)': '',
+                 'SA(10)': ''}
     for site, rtgm_df, warning in process_sites(dstore, csm):
         sid = site.id
         loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             dic_mce = {'IMT': IMTS,
-              'ProbMCE': [np.nan]*len(IMTS),
-              'DetMCE': [np.nan]*len(IMTS),
-              'MCE': [np.nan]*len(IMTS),
-              'sid': [sid]*len(IMTS)}
+                       'ProbMCE': [np.nan]*len(IMTS),
+                       'DetMCE': [np.nan]*len(IMTS),
+                       'MCE': [np.nan]*len(IMTS),
+                       'sid': [sid]*len(IMTS)}
             mce_df = pd.DataFrame(dic_mce)
             mce_dfs.append(mce_df)
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
-            logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x, loc.y, mce_df)
+            logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
+                         loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, sid, low_haz=True)
-            logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x, loc.y, mce_df)
+            logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
+                         loc.y, mce_df)
             mce_dfs.append(mce_df)
             a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
             asce07[sid] = hdf5.dumps(a07)
@@ -523,7 +533,7 @@ def main(dstore, csm):
             logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
-    
+
     for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
@@ -538,7 +548,7 @@ def main(dstore, csm):
 
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
-    
+
     if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
         if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
@@ -546,7 +556,7 @@ def main(dstore, csm):
             plot_governing_mce(dstore, sid, update_dstore=True)
             if not warnings[sid]:
                 plot_disagg_by_src(dstore, sid, update_dstore=True)
-    
+
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
         if not warnings[0].startswith('Only probabilistic MCE'):
