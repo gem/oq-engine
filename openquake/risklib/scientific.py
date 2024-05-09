@@ -1447,7 +1447,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
-def fix_losses(sorted_losses, num_events, eff_time, pla_factor=None):
+def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
     """
     :param sorted_losses: a sorted array of size num_losses
     :param num_events: an integer >= num_losses
@@ -1463,7 +1463,7 @@ def fix_losses(sorted_losses, num_events, eff_time, pla_factor=None):
     elif num_events < num_losses:
         raise ValueError('More losses (%d) than events (%d) ??' %
                          (num_losses, num_events))
-    eperiods = (eff_time or 0)/ numpy.arange(num_events, 0., -1)
+    eperiods = eff_time / numpy.arange(num_events, 0., -1)
     if pla_factor:
         losses *= pla_factor(eperiods)
     return losses, eperiods

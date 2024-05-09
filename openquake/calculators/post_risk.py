@@ -147,10 +147,10 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
                      num_events=None):
     """
     :param dstore: datastore for an event based risk calculation
-    :returns: a LossCurvesMapsBuilder instance
+    :returns: a LossCurvesMapsBuilder instance or a Mock object for scenarios
     """
     if oq.investigation_time is None:
-        return Mock(eff_time=None, pla_factor=None)
+        return Mock(eff_time=0, pla_factor=None)
 
     weights = dstore['weights'][()]
     haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
@@ -333,7 +333,10 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     logging.info("Performing %d aggregations", len(agg_ids))
 
     loss_cols = [col for col in columns if not col.startswith('dmg_')]
-    builder = get_loss_builder(dstore, oq, num_events=num_events)
+    if loss_cols:
+        builder = get_loss_builder(dstore, oq, num_events=num_events)
+    else:
+        builder = Mock(eff_time=0, pla_factor=None)
 
     # double loop to avoid running out of memory
     for agg_id in agg_ids:
@@ -373,7 +376,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
     dstore.create_df('aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
-    if oq.investigation_time:
+    if oq.investigation_time and loss_cols:
         store_aggcurves(
             oq, agg_ids, rbe_df, builder, loss_cols, events, num_events, dstore)
     return aggrisk
