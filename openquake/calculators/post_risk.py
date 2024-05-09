@@ -20,7 +20,6 @@ import os
 import getpass
 import logging
 import itertools
-from unittest.mock import Mock
 import numpy
 import pandas
 
@@ -35,6 +34,10 @@ F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
+
+class FakeBuilder:
+    investigation_time = 0.
+    pla_factor = None
 
 
 def fix_investigation_time(oq, dstore):
@@ -150,7 +153,7 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     :returns: a LossCurvesMapsBuilder instance or a Mock object for scenarios
     """
     if oq.investigation_time is None:
-        return Mock(eff_time=0, pla_factor=None)
+        return FakeBuilder()
 
     weights = dstore['weights'][()]
     haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
@@ -336,7 +339,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     if loss_cols:
         builder = get_loss_builder(dstore, oq, num_events=num_events)
     else:
-        builder = Mock(eff_time=0, pla_factor=None)
+        builder = FakeBuilder()
 
     # double loop to avoid running out of memory
     for agg_id in agg_ids:
