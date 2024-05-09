@@ -361,6 +361,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
                 # infer the number of buildings in nodamage state
                 ndamaged = sum(df[col].sum() for col in dmgs)
                 acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
+            # eperiods = builder.eff_time / numpy.arange(ne, 0., -1)
             for col in columns:
                 agg = df[col].sum()
                 acc[col].append(
