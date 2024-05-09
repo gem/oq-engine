@@ -217,14 +217,13 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
     ax1.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
              linewidth=3, linestyle='-')
-    if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
-        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
-        ax1.ylim([0.01, numpy.max([prob_mce, mce, DLL]) + 0.2])
-    else:
-        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
-        ax1.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
+    #if any([val == 'NaN' for val in det_mce]):  # hazard is lower than DLLs
+       # upperlim =  max(prob_mce + mce + det_mce + DLL)
+    #else:
+    upperlim =  max(max(prob_mce) , max(mce) , max(det_mce) , max(DLL))
+    ax1.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
                  linewidth=3, linestyle='-')
-        ax1.set_xlim([0.01, numpy.max([prob_mce,  mce, det_mce, DLL]) + 0.2])
+    ax1.set_ylim([0.01, upperlim + 0.2])
     ax1.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
     ax1.grid('both')
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
@@ -236,14 +235,14 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax2.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,linestyle='-')
     ax2.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
              linewidth=3, linestyle='-')
-    if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
-        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
-        ax2.ylim([0.01, numpy.max([prob_mce, mce, DLL]) + 0.2])
-    else:
-        upperlim = max([prob_mce[1], 1.5, det_mce[1]])
-        ax2.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
+    #if any([val == 'n.a.' for val in det_mce]):  # hazard is lower than DLLs
+        # max(prob_mce + mce + det_mce + DLL)
+        #ax2.ylim([0.01, max(prob_mce + mce + DLL) + 0.2])
+    #else:
+    #upperlim =  max(prob_mce + mce + det_mce + DLL)
+    ax2.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
                  linewidth=3, linestyle='-')
-        plt.ylim([0.01, numpy.max([prob_mce,  mce, det_mce, DLL]) + 0.2])
+    plt.ylim([0.01, upperlim + 0.2])
     ax2.plot(T, mce, 'r', label='Governing MCE', linewidth=3,linestyle=':')
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
@@ -259,7 +258,6 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     message = 'See WebUI User Guide for complete explanation of plot contents.'
     plt.text(0.03, -upperlim*0.45, message, fontsize='small', color='black',
              alpha=0.85)
-
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
@@ -396,7 +394,6 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm_df.RTGM == 0).all():
         return
-
     # get hazard curves, put into rates
     AFE = []
     mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
@@ -408,7 +405,8 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     fig, ax = plt.subplots(3, figsize=(8, 15))
     fact=0.1
     for m, imt in enumerate(imtls):
-        #print(imt)
+        if rtgm_df['ProbMCE'][m] ==0:
+            continue
         _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx, rtgm_df['ProbMCE'],
                 dstore['mean_rates_by_src'], update_dstore, dstore)
         if m in plot_idx:

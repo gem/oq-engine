@@ -189,19 +189,30 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     mag_dist_eps_sig = []
     for src, imt, mag, dist, eps in mag_dist_eps:
         m = imtidx[imt]
-        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
-        rgi = RegularGridInterpolator(
-            (sigma_by_src.mag, sigma_by_src.dist), sig)
-        sigma = rgi((np.round(mag, 3), np.round(dist, 3)))
-        srcs.append(src)
-        imts.append(imt)
-        dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
-        mag_dist_eps_sig.append((imt, src, mag, dist, eps, sigma))
+        if np.isnan(mag):
+            srcs.append(src)
+            imts.append(imt)
+            dets.append(np.nan)
+            mag_dist_eps_sig.append((imt, src, mag, dist, eps, np.nan))
+        else:
+            sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
+            rgi = RegularGridInterpolator(
+                (sigma_by_src.mag, sigma_by_src.dist), sig)
+            sigma = rgi((np.round(mag, 3), np.round(dist, 3)))
+            srcs.append(src)
+            imts.append(imt)
+            dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
+            mag_dist_eps_sig.append((imt, src, mag, dist, eps, sigma))
     df = pd.DataFrame(dict(imt=imts, source_id=srcs, det=dets))
-    det = df.groupby('imt').det.max()
+    #det = df.groupby('imt').det.max()
+    det = {}
+    for imt in df.imt.values:
+        df_sub = df[df.imt == imt]
+        val = max(df_sub.det)
+        det[imt] = val
     dt = [('imt', hdf5.vstr), ('source_id', hdf5.vstr), ('mag', float),
           ('dist', float), ('eps', float), ('sig', float)]
-    return det.to_dict(), np.array(mag_dist_eps_sig, dt)
+    return det, np.array(mag_dist_eps_sig, dt)
 
 
 def get_zero_hazard_asce07():
@@ -287,7 +298,6 @@ def get_mce_asce07(det_imt, DLLs, rtgm, sid, low_haz=False):
               'MCE': mce.values(),
               'sid': [sid]*len(IMTS)}
     mce_df = pd.DataFrame(dic_mce)
-
     if mce['SA(0.2)'] < 0.25:
         Ss_seismicity = "Low"
     elif mce['SA(0.2)'] < 0.5:
