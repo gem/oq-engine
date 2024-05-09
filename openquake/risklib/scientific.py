@@ -1469,6 +1469,7 @@ def add_zeros(losses, num_events):
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
                      sorting_idxs=None, pla_factor=None):
+    # NB: sorting_idxs is used in test_claim
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
