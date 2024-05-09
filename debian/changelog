@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Added a new epistemic uncertainty for modelling relative uncertainty on 
+    MMax
+
   [Michele Simionato]
   * Added a check to forbid `individual_rlzs=true` and `collect_rlzs=true`
   * Fixed a bug in `oq extract "ruptures?rup_id=XXX`
