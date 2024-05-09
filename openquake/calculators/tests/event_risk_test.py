@@ -38,7 +38,7 @@ def check_full_lt(calc1, calc2):
             aae(val1[name], val2[name])
 
 
-class GmfEbRiskTestCase(CalculatorTestCase):
+class EventRiskTestCase(CalculatorTestCase):
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job_risk.ini')
         text = view('portfolio_loss', self.calc.datastore)
@@ -114,19 +114,23 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                       post_loss_amplification_file='')
 
         # check aggcurves-stats
-        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1e-5)
+        [tot, byid] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves.csv', tot, delta=1e-5)
+        self.assertEqualFiles('expected/aggcurves-id.csv', byid, delta=1e-5)
 
         # check aggrisk-stats
-        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1e-5)
+        [tot, byid] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', tot, delta=1e-5)
+        self.assertEqualFiles('expected/aggrisk-id.csv', byid, delta=1e-5)
 
         # post_loss_amplification
         self.run_calc(case_6.__file__, 'job.ini')
-        [fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves-pla.csv', fname, delta=1e-5)
-        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk-pla.csv', fname, delta=1e-5)
+        [tot, byid] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves-pla.csv', tot, delta=1e-5)
+        self.assertEqualFiles('expected/aggcurves-id-pla.csv', byid, delta=1e-5)
+        [tot, byid] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-pla.csv', tot, delta=1e-5)
+        self.assertEqualFiles('expected/aggrisk-id-pla.csv', byid, delta=1e-5)
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')

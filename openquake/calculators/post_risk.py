@@ -265,38 +265,35 @@ def get_loss_id(ext_loss_types):
 
 
 # launch Starmap building the aggcurves and store them
-def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
+def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
+                    events, num_events, dstore):
     aggtypes = oq.aggregate_loss_curves_types
-    loss_cols = [col for col in columns if not col.startswith('dmg_')]
-    # can be ['fatalities', 'losses'] in a scenario_damage test
-    if oq.investigation_time and loss_cols:  # build aggcurves
-        logging.info('Building aggcurves')
-        units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
-        builder = get_loss_builder(dstore, oq, num_events=num_events)
-        try:
-            year = events['year']
-            if len(numpy.unique(year)) == 1:  # there is a single year
-                year = ()
-        except ValueError:  # missing in case of GMFs from CSV
+    logging.info('Building aggcurves')
+    units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
+    try:
+        year = events['year']
+        if len(numpy.unique(year)) == 1:  # there is a single year
             year = ()
-        items = []
-        for agg_id in agg_ids:
-            gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
-            for (rlz_id, loss_id), df in gb:
-                data = {col: df[col].to_numpy() for col in loss_cols}
-                if len(year):
-                    data['year'] = year[df.event_id.to_numpy()]
-                items.append([(agg_id, rlz_id, loss_id), data])
-        dic = parallel.Starmap.apply(
-            build_aggcurves, (items, builder, num_events, aggtypes),
-            concurrent_tasks=oq.concurrent_tasks,
-            h5=dstore.hdf5).reduce()
-        fix_dtypes(dic)
-        suffix = {'ep': '', 'aep': '_aep', 'oep': '_oep'}
-        ep_fields = ['loss' + suffix[a] for a in aggtypes.split(', ')]
-        dstore.create_df('aggcurves', pandas.DataFrame(dic),
-                         limit_states=' '.join(oq.limit_states),
-                         units=units, ep_fields=ep_fields)
+    except ValueError:  # missing in case of GMFs from CSV
+        year = ()
+    items = []
+    for agg_id in agg_ids:
+        gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
+        for (rlz_id, loss_id), df in gb:
+            data = {col: df[col].to_numpy() for col in loss_cols}
+            if len(year):
+                data['year'] = year[df.event_id.to_numpy()]
+            items.append([(agg_id, rlz_id, loss_id), data])
+    dic = parallel.Starmap.apply(
+        build_aggcurves, (items, builder, num_events, aggtypes),
+        concurrent_tasks=oq.concurrent_tasks,
+        h5=dstore.hdf5).reduce()
+    fix_dtypes(dic)
+    suffix = {'ep': '', 'aep': '_aep', 'oep': '_oep'}
+    ep_fields = ['loss' + suffix[a] for a in aggtypes.split(', ')]
+    dstore.create_df('aggcurves', pandas.DataFrame(dic),
+                     limit_states=' '.join(oq.limit_states),
+                     units=units, ep_fields=ep_fields)
 
     
 # aggcurves are built in parallel, aggrisk sequentially
@@ -331,6 +328,11 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     T = scientific.LOSSID[oq.total_losses or 'structural']
     logging.info("Performing %d aggregations", len(agg_ids))
 
+    loss_cols = [col for col in columns if not col.startswith('dmg_')]
+    if oq.investigation_time and loss_cols:  # build aggcurves
+        builder = get_loss_builder(dstore, oq, num_events=num_events)
+    else:
+        builder = None
     # double loop to avoid running out of memory
     for agg_id in agg_ids:
 
@@ -359,6 +361,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
                 # infer the number of buildings in nodamage state
                 ndamaged = sum(df[col].sum() for col in dmgs)
                 acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
+            # eperiods = builder.eff_time / numpy.arange(ne, 0., -1)
             for col in columns:
                 agg = df[col].sum()
                 acc[col].append(
@@ -366,7 +369,9 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
     dstore.create_df('aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
-    store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore)
+    if builder:
+        store_aggcurves(
+            oq, agg_ids, rbe_df, builder, loss_cols, events, num_events, dstore)
     return aggrisk
 
 
