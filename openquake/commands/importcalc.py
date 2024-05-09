@@ -55,4 +55,4 @@ def main(calc_id):
     logging.info('Imported calculation %s successfully', calc_id)
 
 
-main.calc_id = 'calculation ID or pathname'
+main.calc_id = 'calculation ID or pathname ~/oqdata/calc_XXX.hdf5'
