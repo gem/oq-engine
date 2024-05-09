@@ -221,7 +221,10 @@ class SgobbaEtAl2020(GMPE):
     PERIODS = np.array([0, 0.2, 0.50251256281407, 1.0, 2.0])
 
     def __init__(self, event_id=None, directionality=False, cluster=None,
-                 site=False, bedrock=False):
+                 site=False, bedrock=False, **kwargs):
+        super().__init__(event_id=event_id,
+                         directionality=directionality,
+                         cluster=cluster, **kwargs)
         self.event_id = event_id
         self.directionality = directionality
         self.cluster = cluster

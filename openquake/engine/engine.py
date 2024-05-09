@@ -47,12 +47,13 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib import parallel, general, config, workerpool as w
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import readinput
 from openquake.calculators import base, export
-
+from openquake.commonlib import logs
 
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
+OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
@@ -81,6 +82,11 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
+    if OQ_DISTRIBUTE in 'no processpool ipp':  # do nothing
+        num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
+        logging.warning('Using %d cores on %s', num_workers, platform.node())
+        return
+
     master = w.WorkerMaster(config.zworkers)
     num_workers = sum(total for host, running, total in master.wait())
     if num_workers == 0:
@@ -90,8 +96,7 @@ def set_concurrent_tasks_default(calc):
 
     parallel.Starmap.CT = num_workers * 2
     OqParam.concurrent_tasks.default = num_workers * 2
-    logging.warning('Using %d %s workers', num_workers,
-                    parallel.oq_distribute())
+    logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
 
 def expose_outputs(dstore, owner=USER, status='complete'):
@@ -136,7 +141,7 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
     if 'ruptures' in dskeys:
-        if 'scenario' in calcmode or len(dstore['ruptures']) == 0:
+        if  'scenario' in calcmode:
             # do not export, as requested by Vitor
             exportable.remove('ruptures')
         else:
@@ -245,7 +250,6 @@ def run_calc(log):
     """
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
-    dist = parallel.oq_distribute()
     with log:
         # check the available memory before starting
         while True:
@@ -266,28 +270,28 @@ def run_calc(log):
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
-        obsolete_msg = check_obsolete_version(oqparam.calculation_mode)
-        # NB: the warning should not be logged for users with
-        # an updated LTS version
-        if obsolete_msg:
-            logging.warning(obsolete_msg)
+        msg = check_obsolete_version(oqparam.calculation_mode)
+        # NB: disabling the warning should be done only for users with
+        # an updated LTS version, but we are doing it for all users
+        # if msg:
+        #    logging.warning(msg)
         calc.from_engine = True
-        if dist == 'zmq':
+        if config.zworkers['host_cores']:
             set_concurrent_tasks_default(calc)
         else:
-            logging.warning('Using %d %s workers',
-                            parallel.Starmap.CT // 2, dist)
+            logging.warning('Assuming %d %s workers',
+                            parallel.Starmap.CT // 2, OQ_DISTRIBUTE)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
-        calc.datastore.close()
-        outs = '\n'.join(logs.dbcmd('list_outputs', log.calc_id, False))
-        logging.info(outs)
         path = calc.datastore.filename
         size = general.humansize(getsize(path))
-        logging.info(
-            'Stored %s on %s in %d seconds', size, path, time.time() - t0)
+        logging.info('Stored %s on %s in %d seconds',
+                     size, path, time.time() - t0)
+        calc.datastore.close()
+        for line in logs.dbcmd('list_outputs', log.calc_id, False):
+            general.safeprint(line)
         # sanity check to make sure that the logging on file is working
         if (log.log_file and log.log_file != os.devnull and
                 getsize(log.log_file) == 0):
@@ -308,7 +312,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     except Exception:  # gaierror
         host = None
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
-        job = logs.init('job', job_inis[0], log_level, log_file,
+        job = logs.init("job", job_inis[0], log_level, log_file,
                         user_name, hc_id, host)
         hc_id = job.calc_id
         jobs = [job]
@@ -343,43 +347,33 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     return jobs
 
 
-def cleanup(kind, orig_dist):
+def cleanup(kind):
     """
-    Stop or kill the zmq workers
+    Stop or kill the zmq workers if serialize_jobs == 1.
     """
     assert kind in ("stop", "kill"), kind
+    if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
+        return  # do nothing
     if kind == 'stop':
         # called in the regular case, does not require ssh access
         print('Stopping the workers')
         workers_stop()
     elif kind == 'kill':
         # called in case of exceptions (or out of memory), requires ssh
-        print('Killing the workers')
+        print('Asking the DbServer to kill the workers')
         logs.dbcmd('workers_kill', config.zworkers)
-    os.environ['OQ_DISTRIBUTE'] = orig_dist
 
 
-def run_jobs(jobctxs, concurrent_jobs=None):
+def run_jobs(jobctxs, concurrent_jobs=3):
     """
     Run jobs using the specified config file and other options.
 
     :param jobctxs:
         List of LogContexts
     :param concurrent_jobs:
-        How many jobs to run concurrently (default num_cores/4)
+        How many jobs to run concurrently (default 3)
     """
-    if concurrent_jobs is None:
-        # // 10 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 10 or 1
-
     hc_id = jobctxs[-1].params['hazard_calculation_id']
-    orig_dist = parallel.oq_distribute()
-    use_zmq = (hc_id is None and len(jobctxs) > 1 and
-               config.zworkers.host_cores == '127.0.0.1 -1')
-    if use_zmq:
-        # use multispawn with zmq on a single machine
-        os.environ['OQ_DISTRIBUTE'] = 'zmq'
-
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
@@ -400,32 +394,31 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         # the job aborted even before starting
         for job in jobctxs:
             logs.dbcmd('finish', job.calc_id, 'aborted')
-        raise
+        return jobctxs
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if (orig_dist == 'zmq' or use_zmq) and \
-           w.WorkerMaster(config.zworkers).status() == []:
-            print('Starting the workers %s' % config.zworkers.host_cores)
+        if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
+                config.zworkers).status() == []:
+            print('Asking the DbServer to start the workers %s' %
+                  config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
-        if jobarray and parallel.oq_distribute() != 'no':
+        if jobarray and OQ_DISTRIBUTE != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
-        if orig_dist == 'zmq' or use_zmq:
-            cleanup('stop', orig_dist)
+        cleanup('stop')
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
         rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
                           "AND status IN ('created', 'executing')", ids)
         for job_id, in rows:
             logs.dbcmd("set_status", job_id, 'failed')
-        if orig_dist == 'zmq' or use_zmq:
-            cleanup('kill', orig_dist)
+        cleanup('kill')
         raise
     return jobctxs
 
@@ -480,7 +473,9 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
+    from openquake.server import dbserver
     # run a LogContext object stored in a pickle file, called by job.yaml
     with open(sys.argv[1], 'rb') as f:
         jobctx = pickle.load(f)
+    dbserver.ensure_on()
     run_jobs([jobctx])

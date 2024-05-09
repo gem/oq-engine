@@ -29,7 +29,6 @@ import toml
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import duplicated, BASE183, group_array
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
@@ -138,27 +137,14 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, bsno, brno):
+def keyno(branch_id, bsno, brno, fname='', chars=BASE183):
     """
     :param branch_id: a branch ID string
     :param bsno: number of the branchset (starting from 0)
     :param brno: number of the branch in the branchset (starting from 0)
     :returns: a short unique alias for the branch_id
     """
-    return BASE183[brno] + str(bsno)
-
-
-# currently not used
-def get_trts(gsim_logic_tree_file):
-    """
-    Parse the file and returns the full set of tectonic region types
-    """
-    trts = set()
-    lt = nrml.read(gsim_logic_tree_file).logicTree
-    for nd in lt:
-        for node in bsnodes(gsim_logic_tree_file, nd):
-            trts.add(node['applyToTectonicRegionType'])
-    return trts
+    return chars[brno] + str(bsno)
 
 
 class GsimLogicTree(object):
@@ -187,37 +173,13 @@ class GsimLogicTree(object):
                      nodes=[N('uncertaintyModel', text=str(gsim)),
                             N('uncertaintyWeight', text='1.0')])
         lt = N('logicTree', {'logicTreeID': 'lt1'},
-               nodes=[N('logicTreeBranchSet',
-                        {'applyToTectonicRegionType': '*',
-                         'branchSetID': 'bs1',
-                         'uncertaintyType': 'gmpeModel'},
-                        nodes=[ltbranch])])
+               nodes=[N('logicTreeBranchingLevel', {'branchingLevelID': 'bl1'},
+                        nodes=[N('logicTreeBranchSet',
+                                 {'applyToTectonicRegionType': '*',
+                                  'branchSetID': 'bs1',
+                                  'uncertaintyType': 'gmpeModel'},
+                                 nodes=[ltbranch])])])
         return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
-
-    @classmethod
-    def from_hdf5(cls, fname, mosaic_model, trt):
-        """
-        :returns: gsim logic tree associated to the given mosaic model
-        """
-        with hdf5.File(fname, 'r') as f:
-            alldata = f['model_trt_gsim_weight'][:]
-        data = alldata[alldata['model'] == mosaic_model.encode('utf8')]
-        dat = data[data['trt'] == trt]
-        assert len(dat) > 0
-        trt = decode(trt)
-        gsims = decode(dat['gsim'])
-        weights = decode(dat['weight'])
-        ltbranches = [N('logicTreeBranch', {'branchID': 'b1'},
-                        nodes=[N('uncertaintyModel', text=gsim),
-                               N('uncertaintyWeight', text=weight)])
-                      for gsim, weight in zip(gsims, weights)]
-        lt = N('logicTree', {'logicTreeID': 'lt1'},
-               nodes=[N('logicTreeBranchSet',
-                        {'applyToTectonicRegionType': trt,
-                         'branchSetID': 'bs1',
-                         'uncertaintyType': 'gmpeModel'},
-                        nodes=ltbranches)])
-        return cls('fake', [trt], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
@@ -291,12 +253,9 @@ class GsimLogicTree(object):
                 for gsim in gsims:
                     for k, v in gsim.kwargs.items():
                         if k.endswith(('_file', '_table')):
-                            if v is None:  # if volc_arc_file is None
-                                pass
-                            else:
-                                fname = os.path.join(dirname, v)
-                                with open(fname, 'rb') as f:
-                                    dic[os.path.basename(v)] = f.read()
+                            fname = os.path.join(dirname, v)
+                            with open(fname, 'rb') as f:
+                                dic[os.path.basename(v)] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -313,16 +272,14 @@ class GsimLogicTree(object):
                 gsim = valid.gsim(branch['uncertainty'], dirname)
                 for k, v in gsim.kwargs.items():
                     if k.endswith(('_file', '_table')):
-                        if v is None:  # if volc_arc_file is None
-                            pass
-                        else:
-                            arr = numpy.asarray(dic[os.path.basename(v)][()])
-                            gsim.kwargs[k] = io.BytesIO(bytes(arr))
+                        arr = numpy.asarray(dic[os.path.basename(v)][()])
+                        gsim.kwargs[k] = io.BytesIO(bytes(arr))
                 self.values[branch['trt']].append(gsim)
                 weight = object.__new__(ImtWeight)
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
                 weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
-                gsim.weight = weight
+                if len(weight.dic) > 1:
+                    gsim.weight = weight
                 bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
@@ -375,7 +332,7 @@ class GsimLogicTree(object):
                 gsim._toml = _toml
                 new.values[trt] = [gsim]
                 br_id = 'gA' + str(trti)
-                new.shortener[br_id] = keyno(br_id, trti, 0)
+                new.shortener[br_id] = keyno(br_id, trti, 0, self.filename)
                 branch = BranchTuple(trt, br_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
@@ -450,15 +407,16 @@ class GsimLogicTree(object):
                 if gsim in self.values[trt]:
                     raise InvalidLogicTree('%s: duplicated gsim %s' %
                                            (self.filename, gsim))
-
-                gsim.weight = weight
+                if len(weight.dic) > 1:
+                    gsim.weight = weight
                 self.values[trt].append(gsim)
                 bt = BranchTuple(
                     branchset['applyToTectonicRegionType'],
                     branch_id, gsim, weight, effective)
                 if effective:
                     branches.append(bt)
-                    self.shortener[branch_id] = keyno(branch_id, bsno, brno)
+                    self.shortener[branch_id] = keyno(
+                        branch_id, bsno, brno, self.filename)
                 if os.environ.get('OQ_REDUCE'):  # take the first branch only
                     bt.weight.dic['weight'] = 1.
                     break

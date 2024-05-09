@@ -27,7 +27,6 @@ Module exports :class:`CampbellBozorgnia2014`
 import numpy as np
 from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -404,12 +403,12 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def __init__(self, sigma_mu_epsilon=0.0, estimate_ztor=0,
-                 estimate_width=0, estimate_hypo_depth=0):
-        self.estimate_ztor = int(estimate_ztor)
-        self.estimate_width = int(estimate_width)
-        self.estimate_hypo_depth = int(estimate_hypo_depth)
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.estimate_ztor = int(kwargs.get('estimate_ztor', 0))
+        self.estimate_width = int(kwargs.get('estimate_width', 0))
+        self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
+
         if self.estimate_width:
             # To estimate a width, the GMPE needs Zbot
             self.REQUIRES_RUPTURE_PARAMETERS |= {"zbot"}
@@ -432,7 +431,6 @@ class CampbellBozorgnia2014(GMPE):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
             mean[m] = get_mean_values(self.SJ, C, ctx, pga1100)
-            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             if imt.string[:2] == "SA" and imt.period < 0.25:
                 # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
                 # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
@@ -440,7 +438,6 @@ class CampbellBozorgnia2014(GMPE):
                 pga = get_mean_values(self.SJ, C_PGA, ctx, pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
-                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)

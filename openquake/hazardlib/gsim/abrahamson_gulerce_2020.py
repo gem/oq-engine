@@ -114,6 +114,7 @@ CONSTS = {
     "c": 1.88,
     "tau_lin": 0.47,
     "phi_amp": 0.3,
+    "d0": 0.47,
     "alpha_phi3": 0.42,
     "T1_phi2": 0.03,
     "T2_phi2": 0.075,
@@ -129,6 +130,7 @@ CONSTS = {
     "d3_phi3": 0.242,
     "d4_phi3": 0.000,
     "d5_phi3": 0.000,
+    "phi_amp": 0.3,
 }
 
 
@@ -624,7 +626,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1000.0
 
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
-                 sigma_mu_epsilon=0.0):
+                 sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(**kwargs)
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region

@@ -58,30 +58,19 @@ def _find_turning_points(mesh, tol=1.0):
     idx2 = numpy.isfinite(mesh.lons[0, 1:])
     idx = numpy.where(numpy.logical_and(idx1, idx2))[0]
     azimuths = geodetic.azimuth(mesh.lons[0, idx], mesh.lats[0, idx],
-                                mesh.lons[0, idx + 1], mesh.lats[0, idx + 1])
+                                mesh.lons[0, idx+1], mesh.lats[0, idx+1])
     naz = len(azimuths)
     azim = azimuths[0]
-
     # Retain initial point
     idx = [0]
-
-    # Add more points
     for i in range(1, naz):
-        dff = _angle_difference(azimuths[i], azim)
-        if dff > tol:
+        if numpy.fabs(azimuths[i] - azim) > tol:
             idx.append(i)
             azim = azimuths[i]
-
     # Add on last point - if not already in the set
     if idx[-1] != mesh.lons.shape[1] - 1:
         idx.append(mesh.lons.shape[1] - 1)
     return numpy.array(idx)
-
-
-def _angle_difference(a_a, a_b):
-    """ Computes the absolute difference between angle `a_a` and `a_b` """
-    dff = a_a - a_b
-    return (dff + 540) % 360 - 180
 
 
 def downsample_mesh(mesh, tol=1.0):
@@ -111,7 +100,6 @@ def downsample_trace(mesh, tol=1.0):
     :returns:
         Downsampled edge as a numpy array of [long, lat, depth]
     """
-
     idx = _find_turning_points(mesh, tol)
     if mesh.depths is not None:
         return numpy.column_stack([mesh.lons[0, idx],
@@ -121,21 +109,6 @@ def downsample_trace(mesh, tol=1.0):
         return numpy.column_stack([mesh.lons[0, idx], mesh.lats[0, idx]])
 
 
-def _get_p1_p2(clsname, top_edge, i):
-    # returns two points used in get_rx_distance
-    if (clsname == 'KiteSurface' and
-            numpy.isnan(top_edge.lons[0, i]) or
-            numpy.isnan(top_edge.lons[0, i + 1])):
-        raise ValueError('Rx calculation has less than two points')
-    p1 = Point(top_edge.lons[0, i],
-               top_edge.lats[0, i],
-               top_edge.depths[0, i])
-    p2 = Point(top_edge.lons[0, i + 1],
-               top_edge.lats[0, i + 1],
-               top_edge.depths[0, i + 1])
-    return p1, p2
-
-    
 class BaseSurface:
     """
     Base class for a surface in 3D-space.
@@ -143,7 +116,7 @@ class BaseSurface:
 
     def __init__(self, mesh=None):
         self.mesh = mesh
-        self.idx = None
+        self.suid = None
 
     def get_min_distance(self, mesh):
         """
@@ -258,49 +231,85 @@ class BaseSurface:
         """
         top_edge = self.mesh[0:1]
         dists = []
+
         ia = 0
         ib = top_edge.lons.shape[1] - 2
-        if self.__class__.__name__ == 'KiteSurface':
+        if (self.__class__.__name__ == 'KiteSurface'):
             idxs = numpy.nonzero(numpy.isfinite(top_edge.lons[0, :]))[0]
             ia = min(idxs)
             ib = sorted(idxs)[-2]
+
         if top_edge.lons.shape[1] < 3:
-            p1, p2 = _get_p1_p2(self.__class__.__name__, top_edge, i=0)
+            i = 0
+
+            if ((self.__class__.__name__ == 'KiteSurface') and
+                (numpy.isnan(top_edge.lons[0, i]) or
+                 numpy.isnan(top_edge.lons[0, i+1]))):
+                msg = 'Rx calculation. Top of rupture has less than two points'
+                raise ValueError(msg)
+
+            p1 = Point(
+                top_edge.lons[0, i],
+                top_edge.lats[0, i],
+                top_edge.depths[0, i])
+            p2 = Point(
+                top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
+                top_edge.depths[0, i + 1])
             azimuth = p1.azimuth(p2)
-            dists.append(geodetic.distance_to_arc(
-                p1.longitude, p1.latitude,
-                azimuth, mesh.lons, mesh.lats))
+            dists.append(
+                geodetic.distance_to_arc(
+                    p1.longitude, p1.latitude, azimuth,
+                    mesh.lons, mesh.lats))
+
         else:
+
             for i in range(top_edge.lons.shape[1] - 1):
-                try:
-                    p1, p2 = _get_p1_p2(self.__class__.__name__, top_edge, i)
-                except ValueError:
+
+                if ((self.__class__.__name__ == 'KiteSurface') and
+                    (numpy.isnan(top_edge.lons[0, i]) or
+                     numpy.isnan(top_edge.lons[0, i+1]))):
                     continue
+
+                p1 = Point(
+                    top_edge.lons[0, i],
+                    top_edge.lats[0, i],
+                    top_edge.depths[0, i])
+                p2 = Point(
+                    top_edge.lons[0, i + 1],
+                    top_edge.lats[0, i + 1],
+                    top_edge.depths[0, i + 1])
+
                 # Swapping
                 if i == 0:
-                    p1, p2 = p2, p1
+                    pt = p1
+                    p1 = p2
+                    p2 = pt
+
                 # Computing azimuth and distance
                 if i == ia or i == ib:
                     azimuth = p1.azimuth(p2)
-                    dst = geodetic.distance_to_semi_arc(
-                        p1.longitude, p1.latitude,
-                        azimuth, mesh.lons, mesh.lats)
+                    tmp = geodetic.distance_to_semi_arc(p1.longitude,
+                                                        p1.latitude,
+                                                        azimuth,
+                                                        mesh.lons, mesh.lats)
                 else:
-                    dst = geodetic.min_distance_to_segment(
+                    tmp = geodetic.min_distance_to_segment(
                         numpy.array([p1.longitude, p2.longitude]),
                         numpy.array([p1.latitude, p2.latitude]),
                         mesh.lons, mesh.lats)
                 # Correcting the sign of the distance
                 if i == 0:
-                    dst *= -1
-                dists.append(dst)
+                    tmp *= -1
+                dists.append(tmp)
 
         # Computing distances
         dists = numpy.array(dists)
-        iii = numpy.abs(dists).argmin(axis=0)
-        dst = dists[iii, numpy.arange(dists.shape[1])]
+        iii = abs(dists).argmin(axis=0)
+        dst = dists[iii, list(range(dists.shape[1]))]
+
         if numpy.any(numpy.isnan(dst)):
             raise ValueError('NaN in Rx')
+
         return dst
 
     def get_top_edge_depth(self):
@@ -318,7 +327,7 @@ class BaseSurface:
             dep = numpy.min(top_edge.depths)
             return dep
 
-    def get_top_edge_centroid(self):
+    def _get_top_edge_centroid(self):
         """
         Return :class:`~openquake.hazardlib.geo.point.Point` representing the
         surface's top edge centroid.
@@ -350,8 +359,7 @@ class BaseSurface:
             Values are floats in decimal degrees.
         """
         mesh = _get_finite_mesh(self.mesh)
-        return utils.get_spherical_bounding_box(
-            mesh.lons.flatten(), mesh.lats.flatten())
+        return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
 
     def get_middle_point(self):
         """
@@ -386,7 +394,7 @@ class BaseSurface:
         return (self._boundaries('lons'), self._boundaries('lats'),
                 self._boundaries('depths'))
 
-    def get_resampled_top_edge(self, angle_var=3.0):
+    def get_resampled_top_edge(self, angle_var=0.1):
         """
         This methods computes a simplified representation of a fault top edge
         by removing the points that are not describing a change of direction,

@@ -61,9 +61,9 @@ class NSHMP2014(base.GMPE):
     REQUIRES_RUPTURE_PARAMETERS = ()
     REQUIRES_SITES_PARAMETERS = ()
 
-    def __init__(self, gmpe_name, sgn):
-        self.gmpe_name = gmpe_name
-        self.sgn = sgn
+    def __init__(self, **kwargs):
+        self.gmpe_name = kwargs['gmpe_name']
+        self.sgn = kwargs['sgn']
         if self.sgn == 0:
             # default weighting
             self.weights_signs = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
@@ -75,6 +75,7 @@ class NSHMP2014(base.GMPE):
         # are given in terms of Rrup, so both are required in the subclass
         self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES | {'rrup'})
         self.gsim = cls()  # underlying gsim
+        super().__init__(**kwargs)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

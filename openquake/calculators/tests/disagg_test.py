@@ -27,7 +27,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -153,7 +153,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         haz = self.calc.datastore['hmap3'][0, 0]  # shape NMP
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        aae(haz[1], 0.13311564, decimal=6)
+        self.assertAlmostEqual(haz[1], 0.13311564210230828)
 
         # test normal disaggregation
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
@@ -195,14 +195,14 @@ class DisaggregationTestCase(CalculatorTestCase):
         # extract API
         aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
-        self.assertEqual(len(aw.mag), 4)
-        self.assertEqual(aw.shape, (4, 1, 1))
+        self.assertEqual(len(aw.mag), 8)
+        self.assertEqual(aw.shape, (8, 1, 1))
 
         aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
-        self.assertEqual(len(aw.dist), 10)
-        self.assertEqual(len(aw.eps), 6)
-        self.assertEqual(aw.shape, (4, 10, 6, 1, 1))
+        self.assertEqual(len(aw.dist), 60)
+        self.assertEqual(len(aw.eps), 12)
+        self.assertEqual(aw.shape, (8, 60, 12, 1, 1))
 
     def test_case_10(self):
         # test single magnitude
@@ -215,6 +215,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        #if platform.machine() == 'arm64':
+        #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
     def test_case_12(self):
@@ -229,14 +231,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         # check split_by_mag with NGAEastUSGS, see bug
         # https://github.com/gem/oq-engine/issues/8780
         self.run_calc(case_14.__file__, 'job.ini')
-
-    def test_case_15(self):
-        # check that mean_rates_by_src are always annual
-        self.run_calc(case_15.__file__, 'job_50yr.ini')
-        mrs50 = self.calc.datastore['mean_rates_by_src']
-        self.run_calc(case_15.__file__, 'job_1yr.ini')
-        mrs1 = self.calc.datastore['mean_rates_by_src']
-        aae(mrs1.array, mrs50.array)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

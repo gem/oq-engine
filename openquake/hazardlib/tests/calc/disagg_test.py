@@ -142,8 +142,8 @@ class DisaggregateTestCase(unittest.TestCase):
     def test_disaggregator(self):
         dis = disagg.Disaggregator([self.sources[0]], self.site, self.cmaker,
                                    self.bin_edges)
-        imldic = {'PGA': .01}
-        mat3 = dis.disagg_mag_dist_eps(imldic, [1.])[..., 0]
+        iml3 = numpy.array([[[.01]]])
+        mat3 = dis.disagg_mag_dist_eps(iml3, [1.])[..., 0, 0]
         bymag = pprod(disagg.to_probs(mat3), axis=(1, 2))
         aac(bymag, [0.9873275537163634,
                     0.9580616631998118,
@@ -273,11 +273,10 @@ def test_single_source(job_ini):
     job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)
     oq = inp.oq
-    [site] = inp.sitecol
     edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    sid, srcid, std4D, rates4D, rates2D = disagg.disagg_source(
-        inp.groups, site, inp.full_lt, edges_shapedic, oq, {'PGA': .1})
-    # rates4D has shape (Ma, D, E, M), rates2D shape (M, L1)
+    srcid, rates5D, rates2D = disagg.disagg_source(
+        inp.groups, inp.sitecol, inp.full_lt, edges_shapedic, oq)
+    # rates5D has shape (Ma, D, E, M, P), rates2D shape (M, L1)
     print(srcid)
-    print(rates4D.sum(axis=(1, 2)))
+    print(rates5D.sum(axis=(1, 2)))
     print(rates2D)

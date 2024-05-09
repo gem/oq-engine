@@ -74,9 +74,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
-    #: Supported standard deviation type is total, inter-event and intra-event
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group

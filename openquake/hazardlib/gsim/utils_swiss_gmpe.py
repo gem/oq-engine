@@ -82,11 +82,9 @@ def _corr_sig(sig, C, tau_ss, phi_ss, NL=None, tau_value=None):
     s = phi_ss ** 2
     if tau_value is not None and NL is not None:
         s += tau_value * tau_value * ((1 + NL) ** 2)
-        t = tau_value * tau_value * ((1 + NL) ** 2)
     else:
         s += C[tau_ss] * C[tau_ss]
-        t = C[tau_ss] * C[tau_ss]
-    return np.sqrt(s), np.sqrt(t), phi_ss
+    return np.sqrt(s)
 
 
 def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, sig, tau, phi, ctx,
@@ -105,5 +103,4 @@ def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, sig, tau, phi, ctx,
         _compute_small_mag_correction_term(C_ADJ, ctx.mag, dist)
 
     mean[:] = np.log(mean_corr)
-    sig[:], tau[:], phi[:] = _corr_sig(sig, COEFFS[imt], tau_ss,
-                                       phi_ss, NL, tau_value)
+    sig[:] = _corr_sig(sig, COEFFS[imt], tau_ss, phi_ss, NL, tau_value)

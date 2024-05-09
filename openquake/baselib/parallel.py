@@ -182,7 +182,6 @@ import os
 import re
 import ast
 import sys
-import stat
 import time
 import socket
 import signal
@@ -191,10 +190,10 @@ import inspect
 import logging
 import operator
 import traceback
-import subprocess
 import collections
 from unittest import mock
 import multiprocessing.dummy
+import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
 import psutil
 import numpy
@@ -206,48 +205,13 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
+    gettemp, engine_version, shortlist, mp as mp_context)
 
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
-MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
-
-# see https://scicomp.aalto.fi/triton/tut/array
-SLURM_BATCH = '''\
-#!/bin/bash
-#SBATCH --job-name={mon.operation}
-#SBATCH --array=1-{mon.task_no}
-#SBATCH --time=10:00:00
-#SBATCH --mem-per-cpu=1G
-#SBATCH --output={mon.calc_dir}/%a.out
-#SBATCH --error={mon.calc_dir}/%a.err
-srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
-'''
-
-def sbatch(mon):
-    """
-    Start a SLURM script via sbatch
-    """
-    path = os.path.join(mon.calc_dir, 'slurm.sh')
-    with open(path, 'w') as f:
-        python = config.distribution.python
-        f.write(SLURM_BATCH.format(python=python, mon=mon))
-    os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
-    sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
-    if sbatch:
-        subprocess.run(['sbatch', path], capture_output=True)
-        return  # TODO: return the SLURM job ID
-
-    # if SLURM is not installed, fake it
-    logging.info(f'Faking SLURM for {mon.operation}')
-    pool = mp_context.Pool()
-    for task_id in range(1, mon.task_no + 1):
-        pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
-    pool.close()
-    pool.join()
 
 
 @submit.add('no')
@@ -281,23 +245,12 @@ def ipp_submit(self, func, args, monitor):
     self.executor.submit(safely_call, func, args, self.task_no, monitor)
 
 
-@submit.add('slurm')
-def slurm_submit(self, func, args, monitor):
-    calc_dir = monitor.calc_dir  # $HOME/oqdata/calc_XXX
-    if not os.path.exists(calc_dir):
-        os.mkdir(calc_dir)
-    inpname = str(self.task_no + 1) + '.inp'
-    with open(os.path.join(calc_dir, inpname), 'wb') as f:
-        pickle.dump((func, args, monitor), f, pickle.HIGHEST_PROTOCOL)
-    logging.debug('saved %s', os.path.join(calc_dir, inpname))
-
-
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp', 'slurm'):
+    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -320,8 +273,6 @@ class Pickled(object):
 
     :param obj: the object to pickle
     """
-    compressed = False
-
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
@@ -329,9 +280,6 @@ class Pickled(object):
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
-        self.compressed = len(self.pik) > MB and config.distribution.compress
-        if self.compressed:
-            self.pik = compress(self.pik)
 
     def __repr__(self):
         """String representation of the pickled object"""
@@ -344,8 +292,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        pik = decompress(self.pik) if self.compressed else self.pik
-        return pickle.loads(pik)
+        return pickle.loads(self.pik)
 
 
 def get_pickled_sizes(obj):
@@ -435,9 +382,7 @@ class Result(object):
         """
         Returns the underlying value or raise the underlying exception
         """
-        t0 = time.time()
         val = self.pik.unpickle()
-        self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
@@ -502,7 +447,7 @@ dummy_mon.backurl = None
 DEBUG = False
 
 
-def sendback(res, zsocket):
+def sendback(res, zsocket, sentbytes):
     """
     Send back to the master node the result by using the zsocket.
 
@@ -525,7 +470,7 @@ def sendback(res, zsocket):
             dblog('ERROR', calc_id, task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
-    return nbytes
+    return sentbytes + nbytes
 
 
 def safely_call(func, args, task_no=0, mon=dummy_mon):
@@ -570,12 +515,12 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 if res.msg == 'TASK_ENDED':
                     zsocket.send(res)
                     break
-                sentbytes += sendback(res, zsocket)
+                sentbytes = sendback(res, zsocket, sentbytes)
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-            sentbytes += sendback(res, zsocket)
+            sentbytes = sendback(res, zsocket, sentbytes)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
             zsocket.send(end)
@@ -609,8 +554,6 @@ class IterResult(object):
 
     def _iter(self):
         first_time = True
-        self.counts = 0
-        self.dt = 0
         for result in self.iresults:
             msg = check_mem_usage()
             # log a warning if too much memory is used
@@ -618,10 +561,7 @@ class IterResult(object):
                 logging.warning(msg)
                 first_time = False  # warn only once
             self.nbytes += result.nbytes
-            self.counts += 1
-            out = result.get()
-            self.dt += result.dt
-            yield out
+            yield result.get()
 
     def __iter__(self):
         if self.iresults == ():
@@ -632,13 +572,11 @@ class IterResult(object):
             yield from self._iter()
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
-            nb = {k: humansize(v) for k, v in list(reversed(items))[:3]}
-            recv = sum(self.nbytes.values())
-            mean = recv / (self.counts or 1)
-            pu = '[unpik=%.2fs]' % self.dt
-            logging.info('Received %d * %s in %d seconds %s from %s\n%s',
-                         self.counts, humansize(mean),
-                         time.time() - t0, pu, self.name, nb)
+            nb = {k: humansize(v) for k, v in reversed(items)}
+            msg = nb if len(nb) < 10 else {
+                'tot': humansize(sum(self.nbytes.values()))}
+            logging.info('Received %s in %d seconds from %s',
+                         msg, time.time() - t0, self.name)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -676,16 +614,35 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__call__).args[1:]
 
 
-def get_return_ip(receiver_host):
-    if receiver_host:
-        return socket.gethostbyname(receiver_host)
-    hostname = socket.gethostname()
-    return socket.gethostbyname(hostname)
+class SharedArray(object):
+    """
+    Wrapper over a SharedMemory object to be used as a context manager.
+    """
+    def __init__(self, shape, dtype, value):
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        sm = shmem.SharedMemory(create=True, size=nbytes)
+        self.name = sm.name
+        self.shape = shape
+        self.dtype = dtype
+        # fill the SharedMemory buffer with the value
+        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
+        arr[:] = value
+
+    def __enter__(self):
+        self.sm = shmem.SharedMemory(self.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
+
+    def __exit__(self, etype, exc, tb):
+        self.sm.close()
+
+    def unlink(self):
+        shmem.SharedMemory(self.name).unlink()
 
 
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    shared = []  # SharedArrays
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0'))
     if not num_cores:
@@ -711,6 +668,7 @@ class Starmap(object):
                 cls.num_cores, init_workers,
                 maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.shared = []
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
@@ -723,6 +681,8 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
+        for shared in cls.shared:
+            shmem.SharedMemory(shared.name).unlink()
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
@@ -767,6 +727,7 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
+    @classmethod
     def apply_split(cls, task, allargs, concurrent_tasks=None,
                     maxweight=None, weight=lambda item: 1,
                     key=lambda item: 'Unspecified',
@@ -787,7 +748,6 @@ class Starmap(object):
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
             self.calc_id = int(match.group(1))
         else:
-            # TODO: see if we can forbid this case
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
@@ -811,14 +771,15 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
+        if self.distribute in ('no', 'processpool'):
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = get_return_ip(config.dbserver.receiver_host)
-            logging.debug(f'{self.return_ip=}')
+            self.return_ip = socket.gethostbyname(
+                config.dbserver.receiver_host or socket.gethostname())
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
+        self.t0 = time.time()
 
     def log_percent(self):
         """
@@ -842,6 +803,7 @@ class Starmap(object):
         """
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
+            self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -887,11 +849,6 @@ class Starmap(object):
         else:  # build a task queue in advance
             self.task_queue = [(self.task_func, args)
                                for args in self.task_args]
-        dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist == 'slurm':
-            for func, args in self.task_queue:
-                self.submit(args, func=func)
-            self.task_queue.clear()
         return self.get_results()
 
     def get_results(self):
@@ -920,23 +877,18 @@ class Starmap(object):
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
-        dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist == 'slurm':
-            self.monitor.task_no = self.task_no  # total number of tasks
-            sbatch(self.monitor)
-                
-        elif self.task_queue:
+        if self.task_queue:
             first_args = self.task_queue[:self.CT]
             self.task_queue[:] = self.task_queue[self.CT:]
             for func, args in first_args:
                 self.submit(args, func=func)
-
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
-        logging.warning('Sent %d %s tasks, %s', len(self.tasks),
-                        self.name, humansize(nbytes))
+        if nbytes > 1E5:
+            logging.info('Sent %d %s tasks, %s in %d seconds', len(self.tasks),
+                         self.name, humansize(nbytes), time.time() - self.t0)
 
         isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
@@ -978,14 +930,24 @@ class Starmap(object):
         self.log_percent()
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
-        if dist == 'slurm':
-            for fname in os.listdir(self.monitor.calc_dir):
-                os.remove(os.path.join(self.monitor.calc_dir, fname))
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
             logging.info(
                 'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
                 times.mean(), times.std(), times.min(), times.max())
+
+    def create_shared(self, shape, dtype=float, value=0.):
+        """
+        Create an array backed by a SharedMemory buffer.
+
+        :param shape: shape of the array
+        :param dtype: dtype of the array (default float)
+        :param value: initialization value (default 0.)
+        :returns: a SharedArray instance
+        """
+        shared = SharedArray(shape, dtype, value)
+        self.shared.append(shared)
+        return shared
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
@@ -1042,20 +1004,12 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
             break
 
 
-def logfinish(n, tot):
-    logging.info('Finished %d of %d jobs', n, tot)
-    return n + 1
-
-
 def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
-    tot = len(allargs)
-    logging.info('Running %d jobs', tot)
     allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {}  # sentinel -> process
-    n = 1
     while allargs:
         args = allargs.pop()
         proc = mp_context.Process(target=func, args=args)
@@ -1065,19 +1019,7 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             for finished in wait(procs):
                 procs[finished].join()
                 del procs[finished]
-                n = logfinish(n, tot)
-                
     while procs:
         for finished in wait(procs):
             procs[finished].join()
             del procs[finished]
-            n = logfinish(n, tot)
-
-
-def slurm_task(calc_dir: str, task_id: str):
-    """
-    Task in a SLURM job array
-    """
-    with open(calc_dir + '/' + task_id + '.inp', 'rb') as f:
-        func, args, mon = pickle.load(f)
-    safely_call(func, args, int(task_id) - 1, mon)

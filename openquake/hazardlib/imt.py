@@ -24,7 +24,7 @@ import re
 import collections
 import numpy
 
-FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
+FREQUENCY_PATTERN = '^(EAS|FAS|DRVT)\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -74,8 +74,6 @@ def from_string(imt, _damping=5.0):
             im = FAS(float(m.group(2)))
         elif m.group(1) == 'DRVT':
             im = DRVT(float(m.group(2)))
-        elif m.group(1) == 'AvgSA':
-            im = AvgSA(float(m.group(2)))
         return im
     elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
@@ -166,14 +164,12 @@ def SA(period, damping=5.0):
     return IMT('SA(%s)' % period, period, damping)
 
 
-def AvgSA(period=None, damping=5.0):
+def AvgSA():
     """
     Dummy spectral acceleration to compute average ground motion over
-    several spectral ordinates. Depending on the choice of AvgSA GMPE, this
-    can operate as a scalar value or as a vector quantity.
+    several spectral ordinates.
     """
-    return IMT('AvgSA(%s)' % period, period, damping)\
-        if period else IMT('AvgSA')
+    return IMT('AvgSA')
 
 
 def IA():
@@ -272,18 +268,6 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
-def LiqOccur():
-    """
-    Liquefaction occurrence class
-    """
-    return IMT('LiqOccur')
-
-def LSE():
-    """
-    Liquefaction spatial extent as percentage of a pixel area.
-    """
-    return IMT('LSE')
-
 
 def PGDMax(vert_settlement, lat_spread):
     """
@@ -296,8 +280,8 @@ def LSD():
     """
     Liquefaction-induced lateral spread displacements measured in units of ``m``.
     """
-    return IMT('LSD')   
-
+    return IMT('LSD')    
+    
 
 def PGDGeomMean(vert_settlement, lat_spread):
     """

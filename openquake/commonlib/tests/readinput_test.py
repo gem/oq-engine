@@ -17,16 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 import tempfile
 import unittest.mock as mock
 import unittest
-import pandas
 from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
@@ -34,7 +31,6 @@ from openquake.qa_tests_data.logictree import case_02, case_15, case_21
 from openquake.qa_tests_data.classical import case_34
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
-from openquake.qa_tests_data import mosaic
 
 
 TMP = tempfile.gettempdir()
@@ -138,7 +134,7 @@ export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_mesh_exp(oq)
+            readinput.get_mesh(oq)
         self.assertIn('site_id not sequential from zero', str(ctx.exception))
         os.unlink(sites_csv)
 
@@ -326,8 +322,9 @@ class ExposureTestCase(unittest.TestCase):
 
     def test_get_metadata(self):
         [exp] = asset.Exposure.read_headers([self.exposure])
-        self.assertEqual(exp.cost_calculator.cost_types,
-                         {'structural': 'per_asset'})
+        self.assertEqual(exp.description, 'Exposure model for buildings')
+        self.assertEqual([tuple(ct) for ct in exp.cost_types],
+                         [('structural', 'per_asset', 'USD')])
 
     def test_missing_number(self):
         raise unittest.SkipTest
@@ -341,7 +338,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
 
         with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
@@ -360,7 +356,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
@@ -378,11 +373,10 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn(r"Invalid ID 'a 1': the only accepted chars are "
-                      r"^[\w_\-:]+$, line 11", str(ctx.exception))
+        self.assertIn("Invalid ID 'a 1': the only accepted chars are "
+                      "a-zA-Z0-9_-:, line 11", str(ctx.exception))
 
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
@@ -396,7 +390,6 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': [self.exposure2],
                           'structural_vulnerability': None}
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Got 'aggregate', expected "
@@ -416,7 +409,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insurance_losses = False
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",
@@ -502,7 +494,6 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         oq.inputs['reqv']['act shallow crust'] = fname
         with mock.patch('logging.warning') as w:
             readinput.get_composite_source_model(oq)
-        raise unittest.SkipTest('got "Sent %d %s tasks, %s"')
         self.assertIn('Unknown TRT=act shallow crust', w.call_args[0][0])
 
     def test_extra_large_source(self):
@@ -525,17 +516,21 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
 class SitecolAssetcolTestCase(unittest.TestCase):
 
+    def setUp(self):
+        # cleanup evil globals
+        readinput.Global.reset()
+
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.region_grid_spacing = 15
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
     def test_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
@@ -561,27 +556,3 @@ class LogicTreeTestCase(unittest.TestCase):
         expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
                     'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
         self.assertEqual(paths, expected)
-
-
-class ReadGeometryTestCase(unittest.TestCase):
-    def test(self):
-        t0 = time.time()
-        mosaic_dir = os.path.dirname(mosaic.__file__)
-        geom_df = readinput.read_mosaic_df(buffer=1)
-        self.assertEqual(len(geom_df), 30)
-        sites_df = pandas.read_csv(
-            os.path.join(mosaic_dir, 'famous_ruptures.csv'),
-            usecols=['lat', 'lon'])
-        lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = geolocate(lonlats, geom_df)
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 55)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
-
-        t0 = time.time()
-        risk_df = readinput.read_countries_df()  # this is slow
-        self.assertEqual(len(risk_df), 218)
-        sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 55)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)

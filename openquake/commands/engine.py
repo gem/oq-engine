@@ -59,12 +59,11 @@ def del_calculation(job_id, confirmed=False):
             'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
             abort([job.id])
-            resp = logs.dbcmd('del_calc', job.id, getpass.getuser(), False)
+            resp = logs.dbcmd('del_calc', job.id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)
         else:
             if 'success' in resp:
-                os.remove(resp['hdf5path'])
                 print('Removed %d' % job.id)
             else:
                 print(resp['error'])
@@ -123,12 +122,8 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    fname = os.path.expanduser(config.dbserver.file)
-    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
-        if not os.path.exists(fname):
-            upgrade_db = True  # automatically creates the db
-            yes = True
-    else:
+    if not os.environ.get('OQ_DATABASE'):
+        # start the dbserver locally if needed
         dbserver.ensure_on()
         # check that we are talking to the right server
         err = dbserver.check_foreign()
@@ -141,8 +136,7 @@ def main(
             pass
         elif yes or confirm('Proceed? (y/n) '):
             logs.dbcmd('upgrade_db')
-        if not run:
-            sys.exit(0)
+        sys.exit(0)
 
     if db_version:
         safeprint(logs.dbcmd('db_version'))

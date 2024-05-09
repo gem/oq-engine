@@ -28,29 +28,17 @@ urlpatterns = [
     re_path(r'^(\d+)/datastore$', views.calc_datastore),
     re_path(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     re_path(r'^(\d+)/results$', views.calc_results, name="results"),
-    re_path(r'^(\d+)/download_png/([-/_\.\(\)\w]+)$', views.download_png),
+    re_path(r'^(\d+)/hmap_(\d+)_(\d+)$', views.hmap_png),
     re_path(r'^(\d+)/traceback$', views.calc_traceback, name="traceback"),
     re_path(r'^(\d+)/log/size$', views.calc_log_size),
     re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log, name="log"),
     re_path(r'^result/(\d+)$', views.calc_result),
     re_path(r'^(\d+)/result/list$', views.calc_results),
 ]
-if settings.APPLICATION_MODE == 'AELO':
-    urlpatterns.extend([
-        re_path(r'^aelo_run$', views.aelo_run),
-        re_path(r'^(\d+)/abort$', views.calc_abort),
-        re_path(r'^(\d+)/remove$', views.calc_remove),
-    ])
-elif settings.APPLICATION_MODE == 'ARISTOTLE':
-    urlpatterns.extend([
-        re_path(r'^aristotle_get_rupture_data$',
-                views.aristotle_get_rupture_data),
-        re_path(r'^aristotle_run$', views.aristotle_run),
-        re_path(r'^(\d+)/abort$', views.calc_abort),
-        re_path(r'^(\d+)/remove$', views.calc_remove),
-        re_path(r'^(\d+)/download_aggrisk$', views.download_aggrisk),
-    ])
-elif settings.APPLICATION_MODE != 'READ_ONLY':
+if settings.APPLICATION_MODE.upper() == 'AELO':
+    urlpatterns.append(
+        re_path(r'^aelo_run$', views.aelo_run))
+elif settings.APPLICATION_MODE.upper() != 'READ_ONLY':
     urlpatterns.extend([
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),

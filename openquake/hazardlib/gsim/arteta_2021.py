@@ -121,7 +121,8 @@ class ArtetaEtAl2021InterVs30(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method <.base.GMPE.compute>`
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
 
@@ -249,7 +250,8 @@ class ArtetaEtAl2021Inter(ArtetaEtAl2021InterVs30):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method <.base.GMPE.compute>`
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
 
@@ -329,7 +331,8 @@ class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method <.base.GMPE.compute>`
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
 
@@ -422,7 +425,8 @@ class ArtetaEtAl2021Slab(ArtetaEtAl2021SlabVs30):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GMPE.compute>` for spec of input and result values.
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
         """
 
         for m, imt in enumerate(imts):

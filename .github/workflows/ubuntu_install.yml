@@ -1,4 +1,4 @@
-name: Test new wheels
+name: Ubuntu test of OpenQuake Engine
 
 on:
   workflow_dispatch:
@@ -12,6 +12,8 @@ on:
         description: 'Run the build with tmate debugging enabled'
         required: false
         default: false
+  schedule:
+    - cron: "0 4 * * *"
 
 jobs:
 
@@ -26,26 +28,26 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.9, "3.10", "3.11"]
+        python-version: [3.8, 3.9, "3.10"]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
     - name: Clone Repository (Master)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
       if: github.event.inputs.git-ref == ''
     - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-    - name: Install engine with install script
+    - name: Install engine with install script 
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
@@ -68,13 +70,16 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 15
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-    - name: Run a small subset of tests checking fiona/gdal
+    - name: Run tests
       run: |
         source ~/openquake/bin/activate
         pip install pytest
-        oq dbserver upgrade
+        oq dbserver start
         cd ~/work/oq-engine/oq-engine
         #
         export MPLBACKEND=Agg
-        pytest -vs --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py openquake/sep/tests/test_utils.py openquake/sep
+        pytest -vsx --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py
+        pytest -vsx --color=yes openquake/sep/tests/test_utils.py
+        pytest -vsx --color=yes openquake/sep
+        #
         oq engine --run https://downloads.openquake.org/jobs/risk_test.zip

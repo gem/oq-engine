@@ -73,32 +73,32 @@ def _fds_ha18(C, mag, dsigma):
     return eds0 + eds1 * np.log10(dsigma) + eds2 * np.log10(dsigma) ** 2
 
 
-def _ff0(C, imt, f0):
+def _ffpeak(C, imt, fpeak):
     """
     Fpeak factor.
     """
-    if imt.string[:2] != "SA" or max(f0) <= 0:
-        # pgv, pga or unknown f0
+    if imt.string[:2] != "SA" or max(fpeak) <= 0:
+        # pgv, pga or unknown fpeak
         return 0
 
     s = CONSTANTS
-    x = f0 / 10 ** C['f']
+    x = fpeak / 10 ** C['f']
 
-    ff0 = np.where(f0 <= 0, 0, s['cfp0'])
+    ffpeak = np.where(fpeak <= 0, 0, s['cfp0'])
 
     idx = np.where((s['x0'] < x) & (x <= s['x1']))
-    ff0[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
+    ffpeak[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
 
     idx = np.where((s['x1'] < x) & (x <= s['x2']))
-    ff0[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+    ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
         + s['cfp2'] * np.log10(x[idx] / s['x1'])
 
     idx = np.where(s['x2'] < x)
-    ff0[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+    ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
         + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
         + s['cfp3'] * np.log10(x[idx] / s['x2'])
 
-    return ff0
+    return ffpeak
 
 
 def _fgamma(suffix, backarc, forearc_ne, forearc_sw, C, rrup):
@@ -224,7 +224,7 @@ class HassaniAtkinson2020SInter(GMPE):
     """
     Hassani Atkinson (2020) for Subduction Interface.
     """
-    gmpe_table = None  # use split_by_mag
+    gmpe_table = True  # use split_by_mag
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
@@ -243,14 +243,17 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'hypo_depth', 'mag'}
 
-    REQUIRES_SITES_PARAMETERS = {'f0', 'vs30', 'z2pt5'}
+    REQUIRES_SITES_PARAMETERS = {'fpeak', 'vs30', 'z2pt5'}
 
     REQUIRES_ATTRIBUTES = {'kappa', 'backarc', 'forearc_ne', 'forearc_sw'}
 
-    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0):
+    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
+                 **kwargs):
         """
         Aditional parameters.
         """
+        super().__init__(kappa=kappa, backarc=backarc, forearc_ne=forearc_ne,
+                         forearc_sw=forearc_sw, **kwargs)
         # kappa parameter
         self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw
@@ -289,11 +292,11 @@ class HassaniAtkinson2020SInter(GMPE):
             fsnonlin = _fsnonlin_ss14(C, ctx.vs30, pga_rock)
             fvs30 = _fvs30(C, ctx.vs30)
             fz2pt5 = _fz2pt5(C, ctx.z2pt5)
-            ff0 = _ff0(C, imt, ctx.f0)
+            ffpeak = _ffpeak(C, imt, ctx.fpeak)
 
             mean[m] = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                              + self.CONST_REGION['cc'] + clf + C['chf']
-                             + C['amp_cr'] + fvs30 + fz2pt5 + ff0 +
+                             + C['amp_cr'] + fvs30 + fz2pt5 + ffpeak +
                              fsnonlin)
             if imt.string != "PGV":
                 # pgv in cm/s

@@ -178,7 +178,13 @@ class ChaoEtAl2020SInter(GMPE):
 
     REQUIRES_ATTRIBUTES = {'manila', 'aftershocks', 'geology'}
 
-    def __init__(self, manila=False, aftershocks=False, geology=True):
+    def __init__(self, manila=False, aftershocks=False, geology=True,
+                 **kwargs):
+        """
+        Aditional parameters.
+        """
+        super().__init__(manila=manila, aftershocks=aftershocks,
+                         geology=geology, **kwargs)
         # Manila or Ryukyu subduction zone
         self.manila = manila
         # aftershocks or mainshocks

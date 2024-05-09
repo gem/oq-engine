@@ -24,13 +24,11 @@ import sys
 import zlib
 import copy
 import math
-import time
 import pickle
 import socket
 import random
 import atexit
 import zipfile
-import logging
 import builtins
 import operator
 import warnings
@@ -61,38 +59,6 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
 mp = multiprocessing.get_context('spawn')
 
 
-class Cache(dict):
-    miss = 0
-    tot = 0
-
-    @property
-    def hit(self):
-        return self.tot - self.miss
-
-    @property
-    def speedup(self):
-        return self.tot / self.miss
-
-    def __setitem__(self, key, val):
-        dict.__setitem__(self, key, val)
-        self.miss += 1
-
-    def __getitem__(self, key):
-        self.tot += 1
-        return dict.__getitem__(self, key)
-
-    def getsize(self):
-        """
-        :returns: the size in bytes of the cache values
-        """
-        return sum(getsizeof(val) for val in self.values())
-
-    def __str__(self):
-        templ = '<Cache hit=%d, miss=%d, speedup=%.1f, size=%s>'
-        return templ % (self.hit, self.miss, self.speedup,
-                        humansize(self.getsize()))
-
-
 def duplicated(items):
     """
     :returns: the list of duplicated keys, possibly empty
@@ -112,17 +78,12 @@ def cached_property(method):
         try:
             val = self.__dict__[name]
         except KeyError:
-            t0 = time.time()
             val = method(self)
-            cached_property.dt[name] = time.time() - t0
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
     newmethod.__doc__ = method.__doc__
     return property(newmethod)
-
-
-cached_property.dt = {}  # dictionary of times
 
 
 def nokey(item):
@@ -476,10 +437,10 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            with open(os.devnull, 'w') as devnull:
-                gh = subprocess.check_output(
-                    ['git', 'rev-parse', '--short', 'HEAD'],
-                    stderr=devnull, cwd=os.path.dirname(git_path)).strip()
+            gh = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                stderr=open(os.devnull, 'w'),
+                cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
         except Exception:
             pass
@@ -487,64 +448,6 @@ def engine_version():
             # may not work properly
 
     return __version__ + gh
-
-
-def extract_dependencies(lines):
-    for line in lines:
-        longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
-        try:
-            pkg, version, *other = longname.split('-')
-        except ValueError:  # for instance a comment
-            continue
-        if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam'):
-            # not importable
-            continue
-        if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
-                   'importlib_metadata', 'zipp'):
-            # missing __version__
-            continue
-        elif pkg == 'pyzmq':
-            pkg = 'zmq'
-        elif pkg == 'Pillow':
-            pkg = 'PIL'
-        elif pkg == 'GDAL':
-            pkg = 'osgeo.gdal'
-        elif pkg == 'Django':
-            pkg = 'django'
-        elif pkg == 'pyshp':
-            pkg = 'shapefile'
-        yield pkg, version
-
-    
-def check_dependencies():
-    """
-    Print a warning if we forgot to update the dependencies.
-    Works only for development installations.
-    """
-    import openquake
-    if 'site-packages' in openquake.__path__[0]:
-        return  # do nothing for non-devel installations
-    pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
-    system = sys.platform
-    if system == 'linux':
-        system = 'linux64'
-    elif system == 'win32':
-        system = 'win64'
-    elif system == 'darwin':
-        system = 'macos_arm64'
-    else:
-        # unsupported OS, do not check dependencies
-        return
-    reqfile = 'requirements-py%s-%s.txt' % (pyver, system)
-    repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    with open(os.path.join(repodir, reqfile)) as f:
-        lines = f.readlines()
-    for pkg, expected in extract_dependencies(lines):
-        version = __import__(pkg).__version__
-        if version != expected:
-            logging.warning('%s is at version %s but the requirements say %s' %
-                            (pkg, version, expected))
 
 
 def run_in_process(code, *args):
@@ -853,20 +756,20 @@ def copyobj(obj, **kwargs):
 class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays with the same lenghts.
+    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
         self.M = len(imtls)
         self.L1 = len(levels)
         self.size = self.M * self.L1
-        items = imtls.items()
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
-                               for imt, imls in items])
+                               for imt, imls in imtls.items()])
         self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
         self.mdic = {}
-        for m, (imt, imls) in enumerate(items):
+        for m, (imt, imls) in enumerate(imtls.items()):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
@@ -1307,14 +1210,14 @@ def random_histogram(counts, nbins_or_binweights, seed):
     bins and a faster algorithm will be used. Otherwise pass the weights.
     Here are a few examples:
 
-    >>> list(random_histogram(1, 2, seed=42))
-    [0, 1]
-    >>> list(random_histogram(100, 5, seed=42))
-    [22, 17, 21, 26, 14]
-    >>> list(random_histogram(10000, 5, seed=42))
-    [2034, 2000, 2014, 1998, 1954]
-    >>> list(random_histogram(1000, [.3, .3, .4], seed=42))
-    [308, 295, 397]
+    >>> random_histogram(1, 2, seed=42)
+    array([0, 1])
+    >>> random_histogram(100, 5, seed=42)
+    array([22, 17, 21, 26, 14])
+    >>> random_histogram(10000, 5, seed=42)
+    array([2034, 2000, 2014, 1998, 1954])
+    >>> random_histogram(1000, [.3, .3, .4], seed=42)
+    array([308, 295, 397])
     """
     rng = numpy.random.default_rng(seed)
     try:
@@ -1469,9 +1372,6 @@ def getsizeof(o, ids=None):
     if id(o) in ids:
         return 0
 
-    if hasattr(o, 'nbytes'):
-        return o.nbytes
-
     nbytes = sys.getsizeof(o)
     ids.add(id(o))
 
@@ -1497,8 +1397,8 @@ def get_duplicates(array, *fields):
 
 def add_columns(a, b, on, cols=None):
     """
-    >>> a_dt = [('aid', numpy.int64), ('eid', numpy.int64), ('loss', float)]
-    >>> b_dt = [('ordinal', numpy.int64), ('custom_site_id', numpy.int64)]
+    >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
@@ -1545,7 +1445,7 @@ def categorize(values, nchars=2):
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
     prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
-    return numpy.array([dic[v] for v in values], (numpy.bytes_, nchars))
+    return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
 def get_nbytes_msg(sizedict, size=8):
@@ -1588,35 +1488,11 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-class Param:
-    """
-    Container class for a set of parameters with defaults
-
-    >>> p = Param(a=1, b=2)
-    >>> p.a = 3
-    >>> p.a, p.b
-    (3, 2)
-    >>> p.c = 4
-    Traceback (most recent call last):
-      ...
-    AttributeError: Unknown parameter c
-    """
-    def __init__(self, **defaults):
-        for k, v in defaults.items():
-            self.__dict__[k] = v
-
-    def __setattr__(self, name, value):
-        if name in self.__dict__:
-            object.__setattr__(self, name, value)
-        else:
-            raise AttributeError('Unknown parameter %s' % name)
-
-
 class RecordBuilder(object):
     """
     Builder for numpy records or arrays.
 
-    >>> rb = RecordBuilder(a=numpy.int64(0), b=1., c="2")
+    >>> rb = RecordBuilder(a=0, b=1., c="2")
     >>> rb.dtype
     dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
     >>> rb()
@@ -1630,7 +1506,7 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.bytes_, len(value) or 1)
+                tp = (numpy.string_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
                 tp = (value.dtype, len(value))
             else:
@@ -1700,22 +1576,6 @@ def chdir(path):
     finally:
         os.chdir(oldpwd)
 
-
-def smart_concat(arrays):
-    """
-    Concatenated structured arrays by considering only the common fields
-    """
-    if len(arrays) == 0:
-        return ()
-    common = set(arrays[0].dtype.names)
-    for array in arrays[1:]:
-        common &= set(array.dtype.names)
-    assert common, 'There are no common field names'
-    common = sorted(common)
-    dt = arrays[0][common].dtype
-    return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
-
-    
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT

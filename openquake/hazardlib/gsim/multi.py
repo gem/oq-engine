@@ -68,10 +68,10 @@ class MultiGMPE(GMPE):
         """
         Instantiate with a dictionary of GMPEs organised by IMT
         """
-        self.kwargs = {}
+        super().__init__(**kwargs)
         for name in uppernames:
             setattr(self, name, set(getattr(self, name)))
-        for imt, gsim_dic in kwargs.items():
+        for imt, gsim_dic in self.kwargs.items():
             [(gsim_name, kw)] = gsim_dic.items()
             self.kwargs[imt] = gsim = registry[gsim_name](**kw)
             name = "SA" if imt.startswith("SA") else imt

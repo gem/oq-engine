@@ -2,8 +2,7 @@ from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from django.utils.translation import gettext_lazy as _
-from openquake.server.announcements.models import Announcement
+from django.utils.translation import ugettext_lazy as _
 
 
 # NOTE: this customization only moves the email to a more visible section, as
@@ -35,5 +34,3 @@ except NotRegistered:
     pass
 
 admin.site.register(User, UserAdmin)
-
-admin.site.register(Announcement)

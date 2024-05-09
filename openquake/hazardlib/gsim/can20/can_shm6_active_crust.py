@@ -101,7 +101,8 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     """
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method <.base.GMPE.compute>`
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
 
         CanadaSHM6 edits: limited to the period range of 0.05 - 10s
@@ -162,12 +163,12 @@ def shm6_site_correction(C, mean, ctx, imt):
     mean[vs30_ge1100] = factor + cy14_760 + mean[vs30_ge1100]
 
 
-def get_mean_stddevs_cy14(name, C, ctx, conf):
+def get_mean_stddevs_cy14(name, C, ctx):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = CY14.get_ln_y_ref(name, C, ctx, conf)
+    ln_y_ref = CY14.get_ln_y_ref(name, C, ctx)
     y_ref = np.exp(ln_y_ref)
 
     # Set basin depth to 0
@@ -178,6 +179,7 @@ def get_mean_stddevs_cy14(name, C, ctx, conf):
 
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
+    f_nl = 0.0
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
@@ -222,7 +224,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
         # Reference to page 1144, PSA might need PGA value
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs_cy14(
-            name, self.COEFFS[PGA()], ctx, self.conf)
+            name, self.COEFFS[PGA()], ctx)
 
         # Processing IMTs
         for m, imt in enumerate(imts):
@@ -235,7 +237,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_mean_stddevs_cy14(name, self.COEFFS[imt], ctx, self.conf)
+                    get_mean_stddevs_cy14(name, self.COEFFS[imt], ctx)
                 # reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA

@@ -171,8 +171,6 @@ def std_curve(values, weights=None):
     res = numpy.sqrt(numpy.einsum('i,i...', weights, (m - values) ** 2))
     return res
 
-cw_dt = numpy.dtype([('c', float), ('w', float)])
-
 
 # NB: for equal weights and sorted values the quantile is computed as
 # numpy.interp(q, [1/N, 2/N, ..., N/N], values)
@@ -205,12 +203,11 @@ def quantile_curve(quantile, curves, weights=None):
         assert len(weights) == R, (len(weights), R)
     result = numpy.zeros(curves.shape[1:])
     for idx, _ in numpy.ndenumerate(result):
-        cw = numpy.zeros(R, cw_dt)  # (curve, weight)
-        cw['c'] = curves[(slice(None), ) + idx]
-        cw['w'] = weights
-        cw.sort(order='c')
+        data = numpy.array([a[idx] for a in curves])
+        sorted_idxs = numpy.argsort(data)
+        cum_weights = numpy.cumsum(weights[sorted_idxs])
         # get the quantile from the interpolated CDF
-        result[idx] = numpy.interp(quantile, cw['w'].cumsum(), cw['c'])
+        result[idx] = numpy.interp(quantile, cum_weights, data[sorted_idxs])
     return result
 
 

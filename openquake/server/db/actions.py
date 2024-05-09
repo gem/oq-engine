@@ -26,7 +26,6 @@ from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
-from openquake.calculators.export import DISPLAY_NAME
 
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
@@ -108,16 +107,16 @@ def create_job(db, datadir, calculation_mode='to be set',
     :returns:
         the job ID
     """
+    calc_id = get_calc_id(db, datadir) + 1
     # NB: is_running=1 is needed to make views_test.py happy on Jenkins
-    job = dict(is_running=1, description=description,
+    job = dict(id=calc_id, is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
-               ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
-    job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
-                ).lastrowid
-    db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
-       os.path.join(datadir, 'calc_%s' % job_id), job_id)
-    return job_id
+               hazard_calculation_id=hc_id,
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)),
+               host=host)
+    return db('INSERT INTO job (?S) VALUES (?X)',
+              job.keys(), job.values()).lastrowid
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
@@ -132,7 +131,7 @@ def import_job(db, calc_id, calc_mode, description, user_name, status,
                hazard_calculation_id=hc_id,
                is_running=0,
                status=status,
-               ds_calc_dir=os.path.join(datadir, 'calc_%s' % calc_id))
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
 
 
@@ -180,6 +179,27 @@ def get_job(db, job_id, username=None):
         return
     else:
         return joblist[-1]
+
+
+def get_calc_id(db, datadir, job_id=None):
+    """
+    Return the latest calc_id by looking both at the datastore
+    and the database.
+
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :param datadir: the directory containing the datastores
+    :param job_id: a job ID; if None, returns the latest job ID
+    """
+    from openquake.commonlib import datastore  # avoid circular import
+    calcs = datastore.get_calc_ids(datadir)
+    calc_id = 0 if not calcs else calcs[-1]
+    if job_id is None:
+        try:
+            job_id = db('SELECT seq FROM sqlite_sequence WHERE name="job"',
+                        scalar=True)
+        except NotFound:
+            job_id = 0
+    return max(calc_id, job_id)
 
 
 def get_weight(db, job_id):
@@ -265,6 +285,48 @@ def get_outputs(db, job_id):
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
 
+DISPLAY_NAME = {
+    'asset_risk': 'Exposure + Risk',
+    'gmf_data': 'Ground Motion Fields',
+    'damages-rlzs': 'Asset Risk Distributions',
+    'damages-stats': 'Asset Risk Statistics',
+    'mean_rates_by_src': 'Mean Hazard Rates by Source',
+    'mean_disagg_by_src': 'Mean Disaggregation Rates By Source',
+    'risk_by_event': 'Aggregated Risk By Event',
+    'events': 'Events',
+    'event_based_mfd': 'Annual Frequency of Events',
+    'avg_losses-rlzs': 'Average Asset Losses',
+    'avg_losses-stats': 'Average Asset Losses Statistics',
+    'loss_curves-rlzs': 'Asset Loss Curves',
+    'loss_curves-stats': 'Asset Loss Curves Statistics',
+    'loss_maps-rlzs': 'Asset Loss Maps',
+    'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'aggrisk': 'Aggregate Risk',
+    'aggrisk-stats': 'Aggregate Risk Statistics',
+    'agg_risk': 'Total Risk',
+    'aggcurves': 'Aggregate Risk Curves',
+    'aggcurves-stats': 'Aggregate Risk Curves Statistics',
+    'avg_gmf': 'Average Ground Motion Field',
+    'bcr-rlzs': 'Benefit Cost Ratios',
+    'bcr-stats': 'Benefit Cost Ratios Statistics',
+    'cs-stats': 'Mean Conditional Spectra',
+    'reinsurance-avg_policy': 'Average Reinsurance By Policy',
+    'reinsurance-avg_portfolio': 'Average Reinsurance',
+    'reinsurance-risk_by_event': 'Reinsurance By Event',
+    'reinsurance-aggcurves': 'Aggregated Reinsurance Curves',
+    'ruptures': 'Earthquake Ruptures',
+    'hcurves': 'Hazard Curves',
+    'hmaps': 'Hazard Maps',
+    'uhs': 'Uniform Hazard Spectra',
+    'disagg-rlzs': 'Disaggregation Outputs Per Realization',
+    'disagg-stats': 'Statistical Disaggregation Outputs',
+    'realizations': 'Realizations',
+    'src_loss_table': 'Source Loss Table',
+    'fullreport': 'Full Report',
+    'input': 'Input Files'
+}
+
+
 def create_outputs(db, job_id, keysize, ds_size):
     """
     Build a correspondence between the outputs in the datastore and the
@@ -297,14 +359,13 @@ def finish(db, job_id, status):
        job_id)
 
 
-def del_calc(db, job_id, user, delete_file=True, force=False):
+def del_calc(db, job_id, user, force=False):
     """
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
-    :param delete_file: also delete the HDF5 file
     :param force: delete even if there are dependent calculations
     :returns: a dict with key "success" and value indicating
         the job id of the calculation or of its ancestor, or key "error"
@@ -318,7 +379,7 @@ def del_calc(db, job_id, user, delete_file=True, force=False):
     if not force and job_id in job_ids:  # jobarray
         err = []
         for jid in job_ids:
-            res = del_calc(db, jid, user, delete_file, force=True)
+            res = del_calc(db, jid, user, force=True)
             if "error" in res:
                 err.append(res["error"])
         if err:
@@ -343,14 +404,13 @@ def del_calc(db, job_id, user, delete_file=True, force=False):
                 '%s and you are %s' % (job_id, owner, user)}
 
     fname = path + ".hdf5"
-    # A calculation could fail before it produces a hdf5, or somebody
-    # may have canceled the file, so it could not exist
-    if delete_file and os.path.isfile(fname):
+    # A calculation could fail before it produces a hdf5
+    if os.path.isfile(fname):
         try:
             os.remove(fname)
         except OSError as exc:  # permission error
             return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": str(job_id), "hdf5path": fname}
+    return {"success": str(job_id)}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -534,8 +594,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
-             job.hazard_calculation_id, job.size_mb, job.host,
-             job.start_time)
+             job.hazard_calculation_id, job.size_mb, job.host)
             for job in jobs]
 
 

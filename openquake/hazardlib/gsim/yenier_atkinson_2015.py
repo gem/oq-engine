@@ -304,7 +304,8 @@ class YenierAtkinson2015BSSA(GMPE):
 
     adapted = False
 
-    def __init__(self, focal_depth=None, region='CENA'):
+    def __init__(self, focal_depth=None, region='CENA', **kwargs):
+        super().__init__(focal_depth=focal_depth, region=region, **kwargs)
         self.focal_depth = focal_depth
         self.region = region
         self.gmpe = BooreEtAl2014()

@@ -97,6 +97,16 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
+def check_unique(ids, msg=''):
+    """
+    Raise a DuplicatedID exception if there are duplicated IDs
+    """
+    unique, counts = numpy.unique(ids, return_counts=True)
+    for u, c in zip(unique, counts):
+        if c > 1:
+            raise DuplicatedID('%s %s' % (u, msg))
+
+
 class SourceModel(collections.abc.Sequence):
     """
     A container of source groups with attributes name, investigation_time
@@ -149,9 +159,10 @@ class SourceModel(collections.abc.Sequence):
 
 class GeometryModel(object):
     """
-    Contains a dictionary of unique sections
+    Contains a dictionary of sections
     """
     def __init__(self, sections):
+        check_unique(sections)
         self.sections = sections
         self.src_groups = []
 
@@ -195,12 +206,17 @@ def get_geometry_model(node, fname, converter):
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
 def get_source_model_04(node, fname, converter=default):
     sources = []
+    source_ids = set()
     converter.fname = fname
     for src_node in node:
         src = converter.convert_node(src_node)
         if src is None:
             continue
+        if src.source_id in source_ids:
+            raise DuplicatedID(
+                'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
+        source_ids.add(src.source_id)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(
@@ -212,7 +228,6 @@ def get_source_model_04(node, fname, converter=default):
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
 def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
-    source_ids = []
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
         if 'sourceGroup' not in src_group.tag:
@@ -223,8 +238,6 @@ def get_source_model_05(node, fname, converter=default):
         sg = converter.convert_node(src_group)
         if sg and len(sg):
             # a source group can be empty if the source_id filtering is on
-            for src in sg:
-                source_ids.append(src.source_id)
             groups.append(sg)
     itime = node.get('investigation_time')
     if itime is not None:

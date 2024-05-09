@@ -249,9 +249,11 @@ class PitilakisEtAl2018(GMPE):
     #: Defined reference velocity is 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
-    def __init__(self, gmpe_name, reference_velocity=None, **extra_args):
+    def __init__(self, gmpe_name, reference_velocity=None, **kwargs):
+        super().__init__(gmpe_name=gmpe_name,
+                         reference_velocity=reference_velocity, **kwargs)
         if isinstance(gmpe_name, str):
-            self.gsim = registry[gmpe_name](**extra_args)
+            self.gsim = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
             self.gsim = copy.deepcopy(gmpe_name)

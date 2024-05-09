@@ -32,6 +32,7 @@ from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
 
+
 _get_mean = CallableDict()
 
 
@@ -104,8 +105,8 @@ def _return_tables(self, mag, imt, which):
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
-        period = round(imt.period, 7)
-        if period < low_period or period > high_period:
+        if (round(imt.period, 7) < low_period) or (
+                round(imt.period, 7) > high_period):
             raise ValueError("Spectral period %.3f outside of valid range "
                              "(%.3f to %.3f)" % (imt.period, periods[0],
                                                  periods[-1]))
@@ -179,12 +180,19 @@ class GMPETable(GMPE):
 
     kind = "base"
 
-    def __init__(self, gmpe_table):
+    @property
+    def filename(self):
+        """
+        Full pathname of the underlying HDF5 table
+        """
+        return self.kwargs.get('gmpe_table', self.gmpe_table)
+
+    def __init__(self, **kwargs):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        self.gmpe_table = self.filename = gmpe_table
+        super().__init__(**kwargs)
         # populated by the ContextManager once imts and magnitudes are known
         with h5py.File(self.filename, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])

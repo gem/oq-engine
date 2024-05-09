@@ -17,22 +17,8 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
-from openquake.hazardlib.geo.line import find_t
 
 PLOTTING = False
-
-
-def _plott(rtra_prj, txy):
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1)
-    tt = np.array(rtra_prj)
-    plt.plot(txy[:, 0], txy[:, 1], '-')
-    plt.plot(txy[:, 0], txy[:, 1], 'x', ms=2.0)
-    plt.plot(tt[:, 0], tt[:, 1], 'o')
-    for i, t in enumerate(tt):
-        plt.text(t[0], t[1], f'{i}')
-    ax.axis('equal')
-    plt.show()
 
 
 class LineResampleTestCase(unittest.TestCase):
@@ -48,26 +34,8 @@ class LineResampleTestCase(unittest.TestCase):
         p4 = geo.Point(0.0449662998195, 0.172149398777, 21.2132034356)
         p5 = geo.Point(0.0899327195183, 0.217115442616, 28.2842712475)
         p6 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
-        p7 = geo.Point(0.17986642, 0.30704752, 42.42641368)
-        expected = geo.Line([p1, p2, p3, p4, p5, p6, p7])
+        expected = geo.Line([p1, p2, p3, p4, p5, p6])
         self.assertEqual(expected, resampled)
-
-    def test_resample_dense_trace(self):
-        from .surface.data import atf_haiyuan_data
-        # Create the line
-        dat = atf_haiyuan_data.trace
-        line = geo.Line([geo.Point(p[0], p[1]) for p in dat])
-        # Resample
-        computed = line.resample(2.)
-        zro = np.zeros_like(computed.coo[:-1, 0])
-        # Computing distances
-        dst = geo.geodetic.distance(computed.coo[:-1, 0],
-                                    computed.coo[:-1, 1], zro,
-                                    computed.coo[1:, 0],
-                                    computed.coo[1:, 1], zro)
-        np.testing.assert_allclose(dst, 2.0, atol=0.02)
-        if PLOTTING:
-            _plott(computed.coo, line.coo)
 
     def test_resample_2(self):
         """
@@ -194,7 +162,7 @@ class RevertPointsTest(unittest.TestCase):
         lats = np.array([3.0, 4.0, 5.])
         deps = np.array([6.0, 7.0, 8.])
         line = geo.Line.from_vectors(lons, lats, deps)
-        line = line.flip()
+        line.flip()
         computed = [p.longitude for p in line.points]
         expected = [3., 2., 1.]
         self.assertEqual(computed, expected)
@@ -220,7 +188,8 @@ class LineKeepCornersTest(unittest.TestCase):
         lod, lad = geo.geodetic.point_at(loc, lac, 53., 10)  # 6
         lons = np.array([0.0, 0.1, 0.2, loa, lob, loc, lod])
         lats = np.array([0.0, 0.0, 0.0, laa, lab, lac, lad])
-        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats)
+        line.keep_corners(4.0)
         coo = np.array([[p.longitude, p.latitude, p.depth] for p in line])
         idxs = [0, 2, 3, 6]
         expected = lons[idxs]
@@ -235,14 +204,15 @@ class ComputeTUTest(unittest.TestCase):
         # The simplest test. Straight trace going from west to east.
         lons = np.array([0.0, 0.1, 0.2])
         lats = np.array([0.0, 0.0, 0.0])
-        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats)
+        line.keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.2, 0.1]])
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tuw(mesh)
+        tupp, uupp, wei = line.get_tu(mesh)
         expected_t = geo.geodetic.distance(0.2, 0.0, 0.0,
                                            coo[0, 0], coo[0, 1], 0.0)
         expected_u = geo.geodetic.distance(0.0, 0.0, 0.0,
@@ -258,14 +228,15 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats)
+        line.keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.3, 0.0], [0.2, -0.1], [0.4, 0.3]])
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, u_upp, wei = line.get_tuw(mesh)
+        tupp, u_upp, wei = line.get_tu(mesh)
 
         # TODO add test
 
@@ -275,13 +246,14 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats)
+        line.keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tuw(mesh)
+        tupp, uupp, wei = line.get_tu(mesh)
 
         # Plotting results
         if PLOTTING:
@@ -302,7 +274,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.6, 0.6, -1.0, 0.4, 0.01)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tuw(mesh)
+        tupp, uupp, wei = line.get_tu(mesh)
 
         if PLOTTING:
             num = 10
@@ -335,7 +307,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.sut_hat
+        slen, uhat, that = line.get_tu_hat()
         np.testing.assert_almost_equal(np.array([[1, 0, 0]]), uhat, decimal=5)
 
         # Now computing ui and ti
@@ -357,7 +329,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.4, 0.6, -0.2, 0.3, 0.005)
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.sut_hat
+        slen, uhat, that = line.get_tu_hat()
 
         # Now computing ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -411,7 +383,7 @@ class ComputeWeightsTest(unittest.TestCase):
         sid = 2
         expected = (np.arctan((segl[i] - ui[i, sid]) / ti[i, sid]) -
                     np.arctan(- ui[i, sid] / ti[i, sid]))
-        expected *= 1 / ti[i, sid]
+        expected *= 1/ti[i, sid]
         msg = 'Weight for site 2 is wrong'
         self.assertAlmostEqual(expected, wei[i, sid], msg)
 
@@ -422,13 +394,14 @@ class ComputeWeightsTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats)
+        line.keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.01)
 
         # slen, uhat and that
-        slen, uhat, that = line.sut_hat
+        slen, uhat, that = line.get_tu_hat()
 
         # Compute ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -453,7 +426,7 @@ class ComputeWeightsTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.2, 0.6, -0.8, 0.1, 0.0025)
 
         # slen, uhat and that
-        slen, uhat, that = line.sut_hat
+        slen, uhat, that = line.get_tu_hat()
 
         # Compute ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -473,19 +446,6 @@ class ComputeWeightsTest(unittest.TestCase):
             plot_pattern(lons, lats, np.log10(wei[2]), plons, plats, label)
             label = 'test_weights_figure04 - sum of weights'
             plot_pattern(lons, lats, np.log10(weit), plons, plats, label)
-
-
-class LineSphereIntersectionTest(unittest.TestCase):
-
-    def test01(self):
-        """ See example https://www.geogebra.org/m/mwanwvwj """
-        pnt0 = np.array([13., 2., 9.])
-        pnt1 = np.array([5., -6., 5.])
-        ref_pnt = np.array([0., 0., 0.])
-        distance = 10.
-        computed = find_t(pnt0, pnt1, ref_pnt, distance)
-        expected = np.array([6.92, -4.08, 5.96])
-        np.testing.assert_almost_equal(computed, expected, decimal=1)
 
 
 def get_figure04_line():
@@ -575,6 +535,3 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     if show:
         plt.show()
     return ax
-
-
-

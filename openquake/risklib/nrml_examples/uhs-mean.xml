@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <uniformHazardSpectra statistics="mean" investigationTime="50.0" poE="0.1">
+        <periods>0.0 0.025 0.1 0.2</periods>
+
+        <uhs>
+            <gml:Point>
+                <gml:pos>0.0 0.0</gml:pos>
+            </gml:Point>
+            <IMLs>0.3 0.5 0.2 0.1</IMLs>
+        </uhs>
+        <uhs>
+            <gml:Point>
+                <gml:pos>0.0 1.0</gml:pos>
+            </gml:Point>
+            <IMLs>0.3 0.5 0.2 0.1</IMLs>
+        </uhs>
+    </uniformHazardSpectra>
+</nrml>

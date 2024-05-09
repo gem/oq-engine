@@ -131,7 +131,10 @@ class PhungEtAl2020Asc(GMPE):
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
-    def __init__(self, region='glb', aftershocks=False, d_dpp=0):
+    def __init__(self, region='glb', aftershocks=False, d_dpp=0, **kwargs):
+        super().__init__(region=region, aftershocks=aftershocks, d_dpp=d_dpp,
+                         **kwargs)
+
         # region options:
         # 'glb', 'tw', 'ca', 'jp' (global, Taiwan, California, Japan)
         self.region = region
@@ -335,7 +338,9 @@ class PhungEtAl2020SInter(GMPE):
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
-    def __init__(self, region='jptw'):
+    def __init__(self, region='jptw', **kwargs):
+        super().__init__(region=region, **kwargs)
+
         # region options:
         # 'jptw', 'tw' (Japan/Taiwan joined, Taiwan)
         self.region = region

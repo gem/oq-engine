@@ -215,17 +215,17 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     """
     For the "core" NGA East set the table is provided in the code in a
     subdirectory fixed to the path of the present file. The GMPE table option
-    is therefore no longer needed if a GSIM alias is used. 
+    is therefore no longer needed
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    gmpe_table = ""
     PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
     kind = "usgs"
 
-    def __init__(self, gmpe_table="",  sigma_model="COLLAPSED",
-                 epistemic_site=True):
-        self.sigma_model = sigma_model
-        self.epistemic_site = epistemic_site
+    def __init__(self, **kwargs):
+        self.sigma_model = kwargs.get("sigma_model", "COLLAPSED")
+        self.epistemic_site = kwargs.get("epistemic_site", True)
         if self.sigma_model not in ("EPRI", "PANEL", "COLLAPSED"):
             raise ValueError("USGS CEUS Sigma Model %s not supported"
                              % self.sigma_model)
@@ -233,7 +233,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # In the case of the collapsed model only the total standard
             # deviation can be defined
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-        super().__init__(gmpe_table)
+        super().__init__(**kwargs)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

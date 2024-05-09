@@ -107,7 +107,8 @@ def simpleGeom(utype, node, filename):
     usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
                      ~node.dip)
     coords = split_coords_2d(~node.LineString.posList)
-    return coords, usd, lsd, dip, spacing
+    trace = geo.Line([geo.Point(*p) for p in coords])
+    return trace, usd, lsd, dip, spacing
 
 
 @parse_uncertainty.add('complexFaultGeometryAbsolute')
@@ -116,62 +117,48 @@ def complexGeom(utype, node, filename):
         node = node.complexFaultGeometry
     _validate_complex_fault_geometry(utype, node, filename)
     spacing = node["spacing"]
-    all_coords = []
+    edges = []
     for edge_node in node.nodes:
-        all_coords.append(split_coords_3d(~edge_node.LineString.posList))
-    return all_coords, spacing
-
-
-def to_surface(pairs):
-    surfaces = []
-    for i, (tag, extra) in enumerate(pairs):
-        if tag == 'simpleFaultGeometry':
-            coords, usd, lsd, dip, spacing = extra
-            trace = geo.Line([geo.Point(*p) for p in coords])
-            surfaces.append(geo.SimpleFaultSurface.from_fault_data(
-                trace, usd, lsd, dip, spacing))
-        elif tag == 'complexFaultGeometry':
-            all_coords, spacing = extra
-            edges = [geo.Line([geo.Point(*p) for p in coords])
-                     for coords in all_coords]
-            surfaces.append(geo.ComplexFaultSurface.from_fault_data(
-                edges, spacing))
-        elif tag == 'planarSurface':
-            tl, tr, br, bl = extra
-            surface = geo.PlanarSurface.from_corner_points(
-                geo.Point(*tl), geo.Point(*tr), geo.Point(*br), geo.Point(*bl))
-            surface.idx = f'{i}'
-            surfaces.append(surface)
-
-    if len(surfaces) > 1:
-        return geo.MultiSurface(surfaces)
-    else:
-        return surfaces[0]
+        coords = split_coords_3d(~edge_node.LineString.posList)
+        edges.append(geo.Line([geo.Point(*p) for p in coords]))
+    return edges, spacing
 
 
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
 def charGeom(utype, node, filename):
-    pairs = []  # (tag, extra)
-    for geom_node in node.surface:
+    surfaces = []
+    for i, geom_node in enumerate(node.surface):
         if "simpleFaultGeometry" in geom_node.tag:
             _validate_simple_fault_geometry(utype, geom_node, filename)
-            extra = parse_uncertainty(
+            trace, usd, lsd, dip, spacing = parse_uncertainty(
                 'simpleFaultGeometryAbsolute', geom_node, filename)
+            surfaces.append(geo.SimpleFaultSurface.from_fault_data(
+                trace, usd, lsd, dip, spacing))
         elif "complexFaultGeometry" in geom_node.tag:
             _validate_complex_fault_geometry(utype, geom_node, filename)
-            extra = parse_uncertainty(
+            edges, spacing = parse_uncertainty(
                 'complexFaultGeometryAbsolute', geom_node, filename)
+            surfaces.append(geo.ComplexFaultSurface.from_fault_data(
+                edges, spacing))
         elif "planarSurface" in geom_node.tag:
             _validate_planar_fault_geometry(utype, geom_node, filename)
-            extra = []
+            nodes = []
             for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-                nd = getattr(geom_node, key)
-                extra.append((nd["lon"], nd["lat"], nd["depth"]))
+                nodes.append(geo.Point(getattr(geom_node, key)["lon"],
+                                       getattr(geom_node, key)["lat"],
+                                       getattr(geom_node, key)["depth"]))
+            top_left, top_right, bottom_right, bottom_left = tuple(nodes)
+            surface = geo.PlanarSurface.from_corner_points(
+                top_left, top_right, bottom_right, bottom_left)
+            surface.suid = f'{i}'
+            surfaces.append(surface)
         else:
             raise LogicTreeError(
                 geom_node, filename, "Surface geometry type not recognised")
-        pairs.append((geom_node.tag.split('}')[1], extra))
-    return pairs
+    if len(surfaces) > 1:
+        return geo.MultiSurface(surfaces)
+    else:
+        return surfaces[0]
 
 
 # validations
@@ -247,8 +234,7 @@ def _simple_fault_dip_absolute(bset, source, value):
 
 @apply_uncertainty.add('simpleFaultGeometryAbsolute')
 def _simple_fault_geom_absolute(utype, source, value):
-    coords, usd, lsd, dip, spacing = value
-    trace = geo.Line([geo.Point(*p) for p in coords])
+    trace, usd, lsd, dip, spacing = value
     source.modify(
         'set_geometry',
         dict(fault_trace=trace, upper_seismogenic_depth=usd,
@@ -257,14 +243,13 @@ def _simple_fault_geom_absolute(utype, source, value):
 
 @apply_uncertainty.add('complexFaultGeometryAbsolute')
 def _complex_fault_geom_absolute(utype, source, value):
-    all_coords, spacing = value
-    edges = [geo.Line([geo.Point(*p) for p in coords]) for coords in all_coords]
+    edges, spacing = value
     source.modify('set_geometry', dict(edges=edges, spacing=spacing))
 
 
 @apply_uncertainty.add('characteristicFaultGeometryAbsolute')
 def _char_fault_geom_absolute(utype, source, value):
-    source.modify('set_geometry', dict(surface=to_surface(value)))
+    source.modify('set_geometry', dict(surface=value))
 
 
 @apply_uncertainty.add('abGRAbsolute')
@@ -289,11 +274,6 @@ def _maxmagGR_relative(utype, source, value):
     source.mfd.modify('increment_max_mag', dict(value=value))
 
 
-@apply_uncertainty.add('maxMagGRRelativeNoMoBalance')
-def _maxmagGRnoMoBalance_relative(utype, source, value):
-    source.mfd.modify('increment_max_mag_no_mo_balance', dict(value=value))
-
-
 @apply_uncertainty.add('maxMagGRAbsolute')
 def _maxmagGR_absolute(utype, source, value):
     source.mfd.modify('set_max_mag', dict(value=value))
@@ -304,6 +284,7 @@ def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
+
 
 @apply_uncertainty.add('truncatedGRFromSlipAbsolute')
 def _trucMFDFromSlip_absolute(utype, source, value):

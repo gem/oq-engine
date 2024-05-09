@@ -89,7 +89,7 @@ class RateGrid(object):
         Discretisation step (km) of area sources
     """
 
-    def __init__(self, limits, sources, area_discretisation=10.0):
+    def __init__(self, limits, sources, area_discretisation=10.):
         """
         Instantiate class with grid configurations
         :param list limits:
@@ -106,22 +106,14 @@ class RateGrid(object):
         self.ny = len(self.ylim)
         self.nz = len(self.zlim)
         self.source_model = sources
-        self.rates = np.zeros(
-            [self.nx - 1, self.ny - 1, self.nz - 1], dtype=float
-        )
+        self.rates = np.zeros([self.nx - 1, self.ny - 1, self.nz - 1],
+                              dtype=float)
         self.area_discretisation = area_discretisation
 
     @classmethod
-    def from_model_files(
-        cls,
-        limits,
-        input_model,
-        investigation_time=1.0,
-        simple_mesh_spacing=1.0,
-        complex_mesh_spacing=5.0,
-        mfd_width=0.1,
-        area_discretisation=10.0,
-    ):
+    def from_model_files(cls, limits, input_model, investigation_time=1.0,
+                         simple_mesh_spacing=1.0, complex_mesh_spacing=5.0,
+                         mfd_width=0.1, area_discretisation=10.0):
         """
         Reads the hazard model from a file
 
@@ -141,13 +133,11 @@ class RateGrid(object):
         :param float area_discretisation:
             Spacing of discretisation of area source (km)
         """
-        converter = SourceConverter(
-            investigation_time,
-            simple_mesh_spacing,
-            complex_mesh_spacing,
-            mfd_width,
-            area_discretisation,
-        )
+        converter = SourceConverter(investigation_time,
+                                    simple_mesh_spacing,
+                                    complex_mesh_spacing,
+                                    mfd_width,
+                                    area_discretisation)
         sources = []
         for grp in nrml.to_python(input_model, converter):
             sources.extend(grp.sources)
@@ -168,10 +158,11 @@ class RateGrid(object):
         """
         nsrcs = self.number_sources()
         for iloc, source in enumerate(self.source_model):
-            print(
-                "Source Number %s of %s, Name = %s, Typology = %s"
-                % (iloc + 1, nsrcs, source.name, source.__class__.__name__)
-            )
+            print("Source Number %s of %s, Name = %s, Typology = %s" % (
+                iloc + 1,
+                nsrcs,
+                source.name,
+                source.__class__.__name__))
             if isinstance(source, CharacteristicFaultSource):
                 self._get_fault_rates(source, mmin, mmax)
             elif isinstance(source, ComplexFaultSource):
@@ -198,16 +189,14 @@ class RateGrid(object):
             xloc - Location of longitude cell
             yloc - Location of latitude cell
         """
-        if (location.longitude < self.xlim[0]) or (
-            location.longitude > self.xlim[-1]
-        ):
+        if (location.longitude < self.xlim[0]) or\
+                (location.longitude > self.xlim[-1]):
             return None, None
-        xloc = int(((location.longitude - self.xlim[0]) / self.xspc) + 1e-7)
-        if (location.latitude < self.ylim[0]) or (
-            location.latitude > self.ylim[-1]
-        ):
+        xloc = int(((location.longitude - self.xlim[0]) / self.xspc) + 1E-7)
+        if (location.latitude < self.ylim[0]) or\
+                (location.latitude > self.ylim[-1]):
             return None, None
-        yloc = int(((location.latitude - self.ylim[0]) / self.yspc) + 1e-7)
+        yloc = int(((location.latitude - self.ylim[0]) / self.yspc) + 1E-7)
         return xloc, yloc
 
     def _get_point_rates(self, source, mmin, mmax=np.inf):
@@ -236,9 +225,8 @@ class RateGrid(object):
             if (zloc < 0) or (zloc >= (self.nz - 1)):
                 continue
             else:
-                self.rates[xloc, yloc, zloc] += (
-                    float(hypo_depth[0]) * annual_rate
-                )
+                self.rates[xloc, yloc, zloc] += float(hypo_depth[0]) * \
+                    annual_rate
 
     def _get_area_rates(self, source, mmin, mmax=np.inf):
         """
@@ -266,19 +254,15 @@ class RateGrid(object):
             valid_rupt = (rupt.mag >= mmin) and (rupt.mag < mmax)
             if not valid_rupt:
                 continue
-            grd = np.column_stack(
-                [
-                    rupt.surface.mesh.lons.flatten(),
-                    rupt.surface.mesh.lats.flatten(),
-                    rupt.surface.mesh.depths.flatten(),
-                ]
-            )
+            grd = np.column_stack([rupt.surface.mesh.lons.flatten(),
+                                   rupt.surface.mesh.lats.flatten(),
+                                   rupt.surface.mesh.depths.flatten()])
             npts = np.shape(grd)[0]
-            counter = np.histogramdd(
-                grd, bins=[self.xlim, self.ylim, self.zlim]
-            )[0]
+            counter = np.histogramdd(grd,
+                                     bins=[self.xlim, self.ylim, self.zlim]
+                                     )[0]
             point_rate = rupt.occurrence_rate / float(npts)
-            self.rates += point_rate * counter
+            self.rates += (point_rate * counter)
 
 
 class RatePolygon(RateGrid):
@@ -299,7 +283,7 @@ class RatePolygon(RateGrid):
         Discretisation spacing (km) of the area source
     """
 
-    def __init__(self, limits, sources, area_discretisation=10.0):
+    def __init__(self, limits, sources, area_discretisation=10.):
         """
         Instantiate class with grid configurations
         :param dict limits:
@@ -333,17 +317,16 @@ class RatePolygon(RateGrid):
         if not in_poly:
             return
         else:
-            for mag, rate in source.get_annual_occurrence_rates():
+            for (mag, rate) in source.get_annual_occurrence_rates():
                 if (mag < mmin) or (mag > mmax):
                     return
                 else:
-                    for prob, depth in source.hypocenter_distribution.data:
-                        if (depth < self.upper_depth) or (
-                            depth > self.lower_depth
-                        ):
+                    for (prob, depth) in source.hypocenter_distribution.data:
+                        if (depth < self.upper_depth) or\
+                                (depth > self.lower_depth):
                             continue
                         else:
-                            self.rates += prob * rate
+                            self.rates += (prob * rate)
 
     def _get_fault_rates(self, source, mmin, mmax=np.inf):
         """
@@ -360,17 +343,14 @@ class RatePolygon(RateGrid):
                 continue
             depths = rup.surface.mesh.depths.flatten()
             # Generate simple mesh from surface
-            rupt_mesh = Mesh(
-                rup.surface.mesh.lons.flatten(),
-                rup.surface.mesh.lats.flatten(),
-                depths,
-            )
+            rupt_mesh = Mesh(rup.surface.mesh.lons.flatten(),
+                             rup.surface.mesh.lats.flatten(),
+                             depths)
             # Mesh points in polygon
             in_poly = self.limits.intersects(rupt_mesh)
-            in_depth = np.logical_and(
-                depths >= self.upper_depth, depths <= self.lower_depth
-            )
+            in_depth = np.logical_and(depths >= self.upper_depth,
+                                      depths <= self.lower_depth)
             idx = np.logical_and(in_poly, in_depth)
             if np.any(idx):
                 node_rate = rup.occurrence_rate / float(len(depths))
-                self.rates += node_rate * np.sum(idx)
+                self.rates += (node_rate * np.sum(idx))

@@ -56,12 +56,12 @@ def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
     :param treaty_types: treaty types
     """
     key = fields[0]
-    [indices] = np.where(np.isnan(dframe.deductible.to_numpy()))
+    [indices] = np.where(dframe.deductible.to_numpy() == '')
     if len(indices) > 0:
         raise InvalidFile(
             '%s (rows %s): empty deductible values were found' % (
                 policyfname, [idx + 2 for idx in indices]))
-    [indices] = np.where(np.isnan(dframe.liability.to_numpy()))
+    [indices] = np.where(dframe.liability.to_numpy() == '')
     if len(indices) > 0:
         raise InvalidFile(
             '%s (rows %s): empty liability values were found' % (
@@ -112,12 +112,6 @@ def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
         raise InvalidFile(
             '%s (row %d): a negative deductible was found' % (
                 policyfname, indices[0] + 2))
-    check_treaties(fields, dframe, policyidx, fname, policyfname,
-                   treaties, treaty_types)
-
-
-def check_treaties(fields, dframe, policyidx, fname, policyfname,
-                   treaties, treaty_types):
     prop_treaties = []
     for treaty, treaty_type in zip(treaties, treaty_types):
         if treaty_type == 'prop':
@@ -148,7 +142,6 @@ def check_treaties(fields, dframe, policyidx, fname, policyfname,
                 ' It must be >= 0 and <= 1' % (
                     policyfname, i+2, np.round(treaty_sum, 5)))
     # replace policy names with policy indices starting from 1
-    key = fields[0]
     dframe[key] = [policyidx[pol] for pol in dframe[key]]
     for no, field in enumerate(fields):
         if field not in dframe.columns:
@@ -241,7 +234,8 @@ def parse(fname, policy_idx):
         treaty['limit'].append(limit)
         treaty_linenos.append(node.lineno)
     policyfname = os.path.join(os.path.dirname(fname), ~rmodel.policies)
-    df = pd.read_csv(policyfname).rename(columns=fieldmap)
+    df = pd.read_csv(policyfname, keep_default_na=False).rename(
+        columns=fieldmap)
     df.columns = df.columns.str.strip()
     all_policies = df.policy.to_numpy()  # ex ['A', 'B']
     exp_policies = np.array(list(policy_idx))  # ex ['?', 'B', 'A']

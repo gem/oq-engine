@@ -30,7 +30,7 @@ import scipy.spatial.distance as dst
 def get_xyz_from_ll(projected, reference):
     """
     This method computes the x, y and z coordinates of a set of points
-    provided a reference point.
+    provided a reference point
 
     :param projected:
         :class:`~openquake.hazardlib.geo.point.Point` object
@@ -38,7 +38,11 @@ def get_xyz_from_ll(projected, reference):
     :param reference:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the coordinates of the reference point.
-    :returns: a 3D vector
+
+    :returns:
+            x
+            y
+            z
     """
 
     azims = geod.azimuth(reference.longitude, reference.latitude,
@@ -48,9 +52,9 @@ def get_xyz_from_ll(projected, reference):
                                    reference.latitude,
                                    projected.longitude,
                                    projected.latitude)
-    return np.array([dists * math.sin(math.radians(azims)),
-                     dists * math.cos(math.radians(azims)),
-                     depths])
+    return (dists * math.sin(math.radians(azims)),
+            dists * math.cos(math.radians(azims)),
+            depths)
 
 
 def get_plane_equation(p0, p1, p2, reference):
@@ -391,16 +395,20 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
         go_next_patch, flag indicates if the calculation goes on the next
         fault patch. 1: yes, 0: no.
     """
+
     # Find the intersection point Pd, by checking if the PdPh share the
     # same vector with PpPh,  and PpPh >= PdPh
     # Transform to xyz coordinate
+
     node0_xyz = get_xyz_from_ll(node0, reference)
     node1_xyz = get_xyz_from_ll(node1, reference)
     node2_xyz = get_xyz_from_ll(node2, reference)
     node3_xyz = get_xyz_from_ll(node3, reference)
     hypocenter_xyz = get_xyz_from_ll(hypocenter, reference)
     hypocenter_xyz = np.array(hypocenter_xyz).flatten()
+
     pp_xyz = pp
+
     e = []
 
     # Loop each segments on the patch to find Pd
@@ -425,9 +433,9 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
                                 node3_xyz[1]])) + buf
         n_seg = 0
         exit_flag = False
-        for seg_s, seg_e in zip(segment_s, segment_e):
-            seg_s = seg_s.flatten()
-            seg_e = seg_e.flatten()
+        for (seg_s, seg_e) in zip(segment_s, segment_e):
+            seg_s = np.array(seg_s).flatten()
+            seg_e = np.array(seg_e).flatten()
             p_intersect, vector1, vector2, vector3, vector4 = _intersection(
                 seg_s, seg_e, pp_xyz, hypocenter_xyz)
 
@@ -439,8 +447,8 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
             # have are the same.
             if (np.allclose(vector1.flatten(), vector2,
                             atol=atol, rtol=0.)):
-                if (np.allclose(vector3.flatten(), vector4, atol=atol,
-                                rtol=0.)):
+                if ((np.allclose(vector3.flatten(), vector4, atol=atol,
+                                 rtol=0.))):
 
                     # Check if ppph >= pdph.
                     if (ppph >= pdph):

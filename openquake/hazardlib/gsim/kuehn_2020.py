@@ -37,7 +37,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
 import numpy as np
 import os
 import h5py
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import interp1d
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
@@ -531,64 +531,41 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
         sigma_mu for the scenarios (numpy.ndarray)
     """
     if not model:
-        return np.zeros_like(mag)
-
-    # Get the correct sigma_mu model
-    is_SA = imt.string not in "PGA PGV"
-    sigma_mu_model = model["SA"] if is_SA else model[imt.string]
-
-    model_m = model["M"]
-    model_r = model["R"]
-
-    # Extend the sigma_mu_model as needed
-    # Prevents having to deal with values
-    # outside the model range manually
-    if np.any(mag > model["M"][-1]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model, sigma_mu_model[-1, :][np.newaxis, :]), axis=0)
-        model_m = np.concatenate((model_m, [mag.max()]), axis=0)
-    if np.any(mag < model["M"][0]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model[0, :][np.newaxis, :], sigma_mu_model), axis=0)
-        model_m = np.concatenate(([mag.min()], model_m), axis=0)
-    if np.any(rrup > model["R"][-1]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model, sigma_mu_model[:, -1][:, np.newaxis]), axis=1)
-        model_r = np.concatenate((model_r, [rrup.max()]), axis=0)
-    if np.any(rrup < model["R"][0]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model[:, 0][:, np.newaxis], sigma_mu_model), axis=1)
-        model_r = np.concatenate(([rrup.min()], model_r), axis=0)
-
+        return 0.0
     if imt.string in "PGA PGV":
-        # Linear interpolation
-        interp = RegularGridInterpolator(
-            (model_m, model_r), sigma_mu_model, bounds_error=True,)
-        sigma_mu = interp(np.stack((mag, rrup), axis=1))
+        # PGA and PGV are 2D arrays of dimension [nmags, ndists]
+        sigma_mu = model[imt.string]
+        if mag <= model["M"][0]:
+            sigma_mu_m = sigma_mu[0, :]
+        elif mag >= model["M"][-1]:
+            sigma_mu_m = sigma_mu[-1, :]
+        else:
+            intpl1 = interp1d(model["M"], sigma_mu, axis=0)
+            sigma_mu_m = intpl1(mag)
+        # Linear interpolation with distance
+        intpl2 = interp1d(model["R"], sigma_mu_m, bounds_error=False,
+                          fill_value=(sigma_mu_m[0], sigma_mu_m[-1]))
+        return intpl2(rrup)
+    # In the case of SA the array is of dimension [nmags, ndists, nperiods]
+    # Get values for given magnitude
+    if mag <= model["M"][0]:
+        sigma_mu_m = model["SA"][0, :, :]
+    elif mag >= model["M"][-1]:
+        sigma_mu_m = model["SA"][-1, :, :]
     else:
-        model_t = model["periods"]
-
-        # Extend for extreme periods as needed
-        if np.any(imt.period > model["periods"][-1]):
-            sigma_mu_model = np.concatenate(
-                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
-                axis=2)
-            model_t = np.concatenate((model_t, [imt.period.max()]), axis=0)
-        if np.any(imt.period < model["periods"][0]):
-            sigma_mu_model = np.concatenate(
-                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
-                axis=2)
-            model_t = np.concatenate(([imt.period.min()], model_t), axis=0)
-
-        # Linear interpolation
-        interp = RegularGridInterpolator(
-            (model_m, model_r, np.log(model_t)), sigma_mu_model,
-            bounds_error=True,)
-        sigma_mu = interp(
-            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)),
-                     axis=1))
-
-    return sigma_mu
+        intpl1 = interp1d(model["M"], model["SA"], axis=0)
+        sigma_mu_m = intpl1(mag)
+    # Get values for period - N.B. ln T, linear sigma mu interpolation
+    if imt.period <= model["periods"][0]:
+        sigma_mu_t = sigma_mu_m[:, 0]
+    elif imt.period >= model["periods"][-1]:
+        sigma_mu_t = sigma_mu_m[:, -1]
+    else:
+        intpl2 = interp1d(np.log(model["periods"]), sigma_mu_m, axis=1)
+        sigma_mu_t = intpl2(np.log(imt.period))
+    intpl3 = interp1d(model["R"], sigma_mu_t, bounds_error=False,
+                      fill_value=(sigma_mu_t[0], sigma_mu_t[-1]))
+    return intpl3(rrup)
 
 
 class KuehnEtAl2020SInter(GMPE):
@@ -670,7 +647,8 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0):
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(**kwargs)
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -692,7 +670,7 @@ class KuehnEtAl2020SInter(GMPE):
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
-            self.gmpe_table = None  # enable split by mag
+            self.gmpe_table = True  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
@@ -748,8 +726,9 @@ class KuehnEtAl2020SInter(GMPE):
                                           ctx, pga1100)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
+                [mag] = np.unique(np.round(ctx.mag, 2))
                 sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
+                    self.sigma_mu_model, imt, mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
             tau[m] = C["tau"]
@@ -757,8 +736,7 @@ class KuehnEtAl2020SInter(GMPE):
             sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
     # Coefficients in external file - supplied directly by the author
-    with open(KUEHN_COEFFS) as f:
-        COEFFS = CoeffsTable(sa_damping=5, table=f.read())
+    COEFFS = CoeffsTable(sa_damping=5, table=open(KUEHN_COEFFS).read())
 
 
 class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
@@ -776,8 +754,10 @@ class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
     - different depth centering and break point
     - different default magnitude break point
     """
+
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
 
 # For the aliases use the verbose form of the region name
 REGION_ALIASES = {

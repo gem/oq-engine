@@ -22,7 +22,6 @@
 """
 import time
 import numpy
-import shapely
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor
@@ -45,11 +44,10 @@ MAX_RUPTURES = 2000
 
 
 # this is really fast
-def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
+def get_rup_array(ebruptures, srcfilter=nofilter):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
-    out the ruptures far away from every site. If a shapely polygon is passed
-    in model_geom, ruptures outside the polygon are discarded.
+    out the ruptures far away from every site
     """
     if not BaseRupture._code:
         BaseRupture.init()  # initialize rupture codes
@@ -93,21 +91,14 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
             continue
 
         # apply distance filtering
-        nsites = 0
-        if srcfilter.sitecol is not None:
-            nsites = len(srcfilter.close_sids(rec, rup.tectonic_region_type))
-            if nsites == 0:
-                continue
-
-        # apply model filtering if any (used in `oq mosaic sample_rups`)
-        if model_geom and not shapely.contains_xy(
-                model_geom, hypo[0], hypo[1]):
+        if srcfilter.sitecol is not None and len(
+                srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
-               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0)
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
@@ -222,7 +213,6 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     :yields:
         dictionaries with keys rup_array, source_data
     """
-    model_geom = getattr(cmaker, 'model_geom', None)
     srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     source_data = AccumDict(accum=[])
@@ -248,7 +238,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
 
         # Yield ruptures
         er = sum(src.num_ruptures for src in sources)
-        dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter, model_geom),
+        dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
                    source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
     else:
@@ -260,10 +250,9 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             eff_ruptures += nr
             if len(eb_ruptures) > MAX_RUPTURES:
                 # yield partial result to avoid running out of memory
-                yield AccumDict(dict(
-                    rup_array=get_rup_array(
-                        eb_ruptures, srcfilter, model_geom),
-                    source_data={}, eff_ruptures={}))
+                yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures,
+                                                             srcfilter),
+                                     source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
             t0 = time.time()
@@ -277,7 +266,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
         t0 = time.time()
-        rup_array = get_rup_array(eb_ruptures, srcfilter, model_geom)
+        rup_array = get_rup_array(eb_ruptures, srcfilter)
         dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,

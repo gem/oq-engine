@@ -218,11 +218,6 @@ class Monitor(object):
         self.task_no = -1  # overridden in parallel
 
     @property
-    def calc_dir(self):
-        """Calculation directory $HOME/oqdata/calc_XXX"""
-        return self.filename.rsplit('.', 1)[0]
-
-    @property
     def mem(self):
         """Mean memory allocation"""
         return self._mem / (self.counts or 1)
@@ -374,10 +369,8 @@ class Monitor(object):
                 return dset[slc]
             return pickle.loads(dset[()])
 
-    def iter(self, genobj, atstop=lambda: None):
+    def iter(self, genobj):
         """
-        :param genobj: a generator object
-        :param atstop: optional thunk to call at StopIteration
         :yields: the elements of the generator object
         """
         while True:
@@ -386,7 +379,6 @@ class Monitor(object):
                 with self:
                     obj = next(genobj)
             except StopIteration:
-                atstop()
                 return
             else:
                 yield obj
@@ -450,11 +442,10 @@ else:
         return lambda func: func
 
 
-# used when reading _rates/sid
+# used when reading _poes/sid
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",
-          "int64[:, :](int32[:])",
           "int64[:, :](int64[:])"])
 def idx_start_stop(integers):
     # given an array of integers returns an array int64 of shape (n, 3)

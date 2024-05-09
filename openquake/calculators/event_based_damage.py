@@ -29,7 +29,6 @@ from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
     get_loss_builder, fix_dtypes, PostRiskCalculator)
-from openquake.calculators.export import DISPLAY_NAME
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -66,106 +65,42 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
-            crmodel, ci, R, Dc, dmgcsq, dddict):
-    oq = crmodel.oqparam
-    loss_types = oq.loss_types
-    eids = gmf_df.eid.to_numpy()
-    if R > 1:
-        rlzs = allrlzs[eids]
-    if sec_sims or not oq.float_dmg_dist:
-        rng = scientific.MultiEventRNG(
-            oq.master_seed, numpy.unique(eids))
-    for prob_field, num_sims in sec_sims:
-        probs = gmf_df[prob_field].to_numpy()   # LiqProb
-        if not oq.float_dmg_dist:
-            dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
-    for taxo, adf in asset_df.groupby('taxonomy'):
-        out = crmodel.get_output(adf, gmf_df)
-        aids = adf.index.to_numpy()
-        assets = adf.to_records()
-        if oq.float_dmg_dist:
-            number = assets['value-number']
-        else:
-            number = U32(assets['value-number'])
-        for lti, lt in enumerate(loss_types):
-            fractions = out[lt]
-            Asid, E, D = fractions.shape
-            assert len(eids) == E
-            d3 = numpy.zeros((Asid, E, Dc), F32)
-            if oq.float_dmg_dist:
-                d3[:, :, :D] = fractions
-                for a in range(Asid):
-                    d3[a] *= number[a]
-            else:
-                # this is a performance distaster; for instance
-                # the Messina test in oq-risk-tests becomes 12x
-                # slower even if it has only 25_736 assets
-                d3[:, :, :D] = rng.discrete_dmg_dist(
-                    eids, fractions, number)
-
-            # secondary perils and consequences
-            for a, asset in enumerate(assets):
-                if sec_sims:
-                    for d in range(1, D):
-                        # doing the mean on the secondary simulations
-                        if oq.float_dmg_dist:
-                            d3[a, :, d] *= probs
-                        else:
-                            d3[a, :, d] *= dprobs
-
-                csq = crmodel.compute_csq(
-                    asset, d3[a, :, :D] / number[a], lt,
-                    oq.time_event)
-                for name, values in csq.items():
-                    d3[a, :, ci[name]] = values
-            if R == 1:
-                dmgcsq[aids, 0, lti] += d3.sum(axis=1)
-            else:
-                for e, rlz in enumerate(rlzs):
-                    dmgcsq[aids, rlz, lti] += d3[:, e]
-            tot = d3.sum(axis=0)  # sum on the assets
-            for e, eid in enumerate(eids):
-                dddict[eid, oq.K][lti] += tot[e]
-                if oq.K:
-                    for kids in aggids:
-                        for a, aid in enumerate(aids):
-                            dddict[eid, kids[aid]][lti] += d3[a, e]
-
-
-def event_based_damage(df, oq, dstore, monitor):
+def event_based_damage(df, oqparam, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param oq: parameters coming from the job.ini
+    :param oqparam: parameters coming from the job.ini
     :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
+    K = oqparam.K
     with monitor('reading gmf_data'):
-        if oq.parentdir:
+        if oqparam.parentdir:
             dstore = datastore.read(
-                oq.hdf5path, parentdir=oq.parentdir)
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
         else:
             dstore.open('r')
         assetcol = dstore['assetcol']
-        if oq.K:
+        if K:
             # TODO: move this in the controller!
             aggids, _ = assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
+                oqparam.aggregate_by, oqparam.max_aggregations)
         else:
             aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
-    sec_sims = oq.secondary_simulations.items()
+    master_seed = oqparam.master_seed
+    sec_sims = oqparam.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
+    dmgcsq = zero_dmgcsq(len(assetcol), oqparam.R, crmodel)
     A, R, L, Dc = dmgcsq.shape
+    D = len(crmodel.damage_states)
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
-    else:
-        allrlzs = [0]
-    assert len(oq.loss_types) == L
+    loss_types = crmodel.oqparam.loss_types
+    assert len(loss_types) == L
+    float_dmg_dist = oqparam.float_dmg_dist  # True by default
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -173,9 +108,67 @@ def event_based_damage(df, oq, dstore, monitor):
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
                 continue
-            _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
-                    crmodel, ci, R, Dc, dmgcsq, dddict)
-    return _dframe(dddict, ci, oq.loss_types), dmgcsq
+            eids = gmf_df.eid.to_numpy()
+            if R > 1:
+                rlzs = allrlzs[eids]
+            if sec_sims or not float_dmg_dist:
+                rng = scientific.MultiEventRNG(
+                    master_seed, numpy.unique(eids))
+            for prob_field, num_sims in sec_sims:
+                probs = gmf_df[prob_field].to_numpy()   # LiqProb
+                if not float_dmg_dist:
+                    dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
+            for taxo, adf in asset_df.groupby('taxonomy'):
+                out = crmodel.get_output(adf, gmf_df)
+                aids = adf.index.to_numpy()
+                assets = adf.to_records()
+                if float_dmg_dist:
+                    number = assets['value-number']
+                else:
+                    number = U32(assets['value-number'])
+                for lti, lt in enumerate(loss_types):
+                    fractions = out[lt]
+                    Asid, E, D = fractions.shape
+                    assert len(eids) == E
+                    d3 = numpy.zeros((Asid, E, Dc), F32)
+                    if float_dmg_dist:
+                        d3[:, :, :D] = fractions
+                        for a in range(Asid):
+                            d3[a] *= number[a]
+                    else:
+                        # this is a performance distaster; for instance
+                        # the Messina test in oq-risk-tests becomes 12x
+                        # slower even if it has only 25_736 assets
+                        d3[:, :, :D] = rng.discrete_dmg_dist(
+                            eids, fractions, number)
+
+                    # secondary perils and consequences
+                    for a, asset in enumerate(assets):
+                        if sec_sims:
+                            for d in range(1, D):
+                                # doing the mean on the secondary simulations
+                                if float_dmg_dist:
+                                    d3[a, :, d] *= probs
+                                else:
+                                    d3[a, :, d] *= dprobs
+
+                        csq = crmodel.compute_csq(
+                            asset, d3[a, :, :D] / number[a], lt)
+                        for name, values in csq.items():
+                            d3[a, :, ci[name]] = values
+                    if R == 1:
+                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
+                    else:
+                        for e, rlz in enumerate(rlzs):
+                            dmgcsq[aids, rlz, lti] += d3[:, e]
+                    tot = d3.sum(axis=0)  # sum on the assets
+                    for e, eid in enumerate(eids):
+                        dddict[eid, K][lti] += tot[e]
+                        if K:
+                            for kids in aggids:
+                                for a, aid in enumerate(aids):
+                                    dddict[eid, kids[aid]][lti] += d3[a, e]
+    return _dframe(dddict, ci, loss_types), dmgcsq
 
 
 def _dframe(adic, ci, loss_types):
@@ -224,10 +217,9 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.hazard_calculation_id:
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
-            self.builder = get_loss_builder(self.datastore, oq)  # check
+            self.builder = get_loss_builder(self.datastore)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore,
-                                      self._monitor)
+        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
@@ -293,76 +285,9 @@ class DamageCalculator(EventBasedRiskCalculator):
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
 
-        if (hasattr(oq, 'infrastructure_connectivity_analysis')
-                and oq.infrastructure_connectivity_analysis):
-
-            logging.info('Running connectivity analysis')
-            conn_results = connectivity.analysis(self.datastore)
-            self._store_connectivity_analysis_results(conn_results)
-
-    def _store_connectivity_analysis_results(self, conn_results):
-        avg_dict = {}
-        if 'avg_connectivity_loss_eff' in conn_results:
-            avg_dict['efl'] = [conn_results['avg_connectivity_loss_eff']]
-        if 'avg_connectivity_loss_pcl' in conn_results:
-            avg_dict['pcl'] = [conn_results['avg_connectivity_loss_pcl']]
-        if 'avg_connectivity_loss_wcl' in conn_results:
-            avg_dict['wcl'] = [conn_results['avg_connectivity_loss_wcl']]
-        if 'avg_connectivity_loss_ccl' in conn_results:
-            avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
-        if avg_dict:
-            avg_df = pandas.DataFrame(data=avg_dict)
-            self.datastore.create_df(
-                'infra-avg_loss', avg_df,
-                display_name=DISPLAY_NAME['infra-avg_loss'])
-            logging.info(
-                'Stored avarage connectivity loss (infra-avg_loss)')
-        if 'event_connectivity_loss_eff' in conn_results:
-            self.datastore.create_df(
-                'infra-event_efl',
-                conn_results['event_connectivity_loss_eff'],
-                display_name=DISPLAY_NAME['infra-event_efl'])
-            logging.info(
-                'Stored efficiency loss by event (infra-event_efl)')
-        if 'event_connectivity_loss_pcl' in conn_results:
-            self.datastore.create_df(
-                'infra-event_pcl',
-                conn_results['event_connectivity_loss_pcl'],
-                display_name=DISPLAY_NAME['infra-event_pcl'])
-            logging.info(
-                'Stored partial connectivity loss by event (infra-event_pcl)')
-        if 'event_connectivity_loss_wcl' in conn_results:
-            self.datastore.create_df(
-                'infra-event_wcl',
-                conn_results['event_connectivity_loss_wcl'],
-                display_name=DISPLAY_NAME['infra-event_wcl'])
-            logging.info(
-                'Stored weighted connectivity loss by event (infra-event_wcl)')
-        if 'event_connectivity_loss_ccl' in conn_results:
-            self.datastore.create_df(
-                'infra-event_ccl',
-                conn_results['event_connectivity_loss_ccl'],
-                display_name=DISPLAY_NAME['infra-event_ccl'])
-            logging.info(
-                'Stored complete connectivity loss by event (infra-event_ccl)')
-        if 'taz_cl' in conn_results:
-            self.datastore.create_df(
-                'infra-taz_cl',
-                conn_results['taz_cl'],
-                display_name=DISPLAY_NAME['infra-taz_cl'])
-            logging.info(
-                'Stored connectivity loss of TAZ nodes (taz_cl)')
-        if 'dem_cl' in conn_results:
-            self.datastore.create_df(
-                'infra-dem_cl',
-                conn_results['dem_cl'],
-                display_name=DISPLAY_NAME['infra-dem_cl'])
-            logging.info(
-                'Stored connectivity loss of demand nodes (dem_cl)')
-        if 'node_el' in conn_results:
-            self.datastore.create_df(
-                'infra-node_el',
-                conn_results['node_el'],
-                display_name=DISPLAY_NAME['infra-node_el'])
-            logging.info(
-                'Stored efficiency loss of nodes (node_el)')
+        fields = self.assetcol.array.dtype.names
+        if 'supply_or_demand' in fields:
+            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
+            self.datastore.create_df('functional_demand_nodes', demand_nodes)
+            logging.info('Stored functional_demand_nodes')
+            logging.info('Average connectivity loss: %.4f', avg_conn_loss)

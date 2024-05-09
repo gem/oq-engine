@@ -208,7 +208,8 @@ class BozorgniaCampbell2016(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    def __init__(self, SJ=0, sgn=0):
+    def __init__(self, SJ=0, sgn=0, **kwargs):
+        super().__init__(**kwargs)
         self.SJ = SJ
         self.sgn = sgn
 

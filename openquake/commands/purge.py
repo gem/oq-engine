@@ -28,7 +28,7 @@ def purge_one(calc_id, user, force):
     """
     Remove one calculation ID from the database and remove its datastore
     """
-    logs.dbcmd('del_calc', calc_id, user, False, force)
+    logs.dbcmd('del_calc', calc_id, user, force)
     f1 = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     f2 = os.path.join(datadir, 'calc_%s_tmp.hdf5' % calc_id)
     for f in [f1, f2]:
@@ -93,7 +93,7 @@ def main(what, force=False):
     calc_id = int(what)
     if calc_id < 0:
         try:
-            calc_id = logs.get_calc_ids(datadir)[calc_id]
+            calc_id = datastore.get_calc_ids(datadir)[calc_id]
         except IndexError:
             print('Calculation %d not found' % calc_id)
             return

@@ -100,7 +100,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
             for col in cols:
                 if col in csqs:  # normally csqs = ['loss']
                     aval = scientific.get_agg_value(
-                        col, agg_values, agg_id, loss_type, oq.time_event)
+                        col, agg_values, agg_id, loss_type)
                     out[col + '_value'].extend(df[col])
                     out[col + '_ratio'].extend(df[col] / aval)
                 else:  # in ScenarioDamageTestCase:test_case_12
@@ -174,11 +174,7 @@ def export_aggrisk_stats(ekey, dstore):
 def _get_data(dstore, dskey, loss_types, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
-        try:
-            weights = dstore['weights'][()]
-        except KeyError:
-            # there is single realization, like in classical_risk/case_2
-            weights = [1.]
+        weights = dstore['weights'][()]
         if dskey in set(dstore):  # precomputed
             rlzs_or_stats = list(stats)
             statfuncs = [stats[ros] for ros in stats]
@@ -260,7 +256,7 @@ def export_event_loss_table(ekey, dstore):
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=oq.risk_investigation_time
                        or oq.investigation_time))
-    events = dstore.read_df('events', 'id')
+    events = dstore['events'][()]
     K = dstore.get_attr('risk_by_event', 'K', 0)
     try:
         lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
@@ -273,14 +269,11 @@ def export_event_loss_table(ekey, dstore):
         del df['variance']
     ren = {'dmg_%d' % i: lstate for i, lstate in enumerate(lstates, 1)}
     df.rename(columns=ren, inplace=True)
-    df = df.join(events, on='event_id')
-    if 'ses_id' in df.columns:
-        del df['ses_id']
-    del df['rlz_id']
-    if 'scenario' in oq.calculation_mode:
-        del df['rup_id']
-        if 'year' in df.columns:
-            del df['year']
+    evs = events[df.event_id.to_numpy()]
+    if 'scenario' not in oq.calculation_mode:
+        df['rup_id'] = evs['rup_id']
+    if 'scenario' not in oq.calculation_mode and 'year' in evs.dtype.names:
+        df['year'] = evs['year']
     df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
@@ -557,12 +550,6 @@ def export_agg_risk_csv(ekey, dstore):
     return [fname]
 
 
-# used in export_aggcurves_csv
-def _fix(col):
-    if col.endswith(('_aep', '_oep')):
-        return col[:-4]  # strip suffix
-    return col
-
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -580,7 +567,7 @@ def export_aggcurves_csv(ekey, dstore):
     K = len(dstore['agg_values']) - 1
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
-                    if _fix(col) in scientific.KNOWN_CONSEQUENCES]
+                    if col in scientific.KNOWN_CONSEQUENCES]
     dest = dstore.export_path('%s-{}.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -592,9 +579,8 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    cols = [col for col in dataf.columns if
-            _fix(col) not in consequences and
-            col not in ('agg_id', 'rlz_id', 'loss_id')]
+    cols = [col for col in dataf.columns if col not in consequences
+            and col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
     manyrlzs = not oq.collect_rlzs and R > 1
     fnames = []
@@ -609,22 +595,20 @@ def export_aggcurves_csv(ekey, dstore):
             if loss_id == scientific.LOSSID['claim']:  # temporary hack
                 continue
             if loss_id == scientific.LOSSID['occupants']:
-                lt = LT[loss_id] + '_' + oq.time_event
+                lt =  LT[loss_id] + '_' + oq.time_event
             else:
-                lt = LT[loss_id]
+                lt =  LT[loss_id]
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
                     edic[tagname].extend([tag] * len(d))
             for col in cols:
-                if not col.endswith(('_aep', '_oep')):
-                    edic[col].extend(d[col])
+                edic[col].extend(d[col])
             edic['loss_type'].extend([LT[loss_id]] * len(d))
             if manyrlzs:
                 edic['rlz_id'].extend([rlz_id] * len(d))
             for cons in consequences:
                 edic[cons + '_value'].extend(d[cons])
-                aval = scientific.get_agg_value(
-                    _fix(cons), agg_values, agg_id, lt, oq.time_event)
+                aval = scientific.get_agg_value(cons, agg_values, agg_id, lt)
                 edic[cons + '_ratio'].extend(d[cons] / aval)
         fname = dest.format('-'.join(tagnames))
         writer.save(pandas.DataFrame(edic), fname, comment=md)
@@ -655,19 +639,3 @@ def export_reinsurance(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
     return [dest]
-
-
-@export.add(('infra-avg_loss', 'csv'),
-            ('infra-node_el', 'csv'),
-            ('infra-taz_cl', 'csv'),
-            ('infra-dem_cl', 'csv'),
-            ('infra-event_ccl', 'csv'),
-            ('infra-event_pcl', 'csv'),
-            ('infra-event_wcl', 'csv'),
-            ('infra-event_efl', 'csv'))
-def export_node_el(ekey, dstore):
-    dest = dstore.export_path('%s.%s' % ekey)
-    df = dstore.read_df(ekey[0])
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(df, dest, comment=dstore.metadata)
-    return writer.getsaved()

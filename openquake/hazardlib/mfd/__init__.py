@@ -25,15 +25,13 @@ implementations:
 :class:`openquake.hazardlib.mfd.youngs_coppersmith_1985.YoungsCoppersmith1985MFD`.
 """
 import toml
-from openquake.hazardlib.mfd.evenly_discretized import (  # noqa
-    EvenlyDiscretizedMFD
-)
-from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD  # noqa
-from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (  # noqa
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
     YoungsCoppersmith1985MFD)
-from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD  # noqa
-from openquake.hazardlib.mfd.tapered_gr_mfd import TaperedGRMFD  # noqa
-from openquake.hazardlib.mfd import multi_mfd  # noqa
+from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
+from openquake.hazardlib.mfd.tapered_gr_mfd import TaperedGRMFD
+from openquake.hazardlib.mfd import multi_mfd
 
 
 def from_toml(string, bin_width):

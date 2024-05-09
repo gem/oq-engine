@@ -39,8 +39,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
-RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)'
-                             % LTYPE_REGEX)
+RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
@@ -397,7 +396,7 @@ class RiskModel(object):
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type]
         return vf(asset_df, gmf_df, col, rndgen,
-                  self.minimum_asset_loss.get(loss_type, 0.))
+                  self.minimum_asset_loss[loss_type])
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -508,15 +507,13 @@ class CompositeRiskModel(collections.abc.Mapping):
     """
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam, tmap=None):
+    def read(cls, dstore, oqparam):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
         risklist = RiskFuncList()
-        if hasattr(dstore, 'get_attr'):
-            # missing only in Aristotle mode, where dstore is an hdf5.File
-            risklist.limit_states = dstore.get_attr('crm', 'limit_states')
+        risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
         for rf_json in df.riskfunc:
             rf = hdf5.json_to_obj(rf_json)
@@ -534,7 +531,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = tmap or ast.literal_eval(dstore.get_attr('crm', 'tmap'))
+        crm.tmap = ast.literal_eval(dstore.get_attr('crm', 'tmap'))
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -565,15 +562,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                     consequence, tagname = byname.split('_by_')
                     # the taxonomy map is a dictionary loss_type ->
                     # [[(risk_taxon, weight]),...] for each asset taxonomy
-                    for pairs in tmap[loss_type].values():
+                    for pairs in tmap[loss_type][1:]:  # strip [('?', 1)]
                         for risk_t, weight in pairs:
-                            if risk_t != '?':
-                                try:
-                                    coeffs[risk_t][loss_type]
-                                except KeyError as err:
-                                    raise InvalidFile(
-                                        'Missing %s in\n%s' % (err, cfs))
-
+                            try:
+                                coeffs[risk_t][loss_type]
+                            except KeyError as err:
+                                raise InvalidFile(
+                                    'Missing %s in\n%s' % (err, cfs))
     def check_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
@@ -599,10 +594,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 rms = []
                 if self.tmap:
-                    for pairs in self.tmap[lt].values():
+                    for pairs in self.tmap[lt][1:]:
                         for risk_id, weight in pairs:
-                            if risk_id != '?':
-                                rms.append(self._riskmodels[risk_id])
+                            rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
@@ -617,7 +611,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, asset, fractions, loss_type, time_event):
+    def compute_csq(self, asset, fractions, loss_type):
         """
         :param asset: asset record
         :param fractions: array of probabilies of shape (E, D)
@@ -635,8 +629,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # for instance risk_t = 'W_LFM-DUM_H6'
                     cs = coeffs[risk_t][loss_type]
                     csq[consequence] += scientific.consequence(
-                        consequence, cs, asset, fractions[:, 1:], loss_type,
-                        time_event) * weight
+                        consequence, cs, asset, fractions[:, 1:], loss_type
+                    ) * weight
         return csq
 
     def init(self):
@@ -717,9 +711,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):  # vulnerability
                     iml[rf.imt].append(rf.imls[0])
-        if oq.aristotle:
-            pass  # don't set minimum_intensity
-        elif sum(oq.minimum_intensity.values()) == 0 and iml:
+        if sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
 
     def eid_dmg_dt(self):

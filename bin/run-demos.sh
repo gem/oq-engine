@@ -1,5 +1,4 @@
 #!/bin/bash
-export OQ_DATABASE=localhost
 set -e
 if [ ! -d "$1" ]; then
     echo "Please specify the location of the folder containing the demos. Aborting." >&2
@@ -12,14 +11,14 @@ oq info cfg
 # run demos with job_hazard.ini and job_risk.ini
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
-       oq engine --run $demo_dir/job_hazard.ini --exports csv,hdf5
+       oq engine --run $demo_dir/job_hazard.ini --exports npz -p pointsource_distance=0
        oq engine --run $demo_dir/job_risk.ini --hc -1
    fi
 done
 
 # run the other demos
 for ini in $(find $1 -name job.ini | sort); do
-    oq engine --run $ini --exports csv,hdf5
+    oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0 -r
 done
 
 oq export hcurves 16  # export with GMPETables
@@ -48,7 +47,7 @@ echo "Testing ShakeMap calculator"
 oq run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini
 
 # run ebrisk
-oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv,hdf5
+oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
 # oq plot avg_gmf?imt=PGA  # hangs on the macOS Action
 oq show aggrisk
 MPLBACKEND=Agg oq plot rupture_info?min_mag=6

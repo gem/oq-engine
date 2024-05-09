@@ -57,12 +57,13 @@ def positiveint(flag):
 config = DotDict()  # global configuration
 d = os.path.dirname
 base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
-home = os.path.expanduser('~/openquake.cfg')
-if sys.prefix != sys.base_prefix:
-    # installation in the venv identified by sys.prefix
-    config.paths = [base, os.path.join(sys.prefix, 'openquake.cfg'), home]
-else:  # other kind of installation
-    config.paths = [base, '/etc/openquake/openquake.cfg', home]
+# 'virtualenv' still uses 'real_prefix' also on Python 3
+# removal of this breaks Travis
+if hasattr(sys, 'real_prefix') or (
+        hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+    config.paths = [base, os.path.join(sys.prefix, 'openquake.cfg')]
+else:  # installation from sources or packages, search in $HOME or /etc
+    config.paths = [base, '/etc/openquake/openquake.cfg', '~/openquake.cfg']
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
 if cfgfile:
     config.paths.append(cfgfile)
@@ -117,6 +118,8 @@ if config.directory.custom_tmp:
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+if config.dbserver.host == 'local':
+    os.environ['OQ_DATABASE'] = 'local'
 
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':
@@ -126,5 +129,5 @@ else:  # linux
     install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
     config.multi_user = install_user in ('root', 'openquake')
 
-# the version is managed by the universal installer
-__version__ = '3.20.0'
+# the version is managed by packager.sh with a sed
+__version__ = '3.17.1'

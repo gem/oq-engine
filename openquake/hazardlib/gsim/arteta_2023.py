@@ -136,7 +136,8 @@ class ArtetaEtAl2023_Vs30(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method <.base.GMPE.compute>`
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
 
@@ -268,7 +269,8 @@ class ArtetaEtAl2023(ArtetaEtAl2023_Vs30):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method <.base.GMPE.compute>`
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
 

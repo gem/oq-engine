@@ -58,11 +58,9 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     Model implemented by laurentiu.danciu@gmail.com
     """
 
-    # Supported standard deviation type originally only total, but reported as a
-    # combination of mean and magnitude/distance single station sigma.
-    # updated to return inter and intra event component of st.dev (June 2023)                                                                         
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    # Supported standard deviation type is only total, but reported as a
+    # combination of mean and magnitude/distance single station sigma
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
