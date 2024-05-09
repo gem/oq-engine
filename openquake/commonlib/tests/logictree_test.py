@@ -1335,6 +1335,14 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
         self.assertEqual(self.point_source.mfd.b_val, 0.9 - 0.2)
 
+    def test_relative_mmax_no_balance(self):
+        a_val = self.point_source.mfd.a_val
+        uncertainties = [('maxMagGRRelativeNoMoBalance', +1)]
+        for utype, uvalue in uncertainties:
+            lt.apply_uncertainty(utype, self.point_source, uvalue)
+        self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
+        self.assertEqual(self.point_source.mfd.a_val, a_val)
+
     def test_absolute_uncertainty(self):
         uncertainties = [('maxMagGRAbsolute', 9),
                          ('abGRAbsolute', (-1, 0.2))]
