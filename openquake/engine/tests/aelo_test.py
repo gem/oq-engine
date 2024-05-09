@@ -35,17 +35,19 @@ aac = numpy.testing.assert_allclose
 
 
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
-EXPECTED = [[0.318162, 0.298462, 0.300892, 0.337696, 0.37742 , 0.418067,
-       0.530159, 0.566886, 0.614046, 0.649657, 0.684717, 0.674682,
-       0.561784, 0.456605, 0.342291, 0.249879, 0.185148, 0.16969 ,
-       0.176063, 0.16694 , 0.129153], [0.850262, 0.83579 , 0.894015, 1.08242 ,
-       1.30823 , 1.45425 , 1.68647 , 1.75218 , 1.74271 , 1.70589 , 1.59723 , 1.4563,
-       1.13155 , 0.906292, 0.664615, 0.487139, 0.374017, 0.351059, 0.371102, 0.345053, 0.264844]]
-ASCE07 =['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.75218',
-       '0.96048', '0.93027', '1.50000', 'Very High', '0.60000', '0.90629',
-       '0.94621', '0.43816', '0.60000', 'Very High']
-ASCE41 = [1.5    , 1.39946, 1.39946, 1.     , 0.81921, 0.81921, 0.6    ,
-       0.6    , 0.723  , 0.4    , 0.4    , 0.40944]
+EXPECTED = [[0.318162, 0.298462, 0.300892, 0.337696, 0.37742, 0.418067,
+            0.530159, 0.566886, 0.614046, 0.649657, 0.684717, 0.674682,
+            0.561784, 0.456605, 0.342291, 0.249879, 0.185148, 0.16969,
+            0.176063, 0.16694, 0.129153], [0.850262, 0.83579, 0.894015,
+            1.08242, 1.30823, 1.45425, 1.68647, 1.75218, 1.74271, 1.70589,
+            1.59723, 1.4563, 1.13155, 0.906292, 0.664615, 0.487139, 0.374017,
+            0.351059, 0.371102, 0.345053, 0.264844]]
+ASCE07 = ['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.75218',
+          '0.96048', '0.93027', '1.50000', 'Very High', '0.60000', '0.90629',
+          '0.94621', '0.43816', '0.60000', 'Very High']
+ASCE41 = [1.5, 1.39946, 1.39946, 1., 0.81921, 0.81921, 0.6,
+          0.6, 0.723, 0.4, 0.4, 0.40944]
+
 
 def test_PAC():
     # test with same name sources and semicolon convention, full enum
@@ -53,10 +55,13 @@ def test_PAC():
     with logs.init(job_ini) as log:
         sites = log.get_oqparam().sites
         # site (160, -9.5), first level of PGA
-        lon = sites[1][0]; lat = sites[1][1]
-        lon2 = sites[0][0]; lat2 = sites[0][1]
+        lon = sites[1][0]
+        lat = sites[1][1]
+        lon2 = sites[0][0]
+        lat2 = sites[0][1]
         site = 'PAC first'
-        dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2), site=site, vs30='760')
+        dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2), site=site,
+                   vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
@@ -64,22 +69,25 @@ def test_PAC():
         r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.03272511, 0.040312827, 0.83427], atol=1E-6)
+            aac([r0, r1, a7['PGA']], [0.03272511, 0.040312827, 0.83427],
+                atol=1E-6)
 
         # site (160, -9.4), first level of PGA
         r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.032720476, 0.040302116, 0.7959], atol=1E-6)
-    
+            aac([r0, r1, a7['PGA']], [0.032720476, 0.040302116, 0.7959],
+                atol=1E-6)
+
             # check that there are not warnings about results
             warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
             assert sum([len(w) for w in warnings]) == 0
-    
+
             # check all plots created
             assert 'png/governing_mce.png' not in calc.datastore
             assert 'png/hcurves.png' not in calc.datastore
             assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
 
 def test_KOR():
     # another test with same name sources, no semicolon convention, sampling
@@ -107,7 +115,6 @@ def test_CCA():
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
-            breakpoint()
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
         if rtgmpy:
@@ -133,10 +140,10 @@ def test_CCA():
         # test no close ruptures
         dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
         with logs.init(job_ini) as log:
-                log.params.update(get_params_from(
+            log.params.update(get_params_from(
                     dic, MOSAIC_DIR, exclude=['USA']))
-                calc = base.calculators(log.get_oqparam(), log.calc_id)
-                calc.run()
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
         # check that the warning announces no close ruptures
         warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
         assert len(warnings) == 1
