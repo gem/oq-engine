@@ -20,6 +20,7 @@ import os
 import getpass
 import logging
 import itertools
+from unittest.mock import Mock
 import numpy
 import pandas
 
@@ -146,8 +147,11 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
                      num_events=None):
     """
     :param dstore: datastore for an event based risk calculation
-    :returns: a LossCurvesMapsBuilder instance
+    :returns: a LossCurvesMapsBuilder instance or a Mock object for scenarios
     """
+    if oq.investigation_time is None:
+        return Mock(eff_time=0, pla_factor=None)
+
     weights = dstore['weights'][()]
     haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
         len(weights) if oq.collect_rlzs else 1)
@@ -329,10 +333,11 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     logging.info("Performing %d aggregations", len(agg_ids))
 
     loss_cols = [col for col in columns if not col.startswith('dmg_')]
-    if oq.investigation_time and loss_cols:  # build aggcurves
+    if loss_cols:
         builder = get_loss_builder(dstore, oq, num_events=num_events)
     else:
-        builder = None
+        builder = Mock(eff_time=0, pla_factor=None)
+
     # double loop to avoid running out of memory
     for agg_id in agg_ids:
 
@@ -361,15 +366,17 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
                 # infer the number of buildings in nodamage state
                 ndamaged = sum(df[col].sum() for col in dmgs)
                 acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
-            # eperiods = builder.eff_time / numpy.arange(ne, 0., -1)
             for col in columns:
-                agg = df[col].sum()
+                sorted_losses = df[col].sort_values().to_numpy()
+                fixed_losses, _ = scientific.fix_losses(
+                    sorted_losses, ne, builder.eff_time, builder.pla_factor)
+                agg = fixed_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
     dstore.create_df('aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
-    if builder:
+    if oq.investigation_time and loss_cols:
         store_aggcurves(
             oq, agg_ids, rbe_df, builder, loss_cols, events, num_events, dstore)
     return aggrisk
@@ -402,8 +409,7 @@ def build_reinsurance(dstore, oq, num_events):
         rbe_df['rlz_id'] = rlz_id[rbe_df.index.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    if oq.investigation_time:
-        builder = get_loss_builder(dstore, oq, num_events=num_events)
+    builder = get_loss_builder(dstore, oq, num_events=num_events)
     avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
     for rlzid, df in rbe_df.groupby('rlz_id'):

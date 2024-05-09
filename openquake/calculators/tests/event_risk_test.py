@@ -132,6 +132,12 @@ class EventRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-pla.csv', tot, delta=1e-5)
         self.assertEqualFiles('expected/aggrisk-id-pla.csv', byid, delta=1e-5)
 
+    def test_case_6_bis(self):
+        self.run_calc(case_6.__file__, 'job2.ini')
+        # check aggrisk-stats
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk_bis.csv', fname, delta=1e-5)
+
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
         calc0 = self.calc.datastore  # single file event_based_risk

@@ -1447,28 +1447,31 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
-def add_zeros(losses, num_events):
+def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
     """
-    Add zeros on the left if there are less losses than events.
-
-    :param losses: an array of size num_losses
+    :param sorted_losses: a sorted array of size num_losses
     :param num_events: an integer >= num_losses
-    :returns: an array of size num_events
+    :returns: two arrays of size num_events
     """
-    num_losses = len(losses)
+    # add zeros on the left if there are less losses than events.
+    num_losses = len(sorted_losses)
     if num_events > num_losses:
-        newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events - num_losses:num_events] = losses
-        return newlosses
+        losses = numpy.zeros(num_events, sorted_losses.dtype)
+        losses[num_events - num_losses:num_events] = sorted_losses
     elif num_losses == num_events:
-        return losses
+        losses = sorted_losses.copy()
     elif num_events < num_losses:
         raise ValueError('More losses (%d) than events (%d) ??' %
                          (num_losses, num_events))
+    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    if pla_factor:
+        losses *= pla_factor(eperiods)
+    return losses, eperiods
 
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
                      sorting_idxs=None, pla_factor=None):
+    # NB: sorting_idxs is used in test_claim
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1503,16 +1506,13 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         losses = numpy.sort(losses)
     else:
         losses = losses[sorting_idxs]
-    losses = add_zeros(losses, num_events)
-    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    losses, eperiods = fix_losses(losses, num_events, eff_time, pla_factor)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
                 if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, loge = numpy.log(rperiods), numpy.log(eperiods)
-    if pla_factor:
-        losses = pla_factor(eperiods) * losses
     curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
     return curve
