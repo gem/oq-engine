@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel name="Example Source Model Containing a Simple Fault Source">
+        <sourceGroup name="group 1" tectonicRegion="Active Shallow Crust" >
+            <simpleFaultSource id="3a" name="Simple Fault Source" tectonicRegion="Active Shallow Crust" >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            1.0 -0.2 1.4 0.0 1.7 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 30.0 </dip>
+                    <upperSeismoDepth> 5.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 2.0 </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.2" bValue="0.9" maxMag="7.1" minMag="6.5"/>
+                <rake> 90.0 </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
