@@ -21,7 +21,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class Ghasemi2009TestCase(BaseGSIMTestCase):
     GSIM_CLASS = GhasemiEtAl2009
 
-    # Tables created from Ecxel calculation file of the proposed model 
+    # Tables created from Excel calculation file of the proposed model 
 
     def test_all(self):
         self.check('Ghasemi09.csv',
