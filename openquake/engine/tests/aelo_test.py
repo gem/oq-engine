@@ -159,22 +159,23 @@ def test_CCA():
 def test_WAF():
     # test of site with very low hazard
     job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
-    dic = dict(sites='9.5 0.4', site='WAF-site', vs30='760')
+    dic = dict(sites='7.5 9', site='WAF-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(
             dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
-        '''# check that warning indicates very low hazard
+        # check that warning indicates very low hazard
         warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        breakpoint()
         assert len(warnings) == 1
         assert warnings[0].startswith('Very low')
 
         # check no plots created
         assert 'png/governing_mce.png' not in calc.datastore
         assert 'png/hcurves.png' not in calc.datastore
-        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore'''
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
         # test of site with very low hazard, but high enough to compute ASCE
         job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')

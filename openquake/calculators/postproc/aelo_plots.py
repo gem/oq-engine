@@ -229,12 +229,12 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
              linestyle='-')
     ax1.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
-             linewidth=3, linestyle='-')
+             linewidth=1, linestyle='-')
     upperlim = max(max(prob_mce), max(mce), max(det_mce), max(DLL))
     ax1.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
-             linewidth=3, linestyle='-')
+             linewidth=1, linestyle='-')
     ax1.set_ylim([0.01, upperlim + 0.2])
-    ax1.plot(T, mce, 'r', label='Governing MCE', linewidth=3, linestyle=':')
+    ax1.plot(T, mce, 'r', label='Governing MCE', linewidth=4, linestyle=':')
     ax1.grid('both')
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax1.set_xlabel('Period (s)', fontsize=20)
@@ -245,11 +245,11 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax2.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
              linestyle='-')
     ax2.plot(T, prob_mce, 'bX', markersize=8, label='Probabilisitc MCE',
-             linewidth=3, linestyle='-')
+             linewidth=1, linestyle='-')
     ax2.plot(T, det_mce, 'c^', markersize=8, label='Deterministic MCE',
-             linewidth=3, linestyle='-')
+             linewidth=1, linestyle='-')
     plt.ylim([0.01, upperlim + 0.2])
-    ax2.plot(T, mce, 'r', label='Governing MCE', linewidth=3, linestyle=':')
+    ax2.plot(T, mce, 'r', label='Governing MCE', linewidth=4, linestyle=':')
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax2.set_xlabel('Period (s)', fontsize=20)
@@ -262,7 +262,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.03, -upperlim*0.45, message, fontsize='small', color='black',
+    plt.text(0.03, -upperlim*0.2, message, fontsize='small', color='black',
              alpha=0.85)
     if update_dstore:
         bio = io.BytesIO()
