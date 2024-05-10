@@ -95,8 +95,7 @@ Then the data will be stored in `/mnt/largedisk/<username>/oqdata`.
 Help! Is it possible to configure multiple installations of the engine to run independently on the same computer?
 *****************************************************************************************************************
 
-Yes, it is possible, as long as their virtual environments are stored in different directories and the ports used by 
-their dbservers are different.
+Yes, it is possible, as long as their virtual environments are stored in different directories.
 
 When you install the engine using the ``install.py`` script, you may specify the ``--venv`` parameter to choose in which 
 directory the engine virtual environment must be stored. On an existing installation of the engine, you can run the 
@@ -106,13 +105,16 @@ command::
 
 to retrieve the path of its virtual environment.
 
-Another parameter accepted by the ``install.py`` script is ``--dbport``, that specifies the port number used by the 
-engine dbserver. By default, the port is set to 1907 for server installations or 1908 for user installations. The port 
-can be customized through the attribute ``port`` of section ``[dbserver]`` in the configuration file ``openquake.cfg``, 
-placed inside the virtual environment directory, e.g.::
+Another parameter accepted by the ``install.py`` script is
+``--dbport``, that specifies the port number used by the engine
+dbserver. This is only relevant for server installations.  By default,
+the port is set to 1907. The port can be customized through the
+attribute ``port`` of section ``[dbserver]`` in the configuration file
+``openquake.cfg``, placed inside the virtual environment directory,
+e.g.::
 
 	[dbserver]
-        port = 1907
+        port = 1908
 
 ########################################################################
 Can two installations of the engine share the same ``oqdata`` directory?
@@ -220,13 +222,6 @@ closed having a running computation attached to it.
 
 To avoid this error please use ``nohup``, ``screen``, ``tmux`` or ``byobu`` when using ``oq`` via SSH. More information 
 is available on :ref:`Running the OpenQuake engine <unix>`.
-
-##############
-DbServer ports
-##############
-
-The default port for the DbServer (configured via the ``openquake.cfg`` configuration file) is ``1908`` (for a 
-development installation) or ``1907`` (for a package installation).
 
 .. _certificate-verification-on-macOS:
 
