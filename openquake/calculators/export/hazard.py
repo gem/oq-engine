@@ -172,6 +172,50 @@ def get_kkf(ekey):
     return key, kind, fmt
 
 
+def export_aelo_csv(key, dstore):
+    """
+    Export hcurves and uhs in an Excel-friendly format
+    """
+    # in AELO mode there is a single site and a single statistics, the mean
+    assert key in ('hcurves', 'uhs')
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    lon, lat = sitecol.lons[0], sitecol.lats[0]
+    fname = hazard_curve_name(dstore, (key, 'csv'), 'mean')
+    comment = dstore.metadata
+    comment.update(lon=lon, lat=lat, kind='mean',
+                   investigation_time=oq.investigation_time)
+
+    if key == 'hcurves':
+        arr = dstore['hcurves-stats'][0, 0]  # shape (M, L1)
+        M, L1 = arr.shape
+        array = numpy.zeros(M*L1, [('imt', hdf5.vstr), ('iml', float),
+                                   ('poe', float)])
+        for m, imt in enumerate(oq.imtls):
+            for l, iml in enumerate(oq.imtls[imt]):
+                row = array[m*L1 + l]
+                row['imt'] = imt
+                row['iml'] = iml
+                row['poe'] = arr[m, l]
+        writers.write_csv(fname, array, comment=comment)
+
+    elif key == 'uhs':
+        arr = dstore['hmaps-stats'][0, 0]  # shape (M, P)
+        M, P = arr.shape
+        periods = [imt.period for imt in oq.imt_periods()]
+        array = numpy.zeros(M*P, [('poe', float), ('period', float),
+                                  ('iml', float)])
+        for m, period in enumerate(periods):
+            for p, poe in enumerate(oq.poes):
+                row = array[p*M + m]
+                row['poe'] = poe
+                row['period'] = period
+                row['iml'] = arr[m, p]
+        writers.write_csv(fname, array, comment=comment)
+
+    return [fname]
+
+
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
@@ -180,6 +224,9 @@ def export_hcurves_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+        return export_aelo_csv(ekey[0], dstore)
+
     oq = dstore['oqparam']
     info = get_info(dstore)
     R = dstore['full_lt'].get_num_paths()
