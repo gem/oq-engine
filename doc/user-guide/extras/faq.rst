@@ -15,24 +15,24 @@ and/or little support from their IT departments. For them we recommend to buy a 
 which is complex to manage. A server with 256 GB of RAM and 64 real cores is currently powerful enough to run all of the 
 calculations in the GEM global hazard and risk mosaic. If you have larger calculations and IT expertise, for a cluster 
 setup see the :ref:`hardware suggestions <hardware-requirements>` and :ref:`cluster <cluster>` pages.
-
-****************************************************
-Help! I have a multi-node cluster and I'm in trouble
-****************************************************
-
 If you are running the OpenQuake engine on a multi-node cluster you should also have a look at :ref:`FAQ related to cluster 
 deployments <faq-cluster>`.
 
-**************************************
-Help! Should I disable hyperthreading?
-**************************************
+***********************************************************
+Help! Should I disable hyperthreading on my laptop/desktop?
+***********************************************************
 
-Disabling hyperthreading is recommended since it will save memory. Suppose for instance that you have a laptop with a 
-powerful i9 processor and 16 GB of RAM. It seems a lot. In reality it is not. The operating system will consume some 
-memory, the browser will consume a lot of memory, you may have other applications open and you may end up with less than 
-10 GB of available memory. If hyperthreading is enabled the engine will see 10x2 = 20 cores; running parallel computations 
-may easily consume 0.5 GB per core, i.e. 10 GB, so you will run out of memory. With hyperthreading disabled you will still 
-have 5 GB of available RAM.
+Disabling hyperthreading - when possible - is recommended since it
+will save memory. Suppose for instance that you have a laptop with a
+i9 processor with 20 thread and 16 GB of RAM. It seems a lot at the
+time of this writing (early 2022). In reality it is not. The operating
+system will consume some memory, the browser will consume a lot of
+memory, you may have other applications open and you may end up with
+less than 10 GB of available memory. If hyperthreading is enabled the
+engine will see 10x2 = 20 cores; running parallel computations may
+easily consume 0.5 GB per core, i.e. 10 GB, so you will run out of
+memory. With hyperthreading disabled you will still have 5 GB of
+available RAM.
 
 **Note**: on a linux machine you can try disable hyperthreading temporarily with the command ``sudo echo off > 
 /sys/devices/system/cpu/smt/control``: however, this setting will not survive a reboot. Also, on some systems this 
@@ -43,32 +43,53 @@ recommend at least 2 GB per thread.
 Help! My windows server with 32/64 or more cores hangs!
 *******************************************************
 
-Some users reported this issue. It is due to a limitation of Python multiprocessing module on Windows. In all cases we 
-have seen, the problem was solved by disabling hyperthreading. Otherwise you can reduce the number of used cores by 
-setting the parameter ``num_cores`` in the file openquake.cfg as explained below.
+Some users reported this issue. It is due to a limitation of Python
+multiprocessing module on Windows. In all cases we have seen, the
+problem was solved by disabling hyperthreading. Otherwise you can
+reduce the number of used cores by setting the parameter ``num_cores``
+in the file `openquake.cfg` as explained below.
 
 ************************************************************
 Help! I want to limit the number of cores used by the engine
 ************************************************************
 
-This is another way to save memory. If you are on a single machine, the way to do it is to edit the file openquake.cfg 
-and add the lines (if for instance you want to use 8 cores)::
+This is another way to save memory. If you are on a single machine,
+the way to do it is to edit the file `openquake.cfg` and add the lines
+(if for instance you want to use 8 cores)::
 
 	[distribution]
 	num_cores = 8
 
-If you are on a cluster you must edit the section [zworkers] and the parameter ``host_cores``, replacing the ``-1`` with 
-the number of cores to be used on each machine.
+If you are on a cluster you must edit the section [zworkers] and the
+parameter ``host_cores``, replacing the ``-1`` with the number of
+cores to be used on each machine.
 
 *********************************
 Help! I am running out of memory!
 *********************************
 
 If you are on a laptop, the first thing to do is close all memory consuming applications. Remember that running the 
-engine from the command-line is the most memory-efficient way to run calculations (browesers can use significant memory 
+engine from the command-line is the most memory-efficient way to run calculations (browsers can use significant memory 
 from your laptop). You can also limit the number of parallel threads as explained before (i.e. disable hyperthreading, 
 reduce num_cores) or disable parallelism altogether. If you still run out of memory, then you must reduce your 
 calculation or upgrade your system.
+
+*************************************
+Help! I am running out of disk space!
+*************************************
+
+By default the engine stores the calculations in the directory $HOME/oqdata.
+If there is not much space on that partition you may run out of disk space.
+The solution is to change the location where the calculations are stored,
+pointing to an external disk or in general to a partition with a lot of
+space. You can do it temporarily by setting the environment variable
+OQ_DATADIR or permanently by changing the `openquake.cfg` file and
+adding a couple of lines like::
+
+  [directory]
+  shared_dir = /mnt/largedisk
+
+Then the data will be stored in `/mnt/largedisk/<username>/oqdata`.
 
 *****************************************************************************************************************
 Help! Is it possible to configure multiple installations of the engine to run independently on the same computer?
@@ -91,7 +112,7 @@ can be customized through the attribute ``port`` of section ``[dbserver]`` in th
 placed inside the virtual environment directory, e.g.::
 
 	[dbserver]
-	    port = 1907
+        port = 1907
 
 ########################################################################
 Can two installations of the engine share the same ``oqdata`` directory?
@@ -179,7 +200,7 @@ OpenQuake engine version 2.9 (Jeffreys).
 Python scripts that import openquake
 ####################################
 
-On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library 
+If a third party python script (or a Jupyter notebook) needs to import openquake as a library 
 (as an example: ``from openquake.commonlib import readinput``) you must use a virtual environment and install a local 
 copy of the Engine::
 
@@ -187,49 +208,6 @@ copy of the Engine::
 	$ . /path/to/myvenv/bin/activate
 	$ pip3 install openquake.engine
 
-##############################################
-Errors upgrading from an old version on Ubuntu
-##############################################
-
-When upgrading from an OpenQuake engine version **older than 2.9 to a newer one** you may encounter an error on Ubuntu. Using 
-``apt`` to perform the upgrade you may get an error like this::
-
-	Unpacking oq-python3.5 (3.5.3-1ubuntu0~gem03~xenial01) ...
-	dpkg: error processing archive /var/cache/apt/archives/oq-python3.5_3.5.3-1ubuntu0~gem03~xenial01_amd64.deb (--unpack):
-	 trying to overwrite '/opt/openquake/bin/easy_install', which is also in package python-oq-libs 1.3.0~dev1496296871+a6bdffb
-
-This issue can be resolved uninstalling OpenQuake engine first and then making a fresh installation of the latest version::
-
-	$ sudo apt remove python-oq-.*
-	$ sudo rm -Rf /opt/openquake
-	$ sudo apt install python3-oq-engine
-
-##########################
-OpenQuake Hazardlib errors
-##########################
-
-::
-
-	pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
-
-Since OpenQuake engine 2.5, the OpenQuake Hazardlib package has been merged with the OpenQuake engine one.
-
-If you are using git and you have the ``PYTHONPATH`` set you should update ``oq-engine`` and then remove ``oq-hazardlib`` 
-from your filesystem and from the ``PYTHONPATH``, to avoid any possible confusion.
-
-If ``oq-hazardlib`` has been installed via ``pip`` you must uninstall both ``openquake.engine`` and ``openquake.hazardlib`` 
-first, and then reinstall ``openquake.engine``.::
-
-	$ pip uninstall openquake.hazardlib openquake.engine
-	$ pip install openquake.engine
-	# -OR- development installation
-	$ pip install -e /path/to/oq-engine/
-
-If you are using Ubuntu or RedHat packages no extra operations are needed, the package manager will remove the old 
-``python-oq-hazardlib`` package and replace it with a fresh copy of ``python3-oq-engine``.
-
-On Ubuntu make sure to run ``apt dist-upgrade`` instead on ``apt upgrade`` to make a proper upgrade of the OpenQuake 
-packages.
 
 ##########################################################
 'The openquake master lost its controlling terminal' error
@@ -250,35 +228,13 @@ DbServer ports
 The default port for the DbServer (configured via the ``openquake.cfg`` configuration file) is ``1908`` (for a 
 development installation) or ``1907`` (for a package installation).
 
-###############
-Swap partitions
-###############
-
-Having a swap partition active on resources fully dedicated to the OpenQuake engine is discouraged. More info 
-:ref:`here <cluster>`.
-
-################################
-System running out of disk space
-################################
-
-The OpenQuake engine may require lot of disk space for the raw results data (``hdf5`` files stored in ``/home/<user>/oqdata``) 
-and the temporary files used to either generated outputs or load input files via the ``API``. On certain cloud 
-configurations the amount of space allocated to the root fs (``/``) is fairly limited and extra 'data' volumes needs to 
-be attached. To make the Engine use these volumes for ``oqdata`` and the temporary storage you must change the 
-``openquake.cfg`` configuration; assuming ``/mnt/ext_volume`` as the mount point of the extra 'data' volume, it must be 
-changed as follow:
-
-- ``shared_dir`` must be set to ``/mnt/ext_volume``
-- A ``tmp`` dir must be created in ``/mnt/ext_volume``
-- ``custom_tmp`` must be set to ``/mnt/ext_volume/tmp`` (the directory must exist)
-
 .. _certificate-verification-on-macOS:
 
 #################################
 Certificate verification on macOS
 #################################
 
-::
+On macOS you can get the following error::
 
 	Traceback (most recent call last):
 	  File "/Users/openquake/py36/bin/oq", line 11, in <module>
@@ -436,10 +392,16 @@ approach is recommended to the most adventurous people.
 how do I plot/analyze/postprocess the results of a calculation?
 ***************************************************************
 
-The official way to plot the result of a calculation is to use the `QGIS plugin <https://plugins.qgis.org/plugins/svir/>`_. 
-However you may want a kind of plot which is not available in the plugin, or you may want to batch-produce hundreds of 
-plots, or you may want to plot the results of a postprocessing operation. In such cases you need to use the 
-extract API and to write your own plotting/postprocessing code.
+The official way to plot the result of a calculation is to use the `QGIS plugin <https://plugins.qgis.org/plugins/svir/>`_. There is also a command `oq plot` included with the engine distribution with some capabilities, please run
+
+$ oq plot examples
+
+to get the full list of available plots.
+
+However you may want a kind of plot which is not available, or you may
+want to batch-produce hundreds of plots, or you may want to plot the
+results of a postprocessing operation. In such cases you need to use
+the extract API and to write your own plotting/postprocessing code.
 
 .. _faq-risk:
 
