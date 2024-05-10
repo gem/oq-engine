@@ -1,5 +1,16 @@
   [Michele Simionato]
   * Using custom `hcurves` and `uhs` exporters in AELO mode
+
+  [Fatemeh Alishahiha]
+  * Added a new gsim library named `ghasemi_2009` developed for Iran.
+
+  [Marco Pagani]
+  * Added a new epistemic uncertainty for modelling relative uncertainty on
+    MMax
+
+  [Michele Simionato]
+  * Added a check to forbid `individual_rlzs=true` and `collect_rlzs=true`
+  * Fixed a bug in `oq extract "ruptures?rup_id=XXX`
   * Raising an early error if the user forgets to specify a site_model_file
     when needed (i.e. for parameters region and xvf)
 

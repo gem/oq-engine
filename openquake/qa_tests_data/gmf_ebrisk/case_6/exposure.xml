@@ -14,6 +14,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <conversions>
             <costTypes>
                 <costType name="structural" type="per_asset" unit="EUR"/>
+                <costType name="nonstructural" type="per_asset" unit="EUR"/>
             </costTypes>
         </conversions>
         <assets>
@@ -25,6 +26,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="4.9719626E+04"/>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -35,6 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -45,6 +48,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8193900E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -55,6 +59,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8193900E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -65,6 +70,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8360500E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -75,6 +81,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8360500E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -85,6 +92,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8527200E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -95,6 +103,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -105,6 +114,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -115,6 +125,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9360500E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -125,6 +136,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -135,6 +147,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="2.2592523E+04"/>
+                    <cost type="nonstructural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -145,6 +158,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4198490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -155,6 +169,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -165,6 +180,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8360500E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -175,6 +191,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8693900E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="6.8037383E+04"/>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -185,6 +202,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -195,6 +213,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -205,6 +224,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="3.4149533E+04"/>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -215,6 +235,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9527200E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -225,6 +246,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9527200E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="2.5514019E+04"/>
+                    <cost type="nonstructural" value="2.5514019E+04"/>
                 </costs>
             </asset>
             <asset
@@ -235,6 +257,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="3.4149533E+04"/>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -245,6 +268,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4181830E+01"/>
                 <costs>
                     <cost type="structural" value="6.8037383E+04"/>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -255,6 +279,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -265,6 +290,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8360500E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -275,6 +301,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8693900E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -285,6 +312,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="6.8037383E+04"/>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -295,6 +323,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9360500E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="2.5514019E+04"/>
+                    <cost type="nonstructural" value="2.5514019E+04"/>
                 </costs>
             </asset>
             <asset
@@ -305,6 +334,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9527200E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="2.2592523E+04"/>
+                    <cost type="nonstructural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -315,6 +345,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4165160E+01"/>
                 <costs>
                     <cost type="structural" value="4.9719626E+04"/>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -325,6 +356,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -335,6 +367,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -345,6 +378,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8193900E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="6.8037383E+04"/>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -355,6 +389,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8193900E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -365,6 +400,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8860500E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -375,6 +411,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -385,6 +422,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9527200E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -395,6 +433,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4148490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -405,6 +444,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4131830E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -415,6 +455,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8193900E+00" lon="-8.4131830E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -425,6 +466,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8360500E+00" lon="-8.4131830E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -435,6 +477,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8860500E+00" lon="-8.4131830E+01"/>
                 <costs>
                     <cost type="structural" value="4.9719626E+04"/>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -445,6 +488,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4131830E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -454,6 +498,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9027200E+00" lon="-8.4131830E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -464,6 +509,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9527200E+00" lon="-8.4131830E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                     <cost type="structural" value="6.8037383E+04"/>
                 </costs>
             </asset>
@@ -474,6 +520,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9693900E+00" lon="-8.4131830E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                     <cost type="structural" value="4.9719626E+04"/>
                 </costs>
             </asset>
@@ -484,6 +531,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4131830E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                     <cost type="structural" value="4.0485981E+05"/>
                 </costs>
             </asset>
@@ -494,6 +542,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                     <cost type="structural" value="3.4149533E+04"/>
                 </costs>
             </asset>
@@ -504,6 +553,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8193900E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                     <cost type="structural" value="4.0485981E+05"/>
                 </costs>
             </asset>
@@ -514,6 +564,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8193900E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                     <cost type="structural" value="3.7628598E+04"/>
                 </costs>
             </asset>
@@ -524,6 +575,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -534,6 +586,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8527200E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                     <cost type="structural" value="2.6579433E+04"/>
                 </costs>
             </asset>
@@ -544,6 +597,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8527200E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -554,6 +608,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8693900E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -564,6 +619,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8860500E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                     <cost type="structural" value="3.4149533E+04"/>
                 </costs>
             </asset>
@@ -574,6 +630,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9027200E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                     <cost type="structural" value="4.9719626E+04"/>
                 </costs>
             </asset>
@@ -584,6 +641,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9527200E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                     <cost type="structural" value="3.4149533E+04"/>
                 </costs>
             </asset>
@@ -594,6 +652,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9693900E+00" lon="-8.4115160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                     <cost type="structural" value="4.9719626E+04"/>
                 </costs>
             </asset>
@@ -604,7 +663,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4115160E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -614,7 +674,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4115160E+01"/>
                 <costs>
-                    <cost type="structural" value="6.8037383E+04"/>
+                  <cost type="nonstructural" value="6.8037383E+04"/>
+                  <cost type="structural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -624,7 +685,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -634,7 +696,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8527200E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="2.6579433E+04"/>
+                  <cost type="nonstructural" value="2.6579433E+04"/>
+                  <cost type="structural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -644,7 +707,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8693900E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="4.0485981E+05"/>
+                  <cost type="nonstructural" value="4.0485981E+05"/>
+                  <cost type="structural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -654,7 +718,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8860500E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="nonstructural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -664,7 +729,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8860500E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -674,6 +740,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9193900E+00" lon="-8.4098490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                     <cost type="structural" value="3.4149533E+04"/>
                 </costs>
             </asset>
@@ -685,6 +752,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9193900E+00" lon="-8.4098490E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -694,6 +762,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9527200E+00" lon="-8.4098490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                     <cost type="structural" value="3.4149533E+04"/>
                 </costs>
             </asset>
@@ -704,7 +773,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9693900E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -714,7 +784,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="nonstructural" value="2.2592523E+04"/>
+                  <cost type="structural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -724,7 +795,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4098490E+01"/>
                 <costs>
-                    <cost type="structural" value="6.8037383E+04"/>
+                  <cost type="nonstructural" value="6.8037383E+04"/>
+                  <cost type="structural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -734,7 +806,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4081830E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -744,7 +817,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8193900E+00" lon="-8.4081830E+01"/>
                 <costs>
-                    <cost type="structural" value="2.6579433E+04"/>
+                  <cost type="nonstructural" value="2.6579433E+04"/>
+                  <cost type="structural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -754,7 +828,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8860500E+00" lon="-8.4081830E+01"/>
                 <costs>
-                    <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="nonstructural" value="2.2592523E+04"/>
+                  <cost type="structural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -764,7 +839,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9527200E+00" lon="-8.4081830E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -774,7 +850,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9693900E+00" lon="-8.4081830E+01"/>
                 <costs>
-                    <cost type="structural" value="2.6579433E+04"/>
+                  <cost type="nonstructural" value="2.6579433E+04"/>
+                  <cost type="structural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -784,6 +861,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                     <cost type="structural" value="3.4149533E+04"/>
                 </costs>
             </asset>
@@ -794,6 +872,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                     <cost type="structural" value="3.7628598E+04"/>
                 </costs>
             </asset>
@@ -804,6 +883,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8193900E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                     <cost type="structural" value="6.8037383E+04"/>
                 </costs>
             </asset>
@@ -814,7 +894,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4065160E+01"/>
                 <costs>
-                    <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="nonstructural" value="2.2592523E+04"/>
+                  <cost type="structural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -824,7 +905,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4065160E+01"/>
                 <costs>
-                    <cost type="structural" value="1.8605607E+04"/>
+                  <cost type="nonstructural" value="1.8605607E+04"/>
+                  <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -834,6 +916,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8527200E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                     <cost type="structural" value="3.7628598E+04"/>
                 </costs>
             </asset>
@@ -844,6 +927,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9027200E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                     <cost type="structural" value="6.8037383E+04"/>
                 </costs>
             </asset>
@@ -854,6 +938,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9360500E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                     <cost type="structural" value="4.0485981E+05"/>
                 </costs>
             </asset>
@@ -864,6 +949,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4065160E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -874,6 +960,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4048490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                     <cost type="structural" value="4.9719626E+04"/>
                 </costs>
             </asset>
@@ -884,6 +971,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4048490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="2.2592523E+04"/>
                     <cost type="structural" value="2.2592523E+04"/>
                 </costs>
             </asset>
@@ -894,6 +982,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4048490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -904,6 +993,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="2.2592523E+04"/>
                     <cost type="structural" value="2.2592523E+04"/>
                 </costs>
             </asset>
@@ -914,6 +1004,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                     <cost type="structural" value="6.8037383E+04"/>
                 </costs>
             </asset>
@@ -924,6 +1015,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
                 <costs>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                     <cost type="structural" value="1.8605607E+04"/>
                 </costs>
             </asset>
@@ -935,6 +1027,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -945,6 +1038,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="3.4149533E+04"/>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -955,6 +1049,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9193900E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -965,6 +1060,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -975,6 +1071,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="4.9719626E+04"/>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -984,7 +1081,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
                 <costs>
-                    <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -994,7 +1092,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9527200E+00" lon="-8.4048490E+01"/>
                 <costs>
-                    <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1005,6 +1104,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="6.8037383E+04"/>
+                    <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1015,6 +1115,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="2.2592523E+04"/>
+                    <cost type="nonstructural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1025,6 +1126,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1035,6 +1137,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
                 <costs>
                     <cost type="structural" value="4.9719626E+04"/>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1045,6 +1148,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8027200E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="4.9719626E+04"/>
+                    <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1054,7 +1158,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8193900E+00" lon="-8.4031830E+01"/>
                 <costs>
-                    <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1064,7 +1169,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
                 <costs>
-                    <cost type="structural" value="6.8037383E+04"/>
+                  <cost type="structural" value="6.8037383E+04"/>
+                  <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1074,7 +1180,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
                 <costs>
-                    <cost type="structural" value="2.5514019E+04"/>
+                  <cost type="structural" value="2.5514019E+04"/>
+                  <cost type="nonstructural" value="2.5514019E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1084,7 +1191,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
                 <costs>
-                    <cost type="structural" value="3.4149533E+04"/>
+                  <cost type="structural" value="3.4149533E+04"/>
+                  <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1095,6 +1203,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.8860500E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1105,6 +1214,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9027200E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="2.5514019E+04"/>
+                    <cost type="nonstructural" value="2.5514019E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1115,6 +1225,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9193900E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1125,6 +1236,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9360500E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1135,6 +1247,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9360500E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="1.8605607E+04"/>
+                    <cost type="nonstructural" value="1.8605607E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1145,6 +1258,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9527200E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="3.7628598E+04"/>
+                    <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1155,6 +1269,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="2.6579433E+04"/>
+                    <cost type="nonstructural" value="2.6579433E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1165,6 +1280,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9693900E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="3.4149533E+04"/>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1175,6 +1291,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="4.0485981E+05"/>
+                    <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
             <asset
@@ -1185,6 +1302,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
                 <costs>
                     <cost type="structural" value="3.4149533E+04"/>
+                    <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1194,7 +1312,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
                 <costs>
-                    <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1204,7 +1323,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8027200E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="3.4149533E+04"/>
+                  <cost type="structural" value="3.4149533E+04"/>
+                  <cost type="nonstructural" value="3.4149533E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1214,7 +1334,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.8693900E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="4.9719626E+04"/>
+                  <cost type="structural" value="4.9719626E+04"/>
+                  <cost type="nonstructural" value="4.9719626E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1224,7 +1345,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="nonstructural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1234,7 +1356,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="6.8037383E+04"/>
+                  <cost type="structural" value="6.8037383E+04"/>
+                  <cost type="nonstructural" value="6.8037383E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1244,7 +1367,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="structural" value="3.7628598E+04"/>
+                  <cost type="nonstructural" value="3.7628598E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1254,7 +1378,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9527200E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="structural" value="2.2592523E+04"/>
+                  <cost type="nonstructural" value="2.2592523E+04"/>
                 </costs>
             </asset>
             <asset
@@ -1264,7 +1389,8 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <location lat="9.9693900E+00" lon="-8.4015160E+01"/>
                 <costs>
-                    <cost type="structural" value="4.0485981E+05"/>
+                  <cost type="structural" value="4.0485981E+05"/>
+                  <cost type="nonstructural" value="4.0485981E+05"/>
                 </costs>
             </asset>
         </assets>

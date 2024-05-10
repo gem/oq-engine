@@ -751,7 +751,8 @@ def assets2df(asset_nodes, fields, ignore_missing_costs):
                     rec[field] = asset[cost]
                 except KeyError:
                     if cost not in ignore_missing_costs:
-                        raise
+                        raise KeyError('Missing type="%s" for asset %s' %
+                                       (cost, rec['id']))
             else:
                 rec[field] = asset.attrib.get(field, '?')
     return pandas.DataFrame({f: array[f] for f, dt in dtlist}).set_index('id')

@@ -1447,8 +1447,31 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
                             sorting_idxs)[0]
 
 
+def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
+    """
+    :param sorted_losses: a sorted array of size num_losses
+    :param num_events: an integer >= num_losses
+    :returns: two arrays of size num_events
+    """
+    # add zeros on the left if there are less losses than events.
+    num_losses = len(sorted_losses)
+    if num_events > num_losses:
+        losses = numpy.zeros(num_events, sorted_losses.dtype)
+        losses[num_events - num_losses:num_events] = sorted_losses
+    elif num_losses == num_events:
+        losses = sorted_losses.copy()
+    elif num_events < num_losses:
+        raise ValueError('More losses (%d) than events (%d) ??' %
+                         (num_losses, num_events))
+    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    if pla_factor:
+        losses *= pla_factor(eperiods)
+    return losses, eperiods
+
+
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
                      sorting_idxs=None, pla_factor=None):
+    # NB: sorting_idxs is used in test_claim
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1483,21 +1506,13 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         losses = numpy.sort(losses)
     else:
         losses = losses[sorting_idxs]
-    # num_losses < num_events: just add zeros
-    num_zeros = num_events - num_losses
-    if num_zeros:
-        newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events - num_losses:num_events] = losses
-        losses = newlosses
-    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    losses, eperiods = fix_losses(losses, num_events, eff_time, pla_factor)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
                 if eperiods[0] <= rp <= eperiods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, loge = numpy.log(rperiods), numpy.log(eperiods)
-    if pla_factor:
-        losses = pla_factor(eperiods) * losses
     curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
     return curve
@@ -1515,13 +1530,11 @@ class LossCurvesMapsBuilder(object):
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
-                 weights, num_events, eff_time, risk_investigation_time,
-                 pla_factor=None):
+                 weights, eff_time, risk_investigation_time, pla_factor=None):
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
-        self.num_events = num_events
         self.eff_time = eff_time
         if return_periods.sum() == 0:
             self.poes = 1
@@ -1531,14 +1544,13 @@ class LossCurvesMapsBuilder(object):
         self.pla_factor = pla_factor
 
     # used in post_risk, for normal loss curves and reinsurance curves
-    def build_curve(self, years, col, losses, agg_types, loss_type, rlzi=0):
+    def build_curve(self, years, col, losses, agg_types, loss_type, ne):
         """
         Compute the requested curves
         (AEP and OEP curves only if years is not None)
         """
         # NB: agg_types can be the string "ep, aep, oep"
         periods = self.return_periods
-        ne = self.num_events[rlzi]
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:

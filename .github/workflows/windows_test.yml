@@ -8,14 +8,14 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "00 14 * * *"
+    - cron: "00 19 * * *"
   push:
     branches: [ windows-all-tests ]
 
 jobs:
 
   install:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
@@ -25,6 +25,7 @@ jobs:
       BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
+        os: [windows-2022, windows-2019]
         python-version: ["3.11"]
 
     steps:

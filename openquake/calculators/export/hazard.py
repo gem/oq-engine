@@ -25,14 +25,13 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib.general import deprecated, DictArray
+from openquake.baselib.general import DictArray
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
-from openquake.commonlib import hazard_writers, calc, util
+from openquake.commonlib import calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -298,114 +297,6 @@ def get_metadata(rlzs, kind):
     elif kind == 'std':
         metadata['statistics'] = 'std'
     return metadata
-
-
-@deprecated(msg='Use the CSV exporter instead')
-def export_uhs_xml(ekey, dstore):
-    oq = dstore['oqparam']
-    rlzs = dstore['full_lt'].rlzs
-    R = len(rlzs)
-    sitemesh = get_sites(dstore['sitecol'].complete)
-    key, kind, fmt = get_kkf(ekey)
-    fnames = []
-    periods = [imt.period for imt in oq.imt_periods()]
-    for kind in oq.get_kinds(kind, R):
-        metadata = get_metadata(rlzs, kind)
-        uhs = extract(dstore, 'uhs?kind=' + kind)[kind]
-        for p, poe in enumerate(oq.poes):
-            fname = hazard_curve_name(dstore, (key, fmt), kind + '-%s' % poe)
-            writer = hazard_writers.UHSXMLWriter(
-                fname, periods=periods, poe=poe,
-                investigation_time=oq.investigation_time, **metadata)
-            data = []
-            for site, curve in zip(sitemesh, uhs):
-                data.append(UHS(curve['%.6f' % poe], Location(site)))
-            writer.serialize(data)
-            fnames.append(fname)
-    return sorted(fnames)
-
-
-class Location(object):
-    def __init__(self, xyz):
-        self.x, self.y = xyz['lon'], xyz['lat']
-        self.wkt = 'POINT(%s %s)' % (self.x, self.y)
-
-
-HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
-HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
-
-
-@deprecated(msg='Use the CSV exporter instead')
-def export_hcurves_xml(ekey, dstore):
-    key, kind, fmt = get_kkf(ekey)
-    len_ext = len(fmt) + 1
-    oq = dstore['oqparam']
-    sitemesh = get_sites(dstore['sitecol'])
-    rlzs = dstore['full_lt'].get_realizations()
-    R = len(rlzs)
-    fnames = []
-    writercls = hazard_writers.HazardCurveXMLWriter
-    for kind in oq.get_kinds(kind, R):
-        if kind.startswith('rlz-'):
-            rlz = rlzs[int(kind[4:])]
-            smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = rlz.gsim_rlz.pid
-        else:
-            smlt_path = ''
-            gsimlt_path = ''
-        name = hazard_curve_name(dstore, ekey, kind)
-        for im in oq.imtls:
-            key = 'hcurves?kind=%s&imt=%s' % (kind, im)
-            hcurves = extract(dstore, key)[kind]  # shape (N, 1, L1)
-            imt = from_string(im)
-            fname = name[:-len_ext] + '-' + im + '.' + fmt
-            data = [HazardCurve(Location(site), poes[0])
-                    for site, poes in zip(sitemesh, hcurves)]
-            imt_name = 'SA' if im.startswith('SA') else im
-            writer = writercls(fname,
-                               investigation_time=oq.investigation_time,
-                               imls=oq.imtls[im], imt=imt_name,
-                               sa_period=getattr(imt, 'period', None) or None,
-                               sa_damping=getattr(imt, 'damping', None),
-                               smlt_path=smlt_path, gsimlt_path=gsimlt_path)
-            writer.serialize(data)
-            fnames.append(fname)
-    return sorted(fnames)
-
-
-@deprecated(msg='Use the CSV exporter instead')
-def export_hmaps_xml(ekey, dstore):
-    key, kind, fmt = get_kkf(ekey)
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    sitemesh = get_sites(sitecol)
-    rlzs = dstore['full_lt'].get_realizations()
-    R = len(rlzs)
-    fnames = []
-    writercls = hazard_writers.HazardMapXMLWriter
-    for kind in oq.get_kinds(kind, R):
-        # shape (N, M, P)
-        hmaps = extract(dstore, 'hmaps?kind=' + kind)[kind]
-        if kind.startswith('rlz-'):
-            rlz = rlzs[int(kind[4:])]
-            smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = rlz.gsim_rlz.pid
-        else:
-            smlt_path = ''
-            gsimlt_path = ''
-        for m, imt in enumerate(oq.imtls):
-            for p, poe in enumerate(oq.poes):
-                suffix = '-%s-%s' % (poe, imt)
-                fname = hazard_curve_name(dstore, ekey, kind + suffix)
-                data = [HazardMap(site[0], site[1], hmap[m, p])
-                        for site, hmap in zip(sitemesh, hmaps)]
-                writer = writercls(
-                    fname, investigation_time=oq.investigation_time,
-                    imt=imt, poe=poe,
-                    smlt_path=smlt_path, gsimlt_path=gsimlt_path)
-                writer.serialize(data)
-                fnames.append(fname)
-    return sorted(fnames)
 
 
 @export.add(('cs-stats', 'csv'))
