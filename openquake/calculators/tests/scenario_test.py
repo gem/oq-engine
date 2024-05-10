@@ -78,6 +78,19 @@ class ScenarioTestCase(CalculatorTestCase):
         medians = self.medians(case_2)['PGA']
         aae(medians, [0.37412136, 0.19021782, 0.1365383], decimal=2)
 
+    def test_case_2_bis(self):
+        # consider 2 different error situations
+
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_2.__file__, 'job.ini', gsim='')
+        self.assertIn('Missing gsim or gsim_logic_tree_file',
+                      str(ctx.exception))
+
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_2.__file__, 'job_wrong.ini')
+        self.assertIn('missing gsim or gsim_logic_tree_file',
+                      str(ctx.exception))
+
     def test_case_3(self):
         medians_dict = self.medians(case_3)
         medians_pga = medians_dict['PGA']
