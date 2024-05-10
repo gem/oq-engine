@@ -168,7 +168,6 @@ def test_WAF():
     if rtgmpy:
         # check that warning indicates very low hazard
         warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
-        breakpoint()
         assert len(warnings) == 1
         assert warnings[0].startswith('Very low')
 
