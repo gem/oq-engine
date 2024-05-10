@@ -198,6 +198,7 @@ def test_WAF():
 def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
+    expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
     dic = dict(sites='139 36', site='JPN-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(
@@ -223,25 +224,10 @@ def test_JPN():
     df2 = pandas.read_csv(uhs_fname, skiprows=1, index_col='period')
     assert len(df1) == size
     assert len(df2) == M * P
-    expected_uhs = '''\
-         poe       iml
-period                
-0.0     0.02  0.695452
-0.2     0.02  1.470866
-1.0     0.02  0.576505
-0.0     0.05  0.506614
-0.2     0.05  1.059386
-1.0     0.05  0.415925
-0.0     0.10  0.378868
-0.2     0.10  0.782419
-1.0     0.10  0.308323
-0.0     0.20  0.263694
-0.2     0.20  0.538265
-1.0     0.20  0.210463
-0.0     0.50  0.124536
-0.2     0.50  0.243294
-1.0     0.50  0.097187'''
-    assert str(df2) == expected_uhs
+    expected_uhs = pandas.read_csv(expected, skiprows=1, index_col='period')
+    expected_uhs.columns=["poe", "iml"]
+
+    assert str(df2) == str(expected_uhs)
 
     if rtgmpy:
         # check all plots created
