@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added another check for missing gsim in scenario calculations
   * Using custom `hcurves` and `uhs` exporters in AELO mode
 
   [Fatemeh Alishahiha]

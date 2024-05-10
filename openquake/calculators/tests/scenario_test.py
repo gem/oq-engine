@@ -83,12 +83,12 @@ class ScenarioTestCase(CalculatorTestCase):
 
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', gsim='')
-        self.assertIn('missing gsim or gsim_logic_tree_file',
+        self.assertIn('Missing gsim or gsim_logic_tree_file',
                       str(ctx.exception))
 
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_2.__file__, 'job_wrong.ini')
-        self.assertIn('Missing gsim or gsim_logic_tree_file',
+        self.assertIn('missing gsim or gsim_logic_tree_file',
                       str(ctx.exception))
 
     def test_case_3(self):

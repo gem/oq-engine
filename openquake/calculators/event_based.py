@@ -604,7 +604,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     oq.tectonic_region_type.encode('utf8'))
         elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
-            raise InvalidFile('%s: Missing gsim or gsim_logic_tree_file' %
+            raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
                               oq.inputs['job_ini'])
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):

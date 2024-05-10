@@ -1277,7 +1277,7 @@ class OqParam(valid.ParamSet):
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
-            raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
+            raise InvalidFile('%s: Missing gsim or gsim_logic_tree_file'
                               % job_ini)
         if 'amplification' in self.inputs:
             self.req_site_params.add('ampcode')
