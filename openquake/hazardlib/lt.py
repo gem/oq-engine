@@ -289,6 +289,11 @@ def _maxmagGR_relative(utype, source, value):
     source.mfd.modify('increment_max_mag', dict(value=value))
 
 
+@apply_uncertainty.add('maxMagGRRelativeNoMoBalance')
+def _maxmagGRnoMoBalance_relative(utype, source, value):
+    source.mfd.modify('increment_max_mag_no_mo_balance', dict(value=value))
+
+
 @apply_uncertainty.add('maxMagGRAbsolute')
 def _maxmagGR_absolute(utype, source, value):
     source.mfd.modify('set_max_mag', dict(value=value))
@@ -299,7 +304,6 @@ def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
-
 
 @apply_uncertainty.add('truncatedGRFromSlipAbsolute')
 def _trucMFDFromSlip_absolute(utype, source, value):

@@ -25,3 +25,4 @@
 | case_68 | Test extendModel                                                           |
 | case_71 | Test oversampling                                                          |
 | case_73 | Tests some epistemic uncertainties in a source-specific LT                 |
+| case_84 | Tests maxMagGRRelativeNoMoBalance uncertainty                              |

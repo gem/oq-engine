@@ -1277,7 +1277,7 @@ class OqParam(valid.ParamSet):
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
-            raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
+            raise InvalidFile('%s: Missing gsim or gsim_logic_tree_file'
                               % job_ini)
         if 'amplification' in self.inputs:
             self.req_site_params.add('ampcode')
@@ -1436,6 +1436,10 @@ class OqParam(valid.ParamSet):
         if 'post_loss_amplification' in self.inputs:
             df = pandas.read_csv(self.inputs['post_loss_amplification'])
             check_increasing(df, 'return_period', 'pla_factor')
+            if self.avg_losses:
+                raise InvalidFile(
+                    "%s: you must set avg_losses=false with "
+                    "post_loss_amplification" % self.inputs['job_ini'])
 
     def check_gsims(self, gsims):
         """
@@ -2034,6 +2038,11 @@ class OqParam(valid.ParamSet):
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.job_type == 'hazard':
             return True
+
+        # there are more checks for risk calculations
+        if self.collect_rlzs and self.individual_rlzs:
+            raise InvalidFile("%s: you cannot have individual_rlzs=true with "
+                              "collect_rlzs=true" % self.inputs['job_ini'])
         if self.calculation_mode == 'event_based_damage':
             ini = self.inputs['job_ini']
             if not self.investigation_time:

@@ -251,7 +251,7 @@ Ground Motion Fields.::
 	calculation_mode = scenario_damage
 	
 	[hazard]
-	gmfs_file = gmfs.xml
+	gmfs_file = gmfs.csv
 	
 	[exposure]
 	exposure_file = exposure_model.xml

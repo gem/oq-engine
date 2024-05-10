@@ -25,7 +25,7 @@ amount of resources on the net about these topics. Familiarity with
 the standard Python coding guidelines (PEP8) is expected.
 The engine enforces a few additional constraints:
 
-1. functions and methods can have at most 100 lines
+1. functions and methods can have at most 90 lines
 2. functions and methods can have at most 16 arguments
 
 Pull requests breaking the above constraints will break the
