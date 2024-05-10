@@ -18,6 +18,7 @@
 
 import os
 import json
+from unittest import mock
 import numpy
 import pandas
 try:
@@ -203,6 +204,15 @@ def test_JPN():
             dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
+
+    size = calc.oqparam.imtls.size  # size of the hazard curves
+    assert size == 525  # 21 IMT * 25 levels
+
+    M = len(calc.oqparam.imtls)  # set in aelo.py
+    assert M == 21
+
+    P  = len(calc.oqparam.poes)  # [0.02, 0.05, 0.1, 0.2, 0.5]
+    assert P == 5
 
     if rtgmpy:
         # check all plots created

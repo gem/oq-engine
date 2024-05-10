@@ -89,25 +89,8 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
-                           update_dstore=False):
-    """
-    :param dstore: the datastore
-    :returns: figure of hazard curves
-    """
-    dinfo = get_info(dstore)
-    # get imls and imts, make arrays
-    imtls = dinfo['imtls']
-    # separate imts and imls
-    AFE, afe_RTGM, imls, imls_mc = [], [], [], []
-    # get rtgm ouptut from the datastore
-    rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
-    imts = rtgm_df['IMT']
-    plot_rtgm_probmce = []
-    # specify subset of imts to plot
-    plot_imt = ['PGA', 'SA0P2', 'SA1P0', 'SA2P0', 'SA5P0']
-    plot_IMT = []
-
+def _hcurves(imts, plot_imt, plot_IMT, AFE, afe_RTGM, imls, imls_mc, imtls,
+             rtgm_df, plot_rtgm_probmce, site_idx, dinfo, dstore):
     for imt in plot_imt:
         # convert imts from USGS format
         IMT = _convert_imt(imt)
@@ -135,11 +118,34 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
                 afe_RTGM.append(_find_afe_target(imls[m], AFE[m],
                                                  rtgm_probmce[m]))
 
+
+def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
+                           update_dstore=False):
+    """
+    :param dstore: the datastore
+    :returns: figure of hazard curves
+    """
+    dinfo = get_info(dstore)
+    # get imls and imts, make arrays
+    imtls = dinfo['imtls']
+    # separate imts and imls
+    AFE, afe_RTGM, imls, imls_mc = [], [], [], []
+    # get rtgm ouptut from the datastore
+    rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
+    imts = rtgm_df['IMT']
+    plot_rtgm_probmce = []
+    # specify subset of imts to plot
+    plot_imt = ['PGA', 'SA0P2', 'SA1P0', 'SA2P0', 'SA5P0']
+    plot_IMT = []
+
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
     colors = mpl.colormaps['viridis'].reversed().resampled(5)
     patterns = ['-', '-.', '--', ':', '-.']
+
+    _hcurves(imts, plot_imt, plot_IMT, AFE, afe_RTGM, imls, imls_mc, imtls,
+             rtgm_df, plot_rtgm_probmce, site_idx, dinfo, dstore)
 
     if plot_mce:
         for i, imt in enumerate(plot_imt):
