@@ -517,19 +517,18 @@ the `ses_seed`. The solution is to increase the parameters
 `number_of_logic_tree_samples`, `ses_per_logic_tree_path` or
 `investigation_time`.
 
-The way the engine determines that the
-statistics is insufficient is to split the event IDs in two sets of
-odd and even IDs.  If the number of relevant events is large, you
-expect the two sets to be equivalent and to produce very similar loss
-curves; on the other hands, if you get the warnings it means that
-there are few events and the odd and even loss curves are quite
-different. Notice that the relevant events are the ones corresponding
-to nonzero losses, therefore for fatalities it is quite common to get
-the warning. In that case you can accept that the precision on such
-curves is low and go on, since it could be impractical to increase
-the effective investigation time (in the sense that the calculations
-could get too slow or could even not run due to out-of-memory/out-of-disk-space
-errors).
+The way the engine determines that the statistics is insufficient is
+to split the event IDs in two sets of odd and even IDs.  If the number
+of relevant events is large, you expect the two sets to be equivalent
+and to produce very similar loss curves; on the other hand, if you get
+the warnings it means that there are few events and the odd and even
+loss curves are quite different. Notice that the relevant events are
+the ones corresponding to nonzero losses, therefore for fatalities it
+is quite common to get the warning. In that case you can accept that
+the precision on such curves is low and go on, since it could be
+impractical to increase the effective investigation time (in the sense
+that the calculations could get too slow or could even not run due to
+out-of-memory/out-of-disk-space errors).
 
 The command `oq show delta_loss:<loss_index>` displays the loss curves
 for the odd and even sets of relevant events, so that you can get an idea
@@ -558,7 +557,11 @@ as follows::
  1000  5.022807e+09  3.366133e+09  8.697419e+09  0.441933
 
 That gives an indication of the error on the loss curve, which is normally
-quite large. In many cases there is nothing you can do about that since
+quite large. The `delta` is the relative error computed with the formula::
+
+ delta = |loss_even - loss_odd| / (loss_even + loss_odd)
+
+In many cases there is nothing you can do about that since
 the statistical error goes down with 1/sqrt(num_events) and therefore
 it requires a quadratic effort to reduce it (i.e. 100 times more
 computations only reduce the error 10 times).
