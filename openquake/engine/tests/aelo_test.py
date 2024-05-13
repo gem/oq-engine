@@ -223,6 +223,7 @@ def test_JPN():
     df1 = pandas.read_csv(hcurves_fname, skiprows=1)
     df2 = pandas.read_csv(uhs_fname, skiprows=1, index_col='period')
     assert len(df1) == size
+
     assert len(df2) == M * P
     expected_uhs = pandas.read_csv(expected, skiprows=1, index_col='period')
     expected_uhs.columns=["poe", "iml"]
