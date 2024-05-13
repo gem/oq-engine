@@ -511,24 +511,25 @@ Why I am getting the warning "A big variation in the loss curve is expected"?
 *****************************************************************************
 
 The warning means that your effective investigation time is too small,
-you do not have enough events to have a sensible statistics and
-therefore your loss curves will will strongly depend on the choice of
+you do not have enough events to have sensible statistics and
+therefore your loss curves will strongly depend on the choice of
 the `ses_seed`. The solution is to increase the parameters
 `number_of_logic_tree_samples`, `ses_per_logic_tree_path` or
 `investigation_time`.
 
 The way the engine determines that the statistics is insufficient is
 to split the event IDs in two sets of odd and even IDs.  If the number
-of relevant events is large, you expect the two sets to be equivalent
-and to produce very similar loss curves; on the other hand, if you get
-the warnings it means that there are few events and the odd and even
-loss curves are quite different. Notice that the relevant events are
-the ones corresponding to nonzero losses, therefore for fatalities it
-is quite common to get the warning. In that case you can accept that
-the precision on such curves is low and go on, since it could be
-impractical to increase the effective investigation time (in the sense
-that the calculations could get too slow or could even not run due to
-out-of-memory/out-of-disk-space errors).
+of relevant events is large, you expect the two sets to be
+statistically equivalent and to produce very similar loss curves; on
+the other hand, if you get the warnings it means that there are few
+events and the odd and even loss curves are quite different. Notice
+that the relevant events are the ones corresponding to nonzero losses,
+therefore for fatalities it is quite common to get the warning. In
+that case you can accept that the precision on such curves is low and
+go on, since it could be impractical to increase the effective
+investigation time (in the sense that the calculations could get too
+slow or could even not run due to out-of-memory/out-of-disk-space
+errors).
 
 The command `oq show delta_loss:<loss_index>` displays the loss curves
 for the odd and even sets of relevant events, so that you can get an idea
