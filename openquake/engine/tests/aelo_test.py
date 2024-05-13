@@ -209,10 +209,10 @@ def test_JPN():
     size = calc.oqparam.imtls.size  # size of the hazard curves
     assert size == 525  # 21 IMT * 25 levels
 
-    M = len(calc.oqparam.imtls)  # set in aelo.py
+    M = len(calc.oqparam.imtls)  # set in job file
     assert M == 21
 
-    P  = len(calc.oqparam.poes)  # [0.02, 0.05, 0.1, 0.2, 0.5]
+    P = len(calc.oqparam.poes)  # [0.02, 0.05, 0.1, 0.2, 0.5]
     assert P == 5
 
     # check export hcurves and uhs
@@ -223,10 +223,10 @@ def test_JPN():
     df1 = pandas.read_csv(hcurves_fname, skiprows=1)
     df2 = pandas.read_csv(uhs_fname, skiprows=1, index_col='period')
     assert len(df1) == size
-
-    assert len(df2) == M * P
+    assert len(df2) == M
     expected_uhs = pandas.read_csv(expected, skiprows=1, index_col='period')
-    expected_uhs.columns=["poe", "iml"]
+    expected_uhs.columns = ["poe-0.02", "poe-0.05", "poe-0.1", "poe-0.2",
+                            "poe-0.5"]
 
     assert str(df2) == str(expected_uhs)
 
