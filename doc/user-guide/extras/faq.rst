@@ -562,7 +562,7 @@ quite large. The `delta` is the relative error computed with the formula::
  delta = |loss_even - loss_odd| / (loss_even + loss_odd)
 
 In many cases there is nothing you can do about that since
-the statistical error goes down with 1/sqrt(num_events) and therefore
+the statistical error goes down with `1 / sqrt(num_events)` and therefore
 it requires a quadratic effort to reduce it (i.e. 100 times more
 computations only reduce the error 10 times).
 
