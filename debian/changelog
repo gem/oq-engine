@@ -1,8 +1,6 @@
   [Antonio Ettorre]
   * Upgrade pyzmq to 26.0.3
 
-python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
-
   [Michele Simionato]
   * Backported fix to `oq extract ruptures?rup_id=XXX`
   * Backported fix to a fake error in case of a nontrivial
