@@ -79,23 +79,18 @@ SA(10.0),0.042,0.045,0.052,0.069,0.089,0.11,0.14,0.17
 PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 '''), index_col='imt')
 
-# hard-coded for year 1
-# NOTE: consider lower thresholds of IMLs and impact on plots in Year 3
-# TODO: interpolate for vs30 != 760 and for different periods
-# NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
-# three imts, that are mandatory in this context. For the plot of governing
-# MCE we read imts from the imtls
-IMTS = ['PGA', 'SA(0.02)', 'SA(0.03)', 'SA(0.05)', 'SA(0.075)', 'SA(0.1)',
-        'SA(0.15)', 'SA(0.2)', 'SA(0.25)', 'SA(0.3)', 'SA(0.4)', 'SA(0.5)',
-        'SA(0.75)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)', 'SA(4.0)',
-        'SA(5.0)', 'SA(7.5)', 'SA(10.0)']
-D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-DLLs = [D[imt] for imt in IMTS]
-assert DLLs == [0.5, 0.68, 0.75, 0.95, 1.21, 1.37, 1.53, 1.5, 1.4, 1.3, 1.14,
-                1.01, 0.76, 0.6, 0.41, 0.31, 0.21, 0.16, 0.13, 0.08, 0.052]
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 ASCE_version = 'ASCE7-22'
+
+# TODO: add ASCE_version as a job file option
+# TODO: interpolate DLLs for vs30 != 760
+
+
+def get_DLLs(IMTS):
+    D = DLL_df.BC.loc  # site class BC for vs30=760m/s
+    DLLs = [D[imt] for imt in IMTS]
+    return DLLs
 
 
 def norm_imt(imt):
@@ -115,7 +110,9 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
     :returns: pandas dataframe with RTGM and related parameters
     :returns: numpy array of conversion factors to max component
     """
+    IMTS = list(oq.imtls)
     M = len(IMTS)
+    DLLs = get_DLLs(IMTS)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
@@ -163,7 +160,6 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
            'DLL': DLLs,
            'fact': np.array(facts),
            'sid': [site_idx]*len(imts)}
-
     rtgm_df = pd.DataFrame(dic)
     return rtgm_df
 
@@ -260,12 +256,13 @@ def get_zero_hazard_asce41():
     return asce41
 
 
-def get_mce_asce07(det_imt, DLLs, rtgm, sid, low_haz=False):
+def get_mce_asce07(IMTS, det_imt, DLLs, rtgm, sid, low_haz=False):
     """
-    :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
+    :param IMTS: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT
-    :param DLLs: deterministic lower limits according to ASCE 7-16
+    :param DLLs: deterministic lower limits according to ASCE 7-22
     :param rtgm: dataframe
+    :param sid: the site ID
     :param low_haz: boolean specifying if the hazard is lower than DLLs
     :returns: a dictionary imt -> probabilistic MCE
     :returns: a dictionary imt -> governing MCE
@@ -356,6 +353,7 @@ def get_asce41(dstore, mce, facts, sid):
     :param dstore: the datastore
     :param mce: governing MCE
     :param facts: conversion factors to max component
+    :param sid: the site ID
     :returns: a dictionary with the ASCE-41 parameters
     """
     fact = dict(zip(mce, facts))
@@ -403,7 +401,7 @@ def get_asce41(dstore, mce, facts, sid):
     return asce41
 
 
-def process_sites(dstore, csm):
+def process_sites(dstore, csm, DLLs):
     """
     :yields: (site, rtgm_df, warning)
     """
@@ -449,7 +447,7 @@ def process_sites(dstore, csm):
             yield site, rtgm_df, ''
 
 
-def calc_asce(dstore, csm, rtgm):
+def calc_asce(dstore, csm, IMTS, DLLs, rtgm):
     """
     :yields: (sid, asce07, asce41)
     """
@@ -466,7 +464,7 @@ def calc_asce(dstore, csm, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            det_imt, DLLs, rtgm_df, sid)
+            IMTS, det_imt, DLLs, rtgm_df, sid)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
@@ -486,6 +484,10 @@ def main(dstore, csm):
     :param dstore: datastore with the classical calculation
     :param csm: a CompositeSourceModel instance
     """
+    oq = dstore['oqparam']
+    IMTS = list(oq.imtls)
+    DLLs = get_DLLs(IMTS)
+
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
@@ -496,13 +498,12 @@ def main(dstore, csm):
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
-    dummy_det = {'PGA': '', 'SA(0.02)': '', 'SA(0.03)': '', 'SA(0.05)': '',
-                 'SA(0.075)': '', 'SA(0.1)': '', 'SA(0.15)': '', 'SA(0.2)': '',
-                 'SA(0.25)': '', 'SA(0.3)': '', 'SA(0.4)': '', 'SA(0.5)': '',
-                 'SA(0.75)': '', 'SA(1.0)': '', 'SA(1.5)': '', 'SA(2.0)': '',
-                 'SA(3.0)': '', 'SA(4.0)': '', 'SA(5.0)': '', 'SA(7.5)': '',
-                 'SA(10)': ''}
-    for site, rtgm_df, warning in process_sites(dstore, csm):
+    dummy_det = {}
+
+    for imt in IMTS:
+        dummy_det[imt] = ''
+
+    for site, rtgm_df, warning in process_sites(dstore, csm, DLLs):
         sid = site.id
         loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
@@ -519,7 +520,7 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
-                dummy_det, DLLs, rtgm_df, sid, low_haz=True)
+                IMTS, dummy_det, DLLs, rtgm_df, sid, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
@@ -534,7 +535,8 @@ def main(dstore, csm):
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
 
-    for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, rtgm):
+    for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, IMTS, DLLs,
+                                                 rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes

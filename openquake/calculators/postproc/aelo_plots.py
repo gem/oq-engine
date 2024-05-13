@@ -25,6 +25,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
 from PIL import Image
 
+ASCE_version = 'ASCE7-22'
+
 
 def import_plt():
     if os.environ.get('TEXT'):
@@ -43,7 +45,7 @@ def _convert_imt(imt):
     return (IMT)
 
 
-def _find_fact_maxC(T, code):
+def _find_fact_maxC(T, ASCE_version):
     # find the factor to convert to maximum component based on
     # ASCE7-16 and ASCE7-22
 
@@ -52,7 +54,7 @@ def _find_fact_maxC(T, code):
     f3 = interpolate.interp1d([0.2, 1], [1.2, 1.25])
     f4 = interpolate.interp1d([1, 10], [1.25, 1.3])
 
-    if code == 'ASCE7-16':
+    if ASCE_version == 'ASCE7-16':
         if T == 0:
             fact_maxC = 1.
         elif T <= 0.2:
@@ -63,7 +65,7 @@ def _find_fact_maxC(T, code):
             fact_maxC = f2(T)
         else:
             fact_maxC = 1.5
-    elif code == 'ASCE7-22':
+    elif ASCE_version == 'ASCE7-22':
         if T <= 0.2:
             fact_maxC = 1.2
         elif T <= 1:
@@ -99,7 +101,7 @@ def _hcurves(imts, plot_imt, plot_IMT, AFE, afe_RTGM, imls, imls_mc, imtls,
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(IMT).period
-        f = 1 if imt == "PGA" else _find_fact_maxC(T, 'ASCE7-22')
+        f = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
         imls.append([im for im in imtls[IMT]])
         imls_mc.append([im*f for im in imtls[IMT]])
         # get the IML for the 2475 RP
@@ -327,7 +329,7 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, site_idx,
     fig1, ax1 = plt.subplots()
     # annual frequency of exceedance:
     T = from_string(imt).period
-    f = 1 if imt == "PGA" else _find_fact_maxC(T, 'ASCE7-22')
+    f = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
     imls_o = imtls[imt]
     imls = numpy.array([iml*f for iml in imls_o])
     # have to compute everything for max comp. and for geom. mean
@@ -396,7 +398,9 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
-    plot_idx = [0, 7, 13]
+    imts = list(imtls)
+    plot_idx = [imts.index('PGA'), imts.index('SA(0.2)'),
+                imts.index('SA(1.0)')]
     n = 0
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
