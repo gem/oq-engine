@@ -1278,6 +1278,21 @@ def view_risk_by_rup(token, dstore):
     return df[:30]
 
 
+@view.add('loss_ids')
+def view_loss_ids(token, dstore):
+    """
+    Displays the loss IDs corresponding to nonzero losses
+    """
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id', dict(agg_id=K))
+    loss_ids = df.loss_id.unique()
+    arr = numpy.zeros(len(loss_ids), dt('loss_type loss_id'))
+    for i, loss_id in enumerate(loss_ids):
+        arr[i]['loss_type'] = LOSSTYPE[loss_id]
+        arr[i]['loss_id'] = loss_id
+    return arr
+
+
 @view.add('delta_loss')
 def view_delta_loss(token, dstore):
     """
@@ -1292,6 +1307,7 @@ def view_delta_loss(token, dstore):
     else:
         li = 0
     oq = dstore['oqparam']
+    loss_type = LOSSTYPE[li]
     efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
         dstore['weights'])
     num_events = len(dstore['events'])
@@ -1303,7 +1319,7 @@ def view_delta_loss(token, dstore):
     df = dstore.read_df('risk_by_event', 'event_id',
                         dict(agg_id=K, loss_id=li))
     if len(df) == 0:  # for instance no fatalities
-        return {'delta': numpy.zeros(1)}
+        return f"There are no relevant events for {loss_type=}"
     mod2 = df.index % 2
     losses0 = df['loss'][mod2 == 0]
     losses1 = df['loss'][mod2 == 1]
