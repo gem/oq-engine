@@ -517,19 +517,18 @@ the `ses_seed`. The solution is to increase the parameters
 `number_of_logic_tree_samples`, `ses_per_logic_tree_path` or
 `investigation_time`.
 
-The way the engine determines that the statistics is insufficient is
-to split the event IDs in two sets of odd and even IDs.  If the number
-of relevant events is large, you expect the two sets to be
-statistically equivalent and to produce very similar loss curves; on
-the other hand, if you get the warnings it means that there are few
-events and the odd and even loss curves are quite different. Notice
-that the relevant events are the ones corresponding to nonzero losses,
-therefore for fatalities it is quite common to get the warning. In
-that case you can accept that the precision on such curves is low and
-go on, since it could be impractical to increase the effective
-investigation time (in the sense that the calculations could get too
-slow or could even not run due to out-of-memory/out-of-disk-space
-errors).
+The way the engine determines that the effective investigation time is
+insufficient is to split the event IDs in two sets of odd and even
+IDs.  If the number of relevant events is large, you expect the two
+sets to be statistically equivalent and to produce very similar loss
+curves; on the other hand, if you get the warning, it means that the
+odd and even loss curves are quite different. Notice that the relevant
+events are the ones corresponding to nonzero losses, therefore for
+fatalities it is quite common to get the warning. In that case you can
+accept that the precision on such curves is low and go on, since it
+could be impractical to increase the effective investigation time (in
+the sense that the calculation could get too slow or could even not
+run due to out-of-memory/out-of-disk-space errors).
 
 The command `oq show delta_loss:<loss_index>` displays the loss curves
 for the odd and even sets of relevant events, so that you can get an idea
