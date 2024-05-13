@@ -62,8 +62,6 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
-    params['intensity_measure_types_and_levels'] = inputs[
-            'intensity_measure_types_and_levels']
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
