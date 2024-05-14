@@ -164,3 +164,7 @@ below in the table below:
 +--------+-------------+---------+
 | 3      | A~BB        | 0.16000 |
 +--------+-------------+---------+
+
+The ``branch_path`` field is used to determine which GMPEs are
+being used for each tectonic region type, as explained in
+the logic tree section of the documentation.
