@@ -87,9 +87,9 @@ ASCE_version = 'ASCE7-22'
 # TODO: interpolate DLLs for vs30 != 760
 
 
-def get_DLLs(IMTS):
+def get_DLLs(job_imts):
     D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-    DLLs = [D[imt] for imt in IMTS]
+    DLLs = [D[imt] for imt in job_imts]
     return DLLs
 
 
@@ -110,15 +110,15 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
     :returns: pandas dataframe with RTGM and related parameters
     :returns: numpy array of conversion factors to max component
     """
-    IMTS = list(oq.imtls)
-    M = len(IMTS)
-    DLLs = get_DLLs(IMTS)
+    job_imts = list(oq.imtls)
+    M = len(job_imts)
+    DLLs = get_DLLs(job_imts)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
     imtls = oq.imtls
     imts, facts = [], []
-    for m, imt in enumerate(IMTS):
+    for m, imt in enumerate(job_imts):
         afe = to_rates(hcurves[m], oq.investigation_time, minrate=1E-12)
 
         IMT = norm_imt(imt)
@@ -256,9 +256,9 @@ def get_zero_hazard_asce41():
     return asce41
 
 
-def get_mce_asce07(IMTS, det_imt, DLLs, rtgm, sid, low_haz=False):
+def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, low_haz=False):
     """
-    :param IMTS: the IMTs run in the job
+    :param job_imts: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT
     :param DLLs: deterministic lower limits according to ASCE 7-22
     :param rtgm: dataframe
@@ -290,12 +290,12 @@ def get_mce_asce07(IMTS, det_imt, DLLs, rtgm, sid, low_haz=False):
             det_mce[imt] = max(det_imt[imt], DLLs[i])
             mce[imt] = min(prob_mce[i], det_mce[imt])
         prob_mce_out[imt] = prob_mce[i]
-    dic_mce = {'IMT': IMTS,
+    dic_mce = {'IMT': job_imts,
                'DLL': DLLs,
                'ProbMCE': prob_mce,
                'DetMCE': det_mce.values(),
                'MCE': mce.values(),
-               'sid': [sid]*len(IMTS)}
+               'sid': [sid]*len(job_imts)}
     mce_df = pd.DataFrame(dic_mce)
     if mce['SA(0.2)'] < 0.25:
         Ss_seismicity = "Low"
@@ -447,14 +447,14 @@ def process_sites(dstore, csm, DLLs):
             yield site, rtgm_df, ''
 
 
-def calc_asce(dstore, csm, IMTS, DLLs, rtgm):
+def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
     """
     :yields: (sid, asce07, asce41)
     """
     imls_by_sid = {}
     for sid, rtgm_df in rtgm.items():
         imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
-    out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
+    out = postproc.disagg_by_rel_sources.main(dstore, csm, job_imts, imls_by_sid)
     sitecol = dstore['sitecol']
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         lon = sitecol.lons[sid]
@@ -464,7 +464,7 @@ def calc_asce(dstore, csm, IMTS, DLLs, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            IMTS, det_imt, DLLs, rtgm_df, sid)
+            job_imts, det_imt, DLLs, rtgm_df, sid)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
@@ -485,8 +485,8 @@ def main(dstore, csm):
     :param csm: a CompositeSourceModel instance
     """
     oq = dstore['oqparam']
-    IMTS = list(oq.imtls)
-    DLLs = get_DLLs(IMTS)
+    job_imts = list(oq.imtls)
+    DLLs = get_DLLs(job_imts)
 
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
@@ -500,18 +500,18 @@ def main(dstore, csm):
     rtgm = {}
     dummy_det = {}
 
-    for imt in IMTS:
+    for imt in job_imts:
         dummy_det[imt] = ''
 
     for site, rtgm_df, warning in process_sites(dstore, csm, DLLs):
         sid = site.id
         loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
-            dic_mce = {'IMT': IMTS,
-                       'ProbMCE': [np.nan]*len(IMTS),
-                       'DetMCE': [np.nan]*len(IMTS),
-                       'MCE': [np.nan]*len(IMTS),
-                       'sid': [sid]*len(IMTS)}
+            dic_mce = {'IMT': job_imts,
+                       'ProbMCE': [np.nan]*len(job_imts),
+                       'DetMCE': [np.nan]*len(job_imts),
+                       'MCE': [np.nan]*len(job_imts),
+                       'sid': [sid]*len(job_imts)}
             mce_df = pd.DataFrame(dic_mce)
             mce_dfs.append(mce_df)
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
@@ -520,7 +520,7 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
-                IMTS, dummy_det, DLLs, rtgm_df, sid, low_haz=True)
+                job_imts, dummy_det, DLLs, rtgm_df, sid, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
@@ -535,7 +535,7 @@ def main(dstore, csm):
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
 
-    for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, IMTS, DLLs,
+    for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, job_imts, DLLs,
                                                  rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
