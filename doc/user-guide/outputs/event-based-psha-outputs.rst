@@ -106,15 +106,23 @@ in the following example:
 | ...      | ...    | ...           | ...           |
 +----------+--------+---------------+---------------+
 
-The ``Events`` output produces a csv file with fields ``event_id``, ``rup_id``,
-``rlz_id``, ``year`` and ``ses_id``. The ``event_id`` is a 32 
-bit integer that identifies uniquely the event; the ``rup_id`` is a 64 bit integer that identifies uniquely the rupture; 
-the ``rlz_id`` is a 16 bit integer that identifies uniquely the realization.
-The ``year`` field is a random number from 0 to the effective investigation time
-while the ``ses_id`` field is a random number from 0 to
-``ses_per_logic_tree_path``.
-Notice that in previous versions of the engine (before engine-3.11)
-the semantic of those fields was different. Here is an example:
+Users wanting to know exactly how ``sigma`` and ``epsilon`` are computed
+should look at the implementation in the file
+``openquake/hazardlib/calc/gmf.py``. For instance the event based
+demo uses the GMPEs BooreAtkinson2008 and ToroEtAl2002, with the
+latter being defined only for the total standard deviation, and that
+explains the NAN in the sigmas for some events.
+
+The ``Events`` output produces a csv file with fields ``event_id``,
+``rup_id``, ``rlz_id``, ``year`` and ``ses_id``. The ``event_id`` is a
+32 bit integer that identifies uniquely the event; the ``rup_id`` is a
+64 bit integer that identifies uniquely the rupture; the ``rlz_id`` is
+a 16 bit integer that identifies uniquely the realization.  The
+``year`` field is a random number from 0 to the effective
+investigation time while the ``ses_id`` field is a random number from
+0 to ``ses_per_logic_tree_path``.  Notice that in previous versions of
+the engine (before engine-3.11) the semantic of those fields was
+different. Here is an example:
 
 +----------+--------+--------+--------+--------+
 | event_id | rup_id | rlz_id | year   | ses_id |
@@ -140,8 +148,10 @@ the semantic of those fields was different. Here is an example:
 | ...      | ...    | ...    | ...    | ...    |
 +----------+--------+--------+--------+--------+
 
-The ``Realizations`` output produces a csv file listing the source model and the combination of ground shaking intensity 
-models for each path sampled from the logic tree. An example of such a file is shown below in the table below:
+The ``Realizations`` output produces a csv file listing the source
+model and the combination of ground shaking intensity models for each
+path sampled from the logic tree. An example of such a file is shown
+below in the table below:
 
 +--------+-------------+---------+
 | rlz_id | branch_path | weight  |
