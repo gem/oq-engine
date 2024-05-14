@@ -1,3 +1,5 @@
+python3-oq-engine (3.19.1-0~xenial01) xenial; urgency=low
+
   [Antonio Ettorre]
   * Upgrade pyzmq to 26.0.3
 
@@ -6,6 +8,8 @@
   * Backported fix to a fake error in case of a nontrivial
     maximum_distance together with a minimum_magnitude
   * Backported fixes to the Canada SHM6 GMPEs
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 14 May 2024 08:09:20 +0000
 
 python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
 
