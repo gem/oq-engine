@@ -62,7 +62,8 @@ Probably the most important command. *oq info* has several features.
         $ oq info extracts    # list available extractors
 	$ oq info parameters  # list all job.ini parameters
         $ oq info sources     # list available source types
-        $ oq info mfds        # list available MFDs
+        $ oq info mfd         # list available MFDs
+        $ oq info msr         # list available MSRs
         $ oq info venv        # list location of the virtual environment
 
 2. It can be invoked with a *job.ini* file to extract information about the logic tree of the calculation.
