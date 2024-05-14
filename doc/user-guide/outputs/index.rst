@@ -76,7 +76,7 @@ will be happy to give directions on how to do that in Python.
 NB: in the literature there are different algorithms for the computation of the quantiles. The OpenQuake engine uses an 
 algorithm based on interpolation which is implemented here:
 
-`gem/oq-engine <https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/stats.py>`_
+`gem/oq-engine <https://github.com/gem/oq-engine/tree/engine-3.19/openquake/hazardlib/stats.py>`_
 
 In particular, the median is computed as the q=0.5 quantile.
 
