@@ -342,7 +342,7 @@ def get_mce_asce07(IMTS, det_imt, DLLs, rtgm, sid, low_haz=False):
     for key in asce07:
         if not isinstance(asce07[key], str):
             asce07[key] = (
-                round(asce07[key], ASCE_DECIMALS) if asce07[key] is not None
+                round(asce07[key], ASCE_DECIMALS) if asce07[key] is not np.nan
                 else 'n.a.')
 
     return prob_mce_out, mce, det_mce, asce07, mce_df
