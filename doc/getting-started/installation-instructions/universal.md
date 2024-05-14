@@ -53,7 +53,7 @@ You just need to download the installation script as:
 
 **on Windows:**
 ```
-C:\>curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/master/install.py
 C:\>python.exe install.py user
 ```
 
@@ -61,13 +61,13 @@ C:\>python.exe install.py user
 
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
 ```
-$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ python3.10 install.py user
 ```
 
 **on Linux:**
 ```
-$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ /usr/bin/python3 install.py user
 ```
 
@@ -175,7 +175,7 @@ automatically installed and started: `openquake-dbserver` and
 `openquake-webui`.
 
 ```
-$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ sudo -H /usr/bin/python3 install.py server
 ```
 
