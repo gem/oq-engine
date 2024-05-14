@@ -9,7 +9,9 @@ off with the universal installation script, even on Windows.
 
 # Universal installation script
 
-Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed.
+Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed
+(currently Python 3.9, 3.10 and 3.11 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
+
 The script allows the user to select between different kinds of installation:
 
 1. [`user` installation](#user-installation) (Windows, macOS, and Linux)
