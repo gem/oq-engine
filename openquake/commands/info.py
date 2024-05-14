@@ -35,6 +35,7 @@ from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt, logictree
 from openquake.hazardlib.mfd.base import BaseMFD
+from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
@@ -105,7 +106,7 @@ def do_build_reports(directory):
 
 choices = ['calculators', 'cfg', 'consequences',
            'gsims', 'imts', 'views', 'exports', 'disagg',
-           'extracts', 'parameters', 'sources', 'mfds', 'venv']
+           'extracts', 'parameters', 'sources', 'mfds', 'msrs', 'venv']
 
 
 def is_upper(func):
@@ -177,6 +178,9 @@ def main(what, report=False):
             print(docs[param])
     elif what == 'mfds':
         for cls in gen_subclasses(BaseMFD):
+            print(cls.__name__)
+    elif what == 'msrs':
+        for cls in gen_subclasses(BaseMSR):
             print(cls.__name__)
     elif what == 'venv':
         print(sys.prefix)
