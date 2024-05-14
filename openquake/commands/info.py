@@ -35,6 +35,7 @@ from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt, logictree
 from openquake.hazardlib.mfd.base import BaseMFD
+from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
@@ -55,6 +56,26 @@ def print_features(fiona_file):
         header = list(dic)
         rows.append(dic.values())
     print(text_table(rows, header, ext='org'))
+
+
+def print_subclass(what, cls):
+    """
+    Print the docstring of the given subclass, or print all available
+    subclasses.
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no subclass specified, print all
+        for cls in gen_subclasses(cls):
+            print(cls.__name__)
+    else:
+        # print the specified subclass, if known
+        for cls in gen_subclasses(cls):
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown class %s' % split[1])
 
 
 def source_model_info(sm_nodes):
@@ -105,7 +126,7 @@ def do_build_reports(directory):
 
 choices = ['calculators', 'cfg', 'consequences',
            'gsims', 'imts', 'views', 'exports', 'disagg',
-           'extracts', 'parameters', 'sources', 'mfds', 'venv']
+           'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv']
 
 
 def is_upper(func):
@@ -175,9 +196,10 @@ def main(what, report=False):
         for param in params:
             print(param)
             print(docs[param])
-    elif what == 'mfds':
-        for cls in gen_subclasses(BaseMFD):
-            print(cls.__name__)
+    elif what.startswith('mfd'):
+        print_subclass(what, BaseMFD)
+    elif what.startswith('msr'):
+        print_subclass(what, BaseMSR)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':
