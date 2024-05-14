@@ -33,7 +33,7 @@ from decorator import FunctionMaker
 from openquake.baselib import config
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, imt, logictree
+from openquake.hazardlib import gsim, nrml, imt, logictree, site
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -206,6 +206,19 @@ def main(what, report=False):
         print('Looking at the following paths (the last wins)')
         for path in config.paths:
             print(path)
+    elif what == 'site_params':
+        lst = sorted(site.site_param_dt)
+        maxlen = max(len(x) for x in lst)
+        ncols = 4
+        nrows = int(numpy.ceil(len(lst) / ncols))
+        for r in range(nrows):
+            col = []
+            for c in range(ncols):
+                try:
+                    col.append(lst[r * ncols + c].rjust(maxlen))
+                except IndexError:
+                    col.append(' ' * maxlen)
+            print(''.join(col))
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
