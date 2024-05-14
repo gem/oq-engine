@@ -65,6 +65,10 @@ except ImportError:
             sys.exit('venv is missing! Please see the documentation of your '
                      'Operating System to install it')
 
+PYVER = sys.version_info
+if PYVER < (3, 9, 0):
+    sys.exit('Error: you need at least Python 3.9, but you have %s' %	
+             '.'.join(map(str, sys.version_info)))
 CDIR = os.path.dirname(os.path.abspath(__file__))
 REMOVE_VENV = '''Found pre-existing venv %s
 If you proceeed you will have to reinstall manually any software other
@@ -181,8 +185,6 @@ TimeoutStopSec=10
 [Install]
 WantedBy=multi-user.target
 '''
-
-PYVER = sys.version_info
 PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'darwin': ('macos',),
             'win32': ('win64',)}
