@@ -15,22 +15,23 @@ This is the list of demos which illustrate how to use the OpenQuake engine for v
 - CharacteristicFaultSourceCase3ClassicalPSHA
 - ComplexFaultSourceClassicalPSHA
 - Disaggregation
-- **EventBasedLiquefaction**
+- EventBasedLiquefaction
 - EventBasedPSHA
-- **GMPETablePSHA**
-- **LatinSamplingClassicalPSHA**
+- GMPETablePSHA
+- LatinSamplingClassicalPSHA
 - LogicTreeCase1ClassicalPSHA
 - LogicTreeCase2ClassicalPSHA
 - LogicTreeCase3ClassicalPSHA
-- **MultiPointClassicalPSHA**
-- **NonparametricSourcesClassicalPSHA**
+- MultiPointClassicalPSHA
+- NonparametricSourcesClassicalPSHA
 - PointSourceClassicalPSHA
-- **ScenarioCase1**
-- **ScenarioCase2**
-- **ScenarioLiquefaction**
+- ScenarioCase1
+- ScenarioCase2
+- ScenarioCase3
+- ScenarioLiquefaction
 - SimpleFaultSourceClassicalPSHA
 
-The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`__.
+The demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`__. Feel free to run such examples and to play with the inputs and the outputs.
 
 ********************
 Classical PSHA Demos
