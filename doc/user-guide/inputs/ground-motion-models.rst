@@ -255,9 +255,9 @@ Here are a few examples of how to use it in the gsim logic tree file::
  [NRCan15SiteTerm]
  gmpe_name = ToroEtAl2002SHARE
 
-When instantiated the ``NRCan15SiteTerm`` works like the underlying
-GMPE, except the compute mean values are amplified by a factor
+When instantiated, the ``NRCan15SiteTerm`` works like the underlying
+GMPE, except the computed mean values are amplified by a factor
 depending on the vs30 parameters (hence the name ``SiteTerm``). The
-initial version of the code for the amplification factor was kindly
+initial version of the code for the amplification factor was
 provided by Michal Kolaj from Geological Survey of Canada, hence the
 name ``NRCan15``.
