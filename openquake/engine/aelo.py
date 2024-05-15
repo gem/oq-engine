@@ -24,7 +24,7 @@ import getpass
 import logging
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, oqvalidation
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -43,7 +43,7 @@ PRELIMINARY_MODEL_WARNING = (
 
 def get_params_from(inputs, mosaic_dir, exclude=()):
     """
-    :param inputs: a dictionary with sites, vs30, siteid
+    :param inputs: a dictionary with sites, vs30, siteid, asce_version
     :param mosaic_dir: directory where the mosaic is located
 
     Build the job.ini parameters for the given lon, lat by extracting them
@@ -90,6 +90,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
     params['export_dir'] = ''
+    params['asce_version'] = inputs['asce_version']
     return params
 
 
@@ -104,6 +105,7 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: str,
+         asce_version: str,
          job_owner_email=None,
          outputs_uri=None,
          jobctx=None,
@@ -113,7 +115,11 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid)
+    valid_asce_versions = oqvalidation.OqParam.asce_version.validator.choices
+    if asce_version not in valid_asce_versions:
+        raise ValueError(f'asce_version must be in {valid_asce_versions}')
+    inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
+                  asce_version=asce_version)
     warnings = []
     if jobctx is None:
         # in  testing mode create a new job context
