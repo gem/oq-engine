@@ -33,9 +33,7 @@ Alternatively, use Python from one of the OS X package managers (Homebrew, MacPo
 > <br />
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 > <br />
->_**Note 6.** On Windows installations we require Python 3.10, while the Microsoft App
-Store suggests Python 3.11 which is not supported yet, so you have to be careful and
-search for Python 3.10 on the App Store or on the Python official download page._
+>_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine yet, so you have to be careful and install a supported Python version. You can do so from the App Store or from the Python official download page._
 
 After installing, you can get the location of the engine virtual enviroment with the command
 ```
