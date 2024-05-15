@@ -147,7 +147,7 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'cfg', 'consequences',
-           'gsims', 'imts', 'views', 'exports', 'disagg',
+           'gsims', 'imt', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv']
 
 
@@ -181,7 +181,7 @@ def main(what, report=False):
     elif what == 'portable_gsims':
         for gs in gsim.get_portable_gsims():
             print(gs)
-    elif what.startswith('imts'):
+    elif what.startswith('imt'):
         print_imts(what)
     elif what == 'views':
         for name in sorted(view):
