@@ -411,6 +411,10 @@ def process_sites(dstore, csm, DLLs):
         mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
 
         oq = dstore['oqparam']
+        imts = list(oq.imtls)
+        sa02 = imts.index('SA(0.2)')
+        sa10 = imts.index('SA(1.0)')
+
         stats = list(oq.hazard_stats())
         assert stats[0] == 'mean', stats[0]
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
@@ -418,7 +422,7 @@ def process_sites(dstore, csm, DLLs):
         loc = site.location
         rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
-
+        
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
@@ -431,8 +435,8 @@ def process_sites(dstore, csm, DLLs):
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
 
-        elif (rtgm_df.ProbMCE.to_numpy()[1] < 0.11) or \
-                (rtgm_df.ProbMCE.to_numpy()[2] < 0.04):
+        elif (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
+                (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
                 'The MCE at the site is very low. Users may need to'
                 ' increase the ASCE 7-16 and ASCE 41-17 parameter values'

@@ -137,7 +137,8 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False,
     imts = rtgm_df['IMT']
     plot_rtgm_probmce = []
     # specify subset of imts to plot
-    plot_imt = ['PGA', 'SA0P2', 'SA1P0', 'SA2P0', 'SA5P0']
+    imt_sub = ['PGA', 'SA0P2', 'SA1P0', 'SA2P0', 'SA5P0']
+    plot_imt = [i for i in imts if i in imt_sub]
     plot_IMT = []
 
     plt = import_plt()
