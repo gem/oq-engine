@@ -777,6 +777,7 @@ def aristotle_run(request):
 
     :param request:
         a `django.http.HttpRequest` object containing
+        usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed
