@@ -868,10 +868,7 @@ def aelo_validate(request):
         invalid_inputs.append('siteid')
     try:
         asce_version = request.POST.get('asce_version')
-        valid_asce_versions = \
-            oqvalidation.OqParam.asce_version.validator.choices
-        if asce_version not in valid_asce_versions:
-            raise ValueError(f"Valid ASCE versions are {valid_asce_versions}")
+        oqvalidation.OqParam.asce_version.validator(asce_version)
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['asce_version']] = str(exc)
         invalid_inputs.append('asce_version')
@@ -1227,6 +1224,10 @@ def web_engine(request, **kwargs):
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
+        params['asce_versions'] = (
+            oqvalidation.OqParam.asce_version.validator.choices)
+        params['default_asce_version'] = (
+            oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
     return render(

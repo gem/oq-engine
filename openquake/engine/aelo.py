@@ -115,9 +115,7 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    valid_asce_versions = oqvalidation.OqParam.asce_version.validator.choices
-    if asce_version not in valid_asce_versions:
-        raise ValueError(f'asce_version must be in {valid_asce_versions}')
+    oqvalidation.OqParam.asce_version.validator(asce_version)
     inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
                   asce_version=asce_version)
     warnings = []
