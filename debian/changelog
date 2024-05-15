@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the passing of parameters to the underlying GMPE in NRCan15SiteTerm
   * Added another check for missing gsim in scenario calculations
   * Using custom `hcurves` and `uhs` exporters in AELO mode
 
