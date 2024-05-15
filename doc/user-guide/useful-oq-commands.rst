@@ -55,7 +55,7 @@ Probably the most important command. *oq info* has several features.
         $ oq info cfg         # list openquake.cfg locations in order
         # oq info consequences# list available consequences
 	$ oq info gsims       # list available GSIMs
-        $ oq info imts        # list known IMTs
+        $ oq info imt         # list known IMTs
 	$ oq info views       # list available views
 	$ oq info exports     # list available exports
         $ oq info disagg      # list available disaggregation kinds
