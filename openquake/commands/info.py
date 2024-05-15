@@ -78,6 +78,28 @@ def print_subclass(what, cls):
             print('Unknown class %s' % split[1])
 
 
+def print_imts(what):
+    """
+    Print the docstring of the given IMT, or print all available
+    IMTs.
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no IMT specified, print all
+        for im in vars(imt).values():
+            if inspect.isfunction(im) and is_upper(im):
+                print(im.__name__)
+    else:
+        # print the docstring of the specified IMT, if known
+        for im in vars(imt).values():
+            if inspect.isfunction(im) and is_upper(im):
+                if im.__name__ == split[1]:
+                    print(im.__doc__)
+                    break
+        else:
+            print('Unknown IMT %s' % split[1])
+
+
 def source_model_info(sm_nodes):
     """
     Extract information about source models. Returns a table
@@ -159,10 +181,8 @@ def main(what, report=False):
     elif what == 'portable_gsims':
         for gs in gsim.get_portable_gsims():
             print(gs)
-    elif what == 'imts':
-        for im in vars(imt).values():
-            if inspect.isfunction(im) and is_upper(im):
-                print(im.__name__)
+    elif what.startswith('imts'):
+        print_imts(what)
     elif what == 'views':
         for name in sorted(view):
             print(name)
