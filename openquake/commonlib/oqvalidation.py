@@ -82,6 +82,11 @@ amplification_method:
   Example: *amplification_method = kernel*.
   Default: "convolution"
 
+asce_version:
+  ASCE version used in AELO mode.
+  Example: *asce_version = asce7-22*.
+  Default: "asce7-16"
+
 area_source_discretization:
   Discretization parameters (in km) for area sources.
   Example: *area_source_discretization = 10*.
@@ -967,6 +972,8 @@ class OqParam(valid.ParamSet):
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
+    asce_version = valid.Param(
+        valid.Choice('ASCE7-16', 'ASCE7-22'), 'ASCE7-16')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
