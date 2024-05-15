@@ -169,7 +169,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
 def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760,
-             asce_version: str = 'ASCE7-16'):
+             asce_version: str = oqvalidation.OqParam.asce_version.default):
     """
     Run a PSHA analysis on the given sites or given a CSV file
     formatted as described in the 'from_file' function. For instance
@@ -200,9 +200,9 @@ run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 run_site.vs30 = 'vs30 value for the calculation'
-run_site.asce_version = (
-    f'one of {oqvalidation.OqParam.asce_version.validator.choices}')
-
+run_site.asce_version = dict(
+    help='ASCE version',
+    choices=oqvalidation.OqParam.asce_version.validator.choices)
 
 # ######################### sample rups and gmfs ######################### #
 
