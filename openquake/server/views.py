@@ -805,6 +805,7 @@ def aristotle_run(request):
         allparams, config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
+    response_data = dict()
     for jobctx in jobctxs:
         job_id = jobctx.calc_id
         outputs_uri_web = request.build_absolute_uri(
@@ -815,11 +816,11 @@ def aristotle_run(request):
             reverse('log', args=[job_id, '0', '']))
         traceback_uri = request.build_absolute_uri(
             reverse('traceback', args=[job_id]))
-        response_data = dict(
+        response_data[job_id] = dict(
             status='created', job_id=job_id, outputs_uri=outputs_uri_api,
             log_uri=log_uri, traceback_uri=traceback_uri)
         if not job_owner_email:
-            response_data['WARNING'] = (
+            response_data[job_id]['WARNING'] = (
                 'No email address is speficied for your user account,'
                 ' therefore email notifications will be disabled. As soon as'
                 ' the job completes, you can access its outputs at the'
