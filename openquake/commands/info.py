@@ -34,6 +34,7 @@ from openquake.baselib import config
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt, logictree, site
+from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -78,7 +79,7 @@ def print_subclass(what, cls):
             print('Unknown class %s' % split[1])
 
 
-def print_imts(what):
+def print_imt(what):
     """
     Print the docstring of the given IMT, or print all available
     IMTs.
@@ -98,6 +99,26 @@ def print_imts(what):
                     break
         else:
             print('Unknown IMT %s' % split[1])
+
+
+def print_gsim(what):
+    """
+    Print the docstring of the given GSIM, or print all available
+    GSIMs.
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no GSIM specified, print all
+        for gs in sorted(registry):
+            print(gs)
+    else:
+        # print the docstring of the specified GSIM, if known
+        for gs, cls in registry.items():
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown GSIM %s' % split[1])
 
 
 def source_model_info(sm_nodes):
@@ -147,7 +168,7 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'cfg', 'consequences',
-           'gsims', 'imt', 'views', 'exports', 'disagg',
+           'gsim', 'imt', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv']
 
 
@@ -175,14 +196,10 @@ def main(what, report=False):
         print(fields.replace(',', '\t'))
         for row in rows:
             print('\t'.join(map(str, row)))
-    elif what == 'gsims':
-        for gs in gsim.get_available_gsims():
-            print(gs)
-    elif what == 'portable_gsims':
-        for gs in gsim.get_portable_gsims():
-            print(gs)
+    elif what.startswith('gsim'):
+        print_gsim(what)
     elif what.startswith('imt'):
-        print_imts(what)
+        print_imt(what)
     elif what == 'views':
         for name in sorted(view):
             print(name)
