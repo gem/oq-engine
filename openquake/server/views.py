@@ -867,7 +867,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
         invalid_inputs.append('siteid')
     try:
-        asce_version = request.POST.get('asce_version')
+        asce_version = request.POST.get(
+            'asce_version', oqvalidation.OqParam.asce_version.default)
         oqvalidation.OqParam.asce_version.validator(asce_version)
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['asce_version']] = str(exc)
