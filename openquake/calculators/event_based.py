@@ -26,7 +26,7 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import config, hdf5, parallel, python3compat
+from openquake.baselib import config, hdf5, parallel, performance, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
@@ -257,7 +257,9 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                df = computer.compute_all(cmaker.mea_tau_phi, cmon, umon)
+                s = cmaker.shr_obj
+                with s.mea as mea, s.tau as tau, s.phi as phi:
+                    df = computer.compute_all([mea, tau, phi], cmon, umon)
             else:  # regular GMFs
                 with mmon:
                     mean_stds = cmaker.get_mean_stds(
@@ -380,7 +382,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         if station_data is not None:
-            cmaker.mea_tau_phi = mea, tau, phi
+            if parallel.oq_distribute() == 'zmq':
+                logging.warning('Conditioned scenarios are not meant to be run'
+                                ' on a cluster')
+            cmaker.shr_obj = performance.SharedObject(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
