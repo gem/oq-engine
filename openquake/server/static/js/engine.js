@@ -498,6 +498,7 @@
                     lat: $("#lat").val(),
                     vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
                     siteid: $("#siteid").val(),
+                    asce_version: $("#asce_version").val()
                 };
                 $.ajax({
                     type: "POST",

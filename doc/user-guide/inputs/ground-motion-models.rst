@@ -236,3 +236,28 @@ Here is an example of use in the logic tree file::
 Here *set_between_epsilon* is simply shifting the mean with the formula *mean -> mean + epsilon_tau * inter_event*. In 
 the future ``ModifiableGMPE`` will likely grow more methods. If you want to understand how it works you should look at 
 the source code: `gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py>`_
+
+***************
+NRCan15SiteTerm
+***************
+
+The ``NRCan15SiteTerm`` class is another example of a GMPE that can be
+used to modify the behavior of an underlying GMPE. It is used in many models
+of the GEM mosaic (but not in 2015 model for Canada, in spite of the name).
+Here are a few examples of how to use it in the gsim logic tree file::
+
+ [NRCan15SiteTerm]
+ gmpe_name = SomervilleEtAl2009YilgarnCraton
+
+ [NRCan15SiteTerm]
+ gmpe_name = PezeshkEtAl2011NEHRPBC
+
+ [NRCan15SiteTerm]
+ gmpe_name = ToroEtAl2002SHARE
+
+When instantiated, the ``NRCan15SiteTerm`` works like the underlying
+GMPE, except the computed mean values are amplified by a factor
+depending on the vs30 parameters (hence the name ``SiteTerm``). The
+initial version of the code for the amplification factor was
+provided by Michal Kolaj from Geological Survey of Canada, hence the
+name ``NRCan15``.

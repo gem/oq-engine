@@ -41,6 +41,16 @@
               <input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly />
               <!-- <label for"siteid">Site ID:</label> -->
               <input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
+                <label for="asce_version">{{ aelo_form_placeholders.asce_version }}</label>
+                <select name="asce_version" id="asce_version">
+                  {% for asce_version in asce_versions %}
+                  {% if asce_version == default_asce_version %}
+                  <option value="{{ asce_version }}" selected>{{ asce_version }}</option>
+                  {% else %}
+                  <option value="{{ asce_version }}">{{ asce_version }}</option>
+                  {% endif %}
+                  {% endfor %}
+                </select>
               <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
             </form>

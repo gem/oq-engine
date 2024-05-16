@@ -19,7 +19,16 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import Monitor, kollapse
+from openquake.baselib.performance import Monitor, kollapse, SharedArray
+from openquake.baselib.parallel import Starmap
+
+
+def update(s_array, index, value, monitor):
+    """
+    Update a shared array
+    """
+    with s_array as arr:
+        arr[index] = value
 
 
 class MonitorTestCase(unittest.TestCase):
@@ -102,3 +111,20 @@ class KollapseTestCase(unittest.TestCase):
         print([len(s) for s in sids])
         dt = time.time() - t0
         print('Grouped %d elements in %.1f seconds' % (N, dt))
+
+
+class SharedArrayTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.s_array = SharedArray((2, 2), float, 0.)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.s_array.unlink()
+
+    def test(self):
+        Starmap(update, [(self.s_array, index, value)
+                         for index, value in zip([0, 1], [.1, .2])]
+        ).reduce()
+        with self.s_array as arr:
+            print(arr)
