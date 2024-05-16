@@ -445,13 +445,13 @@ class SharedObject(object):
     A container of SharedArrays
     """
     def __init__(self, **kw):
-        self.names = list(kw)
+        self._names = list(kw)
         for k, arr in kw.items():
             setattr(self, k, SharedArray.new(arr))
         atexit.register(self.unlink)
 
     def unlink(self):
-        for name in self.names:
+        for name in self._names:
             getattr(self, name).unlink()
 
 
