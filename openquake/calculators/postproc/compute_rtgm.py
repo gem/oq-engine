@@ -54,7 +54,7 @@ from openquake.calculators.postproc.aelo_plots import (
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
-PGA0,0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
+SA(0.0),0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
 SA(0.01),0.50,0.57,0.66,0.73,0.75,0.70,0.62,0.55
 SA(0.02),0.52,0.58,0.68,0.74,0.75,0.70,0.62,0.55
 SA(0.03),0.60,0.66,0.75,0.79,0.78,0.70,0.62,0.55
@@ -81,9 +81,7 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
-ASCE_version = 'ASCE7-22'
 
-# TODO: add ASCE_version as a job file option
 # TODO: interpolate DLLs for vs30 != 760
 
 
@@ -100,7 +98,7 @@ def norm_imt(imt):
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
 
-def calc_rtgm_df(hcurves, site, site_idx, oq):
+def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
@@ -124,9 +122,8 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
         IMT = norm_imt(imt)
         imts.append(IMT)
         T = from_string(imt).period
-        fact = _find_fact_maxC(T, ASCE_version)
+        fact = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
         facts.append(fact)
-
         if afe[0] < MIN_AFE:
             UHGM[m] = 0
             RTGM_max[m] = 0
@@ -401,7 +398,7 @@ def get_asce41(dstore, mce, facts, sid):
     return asce41
 
 
-def process_sites(dstore, csm, DLLs):
+def process_sites(dstore, csm, DLLs, ASCE_version):
     """
     :yields: (site, rtgm_df, warning)
     """
@@ -420,9 +417,9 @@ def process_sites(dstore, csm, DLLs):
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
         site = list(dstore['sitecol'])[sid]
         loc = site.location
-        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
+        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
-        
+
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
@@ -458,7 +455,8 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
     imls_by_sid = {}
     for sid, rtgm_df in rtgm.items():
         imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
-    out = postproc.disagg_by_rel_sources.main(dstore, csm, job_imts, imls_by_sid)
+    out = postproc.disagg_by_rel_sources.main(dstore, csm, job_imts,
+                                              imls_by_sid)
     sitecol = dstore['sitecol']
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         lon = sitecol.lons[sid]
@@ -489,6 +487,7 @@ def main(dstore, csm):
     :param csm: a CompositeSourceModel instance
     """
     oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
     DLLs = get_DLLs(job_imts)
 
@@ -507,7 +506,8 @@ def main(dstore, csm):
     for imt in job_imts:
         dummy_det[imt] = ''
 
-    for site, rtgm_df, warning in process_sites(dstore, csm, DLLs):
+    for site, rtgm_df, warning in process_sites(dstore, csm, DLLs,
+                                                ASCE_version):
         sid = site.id
         loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
