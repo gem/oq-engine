@@ -348,6 +348,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
     if station_data is not None:
+        # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
@@ -359,19 +360,17 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
-        size = 3 * G * M * N * N * 8  # sig, tau, phi
-        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        size = 2 * G * M * N * N * 8  # tau, phi
+        logging.info('Building %s of mean_covs', humansize(size))
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
                 'You must reduce the number of sites i.e. enlarge '
                 'region_grid_spacing)')
-        mean_covs = computer.get_mean_covs()
-        for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
-            for g in range(len(cmaker.gsims)):
-                name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore.create_dset(name, val[g])
+        mea, _, tau, phi = computer.get_mean_covs()
         del proxy.geom  # to reduce data transfer
+    else:
+        mea, tau, phi = None, None, None
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
@@ -382,6 +381,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        cmaker.mea_tau_phi = mea, tau, phi
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
@@ -707,7 +707,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = (event_based if parallel.oq_distribute() == 'slurm'
+        eb = (event_based if ('station_data' in oq.inputs or
+                              parallel.oq_distribute() == 'slurm')
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)

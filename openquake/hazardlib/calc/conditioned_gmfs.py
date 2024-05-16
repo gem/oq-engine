@@ -232,15 +232,13 @@ class ConditionedGmfComputer(GmfComputer):
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
+        mea, tau, phi = self.cmaker.mea_tau_phi
         for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
-            with rmon:
-                mea = dstore['conditioned/gsim_%d/mea' % g][:]
-                tau = dstore['conditioned/gsim_%d/tau' % g][:]
-                phi = dstore['conditioned/gsim_%d/phi' % g][:]
             with cmon:
-                array = self.compute(gsim,rlzs, mea, tau, phi, rng)
+                array = self.compute(gsim, rlzs, mea[g], tau[g], phi[g], rng)
             with umon:
-                self.update(data, array, rlzs, [mea, tau+phi, tau, phi])
+                self.update(data, array, rlzs, [mea[g], tau[g] + phi[g],
+                                                tau[g], phi[g]])
         with umon:
             return self.strip_zeros(data)
 
