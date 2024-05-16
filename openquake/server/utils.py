@@ -119,6 +119,7 @@ def oq_server_context_processor(request):
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
+    context['disable_version_warning'] = settings.DISABLE_VERSION_WARNING
     context['server_name'] = settings.SERVER_NAME
     context['tools_only'] = settings.APPLICATION_MODE == 'TOOLS_ONLY'
     context['announcements'] = announcements
