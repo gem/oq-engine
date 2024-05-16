@@ -111,6 +111,7 @@
   {% block extra_script %}
   <script type="text/javascript"><!--
     var gem_oq_server_url = '{{ oq_engine_server_url }}';
+    var disable_version_warning = {{ disable_version_warning|yesno:"true,false" }};
     //-->
     $( document ).ready(function() {
         outdatedBrowser({
