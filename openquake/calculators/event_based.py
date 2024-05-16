@@ -348,6 +348,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
     if station_data is not None:
+        # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
