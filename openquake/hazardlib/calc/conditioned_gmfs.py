@@ -224,21 +224,21 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(
-            self, dstore, rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mea_tau_phi, cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
-        mea, tau, phi = self.cmaker.mea_tau_phi
         for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
+            mea = mea_tau_phi[0][g]
+            tau = mea_tau_phi[1][g]
+            phi = mea_tau_phi[2][g]
             with cmon:
-                array = self.compute(gsim, rlzs, mea[g], tau[g], phi[g], rng)
+                array = self.compute(gsim, rlzs, mea, tau, phi, rng)
             with umon:
-                self.update(data, array, rlzs, [mea[g], tau[g] + phi[g],
-                                                tau[g], phi[g]])
+                self.update(data, array, rlzs, [mea, tau + phi, tau, phi])
         with umon:
             return self.strip_zeros(data)
 

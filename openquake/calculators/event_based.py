@@ -230,7 +230,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
     cmaker.scenario = 'scenario' in oq.calculation_mode
     with dstore:
@@ -258,7 +257,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                df = computer.compute_all(dstore, rmon, cmon, umon)
+                df = computer.compute_all(cmaker.mea_tau_phi, cmon, umon)
             else:  # regular GMFs
                 with mmon:
                     mean_stds = cmaker.get_mean_stds(
@@ -369,8 +368,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                 'region_grid_spacing)')
         mea, _, tau, phi = computer.get_mean_covs()
         del proxy.geom  # to reduce data transfer
-    else:
-        mea, tau, phi = None, None, None
+
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
@@ -381,7 +379,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        cmaker.mea_tau_phi = mea, tau, phi
+        if station_data is not None:
+            cmaker.mea_tau_phi = mea, tau, phi
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
