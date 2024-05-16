@@ -412,6 +412,10 @@ class SharedArray(object):
     """
     Wrapper over a SharedMemory object to be used as a context manager.
     """
+    @classmethod
+    def new(cls, array):
+        return cls(array.shape, array.dtype, array)
+
     def __init__(self, shape, dtype, value):
         # NOTE: on Windows numpy.zeros(1, dtype).nbytes is a numpy.int32 and
         # causes issues, so it is converted into a Python int below
@@ -433,6 +437,20 @@ class SharedArray(object):
 
     def unlink(self):
         shmem.SharedMemory(self.name).unlink()
+
+
+class SharedObject(object):
+    """
+    A container of SharedArrays
+    """
+    def __init__(self, **kw):
+        self.names = list(kw)
+        for k, arr in kw.items():
+            setattr(self, k, SharedArray.new(arr))
+
+    def unlink(self):
+        for name in self.names:
+            getattr(self, name).unlink()
 
 
 def vectorize_arg(idx):
