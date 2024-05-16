@@ -184,7 +184,6 @@ import ast
 import sys
 import stat
 import time
-import atexit
 import socket
 import signal
 import pickle
@@ -724,7 +723,6 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
-        atexit._run_exitfuncs()
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
