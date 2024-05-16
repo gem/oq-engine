@@ -360,18 +360,16 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         M = len(cmaker.imts)
         N = len(computer.sitecol)
         size = 3 * G * M * N * N * 8  # sig, tau, phi
-        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        logging.info('Building %s of mean_covs', humansize(size))
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
                 'You must reduce the number of sites i.e. enlarge '
                 'region_grid_spacing)')
         mean_covs = computer.get_mean_covs()
-        for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
-            for g in range(len(cmaker.gsims)):
-                name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore.create_dset(name, val[g])
         del proxy.geom  # to reduce data transfer
+    else:
+        mean_covs = ()
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
@@ -382,6 +380,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        cmaker.mean_covs = mean_covs
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
@@ -707,7 +706,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = (event_based if parallel.oq_distribute() == 'slurm'
+        eb = (event_based if ('station_data' in oq.inputs or
+                              parallel.oq_distribute() == 'slurm')
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
