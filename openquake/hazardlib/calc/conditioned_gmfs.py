@@ -232,7 +232,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
-        mea, sig, tau, phi = self.cmaker.mean_covs
+        mea, tau, phi = self.cmaker.mea_tau_phi
         for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
             with cmon:
                 array = self.compute(gsim, rlzs, mea[g], tau[g], phi[g], rng)
