@@ -536,6 +536,7 @@ def get_mean_covs(
     if sigma:
         return [me, ta + ph, ta, ph]
     else:
+        # save memory since sigma = tau + phi is not needed
         return [me, ta, ph]
 
 
