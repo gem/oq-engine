@@ -1411,6 +1411,13 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
+        
+        # check compute_rtgm will run
+        if 'rtgm' in self.postproc_func:
+            if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
+                raise InvalidFile('%s: the IMTs PGA, SA(0.2), and SA(1.0)'
+                                  ' are required to use compute_rtgm' % job_ini)
+
 
     def validate(self):
         """
