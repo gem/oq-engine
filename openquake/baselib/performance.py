@@ -18,6 +18,7 @@
 
 import os
 import time
+import atexit
 import multiprocessing.shared_memory as shmem
 import pstats
 import pickle
@@ -447,6 +448,7 @@ class SharedObject(object):
         self.names = list(kw)
         for k, arr in kw.items():
             setattr(self, k, SharedArray.new(arr))
+        atexit.register(self.unlink)
 
     def unlink(self):
         for name in self.names:
