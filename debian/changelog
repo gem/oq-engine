@@ -1,5 +1,9 @@
+  [Paolo Tormene, Michele Simionato]
+  * Added a new parameter `asce_version` for AELO calculations
+
   [Michele Simionato]
-  * Saving disk space in conditioned GMFs scenarios
+  * Saving memory and disk space in conditioned GMFs scenarios, improving
+    also the performance in many cases
   * Fixed the passing of parameters to the underlying GMPE in NRCan15SiteTerm
   * Added another check for missing gsim in scenario calculations
   * Using custom `hcurves` and `uhs` exporters in AELO mode
