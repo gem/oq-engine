@@ -100,7 +100,8 @@ AELO_FORM_PLACEHOLDERS = {
     'lon': 'Longitude (max. 5 decimal places)',
     'lat': 'Latitude (max. 5 decimal places)',
     'vs30': 'Vs30 (fixed at 760 m/s)',
-    'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)'
+    'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)',
+    'asce_version': 'ASCE version',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -607,7 +608,8 @@ def aelo_callback(
     reply_to = 'aelosupport@openquake.org'
     lon, lat = inputs['sites'].split()
     body = (f"Input values: lon = {lon}, lat = {lat},"
-            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
+            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
+            f" asce_version = {inputs['asce_version']}\n\n")
     if warnings is not None:
         for warning in warnings:
             body += warning + '\n'
@@ -864,6 +866,13 @@ def aelo_validate(request):
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
         invalid_inputs.append('siteid')
+    try:
+        asce_version = request.POST.get(
+            'asce_version', oqvalidation.OqParam.asce_version.default)
+        oqvalidation.OqParam.asce_version.validator(asce_version)
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['asce_version']] = str(exc)
+        invalid_inputs.append('asce_version')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -875,7 +884,7 @@ def aelo_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    return lon, lat, vs30, siteid
+    return lon, lat, vs30, siteid, asce_version
 
 
 @csrf_exempt
@@ -886,17 +895,19 @@ def aelo_run(request):
     Run an AELO calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid,
+        asce_version
     """
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    lon, lat, vs30, siteid = res
+    lon, lat, vs30, siteid, asce_version = res
 
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
+            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
+                 asce_version=asce_version),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
@@ -938,8 +949,8 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
-        aelo_callback)).start()
+        lon, lat, vs30, siteid, asce_version, job_owner_email, outputs_uri_web,
+        jobctx, aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
@@ -1214,6 +1225,10 @@ def web_engine(request, **kwargs):
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
+        params['asce_versions'] = (
+            oqvalidation.OqParam.asce_version.validator.choices)
+        params['default_asce_version'] = (
+            oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
     return render(
