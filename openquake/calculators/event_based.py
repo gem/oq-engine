@@ -230,7 +230,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
     cmaker.scenario = 'scenario' in oq.calculation_mode
     with dstore:
@@ -258,7 +257,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                df = computer.compute_all(dstore, rmon, cmon, umon)
+                df = computer.compute_all(dstore, cmon, umon)
             else:  # regular GMFs
                 with mmon:
                     mean_stds = cmaker.get_mean_stds(
