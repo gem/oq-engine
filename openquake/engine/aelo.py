@@ -90,7 +90,8 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
     params['export_dir'] = ''
-    params['asce_version'] = inputs['asce_version']
+    params['asce_version'] = inputs.get(
+        'asce_version', oqvalidation.OqParam.asce_version.default)
     return params
 
 
