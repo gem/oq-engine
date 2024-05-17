@@ -7,6 +7,8 @@ python3-oq-engine (3.19.1-0~xenial01) xenial; urgency=low
   * Backported fix to `oq extract ruptures?rup_id=XXX`
   * Backported fix to a fake error in case of a nontrivial
     maximum_distance together with a minimum_magnitude
+  * Backported fix to conditioned scenarios which in rare cases
+    may contain sites in gmf_data not in the site mesh
   * Backported fix to scenario from gmfs.hdf5 (ExternalLink)
   * Backported fixes to the Canada SHM6 GMPEs
 
