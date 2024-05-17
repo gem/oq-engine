@@ -36,10 +36,12 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 U16 = np.uint16
+U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
 BLOCKSIZE = 5_000
 TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 # NB: if too large, very few sources will be generated and a lot of
 # memory will be used
 
@@ -253,12 +255,12 @@ def save(mfsources, sectiondict, hdf5path):
     """
     Utility to serialize MultiFaultSources and optionally computing msparams
     """
-    assert len(sectiondict) < TWO16, len(sectiondict)
+    assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_rids = []
     for src in mfsources:
         try:
-            rids = [U16([s2i[idx] for idx in idxs])
+            rids = [U32([s2i[idx] for idx in idxs])
                     for idxs in src._rupture_idxs]
         except KeyError as exc:
             raise IndexError('The section index %s in source %r is invalid'
