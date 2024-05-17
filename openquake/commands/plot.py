@@ -842,10 +842,11 @@ def make_figure_gmf_data(extractors, what):
                  label=eid,
                  alpha=0.3,
                  linewidth=0.5)  # opacity
-    max_diff_series = (
+    max_diff = (
         df.groupby('sid')['gmv_0'].max() - df.groupby('sid')['gmv_0'].min())
+    max_diff_series = pandas.Series(max_diff)
     max_diff_value = max_diff_series.max()
-    site_max_diff = max_diff_series.index[numpy.argmax(max_diff_value)]
+    site_max_diff = max_diff.idxmax()
     max_diff_label = (
         f'Max diff per site'
         f' (max: site {site_max_diff}, diff {max_diff_value:.5f})')
