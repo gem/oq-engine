@@ -115,7 +115,7 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
 
           # JUST TO TEST MULTI_DOCS
-          MULTI_DOCS_FOR_DEVEL: "true"
+          MULTI_DOCS_FOR_DEVEL: "false"
         run: |
           bash --version
           LTS_VER=$(grep '^Current LTS' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')

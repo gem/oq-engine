@@ -92,7 +92,7 @@ html_theme_options = {
     "switcher": {
         "json_url": json_url_path,
 #        "version_match": "development" if it_is_master is True else '.'.join(version.split('.')[0:2])
-         "version_match": "master"
+         "version_match": "3.19"
     },
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
