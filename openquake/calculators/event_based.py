@@ -387,6 +387,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                                 ' on a cluster')
             cmaker.shr_obj = performance.SharedObject(mea=mea, tau=tau, phi=phi)
             smap.unlink = cmaker.shr_obj.unlink
+        else:
+            smap.unlink = lambda: None
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
@@ -717,8 +719,7 @@ class EventBasedCalculator(base.HazardCalculator):
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
-        if 'station_data' in oq.inputs:
-            smap.unlink()  # shared memory
+        smap.unlink()  # shared memory
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:
