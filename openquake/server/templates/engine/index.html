@@ -33,24 +33,36 @@
             {% endif %}
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
-              <!-- <label for"lat">Latitude:</label> -->
-              <input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
-              <!-- <label for"lon">Longitude:</label> -->
-              <input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
-              <!-- <label for"vs30">Vs30:</label> -->
-              <input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly />
-              <!-- <label for"siteid">Site ID:</label> -->
-              <input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
-                <label for="asce_version">{{ aelo_form_placeholders.asce_version }}</label>
-                <select name="asce_version" id="asce_version">
-                  {% for asce_version in asce_versions %}
-                  {% if asce_version == default_asce_version %}
-                  <option value="{{ asce_version }}" selected>{{ asce_version }}</option>
-                  {% else %}
-                  <option value="{{ asce_version }}">{{ asce_version }}</option>
-                  {% endif %}
-                  {% endfor %}
-                </select>
+              <table class="table-aelo-form table">
+                <thead>
+                  <tr>
+                    <th><label class="aelo-label" for"lat">Latitude:</label></th>
+                    <th><label class="aelo-label" for"lon">Longitude:</label></th>
+                    <th><label class="aelo-label" for"vs30">Vs30:</label></th>
+                    <th><label class="aelo-label" for"siteid">Site ID:</label></th>
+                    <th><label class="aelo-label" for="asce_version">{{ aelo_form_placeholders.asce_version }}</label></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/></td>
+                    <td><input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/></td>
+                    <td><input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly /></td>
+                    <td><input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
+                    <td>
+                        <select class="aelo-select" name="asce_version" id="asce_version">
+                        {% for asce_version in asce_versions %}
+                        {% if asce_version == default_asce_version %}
+                        <option value="{{ asce_version }}" selected>{{ asce_version }}</option>
+                        {% else %}
+                        <option value="{{ asce_version }}">{{ asce_version }}</option>
+                        {% endif %}
+                        {% endfor %}
+                        </select>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
               <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
             </form>
@@ -103,7 +115,7 @@
               </div>
               <div class="aristotle_form_row">
                 <label for="trt">{{ aristotle_form_placeholders.trt }}</label>
-                <select name="trt" id="trt">
+                <select name="trt" id="trt" class="aristotle-select">
                 </select>
               </div>
               <div class="aristotle_form_row">
