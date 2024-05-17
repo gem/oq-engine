@@ -844,13 +844,23 @@ def make_figure_gmf_data(extractors, what):
                  linewidth=0.5)  # opacity
     max_diff = (
         df.groupby('sid')['gmv_0'].max() - df.groupby('sid')['gmv_0'].min())
+    max_mult_diff = (
+        df.groupby('sid')['gmv_0'].max() / df.groupby('sid')['gmv_0'].min())
     max_diff_series = pandas.Series(max_diff)
+    max_mult_diff_series = pandas.Series(max_mult_diff)
     max_diff_value = max_diff_series.max()
+    max_mult_diff_value = max_mult_diff_series.max()
     site_max_diff = max_diff.idxmax()
+    site_max_mult_diff = max_mult_diff.idxmax()
     max_diff_label = (
         f'Max diff per site'
         f' (max: site {site_max_diff}, diff {max_diff_value:.5f})')
-    plt.plot(df['sid'].unique(),
+    max_mult_diff_label = (
+        f'Max mult diff per site'
+        f' (max: site {site_max_mult_diff},'
+        f' mult diff {max_mult_diff_value:.5f})')
+    unique_sids = df['sid'].unique()
+    plt.plot(unique_sids,
              max_diff_series,
              marker='',
              linestyle=':',
@@ -858,6 +868,14 @@ def make_figure_gmf_data(extractors, what):
              alpha=1,
              color='black',
              label=max_diff_label)
+    plt.plot(unique_sids,
+             max_mult_diff_series,
+             marker='',
+             linestyle='--',
+             linewidth=1,
+             alpha=1,
+             color='grey',
+             label=max_mult_diff_label)
     plt.xlabel('Site ID')
     plt.ylabel('Ground motion value')
     plt.title('Ground motion by site')
