@@ -827,6 +827,30 @@ def make_figure_disagg_by_src(extractors, what):
     return plt
 
 
+def make_figure_gmf_data(extractors, what):
+    """
+    $ oq plot "gmf_data?"
+    """
+    plt = import_plt()
+    [ex] = extractors
+    df = ex.dstore.read_df('gmf_data')
+    for eid in df['eid'].unique():
+        plt.plot(df[df['eid'] == eid]['sid'],
+                 df[df['eid'] == eid]['gmv_0'],
+                 marker='',
+                 linestyle='-',
+                 label=eid,
+                 alpha=0.7,
+                 linewidth=0.5)  # opacity
+
+    plt.xlabel('Site ID')
+    plt.ylabel('Ground motion value')
+    plt.title('Ground motion by site')
+    plt.legend(title='Event ID')
+    plt.grid(True)
+    return plt
+
+
 def plot_wkt(wkt_string):
     """
     Plot a WKT string describing a polygon
