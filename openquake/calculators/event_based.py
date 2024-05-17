@@ -717,7 +717,8 @@ class EventBasedCalculator(base.HazardCalculator):
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
-        smap.unlink()  # shared memory
+        if 'station_data' in oq.inputs:
+            smap.unlink()  # shared memory
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:
