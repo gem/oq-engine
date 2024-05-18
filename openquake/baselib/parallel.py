@@ -686,10 +686,9 @@ def get_return_ip(receiver_host):
 
 # ########################### SharedMemory ############################## #
 
-
 class SharedArray(object):
     """
-    Wrapper over a SharedMemory object to be used as a context manager.
+    Wrapper over a SharedMemory array to be used as a context manager.
     """
     @classmethod
     def new(cls, array):
@@ -958,9 +957,12 @@ class Starmap(object):
                 del self.task_queue[0]
                 self.submit(args, func=func)
 
+    # NB: the shared dictionary will be attached to the monitor
+    # and used in the workers; to see an example of usage, look at
+    # the event_based calculator
     def share(self, **dictarray):
         """
-        Apply SharedArray to a dictionary of arrays
+        Apply SharedArray.new to a dictionary of arrays
         """
         self._shared = {k: SharedArray.new(a) for k, a in dictarray.items()}
 
@@ -969,6 +971,7 @@ class Starmap(object):
         Unlink the shared arrays, if any
         """
         for name, shr in self._shared.items():
+            logging.debug('Unlinking %s', name)
             shr.unlink()
 
     def _loop(self):
