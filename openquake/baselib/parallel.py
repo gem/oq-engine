@@ -706,6 +706,7 @@ class SharedArray(object):
         # fill the SharedMemory buffer with the value
         arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
         arr[:] = value
+        sm.close()
 
     def __enter__(self):
         self.sm = shmem.SharedMemory(self.name)
@@ -715,21 +716,9 @@ class SharedArray(object):
         self.sm.close()
 
     def unlink(self):
-        shmem.SharedMemory(self.name).unlink()
-
-
-class SharedObject(object):
-    """
-    A container of SharedArrays
-    """
-    def __init__(self, **kw):
-        self._names = list(kw)
-        for k, arr in kw.items():
-            setattr(self, k, SharedArray.new(arr))
-
-    def unlink(self):
-        for name in self._names:
-            getattr(self, name).unlink()
+        sm = shmem.SharedMemory(self.name)
+        sm.close()
+        sm.unlink()
 
 
 class Starmap(object):
@@ -868,6 +857,7 @@ class Starmap(object):
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
+        self._shared = {}
 
     def log_percent(self):
         """
@@ -967,6 +957,19 @@ class Starmap(object):
                 del self.task_queue[0]
                 self.submit(args, func=func)
 
+    def share(self, **dictarray):
+        """
+        Apply SharedArray to a dictionary of arrays
+        """
+        self._shared = {k: SharedArray.new(a) for k, a in dictarray.items()}
+
+    def unlink(self):
+        """
+        Unlink the shared arrays, if any
+        """
+        for name, shr in self._shared.items():
+            shr.unlink()
+
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
@@ -1027,6 +1030,7 @@ class Starmap(object):
         self.log_percent()
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
+        self.unlink()
         if dist == 'slurm':
             for fname in os.listdir(self.monitor.calc_dir):
                 os.remove(os.path.join(self.monitor.calc_dir, fname))
