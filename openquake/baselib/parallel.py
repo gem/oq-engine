@@ -695,29 +695,27 @@ class SharedArray(object):
         return cls(array.shape, array.dtype, array)
 
     def __init__(self, shape, dtype, value):
-        # NOTE: on Windows numpy.zeros(1, dtype).nbytes is a numpy.int32 and
-        # causes issues, so it is converted into a Python int below
-        nbytes = int(numpy.zeros(1, dtype).nbytes) * numpy.prod(shape)
-        sm = shmem.SharedMemory(create=True, size=nbytes)
-        self.name = sm.name
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        # NOTE: on Windows size wants an int an not a numpy.int
+        self.sm = shmem.SharedMemory(create=True, size=int(nbytes))
         self.shape = shape
         self.dtype = dtype
         # fill the SharedMemory buffer with the value
-        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
+        arr = numpy.ndarray(shape, dtype, buffer=self.sm.buf)
         arr[:] = value
-        sm.close()
 
     def __enter__(self):
-        self.sm = shmem.SharedMemory(self.name)
+        # this is called in ther workers
+        self._sm = shmem.SharedMemory(self.sm.name)
         return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
 
     def __exit__(self, etype, exc, tb):
-        self.sm.close()
+        # this is called in ther workers
+        self._sm.close()
 
     def unlink(self):
-        sm = shmem.SharedMemory(self.name)
-        sm.close()
-        sm.unlink()
+        self.sm.close()
+        self.sm.unlink()
 
 
 class Starmap(object):
