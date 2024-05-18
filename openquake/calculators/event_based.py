@@ -362,7 +362,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         M = len(cmaker.imts)
         N = len(computer.sitecol)
         size = 2 * G * M * N * N * 8  # tau, phi
-        logging.info('Building %s of mean_covs', humansize(size))
+        msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
+        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
@@ -375,6 +376,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
         save_tmp(smap.monitor)
+
+    # NB: for conditioned scenarios we are looping on a single trt
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
