@@ -221,6 +221,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    shr = monitor.shared
     oq = cmaker.oq
     alldata = []
     se_dt = sig_eps_dt(oq.imtls)
@@ -257,8 +258,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                s = cmaker.shr_obj
-                with s.mea as mea, s.tau as tau, s.phi as phi:
+                with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                     df = computer.compute_all([mea, tau, phi], cmon, umon)
             else:  # regular GMFs
                 with mmon:
@@ -385,10 +385,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             if parallel.oq_distribute() == 'zmq':
                 logging.warning('Conditioned scenarios are not meant to be run'
                                 ' on a cluster')
-            cmaker.shr_obj = performance.SharedObject(mea=mea, tau=tau, phi=phi)
-            smap.unlink = cmaker.shr_obj.unlink
-        else:
-            smap.unlink = lambda: None
+            smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
@@ -719,7 +716,6 @@ class EventBasedCalculator(base.HazardCalculator):
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
-        smap.unlink()  # shared memory
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:
