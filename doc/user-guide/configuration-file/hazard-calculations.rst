@@ -1,34 +1,32 @@
 Hazard Calculations
 -------------------
 
-.. _classical-psha:
+This Chapter summarises the structure of the information necessary to define the different input data to be used with 
+the OpenQuake engine hazard calculators, i.e. the so called ``job.ini`` configuration file.
+Each calculator has its own specific parameters, however there are a few
+parameters which are common to all calculators, so they will be explained first.
 
-**************
-Classical PSHA
-**************
-
-In the following we describe the overall structure and the most typical parameters of a configuration file to be used 
-for the computation of a seismic hazard map using a classical PSHA methodology.
-
-**Calculation type and model info**::
+**Calculation type and description**::
 
 	[general]
-	description = A demo OpenQuake-engine .ini file for classical PSHA
 	calculation_mode = classical
-	random_seed = 1024
+	description = A demo OpenQuake-engine .ini file for classical PSHA
 
-In this section the user specifies the following parameters:
+In a section conventionally called ``[general]``, the user specifies the following parameters:
 
 - ``description``: a parameter that can be used to designate the model
-- ``calculation_mode``: it is used to set the kind of calculation. In this case it corresponds to ``classical``. Alternative options for the calculation_mode are described later in this manual.
-- ``random_seed``: is used to control the random generator so that when Monte Carlo procedures are used calculations are replicable (if the same ``random_seed`` is used you get exactly the same results).
+- ``calculation_mode``: used to set the kind of calculation. In this
+  example it corresponds to ``classical``. Alternative options for the
+  calculation_mode are described later in this manual.
 
 **Geometry of the area (or the sites) where hazard is computed**
 
-This section is used to specify where the hazard will be computed. Two options are available:
+A section conventionally called ``[geometry]`` is used to specify
+where the hazard will be computed. Two options are available.
 
-The first option is to define a polygon (usually a rectangle) and a distance (in km) to be used to discretize the 
-polygon area. The polygon is defined by a list of longitude-latitude tuples.
+The first option is to define a polygon (usually a rectangle) and a
+distance (in km) to be used to discretize the polygon area. The
+polygon is defined by a list of longitude-latitude tuples.
 
 An example is provided below::
 
@@ -53,18 +51,108 @@ If the list of sites is too long the user can specify the name of a csv file as 
 The format of the csv file containing the list of sites is a sequence of points (one per row) specified in terms of the 
 longitude, latitude tuple. Depth values are again optional. An example is provided below::
 
+        site_id,lon,lat
+	0,179.0,90.0
+	1,178.0,89.0
+	2,177.0,88.0
+
+For reasons of backward compatibility, it is also possible to skip the header and to omit the ``site_id`` column, however
+we recommend to avoid that format, since it is error prone given that many users tend to use the lat,lot convention
+instead of the lon,lat convention that the engine honors::
+
 	179.0,90.0
 	178.0,89.0
 	177.0,88.0
 
+**Parameters describing site conditions**::
+
+Such parameters are used to specify local soil conditions and are normally listed in a section of the ``job.ini``
+file called ``[site_params]``. The simplest possibility is to define uniform site conditions 
+(i.e. all the sites have the same characteristics), as in this example::
+
+	[site_params]
+	reference_vs30_type = measured
+	reference_vs30_value = 760.0
+	reference_depth_to_2pt5km_per_sec = 5.0
+	reference_depth_to_1pt0km_per_sec = 100.0
+        reference_backarc = 0
+
+Alternatively it is possible to define spatially variable soil properties in a separate file; the engine will then 
+assign to each investigation location the values of the closest point used to specify site conditions::
+
+	[site_params]
+	site_model_file = site_model.csv
+
+The file containing the site model has the following structure::
+
+	lon,lat,vs30,z1pt0,z2pt5,vs30measured,backarc
+	10.0,40.0,800.0,19.367196734,0.588625072259,0,0
+	10.1,40.0,800.0,19.367196734,0.588625072259,0,0
+	10.2,40.0,800.0,19.367196734,0.588625072259,0,0
+	10.3,40.0,800.0,19.367196734,0.588625072259,0,0
+	10.4,40.0,800.0,19.367196734,0.588625072259,0,0
+
+Notice that the 0 for the field ``vs30measured`` means that the ``vs30`` field is inferred, not measured. Most of the 
+GMPEs are not sensitive to it, so you can usually skip it. For the ``backarc`` parameter 0 means false and this is the 
+default, so you can skip such column. All columns that have defaults or are not needed by the GMPEs you are using can 
+be skipped, while you will get an error if a relevant column is missing.
+
+If the closest available site with soil conditions is at a distance greater than 5 km from the investigation location, a 
+warning is generated.
+
+**Note**: For backward-compatibility reasons, the site model file can also be given in XML format. That old format is 
+deprecated but there are no plans to remove it any soon.
+
+There are a lot more site parameters than the one listed above. You can get the full list with the command
+`oq info`::
+  
+ $ oq info site_params # full list as of engine-3.20
+             D50_15              F_15                Fs               PHV
+                THV              T_15              T_eq           ampcode
+         amplfactor           backarc               bas         ch_ampl03
+          ch_ampl06       ch_phis2s03       ch_phis2s06        ch_phiss03
+         ch_phiss06      cohesion_mid        crit_accel               cti
+     custom_site_id                dc             depth                dr
+        dry_density                dw               dwb               ec8
+            ec8_p18                f0    freeface_ratio      friction_mid
+            geohash           geology               gwd              h800
+             hwater           in_cshm            kappa0               lat
+       liq_susc_cat               lon            precip            region
+             relief        saturation              sids           site_id
+          siteclass             slope          soiltype               tri
+               unit              vs30      vs30measured               xvf
+ yield_acceleration             z1pt0             z1pt4             z2pt5
+                zwb
+
+Most parameters are very specific to particular GMPEs and particular
+calculations, so you need to study the implementation of the specific
+feature you are interested in to know what they mean and how they
+work.
+
+.. _classical-psha:
+
+**************
+Classical PSHA
+**************
+
+In the following we describe the overall structure and the most typical parameters of a configuration file to be used 
+for the computation of a seismic hazard map using a classical PSHA methodology.
+
 **Logic tree sampling**
 
-The OpenQuake engine provides two options for processing the whole logic tree structure. The first option uses 
-Montecarlo sampling; the user in this case specifies a number of realizations.
+The OpenQuake engine provides two options for processing the whole logic tree structure.
 
-In the second option all the possible realizations are created. Below we provide an example for the latter option. In 
-this case we set the ``number_of_logic_tree_samples`` to 0. OpenQuake engine will perform a complete enumeration of all the 
-possible paths from the roots to the leaves of the logic tree structure.::
+The first option uses Montecarlo sampling; the user in this case
+specifies a number of realizations and a ``random_seed`` parameter,
+used to control the random generator so that when Monte Carlo
+procedures are used calculations are replicable (if the same
+``random_seed`` is used you get exactly the same results).
+
+In the second option all the possible realizations are created. Below
+we provide an example for the latter option. In this case we set the
+``number_of_logic_tree_samples`` to 0. OpenQuake engine will perform a
+complete enumeration of all the possible paths from the roots to the
+leaves of the logic tree structure.::
 
 	[logic_tree]
 	number_of_logic_tree_samples = 0
@@ -90,43 +178,6 @@ small mesh spacing would produce a very large number of ruptures. The spacing fo
 by the line::
 
 	complex_fault_mesh_spacing = 10
-
-**Parameters describing site conditions**::
-
-	[site_params]
-	reference_vs30_type = measured
-	reference_vs30_value = 760.0
-	reference_depth_to_2pt5km_per_sec = 5.0
-	reference_depth_to_1pt0km_per_sec = 100.0
-
-In this section the user specifies local soil conditions. The simplest solution is to define uniform site conditions 
-(i.e. all the sites have the same characteristics).
-
-Alternatively it is possible to define spatially variable soil properties in a separate file; the engine will then 
-assign to each investigation location the values of the closest point used to specify site conditions.::
-
-	[site_params]
-	site_model_file = site_model.csv
-
-The file containing the site model has the following structure::
-
-	lon,lat,vs30,z1pt0,z2pt5,vs30measured,backarc
-	10.0,40.0,800.0,19.367196734,0.588625072259,0,0
-	10.1,40.0,800.0,19.367196734,0.588625072259,0,0
-	10.2,40.0,800.0,19.367196734,0.588625072259,0,0
-	10.3,40.0,800.0,19.367196734,0.588625072259,0,0
-	10.4,40.0,800.0,19.367196734,0.588625072259,0,0
-
-Notice that the 0 for the field ``vs30measured`` means that the ``vs30`` field is inferred, not measured. Most of the 
-GMPEs are not sensitive to it, so you can usually skip it. For the ``backarc`` parameter 0 means false and this is the 
-default, so you can skip such column. All columns that have defaults or are not needed by the GMPEs you are using can 
-be skipped, while you will get an error if a relevant column is missing.
-
-If the closest available site with soil conditions is at a distance greater than 5 km from the investigation location, a 
-warning is generated.
-
-**Note**: For backward-compatibility reasons, the site model file can also be given in XML format. That old format is 
-deprecated but there are no plans to remove it any soon.
 
 **Calculation configuration**::
 
@@ -271,7 +322,6 @@ Note the setting of the ``calculation_mode`` parameter which now corresponds to 
 	[general]
 	description = A demo OpenQuake-engine .ini file for event based PSHA
 	calculation_mode = event_based
-	random_seed = 1024
 
 **Event based parameters**
 
@@ -289,7 +339,8 @@ respectively. ``0`` and ``1`` are also acceptable flags.
 
 **Output**
 
-This part substitutes the ``Output`` part described in the configuration file example described in the Section :ref:`Classical 
+This part substitutes the ``Output`` part described in the
+configuration file example described in the Section :ref:`Classical
 PSHA <classical-psha>`.::
 
 	[output]
@@ -302,11 +353,13 @@ PSHA <classical-psha>`.::
 	quantiles = 0.15, 0.50, 0.85
 	poes = 0.1, 0.2
 
-Starting from OpenQuake engine v2.2, it is now possible to export information about the ruptures directly in CSV format.
+Starting from OpenQuake engine v2.2, it is now possible to export
+information about the ruptures directly in CSV format.
 
-The option ``hazard_curves_from_gmfs`` instructs the user to use the event- based ground motion values to provide hazard 
-curves indicating the probabilities of exceeding the intensity measure levels set previously in the ``intensity_measure_types_and_levels`` 
-option.
+The option ``hazard_curves_from_gmfs`` instructs the user to use the
+event- based ground motion values to provide hazard curves indicating
+the probabilities of exceeding the intensity measure levels set
+previously in the ``intensity_measure_types_and_levels`` option.
 
 ***************
 Scenario Hazard

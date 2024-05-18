@@ -234,3 +234,28 @@ class SplitTaskTestCase(unittest.TestCase):
         self.assertAlmostEqual(res, 48.6718458266)
         """
         shutil.rmtree(tmpdir)
+
+
+def update(s_array, index, value, monitor):
+    """
+    Update a shared array
+    """
+    with s_array as arr:
+        arr[index] = value
+
+
+class SharedArrayTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.s_array = parallel.SharedArray((2, 2), float, 0.)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.s_array.unlink()
+
+    def test(self):
+        parallel.Starmap(update, [(self.s_array, index, value)
+                                  for index, value in zip([0, 1], [.1, .2])]
+        ).reduce()
+        with self.s_array as arr:
+            print(arr)

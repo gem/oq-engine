@@ -506,6 +506,66 @@ in the first calculation would provide probabilities of exceedance in 1 year, wh
 second calculation would provide probabilities of exceedance in 50 years. All **risk** results for the three calculations 
 will be statistically identical.
 
+*****************************************************************************
+Why I am getting the warning "A big variation in the loss curve is expected"?
+*****************************************************************************
+
+The warning means that your effective investigation time is too small,
+you do not have enough events to have sensible statistics and
+therefore your loss curves will strongly depend on the choice of
+the `ses_seed`. The solution is to increase the parameters
+`number_of_logic_tree_samples`, `ses_per_logic_tree_path` or
+`investigation_time`.
+
+The way the engine determines that the effective investigation time is
+insufficient is to split the event IDs in two sets of odd and even
+IDs.  If the number of relevant events is large, you expect the two
+sets to be statistically equivalent and to produce very similar loss
+curves; on the other hand, if you get the warning, it means that the
+odd and even loss curves are quite different. Notice that the relevant
+events are the ones corresponding to nonzero losses, therefore for
+fatalities it is quite common to get the warning. In that case you can
+accept that the precision on such curves is low and go on, since it
+could be impractical to increase the effective investigation time (in
+the sense that the calculation could get too slow or could even not
+run due to out-of-memory/out-of-disk-space errors).
+
+The command `oq show delta_loss:<loss_index>` displays the loss curves
+for the odd and even sets of relevant events, so that you can get an idea
+of the discrepancies. It is always available, even if the warning is
+not displayed. The loss indexes corresponding to nonzero losses
+can be extracted with the command::
+
+  $ oq show loss_ids
+  | loss_type     | loss_id |
+  |---------------+---------|
+  | nonstructural | 2       |
+  | structural    | 3       |
+
+For instance the even/odd loss curve for `nonstructural` can be displayed
+as follows::
+
+ $ oq show delta_loss:2
+               loss          even           odd     delta
+ 5     9.794486e+07  8.659461e+07  1.026752e+08  0.084961
+ 10    2.627667e+08  2.463170e+08  2.913166e+08  0.083699
+ 20    5.115378e+08  5.389827e+08  5.060021e+08  0.031561
+ 50    9.174307e+08  9.665251e+08  8.286646e+08  0.076794
+ 100   1.214801e+09  1.126333e+09  1.305085e+09  0.073518
+ 200   2.018548e+09  1.718065e+09  2.063922e+09  0.091449
+ 500   3.366133e+09  2.235775e+09  5.022807e+09  0.383964
+ 1000  5.022807e+09  3.366133e+09  8.697419e+09  0.441933
+
+That gives an indication of the error on the loss curve, which is normally
+quite large. The `delta` is the relative error computed with the formula::
+
+ delta = |loss_even - loss_odd| / (loss_even + loss_odd)
+
+In many cases there is nothing you can do about that since
+the statistical error goes down with `1 / sqrt(num_events)` and therefore
+it requires a quadratic effort to reduce it (i.e. 100 times more
+computations only reduce the error 10 times).
+
 ***************************************
 Can I disaggregate my losses by source?
 ***************************************

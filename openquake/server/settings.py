@@ -180,6 +180,10 @@ APPLICATION_MODES = [
 
 APPLICATION_MODE = 'PUBLIC'
 
+# If False, a warning is displayed in case a newer version of the engine has
+# been released
+DISABLE_VERSION_WARNING = False
+
 # Set to True if using NGINX or some other reverse proxy
 # Externally visible url and port number is different from Django visible
 # values
@@ -236,8 +240,8 @@ if APPLICATION_MODE in ('TOOLS_ONLY',):
                 'cookie_consent', 'corsheaders',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
-            
-    # add middleware for corsheader        
+
+    # add middleware for corsheader
     for app_cors in ('corsheaders.middleware.CorsMiddleware',):
         if app_cors not in MIDDLEWARE:
             MIDDLEWARE += (app_cors,)

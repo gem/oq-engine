@@ -2,6 +2,8 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/macos/arm64/py310/charset_normalizer-3.3.2-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/pyzmq-26.0.3-cp310-cp310-macosx_10_15_universal2.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/pandas-2.0.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/kiwisolver-1.4.5-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/h5py-3.10.0-cp310-cp310-macosx_11_0_arm64.whl
@@ -18,7 +20,6 @@ https://wheelhouse.openquake.org/macos/arm64/py310/psutil-5.9.6-cp310-abi3-macos
 https://wheelhouse.openquake.org/macos/arm64/py310/fiona-1.9.5-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/GDAL-3.7.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/pyproj-3.6.1-cp310-cp310-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py310/pyzmq-25.1.1-cp310-cp310-macosx_10_15_universal2.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/setproctitle-1.3.3-cp310-cp310-macosx_10_9_universal2.whl
 #pp
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl

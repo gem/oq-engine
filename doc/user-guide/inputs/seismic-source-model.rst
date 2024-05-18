@@ -34,6 +34,7 @@ Currently the OpenQuake engine supports the following source types:
   - *Multi-planar fault rupture* - an individual rupture represented as a collection of rectangular planes
   - *Simple fault rupture* - an individual fault rupture represented as a simple fault surface
   - *Complex fault rupture* - an individual fault rupture represented as a complex fault surface
+  - *Gridded rupture* - an individual fault rupture represented as a mesh of points
 
 The OpenQuake engine contains some basic assumptions for the definition of these source typologies:
 

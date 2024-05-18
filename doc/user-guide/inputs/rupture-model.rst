@@ -108,3 +108,22 @@ of the fault rupture. An example of a complex fault rupture is shown below in th
 	    </complexFaultRupture>
 	
 	</nrml>
+
+
+*Gridded Rupture* - in which the geometry is defined in terms of a GriddedSurface which is a mesh of points. An example of gridded rupture is shown below in the listing below::
+
+	<?xml version='1.0' encoding='utf-8'?>
+	<nrml xmlns:gml="http://www.opengis.net/gml"
+	      xmlns="http://openquake.org/xmlns/nrml/0.5">
+              <griddedRupture probs_occur="0.984 0.016">
+                    <magnitude>8.2</magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="19.2" lat="35.301" lon="140.859"/>
+                    <griddedSurface>
+                        <gml:posList>
+                            141.659 35.121 9.8 141.659 35.099 9.6 141.659 35.076 9.4 ...
+                        </gml:posList>
+                    </griddedSurface>
+              </griddedRupture>
+	</nrml>
+

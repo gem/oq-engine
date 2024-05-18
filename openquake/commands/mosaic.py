@@ -27,7 +27,7 @@ import pandas
 import collections
 from openquake.baselib import config, performance
 from openquake.qa_tests_data import mosaic
-from openquake.commonlib import readinput, logs, datastore
+from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.aristotle import main_cmd
@@ -168,7 +168,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
 
 def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = None, vs30: float = 760):
+             concurrent_jobs: int = None, vs30: float = 760,
+             asce_version: str = oqvalidation.OqParam.asce_version.default):
     """
     Run a PSHA analysis on the given sites or given a CSV file
     formatted as described in the 'from_file' function. For instance
@@ -182,7 +183,8 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
         from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
         return
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
-    params = get_params_from(dict(sites=sites, vs30=vs30), mosaic_dir)
+    params = get_params_from(
+        dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -198,7 +200,9 @@ run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 run_site.vs30 = 'vs30 value for the calculation'
-
+run_site.asce_version = dict(
+    help='ASCE version',
+    choices=oqvalidation.OqParam.asce_version.validator.choices)
 
 # ######################### sample rups and gmfs ######################### #
 
