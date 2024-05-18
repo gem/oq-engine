@@ -705,13 +705,12 @@ class SharedArray(object):
         arr[:] = value
 
     def __enter__(self):
-        # this is called in ther workers
-        self._sm = shmem.SharedMemory(self.sm.name)
+        # this is called in the workers
         return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
 
     def __exit__(self, etype, exc, tb):
-        # this is called in ther workers
-        self._sm.close()
+        # this is called in the workers
+        self.sm.close()
 
     def unlink(self):
         self.sm.close()
