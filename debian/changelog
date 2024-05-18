@@ -1,3 +1,7 @@
+  [Michele Simionato, Marco Pagani]
+  * Fixed the multifault rupture indices and the MultiLine class so
+    that the New Zealand model can run
+
   [Paolo Tormene, Michele Simionato]
   * Added a new parameter `asce_version` for AELO calculations
 

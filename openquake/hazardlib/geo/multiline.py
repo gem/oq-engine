@@ -203,24 +203,24 @@ class MultiLine(object):
             # fast lane, when the number of segments is constant
             lam0s, phi0s, coos, slens, uhats, thats = build_line_params(
                 self.lines)
-            out = get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+            return get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
                            self.soidx, self.flipped, lons, lats)
-        else:
-            # slow lane
-            out = []
-            for idx in self.soidx:
-                line = self.lines[idx]
-                slen, uhat, that = line.sut_hat
-                if self.flipped[idx]:
-                    coo = np.flipud(line.coo[:, 0:2])
-                    uhat = -uhat
-                    that = -that
-                else:
-                    coo = line.coo[:, :2]
-                tuw = get_tuw(line.proj.lam0, line.proj.phi0, coo,
-                              slen, uhat, that,  lons, lats)
-                out.append(tuw)
-        return out
+        # else slow lane
+        out = []
+        for idx in self.soidx:
+            line = self.lines[idx]
+            slen, uhat, that = line.sut_hat
+            if self.flipped[idx]:
+                coo = np.flipud(line.coo[:, 0:2])
+                uhat = -uhat
+                that = -that
+            else:
+                coo = line.coo[:, :2]
+            tuw = get_tuw(line.proj.lam0, line.proj.phi0, coo,
+                          slen, uhat, that,  lons, lats)
+            out.append(tuw)
+        return np.array(out)
+
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
