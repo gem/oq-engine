@@ -198,7 +198,7 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
         oq._amplifier, oq._sec_perils)
 
 
-def gen_event_based(allproxies, cmaker, shr, stations, dstore, monitor):
+def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     """
     Launcher of event_based tasks
     """
@@ -206,21 +206,22 @@ def gen_event_based(allproxies, cmaker, shr, stations, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, 10_000, rup_weight):
         n += len(proxies)
-        yield event_based(proxies, cmaker, shr, stations, dstore, monitor)
+        yield event_based(proxies, cmaker, stations, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
                 rup_weight(r) for r in rem) > 12_000:
             half = len(rem) // 2
-            yield gen_event_based, rem[:half], cmaker, shr, stations, dstore
-            yield gen_event_based, rem[half:], cmaker, shr, stations, dstore
+            yield gen_event_based, rem[:half], cmaker, stations, dstore
+            yield gen_event_based, rem[half:], cmaker, stations, dstore
             return
 
 
-def event_based(proxies, cmaker, shr, stations, dstore, monitor):
+def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    shr = monitor.shared
     oq = cmaker.oq
     alldata = []
     se_dt = sig_eps_dt(oq.imtls)
@@ -386,7 +387,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                                 ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
-            args = block, cmaker, smap._shared, (station_data, station_sites), dstore
+            args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
     return smap
 

@@ -276,11 +276,10 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def ebrisk(proxies, cmaker, shr, stations, dstore, monitor):
+def ebrisk(proxies, cmaker, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
-    :param shr: dummy parameter
     :param stations: empty pair or (station_data, station_sitecol)
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
@@ -288,7 +287,7 @@ def ebrisk(proxies, cmaker, shr, stations, dstore, monitor):
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        dic = event_based.event_based(block, cmaker, shr, stations, dstore, monitor)
+        dic = event_based.event_based(block, cmaker, stations, dstore, monitor)
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             yield event_based_risk(gmf_df, cmaker.oq, monitor)

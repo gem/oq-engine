@@ -883,6 +883,7 @@ class Starmap(object):
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
+            self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
                 self.return_ip, self.socket.port)
             self.monitor.config = config
