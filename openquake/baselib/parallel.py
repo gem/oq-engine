@@ -706,11 +706,12 @@ class SharedArray(object):
 
     def __enter__(self):
         # this is called in the workers
-        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
+        self._sm = shmem.SharedMemory(name=self.sm.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self._sm.buf)
 
     def __exit__(self, etype, exc, tb):
         # this is called in the workers
-        self.sm.close()
+        self._sm.close()
 
     def unlink(self):
         self.sm.close()
