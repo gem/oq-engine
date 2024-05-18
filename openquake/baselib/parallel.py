@@ -698,7 +698,7 @@ class SharedArray(object):
         # NOTE: on Windows numpy.zeros(1, dtype).nbytes is a numpy.int32 and
         # causes issues, so it is converted into a Python int below
         nbytes = int(numpy.zeros(1, dtype).nbytes) * numpy.prod(shape)
-        sm = shmem.SharedMemory(create=True, size=int(nbytes))
+        sm = shmem.SharedMemory(create=True, size=nbytes)
         self.name = sm.name
         self.shape = shape
         self.dtype = dtype
