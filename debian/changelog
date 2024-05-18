@@ -1,7 +1,3 @@
-  [Fatemeh Alishahiha]
-  * Added vertical component to `abrahamson_silva_1997` gsim library
-    with all its tests.
-
   [Michele Simionato]
   * Added another check for missing gsim in scenario calculations
   * Using custom `hcurves` and `uhs` exporters in AELO mode
