@@ -1,4 +1,4 @@
-  [Michele Simionato]
+  [Michele Simionato, Marco Pagani]
   * Fixed the multifault rupture indices and the MultiLine class so
     that the New Zealand model can run
 
