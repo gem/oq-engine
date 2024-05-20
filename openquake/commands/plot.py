@@ -837,6 +837,7 @@ def make_figure_gmf_data(extractors, what):
     if metric not in implemented_metrics:
         raise NotImplementedError(f'Metric {metric} is not implemented')
 
+    # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
 
