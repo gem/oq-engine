@@ -827,77 +827,30 @@ def make_figure_disagg_by_src(extractors, what):
     return plt
 
 
-def make_figure_gmf_data(extractors, what):
+def make_figure_gmf_scenario(extractors, what):
     """
-    $ oq plot "gmf_data?"
+    $ oq plot "gmf_scenario?imt=PGA"
     """
-    implemented_metrics = ['max_diff', 'max_mult_diff']
-    # FIXME: get metric from command arguments
-    metric = 'max_diff'
-    if metric not in implemented_metrics:
-        raise NotImplementedError(f'Metric {metric} is not implemented')
-
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
 
-    df = ex.dstore.read_df('gmf_data')
+    df = ex.get(what)
     for eid in df['eid'].unique():
         plt.plot(df[df['eid'] == eid]['sid'],
-                 df[df['eid'] == eid]['gmv_0'],
+                 df[df['eid'] == eid]['gmv'],
                  marker='',
                  linestyle='-',
                  label=eid,
-                 alpha=0.3,
-                 linewidth=0.5)  # opacity
+                 linewidth=0.5)
 
-    unique_sids = df['sid'].unique()
-
-    if metric == 'max_diff':
-        # Maximum difference per site
-        max_diff = (
-            df.groupby('sid')['gmv_0'].max()
-            - df.groupby('sid')['gmv_0'].min())
-        max_diff_series = pandas.Series(max_diff)
-        max_diff_value = max_diff_series.max()
-        site_max_diff = max_diff.idxmax()
-        max_diff_label = (
-            f'Max diff per site'
-            f' (max: site {site_max_diff}, diff {max_diff_value:.5f})')
-        plt.plot(unique_sids,
-                 max_diff_series,
-                 marker='',
-                 linestyle=':',
-                 linewidth=1,
-                 alpha=1,
-                 color='black',
-                 label=max_diff_label)
-
-    elif metric == 'max_mult_diff':
-        # Maximum multiplicative difference (max/min ratio) per site
-        max_mult_diff = (
-            df.groupby('sid')['gmv_0'].max()
-            / df.groupby('sid')['gmv_0'].min())
-        max_mult_diff_series = pandas.Series(max_mult_diff)
-        max_mult_diff_value = max_mult_diff_series.max()
-        site_max_mult_diff = max_mult_diff.idxmax()
-        max_mult_diff_label = (
-            f'Max mult diff per site'
-            f' (max: site {site_max_mult_diff},'
-            f' mult diff {max_mult_diff_value:.5f})')
-        plt.plot(unique_sids,
-                 max_mult_diff_series,
-                 marker='',
-                 linestyle='--',
-                 linewidth=1,
-                 alpha=1,
-                 color='black',
-                 label=max_mult_diff_label)
-
+    # Maximum multiplicative difference (max/min ratio) per site
+    max_rate = (df.groupby('sid')['gmv'].max() /
+                df.groupby('sid')['gmv'].min())
     plt.xlabel('Site ID')
     plt.ylabel('Ground motion value')
-    plt.title('Ground motion by site')
-    plt.legend(title='Event ID')
+    plt.title(f'Ground motion by site (max_rate={max_rate.max():.1f} at '
+              f'site ID={max_rate.idxmax()})')
     plt.grid(True)
     return plt
 

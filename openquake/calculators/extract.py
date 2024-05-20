@@ -905,6 +905,19 @@ def _gmf(df, num_sites, imts):
     return gmfa
 
 
+@extract.add('gmf_scenario')
+def extract_gmf_by_imt(dstore, what):
+    oq = dstore['oqparam']
+    assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
+    qdict = parse(what)  # example {'imt': 'PGA'}
+    [imt] = qdict['imt']
+    m = list(oq.imtls).index(imt)
+    gmvs = dstore[f'gmf_data/gmv_{m}'][:]
+    eids = dstore['gmf_data/eid'][:]
+    sids = dstore['gmf_data/sid'][:]
+    return pandas.DataFrame(dict(sid=sids, eid=eids, gmv=gmvs))
+
+
 # used by the QGIS plugin for a single eid
 @extract.add('gmf_data')
 def extract_gmf_npz(dstore, what):
