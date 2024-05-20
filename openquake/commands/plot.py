@@ -834,23 +834,26 @@ def make_figure_gmf_scenario(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
-
-    df = ex.get(what)
-    for eid in df['eid'].unique():
-        plt.plot(df[df['eid'] == eid]['sid'],
-                 df[df['eid'] == eid]['gmv'],
+    arr = ex.get(what).array
+    E, N = arr.shape
+    sids = range(N)
+    for eid in range(E):
+        plt.plot(sids,
+                 arr[eid],
                  marker='',
                  linestyle='-',
                  label=eid,
                  linewidth=0.5)
 
     # Maximum multiplicative difference (max/min ratio) per site
-    max_rate = (df.groupby('sid')['gmv'].max() /
-                df.groupby('sid')['gmv'].min())
+    min_values = arr.min(axis=0)
+    max_values = arr.max(axis=0)
+    ok = min_values > 0
+    max_rate = max_values[ok] / min_values[ok]
     plt.xlabel('Site ID')
     plt.ylabel('Ground motion value')
     plt.title(f'Ground motion by site (max_rate={max_rate.max():.1f} at '
-              f'site ID={max_rate.idxmax()})')
+              f'site ID={max_rate.argmax()})')
     plt.grid(True)
     return plt
 

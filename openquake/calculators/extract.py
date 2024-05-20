@@ -915,7 +915,15 @@ def extract_gmf_by_imt(dstore, what):
     gmvs = dstore[f'gmf_data/gmv_{m}'][:]
     eids = dstore['gmf_data/eid'][:]
     sids = dstore['gmf_data/sid'][:]
-    return pandas.DataFrame(dict(sid=sids, eid=eids, gmv=gmvs))
+    try:
+        N = len(dstore['complete'])
+    except KeyError:
+        N = len(dstore['sitecol'])
+    E = len(dstore['events'])
+    arr = numpy.zeros((E, N))
+    for eid, sid, gmv in zip(eids, sids, gmvs):
+        arr[eid, sid] = gmv
+    return arr
 
 
 # used by the QGIS plugin for a single eid
