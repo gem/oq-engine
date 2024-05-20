@@ -55,18 +55,8 @@ def imt2tup(string):
             raise ValueError('Missing period in SA')
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
-
-    if len(rest[0][:-1].split(',')) == 1:
-        period = float(rest[0][:-1])
-    elif len(rest[0][:-1].split(',')) == 2:
-        period = float(rest[0][:-1].split(',')[0])
-        strength_ratio = float(rest[0][:-1].split(',')[1])
-    else:
-        raise NameError('IMT attributes not recognizable: %s' % rest[0][:-1])
-    if name.startswith("SDi"):
-        return ('SDi(%s,%s)' % (period, strength_ratio), period, strength_ratio)
-    else:
-        raise NameError('IMT class name not recognizable: %s' % name)
+    period = float(rest[0][:-1])
+    return ('SA(%s)' % period, period)
 
 
 def from_string(imt, _damping=5.0):
@@ -109,6 +99,9 @@ def sort_by_imt(imtls):
 
 def repr(self):
     if self.period and self.damping != 5.0:
+        if self.string.startswith('SDi'):
+            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
+                                        self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
@@ -179,7 +172,7 @@ def SA(period, damping=5.0):
     return IMT('SA(%s)' % period, period, damping)
 
 
-def SDi(period=1.0, strength_ratio=2, damping=5.0):
+def SDi(period, strength_ratio, damping=5.0):
     """
     Inelastic spectral displacement, defined as the maximum displacement
     of a damped, single-degree-of-freedom inelastic oscillator. Units 
@@ -187,7 +180,8 @@ def SDi(period=1.0, strength_ratio=2, damping=5.0):
     """
     period = float(period)
     strength_ratio = float(strength_ratio)
-    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping, strength_ratio)
+    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping,
+               strength_ratio)
 
 
 def AvgSA(period=None, damping=5.0):
@@ -320,7 +314,7 @@ def LSD():
     """
     Liquefaction-induced lateral spread displacements measured in units of ``m``.
     """
-    return IMT('LSD')   
+    return IMT('LSD')
 
 
 def PGDGeomMean(vert_settlement, lat_spread):
