@@ -116,8 +116,9 @@ def read_cmaker_df(gsim, csvfnames):
     cmap = {}
     for col in df.columns:
         try:
-            im = str(imt.from_string(col if col.startswith("AvgSA")
-                                     else col.upper()))
+            im = str(imt.from_string(
+                col if (col.startswith("AvgSA") or
+                        col.startswith("SDi")) else col.upper()))
         except KeyError:
             pass
         else:
