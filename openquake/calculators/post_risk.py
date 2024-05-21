@@ -579,14 +579,14 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
-        if oq.investigation_time and 'risk' in oq.calculation_mode:
+        if 'risk' in oq.calculation_mode:
             self.datastore['oqparam'] = oq
             for ln in self.oqparam.loss_types:
                 li = scientific.LOSSID[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
                     logging.warning(
-                        'A big variation in the %s loss curve is expected: try'
+                        'A big variation in the %s losses is expected: try'
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)
         logging.info('Sanity check on avg_losses and aggrisk')
