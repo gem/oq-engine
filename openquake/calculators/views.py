@@ -1322,6 +1322,9 @@ def view_delta_loss(token, dstore):
     num_events0 = num_events // 2 + (num_events % 2)
     num_events1 = num_events // 2
     if oq.calculation_mode == 'scenario_risk':
+        if oq.number_of_ground_motion_fields == 1:
+            return {'delta': numpy.zeros(1),
+                    'error': 'number_of_ground_motion_fields=1'}
         c0 = losses0.sum() / num_events0
         c1 = losses1.sum() / num_events1
         dic = dict(even=[c0], odd=[c1], delta=[numpy.abs(c0 - c1) / (c0 + c1)])
