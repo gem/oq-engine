@@ -506,16 +506,16 @@ in the first calculation would provide probabilities of exceedance in 1 year, wh
 second calculation would provide probabilities of exceedance in 50 years. All **risk** results for the three calculations 
 will be statistically identical.
 
-*****************************************************************************
-Why I am getting the warning "A big variation in the loss curve is expected"?
-*****************************************************************************
+*************************************************************************
+Why I am getting the warning "A big variation in the losses is expected"?
+**************************************************************************
 
-The warning means that your effective investigation time is too small,
-you do not have enough events to have sensible statistics and
-therefore your loss curves will strongly depend on the choice of
-the `ses_seed`. The solution is to increase the parameters
-`number_of_logic_tree_samples`, `ses_per_logic_tree_path` or
-`investigation_time`.
+In event based risk calculations the warning means that your effective
+investigation time is too small, you do not have enough events to have
+sensible statistics and therefore your loss curves will strongly
+depend on the choice of the `ses_seed`. The solution is to increase
+the parameters `number_of_logic_tree_samples`,
+`ses_per_logic_tree_path` or `investigation_time`.
 
 The way the engine determines that the effective investigation time is
 insufficient is to split the event IDs in two sets of odd and even
@@ -565,6 +565,15 @@ In many cases there is nothing you can do about that since
 the statistical error goes down with `1 / sqrt(num_events)` and therefore
 it requires a quadratic effort to reduce it (i.e. 100 times more
 computations only reduce the error 10 times).
+
+In scenario risk calculations there are no loss curves, however you can
+still get the same warning if the average losses (averaged over the number
+of events) are quite different between odd and even events. In that case
+you can get something as follows::
+
+  $ oq show delta_loss:4
+                  even         odd     delta
+  occupants  78.734665  114.527138  0.185202
 
 ***************************************
 Can I disaggregate my losses by source?

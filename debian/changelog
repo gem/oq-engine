@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Extended the `delta_loss` warning to scenario_risk calculations
+    and documented it
+
   [Michele Simionato, Marco Pagani]
   * Fixed the multifault rupture indices and the MultiLine class so
     that the New Zealand model can run
