@@ -175,7 +175,7 @@ def SA(period, damping=5.0):
 def SDi(period, strength_ratio, damping=5.0):
     """
     Inelastic spectral displacement, defined as the maximum displacement
-    of a damped, single-degree-of-freedom inelastic oscillator. Units 
+    of a damped, single-degree-of-freedom inelastic oscillator. Units
     are ``cm``.
     """
     period = float(period)
@@ -290,11 +290,13 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+
 def LiqOccur():
     """
     Liquefaction occurrence class
     """
     return IMT('LiqOccur')
+
 
 def LSE():
     """
@@ -309,10 +311,11 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
-    
+
 def LSD():
     """
-    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    Liquefaction-induced lateral spread displacements measured in units of
+    ``m``.
     """
     return IMT('LSD')
 

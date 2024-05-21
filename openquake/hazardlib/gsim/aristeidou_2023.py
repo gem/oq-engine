@@ -92,7 +92,7 @@ def check_bounds(array, value):
 
 def _get_magnitude_term(C, ctx):
     """
-    Returns the magnitude scaling term defined in equation (4)
+    Returns the magnitude scaling term defined in equation (4), p. 1610
     """
     f_m = C["b1"] * (ctx.mag - CONSTS["mr"]) + C["b2"] \
         * (ctx.mag - CONSTS["mr"]) ** 2
@@ -101,7 +101,7 @@ def _get_magnitude_term(C, ctx):
 
 def _get_distance_term(C, ctx):
     """
-    Returns the distance scaling term given by equation (5)
+    Returns the distance scaling term given by equation (5), p. 1611
     """
     r = np.sqrt(ctx.rrup ** 2 + C["c3"] ** 2)
     f_d = np.zeros(ctx.sids.shape)
@@ -119,7 +119,7 @@ def _get_distance_term(C, ctx):
 
 def _get_style_of_faulting_term(C, ctx, mechanism):
     """
-    Returns the style-of-faulting scaling term defined in equation (7)
+    Returns the style-of-faulting scaling term defined in equation (7), p. 1611
     """
     fn = np.ones(ctx.sids.shape) * ((mechanism == 1) | (mechanism == 4))
     ft = np.ones(ctx.sids.shape) * ((mechanism == 2) | (mechanism == 3))
@@ -129,7 +129,7 @@ def _get_style_of_faulting_term(C, ctx, mechanism):
 
 def _get_site_amplification_term(C, ctx):
     """
-    Returns the site amplification term defined in equation (8)
+    Returns the site amplification term defined in equation (8), p. 1611
     """
     vs30 = ctx.vs30
     f_s = np.zeros(ctx.sids.shape)
@@ -144,7 +144,7 @@ def _get_site_amplification_term(C, ctx):
 
 def _get_basin_response_term(C, ctx):
     """
-    Returns the basin response term defined in equation (9)
+    Returns the basin response term defined in equation (9), p. 1611
     """
     f_basin = np.zeros(ctx.sids.shape)
     f_basin[(ctx.z2pt5 <= 1)] = (C["d1"] * (ctx.z2pt5 - 1))[ctx.z2pt5 <= 1]
@@ -161,10 +161,10 @@ def _get_strength_ratio_interpolation(coeffs, imt, hor_comp_def):
     """
     prev_available_r = max(
         v for v in CONSTS["available_strength_ratios"]
-            if v <= imt.strength_ratio)
+        if v <= imt.strength_ratio)
     next_available_r = min(
         v for v in CONSTS["available_strength_ratios"]
-            if v > imt.strength_ratio)
+        if v > imt.strength_ratio)
     prev_array = np.array(coeffs[
         f"R={prev_available_r:g}, {hor_comp_def}"][
             SDi(imt.period, prev_available_r)].tolist())
@@ -224,7 +224,6 @@ class AristeidouEtAl2023(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
         for m, imt in enumerate(imts):
             strength_ratio_inside_bounds = check_bounds(
                 CONSTS["available_strength_ratios"], imt.strength_ratio)
@@ -232,7 +231,7 @@ class AristeidouEtAl2023(GMPE):
                 C = self.COEFFS[
                     f"R={imt.strength_ratio:g}, {self.hor_comp_def}"][imt]
             elif imt.strength_ratio not in CONSTS["available_strength_ratios"] \
-                and strength_ratio_inside_bounds:
+                    and strength_ratio_inside_bounds:
                 interpolated_array = _get_strength_ratio_interpolation(
                     self.COEFFS, imt, self.hor_comp_def)
                 coeff_names = self.COEFFS[
