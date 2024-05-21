@@ -1308,22 +1308,27 @@ def view_delta_loss(token, dstore):
         li = 0
     oq = dstore['oqparam']
     loss_type = LOSSTYPE[li]
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id',
+                        dict(agg_id=K, loss_id=li))
+    if len(df) == 0:  # for instance no fatalities
+        return {'delta': numpy.zeros(1),
+                'loss_types': view_loss_ids(token, dstore),
+                'error': f"There are no relevant events for {loss_type=}"}
+    mod2 = df.index % 2
+    losses0 = df['loss'][mod2 == 0]
+    losses1 = df['loss'][mod2 == 1]
+    if oq.calculation_mode == 'scenario_risk':
+        c0 = losses0.mean()
+        c1 = losses1.mean()
+        dic = dict(even=[c0], odd=[c1], delta=[numpy.abs(c0 - c1) / (c0 + c1)])
+        return pandas.DataFrame(dic, index=[loss_type])
     efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
         dstore['weights'])
     num_events = len(dstore['events'])
     num_events0 = num_events // 2 + (num_events % 2)
     num_events1 = num_events // 2
     periods = return_periods(efftime, num_events)[1:-1]
-
-    K = dstore['risk_by_event'].attrs.get('K', 0)
-    df = dstore.read_df('risk_by_event', 'event_id',
-                        dict(agg_id=K, loss_id=li))
-    if len(df) == 0:  # for instance no fatalities
-        return {'delta': numpy.zeros(1),
-                'error': f"There are no relevant events for {loss_type=}"}
-    mod2 = df.index % 2
-    losses0 = df['loss'][mod2 == 0]
-    losses1 = df['loss'][mod2 == 1]
     c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
     c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
     ok = (c0 != 0) & (c1 != 0)
