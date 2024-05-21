@@ -849,11 +849,24 @@ def make_figure_gmf_scenario(extractors, what):
     min_values = arr.min(axis=0)
     max_values = arr.max(axis=0)
     ok = min_values > 0
+    max_diff = max_values[ok] - min_values[ok]
     max_rate = max_values[ok] / min_values[ok]
+    max_rate_idx = max_rate.argmax()
+    diff_at_max_rate = max_diff[max_rate_idx]
+    gt5g = numpy.where(max_values > 5)[0]
+    max_diff_info = (
+        f'max_diff={max_diff.max():.5f} at site ID={max_diff.argmax()}')
+    max_rate_info = (
+        f'max_rate={max_rate.max():.1f} at site ID={max_rate_idx}'
+        f' (diff at site ID {max_rate_idx}={diff_at_max_rate:.5f})')
+    gt5g_info = f'values > 5g at site IDs: {gt5g}'
+    logging.info(max_diff_info)
+    logging.info(max_rate_info)
+    logging.info(gt5g_info)
     plt.xlabel('Site ID')
     plt.ylabel('Ground motion value')
-    plt.title(f'Ground motion by site (max_rate={max_rate.max():.1f} at '
-              f'site ID={max_rate.argmax()})')
+    plt.title('Ground motion by site')
+    plt.suptitle(f'{max_diff_info} | {max_rate_info} | {gt5g_info}')
     plt.grid(True)
     return plt
 
