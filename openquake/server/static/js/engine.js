@@ -439,14 +439,16 @@
             calculations.fetch({reset: true});
             setTimer();
 
-            ajax = $.ajax({url: gem_oq_server_url + "/v1/engine_latest_version",
-                           async: true}).done(function (data) {
-                                                 /* None is returned in case of an error,
-                                                    but we don't care about errors here */
-                                                 if(data && data != 'None') {
-                                                     $('#new-release-box').html(data).show()
-                                                 }
-                                              });
+            if (!disable_version_warning) {
+                ajax = $.ajax({url: gem_oq_server_url + "/v1/engine_latest_version",
+                              async: true}).done(function (data) {
+                                  /* None is returned in case of an error,
+                                      but we don't care about errors here */
+                                  if(data && data != 'None') {
+                                      $('#new-release-box').html(data).show()
+                                  }
+                              });
+            }
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
@@ -498,6 +500,7 @@
                     lat: $("#lat").val(),
                     vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
                     siteid: $("#siteid").val(),
+                    asce_version: $("#asce_version").val()
                 };
                 $.ajax({
                     type: "POST",

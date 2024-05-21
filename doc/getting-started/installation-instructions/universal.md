@@ -9,7 +9,9 @@ off with the universal installation script, even on Windows.
 
 # Universal installation script
 
-Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed.
+Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed
+(currently Python 3.9, 3.10 and 3.11 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
+
 The script allows the user to select between different kinds of installation:
 
 1. [`user` installation](#user-installation) (Windows, macOS, and Linux)
@@ -31,9 +33,7 @@ Alternatively, use Python from one of the OS X package managers (Homebrew, MacPo
 > <br />
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 > <br />
->_**Note 6.** On Windows installations we require Python 3.10, while the Microsoft App
-Store suggests Python 3.11 which is not supported yet, so you have to be careful and
-search for Python 3.10 on the App Store or on the Python official download page._
+>_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine yet, so you have to be careful and install a supported Python version. You can do so from the App Store or from the Python official download page._
 
 After installing, you can get the location of the engine virtual enviroment with the command
 ```
@@ -53,7 +53,7 @@ You just need to download the installation script as:
 
 **on Windows:**
 ```
-C:\>curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/master/install.py
 C:\>python.exe install.py user
 ```
 
@@ -61,13 +61,13 @@ C:\>python.exe install.py user
 
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
 ```
-$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ python3.10 install.py user
 ```
 
 **on Linux:**
 ```
-$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ /usr/bin/python3 install.py user
 ```
 
@@ -175,7 +175,7 @@ automatically installed and started: `openquake-dbserver` and
 `openquake-webui`.
 
 ```
-$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ sudo -H /usr/bin/python3 install.py server
 ```
 

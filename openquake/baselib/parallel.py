@@ -196,6 +196,7 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 from multiprocessing.connection import wait
+import multiprocessing.shared_memory as shmem
 import psutil
 import numpy
 
@@ -683,6 +684,40 @@ def get_return_ip(receiver_host):
     return socket.gethostbyname(hostname)
 
 
+# ########################### SharedMemory ############################## #
+
+class SharedArray(object):
+    """
+    Wrapper over a SharedMemory array to be used as a context manager.
+    """
+    @classmethod
+    def new(cls, array):
+        return cls(array.shape, array.dtype, array)
+
+    def __init__(self, shape, dtype, value):
+        nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
+        # NOTE: on Windows size wants an int an not a numpy.int
+        self.sm = shmem.SharedMemory(create=True, size=int(nbytes))
+        self.shape = shape
+        self.dtype = dtype
+        # fill the SharedMemory buffer with the value
+        arr = numpy.ndarray(shape, dtype, buffer=self.sm.buf)
+        arr[:] = value
+
+    def __enter__(self):
+        # this is called in the workers
+        self._sm = shmem.SharedMemory(name=self.sm.name)
+        return numpy.ndarray(self.shape, self.dtype, buffer=self._sm.buf)
+
+    def __exit__(self, etype, exc, tb):
+        # this is called in the workers
+        self._sm.close()
+
+    def unlink(self):
+        self.sm.close()
+        self.sm.unlink()
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
@@ -819,6 +854,7 @@ class Starmap(object):
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
+        self._shared = {}
 
     def log_percent(self):
         """
@@ -844,6 +880,7 @@ class Starmap(object):
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
+            self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
                 self.return_ip, self.socket.port)
             self.monitor.config = config
@@ -918,6 +955,23 @@ class Starmap(object):
                 del self.task_queue[0]
                 self.submit(args, func=func)
 
+    # NB: the shared dictionary will be attached to the monitor
+    # and used in the workers; to see an example of usage, look at
+    # the event_based calculator
+    def share(self, **dictarray):
+        """
+        Apply SharedArray.new to a dictionary of arrays
+        """
+        self._shared = {k: SharedArray.new(a) for k, a in dictarray.items()}
+
+    def unlink(self):
+        """
+        Unlink the shared arrays, if any
+        """
+        for name, shr in self._shared.items():
+            logging.debug('Unlinking %s', name)
+            shr.unlink()
+
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
@@ -978,6 +1032,7 @@ class Starmap(object):
         self.log_percent()
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
+        self.unlink()
         if dist == 'slurm':
             for fname in os.listdir(self.monitor.calc_dir):
                 os.remove(os.path.join(self.monitor.calc_dir, fname))
