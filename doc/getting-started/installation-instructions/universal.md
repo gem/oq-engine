@@ -23,9 +23,8 @@ The script allows the user to select between different kinds of installation:
 
 >_**Note 1.** On some Linux distributions (e.g. Ubuntu) you may need to install the package `python3-venv` before running the installer_
 > <br />
->_**Note 2.** New Macs with the M1 CPU are supported only if you're on macOS 12.x or MacOS 13.x and for python3.10.
-><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the official Python distribution.
-Alternatively, use Python from one of the OS X package managers (Homebrew, MacPorts, Fink).
+>_**Note 2.** New Macs with the M1 or M2 CPU are supported only if you're on macOS 13.x or MacOS 14.x and for python3.11
+><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the Python  version from the official Python website (python.org)
 > <br />
 >_**Note 3.** For `user` and `devel` installation methods, the virtual environment `openquake` will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts._<br />_Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html_
 > <br />

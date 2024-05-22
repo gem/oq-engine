@@ -14,8 +14,8 @@ Requirements are:
 We recommend using a Linux server for large calculations such as
 national or regional-scale models.
 
-Installation Procedure
-----------------------
+Installation Procedure of Python 3
+----------------------------------
 
 Before to use the universal installer you need to install Python3.
 
@@ -57,7 +57,7 @@ at the end of installation
 
 Close all windows after the Process is completed.
 
-Once Python 3.11 is installed, please see instructions for the :doc:`universal installer <universal>` script, to install OpenQuake Engine 
+Once Python 3.11 is installed, please see instructions for the :doc:`universal installer <universal>` script to install OpenQuake Engine
 
 Getting help
 ------------
