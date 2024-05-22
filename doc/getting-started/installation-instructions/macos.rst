@@ -58,11 +58,9 @@ at the end of installation
 Close all windows after the Process is completed.
 
 Once Python 3.11 is installed, please run the universal installer to
-install OpenQuake Engine `universal installer <universal.md>`__
+install OpenQuake Engine 
+ :ref:`<universal>`.
 
-Please refer to the `Web user-interface
-instructions <../running-calculations/web-ui.rst>`__ for more
-information about using the web-ui.
 
 Getting help
 ------------
