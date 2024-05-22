@@ -262,9 +262,8 @@ def get_csm(oq, full_lt, dstore=None):
     smdict = {k: smdict[k] for k in sorted(smdict)}
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
-    logging.info('Applying uncertainties')
-
     # build all the possible source groups from the full logic tree
+    logging.info('Applying uncertainties')
     frac = 1. / len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
         # the smweight is used in event based sampling:
@@ -274,8 +273,7 @@ def get_csm(oq, full_lt, dstore=None):
     smap = parallel.Starmap(gen_groups, h5=dstore if dstore else None,
                             distribute='no' if parallel.Starmap.distribute=='no'
                             else 'processpool')
-    pik = memoryview(pickle.dumps(smdict, pickle.HIGHEST_PROTOCOL))
-    smap.share(smdict=numpy.ndarray(len(pik), dtype=numpy.uint8, buffer=pik))
+    smap.share(smdict=general.dumpa(smdict))
     for rlz in full_lt.sm_rlzs:
         smap.submit((rlz, full_lt))
     groups = sorted(list(smap), key=lambda sg: sg.ordinal)
@@ -412,8 +410,8 @@ def _groups_ids(smlt_dir, smdict, fnames):
 
 
 def gen_groups(rlz, full_lt, monitor):
-    with monitor.shared['smdict'] as pik:
-        smdict = pickle.loads(bytes(pik))
+    with monitor.shared['smdict'] as arr:
+        smdict = general.loada(arr)
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     src_groups, source_ids = _groups_ids(
