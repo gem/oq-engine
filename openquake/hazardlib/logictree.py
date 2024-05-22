@@ -1045,10 +1045,11 @@ class FullLogicTree(object):
         self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
-    #def __getstate__(self):
-    #    return {'source_model_lt': self.source_model_lt,
-    #            'gsim_lt': self.gsim_lt,
-    #            'oversampling': self.oversampling}
+    def __getstate__(self):
+        # .sd will not be available in the workers
+        return {'source_model_lt': self.source_model_lt,
+                'gsim_lt': self.gsim_lt,
+                'oversampling': self.oversampling}
 
     def init(self):
         if self.source_model_lt.num_samples:
