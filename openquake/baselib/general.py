@@ -1742,10 +1742,23 @@ def decompress(cbytes):
     """
     return pickle.loads(zlib.decompress(cbytes))
 
+# ########################### dumpa/load ############################## #
+
+# the functions below as useful to avoid data transfer, to be used as
+
+# smap.share(arr=dumpa(big_object))
+
+# and then in the workers
+
+# with monitor.shared['arr'] as arr:
+#      big_object = loada(arr)
 
 def dumpa(obj):
     """
-    Dump a Python object as an array of uint8 convertible
+    Dump a Python object as an array of uint8:
+
+    >>> dumpa(23)
+    array([128,   5,  75,  23,  46], dtype=uint8)
     """
     buf = memoryview(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
     return numpy.ndarray(len(buf), dtype=numpy.uint8, buffer=buf)
@@ -1753,7 +1766,10 @@ def dumpa(obj):
 
 def loada(arr):
     """
-    Convert an array of uint8 into a Python object
+    Convert an array of uint8 into a Python object:
+
+    >>> loada(numpy.array([128, 5, 75, 23, 46], numpy.uint8))
+    23
     """
     return pickle.loads(bytes(arr))
     
