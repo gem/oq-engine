@@ -273,9 +273,10 @@ def get_csm(oq, full_lt, dstore=None):
     smap = parallel.Starmap(gen_groups, h5=dstore if dstore else None,
                             distribute='no' if parallel.Starmap.distribute=='no'
                             else 'processpool')
-    smap.share(smdict=general.dumpa(smdict))
+    smap.share(smdict=general.dumpa(smdict),
+               full_lt=general.dumpa(full_lt))
     for rlz in full_lt.sm_rlzs:
-        smap.submit((rlz, full_lt))
+        smap.submit((rlz,))
     groups = sorted(list(smap), key=lambda sg: sg.ordinal)
     parallel.Starmap.shutdown()  # save memory
 
@@ -409,9 +410,10 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def gen_groups(rlz, full_lt, monitor):
-    with monitor.shared['smdict'] as arr:
-        smdict = general.loada(arr)
+def gen_groups(rlz, monitor):
+    with monitor.shared['smdict'] as s, monitor.shared['full_lt'] as f:
+        smdict = general.loada(s)
+        full_lt = general.loada(f)
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     src_groups, source_ids = _groups_ids(
