@@ -275,7 +275,7 @@ def get_csm(oq, full_lt, dstore=None):
         gen_groups, (full_lt.sm_rlzs, full_lt, smdict),
         h5=dstore if dstore else None
     )
-    groups = sorted(smap, key=lambda sg: sg.ordinal)
+    groups = sorted(list(smap), key=lambda sg: sg.ordinal)
     parallel.Starmap.shutdown()  # save memory
 
     # checking the changes
