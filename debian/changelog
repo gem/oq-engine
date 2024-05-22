@@ -1,3 +1,7 @@
+  [Fatemeh Alishahiha]
+  * Added vertical component to `abrahamson_silva_1997` gsim library
+    with all its tests.
+
   [Michele Simionato]
   * Extended the `delta_loss` warning to scenario_risk calculations
     and documented it
