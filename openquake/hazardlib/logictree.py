@@ -1048,6 +1048,7 @@ class FullLogicTree(object):
         return {'source_model_lt': self.source_model_lt,
                 'gsim_lt': self.gsim_lt,
                 'trti': self.trti,
+                'num_samples': self.num_samples,
                 'oversampling': self.oversampling}
 
     def init(self):
