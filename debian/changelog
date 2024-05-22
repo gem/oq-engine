@@ -3,6 +3,7 @@
     with all its tests.
 
   [Michele Simionato]
+  * Reduced the memory consumption in postclassical
   * Extended the `delta_loss` warning to scenario_risk calculations
     and documented it
 
