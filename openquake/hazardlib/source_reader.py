@@ -263,13 +263,13 @@ def get_csm(oq, full_lt, dstore=None):
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     # build all the possible source groups from the full logic tree
-    logging.info('Applying uncertainties')
-    frac = 1. / len(full_lt.sm_rlzs)
+    R = len(full_lt.sm_rlzs)
+    logging.info('Applying uncertainties to %d source model rlzs', R)
     for rlz in full_lt.sm_rlzs:
         # the smweight is used in event based sampling:
         # see oq-risk-tests etna where num_samples=0 and frac=1/3
         # is different from rlz.weight=.5 for the first realization of three
-        rlz.smweight = rlz.weight if full_lt.num_samples else frac
+        rlz.smweight = rlz.weight if full_lt.num_samples else 1/R
     smap = parallel.Starmap(gen_groups, h5=dstore if dstore else None,
                             distribute='no' if parallel.Starmap.distribute=='no'
                             else 'processpool')
