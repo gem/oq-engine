@@ -23,24 +23,45 @@ Before to use the universal installer you need to install Python3.
 Downloading the Python version from the official Python website (python.org) is the recommended) method for installing Python on a Mac.
 
 Download the installer from [https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg](https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg)
-The installation process is described in the following  screenshots :
-Localize the downloaded file on your computer (probably Downloads) and double-click on the installer to start the installation.
 
+The installation process is described in the following  screenshots :
+
+Localize the downloaded file on your computer (probably Downloads) 
 <figure>
-	<img src="../../../_images/macos/download_python.png"
+	<img src="_images/macos/download_python.png"
 		 width="50%" align="center" alt="Python Installer"/>
-	<figcaption><i>"Location of Python3.11 " popup</i></figcaption>
 </figure>
 
+and double-click on the installer to start the installation.
 
 <figure>
 	<img src="_images/macos/run_installer.png" alt="Run Installer"
 	     width="50%" align="center" />
-	<figcaption>Run Installer</figcaption>
 </figure>
+
 IMPORTANT: Please note that the package includes its own private copy of OpenSSL 3.0.
+<figure>
+	<img src="_images/macos/openssl.png" alt="OpenSSL 3.0"
+	     width="50%" align="center" />
+</figure>
 
 IMPORTANT Remember to double-click on Install Certificates to install it at the end of installation
+
+<figure>
+	<img src="_images/macos/install_certifi_1.png" alt="Install Certificates"
+	     width="50%" align="center" />
+</figure>
+
+<figure>
+	<img src="_images/macos/install_certifi_2.png" alt="Install Certificates"
+	     width="50%" align="center" />
+</figure>
+
+<figure>
+	<img src="_images/macos/install_certifi_3.png" alt="Install Certificates"
+	     width="50%" align="center" />
+</figure>
+
 
 Close all windows after the Process is completed.
 
