@@ -266,8 +266,13 @@ def get_csm(oq, full_lt, dstore=None):
 
     # build all the possible source groups from the full logic tree
     frac = 1. / len(full_lt.sm_rlzs)
+    for rlz in full_lt.sm_rlzs:
+        # the smweight is used in event based sampling:
+        # see oq-risk-tests etna where num_samples=0 and frac=1/3
+        # is different from rlz.weight=.5 for the first realization of three
+        rlz.smweight = rlz.weight if full_lt.num_samples else frac
     smap = parallel.Starmap.apply(
-        gen_groups, (full_lt.sm_rlzs, full_lt, frac, smdict),
+        gen_groups, (full_lt.sm_rlzs, full_lt, smdict),
         h5=dstore if dstore else None
     )
     groups = sorted(smap, key=lambda sg: sg.ordinal)
@@ -403,7 +408,7 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def gen_groups(rlzs, full_lt, frac, smdict):
+def gen_groups(rlzs, full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     for rlz in rlzs:
@@ -438,9 +443,7 @@ def gen_groups(rlzs, full_lt, frac, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
             for src in sg:
-                # the smweight is used in event based sampling:
-                # see oq-risk-tests etna
-                src.smweight = rlz.weight if full_lt.num_samples else frac
+                src.smweight = rlz.smweight
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             sg.ordinal = ordinal
