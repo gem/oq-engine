@@ -271,10 +271,13 @@ def get_csm(oq, full_lt, dstore=None):
         # see oq-risk-tests etna where num_samples=0 and frac=1/3
         # is different from rlz.weight=.5 for the first realization of three
         rlz.smweight = rlz.weight if full_lt.num_samples else frac
-    smap = parallel.Starmap.apply(
-        gen_groups, (full_lt.sm_rlzs, full_lt, smdict),
-        h5=dstore if dstore else None
-    )
+    smap = parallel.Starmap(gen_groups, h5=dstore if dstore else None,
+                            distribute='no' if parallel.Starmap.distribute=='no'
+                            else 'processpool')
+    pik = memoryview(pickle.dumps(smdict, pickle.HIGHEST_PROTOCOL))
+    smap.share(smdict=numpy.ndarray(len(pik), dtype=numpy.uint8, buffer=pik))
+    for rlz in full_lt.sm_rlzs:
+        smap.submit((rlz, full_lt))
     groups = sorted(list(smap), key=lambda sg: sg.ordinal)
     parallel.Starmap.shutdown()  # save memory
 
@@ -408,47 +411,48 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def gen_groups(rlzs, full_lt, smdict):
+def gen_groups(rlz, full_lt, monitor):
+    with monitor.shared['smdict'] as pik:
+        smdict = pickle.loads(bytes(pik))
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
-    for rlz in rlzs:
-        src_groups, source_ids = _groups_ids(
-            smlt_dir, smdict, rlz.value[0].split())
+    src_groups, source_ids = _groups_ids(
+        smlt_dir, smdict, rlz.value[0].split())
 
-        # check applyToSources
-        sm_branch = rlz.lt_path[0]
-        src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
-        for srcid in src_id:
-            if srcid not in source_ids:
-                raise ValueError(
-                    "The source %s is not in the source model,"
-                    " please fix applyToSources in %s or the "
-                    "source model(s) %s" % (srcid, smlt_file,
-                                            rlz.value[0].split()))
+    # check applyToSources
+    sm_branch = rlz.lt_path[0]
+    src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+    for srcid in src_id:
+        if srcid not in source_ids:
+            raise ValueError(
+                "The source %s is not in the source model,"
+                " please fix applyToSources in %s or the "
+                "source model(s) %s" % (srcid, smlt_file,
+                                        rlz.value[0].split()))
 
-        # build groups
-        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        while (bset_values and
-               bset_values[0][0].uncertainty_type == 'extendModel'):
-            (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-            common = source_ids & extra_ids
-            if common:
-                raise InvalidFile(
-                    '%s contains source(s) %s already present in %s' %
-                    (value, common, rlz.value))
-            src_groups.extend(extra)
-        ordinal = rlz.ordinal * TWO16
-        for src_group in src_groups:
-            sg = apply_uncertainties(bset_values, src_group)
-            full_lt.set_trt_smr(sg, smr=rlz.ordinal)
-            for src in sg:
-                src.smweight = rlz.smweight
-                if rlz.samples > 1:
-                    src.samples = rlz.samples
-            sg.ordinal = ordinal
-            ordinal += 1
-            yield sg
+    # build groups
+    bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
+    while (bset_values and
+           bset_values[0][0].uncertainty_type == 'extendModel'):
+        (bset, value), *bset_values = bset_values
+        extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+        common = source_ids & extra_ids
+        if common:
+            raise InvalidFile(
+                '%s contains source(s) %s already present in %s' %
+                (value, common, rlz.value))
+        src_groups.extend(extra)
+    ordinal = rlz.ordinal * TWO16
+    for src_group in src_groups:
+        sg = apply_uncertainties(bset_values, src_group)
+        full_lt.set_trt_smr(sg, smr=rlz.ordinal)
+        for src in sg:
+            src.smweight = rlz.smweight
+            if rlz.samples > 1:
+                src.samples = rlz.samples
+        sg.ordinal = ordinal
+        ordinal += 1
+        yield sg
 
 
 def reduce_sources(sources_with_same_id, full_lt):
