@@ -260,15 +260,17 @@ def get_csm(oq, full_lt, dstore=None):
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
-    parallel.Starmap.shutdown()  # save memory
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
 
     # build all the possible source groups from the full logic tree
-    groups = []
-    for rlz in full_lt.sm_rlzs:
-        groups.extend(build_sg(full_lt, rlz, smdict))
+    frac = 1. / len(full_lt.sm_rlzs)
+    allargs = [(full_lt, rlz, rlz.weight if full_lt.num_samples else frac,
+                smdict) for rlz in full_lt.sm_rlzs]
+    smap = parallel.Starmap(build_sg, allargs, h5=dstore if dstore else None)
+    groups = list(smap)
+    parallel.Starmap.shutdown()  # save memory
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
@@ -400,8 +402,7 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def build_sg(full_lt, rlz, smdict):
-    frac = 1. / len(full_lt.sm_rlzs)
+def build_sg(full_lt, rlz, weight, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     src_groups, source_ids = _groups_ids(
@@ -436,7 +437,7 @@ def build_sg(full_lt, rlz, smdict):
         for src in sg:
             # the smweight is used in event based sampling:
             # see oq-risk-tests etna
-            src.smweight = rlz.weight if full_lt.num_samples else frac
+            src.smweight = weight
             if rlz.samples > 1:
                 src.samples = rlz.samples
         yield sg
