@@ -194,7 +194,8 @@ class PmapGetter(object):
             for start, stop in self.slices:
                 # reading one slice at the time to save memory in the groupby
                 rates_df = dstore.read_df('_rates', slc=slice(start, stop))
-                for sid, df in rates_df.groupby('sid'):
+                for sid in rates_df.sid.unique():
+                    df = rates_df[rates_df.sid == sid]
                     try:
                         array = self._pmap[sid].array
                     except KeyError:
