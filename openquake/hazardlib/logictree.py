@@ -39,7 +39,8 @@ import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
-from openquake.baselib.general import groupby, group_array, AccumDict, BASE183
+from openquake.baselib.general import (
+    cached_property, groupby, group_array, AccumDict, BASE183)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
@@ -1044,10 +1045,10 @@ class FullLogicTree(object):
         self.oversampling = oversampling
         self.init()  # set .sm_rlzs and .trts
 
-    def __getstate__(self):
-        return {'source_model_lt': self.source_model_lt,
-                'gsim_lt': self.gsim_lt,
-                'oversampling': self.oversampling}
+    #def __getstate__(self):
+    #    return {'source_model_lt': self.source_model_lt,
+    #            'gsim_lt': self.gsim_lt,
+    #            'oversampling': self.oversampling}
 
     def init(self):
         if self.source_model_lt.num_samples:
@@ -1134,6 +1135,10 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
+    @cached_property
+    def sd(self):
+        return group_array(self.source_model_lt.source_data, 'source')
+    
     def get_trt_smrs(self, src_id=None):
         """
         :returns: a tuple of indices trt_smr for the given source
@@ -1146,10 +1151,6 @@ class FullLogicTree(object):
             return tuple(trti * TWO24 + sm_rlz.ordinal
                          for sm_rlz in self.sm_rlzs
                          for trti in self.trti)
-
-        if not hasattr(self, 'sd'):  # cache source_data by source
-            self.sd = group_array(
-                self.source_model_lt.source_data, 'source')
         sd = self.sd[src_id]
         trt = sd['trt'][0]  # all same trt
         trti = 0 if trt == '*' else self.trti[trt]
@@ -1169,7 +1170,7 @@ class FullLogicTree(object):
         """
         if not self.trti: # empty gsim_lt
             return srcs
-        sd = group_array(self.source_model_lt.source_data, 'source')
+        sd = self.sd
         out = []
         for src in srcs:
             srcid = valid.corename(src)
