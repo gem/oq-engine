@@ -1320,7 +1320,7 @@ def view_delta_loss(token, dstore):
             return {'delta': numpy.zeros(1),
                     'error': 'number_of_ground_motion_fields=1'}
         R = len(dstore['weights'])
-        df['rlz_id'] = dstore['events']['rlz_id']
+        df['rlz_id'] = dstore['events']['rlz_id'][df.index]
         c0, c1 = numpy.zeros(R), numpy.zeros(R)
         for r in range(R):
             loss = df.loss[df.rlz_id == r]
