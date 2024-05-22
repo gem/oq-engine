@@ -1742,7 +1742,7 @@ def decompress(cbytes):
     """
     return pickle.loads(zlib.decompress(cbytes))
 
-# ########################### dumpa/load ############################## #
+# ########################### dumpa/loada ############################## #
 
 # the functions below as useful to avoid data transfer, to be used as
 
