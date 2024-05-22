@@ -264,7 +264,11 @@ def get_csm(oq, full_lt, dstore=None):
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
-    groups = _build_groups(full_lt, smdict)
+
+    # build all the possible source groups from the full logic tree
+    groups = []
+    for rlz in full_lt.sm_rlzs:
+        groups.extend(build_sg(full_lt, rlz, smdict))
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
@@ -396,48 +400,46 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def _build_groups(full_lt, smdict):
-    # build all the possible source groups from the full logic tree
+def build_sg(full_lt, rlz, smdict):
+    frac = 1. / len(full_lt.sm_rlzs)
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
-    groups = []
-    frac = 1. / len(full_lt.sm_rlzs)
-    for rlz in full_lt.sm_rlzs:
-        src_groups, source_ids = _groups_ids(
-            smlt_dir, smdict, rlz.value[0].split())
-        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        while (bset_values and
-               bset_values[0][0].uncertainty_type == 'extendModel'):
-            (bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-            common = source_ids & extra_ids
-            if common:
-                raise InvalidFile(
-                    '%s contains source(s) %s already present in %s' %
-                    (value, common, rlz.value))
-            src_groups.extend(extra)
-        for src_group in src_groups:
-            sg = apply_uncertainties(bset_values, src_group)
-            full_lt.set_trt_smr(sg, smr=rlz.ordinal)
-            for src in sg:
-                # the smweight is used in event based sampling:
-                # see oq-risk-tests etna
-                src.smweight = rlz.weight if full_lt.num_samples else frac
-                if rlz.samples > 1:
-                    src.samples = rlz.samples
-            groups.append(sg)
+    src_groups, source_ids = _groups_ids(
+        smlt_dir, smdict, rlz.value[0].split())
 
-        # check applyToSources
-        sm_branch = rlz.lt_path[0]
-        src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
-        for srcid in src_id:
-            if srcid not in source_ids:
-                raise ValueError(
-                    "The source %s is not in the source model,"
-                    " please fix applyToSources in %s or the "
-                    "source model(s) %s" % (srcid, smlt_file,
-                                            rlz.value[0].split()))
-    return groups
+    # check applyToSources
+    sm_branch = rlz.lt_path[0]
+    src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+    for srcid in src_id:
+        if srcid not in source_ids:
+            raise ValueError(
+                "The source %s is not in the source model,"
+                " please fix applyToSources in %s or the "
+                "source model(s) %s" % (srcid, smlt_file,
+                                        rlz.value[0].split()))
+
+    # build groups
+    bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
+    while (bset_values and
+           bset_values[0][0].uncertainty_type == 'extendModel'):
+        (bset, value), *bset_values = bset_values
+        extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+        common = source_ids & extra_ids
+        if common:
+            raise InvalidFile(
+                '%s contains source(s) %s already present in %s' %
+                (value, common, rlz.value))
+        src_groups.extend(extra)
+    for src_group in src_groups:
+        sg = apply_uncertainties(bset_values, src_group)
+        full_lt.set_trt_smr(sg, smr=rlz.ordinal)
+        for src in sg:
+            # the smweight is used in event based sampling:
+            # see oq-risk-tests etna
+            src.smweight = rlz.weight if full_lt.num_samples else frac
+            if rlz.samples > 1:
+                src.samples = rlz.samples
+        yield sg
 
 
 def reduce_sources(sources_with_same_id, full_lt):
