@@ -1,5 +1,11 @@
   [Michele Simionato]
   * Parallelized "apply uncertainties" in the CompositeSourceModel
+
+  [Fatemeh Alishahiha]
+  * Added vertical component to `abrahamson_silva_1997` gsim library
+
+  [Michele Simionato]
+  * Optimized "reading rates" in postclassical
   * Extended the `delta_loss` warning to scenario_risk calculations
     and documented it
 
