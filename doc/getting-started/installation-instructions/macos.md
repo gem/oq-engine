@@ -17,8 +17,6 @@ national or regional-scale models.
 
 ## Installation Procedure
 
-The OpenQuake Engine can be installed on MacOS with the [universal
-installer](universal.md)
 
 Before to use the universal installer you need to install Python3.
 
@@ -26,33 +24,30 @@ Downloading the Python version from the official Python website (python.org) is 
 
 Download the installer from [https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg](https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg)
 The installation process is described in the following  screenshots :
-
-Double-click on the installer to start the installation.  You will probably be
-presented with a popup message similar to the one shown below:
+Localize the downloaded file on your computer (probably Downloads) and double-click on the installer to start the installation.
 
 <figure>
-	<img src="../../../_images/install/01_Windows_warning.png"
-		 width="50%" align="center" alt="Windows popup"/>
-	<figcaption><i>"Windows Protected your PC" popup</i></figcaption>
+	<img src="../../../_images/macos/download_python.png"
+		 width="50%" align="center" alt="Python Installer"/>
+	<figcaption><i>"Location of Python3.11 " popup</i></figcaption>
 </figure>
 
 
-<img src="_images/02_Run_anyway.png" alt="Run Anyway" width="50%" align="center" />
-
-
-```{figure} _images/03_Installer_start.png
-:scale: 50 %
-:alt: Installer Start
-
-Installer Start
-```
-
-
 <figure>
-	<img src="_images/03_Installer_start.png" alt="Installer Start"
+	<img src="_images/macos/run_installer.png" alt="Run Installer"
 	     width="50%" align="center" />
-	<figcaption>Installer Start</figcaption>
+	<figcaption>Run Installer</figcaption>
 </figure>
+IMPORTANT: Please note that the package includes its own private copy of OpenSSL 3.0.
+
+IMPORTANT Remember to double-click on Install Certificates to install it at the end of installation
+
+Close all windows after the Process is completed.
+
+Once Python 3.11 is installed, please run the universal installer to install OpenQuake Engine
+[universal installer](universal.md)
+
+
 
 Please refer to the
 [Web user-interface instructions](../running-calculations/web-ui.rst)
