@@ -1,9 +1,9 @@
   [Fatemeh Alishahiha]
   * Added vertical component to `abrahamson_silva_1997` gsim library
-    with all its tests.
 
   [Michele Simionato]
-  * Reduced the memory consumption in postclassical
+  * Optimized building the CompositeSourceModel for complex logic trees
+  * Optimized "reading rates" in postclassical
   * Extended the `delta_loss` warning to scenario_risk calculations
     and documented it
 
