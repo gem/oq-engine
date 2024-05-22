@@ -269,7 +269,7 @@ def get_csm(oq, full_lt, dstore=None):
     allargs = [(full_lt, rlz, rlz.weight if full_lt.num_samples else frac,
                 smdict) for rlz in full_lt.sm_rlzs]
     smap = parallel.Starmap(build_sg, allargs, h5=dstore if dstore else None)
-    groups = list(smap)
+    groups = sorted(smap, key=lambda sg: sg.ordinal)
     parallel.Starmap.shutdown()  # save memory
 
     # checking the changes
@@ -431,6 +431,7 @@ def build_sg(full_lt, rlz, weight, smdict):
                 '%s contains source(s) %s already present in %s' %
                 (value, common, rlz.value))
         src_groups.extend(extra)
+    ordinal = rlz.ordinal * TWO16
     for src_group in src_groups:
         sg = apply_uncertainties(bset_values, src_group)
         full_lt.set_trt_smr(sg, smr=rlz.ordinal)
@@ -440,6 +441,8 @@ def build_sg(full_lt, rlz, weight, smdict):
             src.smweight = weight
             if rlz.samples > 1:
                 src.samples = rlz.samples
+        sg.ordinal = ordinal
+        ordinal += 1
         yield sg
 
 
