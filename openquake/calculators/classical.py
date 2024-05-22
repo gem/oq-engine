@@ -163,11 +163,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
 
 
-def postclassical(pgetter, N, hstats, individual_rlzs,
+def postclassical(pgetter, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
-    :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
@@ -726,7 +725,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = [
             (getters.PmapGetter(dstore, self.full_lt, slices,
                                 oq.imtls, oq.poes, oq.use_rates),
-             N, hstats, individual, oq.max_sites_disagg, self.amplifier)
+             hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1

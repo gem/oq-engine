@@ -192,8 +192,9 @@ class PmapGetter(object):
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
-                # reading one slice at the time to save memory in the groupby
+                # reading one slice at the time to save memory
                 rates_df = dstore.read_df('_rates', slc=slice(start, stop))
+                # not using groupby to save memory
                 for sid in rates_df.sid.unique():
                     df = rates_df[rates_df.sid == sid]
                     try:
