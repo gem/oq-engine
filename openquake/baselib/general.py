@@ -1741,3 +1741,19 @@ def decompress(cbytes):
     gunzip compressed bytes into a Python object
     """
     return pickle.loads(zlib.decompress(cbytes))
+
+
+def dumpa(obj):
+    """
+    Dump a Python object as an array of uint8 convertible
+    """
+    buf = memoryview(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return numpy.ndarray(len(buf), dtype=numpy.uint8, buffer=buf)
+
+
+def loada(arr):
+    """
+    Convert an array of uint8 into a Python object
+    """
+    return pickle.loads(bytes(arr))
+    
