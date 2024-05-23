@@ -35,7 +35,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import ProbabilityMap, rates_dt
+from openquake.hazardlib.probability_map import MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters
 
@@ -103,7 +103,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 def to_rates(pnemap, gid, tiling, disagg_by_src):
     """
-    :returns: dictionary if tiling is True, else ProbabilityMap with rates
+    :returns: dictionary if tiling is True, else MapArray with rates
     """
     rates = pnemap.to_rates()
     if tiling:
@@ -138,7 +138,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
-            pmap = ProbabilityMap(
+            pmap = MapArray(
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
@@ -155,7 +155,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
         for sites in sitecol.split_in_tiles(itiles):
-            pmap = ProbabilityMap(
+            pmap = MapArray(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
@@ -172,7 +172,7 @@ def postclassical(pgetter, hstats, individual_rlzs,
     :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
-    :returns: a dictionary kind -> ProbabilityMap
+    :returns: a dictionary kind -> MapArray
 
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
@@ -196,14 +196,14 @@ def postclassical(pgetter, hstats, individual_rlzs,
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
-            ProbabilityMap(sids, M, L1).fill(0) for r in range(R)]
+            MapArray(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
-            ProbabilityMap(sids, M, L1).fill(0) for r in range(S)]
+            MapArray(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = ProbabilityMap(sids, 1, 1).fill(0).sidx
+    sidx = MapArray(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
@@ -283,7 +283,7 @@ class Hazard:
     # used in in disagg_by_src
     def get_rates(self, pmap, grp_id):
         """
-        :param pmap: a ProbabilityMap
+        :param pmap: a MapArray
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[grp_id]
@@ -434,7 +434,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def check_memory(self, N, L, maxw):
         """
-        Log the memory required to receive the largest ProbabilityMap,
+        Log the memory required to receive the largest MapArray,
         assuming all sites are affected (upper limit)
         """
         num_gs = [len(cm.gsims) for cm in self.cmakers]
@@ -519,7 +519,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(0, F32)
+        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0, F32)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -621,7 +621,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Populate hcurves and hmaps in the .hazard dictionary
 
         :param acc: ignored
-        :param pmap_by_kind: a dictionary of ProbabilityMaps
+        :param pmap_by_kind: a dictionary of MapArrays
         """
         # this is practically instantaneous
         if pmap_by_kind is None:  # instead of a dict

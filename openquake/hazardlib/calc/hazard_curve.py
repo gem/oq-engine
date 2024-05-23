@@ -48,7 +48,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.probability_map import (
-    ProbabilityMap, ProbabilityCurve
+    MapArray, ProbabilityCurve
 )
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -103,7 +103,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
     if not_passed_pmap:
-        pmap = ProbabilityMap(
+        pmap = MapArray(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
         pmap.fill(rup_indep)
 
@@ -180,7 +180,7 @@ def calc_hazard_curves(
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
-    pmap = ProbabilityMap(sitecol.sids, imtls.size, 1).fill(0)
+    pmap = MapArray(sitecol.sids, imtls.size, 1).fill(0)
     for group in groups:
         trt = group.trt
         if sitecol is not srcfilter:
@@ -212,7 +212,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(1)
+    pmap = MapArray(site1.sids, oqparam.imtls.size, 1).fill(1)
     PmapMaker(cmaker, srcfilter, [src]).make(pmap)
     pmap.array[:] = 1. - pmap.array
     if not pmap:  # filtered away

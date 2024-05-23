@@ -309,7 +309,7 @@ def fix_probs_occur(probs_occur):
     return probs_occur
 
 
-class ProbabilityMap(object):
+class MapArray(object):
     """
     Thin wrapper over a 3D-array of probabilities.
     """
@@ -334,7 +334,7 @@ class ProbabilityMap(object):
 
     def split(self):
         """
-        :yields: G ProbabilityMaps of shape (N, L, 1)
+        :yields: G MapArrays of shape (N, L, 1)
         """
         N, L, G = self.array.shape
         for g in range(G):
@@ -344,7 +344,7 @@ class ProbabilityMap(object):
         """
         :param value: a scalar probability
 
-        Fill the ProbabilityMap underlying array with the given scalar
+        Fill the MapArray underlying array with the given scalar
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
@@ -361,13 +361,13 @@ class ProbabilityMap(object):
     # used in calc/disagg_test.py
     def expand(self, full_lt, trt_rlzs):
         """
-        Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
+        Convert a MapArray with shape (N, L, Gt) into a MapArray
         with shape (N, L, R): works only for rates
         """
         N, L, Gt = self.array.shape
         assert Gt == len(trt_rlzs), (Gt, len(trt_rlzs))
         R = full_lt.get_num_paths()
-        out = ProbabilityMap(range(N), L, R).fill(0.)
+        out = MapArray(range(N), L, R).fill(0.)
         for g, trs in enumerate(trt_rlzs):
             for sid in range(N):
                 for rlz in trs % TWO24:
@@ -478,4 +478,4 @@ class ProbabilityMap(object):
         return self.new(self.array ** n)
 
     def __repr__(self):
-        return '<ProbabilityMap(%d, %d, %d)>' % self.shape
+        return '<MapArray(%d, %d, %d)>' % self.shape
