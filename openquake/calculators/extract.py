@@ -914,7 +914,7 @@ def extract_gmf_by_imt(dstore, what):
     [imt] = qdict['imt']
     [rlz_id] = qdict['k']
     eids = dstore['gmf_data/eid'][:]
-    rlzs = dstore['events']['rlz_id']
+    rlzs = dstore['events']['rlz_id']  # num_rlzs * num_gmfs
     ok = rlzs[eids] == rlz_id
     m = list(oq.imtls).index(imt)
     gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
@@ -923,7 +923,7 @@ def extract_gmf_by_imt(dstore, what):
         N = len(dstore['complete'])
     except KeyError:
         N = len(dstore['sitecol'])
-    E = len(rlzs) // len(dstore['weights'])
+    E = len(rlzs) // info['num_rlzs']
     arr = numpy.zeros((E, N))
     for eid, sid, gmv in zip(eids, sids, gmvs):
         arr[eid, sid] = gmv
