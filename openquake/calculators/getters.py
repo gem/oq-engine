@@ -225,7 +225,7 @@ class PmapGetter(object):
     def get_hcurve(self, sid):  # used in classical
         """
         :param sid: a site ID
-        :returns: a ProbabilityCurve of shape L, R for the given site ID
+        :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
         pc0 = numpy.zeros((self.L, self.num_rlzs))
