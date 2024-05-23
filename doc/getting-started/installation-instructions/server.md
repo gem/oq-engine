@@ -89,7 +89,7 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 
 ### gunicorn
 
-*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). For example:
+*gunicorn* can be installed either via `pip` in the venv of OpenQuake engine. For example:
 
 ```console
 $ sudo su -
