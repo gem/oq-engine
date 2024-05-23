@@ -44,7 +44,7 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
-    poes = hcurve.array.T  # shape R, L
+    poes = hcurve.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
@@ -64,7 +64,7 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
             array[:, 0] = to_probs(stat(to_rates(poes), weights))
         else:
             array[:, 0] = stat(poes, weights)
-    return probability_map.ProbabilityCurve(array)
+    return array
 
 
 def sig_eps_dt(imts):
@@ -230,16 +230,15 @@ class PmapGetter(object):
         :returns: a ProbabilityCurve of shape L, R for the given site ID
         """
         pmap = self.init()
-        pc0 = probability_map.ProbabilityCurve(
-            numpy.zeros((self.L, self.num_rlzs)))
+        pc0 = numpy.zeros((self.L, self.num_rlzs))
         if sid not in pmap:  # no hazard for sid
             return pc0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
             rates = pmap[sid].array[:, g]
             for rlz in rlzs:
-                pc0.array[:, rlz] += rates
-        pc0.array = to_probs(pc0.array)
+                pc0[:, rlz] += rates
+        pc0[:] = to_probs(pc0)
         return pc0
 
     def get_mean_rates(self):
