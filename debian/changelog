@@ -1,7 +1,11 @@
+  [Paolo Tormene, Michele Simionato]
+  * Added command `oq plot 'gmf_scenario?imt=PGA&kind=rlz-0'`
+
   [Fatemeh Alishahiha]
   * Added vertical component to `abrahamson_silva_1997` gsim library
 
   [Michele Simionato]
+  * Internal: removed ProbabilityCurve and rename ProbabilityMap->MapArray
   * Optimized building the CompositeSourceModel for complex logic trees
   * Optimized "reading rates" in postclassical
   * Extended the `delta_loss` warning to scenario_risk calculations
