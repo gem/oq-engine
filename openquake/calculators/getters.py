@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib import probability_map, calc
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, get_ebr)
@@ -154,6 +154,7 @@ class PmapGetter(object):
             self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
         else:
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        self.gweights = full_lt.g_weights(self.trt_rlzs)
         self.slices = slices
         self._pmap = {}
 
@@ -165,6 +166,10 @@ class PmapGetter(object):
     @property
     def imts(self):
         return list(self.imtls)
+
+    @property
+    def G(self):
+        return len(self.trt_rlzs)
 
     @property
     def L(self):
@@ -189,7 +194,6 @@ class PmapGetter(object):
         """
         if self._pmap or len(self.slices) == 0:
             return self._pmap
-        G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
                 # reading one slice at the time to save memory
@@ -200,7 +204,7 @@ class PmapGetter(object):
                     try:
                         array = self._pmap[sid].array
                     except KeyError:
-                        array = numpy.zeros((self.L, G))
+                        array = numpy.zeros((self.L, self.G))
                         self._pmap[sid] = probability_map.ProbabilityCurve(
                             array)
                     array[df.lid, df.gid] = df.rate
@@ -238,30 +242,19 @@ class PmapGetter(object):
         pc0.array = to_probs(pc0.array)
         return pc0
 
-    def get_mean(self):
+    def get_mean_rates(self):
         """
-        Compute the mean curve as a ProbabilityMap
-
-        :param grp:
-            if not None must be a string of the form "grp-XX"; in that case
-            returns the mean considering only the contribution for group XX
+        Compute the mean rate map
         """
         self.init()
-        if len(self.weights) == 1:  # one realization
-            # the standard deviation is zero
-            pmap = self.get(0)
-            for sid, hcurve in pmap.items():
-                array = numpy.zeros(hcurve.array.shape)
-                array[:, 0] = hcurve.array[:, 0]
-                hcurve.array = array
-            return pmap
-        L = self.imtls.size
-        pmap = probability_map.ProbabilityMap(self.sids, L, 1)
-        for sid in self.sids:
-            pmap[sid] = build_stat_curve(
-                self.get_hcurve(sid),
-                self.imtls, stats.mean_curve, self.weights)
-        return pmap
+        L1 = self.L // self.M
+        rmap = probability_map.ProbabilityMap(self.sids, self.L, self.G).fill(0)
+        for idx, pmap in enumerate(self._pmap.values()):
+            rmap.array[idx] = pmap.array
+        out = probability_map.ProbabilityMap(self.sids, self.M, L1).fill(0)
+        out.array[:] = calc.mean_rates.calc_mean_rates(
+            rmap, self.gweights, self.imtls)
+        return out
 
 
 def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
