@@ -156,12 +156,12 @@ class PmapGetter(object):
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.gweights = full_lt.g_weights(self.trt_rlzs)
         self.slices = slices
-        self._pmap = {}
+        self._map = {}
 
     @property
     def sids(self):
         self.init()
-        return list(self._pmap)
+        return list(self._map)
 
     @property
     def imts(self):
@@ -178,7 +178,7 @@ class PmapGetter(object):
     @property
     def N(self):
         self.init()
-        return len(self._pmap)
+        return len(self._map)
 
     @property
     def M(self):
@@ -190,10 +190,10 @@ class PmapGetter(object):
 
     def init(self):
         """
-        Build the probability curves from the underlying dataframes
+        Build the _map from the underlying dataframes
         """
-        if self._pmap or len(self.slices) == 0:
-            return self._pmap
+        if self._map or len(self.slices) == 0:
+            return self._map
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
                 # reading one slice at the time to save memory
@@ -202,12 +202,12 @@ class PmapGetter(object):
                 for sid in rates_df.sid.unique():
                     df = rates_df[rates_df.sid == sid]
                     try:
-                        array = self._pmap[sid]
+                        array = self._map[sid]
                     except KeyError:
                         array = numpy.zeros((self.L, self.G))
-                        self._pmap[sid] = array
+                        self._map[sid] = array
                     array[df.lid, df.gid] = df.rate
-        return self._pmap
+        return self._map
 
     # used in risk calculations where there is a single site per getter
     def get_hazard(self, gsim=None):
@@ -245,7 +245,7 @@ class PmapGetter(object):
         self.init()
         L1 = self.L // self.M
         rmap = map_array.MapArray(self.sids, self.L, self.G).fill(0)
-        for idx, pmap in enumerate(self._pmap.values()):
+        for idx, pmap in enumerate(self._map.values()):
             rmap.array[idx] = pmap.array
         out = map_array.MapArray(self.sids, self.M, L1).fill(0)
         out.array[:] = calc.mean_rates.calc_mean_rates(
