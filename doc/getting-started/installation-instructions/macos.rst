@@ -37,25 +37,22 @@ and double-click on the installer to start the installation.
 .. image:: _images/macos/run_installer.png
 
 
-IMPORTANT: Please note that the package includes its own private copy of
-OpenSSL 3.0.
+IMPORTANT: Please note that the package includes its own private copy of OpenSSL 3.0.
 
 .. image:: _images/macos/openssl.png
 
-
-IMPORTANT Remember to double-click on Install Certificates to install it
-at the end of installation
-
+The installer will walk you through a wizard to complete the installation, and in most cases, the default settings work well, so install it like the other applications on macOS. You may also have to enter your Mac password to let it know that you
 
 .. image:: _images/macos/install_certifi_1.png
 
+IMPORTANT Remember to double-click on Install Certificates to install it at the end of installation
 
 .. image:: _images/macos/install_certifi_2.png
 
+Close all windows after the Process is completed.
 
 .. image:: _images/macos/install_certifi_3.png
 
-Close all windows after the Process is completed.
 
 Once Python 3.11 is installed, please see instructions for the :doc:`universal installer <universal>` script to install OpenQuake Engine
 
