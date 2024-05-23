@@ -1616,7 +1616,7 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical (haz.array)
+        event = hasattr(haz, 'eid')  # else classical
         for riskid, lt in self:
             rm = self[riskid, lt]
             if len(rm.imt_by_lt) == 1:
@@ -1629,7 +1629,7 @@ class RiskComputer(dict):
             if event:
                 out = rm(lt, self.asset_df, haz, col, rndgen)
             else:  # classical
-                out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
+                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
             weights[lt].append(self.wdic[riskid, lt])
             dic[lt].append(out)
         out = {}

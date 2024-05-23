@@ -202,11 +202,10 @@ class PmapGetter(object):
                 for sid in rates_df.sid.unique():
                     df = rates_df[rates_df.sid == sid]
                     try:
-                        array = self._pmap[sid].array
+                        array = self._pmap[sid]
                     except KeyError:
                         array = numpy.zeros((self.L, self.G))
-                        self._pmap[sid] = probability_map.ProbabilityCurve(
-                            array)
+                        self._pmap[sid] = array
                     array[df.lid, df.gid] = df.rate
         return self._pmap
 
@@ -220,8 +219,7 @@ class PmapGetter(object):
         if not self.sids:
             # this happens when the poes are all zeros, as in
             # classical_risk/case_3 for the first site
-            return probability_map.ProbabilityCurve(
-                numpy.zeros((self.L, self.num_rlzs)))
+            return numpy.zeros((self.L, self.num_rlzs))
         return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
@@ -235,7 +233,7 @@ class PmapGetter(object):
             return pc0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = pmap[sid].array[:, g]
+            rates = pmap[sid][:, g]
             for rlz in rlzs:
                 pc0[:, rlz] += rates
         pc0[:] = to_probs(pc0)
