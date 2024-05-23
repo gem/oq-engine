@@ -829,7 +829,7 @@ def make_figure_disagg_by_src(extractors, what):
 
 def make_figure_gmf_scenario(extractors, what):
     """
-    $ oq plot "gmf_scenario?imt=PGA"
+    $ oq plot "gmf_scenario?imt=PGA&kind=rlz-0"
     """
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
@@ -845,28 +845,23 @@ def make_figure_gmf_scenario(extractors, what):
                  label=eid,
                  linewidth=0.5)
 
-    # Maximum multiplicative difference (max/min ratio) per site
+    # max_gmv / min_gmv ratio per site
     min_values = arr.min(axis=0)
     max_values = arr.max(axis=0)
-    ok = min_values > 0
-    max_diff = max_values[ok] - min_values[ok]
-    max_rate = max_values[ok] / min_values[ok]
-    max_rate_idx = max_rate.argmax()
-    diff_at_max_rate = max_diff[max_rate_idx]
-    gt5g = numpy.where(max_values > 5)[0]
-    max_diff_info = (
-        f'max_diff={max_diff.max():.5f} at site ID={max_diff.argmax()}')
-    max_rate_info = (
-        f'max_rate={max_rate.max():.1f} at site ID={max_rate_idx}'
-        f' (diff at site ID {max_rate_idx}={diff_at_max_rate:.5f})')
-    gt5g_info = f'values > 5g at site IDs: {gt5g}'
-    logging.info(max_diff_info)
-    logging.info(max_rate_info)
-    logging.info(gt5g_info)
+
+    # NB: maximum rates are interesting, but only if the max_gmv
+    # is large enough (>.1)
+    ok = (min_values > 0) & (max_values > .1)
+    if ok.any():
+        rates = max_values[ok] / min_values[ok]
+        idx = rates.argmax()
+        info = f'max_rate={rates.max():.1f} at site ID={idx} over {E} GMFs'
+    else:
+        info = ''
     plt.xlabel('Site ID')
     plt.ylabel('Ground motion value')
-    plt.title('Ground motion by site')
-    plt.suptitle(f'{max_diff_info} | {max_rate_info} | {gt5g_info}')
+    if info:
+        plt.title(info)
     plt.grid(True)
     return plt
 

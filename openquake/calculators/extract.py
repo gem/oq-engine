@@ -909,17 +909,21 @@ def _gmf(df, num_sites, imts):
 def extract_gmf_by_imt(dstore, what):
     oq = dstore['oqparam']
     assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
-    qdict = parse(what)  # example {'imt': 'PGA'}
+    info = get_info(dstore)
+    qdict = parse(what, info)  # example {'imt': 'PGA', 'k': 1}
     [imt] = qdict['imt']
-    m = list(oq.imtls).index(imt)
-    gmvs = dstore[f'gmf_data/gmv_{m}'][:]
+    [rlz_id] = qdict['k']
     eids = dstore['gmf_data/eid'][:]
-    sids = dstore['gmf_data/sid'][:]
+    rlzs = dstore['events']['rlz_id']
+    ok = rlzs[eids] == rlz_id
+    m = list(oq.imtls).index(imt)
+    gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
+    sids = dstore['gmf_data/sid'][ok]
     try:
         N = len(dstore['complete'])
     except KeyError:
         N = len(dstore['sitecol'])
-    E = len(dstore['events'])
+    E = len(rlzs) // len(dstore['weights'])
     arr = numpy.zeros((E, N))
     for eid, sid, gmv in zip(eids, sids, gmvs):
         arr[eid, sid] = gmv
