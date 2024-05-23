@@ -571,9 +571,12 @@ still get the same warning if the average losses (averaged over the number
 of events) are quite different between odd and even events. In that case
 you can get something as follows::
 
-  $ oq show delta_loss:4
-                  even         odd     delta
-  occupants  78.734665  114.527138  0.185202
+  $ oq show delta_loss:1
+             even           odd     delta
+  0  5.242724e+09  5.175095e+09  0.006492
+  1  4.857120e+09  5.470883e+09  0.059427
+
+where the index correspond to the realization index (i.e. the GSIM).
 
 ***************************************
 Can I disaggregate my losses by source?
