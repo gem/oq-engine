@@ -27,7 +27,7 @@ from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats, probability_map, valid
+from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.commonlib import util
@@ -193,8 +193,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
                     # get the closest realization to the mean
-                    rlzs[sid] = util.closest_to_ref(
-                        hcurve.array.T, mean.array)[:Z]
+                    rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
@@ -213,7 +212,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for m, imt in enumerate(oq.imtls):
                 iml3[:, m] = oq.iml_disagg[imt]
         else:
-            iml3 = probability_map.compute_hmaps(
+            iml3 = map_array.compute_hmaps(
                 mean_curves, oq.imtls, oq.poes)
         if iml3.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')

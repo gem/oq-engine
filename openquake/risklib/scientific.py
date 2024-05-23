@@ -1609,14 +1609,14 @@ class RiskComputer(dict):
         """
         Compute averages by using the taxonomy mapping
 
-        :param haz: a DataFrame of GMFs or a ProbabilityCurve
+        :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
         :returns: loss dict {extended_loss_type: loss_output}
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical (haz.array)
+        event = hasattr(haz, 'eid')  # else classical
         for riskid, lt in self:
             rm = self[riskid, lt]
             if len(rm.imt_by_lt) == 1:
@@ -1629,7 +1629,7 @@ class RiskComputer(dict):
             if event:
                 out = rm(lt, self.asset_df, haz, col, rndgen)
             else:  # classical
-                out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
+                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
             weights[lt].append(self.wdic[riskid, lt])
             dic[lt].append(out)
         out = {}

@@ -1299,31 +1299,45 @@ def view_delta_loss(token, dstore):
     Estimate the stocastic error on the loss curve by splitting the events
     in odd and even. Example:
 
-    $ oq show delta_loss  # consider the first loss type
+    $ oq show delta_loss  # default structural
     """
     if ':' in token:
         _, li = token.split(':')
         li = int(li)
     else:
-        li = 0
+        li = 2  # structural
     oq = dstore['oqparam']
     loss_type = LOSSTYPE[li]
-    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
-        dstore['weights'])
-    num_events = len(dstore['events'])
-    num_events0 = num_events // 2 + (num_events % 2)
-    num_events1 = num_events // 2
-    periods = return_periods(efftime, num_events)[1:-1]
-
     K = dstore['risk_by_event'].attrs.get('K', 0)
     df = dstore.read_df('risk_by_event', 'event_id',
                         dict(agg_id=K, loss_id=li))
     if len(df) == 0:  # for instance no fatalities
         return {'delta': numpy.zeros(1),
+                'loss_types': view_loss_ids(token, dstore),
                 'error': f"There are no relevant events for {loss_type=}"}
+    if oq.calculation_mode == 'scenario_risk':
+        if oq.number_of_ground_motion_fields == 1:
+            return {'delta': numpy.zeros(1),
+                    'error': 'number_of_ground_motion_fields=1'}
+        R = len(dstore['weights'])
+        df['rlz_id'] = dstore['events']['rlz_id'][df.index]
+        c0, c1 = numpy.zeros(R), numpy.zeros(R)
+        for r in range(R):
+            loss = df.loss[df.rlz_id == r]
+            c0[r] = loss[::2].mean()  # even
+            c1[r] = loss[1::2].mean()  # odd
+        dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
+        return pandas.DataFrame(dic)
+    num_events = len(dstore['events'])
+    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
+        dstore['weights'])
+    periods = return_periods(efftime, num_events)[1:-1]
     mod2 = df.index % 2
     losses0 = df['loss'][mod2 == 0]
     losses1 = df['loss'][mod2 == 1]
+    num_events = len(dstore['events'])
+    num_events0 = num_events // 2 + (num_events % 2)
+    num_events1 = num_events // 2
     c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
     c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
     ok = (c0 != 0) & (c1 != 0)

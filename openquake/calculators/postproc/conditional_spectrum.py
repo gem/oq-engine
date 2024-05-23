@@ -22,7 +22,7 @@ import logging
 import numpy
 from openquake.baselib import parallel, hdf5, sap
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.probability_map import compute_hazard_maps
+from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp

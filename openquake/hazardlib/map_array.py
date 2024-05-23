@@ -69,91 +69,6 @@ def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
     return numpy.interp(imls, mean_curve)[iml]
 
 
-class ProbabilityCurve(object):
-    """
-    This class is a small wrapper over an array of PoEs associated to
-    a set of intensity measure types and levels. It provides a few operators,
-    including the complement operator `~`
-
-    ~p = 1 - p
-
-    and the inclusive or operator `|`
-
-    p = p1 | p2 = ~(~p1 * ~p2)
-
-    Such operators are implemented efficiently at the numpy level, by
-    dispatching on the underlying array.
-
-    Here is an example of use:
-
-    >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
-    >>> ~(poe | poe) * .5
-    <ProbabilityCurve
-    [0.405 0.32  0.245 0.5   0.5  ]>
-    """
-    def __init__(self, array):
-        self.array = array
-
-    def __or__(self, other):
-        if other == 0:
-            return self
-        else:
-            return self.__class__(1. - (1. - self.array) * (1. - other.array))
-    __ror__ = __or__
-
-    def __iadd__(self, other):
-        # this is used when composing mutually exclusive probabilities
-        self.array += other.array
-        return self
-
-    def __add__(self, other):
-        # this is used when composing mutually exclusive probabilities
-        self.array += other.array
-        return self.__class__(self.array)
-
-    def __mul__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__class__(self.array * other.array)
-        elif other == 1:
-            return self
-        else:
-            return self.__class__(self.array * other)
-    __rmul__ = __mul__
-
-    def __pow__(self, n):
-        return self.__class__(self.array ** n)
-
-    def __invert__(self):
-        return self.__class__(1. - self.array)
-
-    def __bool__(self):
-        return bool(self.array.any())
-
-    def __repr__(self):
-        return '<ProbabilityCurve\n%s>' % self.array
-
-    def extract(self, inner_idx):
-        """
-        Extracts the component specified by the index `inner_idx`.
-        """
-        array = self.array[:, inner_idx].reshape(-1, 1)
-        return self.__class__(array)
-
-    # used when exporting to HDF5
-    def convert(self, imtls, idx=0):
-        """
-        Convert a probability curve into a record of dtype `imtls.dt`.
-
-        :param imtls: DictArray instance
-        :param idx: extract the data corresponding to the given inner index
-        """
-        curve = numpy.zeros(1, imtls.dt)
-        for imt in imtls:
-            curve[imt] = self.array[imtls(imt), idx]
-        return curve[0]
-
-
-
 # ######################### hazard maps ################################### #
 
 # cutoff value for the poe
@@ -309,7 +224,7 @@ def fix_probs_occur(probs_occur):
     return probs_occur
 
 
-class ProbabilityMap(object):
+class MapArray(object):
     """
     Thin wrapper over a 3D-array of probabilities.
     """
@@ -334,7 +249,7 @@ class ProbabilityMap(object):
 
     def split(self):
         """
-        :yields: G ProbabilityMaps of shape (N, L, 1)
+        :yields: G MapArrays of shape (N, L, 1)
         """
         N, L, G = self.array.shape
         for g in range(G):
@@ -344,7 +259,7 @@ class ProbabilityMap(object):
         """
         :param value: a scalar probability
 
-        Fill the ProbabilityMap underlying array with the given scalar
+        Fill the MapArray underlying array with the given scalar
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
@@ -361,13 +276,13 @@ class ProbabilityMap(object):
     # used in calc/disagg_test.py
     def expand(self, full_lt, trt_rlzs):
         """
-        Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
+        Convert a MapArray with shape (N, L, Gt) into a MapArray
         with shape (N, L, R): works only for rates
         """
         N, L, Gt = self.array.shape
         assert Gt == len(trt_rlzs), (Gt, len(trt_rlzs))
         R = full_lt.get_num_paths()
-        out = ProbabilityMap(range(N), L, R).fill(0.)
+        out = MapArray(range(N), L, R).fill(0.)
         for g, trs in enumerate(trt_rlzs):
             for sid in range(N):
                 for rlz in trs % TWO24:
@@ -478,4 +393,4 @@ class ProbabilityMap(object):
         return self.new(self.array ** n)
 
     def __repr__(self):
-        return '<ProbabilityMap(%d, %d, %d)>' % self.shape
+        return '<MapArray(%d, %d, %d)>' % self.shape

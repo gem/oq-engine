@@ -96,7 +96,7 @@ def main(job_ini,
         params['hazard_calculation_id'] = str(hc)
     if slowest:
         prof = cProfile.Profile()
-        prof.runctx('_run(job_ini[0], 0, pdb, reuse_input, loglevel, '
+        prof.runctx('_run(job_ini[0], None, pdb, reuse_input, loglevel, '
                     'exports, params, host)', globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
