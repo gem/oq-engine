@@ -102,7 +102,6 @@ https://groups.google.com/g/openquake-users
    macos
    development
    cluster
-   rhel
    server
    slurm
    tools
