@@ -193,8 +193,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
                     # get the closest realization to the mean
-                    rlzs[sid] = util.closest_to_ref(
-                        hcurve.array.T, mean.array)[:Z]
+                    rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
