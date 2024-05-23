@@ -101,6 +101,7 @@ https://groups.google.com/g/openquake-users
    windows
    ubuntu
    ubuntu-nightly
+   macos
    development
    cluster
    rhel
