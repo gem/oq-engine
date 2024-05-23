@@ -1,11 +1,5 @@
 (universal)=
 
-# Binary installer for Windows
-
-Windows users can use a traditional .exe installer which can be downloaded from
-https://downloads.openquake.org/pkgs/windows/oq-engine/ and includes Python 3.10
-and all dependencies. However users needing to develop with the engine are better
-off with the universal installation script, even on Windows.
 
 # Universal installation script
 
@@ -33,6 +27,11 @@ The script allows the user to select between different kinds of installation:
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 > <br />
 >_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine yet, so you have to be careful and install a supported Python version. You can do so from the App Store or from the Python official download page._
+
+>_**Note 7.** Windows users can use a traditional .exe installer which can be downloaded from
+https://downloads.openquake.org/pkgs/windows/oq-engine/ and includes Python 3.11
+and all dependencies. However users needing to develop with the engine are better
+off with the universal installation script, even on Windows._
 
 After installing, you can get the location of the engine virtual enviroment with the command
 ```
