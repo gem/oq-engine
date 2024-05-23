@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import probability_map, calc
+from openquake.hazardlib import map_array, calc
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, get_ebr)
@@ -244,10 +244,10 @@ class PmapGetter(object):
         """
         self.init()
         L1 = self.L // self.M
-        rmap = probability_map.MapArray(self.sids, self.L, self.G).fill(0)
+        rmap = map_array.MapArray(self.sids, self.L, self.G).fill(0)
         for idx, pmap in enumerate(self._pmap.values()):
             rmap.array[idx] = pmap.array
-        out = probability_map.MapArray(self.sids, self.M, L1).fill(0)
+        out = map_array.MapArray(self.sids, self.M, L1).fill(0)
         out.array[:] = calc.mean_rates.calc_mean_rates(
             rmap, self.gweights, self.imtls)
         return out

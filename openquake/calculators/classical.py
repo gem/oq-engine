@@ -35,7 +35,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import MapArray, rates_dt
+from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters
 
