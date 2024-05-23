@@ -127,7 +127,7 @@ convenience you can also add it as an ``alias`` in your ``~/.bashrc``
    alias oq="$HOME/openquake/bin/oq"
 
 Multiple installations
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 If any other installation of the Engine exists on the same machine, like
 a system-wide installation made with packages, you must change the
@@ -153,7 +153,7 @@ To run the OpenQuake Engine tests see the
 page.
 
 Sync the source code with remote
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------
 
 You can pull all the latest changes to the source code running
 
@@ -191,7 +191,7 @@ Silx viewer can be then run as
 --------------
 
 Notes
-~~~~~
+-----
 
 If your system does not support the provided binary dependencies (python
 wheels)

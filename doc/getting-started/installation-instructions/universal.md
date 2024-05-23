@@ -27,7 +27,6 @@ The script allows the user to select between different kinds of installation:
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 > <br />
 >_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine yet, so you have to be careful and install a supported Python version. You can do so from the App Store or from the Python official download page._
-
 >_**Note 7.** Windows users can use a traditional .exe installer which can be downloaded from
 https://downloads.openquake.org/pkgs/windows/oq-engine/ and includes Python 3.11
 and all dependencies. However users needing to develop with the engine are better
@@ -60,13 +59,13 @@ C:\>python.exe install.py user
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-$ python3.10 install.py user
+$ python3.11 install.py user
 ```
 
 **on Linux:**
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-$ /usr/bin/python3 install.py user
+$ python3.11 install.py user
 ```
 
 This installation method will create a Python virtual environment in
