@@ -228,16 +228,15 @@ class PmapGetter(object):
         :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
-        pc0 = numpy.zeros((self.L, self.num_rlzs))
+        r0 = numpy.zeros((self.L, self.num_rlzs))
         if sid not in pmap:  # no hazard for sid
-            return pc0
+            return r0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
             rates = pmap[sid][:, g]
             for rlz in rlzs:
-                pc0[:, rlz] += rates
-        pc0[:] = to_probs(pc0)
-        return pc0
+                r0[:, rlz] += rates
+        return to_probs(r0)
 
     def get_mean_rates(self):
         """
