@@ -20,7 +20,7 @@ Hardware requirements
 
 The minimum required to install the engine and run the demos is
 
-- 8 GB of RAM (16 GB on macOS Ventura)
+- 8 GB of RAM (16 GB on macOS Ventura or Sonoma)
 - 4 GB of free disk space
 
 To run any serious calculation (i.e. a model in GEM mosaic) you need at least 2 GB of RAM per thread for hazard 
