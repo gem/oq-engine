@@ -11,30 +11,24 @@ wanting to do everything manually.
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.9/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.11/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
 Some software prerequisites are needed to build the development environment.
 First of your you need a Python version supported by the engine.
-At the moment we recommend Python 3.10, which is the only version
+At the moment we recommend Python 3.11, which is the only version
 supported on Windows and macOS.
 
-**NB: Python 3.11 and 3.12 are not supported yet, so please do NOT install
-such versions**
+**NB: Python 3.12 are not supported yet, so please do NOT install such versions**
 
-### Ubuntu
+**NB: Python version below 3.9 are not supported , so please do NOT install such versions**
 
-```bash
-sudo apt install git python3-venv
-```
+### Linux
 
-### RedHat 8 and clones
-
-```bash
-sudo dnf install python3
-```
+Please check the documentation of your distribution to install one of the supported version of Python.
+At the moment we recommend Python 3.11 but it also can used Python 3.9 and 3.10
 
 ### macOS
-*This procedure refers to the official Python distribution from [python.org](https://python.org). If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+refers to the official Python distribution from [python.org](https://python.org). 
 
 #### Xcode
 
