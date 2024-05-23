@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.probability_map import MapArray
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_cmakers
 
 CUTOFF = 1E-12

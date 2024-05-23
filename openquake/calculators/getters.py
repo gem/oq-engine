@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import probability_map, calc
+from openquake.hazardlib import map_array, calc
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, get_ebr)
@@ -44,7 +44,7 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
-    poes = hcurve.array.T  # shape R, L
+    poes = hcurve.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
@@ -64,7 +64,7 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
             array[:, 0] = to_probs(stat(to_rates(poes), weights))
         else:
             array[:, 0] = stat(poes, weights)
-    return probability_map.ProbabilityCurve(array)
+    return array
 
 
 def sig_eps_dt(imts):
@@ -202,11 +202,10 @@ class PmapGetter(object):
                 for sid in rates_df.sid.unique():
                     df = rates_df[rates_df.sid == sid]
                     try:
-                        array = self._pmap[sid].array
+                        array = self._pmap[sid]
                     except KeyError:
                         array = numpy.zeros((self.L, self.G))
-                        self._pmap[sid] = probability_map.ProbabilityCurve(
-                            array)
+                        self._pmap[sid] = array
                     array[df.lid, df.gid] = df.rate
         return self._pmap
 
@@ -220,27 +219,24 @@ class PmapGetter(object):
         if not self.sids:
             # this happens when the poes are all zeros, as in
             # classical_risk/case_3 for the first site
-            return probability_map.ProbabilityCurve(
-                numpy.zeros((self.L, self.num_rlzs)))
+            return numpy.zeros((self.L, self.num_rlzs))
         return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
         """
         :param sid: a site ID
-        :returns: a ProbabilityCurve of shape L, R for the given site ID
+        :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
-        pc0 = probability_map.ProbabilityCurve(
-            numpy.zeros((self.L, self.num_rlzs)))
+        r0 = numpy.zeros((self.L, self.num_rlzs))
         if sid not in pmap:  # no hazard for sid
-            return pc0
+            return r0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = pmap[sid].array[:, g]
+            rates = pmap[sid][:, g]
             for rlz in rlzs:
-                pc0.array[:, rlz] += rates
-        pc0.array = to_probs(pc0.array)
-        return pc0
+                r0[:, rlz] += rates
+        return to_probs(r0)
 
     def get_mean_rates(self):
         """
@@ -248,10 +244,10 @@ class PmapGetter(object):
         """
         self.init()
         L1 = self.L // self.M
-        rmap = probability_map.MapArray(self.sids, self.L, self.G).fill(0)
+        rmap = map_array.MapArray(self.sids, self.L, self.G).fill(0)
         for idx, pmap in enumerate(self._pmap.values()):
             rmap.array[idx] = pmap.array
-        out = probability_map.MapArray(self.sids, self.M, L1).fill(0)
+        out = map_array.MapArray(self.sids, self.M, L1).fill(0)
         out.array[:] = calc.mean_rates.calc_mean_rates(
             rmap, self.gweights, self.imtls)
         return out

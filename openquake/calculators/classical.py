@@ -35,7 +35,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import MapArray, rates_dt
+from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters
 
@@ -211,18 +211,18 @@ def postclassical(pgetter, hstats, individual_rlzs,
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
                 # NB: the hcurve have soil levels != IMT levels
-        if pc.array.sum() == 0:  # no data
+        if pc.sum() == 0:  # no data
             continue
         with compute_mon:
             if R == 1 or individual_rlzs:
                 for r in range(R):
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
-                        pc.array[:, r].reshape(M, L1))
+                        pc[:, r].reshape(M, L1))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
                         pc, imtls, stat, weights, pgetter.use_rates)
-                    arr = sc.array.reshape(M, L1)
+                    arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
     if poes and (R == 1 or individual_rlzs):

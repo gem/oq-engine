@@ -47,9 +47,7 @@ import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import (
-    MapArray, ProbabilityCurve
-)
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -205,7 +203,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
     :param monitor: a Monitor instance (optional)
-    :returns: a ProbabilityCurve object
+    :returns: an array of shape (L, G)
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
@@ -216,6 +214,5 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     PmapMaker(cmaker, srcfilter, [src]).make(pmap)
     pmap.array[:] = 1. - pmap.array
     if not pmap:  # filtered away
-        zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
-        return ProbabilityCurve(zero)
-    return ProbabilityCurve(pmap.array[0])
+        return numpy.zeros((oqparam.imtls.size, len(gsims)))
+    return pmap.array[0]
