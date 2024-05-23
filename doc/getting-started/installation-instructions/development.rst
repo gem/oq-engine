@@ -41,22 +41,8 @@ macOS
 
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
 
-Xcode
------
-
-You must install the Command Line Tools Package for Xcode first. You can
-install the Command Line Tools package without having to install the
-entire Xcode software by running:
-
-.. code:: bash
-
-   xcode-select --install
-
-If Xcode is already installed on your machine, then there is no need to
-install the command-line tools.
-
 Encoding
-^^^^^^^^
+--------
 
 Make sure that the encoding set in the terminal is ``en_US.UTF-8``. To
 force it, you should put the following lines in your ``~/.profile``:
@@ -67,7 +53,7 @@ force it, you should put the following lines in your ``~/.profile``:
    export LANG=en_US.UTF-8
 
 Download the OpenQuake source code
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------
 
 Considering that the complete repository is quite large given its long
 history, we recommend shallow cloning the repository to download only
@@ -83,7 +69,7 @@ repository, you can convert the shallow clone into a full repository
 with the command ``git fetch --unshallow``.
 
 Install OpenQuake in development mode
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------------------
 
 .. code:: bash
 
