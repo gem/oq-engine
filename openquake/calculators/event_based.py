@@ -29,7 +29,7 @@ from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, performance, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
-from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
+from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
@@ -102,7 +102,7 @@ def build_hcurves(calc):
             poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
             for m, imt in enumerate(oq.imtls):
                 hcurves[rsi2str(rlz, sid, imt)] = poes[m]
-    pmaps = {r: ProbabilityMap(calc.sitecol.sids, L1*M, 1).fill(0)
+    pmaps = {r: MapArray(calc.sitecol.sids, L1*M, 1).fill(0)
              for r in range(R)}
     for key, poes in hcurves.items():
         r, sid, imt = str2rsi(key)
@@ -144,7 +144,7 @@ def build_hcurves(calc):
                 'hmaps-stats', site_id=N, stat=list(hstats),
                 imt=list(oq.imtls), poes=oq.poes)
         for s, stat in enumerate(hstats):
-            smap = ProbabilityMap(calc.sitecol.sids, L1, M)
+            smap = MapArray(calc.sitecol.sids, L1, M)
             [smap.array] = compute_stats(
                 numpy.array([p.array for p in pmaps]),
                 [hstats[stat]], weights)

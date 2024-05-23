@@ -49,7 +49,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -1228,7 +1228,7 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap = MapArray(numpy.arange(N, dtype=U32), len(data), 1)
     pmap.array = data.reshape(N, L, 1)
     return mesh, pmap
 
