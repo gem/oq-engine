@@ -99,8 +99,6 @@ https://groups.google.com/g/openquake-users
 
    universal
    windows
-   ubuntu
-   ubuntu-nightly
    macos
    development
    cluster
