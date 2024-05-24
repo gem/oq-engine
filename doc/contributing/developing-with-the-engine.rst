@@ -184,7 +184,6 @@ Then the hazard curve can be computed as follows::
 	>>> sitecol = readinput.get_site_collection(oq)
 	>>> gsims = readinput.get_gsim_lt(oq).values['*']
 	>>> calc_hazard_curve(sitecol, src, gsims, oq)
-	<ProbabilityCurve
 	[[0.00507997]]>
 
 Working with GMPEs directly: the ContextMaker

@@ -49,7 +49,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -755,6 +755,11 @@ def get_full_lt(oqparam):
         oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+
+    imtweight = full_lt.gsim_lt.branches[0].weight
+    if len(imtweight.dic) > 1 and oqparam.use_rates:
+        raise ValueError('use_rates=true cannot be used with imtWeight')
+
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
@@ -767,11 +772,11 @@ def get_full_lt(oqparam):
                                      len(unique)))
     else:  # full enumeration
         logging.info('There are {:_d} logic tree paths(s)'.format(p))
-        if oqparam.hazard_curves and p > oqparam.max_potential_paths:
+        if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set hazard_curves=false ' % p)
+                'full enumeration, or set use_rates=true ' % p)
         elif (oqparam.is_event_based() and
               (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
                 and p > oqparam.max_potential_paths / 100):
@@ -1228,7 +1233,7 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap = MapArray(numpy.arange(N, dtype=U32), len(data), 1)
     pmap.array = data.reshape(N, L, 1)
     return mesh, pmap
 

@@ -2,6 +2,8 @@ import os
 
 APPLICATION_MODE = 'AELO'
 
+DISABLE_VERSION_WARNING = True
+
 # # Static Folder
 # STATIC_ROOT = ''
 

@@ -96,15 +96,23 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
-AELO_FORM_PLACEHOLDERS = {
-    'lon': 'Longitude (max. 5 decimal places)',
-    'lat': 'Latitude (max. 5 decimal places)',
-    'vs30': 'Vs30 (fixed at 760 m/s)',
-    'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)',
+AELO_FORM_LABELS = {
+    'lon': 'Longitude',
+    'lat': 'Latitude',
+    'vs30': 'Vs30',
+    'siteid': 'Site name',
     'asce_version': 'ASCE version',
 }
 
-ARISTOTLE_FORM_PLACEHOLDERS = {
+AELO_FORM_PLACEHOLDERS = {
+    'lon': 'max. 5 decimals',
+    'lat': 'max. 5 decimals',
+    'vs30': 'fixed at 760 m/s',
+    'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
+    'asce_version': 'ASCE version',
+}
+
+ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier (USGS ID or custom)',
     'rupture_file': 'Rupture model XML',
     'lon': 'Longitude',
@@ -121,6 +129,10 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'asset_hazard_distance': 'Asset hazard distance',
     'ses_seed': 'SES seed',
 }
+
+# NOTE: currently placeholders are equal to labels. We might re-define
+# placeholders like for AELO, e.g. to give a hint on the required format
+ARISTOTLE_FORM_PLACEHOLDERS = ARISTOTLE_FORM_LABELS.copy()
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -747,7 +759,7 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
-            validation_errs[ARISTOTLE_FORM_PLACEHOLDERS[fieldname]] = str(exc)
+            validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
             continue
         if fieldname in dic:
@@ -779,6 +791,7 @@ def aristotle_run(request):
 
     :param request:
         a `django.http.HttpRequest` object containing
+        usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed
@@ -806,6 +819,7 @@ def aristotle_run(request):
         allparams, config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
+    response_data = dict()
     for jobctx in jobctxs:
         job_id = jobctx.calc_id
         outputs_uri_web = request.build_absolute_uri(
@@ -816,11 +830,11 @@ def aristotle_run(request):
             reverse('log', args=[job_id, '0', '']))
         traceback_uri = request.build_absolute_uri(
             reverse('traceback', args=[job_id]))
-        response_data = dict(
+        response_data[job_id] = dict(
             status='created', job_id=job_id, outputs_uri=outputs_uri_api,
             log_uri=log_uri, traceback_uri=traceback_uri)
         if not job_owner_email:
-            response_data['WARNING'] = (
+            response_data[job_id]['WARNING'] = (
                 'No email address is speficied for your user account,'
                 ' therefore email notifications will be disabled. As soon as'
                 ' the job completes, you can access its outputs at the'
@@ -845,17 +859,17 @@ def aelo_validate(request):
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['lon']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['lon']] = str(exc)
         invalid_inputs.append('lon')
     try:
         lat = valid.latitude(request.POST.get('lat'))
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['lat']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
         vs30 = valid.positivefloat(request.POST.get('vs30'))
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     try:
         siteid = request.POST.get('siteid')
@@ -864,14 +878,14 @@ def aelo_validate(request):
                 "site name can not be longer than %s characters" %
                 settings.MAX_AELO_SITE_NAME_LEN)
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['siteid']] = str(exc)
         invalid_inputs.append('siteid')
     try:
         asce_version = request.POST.get(
             'asce_version', oqvalidation.OqParam.asce_version.default)
         oqvalidation.OqParam.asce_version.validator(asce_version)
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['asce_version']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
         invalid_inputs.append('asce_version')
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -1224,12 +1238,14 @@ def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     params = {'application_mode': application_mode}
     if application_mode == 'AELO':
+        params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = (
             oqvalidation.OqParam.asce_version.validator.choices)
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
+        params['aristotle_form_labels'] = ARISTOTLE_FORM_LABELS
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
     return render(
         request, "engine/index.html", params)

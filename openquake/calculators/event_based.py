@@ -29,7 +29,7 @@ from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, performance, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
-from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
+from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
@@ -102,7 +102,7 @@ def build_hcurves(calc):
             poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
             for m, imt in enumerate(oq.imtls):
                 hcurves[rsi2str(rlz, sid, imt)] = poes[m]
-    pmaps = {r: ProbabilityMap(calc.sitecol.sids, L1*M, 1).fill(0)
+    pmaps = {r: MapArray(calc.sitecol.sids, L1*M, 1).fill(0)
              for r in range(R)}
     for key, poes in hcurves.items():
         r, sid, imt = str2rsi(key)
@@ -144,7 +144,7 @@ def build_hcurves(calc):
                 'hmaps-stats', site_id=N, stat=list(hstats),
                 imt=list(oq.imtls), poes=oq.poes)
         for s, stat in enumerate(hstats):
-            smap = ProbabilityMap(calc.sitecol.sids, L1, M)
+            smap = MapArray(calc.sitecol.sids, L1, M)
             [smap.array] = compute_stats(
                 numpy.array([p.array for p in pmaps]),
                 [hstats[stat]], weights)
@@ -221,6 +221,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    shr = monitor.shared
     oq = cmaker.oq
     alldata = []
     se_dt = sig_eps_dt(oq.imtls)
@@ -257,8 +258,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                s = cmaker.shr_obj
-                with s.mea as mea, s.tau as tau, s.phi as phi:
+                with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                     df = computer.compute_all([mea, tau, phi], cmon, umon)
             else:  # regular GMFs
                 with mmon:
@@ -362,19 +362,22 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         M = len(cmaker.imts)
         N = len(computer.sitecol)
         size = 2 * G * M * N * N * 8  # tau, phi
-        logging.info('Building %s of mean_covs', humansize(size))
+        msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
+        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
                 'You must reduce the number of sites i.e. enlarge '
                 'region_grid_spacing)')
-        mea, _, tau, phi = computer.get_mean_covs()
+        mea, tau, phi = computer.get_mea_tau_phi()
         del proxy.geom  # to reduce data transfer
 
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
         save_tmp(smap.monitor)
+
+    # NB: for conditioned scenarios we are looping on a single trt
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
@@ -385,7 +388,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             if parallel.oq_distribute() == 'zmq':
                 logging.warning('Conditioned scenarios are not meant to be run'
                                 ' on a cluster')
-            cmaker.shr_obj = performance.SharedObject(mea=mea, tau=tau, phi=phi)
+            smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)

@@ -212,7 +212,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_mean_covs(self):
+    def get_mea_tau_phi(self):
         """
         :returns: a list of arrays [mea, sig, tau, phi]
         """
@@ -222,7 +222,7 @@ class ConditionedGmfComputer(GmfComputer):
             self.observed_imt_strs, self.sitecol, self.imts,
             self.spatial_correl,
             self.cross_correl_between, self.cross_correl_within,
-            self.cmaker.maximum_distance)
+            self.cmaker.maximum_distance, sigma=False)
 
     def compute_all(self, mea_tau_phi, cmon=Monitor(), umon=Monitor()):
         """
@@ -238,7 +238,7 @@ class ConditionedGmfComputer(GmfComputer):
             with cmon:
                 array = self.compute(gsim, rlzs, mea, tau, phi, rng)
             with umon:
-                self.update(data, array, rlzs, [mea, tau + phi, tau, phi])
+                self.update(data, array, rlzs, [mea])
         with umon:
             return self.strip_zeros(data)
 
@@ -453,9 +453,9 @@ def get_mean_covs(
         rupture, gsims, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
-        maximum_distance):
+        maximum_distance, sigma=True):
     """
-    :returns: a list of arrays [mea, sig, tau, phi]
+    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
 
     if hasattr(rupture, 'rupture'):
@@ -502,7 +502,6 @@ def get_mean_covs(
     M = len(target_imts)
     N = len(ctx_Y)
     me = numpy.zeros((G, M, N, 1))
-    si = numpy.zeros((G, M, N, N))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     for g, gsim in enumerate(gsims):
@@ -531,11 +530,14 @@ def get_mean_covs(
                 sdata, target, station_filtered,
                 compute_cov, result)
             me[g, m] = mu
-            si[g, m] = tau + phi
             ta[g, m] = tau
             ph[g, m] = phi
 
-    return [me, si, ta, ph]
+    if sigma:
+        return [me, ta + ph, ta, ph]
+    else:
+        # save memory since sigma = tau + phi is not needed
+        return [me, ta, ph]
 
 
 # In scenario/case_21 one has

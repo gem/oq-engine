@@ -43,14 +43,14 @@ def classical_risk(riskinputs, oqparam, monitor):
     for ri in riskinputs:
         A = len(ri.asset_df)
         L = len(crmodel.lti)
-        R = ri.hazard_getter.num_rlzs
+        R = ri.hazard_getter.R
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
         with mon:
             haz = ri.hazard_getter.get_hazard()
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                hcurve = haz.extract(rlz)
+                hcurve = haz[:, rlz]
                 out = crmodel.get_output(asset_df, hcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)

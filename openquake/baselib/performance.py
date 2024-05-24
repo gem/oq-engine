@@ -18,8 +18,6 @@
 
 import os
 import time
-import atexit
-import multiprocessing.shared_memory as shmem
 import pstats
 import pickle
 import signal
@@ -405,54 +403,6 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
-
-# ########################### SharedMemory ############################## #
-
-
-class SharedArray(object):
-    """
-    Wrapper over a SharedMemory object to be used as a context manager.
-    """
-    @classmethod
-    def new(cls, array):
-        return cls(array.shape, array.dtype, array)
-
-    def __init__(self, shape, dtype, value):
-        # NOTE: on Windows numpy.zeros(1, dtype).nbytes is a numpy.int32 and
-        # causes issues, so it is converted into a Python int below
-        nbytes = int(numpy.zeros(1, dtype).nbytes) * numpy.prod(shape)
-        sm = shmem.SharedMemory(create=True, size=int(nbytes))
-        self.name = sm.name
-        self.shape = shape
-        self.dtype = dtype
-        # fill the SharedMemory buffer with the value
-        arr = numpy.ndarray(shape, dtype, buffer=sm.buf)
-        arr[:] = value
-
-    def __enter__(self):
-        self.sm = shmem.SharedMemory(self.name)
-        return numpy.ndarray(self.shape, self.dtype, buffer=self.sm.buf)
-
-    def __exit__(self, etype, exc, tb):
-        self.sm.close()
-
-    def unlink(self):
-        shmem.SharedMemory(self.name).unlink()
-
-
-class SharedObject(object):
-    """
-    A container of SharedArrays
-    """
-    def __init__(self, **kw):
-        self._names = list(kw)
-        for k, arr in kw.items():
-            setattr(self, k, SharedArray.new(arr))
-        atexit.register(self.unlink)
-
-    def unlink(self):
-        for name in self._names:
-            getattr(self, name).unlink()
 
 
 def vectorize_arg(idx):
