@@ -54,7 +54,7 @@ C:\>python.exe install.py user
 
 **on macOS:**
 
-Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the :doc:`<macos>`
+Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
@@ -134,7 +134,7 @@ You will need to have `git` installed on your Mac to clone the engine codebase a
 $ git --version
 ```
 If you don’t have `git` installed already, macOS will prompt you to install it through the Xcode Command Line Tools; simply follow the instructions.
-Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the :doc:`<macos>`
+Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
 $ git clone https://github.com/gem/oq-engine.git
@@ -241,9 +241,9 @@ C:\>python install.py user --remove
 **on macOS and Linux:**
 Depending on the type of installation, please choose one of the following commands:
 ```
-$ python3 install.py user --remove
-$ python3 install.py devel --remove
-$ sudo -H python3 install.py server --remove
+$ python3.11 install.py user --remove
+$ python3.11 install.py devel --remove
+$ sudo -H python3.11 install.py server --remove
 ```
 
 The calculation data (in the `$HOME/oqdata` directory) WILL NOT be removed.
