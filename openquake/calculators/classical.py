@@ -164,17 +164,19 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
 
 
-def fast_mean(pgetter, weights, monitor):
+# for instance for New Zealand G~1000 while R[full_enum]~1_000_000
+# i.e. passing the gweights reduces the data transfer by 1000 times
+def fast_mean(pgetter, gweights, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param weights: an array of R weights
+    :param gweights: an array of G weights
     :returns: a dictionary kind -> MapArray
     """
     with monitor('reading rates', measuremem=True):
         pgetter.init()
     
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean(numpy.array(weights))
+        hcurves = pgetter.get_fast_mean(gweights)
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -744,14 +746,16 @@ class ClassicalCalculator(base.HazardCalculator):
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
-        if oq.fastmean:
-            weights = self.datastore['weights'][:]
-        else:
-            weights = self.full_lt.weights
         if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
             trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
         else:
             trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        if oq.fastmean:
+            ws = self.datastore['weights'][:]
+            weights = numpy.array([ws[trs % TWO24].sum() for trs in trt_rlzs])
+            trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+        else:
+            weights = self.full_lt.weights
         allargs = [
             (getters.MapGetter(dstore.filename, trt_rlzs, self.R, slices, oq),
              weights, hstats, individual, oq.max_sites_disagg, self.amplifier)

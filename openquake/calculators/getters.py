@@ -223,14 +223,13 @@ class MapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_fast_mean(self, weights):
+    def get_fast_mean(self, gweights):
         """
         :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
         M = self.M
         L1 = self.L // M
         means = MapArray(U32(self.sids), M, L1).fill(0)
-        gweights = [weights[trs % TWO24].sum() for trs in self.trt_rlzs]
         for sid in self.sids:
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
