@@ -43,7 +43,7 @@ def classical_risk(riskinputs, oqparam, monitor):
     for ri in riskinputs:
         A = len(ri.asset_df)
         L = len(crmodel.lti)
-        R = ri.hazard_getter.num_rlzs
+        R = ri.hazard_getter.R
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
         with mon:

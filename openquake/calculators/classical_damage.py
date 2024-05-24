@@ -41,7 +41,7 @@ def classical_damage(riskinputs, param, monitor):
     crmodel = monitor.read('crmodel')
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        R = ri.hazard_getter.num_rlzs
+        R = ri.hazard_getter.R
         L = len(crmodel.lti)
         D = len(crmodel.damage_states)
         result = AccumDict(accum=numpy.zeros((R, L, D), F32))

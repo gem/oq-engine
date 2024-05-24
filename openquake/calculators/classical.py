@@ -44,6 +44,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
+TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
@@ -163,10 +164,33 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
 
 
-def postclassical(pgetter, hstats, individual_rlzs,
+# for instance for New Zealand G~1000 while R[full_enum]~1_000_000
+# i.e. passing the gweights reduces the data transfer by 1000 times
+def fast_mean(pgetter, gweights, monitor):
+    """
+    :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
+    :param gweights: an array of G weights
+    :returns: a dictionary kind -> MapArray
+    """
+    with monitor('reading rates', measuremem=True):
+        pgetter.init()
+    
+    with monitor('compute stats', measuremem=True):
+        hcurves = pgetter.get_fast_mean(gweights)
+
+    pmap_by_kind = {'hcurves-stats': [hcurves]}
+    if pgetter.poes:
+        with monitor('make_hmaps', measuremem=False):
+            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+    return pmap_by_kind
+
+
+def postclassical(pgetter, weights, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
+    :param weights: a list of ImtWeights
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
@@ -187,11 +211,11 @@ def postclassical(pgetter, hstats, individual_rlzs,
                            for imt in pgetter.imtls})
     else:
         imtls = pgetter.imtls
-    poes, weights, sids = pgetter.poes, pgetter.weights, U32(pgetter.sids)
+    poes, sids = pgetter.poes, U32(pgetter.sids)
     M = len(imtls)
     L = imtls.size
     L1 = L // M
-    R = len(weights)
+    R = pgetter.R
     S = len(hstats)
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
@@ -471,6 +495,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             maxw = self.max_weight
         self.init_poes()
+        if oq.fastmean:
+            logging.info('Will use the fast_mean algorithm')
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
             self.trt_rlzs)])
@@ -702,8 +728,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         hstats = oq.hazard_stats()
-        if not oq.hazard_curves:  # do nothing
-            return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         if '_rates' in set(self.datastore):
             dstore = self.datastore
@@ -722,10 +746,19 @@ class ClassicalCalculator(base.HazardCalculator):
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
+        else:
+            trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        if oq.fastmean:
+            ws = self.datastore['weights'][:]
+            weights = numpy.array([ws[trs % TWO24].sum() for trs in trt_rlzs])
+            trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+        else:
+            weights = self.full_lt.weights
         allargs = [
-            (getters.PmapGetter(dstore, self.full_lt, slices,
-                                oq.imtls, oq.poes, oq.use_rates),
-             hstats, individual, oq.max_sites_disagg, self.amplifier)
+            (getters.MapGetter(dstore.filename, trt_rlzs, self.R, slices, oq),
+             weights, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
@@ -734,17 +767,22 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard curves', humansize(hcbytes))
         if hmbytes:
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
-        if not performance.numba:
-            logging.warning('numba is not installed: using the slow algorithm')
         if 'delta_rates' in oq.inputs:
             pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
-        parallel.Starmap(
-            postclassical, allargs,
-            distribute='no' if self.few_sites else None,
-            h5=self.datastore.hdf5,
-        ).reduce(self.collect_hazard)
+        if oq.fastmean:
+            parallel.Starmap(
+                fast_mean, [args[0:2] for args in allargs],
+                distribute='no' if self.few_sites else None,
+                h5=self.datastore.hdf5,
+            ).reduce(self.collect_hazard)
+        else:
+            parallel.Starmap(
+                postclassical, allargs,
+                distribute='no' if self.few_sites else None,
+                h5=self.datastore.hdf5,
+            ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
@@ -756,26 +794,31 @@ class ClassicalCalculator(base.HazardCalculator):
             est_time = self.classical_time / float(fraction) + delta
             logging.info('Estimated time: %.1f hours', est_time / 3600)
 
-        # generate hazard map plots
-        if 'hmaps-stats' in self.datastore and self.N > 1000:
-            hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
-            maxhaz = hmaps.max(axis=(0, 1, 3))
-            mh = dict(zip(self.oqparam.imtls, maxhaz))
-            logging.info('The maximum hazard map values are %s', mh)
-            if Image is None or not self.from_engine:  # missing PIL
-                return
-            if self.N < 1000:  # few sites, don't plot
-                return
-            M, P = hmaps.shape[2:]
-            logging.info('Saving %dx%d mean hazard maps', M, P)
-            inv_time = oq.investigation_time
-            allargs = []
-            for m, imt in enumerate(self.oqparam.imtls):
-                for p, poe in enumerate(self.oqparam.poes):
-                    dic = dict(m=m, p=p, imt=imt, poe=poe, inv_time=inv_time,
-                               calc_id=self.datastore.calc_id,
-                               array=hmaps[:, 0, m, p])
-                    allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
-            smap = parallel.Starmap(make_hmap_png, allargs)
-            for dic in smap:
-                self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+        if 'hmaps-stats' in self.datastore:
+            self.plot_hmaps()
+
+    def plot_hmaps(self):
+        """
+        Generate hazard map plots if there are more the  1000 sites
+        """
+        hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
+        maxhaz = hmaps.max(axis=(0, 1, 3))
+        mh = dict(zip(self.oqparam.imtls, maxhaz))
+        logging.info('The maximum hazard map values are %s', mh)
+        if Image is None or not self.from_engine:  # missing PIL
+            return
+        if self.N < 1000:  # few sites, don't plot
+            return
+        M, P = hmaps.shape[2:]
+        logging.info('Saving %dx%d mean hazard maps', M, P)
+        inv_time = self.oqparam.investigation_time
+        allargs = []
+        for m, imt in enumerate(self.oqparam.imtls):
+            for p, poe in enumerate(self.oqparam.poes):
+                dic = dict(m=m, p=p, imt=imt, poe=poe, inv_time=inv_time,
+                           calc_id=self.datastore.calc_id,
+                           array=hmaps[:, 0, m, p])
+                allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
+        smap = parallel.Starmap(make_hmap_png, allargs)
+        for dic in smap:
+            self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']

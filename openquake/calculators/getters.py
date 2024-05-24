@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import map_array, calc
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, get_ebr)
@@ -131,36 +131,25 @@ class HcurvesGetter(object):
         return weights @ curves
 
 
-class PmapGetter(object):
+class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
-
-    :param dstore: a DataStore instance or file system path to it
-    :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
-        self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in full_lt.weights])
-        else:
-            self.weights = full_lt.weights
-        self.imtls = imtls
-        self.poes = poes
-        self.use_rates = use_rates
-        self.num_rlzs = len(full_lt.weights)
-        self.eids = None
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        self.gweights = full_lt.g_weights(self.trt_rlzs)
+    def __init__(self, filename, trt_rlzs, R, slices, oq):
+        self.filename = filename
+        self.trt_rlzs = trt_rlzs
+        self.R = R
         self.slices = slices
+        self.imtls = oq.imtls
+        self.poes = oq.poes
+        self.use_rates = oq.use_rates
+        self.eids = None
         self._map = {}
 
     @property
     def sids(self):
-        self.init()
+        #self.init()
         return list(self._map)
 
     @property
@@ -183,10 +172,6 @@ class PmapGetter(object):
     @property
     def M(self):
         return len(self.imtls)
-
-    @property
-    def R(self):
-        return len(self.weights)
 
     def init(self):
         """
@@ -219,7 +204,7 @@ class PmapGetter(object):
         if not self.sids:
             # this happens when the poes are all zeros, as in
             # classical_risk/case_3 for the first site
-            return numpy.zeros((self.L, self.num_rlzs))
+            return numpy.zeros((self.L, self.R))
         return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
@@ -228,7 +213,7 @@ class PmapGetter(object):
         :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
-        r0 = numpy.zeros((self.L, self.num_rlzs))
+        r0 = numpy.zeros((self.L, self.R))
         if sid not in pmap:  # no hazard for sid
             return r0
         for g, t_rlzs in enumerate(self.trt_rlzs):
@@ -238,19 +223,19 @@ class PmapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_mean_rates(self):
+    def get_fast_mean(self, gweights):
         """
-        Compute the mean rate map
+        :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
-        self.init()
-        L1 = self.L // self.M
-        rmap = map_array.MapArray(self.sids, self.L, self.G).fill(0)
-        for idx, pmap in enumerate(self._map.values()):
-            rmap.array[idx] = pmap.array
-        out = map_array.MapArray(self.sids, self.M, L1).fill(0)
-        out.array[:] = calc.mean_rates.calc_mean_rates(
-            rmap, self.gweights, self.imtls)
-        return out
+        M = self.M
+        L1 = self.L // M
+        means = MapArray(U32(self.sids), M, L1).fill(0)
+        for sid in self.sids:
+            idx = means.sidx[sid]
+            rates = self._map[sid]  # shape (L, G)
+            means.array[idx] = (rates @ gweights).reshape((M, L1))
+        means.array[:] = to_probs(means.array)
+        return means
 
 
 def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):

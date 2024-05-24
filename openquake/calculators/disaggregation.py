@@ -173,15 +173,15 @@ class DisaggregationCalculator(base.HazardCalculator):
             oq, self.sitecol, self.R)
         logging.info(self.shapedic)
         self.save_bin_edges(edges)
-        self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         nrows = len(dstore['_rates/sid'])
-        self.pgetter = getters.PmapGetter(
-            dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
+        trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        self.pgetter = getters.MapGetter(
+            dstore.filename, trt_rlzs, self.R, [(0, nrows + 1)], oq)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:

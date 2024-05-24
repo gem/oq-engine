@@ -39,7 +39,7 @@ def classical_bcr(riskinputs, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    R = riskinputs[0].hazard_getter.num_rlzs
+    R = riskinputs[0].hazard_getter.R
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
     crmodel = monitor.read('crmodel')
     mon = monitor('getting hazard', measuremem=False)

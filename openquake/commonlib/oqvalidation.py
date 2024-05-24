@@ -343,12 +343,6 @@ hazard_calculation_id:
   Example: *hazard_calculation_id = 42*.
   Default: None
 
-hazard_curves:
-   Used to disable the calculation of hazard curves when there are
-   too many realizations.
-   Example: *hazard_curves = false*
-   Default: True
-
 hazard_curves_from_gmfs:
   Used in scenario/event based calculations. If set, generates hazard curves
   from the ground motion fields.
@@ -1021,7 +1015,6 @@ class OqParam(valid.ParamSet):
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
-    hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
@@ -1795,6 +1788,14 @@ class OqParam(valid.ParamSet):
         """
         exposures = self.inputs.get('exposure', [])
         return exposures and exposures[0].endswith('.hdf5')
+
+    @property
+    def fastmean(self):
+        """
+        Return True if it is possible to use the fast mean algorithm
+        """
+        return (not self.individual_rlzs and self.soil_intensities is None
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
 
     def get_kinds(self, kind, R):
         """
