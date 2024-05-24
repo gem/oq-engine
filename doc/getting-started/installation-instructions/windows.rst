@@ -1,13 +1,10 @@
-(installing-windows)=
-
 Installing the OpenQuake Engine on Windows
 ==========================================
 
-The OpenQuake Engine can be installed on Windows with the `universal
-installer <universal.md>`__ (recommended if you plan to develop GMPEs)
+The OpenQuake Engine can be installed on Windows with the :doc:`universal installer <universal>` script (recommended if you plan to develop GMPEs)
 or with a traditional .exe installer which can be downloaded from
-https://downloads.openquake.org/pkgs/windows/oq-engine/. The .exe
-installer includes Python 3.11 and all required dependencies and (since
+https://downloads.openquake.org/pkgs/windows/oq-engine/. 
+The .exe installer includes Python 3.11 and all required dependencies and (since
 version 3.19) does not require Windows administrator privileges.
 
 Requirements
@@ -40,7 +37,7 @@ with a popup message similar to the one shown below:
 
 Click on the “More info” link inside the popup:
 
-Check that the App string starts with “OpenQuake_Engine\_” and ends with
+Check that the App string starts with “OpenQuake_Engine” and ends with
 the desired version number, if all is in order, click on the “Run
 anyway” button to continue. You will be presented with an installer
 dialog similar to the one depicted below:
@@ -157,9 +154,8 @@ Once the webui is ready for use, a web browser tab will be opened:
 .. image:: _images/windows/16_webui_up.png
 
 OpenQuake engine web user-interface
-Please refer to the :doc:`Web user-interface instructions <web-ui>` for more information about using the web-ui.
 
-Once Python 3.11 is installed, please see instructions for the :doc:`universal installer <universal>` script to install OpenQuake Engine
+Please refer to the :ref:`Web user-interface instructions <web-ui>` for more information about using the web-ui.
 
 Getting help
 ------------
