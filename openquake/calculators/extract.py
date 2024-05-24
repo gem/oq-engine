@@ -905,8 +905,9 @@ def _gmf(df, num_sites, imts):
     return gmfa
 
 
+# tested in oq-risk-tests, conditioned_gmfs
 @extract.add('gmf_scenario')
-def extract_gmf_by_imt(dstore, what):
+def extract_gmf_scenario(dstore, what):
     oq = dstore['oqparam']
     assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
     info = get_info(dstore)
