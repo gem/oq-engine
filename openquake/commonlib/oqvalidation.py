@@ -1796,6 +1796,14 @@ class OqParam(valid.ParamSet):
         exposures = self.inputs.get('exposure', [])
         return exposures and exposures[0].endswith('.hdf5')
 
+    @property
+    def fastmean(self):
+        """
+        Return True if it is possible to use the fast mean algorithm
+        """
+        return (not self.individual_rlzs and self.soil_intensities is None
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
+
     def get_kinds(self, kind, R):
         """
         Yield 'rlz-000', 'rlz-001', ...', 'mean', 'quantile-0.1', ...

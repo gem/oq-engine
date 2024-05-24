@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import map_array, calc
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, get_ebr)
@@ -154,7 +154,10 @@ class PmapGetter(object):
             self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
         else:
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        self.gweights = full_lt.g_weights(self.trt_rlzs)
+        self.gweights = numpy.zeros((self.G, self.M))
+        for g, imtweight in enumerate(full_lt.g_weights(self.trt_rlzs)):
+            for m, imt in enumerate(imtls):
+                self.gweights[g, m] = imtweight[imt]
         self.slices = slices
         self._map = {}
 
@@ -238,19 +241,19 @@ class PmapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_mean_rates(self):
+    def get_fast_mean(self):
         """
-        Compute the mean rate map
+        :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
-        self.init()
-        L1 = self.L // self.M
-        rmap = map_array.MapArray(self.sids, self.L, self.G).fill(0)
-        for idx, pmap in enumerate(self._map.values()):
-            rmap.array[idx] = pmap.array
-        out = map_array.MapArray(self.sids, self.M, L1).fill(0)
-        out.array[:] = calc.mean_rates.calc_mean_rates(
-            rmap, self.gweights, self.imtls)
-        return out
+        means = MapArray(U32(self.sids), self.M, self.L // self.M).fill(0)
+        for sid in self.sids:
+            rates = self._map[sid]  # shape (L, G)
+            idx = means.sidx[sid]
+            for m, imt in enumerate(self.imtls):
+                slc = self.imtls(imt)
+                means.array[idx, m] = rates[slc] @ self.gweights[:, m]
+        means.array[:] = to_probs(means.array)
+        return means
 
 
 def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):

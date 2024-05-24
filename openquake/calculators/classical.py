@@ -163,6 +163,25 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
 
 
+def fast_mean(pgetter, monitor):
+    """
+    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :returns: a dictionary kind -> MapArray
+    """
+    with monitor('reading rates', measuremem=True):
+        pgetter.init()
+    
+    with monitor('compute stats', measuremem=True):
+        hcurves = pgetter.get_fast_mean()
+
+    pmap_by_kind = {'hcurves-stats': [hcurves]}
+    if pgetter.poes:
+        with monitor('make_hmaps', measuremem=False):
+            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+    return pmap_by_kind
+
+
 def postclassical(pgetter, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
@@ -740,11 +759,18 @@ class ClassicalCalculator(base.HazardCalculator):
             pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
-        parallel.Starmap(
-            postclassical, allargs,
-            distribute='no' if self.few_sites else None,
-            h5=self.datastore.hdf5,
-        ).reduce(self.collect_hazard)
+        if oq.fastmean:
+            parallel.Starmap(
+                fast_mean, [(args[0],) for args in allargs],
+                distribute='no' if self.few_sites else None,
+                h5=self.datastore.hdf5,
+            ).reduce(self.collect_hazard)
+        else:
+            parallel.Starmap(
+                postclassical, allargs,
+                distribute='no' if self.few_sites else None,
+                h5=self.datastore.hdf5,
+            ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
