@@ -44,6 +44,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
+TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
@@ -163,7 +164,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
 
 
-def fast_mean(pgetter, monitor):
+def fast_mean(pgetter, weights, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
     :returns: a dictionary kind -> MapArray
@@ -172,7 +173,8 @@ def fast_mean(pgetter, monitor):
         pgetter.init()
     
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean()
+        gweights = [weights[trs % TWO24].sum() for trs in pgetter.trt_rlzs]
+        hcurves = pgetter.get_fast_mean(numpy.array(gweights))
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -182,10 +184,11 @@ def fast_mean(pgetter, monitor):
     return pmap_by_kind
 
 
-def postclassical(pgetter, hstats, individual_rlzs,
+def postclassical(pgetter, weights, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
+    :param weights: a list of ImtWeights
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
@@ -206,7 +209,7 @@ def postclassical(pgetter, hstats, individual_rlzs,
                            for imt in pgetter.imtls})
     else:
         imtls = pgetter.imtls
-    poes, weights, sids = pgetter.poes, pgetter.weights, U32(pgetter.sids)
+    poes, sids = pgetter.poes, U32(pgetter.sids)
     M = len(imtls)
     L = imtls.size
     L1 = L // M
@@ -741,9 +744,13 @@ class ClassicalCalculator(base.HazardCalculator):
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
+        if oq.fastmean:
+            weights = self.datastore['weights'][:]
+        else:
+            weights = self.full_lt.weights
         allargs = [
             (getters.MapGetter(dstore, self.full_lt, slices, oq),
-             hstats, individual, oq.max_sites_disagg, self.amplifier)
+             weights, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
@@ -758,7 +765,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         if oq.fastmean:
             parallel.Starmap(
-                fast_mean, ((args[0],) for args in allargs),
+                fast_mean, (args[0:2] for args in allargs),
                 distribute='no' if self.few_sites else None,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)

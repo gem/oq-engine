@@ -151,14 +151,9 @@ class MapGetter(object):
         self.imtls = oq.imtls
         self.poes = oq.poes
         self.use_rates = oq.use_rates
+        self.fastmean = oq.fastmean
         self.R = len(full_lt.weights)
         self.eids = None
-        if oq.fastmean:
-            weights = numpy.array([w['default'] for w in full_lt.weights])
-            self.gweights = numpy.array(
-                [weights[trs % TWO24].sum() for trs in self.trt_rlzs])
-        else:
-            self.weights = full_lt.weights
         self.slices = slices
         self._map = {}
 
@@ -238,7 +233,7 @@ class MapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_fast_mean(self):
+    def get_fast_mean(self, gweights):
         """
         :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
@@ -248,7 +243,7 @@ class MapGetter(object):
         for sid in self.sids:
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
-            means.array[idx] = (rates @ self.gweights).reshape((M, L1))
+            means.array[idx] = (rates @ gweights).reshape((M, L1))
         means.array[:] = to_probs(means.array)
         return means
 
