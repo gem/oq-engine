@@ -494,7 +494,7 @@ class ClassicalCalculator(base.HazardCalculator):
             maxw = self.max_weight
         self.init_poes()
         if oq.fastmean:
-            logging.info('Using fast_mean algorithm')
+            logging.info('Will use the fast_mean algorithm')
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
             self.trt_rlzs)])
