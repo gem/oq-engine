@@ -773,7 +773,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         if oq.fastmean:
             parallel.Starmap(
-                fast_mean, (args[0:2] for args in allargs),
+                fast_mean, [args[0:2] for args in allargs],
                 distribute='no' if self.few_sites else None,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
