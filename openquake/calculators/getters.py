@@ -135,26 +135,16 @@ class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
-
-    :param dstore: a DataStore instance or file system path to it
-    :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, full_lt, slices, oq):
-        imtweight = full_lt.gsim_lt.branches[0].weight
-        if len(imtweight.dic) > 1 and oq.use_rates:
-            raise ValueError('use_rates=true cannot be used with imtWeight')
-        self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+    def __init__(self, filename, trt_rlzs, R, slices, oq):
+        self.filename = filename
+        self.trt_rlzs = trt_rlzs
+        self.R = R
+        self.slices = slices
         self.imtls = oq.imtls
         self.poes = oq.poes
         self.use_rates = oq.use_rates
-        self.fastmean = oq.fastmean
-        self.R = len(full_lt.weights)
         self.eids = None
-        self.slices = slices
         self._map = {}
 
     @property

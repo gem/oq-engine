@@ -749,8 +749,14 @@ class ClassicalCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = self.full_lt.weights
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
+        else:
+            trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+
+        filename = dstore if isinstance(dstore, str) else dstore.filename
         allargs = [
-            (getters.MapGetter(dstore, self.full_lt, slices, oq),
+            (getters.MapGetter(filename, trt_rlzs, self.R, slices, oq),
              weights, hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
