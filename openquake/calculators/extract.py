@@ -905,7 +905,7 @@ def _gmf(df, num_sites, imts):
     return gmfa
 
 
-# tested in oq-risk-tests, conditioned_gmfs
+# tested in scenario/case_9 and in oq-risk-tests, conditioned_gmfs
 @extract.add('gmf_scenario')
 def extract_gmf_scenario(dstore, what):
     oq = dstore['oqparam']
@@ -914,6 +914,8 @@ def extract_gmf_scenario(dstore, what):
     qdict = parse(what, info)  # example {'imt': 'PGA', 'k': 1}
     [imt] = qdict['imt']
     [rlz_id] = qdict['k']
+    if rlz_id >= info['num_rlzs']:
+        raise ValueError('There is no realization #%d' % rlz_id)
     eids = dstore['gmf_data/eid'][:]
     rlzs = dstore['events']['rlz_id']
     ok = rlzs[eids] == rlz_id

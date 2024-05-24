@@ -126,10 +126,16 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertAlmostEqual(f2, 0)
 
     def test_case_9(self):
-        # test for minimum_distance
+        # test for minimum_distance and 2 gsims
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
+
+        # test gmf_data export
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
+
+        # test gmf_scenario export
+        aw = extract(self.calc.datastore, 'gmf_scenario?imt=PGA&kind=rlz-1')
+        assert aw.shape == (10, 3)  # 10 simulations, 3 sites
 
         # test the realizations export
         [f] = export(('realizations', 'csv'), self.calc.datastore)
