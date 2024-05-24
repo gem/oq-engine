@@ -137,6 +137,7 @@ OpenQuake Engine installer completed
 Press Finish to close the installer. You should now see two OpenQuake Engine icons on your Windows desktop:
 
 .. image:: _images/windows/13_Desktop_Icons.png
+
 OpenQuake Engine Icons
 It should also be possible find the OpenQuake Engine by pressing the Windows key and typing “OpenQuake”:
 
