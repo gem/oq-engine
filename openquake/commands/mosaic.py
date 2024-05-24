@@ -300,7 +300,8 @@ def callback(job_id, params, exc=None):
     aristotle_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(mosaic_dir='', rupfname=FAMOUS):
+def aristotle(mosaic_dir='', *,
+              rupfname: str = FAMOUS,  maximum_distance: int = 300):
     """
     Run Aristotle calculations starting from a file with planar
     ruptures (by default "famous_ruptures.csv"). You must pass
@@ -310,7 +311,6 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = None
-    maximum_distance = 300
     truncation_level = 3
     number_of_ground_motion_fields = 10
     asset_hazard_distance = 15
@@ -340,6 +340,7 @@ def aristotle(mosaic_dir='', rupfname=FAMOUS):
 
 aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
 aristotle.rupfname = 'Filename with planar ruptures'
+aristotle.maximum_distance = 'Maximum distance in km'
 
 # ################################## main ################################## #
 
