@@ -1116,14 +1116,19 @@ class RiskCalculator(HazardCalculator):
 
     # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
-        full_lt = dstore['full_lt'].init()
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
         slices = performance.get_slices(dstore['_rates/sid'][:])
+        full_lt = dstore['full_lt'].init()
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            trt_rlzs = full_lt.get_trt_rlzs([[0]])
+        else:
+            trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             getter = getters.MapGetter(
-                dstore, full_lt, slices.get(sid, []), self.oqparam)
+                dstore.filename, trt_rlzs, self.R,
+                slices.get(sid, []), self.oqparam)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))
