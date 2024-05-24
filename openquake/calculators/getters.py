@@ -139,28 +139,26 @@ class MapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
+    def __init__(self, dstore, full_lt, slices, oq):
+        imtweight = full_lt.gsim_lt.branches[0].weight
+        if len(imtweight.dic) > 1 and oq.use_rates:
+            raise ValueError('use_rates=true cannot be used with imtWeight')
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(full_lt.weights[0].dic) == 1 or use_rates:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in full_lt.weights])
-        else:
-            if use_rates:
-                raise ValueError('use_rates=true cannot be used with imtWeight')
-            else:  # weights by IMT
-                self.weights = full_lt.weights
-        self.imtls = imtls
-        self.poes = poes
-        self.use_rates = use_rates
-        self.num_rlzs = len(full_lt.weights)
-        self.eids = None
         if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
             self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
         else:
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        if use_rates:
-            self.gweights = numpy.array([
-                self.weights[trs % TWO24].sum()
-                for trs in self.trt_rlzs])
+        self.imtls = oq.imtls
+        self.poes = oq.poes
+        self.use_rates = oq.use_rates
+        self.R = len(full_lt.weights)
+        self.eids = None
+        if oq.fastmean:
+            weights = numpy.array([w['default'] for w in full_lt.weights])
+            self.gweights = numpy.array(
+                [weights[trs % TWO24].sum() for trs in self.trt_rlzs])
+        else:
+            self.weights = full_lt.weights
         self.slices = slices
         self._map = {}
 
@@ -189,10 +187,6 @@ class MapGetter(object):
     @property
     def M(self):
         return len(self.imtls)
-
-    @property
-    def R(self):
-        return len(self.weights)
 
     def init(self):
         """
@@ -225,7 +219,7 @@ class MapGetter(object):
         if not self.sids:
             # this happens when the poes are all zeros, as in
             # classical_risk/case_3 for the first site
-            return numpy.zeros((self.L, self.num_rlzs))
+            return numpy.zeros((self.L, self.R))
         return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
@@ -234,7 +228,7 @@ class MapGetter(object):
         :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
-        r0 = numpy.zeros((self.L, self.num_rlzs))
+        r0 = numpy.zeros((self.L, self.R))
         if sid not in pmap:  # no hazard for sid
             return r0
         for g, t_rlzs in enumerate(self.trt_rlzs):

@@ -1123,7 +1123,7 @@ class RiskCalculator(HazardCalculator):
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             getter = getters.MapGetter(
-                dstore, full_lt, slices.get(sid, []), self.oqparam.imtls)
+                dstore, full_lt, slices.get(sid, []), self.oqparam)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))

@@ -210,7 +210,7 @@ def postclassical(pgetter, hstats, individual_rlzs,
     M = len(imtls)
     L = imtls.size
     L1 = L // M
-    R = len(weights)
+    R = pgetter.R
     S = len(hstats)
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
@@ -742,8 +742,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
         allargs = [
-            (getters.MapGetter(dstore, self.full_lt, slices,
-                                oq.imtls, oq.poes, oq.use_rates),
+            (getters.MapGetter(dstore, self.full_lt, slices, oq),
              hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]
         self.hazard = {}  # kind -> array
