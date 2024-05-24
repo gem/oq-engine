@@ -166,7 +166,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
 
 def fast_mean(pgetter, weights, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
+    :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param weights: an array of R weights
     :returns: a dictionary kind -> MapArray
     """
@@ -174,8 +174,7 @@ def fast_mean(pgetter, weights, monitor):
         pgetter.init()
     
     with monitor('compute stats', measuremem=True):
-        gweights = [weights[trs % TWO24].sum() for trs in pgetter.trt_rlzs]
-        hcurves = pgetter.get_fast_mean(numpy.array(gweights))
+        hcurves = pgetter.get_fast_mean(numpy.array(weights))
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -188,7 +187,7 @@ def fast_mean(pgetter, weights, monitor):
 def postclassical(pgetter, weights, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
+    :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param weights: a list of ImtWeights
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
