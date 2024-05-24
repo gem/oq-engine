@@ -1,3 +1,5 @@
+.. _macos:
+
 Installing the OpenQuake Engine on MacOS
 ========================================
 

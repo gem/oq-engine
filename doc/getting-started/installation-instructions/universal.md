@@ -54,7 +54,6 @@ C:\>python.exe install.py user
 
 **on macOS:**
 
-_*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ python3.11 install.py user
@@ -98,6 +97,12 @@ $HOME/openquake/bin/oq
 
 Calculation data will be stored in `$HOME/oqdata`.
 
+After installing, you can get the location of the engine configuration file with the command
+```
+$ oq info cfg
+```
+We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing it when uninstalling or changing the version of the engine
+
 ## `devel` installation
 
 Users who intend to modify the engine codebase or add new features for the engine should use the `devel` installation:
@@ -112,7 +117,7 @@ If you don’t have `git` installed already, you can install it from https://git
 
 ```
 C:\> git clone https://github.com/gem/oq-engine.git
-C:\> cd oq-engine 
+C:\> cd oq-engine
 C:\> python.exe install.py devel
 ```
 If using PowerShell you may have to give the command
@@ -128,18 +133,16 @@ $ git --version
 ```
 If you don’t have `git` installed already, macOS will prompt you to install it through the Xcode Command Line Tools; simply follow the instructions.
 
-_*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
-
 ```
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine
-$ python3.10 install.py devel
+$ python3.11 install.py devel
 ```
 
 **on Linux:**
 ```
 $ git clone https://github.com/gem/oq-engine.git
-$ cd oq-engine && /usr/bin/python3 install.py devel
+$ cd oq-engine && python3.11 install.py devel
 ```
 This installation method will create a Python virtual environment in
 `$HOME/openquake` and will install the engine in development mode in
@@ -160,6 +163,11 @@ $ source $HOME/openquake/bin/activate
 
 It should now be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
 
+After installing, you can get the location of the engine configuration file with the command
+```
+$ oq info cfg
+```
+We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing it when uninstalling or changing the version of the engine
 
 ## `server` installation
 
@@ -171,7 +179,7 @@ automatically installed and started: `openquake-dbserver` and
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-$ sudo -H /usr/bin/python3 install.py server
+$ sudo -H python3.11 install.py server
 ```
 
 The installation script will automatically create a user called
@@ -196,7 +204,7 @@ If you are on a Linux machine _and_ you have root permissions
 
 ```
 $ git clone https://github.com/gem/oq-engine.git
-$ cd oq-engine && sudo -H /usr/bin/python3 install.py devel_server
+$ cd oq-engine && sudo -H python3.11 install.py devel_server
 ```
 
 ## Cluster installation
