@@ -167,6 +167,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
 def fast_mean(pgetter, weights, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
+    :param weights: an array of R weights
     :returns: a dictionary kind -> MapArray
     """
     with monitor('reading rates', measuremem=True):
