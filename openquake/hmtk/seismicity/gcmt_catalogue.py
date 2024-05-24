@@ -505,6 +505,7 @@ class GCMTCatalogue(Catalogue):
         """
         Serialise the catalogue to a simple csv format, designed for
         comptibility with the GEM Hazard Modeller's Toolkit
+
         """
         header_list = [
             "eventID",
@@ -525,14 +526,22 @@ class GCMTCatalogue(Catalogue):
             "depthError",
             "magnitude",
             "sigmaMagnitude",
+            'str1', 
+            'dip1', 
+            'rake1', 
+            'str2', 
+            'dip2', 
+            'rake2'
         ]
         with open(filename, "wt", newline="") as fid:
+
             writer = csv.DictWriter(fid, fieldnames=header_list)
             headers = dict((header, header) for header in header_list)
             writer.writerow(headers)
             print("Writing to simple csv format ...")
             for iloc, tensor in enumerate(self.gcmts):
                 # Generic Data
+
                 cmt_dict = {
                     "eventID": iloc + 100000,
                     "Agency": "GCMT",
@@ -543,6 +552,13 @@ class GCMTCatalogue(Catalogue):
                     "sigmaMagnitude": None,
                     "depth": None,
                     "depthError": None,
+                    'magnitudeType': 'Mw',
+                    'str1': tensor.nodal_planes.nodal_plane_1['strike'],
+                    'dip1': tensor.nodal_planes.nodal_plane_1['dip'],
+                    'rake1': tensor.nodal_planes.nodal_plane_1['rake'],
+                    'str2': tensor.nodal_planes.nodal_plane_2['strike'],
+                    'dip2': tensor.nodal_planes.nodal_plane_2['dip'],
+                    'rake2': tensor.nodal_planes.nodal_plane_2['rake']
                 }
 
                 if centroid_location:
@@ -580,6 +596,7 @@ class GCMTCatalogue(Catalogue):
                     cmt_dict["latitude"] = tensor.hypocentre.latitude
                     cmt_dict["depth"] = tensor.hypocentre.depth
                     cmt_dict["depthError"] = None
+
                 writer.writerow(cmt_dict)
         print("done!")
 

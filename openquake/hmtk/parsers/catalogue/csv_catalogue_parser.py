@@ -162,6 +162,7 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
 
     # Because the catalogues TOTAL_ATTRIBUTE_LIST is randomly ordered,
     # the preferred output order is given as a list here
+
     OUTPUT_LIST = [
         "eventID",
         "Agency",
@@ -182,6 +183,12 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
         "magnitude",
         "sigmaMagnitude",
         "magnitudeType",
+        'str1', 
+        'dip1', 
+        'rake1', 
+        'str2', 
+        'dip2', 
+        'rake2' 
     ]
 
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
@@ -256,6 +263,7 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
 class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
     """
     Writes GCMT catalogue to csv file
+
     """
 
     OUTPUT_LIST = [
@@ -298,6 +306,7 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
         "azimuth_t",
         "plunge_t",
     ]
+
 
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
         """

@@ -78,6 +78,12 @@ class Catalogue(object):
         "depthError",
         "magnitude",
         "sigmaMagnitude",
+        'str1', 
+        'dip1', 
+        'rake1', 
+        'str2', 
+        'dip2', 
+        'rake2'
     ]
 
     INT_ATTRIBUTE_LIST = ["year", "month", "day", "hour", "minute", "flag"]
@@ -110,6 +116,13 @@ class Catalogue(object):
         "magnitude",
         "sigmaMagnitude",
         "magnitudeType",
+        'str1',
+        'dip1', 
+        'rake1', 
+        'str2', 
+        'dip2', 
+        'rake2'
+
     ]
 
     def __init__(self):
