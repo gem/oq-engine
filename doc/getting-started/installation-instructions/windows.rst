@@ -68,12 +68,12 @@ Already installed
 
 .. image:: _images/windows/05_Uninstall.png
 
-   **IMPORTANT** even if you have installed the OpenQuake engine via the
-   universal installer, git or some other means, you must ensure that no
-   OpenQuake engine processes are running, that you do not have the User
-   Manual PDF or demo files open before proceeding. If any OpenQuake
-   processes are running or files are open, the installation may not
-   complete successfully.
+**IMPORTANT** even if you have installed the OpenQuake engine via the
+universal installer, git or some other means, you must ensure that no
+OpenQuake engine processes are running, that you do not have the User
+Manual PDF or demo files open before proceeding. If any OpenQuake
+processes are running or files are open, the installation may not
+complete successfully.
 
 If you do not have a previous installation of the OpenQuake Engine
 installed, you can skip ahead to `Install OpenQuake Engine
