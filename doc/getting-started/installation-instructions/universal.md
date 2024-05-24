@@ -54,6 +54,8 @@ C:\>python.exe install.py user
 
 **on macOS:**
 
+Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the :doc:`<macos>`
+
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ python3.11 install.py user
@@ -132,6 +134,7 @@ You will need to have `git` installed on your Mac to clone the engine codebase a
 $ git --version
 ```
 If you don’t have `git` installed already, macOS will prompt you to install it through the Xcode Command Line Tools; simply follow the instructions.
+Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the :doc:`<macos>`
 
 ```
 $ git clone https://github.com/gem/oq-engine.git

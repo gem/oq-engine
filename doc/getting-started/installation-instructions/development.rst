@@ -1,6 +1,4 @@
-(development)=
-
-.. \_development-installation:
+.. _development:
 
 Installing the OpenQuake Engine for development
 ===============================================
