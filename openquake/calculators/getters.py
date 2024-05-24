@@ -164,7 +164,7 @@ class MapGetter(object):
 
     @property
     def sids(self):
-        self.init()
+        #self.init()
         return list(self._map)
 
     @property

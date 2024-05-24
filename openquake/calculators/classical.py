@@ -752,15 +752,13 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard curves', humansize(hcbytes))
         if hmbytes:
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
-        if not performance.numba:
-            logging.warning('numba is not installed: using the slow algorithm')
         if 'delta_rates' in oq.inputs:
             pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
         if oq.fastmean:
             parallel.Starmap(
-                fast_mean, [(args[0],) for args in allargs],
+                fast_mean, ((args[0],) for args in allargs),
                 distribute='no' if self.few_sites else None,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
