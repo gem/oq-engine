@@ -165,7 +165,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
 
 def fast_mean(pgetter, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
     :returns: a dictionary kind -> MapArray
     """
     with monitor('reading rates', measuremem=True):
@@ -185,7 +185,7 @@ def fast_mean(pgetter, monitor):
 def postclassical(pgetter, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param pgetter: an :class:`openquake.commonlib.getters.MapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
@@ -490,6 +490,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             maxw = self.max_weight
         self.init_poes()
+        if oq.fastmean:
+            logging.info('Using fast_mean algorithm')
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
             self.trt_rlzs)])
@@ -721,8 +723,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         hstats = oq.hazard_stats()
-        if not oq.hazard_curves:  # do nothing
-            return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         if '_rates' in set(self.datastore):
             dstore = self.datastore
@@ -742,7 +742,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
         allargs = [
-            (getters.PmapGetter(dstore, self.full_lt, slices,
+            (getters.MapGetter(dstore, self.full_lt, slices,
                                 oq.imtls, oq.poes, oq.use_rates),
              hstats, individual, oq.max_sites_disagg, self.amplifier)
             for slices in allslices]

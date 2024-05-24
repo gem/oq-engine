@@ -767,11 +767,11 @@ def get_full_lt(oqparam):
                                      len(unique)))
     else:  # full enumeration
         logging.info('There are {:_d} logic tree paths(s)'.format(p))
-        if oqparam.hazard_curves and p > oqparam.max_potential_paths:
+        if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set hazard_curves=false ' % p)
+                'full enumeration, or set use_rates=true ' % p)
         elif (oqparam.is_event_based() and
               (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
                 and p > oqparam.max_potential_paths / 100):

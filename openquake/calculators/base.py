@@ -1122,7 +1122,7 @@ class RiskCalculator(HazardCalculator):
         slices = performance.get_slices(dstore['_rates/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
-            getter = getters.PmapGetter(
+            getter = getters.MapGetter(
                 dstore, full_lt, slices.get(sid, []), self.oqparam.imtls)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):

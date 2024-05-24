@@ -131,7 +131,7 @@ class HcurvesGetter(object):
         return weights @ curves
 
 
-class PmapGetter(object):
+class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
@@ -141,10 +141,13 @@ class PmapGetter(object):
     """
     def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
+        if len(full_lt.weights[0].dic) == 1 or use_rates:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in full_lt.weights])
         else:
-            self.weights = full_lt.weights
+            if use_rates:
+                raise ValueError('use_rates=true cannot be used with imtWeight')
+            else:  # weights by IMT
+                self.weights = full_lt.weights
         self.imtls = imtls
         self.poes = poes
         self.use_rates = use_rates
@@ -154,10 +157,10 @@ class PmapGetter(object):
             self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
         else:
             self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        self.gweights = numpy.zeros((self.G, self.M))
-        for g, imtweight in enumerate(full_lt.g_weights(self.trt_rlzs)):
-            for m, imt in enumerate(imtls):
-                self.gweights[g, m] = imtweight[imt]
+        if use_rates:
+            self.gweights = numpy.array([
+                self.weights[trs % TWO24].sum()
+                for trs in self.trt_rlzs])
         self.slices = slices
         self._map = {}
 
@@ -245,13 +248,13 @@ class PmapGetter(object):
         """
         :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
-        means = MapArray(U32(self.sids), self.M, self.L // self.M).fill(0)
+        M = self.M
+        L1 = self.L // M
+        means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
-            rates = self._map[sid]  # shape (L, G)
             idx = means.sidx[sid]
-            for m, imt in enumerate(self.imtls):
-                slc = self.imtls(imt)
-                means.array[idx, m] = rates[slc] @ self.gweights[:, m]
+            rates = self._map[sid]  # shape (L, G)
+            means.array[idx] = (rates @ self.gweights).reshape((M, L1))
         means.array[:] = to_probs(means.array)
         return means
 
