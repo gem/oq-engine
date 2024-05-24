@@ -54,7 +54,7 @@ C:\>python.exe install.py user
 
 **on macOS:**
 
-Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
+Before running the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
@@ -103,7 +103,7 @@ After installing, you can get the location of the engine configuration file with
 ```
 $ oq info cfg
 ```
-We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing it when uninstalling or changing the version of the engine
+We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing it when uninstalling or changing the version of the engine.
 
 ## `devel` installation
 
@@ -134,7 +134,7 @@ You will need to have `git` installed on your Mac to clone the engine codebase a
 $ git --version
 ```
 If you don’t have `git` installed already, macOS will prompt you to install it through the Xcode Command Line Tools; simply follow the instructions.
-Before to run the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
+Before running the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
 $ git clone https://github.com/gem/oq-engine.git
@@ -170,7 +170,7 @@ After installing, you can get the location of the engine configuration file with
 ```
 $ oq info cfg
 ```
-We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing it when uninstalling or changing the version of the engine
+We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing it when uninstalling or changing the version of the engine.
 
 ## `server` installation
 

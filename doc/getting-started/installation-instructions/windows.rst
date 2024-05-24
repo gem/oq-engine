@@ -31,20 +31,16 @@ with a popup message similar to the one shown below:
 
 .. image:: _images/windows/01_Windows_warning.png
 
-“Windows Protected your PC” popup
+Click on the “More info” link inside the popup:
 
 .. image:: _images/windows/02_Run_anyway.png
 
-Click on the “More info” link inside the popup:
-
 Check that the App string starts with “OpenQuake_Engine” and ends with
-the desired version number, if all is in order, click on the “Run
+the desired version number. If all is in order, click on the “Run
 anyway” button to continue. You will be presented with an installer
 dialog similar to the one depicted below:
 
 .. image:: _images/windows/03_Installer_start.png
-
-Installer Start
 
 
 Press the “Next” button.
@@ -53,8 +49,6 @@ The AGPL v3 license terms will be displayed - you must accept these
 terms in order to install the OpenQuake engine:
 
 .. image:: _images/windows/04_License.png
-
-License Terms
 
 Press the “I Agree” button.
 
@@ -79,26 +73,22 @@ If you do not have a previous installation of the OpenQuake Engine
 installed, you can skip ahead to `Install OpenQuake Engine
 Components <#install-components>`__
 
-Press Next to continue, you will be presented with a reminder message:
+Press Next to continue. You will be presented with a reminder message:
 
 .. image:: _images/windows/06_Stop_Processes.png
-
-Stop processes
 
 
 Once you have stopped any running OpenQuake Engine processes and closed
 all associated files, press OK to continue. The uninstaller will now
-remove the previous OpenQuake engine installation, this may take some
+remove the previous OpenQuake engine installation. This may take some
 time to complete:
 
 .. image:: _images/windows/07_Uninstalling.png
 
-Uninstaller running
 Once finished, the uninstaller will look like this:
 
 .. image:: _images/windows/08_Uninstall_Complete.png
 
-Uninstaller completed
 Press the “Close” button to close the uninstaller.
 
 .. _install-components:
@@ -110,7 +100,6 @@ We are now ready to install the OpenQuake engine components:
 
 .. image:: _images/windows/09_Installer_Components.png
 
-OpenQuake Engine components
 Press the “Next” button to continue
 
 It will now be possible to view and if necessary change the installation
@@ -121,40 +110,31 @@ provide support.
 
 .. image:: _images/windows/10_Install_Location.png
 
-Installation location
 Press the “Install” button to continue.
 
-The installer will now execute, this may take some time to complete.
+The installer will now execute. This may take some time to complete.
 
 .. image:: _images/windows/11_Installing.png
 
-Installer running
-Once the installer has completed, it will look something like this:
+Once the installer has completed. It will look something like this:
 
 .. image:: _images/windows/12_Complete.png
 
-OpenQuake Engine installer completed
 Press Finish to close the installer. You should now see two OpenQuake Engine icons on your Windows desktop:
 
 .. image:: _images/windows/13_Desktop_Icons.png
 
-OpenQuake Engine Icons
-It should also be possible find the OpenQuake Engine by pressing the Windows key and typing “OpenQuake”:
+It should also be possible to find the OpenQuake Engine by pressing the Windows key and typing “OpenQuake”:
 
 .. image:: _images/windows/14_Win11_Start_menu.png
-
-OpenQuake Engine App in the Windows Start Menu
 
 Double-click the webui icon to start the OpenQuake Engine web user-interface. The first time the OpenQuake engine is executed, the initialization process may take several minutes to complete:
 
 .. image:: _images/windows/15_Starting_webui_wait.png
 
-OpenQuake Engine webui starting
 Once the webui is ready for use, a web browser tab will be opened:
 
 .. image:: _images/windows/16_webui_up.png
-
-OpenQuake engine web user-interface
 
 Please refer to the :ref:`Web user-interface instructions <web-ui>` for more information about using the web-ui.
 
