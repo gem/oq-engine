@@ -1,3 +1,5 @@
+.. _web-ui:
+
 Running the OpenQuake engine through the Web UI
 ===============================================
 
