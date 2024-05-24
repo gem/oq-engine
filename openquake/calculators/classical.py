@@ -790,26 +790,31 @@ class ClassicalCalculator(base.HazardCalculator):
             est_time = self.classical_time / float(fraction) + delta
             logging.info('Estimated time: %.1f hours', est_time / 3600)
 
-        # generate hazard map plots
-        if 'hmaps-stats' in self.datastore and self.N > 1000:
-            hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
-            maxhaz = hmaps.max(axis=(0, 1, 3))
-            mh = dict(zip(self.oqparam.imtls, maxhaz))
-            logging.info('The maximum hazard map values are %s', mh)
-            if Image is None or not self.from_engine:  # missing PIL
-                return
-            if self.N < 1000:  # few sites, don't plot
-                return
-            M, P = hmaps.shape[2:]
-            logging.info('Saving %dx%d mean hazard maps', M, P)
-            inv_time = oq.investigation_time
-            allargs = []
-            for m, imt in enumerate(self.oqparam.imtls):
-                for p, poe in enumerate(self.oqparam.poes):
-                    dic = dict(m=m, p=p, imt=imt, poe=poe, inv_time=inv_time,
-                               calc_id=self.datastore.calc_id,
-                               array=hmaps[:, 0, m, p])
-                    allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
-            smap = parallel.Starmap(make_hmap_png, allargs)
-            for dic in smap:
-                self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+        if 'hmaps-stats' in self.datastore:
+            self.plot_hmaps()
+
+    def plot_hmaps(self):
+        """
+        Generate hazard map plots if there are more the  1000 sites
+        """
+        hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
+        maxhaz = hmaps.max(axis=(0, 1, 3))
+        mh = dict(zip(self.oqparam.imtls, maxhaz))
+        logging.info('The maximum hazard map values are %s', mh)
+        if Image is None or not self.from_engine:  # missing PIL
+            return
+        if self.N < 1000:  # few sites, don't plot
+            return
+        M, P = hmaps.shape[2:]
+        logging.info('Saving %dx%d mean hazard maps', M, P)
+        inv_time = self.oqparam.investigation_time
+        allargs = []
+        for m, imt in enumerate(self.oqparam.imtls):
+            for p, poe in enumerate(self.oqparam.poes):
+                dic = dict(m=m, p=p, imt=imt, poe=poe, inv_time=inv_time,
+                           calc_id=self.datastore.calc_id,
+                           array=hmaps[:, 0, m, p])
+                allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
+        smap = parallel.Starmap(make_hmap_png, allargs)
+        for dic in smap:
+            self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
