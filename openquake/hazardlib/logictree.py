@@ -1135,8 +1135,6 @@ class FullLogicTree(object):
         """
         :returns: the source_model_lt ``num_samples`` parameter
         """
-        if self.oversampling == 'reduce-rlzs':
-            return len(self.get_realizations())
         return self.source_model_lt.num_samples
 
     @property
@@ -1255,17 +1253,13 @@ class FullLogicTree(object):
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
-            if self.oversampling == 'reduce-rlzs':
-                eff_rlzs = get_eff_rlzs(sm_rlzs, gsim_rlzs)
-                rlzs.extend(eff_rlzs)
-            else:
-                for i, gsim_rlz in enumerate(gsim_rlzs):
-                    rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                        sm_rlzs[i].weight * gsim_rlz.weight)
-                    rlzs.append(rlz)
-                if self.sampling_method.startswith('early_'):
-                    for rlz in rlzs:
-                        rlz.weight[:] = 1. / num_samples
+            for i, gsim_rlz in enumerate(gsim_rlzs):
+                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                    sm_rlzs[i].weight * gsim_rlz.weight)
+                rlzs.append(rlz)
+            if self.sampling_method.startswith('early_'):
+                for rlz in rlzs:
+                    rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
             i = 0

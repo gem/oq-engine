@@ -565,10 +565,8 @@ number_of_logic_tree_samples:
 
 oversampling:
   When equal to "forbid" raise an error if tot_samples > num_paths in classical
-  calculations; when equal to "tolerate" do not raise the error (the default);
-  when equal to "reduce_rlzs" reduce the realizations to the unique paths with
-  weights num_samples/tot_samples
-  Example: *oversampling = reduce_rlzs*
+  calculations; when equal to "tolerate" do not raise the error (the default).
+  Example: *oversampling = forbid*
   Default: tolerate
 
 poes:
@@ -1058,7 +1056,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
+        valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
