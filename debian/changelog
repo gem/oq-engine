@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Optimized the calculation of mean hazard curves when `use_rates=true`;
-    now it is possible to compute exactly mean curves even with 300+ millions
+    now it is possible to compute exactly mean curves even with millions
     of realizations
 
   [Paolo Tormene, Michele Simionato]
