@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Optimized the calculation of mean hazard curves when `use_rates=true`;
+    now it is possible to compute exactly mean curves even with millions
+    of realizations
+
   [Paolo Tormene, Michele Simionato]
   * Added command `oq plot 'gmf_scenario?imt=PGA&kind=rlz-0'`
 
@@ -5,7 +10,6 @@
   * Added vertical component to `abrahamson_silva_1997` gsim library
 
   [Michele Simionato]
-  * Optimized the calculation of mean hazard curves when `use_rates=true`
   * Internal: removed ProbabilityCurve and rename ProbabilityMap->MapArray
   * Optimized building the CompositeSourceModel for complex logic trees
   * Optimized "reading rates" in postclassical
