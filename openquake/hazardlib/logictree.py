@@ -1281,8 +1281,7 @@ class FullLogicTree(object):
             for rlz in rlzs:
                 rlz.weight = rlz.weight / tot_weight
         assert rlzs, 'No realizations found??'
-        assert isinstance(rlzs[0].weight, numpy.ndarray)
-        return rlzs
+        return numpy.array(rlzs)
 
     def _rlzs_by_gsim(self, trt_smr):
         # return dictionary gsim->rlzs
@@ -1298,10 +1297,9 @@ class FullLogicTree(object):
                     len(self.gsim_lt.values)) * TWO24
                 for trtsmr in trtsmrs:
                     trti, smr = divmod(trtsmr, TWO24)
-                    for rlz in rlzs:
-                        if smidx[rlz.ordinal] == smr:
-                            acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
-                                rlz.ordinal)
+                    for rlz in rlzs[smidx == smr]:
+                        acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
+                            rlz.ordinal)
             self._rlzs_by = {}
             for trtsmr, dic in acc.items():
                 self._rlzs_by[trtsmr] = {
