@@ -44,7 +44,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, ImtWeight)
+    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty, random)
@@ -68,7 +68,6 @@ source_dt = numpy.dtype([
     ('source', hdf5.vstr),
 ])
 
-
 source_model_dt = numpy.dtype([
     ('name', hdf5.vstr),
     ('weight', F32),
@@ -76,13 +75,13 @@ source_model_dt = numpy.dtype([
     ('samples', U32),
 ])
 
-src_group_dt = numpy.dtype(
-    [('trt_smr', U32),
-     ('name', hdf5.vstr),
-     ('trti', U16),
-     ('effrup', I32),
-     ('totrup', I32),
-     ('sm_id', U32),
+src_group_dt = numpy.dtype([
+    ('trt_smr', U32),
+    ('name', hdf5.vstr),
+    ('trti', U16),
+    ('effrup', I32),
+    ('totrup', I32),
+    ('sm_id', U32),
 ])
 
 branch_dt = numpy.dtype([
@@ -1091,7 +1090,7 @@ class FullLogicTree(object):
             gids.append(numpy.arange(g, g + len(rbg)))
             g += len(rbg)
         return gids
-        
+
     def get_trt_rlzs(self, all_trt_smrs):
         """
         :returns: a list with Gt arrays of dtype uint32
@@ -1150,7 +1149,7 @@ class FullLogicTree(object):
     @cached_property
     def sd(self):
         return group_array(self.source_model_lt.source_data, 'source')
-    
+
     def get_trt_smrs(self, src_id=None):
         """
         :returns: a tuple of indices trt_smr for the given source
@@ -1180,7 +1179,7 @@ class FullLogicTree(object):
         :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
-        if not self.trti: # empty gsim_lt
+        if not self.trti:  # empty gsim_lt
             return srcs
         sd = self.sd
         out = []
@@ -1195,7 +1194,7 @@ class FullLogicTree(object):
             if smr is None and ';' in src.source_id:
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
-            if smr is None:  # called by .reduce_groups 
+            if smr is None:  # called by .reduce_groups
                 try:
                     # check if ambiguous source ID
                     srcid, fname = srcid.rsplit('!')

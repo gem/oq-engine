@@ -191,7 +191,7 @@ def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param weights: a list of ImtWeights
-    :param wget: function weight array, imt -> weight
+    :param wget: function (weights[:, :], imt) -> weights[:]
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
