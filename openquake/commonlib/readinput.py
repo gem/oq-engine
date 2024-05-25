@@ -756,8 +756,7 @@ def get_full_lt(oqparam):
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
-    imtweight = full_lt.gsim_lt.branches[0].weight
-    if len(imtweight.dic) > 1 and oqparam.use_rates:
+    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
         raise ValueError('use_rates=true cannot be used with imtWeight')
 
     if oqparam.number_of_logic_tree_samples:
@@ -850,8 +849,10 @@ def get_composite_source_model(oqparam, dstore=None):
          an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
-    full_lt = get_full_lt(oqparam)
-    path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
+    h5 = dstore.hdf5 if dstore else None
+    with Monitor('building full_lt', measuremem=True, h5=h5) :
+        full_lt = get_full_lt(oqparam)  # builds the weights
+    path = get_cache_path(oqparam, h5)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
         with datastore.read(os.path.realpath(path)) as ds:

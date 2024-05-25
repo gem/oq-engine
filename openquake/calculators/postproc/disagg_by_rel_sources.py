@@ -119,7 +119,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             src2idx[sid, source_id] = idx
             smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
             gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-            weights[sid, source_id] = [rlz.weight['weight'] for rlz in gslt]
+            weights[sid, source_id] = [rlz.weight[-1] for rlz in gslt]
             relt = FullLogicTree(smlt, gslt)
             Z = relt.get_num_paths()
             assert Z, relt  # sanity check

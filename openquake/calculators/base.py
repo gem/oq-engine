@@ -117,7 +117,7 @@ def build_weights(realizations):
     """
     :returns: an array with the realization weights of shape R
     """
-    arr = numpy.array([rlz.weight['default'] for rlz in realizations])
+    arr = numpy.array([rlz.weight[-1] for rlz in realizations])
     return arr
 
 

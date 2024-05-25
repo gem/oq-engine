@@ -31,7 +31,8 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import Node as N, context
-from openquake.baselib.general import duplicated, BASE183, group_array
+from openquake.baselib.general import (
+    duplicated, BASE183, group_array, cached_property)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -72,12 +73,6 @@ class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file
     """
-    @classmethod
-    def new(cls, weight):
-        self = object.__new__(cls)
-        self.dic = {'weight': weight}
-        return self
-
     def __init__(self, branch, fname):
         with context(fname, branch.uncertaintyWeight):
             nodes = list(branch.getnodes('uncertaintyWeight'))
@@ -93,17 +88,6 @@ class ImtWeight(object):
                 raise InvalidLogicTree(
                     'There are duplicated IMTs in the weights')
 
-    def __mul__(self, other):
-        new = object.__new__(self.__class__)
-        if isinstance(other, self.__class__):
-            keys = set(self.dic) | set(other.dic)
-            new.dic = {k: self[k] * other[k] for k in keys}
-        else:  # assume a float
-            new.dic = {k: self.dic[k] * other for k in self.dic}
-        return new
-
-    __rmul__ = __mul__
-
     def __add__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
@@ -113,14 +97,6 @@ class ImtWeight(object):
         return new
 
     __radd__ = __add__
-
-    def __truediv__(self, other):
-        new = object.__new__(self.__class__)
-        if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] / other[k] for k in self.dic}
-        else:  # assume a float
-            new.dic = {k: self.dic[k] / other for k in self.dic}
-        return new
 
     def is_one(self):
         """
@@ -245,6 +221,28 @@ class GsimLogicTree(object):
             raise InvalidLogicTree(
                 '%s is missing in %s' % (set(tectonic_region_types), fname))
 
+    @cached_property
+    def imti(self):
+        # build imti dictionary
+        imts = {}
+        for br in self.branches:
+            imts.update(br.weight.dic)
+        # uppercase is sorted before lowercase, so 'weight' is the last
+        return {imt: i for (i, imt) in enumerate(sorted(imts))}
+
+    # this is nontrivial only for Canada, see logictree/case_39
+    def wget(self, weights, imt=None):
+        """
+        :param weight: an array of weights of shape (R, 1) or (R, M+1)
+        :returns: imt-index for imt-dependent weights
+        """
+        try:
+            i = self.imti[imt]
+        except KeyError:
+            # the default weight is stored in the last index
+            i = len(self.imti) - 1
+        return weights[:, i]
+        
     @property
     def req_site_params(self):
         site_params = set()
@@ -252,6 +250,12 @@ class GsimLogicTree(object):
             for gsim in self.values[trt]:
                 site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
         return site_params
+
+    def has_imt_weights(self):
+        """
+        :returns: True if the logic tree has IMT-dependend weights
+        """
+        return len(self.branches[0].weight.dic) > 1
 
     def check_imts(self, imts):
         """
@@ -506,7 +510,7 @@ class GsimLogicTree(object):
                    for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
-            weight = ImtWeight.new(1.)
+            weight = numpy.ones(1)
             lt_path = []
             lt_uid = []
             value = []
@@ -514,7 +518,7 @@ class GsimLogicTree(object):
                 branch = brlist[i]
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '.')
-                weight *= branch.weight
+                weight[0] *= branch.weight['weight']
                 value.append(branch.gsim)
             rlz = lt.Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
@@ -553,14 +557,16 @@ class GsimLogicTree(object):
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
-            weight = ImtWeight.new(1.)
+            weight = numpy.ones(len(self.imti))
             lt_path = []
             lt_uid = []
             value = []
             for trt, branch in zip(self.values, branches):
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '.')
-                weight *= branch.weight
+                for imt in branch.weight.dic:
+                    i = self.imti.get(imt, len(self.imti))
+                    weight[i] *= branch.weight[imt]
                 value.append(branch.gsim)
             yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))
 
