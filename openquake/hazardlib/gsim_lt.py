@@ -256,6 +256,12 @@ class GsimLogicTree(object):
                 site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
         return site_params
 
+    def has_imt_weights(self):
+        """
+        :returns: True if the logic tree has IMT-dependend weights
+        """
+        return len(self.branches[0].weight.dic) > 1
+
     def check_imts(self, imts):
         """
         Make sure the IMTs are recognized by all GSIMs in the logic tree

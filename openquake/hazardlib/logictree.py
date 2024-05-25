@@ -1066,12 +1066,11 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        if self.get_num_paths() >= 100_000:
-            logging.info('Building realization weights')
+        if self.get_num_paths() >= 10_000:
+            logging.info('Building realizations')
         self.weights = numpy.array(
             [rlz.weight for rlz in self.get_realizations()])
         return self
-
 
     def wget(self, weights, imt):
         """
