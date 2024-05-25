@@ -1108,13 +1108,6 @@ class FullLogicTree(object):
         out = [self.weights[trs % TWO24].sum() for trs in trt_rlzs]
         return numpy.array(out)
 
-    def get_smr_by_ltp(self):
-        """
-        :returns: a dictionary sm_lt_path -> effective realization index
-        """
-        return {'~'.join(sm_rlz.lt_path): i
-                for i, sm_rlz in enumerate(self.sm_rlzs)}
-
     def trt_by(self, trt_smr):
         """
         :returns: the TRT associated to trt_smr
