@@ -749,10 +749,7 @@ def get_full_lt(oqparam):
         elif trt.lower() not in trts_lower:
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    if len(oqparam.source_id) == 1:
-        oversampling = 'reduce-rlzs'
-    else:
-        oversampling = oqparam.oversampling
+    oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
