@@ -1273,21 +1273,11 @@ class FullLogicTree(object):
     def _rlzs_by_gsim(self, trt_smr):
         # return dictionary gsim->rlzs
         if not hasattr(self, '_rlzs_by'):
-            start = 0
-            slices = []
-            for sm in self.sm_rlzs:
-                slices.append(slice(start, start + sm.samples))
-                start += sm.samples
             rlzs = self.get_realizations()
-            acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
-            for sm in self.sm_rlzs:
-                trtsmrs = sm.ordinal + numpy.arange(
-                    len(self.gsim_lt.values)) * TWO24
-                for trtsmr in trtsmrs:
-                    trti, smr = divmod(trtsmr, TWO24)
-                    for rlz in rlzs[slices[smr]]:
-                        acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
-                            rlz.ordinal)
+            if self.source_model_lt.filename == 'fake.xml':  # scenario
+                acc = self._build_acc_scenario(rlzs)
+            else:  # classical and event based
+                acc = self._build_acc(rlzs)
             self._rlzs_by = {}
             for trtsmr, dic in acc.items():
                 self._rlzs_by[trtsmr] = {
@@ -1295,6 +1285,38 @@ class FullLogicTree(object):
         if not self._rlzs_by:
             return {}
         return self._rlzs_by[trt_smr]
+
+    def _build_acc(self, rlzs):
+        start = 0
+        slices = []
+        for sm in self.sm_rlzs:
+            slices.append(slice(start, start + sm.samples))
+            start += sm.samples
+        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
+        for sm in self.sm_rlzs:
+            trtsmrs = sm.ordinal + numpy.arange(
+                len(self.gsim_lt.values)) * TWO24
+            for trtsmr in trtsmrs:
+                trti, smr = divmod(trtsmr, TWO24)
+                for rlz in rlzs[slices[smr]]:
+                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+        return acc
+
+    def _build_acc_scenario(self, rlzs):
+        smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
+                      for i, sm_rlz in enumerate(self.sm_rlzs)}
+        smidx = numpy.zeros(self.get_num_paths(), int)		
+        for rlz in rlzs:		
+            smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]		
+        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
+        for sm in self.sm_rlzs:
+            trtsmrs = sm.ordinal + numpy.arange(
+                len(self.gsim_lt.values)) * TWO24		
+            for trtsmr in trtsmrs:
+                trti, smr = divmod(trtsmr, TWO24)
+                for rlz in rlzs[smidx == smr]:
+                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+        return acc
 
     def get_rlzs_by_gsim(self, trt_smr):
         """
