@@ -1289,6 +1289,9 @@ class FullLogicTree(object):
         if not hasattr(self, '_rlzs_by'):
             smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
+            smidx = numpy.zeros(self.get_num_paths(), int)
+            for rlz in rlzs:
+                smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
                 trtsmrs = sm.ordinal + numpy.arange(
@@ -1296,8 +1299,7 @@ class FullLogicTree(object):
                 for trtsmr in trtsmrs:
                     trti, smr = divmod(trtsmr, TWO24)
                     for rlz in rlzs:
-                        idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
-                        if idx == smr:
+                        if smidx[rlz.ordinal] == smr:
                             acc[trtsmr][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
             self._rlzs_by = {}
