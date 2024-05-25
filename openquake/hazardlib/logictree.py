@@ -182,7 +182,7 @@ def get_eff_rlzs(sm_rlzs, gsim_rlzs):
     effective = []
     for rows in groupby(triples, operator.itemgetter(0)).values():
         pid, sm_rlz, gsim_rlz = rows[0]
-        weight = ImtWeight.new(len(rows) / len(triples))
+        weight = numpy.array([len(rows) / len(triples)])
         effective.append(
             LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
         ordinal += 1
@@ -1066,8 +1066,18 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        self.weights = [rlz.weight for rlz in self.get_realizations()]
+        self.weights = numpy.array(
+            [rlz.weight for rlz in self.get_realizations()])
         return self
+
+
+    def wget(self, weights, imt):
+        """
+        Dispatch to the underlying gsim_lt.wget except for sampling
+        """
+        if self.num_samples:
+            return weights[:, -1]
+        return self.gsim_lt.wget(weights, imt)
 
     def get_gids(self, all_trt_smrs):
         """
@@ -1093,10 +1103,10 @@ class FullLogicTree(object):
 
     def g_weights(self, trt_rlzs):
         """
-        :returns: a list of Gt weights
+        :returns: an array of weights of shape (Gt, 1) or (Gt, M+1)
         """
-        out = [sum(self.weights[r] for r in trs % TWO24) for trs in trt_rlzs]
-        return out
+        out = [self.weights[trs % TWO24].sum() for trs in trt_rlzs]
+        return numpy.array(out)
 
     def get_smr_by_ltp(self):
         """
@@ -1255,8 +1265,7 @@ class FullLogicTree(object):
                     rlzs.append(rlz)
                 if self.sampling_method.startswith('early_'):
                     for rlz in rlzs:
-                        for k in rlz.weight.dic:
-                            rlz.weight.dic[k] = 1. / num_samples
+                        rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
             i = 0
@@ -1267,11 +1276,12 @@ class FullLogicTree(object):
                     rlzs.append(rlz)
                     i += 1
         # rescale the weights if not one, see case_52
-        tot_weight = sum(rlz.weight for rlz in rlzs)
-        if not tot_weight.is_one():
+        tot_weight = sum(rlz.weight for rlz in rlzs)[-1]
+        if tot_weight != 1.:
             for rlz in rlzs:
                 rlz.weight = rlz.weight / tot_weight
         assert rlzs, 'No realizations found??'
+        assert isinstance(rlzs[0].weight, numpy.ndarray)
         return rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
@@ -1359,7 +1369,7 @@ class FullLogicTree(object):
         for r in self.get_realizations():
             path = '%s~%s' % (shorten(r.sm_lt_path, sh1),
                               shorten(r.gsim_rlz.lt_path, sh2))
-            tups.append((r.ordinal, path, r.weight['weight']))
+            tups.append((r.ordinal, path, r.weight[-1]))
         return numpy.array(tups, rlz_dt)
 
     def __repr__(self):

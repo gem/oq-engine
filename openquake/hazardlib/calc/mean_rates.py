@@ -79,7 +79,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(rmap, gweights, imtls, imts=None):
+def calc_mean_rates(rmap, gweights, wget, imtls, imts=None):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
@@ -88,10 +88,11 @@ def calc_mean_rates(rmap, gweights, imtls, imts=None):
     if imts is None:
         imts = imtls
     M = len(imts)
+    if len(gweights.shape) == 1:  # fast_mean
+        return (rmap.array @ gweights).reshape(M, L1)
     rates = numpy.zeros((N, M, L1))
     for m, imt in enumerate(imts):
-        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [
-            gw[imt] for gw in gweights]
+        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ wget(gweights, imt)
     return rates
 
 

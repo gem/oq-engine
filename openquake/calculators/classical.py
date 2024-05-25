@@ -186,11 +186,12 @@ def fast_mean(pgetter, gweights, monitor):
     return pmap_by_kind
 
 
-def postclassical(pgetter, weights, hstats, individual_rlzs,
+def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param weights: a list of ImtWeights
+    :param wget: function weight array, imt -> weight
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
@@ -245,7 +246,7 @@ def postclassical(pgetter, weights, hstats, individual_rlzs,
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, weights, pgetter.use_rates)
+                        pc, imtls, stat, weights, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -498,9 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
-            self.trt_rlzs)])
-        self.datastore['_rates/weig'] = weig
+        self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -756,10 +755,11 @@ class ClassicalCalculator(base.HazardCalculator):
             trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
         else:
             weights = self.full_lt.weights
+        wget = self.full_lt.wget
         allargs = [
             (getters.MapGetter(dstore.filename, trt_rlzs, self.R, slices, oq),
-             weights, hstats, individual, oq.max_sites_disagg, self.amplifier)
-            for slices in allslices]
+             weights, wget, hstats, individual, oq.max_sites_disagg,
+             self.amplifier) for slices in allslices]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0

@@ -1865,7 +1865,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         probs = lt.random(1, self.seed, 'early_weights')
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
-        self.assertEqual(rlz.weight['default'], 0.5)
+        self.assertEqual(rlz.weight[-1], 0.5)
         self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
 
@@ -1898,7 +1898,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def mean(self, rlzs):
         R = len(rlzs)
         paths = ['_'.join(rlz.sm_lt_path) for rlz in rlzs]
-        return sum(self.value[path] * rlz.weight['weight']
+        return sum(self.value[path] * rlz.weight[-1]
                    for rlz, path in zip(rlzs, paths)) / R
 
     def test_full_path(self):
@@ -1931,7 +1931,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.1]       # b3_.
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
 
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.13375)
 
@@ -1950,7 +1950,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         # the weights are all equal
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
 
     def test_sampling_late_weights(self):
@@ -1969,7 +1969,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.18919751558, 0.09459875780, 0.094598757,
                    0.09459875779]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
 
     def test_smlt_bad(self):
