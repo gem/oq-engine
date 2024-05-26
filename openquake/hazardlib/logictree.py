@@ -1323,12 +1323,13 @@ class FullLogicTree(object):
         :param trt_smr: index or array of indices
         :returns: a dictionary gsim -> array of rlz indices
         """
-        if isinstance(trt_smr, (numpy.ndarray, list, tuple)):
+        if isinstance(trt_smr, (numpy.ndarray, list, tuple)):  # classical
             dic = AccumDict(accum=[])
             for t in trt_smr:
                 for gsim, rlzs in self._rlzs_by_gsim(t).items():
-                    dic[gsim].extend(rlzs)
-            return dic
+                    dic[gsim].append(rlzs)
+            return {k: numpy.concatenate(ls, dtype=U32) for k, ls in dic.items()}
+        # event based
         return self._rlzs_by_gsim(trt_smr)
 
     # FullLogicTree
