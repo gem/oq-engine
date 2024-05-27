@@ -44,7 +44,7 @@ from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.classical import get_pmaps_gb
+from openquake.calculators.classical import get_mapas_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
@@ -972,6 +972,20 @@ def view_mean_rates(token, dstore):
     return rates
 
 
+@view.add('global_rates')
+def view_global_rates(token, dstore):
+    """
+    Display mean global rates
+    """
+    oq = dstore['oqparam']
+    assert oq.use_rates
+    arr = dstore['rates-meavar'][:].mean(axis=0).reshape(2, -1)
+    res = numpy.zeros(arr.shape[1:], [('mea', F32), ('sig', F32)])
+    res['mea'] = arr[0]
+    res['sig'] = numpy.sqrt(arr[1] - arr[0]**2) # <x^2>-<x>^2
+    return res
+
+
 @view.add('mean_disagg')
 def view_mean_disagg(token, dstore):
     """
@@ -1510,7 +1524,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    return humansize(get_pmaps_gb(dstore)[0])
+    return humansize(get_mapas_gb(dstore)[0])
 
 
 @view.add('rup_stats')

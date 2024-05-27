@@ -224,19 +224,21 @@ class MapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_fast_mean(self, gweights):
+    def get_rates_meavar(self, gweights):
         """
-        :returns: a MapArray of shape (N, M, L1) with the mean hcurves
+        :returns:
+           two MapArrays of shape (N, M, L1) with the rates mean and variance
         """
         M = self.M
         L1 = self.L // M
-        means = MapArray(U32(self.sids), M, L1).fill(0)
+        mea = MapArray(U32(self.sids), M, L1).fill(0)
+        var = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
-            idx = means.sidx[sid]
+            idx = mea.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
-            means.array[idx] = (rates @ gweights).reshape((M, L1))
-        means.array[:] = to_probs(means.array)
-        return means
+            mea.array[idx] = (rates @ gweights).reshape((M, L1))
+            var.array[idx] = (rates**2 @ gweights).reshape((M, L1))
+        return mea, var
 
 
 def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):

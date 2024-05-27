@@ -55,9 +55,9 @@ slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 # NB: using 32 bit ratemaps
-def get_pmaps_gb(dstore):
+def get_mapas_gb(dstore):
     """
-    :returns: memory required on the master node to keep the pmaps
+    :returns: memory required on the master node to keep the mapas
     """
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
@@ -139,14 +139,14 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
-            pmap = MapArray(
+            mapa = MapArray(
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
-            result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+            result = hazclassical(srcs, sitecol, cmaker, mapa)
+            result['pnemap'] = to_rates(~mapa, gid, tiling, disagg_by_src)
             yield result
     else:
-        # size_mb is the maximum size of the pmap array in GB
+        # size_mb is the maximum size of the mapa array in GB
         size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
                    * 8 / 1024**2)
         if config.distribution.compress:
@@ -156,11 +156,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
         for sites in sitecol.split_in_tiles(itiles):
-            pmap = MapArray(
+            mapa = MapArray(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
-            result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+            result = hazclassical(sources, sites, cmaker, mapa)
+            result['pnemap'] = to_rates(~mapa, gid, tiling, disagg_by_src)
             yield result
 
 
@@ -176,14 +176,16 @@ def fast_mean(pgetter, gweights, monitor):
         pgetter.init()
     
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean(gweights)
+        rates_mea, rates_var = pgetter.get_rates_meavar(gweights)
+    mapa_by_kind = {'hcurves-stats': [rates_mea.to_probs()]}
+    if pgetter.R > 1:
+        mapa_by_kind['rates-meavar'] = [rates_mea, rates_var]
 
-    pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
         with monitor('make_hmaps', measuremem=False):
-            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
-    return pmap_by_kind
+            mapa_by_kind['hmaps-stats'] = calc.make_hmaps(
+                mapa_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+    return mapa_by_kind
 
 
 def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
@@ -218,14 +220,14 @@ def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
     L1 = L // M
     R = pgetter.R
     S = len(hstats)
-    pmap_by_kind = {}
+    mapa_by_kind = {}
     if R == 1 or individual_rlzs:
-        pmap_by_kind['hcurves-rlzs'] = [
+        mapa_by_kind['hcurves-rlzs'] = [
             MapArray(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
-        pmap_by_kind['hcurves-stats'] = [
+        mapa_by_kind['hcurves-stats'] = [
             MapArray(sids, M, L1).fill(0) for r in range(S)]
-    combine_mon = monitor('combine pmaps', measuremem=False)
+    combine_mon = monitor('combine mapas', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     hmaps_mon = monitor('make_hmaps', measuremem=False)
     sidx = MapArray(sids, 1, 1).fill(0).sidx
@@ -241,24 +243,24 @@ def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
         with compute_mon:
             if R == 1 or individual_rlzs:
                 for r in range(R):
-                    pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
+                    mapa_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
                         pc, imtls, stat, weights, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
-                    pmap_by_kind['hcurves-stats'][s].array[idx] = arr
+                    mapa_by_kind['hcurves-stats'][s].array[idx] = arr
 
     if poes and (R == 1 or individual_rlzs):
         with hmaps_mon:
-            pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-rlzs'], imtls, poes)
+            mapa_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+                mapa_by_kind['hcurves-rlzs'], imtls, poes)
     if poes and hstats:
         with hmaps_mon:
-            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-stats'], imtls, poes)
-    return pmap_by_kind
+            mapa_by_kind['hmaps-stats'] = calc.make_hmaps(
+                mapa_by_kind['hcurves-stats'], imtls, poes)
+    return mapa_by_kind
 
 
 def make_hmap_png(hmap, lons, lats):
@@ -306,13 +308,13 @@ class Hazard:
         self.offset = 0
 
     # used in in disagg_by_src
-    def get_rates(self, pmap, grp_id):
+    def get_rates(self, mapa, grp_id):
         """
-        :param pmap: a MapArray
+        :param mapa: a MapArray
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[grp_id]
-        rates = pmap.array @ self.weig[gids] / self.itime
+        rates = mapa.array @ self.weig[gids] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap):
@@ -375,7 +377,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, source_data, rup_data
+        :param dic: dict with keys mapa, source_data, rup_data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
@@ -403,8 +405,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             acc[source_id] += self.haz.get_rates(pnemap, grp_id)
         G = pnemap.array.shape[2]
-        rates = self.pmap.array
-        sidx = self.pmap.sidx[pnemap.sids]
+        rates = self.mapa.array
+        sidx = self.mapa.sidx[pnemap.sids]
         for i, gid in enumerate(self.gids[grp_id]):
             rates[sidx, :, gid] += pnemap.array[:, :, i % G]
         return acc
@@ -498,7 +500,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        req_gb, self.trt_rlzs, self.gids = get_mapas_gb(self.datastore)
         self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
@@ -540,11 +542,11 @@ class ClassicalCalculator(base.HazardCalculator):
         Regular case
         """
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        acc = AccumDict(accum=0.)  # src_id -> pmap
+        acc = AccumDict(accum=0.)  # src_id -> mapa
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0, F32)
+        self.mapa = MapArray(self.sitecol.sids, L, Gt).fill(0, F32)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -567,8 +569,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            self.haz.store_rates(self.pmap)
-        del self.pmap
+            self.haz.store_rates(self.mapa)
+        del self.mapa
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
@@ -641,26 +643,26 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 
-    def collect_hazard(self, acc, pmap_by_kind):
+    def collect_hazard(self, acc, mapa_by_kind):
         """
         Populate hcurves and hmaps in the .hazard dictionary
 
         :param acc: ignored
-        :param pmap_by_kind: a dictionary of MapArrays
+        :param mapa_by_kind: a dictionary of MapArrays
         """
         # this is practically instantaneous
-        if pmap_by_kind is None:  # instead of a dict
+        if mapa_by_kind is None:  # instead of a dict
             raise MemoryError('You ran out of memory!')
-        for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
-            pmaps = pmap_by_kind[kind]
+        for kind in mapa_by_kind:  # hmaps-XXX, hcurves-XXX
+            mapas = mapa_by_kind[kind]
             if kind in self.hazard:
                 array = self.hazard[kind]
             else:
                 dset = self.datastore.getitem(kind)
                 array = self.hazard[kind] = numpy.zeros(dset.shape, dset.dtype)
-            for r, pmap in enumerate(pmaps):
-                for idx, sid in enumerate(pmap.sids):
-                    array[sid, r] = pmap.array[idx]  # shape (M, P)
+            for r, mapa in enumerate(mapas):
+                for idx, sid in enumerate(mapa.sids):
+                    array[sid, r] = mapa.array[idx]  # shape (M, P)
 
     def post_execute(self, dummy):
         """
@@ -708,11 +710,17 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'hmaps-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), poe=oq.poes)
+
+        if oq.fastmean and R > 1:
+            self.datastore.create_dset('rates-meavar', F32, (N, 2, M, L1))
+            self.datastore.set_shape_descr(
+                'rates-meavar', site_id=N, stat=['mean', 'variance'],
+                imt=imts, lvl=L1)
+
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
             self.datastore.set_shape_descr(
-                'hcurves-stats', site_id=N, stat=list(hstats),
-                imt=imts, lvl=numpy.arange(L1))
+                'hcurves-stats', site_id=N, stat=list(hstats), imt=imts, lvl=L1)
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
                 self.datastore.set_shape_descr(

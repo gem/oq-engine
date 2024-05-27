@@ -309,6 +309,9 @@ class MapArray(object):
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
 
+    def to_probs(self, itime=1.):
+        return self.new(1. - numpy.exp(- self.array * itime))
+
     def to_rates(self, itime=1.):
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
