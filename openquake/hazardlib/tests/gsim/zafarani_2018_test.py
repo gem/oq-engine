@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.zaferani_2018 import (ZafaraniEtAl2018,
+from openquake.hazardlib.gsim.zafarani_2018 import (ZafaraniEtAl2018,
                                                    ZafaraniEtAl2018VHratio)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
