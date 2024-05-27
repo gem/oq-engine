@@ -55,7 +55,7 @@ slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 # NB: using 32 bit ratemaps
-def get_maps_gb(dstore):
+def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the mapas
     """
@@ -500,7 +500,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = get_maps_gb(self.datastore)
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
