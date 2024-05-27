@@ -55,7 +55,7 @@ slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 # NB: using 32 bit ratemaps
-def get_mapas_gb(dstore):
+def get_maps_gb(dstore):
     """
     :returns: memory required on the master node to keep the mapas
     """
@@ -146,7 +146,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = to_rates(~mapa, gid, tiling, disagg_by_src)
             yield result
     else:
-        # size_mb is the maximum size of the mapa array in GB
+        # size_mb is the maximum size of the mapa in GB
         size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
                    * 8 / 1024**2)
         if config.distribution.compress:
@@ -500,7 +500,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = get_mapas_gb(self.datastore)
+        req_gb, self.trt_rlzs, self.gids = get_maps_gb(self.datastore)
         self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
