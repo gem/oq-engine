@@ -20,7 +20,7 @@ Hardware requirements
 
 The minimum required to install the engine and run the demos is
 
-- 8 GB of RAM (16 GB on macOS Ventura)
+- 8 GB of RAM (16 GB on macOS Ventura or Sonoma)
 - 4 GB of free disk space
 
 To run any serious calculation (i.e. a model in GEM mosaic) you need at least 2 GB of RAM per thread for hazard 
@@ -66,19 +66,19 @@ The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/op
 in any Python 3 environment via ``pip``::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-linux64.txt openquake.engine
+	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt openquake.engine
 	```
 
-This works for Linux and Python 3.10. You can trivially adapt the command to other operating systems. For instance for Windows it would be::
+This works for Linux and Python 3.11. You can trivially adapt the command to other operating systems. For instance for Windows it would be::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-win64.txt openquake.engine
+	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-win64.txt openquake.engine
 	```
 
 and for Mac, it would be::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-macos.txt openquake.engine
+	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos.txt openquake.engine
 	```
 
 Cloud
@@ -99,11 +99,9 @@ https://groups.google.com/g/openquake-users
 
    universal
    windows
-   ubuntu
-   ubuntu-nightly
+   macos
    development
    cluster
-   rhel
    server
    slurm
    tools

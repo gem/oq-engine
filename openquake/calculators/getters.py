@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, get_ebr)
@@ -40,20 +40,21 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
-    poes = hcurve.array.T  # shape R, L
+    poes = hcurve.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
-    if isinstance(weights, list):  # IMT-dependent weights
+    
+    if weights.shape[1] > 1:  # IMT-dependent weights
         # this is slower since the arrays are shorter
         for imt in imtls:
             slc = imtls(imt)
-            ws = [w[imt] for w in weights]
-            if sum(ws) == 0:  # expect no data for this IMT
+            ws = wget(weights, imt)
+            if not ws.sum():  # expect no data for this IMT
                 continue
             if use_rates:
                 array[slc, 0] = to_probs(stat(to_rates(poes[:, slc]), ws))
@@ -61,10 +62,10 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
                 array[slc, 0] = stat(poes[:, slc], ws)
     else:
         if use_rates:
-            array[:, 0] = to_probs(stat(to_rates(poes), weights))
+            array[:, 0] = to_probs(stat(to_rates(poes), weights[:, -1]))
         else:
-            array[:, 0] = stat(poes, weights)
-    return probability_map.ProbabilityCurve(array)
+            array[:, 0] = stat(poes, weights[:, -1])
+    return array
 
 
 def sig_eps_dt(imts):
@@ -131,40 +132,34 @@ class HcurvesGetter(object):
         return weights @ curves
 
 
-class PmapGetter(object):
+class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
-
-    :param dstore: a DataStore instance or file system path to it
-    :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
-        self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in full_lt.weights])
-        else:
-            self.weights = full_lt.weights
-        self.imtls = imtls
-        self.poes = poes
-        self.use_rates = use_rates
-        self.num_rlzs = len(full_lt.weights)
-        self.eids = None
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+    def __init__(self, filename, trt_rlzs, R, slices, oq):
+        self.filename = filename
+        self.trt_rlzs = trt_rlzs
+        self.R = R
         self.slices = slices
-        self._pmap = {}
+        self.imtls = oq.imtls
+        self.poes = oq.poes
+        self.use_rates = oq.use_rates
+        self.eids = None
+        self._map = {}
 
     @property
     def sids(self):
-        self.init()
-        return list(self._pmap)
+        #self.init()
+        return list(self._map)
 
     @property
     def imts(self):
         return list(self.imtls)
+
+    @property
+    def G(self):
+        return len(self.trt_rlzs)
 
     @property
     def L(self):
@@ -173,36 +168,32 @@ class PmapGetter(object):
     @property
     def N(self):
         self.init()
-        return len(self._pmap)
+        return len(self._map)
 
     @property
     def M(self):
         return len(self.imtls)
 
-    @property
-    def R(self):
-        return len(self.weights)
-
     def init(self):
         """
-        Build the probability curves from the underlying dataframes
+        Build the _map from the underlying dataframes
         """
-        if self._pmap or len(self.slices) == 0:
-            return self._pmap
-        G = len(self.trt_rlzs)
+        if self._map or len(self.slices) == 0:
+            return self._map
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
-                # reading one slice at the time to save memory in the groupby
+                # reading one slice at the time to save memory
                 rates_df = dstore.read_df('_rates', slc=slice(start, stop))
-                for sid, df in rates_df.groupby('sid'):
+                # not using groupby to save memory
+                for sid in rates_df.sid.unique():
+                    df = rates_df[rates_df.sid == sid]
                     try:
-                        array = self._pmap[sid].array
+                        array = self._map[sid]
                     except KeyError:
-                        array = numpy.zeros((self.L, G))
-                        self._pmap[sid] = probability_map.ProbabilityCurve(
-                            array)
+                        array = numpy.zeros((self.L, self.G))
+                        self._map[sid] = array
                     array[df.lid, df.gid] = df.rate
-        return self._pmap
+        return self._map
 
     # used in risk calculations where there is a single site per getter
     def get_hazard(self, gsim=None):
@@ -214,52 +205,38 @@ class PmapGetter(object):
         if not self.sids:
             # this happens when the poes are all zeros, as in
             # classical_risk/case_3 for the first site
-            return probability_map.ProbabilityCurve(
-                numpy.zeros((self.L, self.num_rlzs)))
+            return numpy.zeros((self.L, self.R))
         return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
         """
         :param sid: a site ID
-        :returns: a ProbabilityCurve of shape L, R for the given site ID
+        :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
-        pc0 = probability_map.ProbabilityCurve(
-            numpy.zeros((self.L, self.num_rlzs)))
+        r0 = numpy.zeros((self.L, self.R))
         if sid not in pmap:  # no hazard for sid
-            return pc0
+            return r0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = pmap[sid].array[:, g]
+            rates = pmap[sid][:, g]
             for rlz in rlzs:
-                pc0.array[:, rlz] += rates
-        pc0.array = to_probs(pc0.array)
-        return pc0
+                r0[:, rlz] += rates
+        return to_probs(r0)
 
-    def get_mean(self):
+    def get_fast_mean(self, gweights):
         """
-        Compute the mean curve as a ProbabilityMap
-
-        :param grp:
-            if not None must be a string of the form "grp-XX"; in that case
-            returns the mean considering only the contribution for group XX
+        :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
-        self.init()
-        if len(self.weights) == 1:  # one realization
-            # the standard deviation is zero
-            pmap = self.get(0)
-            for sid, hcurve in pmap.items():
-                array = numpy.zeros(hcurve.array.shape)
-                array[:, 0] = hcurve.array[:, 0]
-                hcurve.array = array
-            return pmap
-        L = self.imtls.size
-        pmap = probability_map.ProbabilityMap(self.sids, L, 1)
+        M = self.M
+        L1 = self.L // M
+        means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
-            pmap[sid] = build_stat_curve(
-                self.get_hcurve(sid),
-                self.imtls, stats.mean_curve, self.weights)
-        return pmap
+            idx = means.sidx[sid]
+            rates = self._map[sid]  # shape (L, G)
+            means.array[idx] = (rates @ gweights).reshape((M, L1))
+        means.array[:] = to_probs(means.array)
+        return means
 
 
 def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):

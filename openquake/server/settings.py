@@ -226,10 +226,8 @@ except ImportError:
 # NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
-if not os.environ.get('OQ_APPLICATION_MODE'):
-    os.environ['OQ_APPLICATION_MODE'] = APPLICATION_MODE
 
-if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
+if APPLICATION_MODE not in APPLICATION_MODES:
     raise ValueError(
         f'Invalid application mode: "{APPLICATION_MODE}". It must be'
         f' one of {APPLICATION_MODES}')

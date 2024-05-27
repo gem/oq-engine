@@ -49,7 +49,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -749,12 +749,13 @@ def get_full_lt(oqparam):
         elif trt.lower() not in trts_lower:
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    if len(oqparam.source_id) == 1:
-        oversampling = 'reduce-rlzs'
-    else:
-        oversampling = oqparam.oversampling
+    oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+
+    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
+        raise ValueError('use_rates=true cannot be used with imtWeight')
+
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
@@ -767,11 +768,11 @@ def get_full_lt(oqparam):
                                      len(unique)))
     else:  # full enumeration
         logging.info('There are {:_d} logic tree paths(s)'.format(p))
-        if oqparam.hazard_curves and p > oqparam.max_potential_paths:
+        if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set hazard_curves=false ' % p)
+                'full enumeration, or set use_rates=true ' % p)
         elif (oqparam.is_event_based() and
               (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
                 and p > oqparam.max_potential_paths / 100):
@@ -845,8 +846,10 @@ def get_composite_source_model(oqparam, dstore=None):
          an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
-    full_lt = get_full_lt(oqparam)
-    path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
+    h5 = dstore.hdf5 if dstore else None
+    with Monitor('building full_lt', measuremem=True, h5=h5) :
+        full_lt = get_full_lt(oqparam)  # builds the weights
+    path = get_cache_path(oqparam, h5)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
         with datastore.read(os.path.realpath(path)) as ds:
@@ -1228,7 +1231,7 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap = MapArray(numpy.arange(N, dtype=U32), len(data), 1)
     pmap.array = data.reshape(N, L, 1)
     return mesh, pmap
 

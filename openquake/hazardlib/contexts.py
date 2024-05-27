@@ -43,7 +43,7 @@ from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
@@ -1174,11 +1174,11 @@ class ContextMaker(object):
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
         :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
-        :returns: a ProbabilityMap
+        :returns: a MapArray
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
-        pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
         self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
                     rup_mutex)
@@ -1343,8 +1343,6 @@ class ContextMaker(object):
                         src.weight += .1
                     elif src.code == b'C':
                         src.weight += 10.
-                    elif src.code == b'F':
-                        src.weight *= 30  # superheavy
                     else:
                         src.weight += 1.
 
@@ -1496,7 +1494,7 @@ class PmapMaker(object):
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
-            pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
+            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)

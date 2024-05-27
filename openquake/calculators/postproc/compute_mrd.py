@@ -59,7 +59,7 @@ def combine_mrds(acc, g_weights):
     g = next(iter(acc))  # first key
     out = numpy.zeros(acc[g].shape)  # shape (L1, L1, N)
     for g in acc:
-        out += acc[g] * g_weights[g]['weight']
+        out += acc[g] * g_weights[g]
     return out
 
 

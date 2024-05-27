@@ -343,12 +343,6 @@ hazard_calculation_id:
   Example: *hazard_calculation_id = 42*.
   Default: None
 
-hazard_curves:
-   Used to disable the calculation of hazard curves when there are
-   too many realizations.
-   Example: *hazard_curves = false*
-   Default: True
-
 hazard_curves_from_gmfs:
   Used in scenario/event based calculations. If set, generates hazard curves
   from the ground motion fields.
@@ -571,10 +565,8 @@ number_of_logic_tree_samples:
 
 oversampling:
   When equal to "forbid" raise an error if tot_samples > num_paths in classical
-  calculations; when equal to "tolerate" do not raise the error (the default);
-  when equal to "reduce_rlzs" reduce the realizations to the unique paths with
-  weights num_samples/tot_samples
-  Example: *oversampling = reduce_rlzs*
+  calculations; when equal to "tolerate" do not raise the error (the default).
+  Example: *oversampling = forbid*
   Default: tolerate
 
 poes:
@@ -1021,7 +1013,6 @@ class OqParam(valid.ParamSet):
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
-    hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
@@ -1065,7 +1056,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
+        valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1803,6 +1794,14 @@ class OqParam(valid.ParamSet):
         """
         exposures = self.inputs.get('exposure', [])
         return exposures and exposures[0].endswith('.hdf5')
+
+    @property
+    def fastmean(self):
+        """
+        Return True if it is possible to use the fast mean algorithm
+        """
+        return (not self.individual_rlzs and self.soil_intensities is None
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
 
     def get_kinds(self, kind, R):
         """

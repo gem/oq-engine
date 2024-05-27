@@ -257,7 +257,7 @@ def extract_weights(dstore, what):
     Extract the realization weights
     """
     rlzs = dstore['full_lt'].get_realizations()
-    return numpy.array([rlz.weight['weight'] for rlz in rlzs])
+    return numpy.array([rlz.weight[-1] for rlz in rlzs])
 
 
 @extract.add('gsims_by_trt')
@@ -905,6 +905,34 @@ def _gmf(df, num_sites, imts):
     return gmfa
 
 
+# tested in oq-risk-tests, conditioned_gmfs
+@extract.add('gmf_scenario')
+def extract_gmf_scenario(dstore, what):
+    oq = dstore['oqparam']
+    assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
+    info = get_info(dstore)
+    qdict = parse(what, info)  # example {'imt': 'PGA', 'k': 1}
+    [imt] = qdict['imt']
+    [rlz_id] = qdict['k']
+    eids = dstore['gmf_data/eid'][:]
+    rlzs = dstore['events']['rlz_id']
+    ok = rlzs[eids] == rlz_id
+    m = list(oq.imtls).index(imt)
+    eids = eids[ok]
+    gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
+    sids = dstore['gmf_data/sid'][ok]
+    try:
+        N = len(dstore['complete'])
+    except KeyError:
+        N = len(dstore['sitecol'])
+    E = len(rlzs) // info['num_rlzs']
+    arr = numpy.zeros((E, N))
+    for e, eid in enumerate(numpy.unique(eids)):
+        event = eids == eid
+        arr[e, sids[event]] = gmvs[event]
+    return arr
+
+
 # used by the QGIS plugin for a single eid
 @extract.add('gmf_data')
 def extract_gmf_npz(dstore, what):
@@ -1250,9 +1278,10 @@ def extract_disagg_layer(dstore, what):
         kinds = oq.disagg_outputs
     sitecol = dstore['sitecol']
     poes_disagg = oq.poes_disagg or (None,)
-    realizations = numpy.array(dstore['full_lt'].get_realizations())
+    full_lt = dstore['full_lt'].init()
     oq.mags_by_trt = dstore['source_mags']
-    edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
+    edges, shapedic = disagg.get_edges_shapedic(
+        oq, sitecol, len(full_lt.weights))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
     hmap3 = dstore['hmap3'][:]  # shape (N, M, P)
@@ -1260,14 +1289,14 @@ def extract_disagg_layer(dstore, what):
     arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
-        rlzs = realizations[best_rlzs[sid]]
+        weights = full_lt.weights[best_rlzs[sid]]
         rec['site_id'] = sid
         rec['lon'] = lon
         rec['lat'] = lat
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
         for m, imt in enumerate(oq.imtls):
-            ws = numpy.array([rlz.weight[imt] for rlz in rlzs])
+            ws = full_lt.wget(weights, imt)
             ws /= ws.sum()  # normalize to 1
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
