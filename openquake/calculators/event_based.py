@@ -26,7 +26,7 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import config, hdf5, parallel, performance, python3compat
+from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
