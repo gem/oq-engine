@@ -3,29 +3,32 @@
 Installing the OpenQuake engine
 ===============================
 
-The OpenQuake Engine runs on Linux, macOS and Windows; on laptops, workstations, standalone servers and multi-node 
-clusters. Due to its large range of use cases it can be installed in several different ways.
-
-	Warning: If you already have an engine installation, before installing the new version you must uninstall the old one.
-
-Instructive YouTube video for the installation procedure:
-
-.. youtube:: J46boursIRc
-   :align: center
-
-.. _hardware-requirements:
-
-Hardware requirements
----------------------
-
-The minimum required to install the engine and run the demos is
+The OpenQuake Engine runs on Linux, macOS and Windows; on laptops,
+workstations, standalone servers and multi-node clusters. Due to its
+large range of use cases it can be installed in several different
+ways. The minimum hardware requirements are
 
 - 8 GB of RAM (16 GB on macOS Ventura or Sonoma)
 - 4 GB of free disk space
 
-To run any serious calculation (i.e. a model in GEM mosaic) you need at least 2 GB of RAM per thread for hazard 
-calculations and even more memory for risk calculations. For instance, on a recent i9 processor with 32 threads you 
-would need at least 64 GB of RAM.
+To run any serious calculation (i.e. a model in GEM mosaic) you need
+at least 2 GB of RAM per thread for hazard calculations and even more
+memory for risk calculations. For instance, on a recent i9 processor
+with 32 threads you would need at least 64 GB of RAM.
+
+If you have a Windows machine and you are not interested
+in developing with the engine, the recommended approach is to use
+the Windows installer:
+
+:ref:`Installing the OpenQuake Engine on Windows`
+
+If you have a Mac or Linux machine and you are not interested
+in developing with the engine, the recommended approach is to use
+the :doc:`universal installer <universal>` in ``user`` mode.
+
+Users wanting to develop with the engine (for instance to implement
+new GMPES) must clone the engine reepository and
+use the :doc:`universal installer <universal>` in ``devel`` mode.
 
 Installing the Long Term Support (LTS) version
 ----------------------------------------------
