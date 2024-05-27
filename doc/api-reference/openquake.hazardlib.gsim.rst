@@ -134,10 +134,10 @@ ameri_2017
     :undoc-members:
     :show-inheritance:
 
-aristeidou_2023
+aristeidou_2024
 ---------------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.aristeidou_2023
+.. automodule:: openquake.hazardlib.gsim.aristeidou_2024
     :members:
     :undoc-members:
     :show-inheritance:
