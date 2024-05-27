@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import getpass
 import requests
 import logging
@@ -101,6 +102,10 @@ def oq_server_context_processor(request):
     A custom context processor which allows injection of additional
     context variables.
     """
+
+    # NOTE: defining env variable at runtime, instead of defining it when the
+    # engine imports variable from the server module
+    os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
 
     context = {}
 

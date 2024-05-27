@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 
 from django.conf import settings
@@ -59,7 +58,5 @@ class LoginRequiredMiddleware:
                     return HttpResponseForbidden()
                 else:
                     return HttpResponseRedirect(settings.LOGIN_URL)
-
-        os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
 
         return self.get_response(request)
