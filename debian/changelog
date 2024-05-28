@@ -2,6 +2,7 @@
   * Updated the documentation about installing the engine
 
   [Michele Simionato]
+  * Raised the default `max_potential_paths` to 1,000,000
   * Optimized the calculation of mean hazard curves when `use_rates=true`;
     now it is possible to compute exactly mean curves even with millions
     of realizations
