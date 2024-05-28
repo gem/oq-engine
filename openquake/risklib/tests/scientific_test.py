@@ -621,8 +621,7 @@ class PlaFactorTestCase(unittest.TestCase):
         pla_factor = scientific.pla_factor(df)
 
         # no interp
-        self.assertEqual(pla_factor(1), 1)
-        self.assertEqual(pla_factor(1000), 1.326)
+        numpy.testing.assert_allclose(pla_factor([1, 1000]), [1, 1.326])
 
         # interp
         self.assertEqual(pla_factor(1.1), 1.0)
