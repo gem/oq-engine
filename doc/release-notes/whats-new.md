@@ -85,9 +85,9 @@ making them also faster in many situations. This is a HUGE improvement
 since many calculations that before were impossible are now possible.
 We also improved the error checking for calculations with too many sites.
 
-We implemented a first version of Post Loss Amplification. The feature
-is undocumented and in experimental stage for the moment, see
-https://github.com/gem/oq-engine/issues/9633 for more.
+We implemented a first version of Post-Loss Amplification (PLA). 
+The feature is documented, but it is in the experimental stage for the moment.
+See https://github.com/gem/oq-engine/issues/9633 for more.
 
 We fixed the `avg_losses-stats` exporter in the case of a single realization
 for classical_risk calculation: [#9579](https://github.com/gem/oq-engine/issues/9579)
