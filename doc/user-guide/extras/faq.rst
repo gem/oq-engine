@@ -14,9 +14,8 @@ It depends on your use case and your level of expertise. Most of our users are s
 and/or little support from their IT departments. For them we recommend to buy a very powerful server and not a cluster,
 which is complex to manage. A server with 256 GB of RAM and 64 real cores is currently powerful enough to run all of the
 calculations in the GEM global hazard and risk mosaic. If you have larger calculations and IT expertise, for a cluster
-setup see the :ref:`hardware suggestions <hardware-requirements>` and :ref:`cluster <cluster>` pages.
-If you are running the OpenQuake engine on a multi-node cluster you should also have a look at :ref:`FAQ related to cluster
-deployments <faq-cluster>`.
+setup see the pages :ref:`cluster <cluster>` 
+and :ref:`FAQ related to cluster deployments <faq-cluster>`.
 
 ***********************************************************
 Help! Should I disable hyperthreading on my laptop/desktop?
