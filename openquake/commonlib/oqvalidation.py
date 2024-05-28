@@ -477,7 +477,7 @@ max_potential_gmfs:
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
-  Default: 15000
+  Default: 1_000_000
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -1042,7 +1042,7 @@ class OqParam(valid.ParamSet):
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
-    max_potential_paths = valid.Param(valid.positiveint, 15_000)
+    max_potential_paths = valid.Param(valid.positiveint, 1_000_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     mosaic_model = valid.Param(valid.three_letters, '')
