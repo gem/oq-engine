@@ -167,8 +167,8 @@ def test_csv():
                         fix_newlines(fname, lines)
                     except Exception as exc:
                         raise ValueError('%s: %s' % (fname, exc))
-                elif error:
-                    print('Wrong line ending in', fname, file=sys.stderr)
+                #elif error:
+                #    print('Wrong line ending in', fname, file=sys.stderr)
                 elif error == 1:
                     raise ValueError('Found \\n line ending in %s' % fname)
                 elif error == 2:
