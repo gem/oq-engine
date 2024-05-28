@@ -1,5 +1,5 @@
 Version 3.20 is the culmination of 3 months of work involving over 200
-pull requests. It is aimed to users wanting the latest features, bug fixes
+pull requests. It is aimed at users wanting the latest features, bug fixes
 and maximum performance. Users valuing stability may want to stay with
 the LTS release instead (currently at version 3.16.8).
 
@@ -26,62 +26,63 @@ the statistical hazard curves by taking advantage of the tiling
 functionality and more.
 
 However, thanks to this work and some more, we were able to add
-support for the New Zealand 2022 National Seismic Hazard Model, which
-also features multifault sources. While the model has been implemented
+support for the 2022 revision of the New Zealand National Seismic 
+Hazard Model ([NZ NSHM 2022](https://nshm.gns.cri.nz/)), which
+also features multifault sources. While the model had been implemented
 with the OpenQuake engine from the very beginning, its calculation was
-extremely hard and required several tricks to be performed. It is only
-with engine 3.20 that the calculation runs out-of-the-box and
-efficiently.
+extremely challenging and required several tricks for it to run. 
+It is only with engine 3.20 that the calculation runs out-of-the-box 
+and efficiently.
 
 Since we improved the way the logic tree is stored in memory and we
 implemented a better algorithm for computing the means if the
 parameter `use_rates` is set, we can now run calculations with
 millions of realizations and it is not a problem to run the New
-Zealand model which has only 979,776 realizations. Computing the
+Zealand model which has "_only_" 979,776 realizations. Computing the
 quantiles is still impossible in practice, since you will run out
 of memory during the postprocessing phase.
 
 # hazardlib
 
-The major thing in hazardlib was a refactoring removing ``**kwargs` from the
-signature of hundreds of GMPEs. As a consequence now each GMPEs knows the
+The major thing in hazardlib was a refactoring removing `**kwargs` from the
+signature of hundreds of GMPEs. As a consequence, now each GMPEs knows the
 arguments it requires and if there is a typo in the gmpe logic tree
-file a clear error is raised. Before the mispelled parameter was silently
-ignored. That caused a half disaster in the model for Europe, where the
+file a clear error is raised. Before, any mispelled parameter was silently
+ignored, for instance in the seismic hazard model for Europe, where the
 parameter `theta6_adjustment` was mispelled as `theta_6_adjustment`
-and that went unnoticed for years. Most sites are unaffected by the
-change, but some are. If you have an incorrect version of the EUR model
-now you will get immediately an error
-
+and that went unnoticed for years ([#9486](https://github.com/gem/oq-engine/issues/9486)).
+Most sites are unaffected by the change, but some are. If you have an incorrect 
+version of the EUR model now you will immediately get an error.
+```sh
 ValueError: FABATaperSFunc.__init__() got an unexpected keyword argument
-'theta_6_adjustment' in file /home/michele/mosaic/EUR/in/gmmLT.xml
-
-that you can solve by renaming 'theta_6_adjustment' -> 'theta6_adjustment'
+'theta_6_adjustment' in file EUR/in/gmmLT.xml
+```
+that you can solve by renaming `theta_6_adjustment` -> `theta6_adjustment`
 in the file `gmmLT.xml`.
 
 We also fixed the passing of parameters in the `NRCan15SiteTerm`, without
 any impact on the results, since currently all models in the GEM mosaic do not
 require passing parameters to the underlying GMPE via the `NRCan15SiteTerm`.
 
-Marco Pagani added a new uncertainty in the logic tree processor,
-called moment `maxMagGRRelativeNoMoBalance`; an example of usage
-is in the test logictree/case_84.
+[Marco Pagani](https://github.com/mmpagani) added a new uncertainty 
+in the logic tree processor, called moment `maxMagGRRelativeNoMoBalance`; 
+an example of usage is in the test logictree/case_84.
 
 He also extended the `ChiouYoungs2014` class to accept many optional
 parameters, notably `use_hw`, `add_delta_c1`, `alpha_nm`,
-`stress_par_host`,, `stress_par_target`, `delta_gamma_tab` as
+`stress_par_host`, `stress_par_target`, `delta_gamma_tab` as
 specified by Boore et al. (2022).
 
-Fatemeh Alishahiha contributed a new class
+[Fatemeh Alishahiha](https://github.com/FatemehAlsh) contributed a new class
 `AbrahamsonSilva1997Vertical` adding a vertical componend to the
-classical Abrahamson Silva GMPE and entirely new class
+classical Abrahamson Silva GMPE and also an entirely new class
 `GhasemiEtAl2009` implementing the Ghasemi et Al. GMPE for Iran.
 
 # Risk
 
 We saved a lot of memory and disk space in conditioned GMFs scenarios,
 making them also faster in many situations. This is a HUGE improvement
-since many calculations that before were impossible are not possible.
+since many calculations that before were impossible are now possible.
 We also improved the error checking for calculations with too many sites.
 
 We implemented a first version of Post Loss Amplification. The feature
@@ -89,7 +90,7 @@ is undocumented and in experimental stage for the moment, see
 https://github.com/gem/oq-engine/issues/9633 for more.
 
 We fixed the `avg_losses-stats` exporter in the case of a single realization
-for classical_risk calculation:
+for classical_risk calculation: [#9579](https://github.com/gem/oq-engine/issues/9579)
 
 # Bug fixes
 
@@ -97,7 +98,7 @@ We fixed a bug when importing a file `gmf_data.csv`: in rare situations
 with filtered site collections one could end up with site IDs in
 not present in the site mesh.
 
-In the engine longitude and latitude are rounded to 5 digits. However,
+In the engine, longitude and latitude are rounded to 5 digits. However,
 sometimes they were rounded by using `numpy.round` and sometimes by
 using Python round. That causes surprises in rare situations, producing
 a different a different rounding depending if the sites were listed
@@ -119,11 +120,11 @@ of the forbidden characters `.:;` is found.
 When using a magnitude-dependent maximum distance with a missing
 tectonic region type, the engine was giving a fake error. Now the
 engine simply ignores the missing tectonic region type if there are no
-sources associated to it, consistently with the behavior of version 3.16.
+sources associated to it, consistent with the behavior of version 3.16.
 
 The mixture-model feature (tested in classical/case_47) was introduced
 4 years ago and nearly immediately broken by a refactoring since the
-test was not testing due to a typo. The problem has now been fixed and
+test was not actually testing due to a typo. The problem has now been fixed and
 the feature is working as intended.
 
 There was an error when running scenarios with a ModifiableGMPE over a
@@ -131,11 +132,11 @@ table-based GMPE, since the `mags_by_trt` dictionary was not passed properly.
 It is now fixed.
 
 Finally, we removed two error-prone caches for the gsim logic tree and
-the exposure, by making them not needed anymore.
+the exposure, by avoiding the need for them.
 
 # New checks
 
-In presence of million of assets and events, calculating the
+In the presence of million of assets and events, calculating the
 average losses can send the server out of memory; there is now
 an early check warning the user of the problem and suggesting a workaround.
 
@@ -163,7 +164,7 @@ user. Now he gets an error such as
 InvalidFile: you cannot have individual_rlzs=true with collect_rlzs=true
 
 The `classical_risk` and `classical_damage` calculators are able to
-start from import hazard curves stored as CSV files. Such files must
+start from imported hazard curves stored as CSV files. Such files must
 contain probabilities, i.e. floats in the range 0..1, however that
 was not checked, causing NaN values to be generated in the outputs.
 Now the user gets a clear error message at import time.
@@ -193,8 +194,8 @@ The procedure downloading the USGS rupture parameters has been enhanced
 so that if the file "rupture.json" is missing (because the USGS has not
 generated it yet) the "finite-fault" parameters are used instead.
 Moreover, it is possible to upload a custom file `rupture_model.xml`,
-if the user possess more information than the USGS or is interested
-in trying alternative models.
+if the user possesses additional or different information than the USGS
+or is interested in trying alternative models.
 
 # `oq` commands
 
@@ -224,7 +225,7 @@ griddedSurfaces with the command `oq nrml to csv|gpkg`.
 # Documentation
 
 There was a lot of work on the documentation, in particular about
-Windows installations and event based outputs, that were both
+Windows installations and event based outputs, which were both
 severely outdated.
 
 Many features implemented years ago have been finally
