@@ -21,6 +21,7 @@ Test of flake8 violations
 """
 import io
 import os
+import sys
 import ast
 import importlib
 import unittest
@@ -141,6 +142,7 @@ def fix_encoding(fname, encoding):
     with open(fname, newline='', encoding=encoding) as f:
         lines = f.read().splitlines()
     fix_newlines(fname, lines)
+    print('fixed', fname, file=sys.stderr)
 
 
 # check encoding and newlines
