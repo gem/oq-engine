@@ -74,7 +74,7 @@ parameters, notably `use_hw`, `add_delta_c1`, `alpha_nm`,
 specified by Boore et al. (2022).
 
 [Fatemeh Alishahiha](https://github.com/FatemehAlsh) contributed a new class
-`AbrahamsonSilva1997Vertical` adding a vertical componend to the
+`AbrahamsonSilva1997Vertical` adding a vertical component to the
 classical Abrahamson Silva GMPE and also an entirely new class
 `GhasemiEtAl2009` implementing the Ghasemi et Al. GMPE for Iran.
 
@@ -108,13 +108,13 @@ This has been fixed.
 We fixed a long standing bug, so that the full logic tree object could
 not be properly serialized in the datastore in some cases, i.e. when modifying
 `simpleFaultGeometryAbsolute`, `complexFaultGeometryAbsolute` and
-`characteristicFaultGeometryAbsolute`). The bug was low priority since
+`characteristicFaultGeometryAbsolute`). The bug was a low priority since
 such features are not used in any hazard model in the mosaic, however
 now it has been finally fixed.
 
 Using some special characters in the branchID tags of the source model
 logic tree caused some tricky errors, as it was happening in the New
-Zealand model. We have solve by issue by raising an early error if any
+Zealand model. We have solved the issue by raising an early error if any
 of the forbidden characters `.:;` is found.
 
 When using a magnitude-dependent maximum distance with a missing
@@ -136,7 +136,7 @@ the exposure, by avoiding the need for them.
 
 # New checks
 
-In the presence of million of assets and events, calculating the
+In the presence of millions of assets and events, calculating the
 average losses can send the server out of memory; there is now
 an early check warning the user of the problem and suggesting a workaround.
 
@@ -147,7 +147,7 @@ late. Now the error is raised before starting the calculation.
 When a required site parameter is not provided, the engine is now raising
 a clear error message instead of giving NAN results.
 
-There were rare situations where complex fault sources where deemed
+There were rare situations where complex fault sources were deemed
 invalid even when correctly specified. This has been fixed in
 https://github.com/gem/oq-engine/pull/9596.
 
@@ -161,11 +161,11 @@ automatically set for sampling calculations and overriding
 `individual_rlzs=true`, in a way very surprising for the final
 user. Now he gets an error such as
 
-InvalidFile: you cannot have individual_rlzs=true with collect_rlzs=true
+```InvalidFile: you cannot have individual_rlzs=true with collect_rlzs=true```
 
 The `classical_risk` and `classical_damage` calculators are able to
 start from imported hazard curves stored as CSV files. Such files must
-contain probabilities, i.e. floats in the range 0..1, however that
+contain probabilities, i.e. floats in the range 0 to 1. However, that
 was not checked, causing NaN values to be generated in the outputs.
 Now the user gets a clear error message at import time.
 
@@ -173,7 +173,7 @@ Now the user gets a clear error message at import time.
 
 [Aristotle](https://www.globalquakemodel.org/proj/aristotle) is a
 project to provide Multi-Hazard advice to the European Research
-Coordination Centre in case of disasters. Currently it is in
+Coordination Centre in case of disasters. Currently, it is in
 a development/experimental status and it is meant to be tested
 but not trusted.
 
@@ -185,12 +185,12 @@ automatically notified when the calculations are done (currently
 for a single ShakeMap ID the engine can perform multiple calculations,
 since the earthquake can affect countries with different taxonomy mappings).
 
-In ARISTOTLE mode also a couple of simple plots are generated: for the
-moment one with the (geometric) average GMFs and one with the
-assets. They are used for debugging and subject to changes in future
+In ARISTOTLE mode, a couple of simple plots are generated: for the
+moment, one with the (geometric) average GMFs and one with the
+assets. They are used for debugging and are subject to changes in future
 versions of the tool.
 
-The procedure downloading the USGS rupture parameters has been enhanced
+The procedure for downloading the USGS rupture parameters has been enhanced
 so that if the file "rupture.json" is missing (because the USGS has not
 generated it yet) the "finite-fault" parameters are used instead.
 Moreover, it is possible to upload a custom file `rupture_model.xml`,
@@ -212,20 +212,20 @@ the docstring of the specified MFD class, and added a command `oq info msr`
 with similar features for the MSR classes.
 
 We improved the command `oq plot avg_gmf`, which is now also displaying
-country borders. Moreover it is not showing the seismic stations in case of
+country borders. Moreover, it is not showing the seismic stations in case of
 conditioned GMFs calculations, since they were confusing.
 
 We fixed the command `oq zip` that was not zipping the exposure.csv files.
 
 The command `oq show delta_loss` has been enhanced and documented in the manual.
 
-We now raise a clear a `NotImplementedError` when trying to convert
+We now raise a clear `NotImplementedError` when trying to convert
 griddedSurfaces with the command `oq nrml to csv|gpkg`.
 
 # Documentation
 
 There was a lot of work on the documentation, in particular about
-Windows installations and event based outputs, which were both
+Windows installations and event-based outputs, which were both
 severely outdated.
 
 Many features implemented years ago have been finally
@@ -257,7 +257,7 @@ Finally, there were a couple of changes affecting development installations:
 
 1. we introduced a maximum limit of 90 lines of code and 16 arguments per
 function/method. The limits are enforced by the tests every time a
-user make a pull request to the engine repository. They are meant to
+user makes a pull request to the engine repository. They are meant to
 avoid excessive degradation of the code base quality.
 
 2. at the start of the WebUI a warning is printed if the
