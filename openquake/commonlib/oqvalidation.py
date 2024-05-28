@@ -1946,6 +1946,7 @@ class OqParam(valid.ParamSet):
             return False
         for trt, val in self.maximum_distance.items():
             if trt not in self._trts and trt != 'default':
+                # not a problem, the associated maxdist will simply be ignored
                 logging.warning('tectonic region %r not in %s', trt, gsim_lt)
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
