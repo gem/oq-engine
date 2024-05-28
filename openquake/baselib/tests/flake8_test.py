@@ -144,7 +144,7 @@ def fix_encoding(fname, encoding):
 
 
 # check encoding and newlines
-def test_csv(OVERWRITE=False):
+def test_csv():
     for cwd, dirs, files in os.walk(REPO):
         for f in files:
             if f.endswith('.csv'):
@@ -154,13 +154,13 @@ def test_csv(OVERWRITE=False):
                     try:
                         lines = f.read().splitlines()
                     except UnicodeDecodeError as exc:
-                        if OVERWRITE:
+                        if os.environ.get('OQ_OVERWRITE'):
                             fix_encoding(fname, 'latin1')
                         else:
                             raise UnicodeDecodeError('%s: %s' % (fname, exc))
                 # read in binary, check newlines
                 error = check_newlines(open(fname, 'rb').read())
-                if error and OVERWRITE:
+                if error and os.environ.get('OQ_OVERWRITE'):
                     try:
                         fix_newlines(fname, lines)
                     except Exception as exc:
