@@ -1944,6 +1944,9 @@ class OqParam(valid.ParamSet):
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
+        for trt, val in self.maximum_distance.items():
+            if trt not in self._trts and trt != 'default':
+                logging.warning('tectonic region %r not in %s', trt, gsim_lt)
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
