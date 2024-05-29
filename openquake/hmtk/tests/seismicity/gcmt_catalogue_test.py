@@ -71,8 +71,6 @@ class TestGCMTCatalogue(unittest.TestCase):
         self.cat = prs.read_file()
 
     def test_serialise_to_csv_centroid(self):
-        """Test serialise centroid"""
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             # Expected - The content of the output file was manually checked
             # against the original .ndk file
@@ -91,8 +89,6 @@ class TestGCMTCatalogue(unittest.TestCase):
                     assert line == line_exp
 
     def test_serialise_to_csv_hypocenter(self):
-        """Test serialise hypocenter"""
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             # Expected - The content of the output file was manually checked
             # against the original .ndk file
