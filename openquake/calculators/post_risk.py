@@ -370,9 +370,9 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
                 ndamaged = sum(df[col].sum() for col in dmgs)
                 acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
             for col in columns:
-                sorted_losses = df[col].sort_values().to_numpy()
-                fixed_losses, _ = scientific.fix_losses(
-                    sorted_losses, ne, builder.eff_time, builder.pla_factor)
+                losses = df[col].sort_values().to_numpy()
+                fixed_losses, _, _ = scientific.fix_losses(
+                    losses, ne, builder.eff_time, builder.pla_factor)
                 agg = fixed_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)

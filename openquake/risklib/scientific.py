@@ -1454,7 +1454,11 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
     :param num_events: an integer >= num_losses
     :returns: two arrays of size num_events
     """
-    sorted_losses = numpy.sort(orig_losses) if sorting else orig_losses.copy()
+    if sorting:
+        sorting_idxs = numpy.argsort(orig_losses)
+    else:
+        sorting_idxs = numpy.arange(len(orig_losses))
+    sorted_losses = orig_losses[sorting_idxs]
 
     # add zeros on the left if there are less losses than events.
     num_losses = len(sorted_losses)
@@ -1469,14 +1473,14 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
     eperiods = eff_time / numpy.arange(num_events, 0., -1)
     if pla_factor:
         losses *= pla_factor(eperiods)
-    return losses, eperiods
+    return losses, sorting_idxs, eperiods
 
 
 def losses_by_period(losses, return_periods, num_events, eff_time=None,
                      sorting=True, pla_factor=None):
     # NB: sorting = False is used in test_claim
     """
-    :param losses: simulated losses
+    :param losses: simulated losses as an array, list or DataFrame column
     :param return_periods: return periods of interest
     :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
@@ -1498,10 +1502,12 @@ def losses_by_period(losses, return_periods, num_events, eff_time=None,
     assert len(losses)
     if isinstance(losses, list):
         losses = numpy.array(losses)
+    elif hasattr(losses, 'to_numpy'):  # DataFrame
+        losses = losses.to_numpy()
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses, eperiods = fix_losses(losses, num_events, eff_time, sorting,
-                                  pla_factor)
+    losses, sorting_idxs, eperiods = fix_losses(
+        losses, num_events, eff_time, sorting, pla_factor)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
