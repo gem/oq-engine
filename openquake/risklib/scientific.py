@@ -1444,11 +1444,10 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
-                            sorting)[0]
+                            sorting)['curve'][0]
 
 
-def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
-               pla_factor=None):
+def fix_losses(orig_losses, num_events, eff_time=0, sorting=True):
     """
     Possibly add zeros and sort the passed losses.
 
@@ -1473,20 +1472,24 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
         raise ValueError('More losses (%d) than events (%d) ??' %
                          (num_losses, num_events))
     eperiods = eff_time / numpy.arange(num_events, 0., -1)
-    if pla_factor:
-        losses *= pla_factor(eperiods)
     return losses, sorting_idxs, eperiods
 
 
 def losses_by_period(losses, return_periods, num_events, eff_time=None,
-                     sorting=True, pla_factor=None):
+                     sorting=True, name='curve', pla_factor=None):
     # NB: sorting = False is used in test_claim
     """
-    :param losses: simulated losses as an array, list or DataFrame column
-    :param return_periods: return periods of interest
-    :param num_events: the number of events (>= number of losses)
-    :param eff_time: investigation_time * ses_per_logic_tree_path
-    :returns: interpolated losses for the return periods, possibly with NaN
+    :param losses:
+        simulated losses as an array, list or DataFrame column
+    :param return_periods:
+        return periods of interest
+    :param num_events:
+        the number of events (>= number of losses)
+    :param eff_time:
+        investigation_time * ses_per_logic_tree_path
+    :returns:
+         a dictionary with the interpolated losses for the return periods,
+         possibly with NaNs and possibly also a post-loss-amplified curve
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
@@ -1498,7 +1501,7 @@ def losses_by_period(losses, return_periods, num_events, eff_time=None,
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
-    array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
+    {'curve': array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])}
     """
     P = len(return_periods)
     assert len(losses)
@@ -1509,16 +1512,23 @@ def losses_by_period(losses, return_periods, num_events, eff_time=None,
     if eff_time is None:
         eff_time = return_periods[-1]
     losses, sorting_idxs, eperiods = fix_losses(
-        losses, num_events, eff_time, sorting, pla_factor)
+        losses, num_events, eff_time, sorting)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
                 if eperiods[0] <= rp <= eperiods[-1]]
-    curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, loge = numpy.log(rperiods), numpy.log(eperiods)
+    curve = numpy.zeros(len(return_periods), losses.dtype)
     curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
-    return curve
+    res = {name: curve}
+    if pla_factor:
+        pla = numpy.zeros(len(return_periods), losses.dtype)
+        pla[num_left:P - num_right] = numpy.interp(
+            logr, loge, losses * pla_factor(eperiods))
+        pla[P - num_right:] = numpy.nan
+        res['pla_' + name] = pla
+    return res
 
 
 class LossCurvesMapsBuilder(object):
@@ -1557,20 +1567,21 @@ class LossCurvesMapsBuilder(object):
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:
-            dic[col] = losses_by_period(losses, periods, ne, self.eff_time,
-                                        pla_factor=self.pla_factor)
+            res = losses_by_period(losses, periods, ne, self.eff_time,
+                                   name=col, pla_factor=self.pla_factor)
+            dic.update(res)
         if len(years):
             gby = pandas.DataFrame(
                 dict(year=years, loss=losses)).groupby('year')
             # see specs in https://github.com/gem/oq-engine/issues/8971
             if 'aep' in agg_types_list:
-                dic[col + '_aep'] = losses_by_period(
+                dic.update(losses_by_period(
                     gby.loss.sum(), periods, ne, self.eff_time,
-                    pla_factor=self.pla_factor)
+                    name=col + '_aep', pla_factor=self.pla_factor))
             if 'oep' in agg_types_list:
-                dic[col + '_oep'] = losses_by_period(
+                dic.update(losses_by_period(
                     gby.loss.max(), periods, ne, self.eff_time,
-                    pla_factor=self.pla_factor)
+                    name=col + '_oep', pla_factor=self.pla_factor))
         return dic
 
 
