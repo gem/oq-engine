@@ -275,6 +275,8 @@ def export_event_loss_table(ekey, dstore):
     df = df.join(events, on='event_id')
     if 'ses_id' in df.columns:
         del df['ses_id']
+    if oq.collect_rlzs:
+        df['rlz_id'] = 0
     dfs = []
     for (loss_id, rlz), df in df.groupby(['loss_id', 'rlz_id']):
         df = df.sort_values('loss')
