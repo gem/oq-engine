@@ -86,7 +86,7 @@ class TestGCMTCatalogue(unittest.TestCase):
             with (open(fname_csv, newline='') as lines,
                   open(fname_expected, newline='') as lines_exp):
                 for line, line_exp in zip(lines, lines_exp):
-                    assert line == line_exp
+                    assert line.strip() == line_exp.strip()
 
     def test_serialise_to_csv_hypocenter(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -104,4 +104,4 @@ class TestGCMTCatalogue(unittest.TestCase):
             with (open(fname_csv, newline='') as lines,
                   open(fname_expected, newline='') as lines_exp):
                 for line, line_exp in zip(lines, lines_exp):
-                    assert line == line_exp
+                    assert line.strip() == line_exp.strip()

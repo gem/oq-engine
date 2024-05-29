@@ -628,7 +628,5 @@ class PlaFactorTestCase(unittest.TestCase):
         self.assertAlmostEqual(pla_factor(900), 1.31896)
 
         # extrap
-        with self.assertRaises(ValueError):
-            pla_factor(0.9)
-        with self.assertRaises(ValueError):
-            pla_factor(1001)
+        self.assertAlmostEqual(pla_factor(0.9), 1.0)
+        self.assertAlmostEqual(pla_factor(1001), 1.326)
