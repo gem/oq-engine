@@ -1435,7 +1435,7 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
+def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     """
     :returns: Maximum Probable Loss at the given return period
 
@@ -1444,7 +1444,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
-                            sorting_idxs)[0]
+                            sorting)[0]
 
 
 def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
@@ -1470,8 +1470,8 @@ def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
 
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
-                     sorting_idxs=None, pla_factor=None):
-    # NB: sorting_idxs is used in test_claim
+                     sorting=True, pla_factor=None):
+    # NB: sorting = False is used in test_claim
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
@@ -1502,10 +1502,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
         num_events = num_losses
     if eff_time is None:
         eff_time = return_periods[-1]
-    if sorting_idxs is None:
+    if sorting:
         losses = numpy.sort(losses)
-    else:
-        losses = losses[sorting_idxs]
     losses, eperiods = fix_losses(losses, num_events, eff_time, pla_factor)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])

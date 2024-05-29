@@ -559,11 +559,11 @@ class LossesByEventTestCase(unittest.TestCase):
         retention = claim - cession
         idxs = numpy.argsort(claim)
         claim_mpl = scientific.maximum_probable_loss(
-            claim, period, efftime, idxs)
+            claim[idxs], period, efftime, sorting=False)
         cession_mpl = scientific.maximum_probable_loss(
-            cession, period, efftime, idxs)
+            cession[idxs], period, efftime, sorting=False)
         ret_mpl = scientific.maximum_probable_loss(
-            retention, period, efftime, idxs)
+            retention[idxs], period, efftime, sorting=False)
         self.assertEqual(claim_mpl, cession_mpl + ret_mpl)
         # print('claim', claim[idxs], claim_mpl)
         # print('cession', cession[idxs], cession_mpl)
@@ -583,11 +583,11 @@ class LossesByEventTestCase(unittest.TestCase):
         retention = claim - cession
         idxs = numpy.argsort(claim)
         claim_curve = scientific.losses_by_period(
-            claim, periods, n, efftime, idxs)
+            claim[idxs], periods, n, efftime, sorting=False)
         cession_curve = scientific.losses_by_period(
-            cession, periods, n, efftime, idxs)
+            cession[idxs], periods, n, efftime, sorting=False)
         ret_curve = scientific.losses_by_period(
-            retention, periods, n, efftime, idxs)
+            retention[idxs], periods, n, efftime, sorting=False)
         aae(claim_curve, cession_curve + ret_curve)
         print('keeping event associations')
         print('claim', claim_curve)
