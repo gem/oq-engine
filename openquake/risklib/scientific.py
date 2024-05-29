@@ -40,7 +40,9 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep', 'losses', 'collapsed',
+KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
+                      'pla_loss', 'pla_loss_aep', 'pla_loss_oep',
+                      'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
 LOSSTYPE = numpy.array('''\
@@ -1269,8 +1271,11 @@ def pla_factor(df):
     To be instantiated with a DataFrame with columns
     return_period and pla_factor.
     """
+    factors = df.pla_factor.to_numpy()  # ordered from 1 to maxvalue
     return interpolate.interp1d(df.return_period.to_numpy(),
-                                df.pla_factor.to_numpy())
+                                factors,
+                                bounds_error=False,
+                                fill_value=(factors[0], factors[-1]))
 
 
 # ####################### statistics #################################### #
@@ -1733,7 +1738,7 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
         return aval[f'occupants_{time_event}']
     elif consequence == 'homeless':
         return aval['residents']
-    elif consequence.startswith(('loss', 'losses')):
+    elif 'loss' in consequence:
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
