@@ -1275,7 +1275,7 @@ def pla_factor(df):
     return interpolate.interp1d(df.return_period.to_numpy(),
                                 factors,
                                 bounds_error=False,
-                                fill_value=(factors[0], factors[-1]))
+                                fill_value=(1., factors[-1]))
 
 
 # ####################### statistics #################################### #
