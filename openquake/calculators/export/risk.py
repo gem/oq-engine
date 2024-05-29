@@ -265,13 +265,6 @@ def export_event_loss_table(ekey, dstore):
     R = post_risk.fix_investigation_time(oq, dstore)
     if oq.investigation_time:
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-
-    if R > 1:
-        num_events = numpy.bincount(
-            events.rlz_id, minlength=R)  # events by rlz
-    else:
-        num_events = numpy.array([len(events)])
-
     K = dstore.get_attr('risk_by_event', 'K', 0)
     try:
         lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
@@ -298,7 +291,7 @@ def export_event_loss_table(ekey, dstore):
         for (loss_id, rlz), d in df.groupby(['loss_id', 'rlz_id']):
             d = d.sort_values('loss')
             if pla_factor:
-                eperiods = eff_time / numpy.arange(num_events[rlz], 0., -1)
+                eperiods = eff_time / numpy.arange(len(d), 0., -1)
                 d['pla_loss'] = pla_factor(eperiods) * d.loss
             dfs.append(d)
         df = pandas.concat(dfs)
