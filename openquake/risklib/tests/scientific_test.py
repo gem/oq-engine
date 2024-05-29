@@ -541,12 +541,12 @@ class LossesByEventTestCase(unittest.TestCase):
         losses0 = losses[:1000]
         losses1 = losses[1000:]
         curve0 = scientific.losses_by_period(
-            losses0, periods, eff_time=eff_time)
+            losses0, periods, len(losses0), eff_time)
         curve1 = scientific.losses_by_period(
-            losses1, periods, eff_time=eff_time)
+            losses1, periods, len(losses1), eff_time)
         mean = (curve0 + curve1) / 2
         full = scientific.losses_by_period(
-            losses, periods, eff_time=2*eff_time)
+            losses, periods, len(losses), 2*eff_time)
         aae(mean, full, rtol=1E-2)  # converges only at 1%
 
     def test_maximum_probable_loss(self):
@@ -559,11 +559,11 @@ class LossesByEventTestCase(unittest.TestCase):
         retention = claim - cession
         idxs = numpy.argsort(claim)
         claim_mpl = scientific.maximum_probable_loss(
-            claim, period, efftime, idxs)
+            claim[idxs], period, efftime, sorting=False)
         cession_mpl = scientific.maximum_probable_loss(
-            cession, period, efftime, idxs)
+            cession[idxs], period, efftime, sorting=False)
         ret_mpl = scientific.maximum_probable_loss(
-            retention, period, efftime, idxs)
+            retention[idxs], period, efftime, sorting=False)
         self.assertEqual(claim_mpl, cession_mpl + ret_mpl)
         # print('claim', claim[idxs], claim_mpl)
         # print('cession', cession[idxs], cession_mpl)
@@ -583,11 +583,11 @@ class LossesByEventTestCase(unittest.TestCase):
         retention = claim - cession
         idxs = numpy.argsort(claim)
         claim_curve = scientific.losses_by_period(
-            claim, periods, n, efftime, idxs)
+            claim[idxs], periods, n, efftime, sorting=False)
         cession_curve = scientific.losses_by_period(
-            cession, periods, n, efftime, idxs)
+            cession[idxs], periods, n, efftime, sorting=False)
         ret_curve = scientific.losses_by_period(
-            retention, periods, n, efftime, idxs)
+            retention[idxs], periods, n, efftime, sorting=False)
         aae(claim_curve, cession_curve + ret_curve)
         print('keeping event associations')
         print('claim', claim_curve)

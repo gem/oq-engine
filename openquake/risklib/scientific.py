@@ -1435,7 +1435,7 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
+def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     """
     :returns: Maximum Probable Loss at the given return period
 
@@ -1444,36 +1444,45 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
-                            sorting_idxs)[0]
+                            sorting)[0]
 
 
-def fix_losses(sorted_losses, num_events, eff_time=0, pla_factor=None):
+def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
+               pla_factor=None):
     """
-    :param sorted_losses: a sorted array of size num_losses
+    Possibly add zeros and sort the passed losses.
+
+    :param orig_losses: an array of size num_losses
     :param num_events: an integer >= num_losses
-    :returns: two arrays of size num_events
+    :returns: three arrays of size num_events
     """
+    if sorting:
+        sorting_idxs = numpy.argsort(orig_losses)
+    else:
+        sorting_idxs = numpy.arange(len(orig_losses))
+    sorted_losses = orig_losses[sorting_idxs]
+
     # add zeros on the left if there are less losses than events.
     num_losses = len(sorted_losses)
     if num_events > num_losses:
         losses = numpy.zeros(num_events, sorted_losses.dtype)
         losses[num_events - num_losses:num_events] = sorted_losses
     elif num_losses == num_events:
-        losses = sorted_losses.copy()
+        losses = sorted_losses
     elif num_events < num_losses:
         raise ValueError('More losses (%d) than events (%d) ??' %
                          (num_losses, num_events))
     eperiods = eff_time / numpy.arange(num_events, 0., -1)
     if pla_factor:
         losses *= pla_factor(eperiods)
-    return losses, eperiods
+    return losses, sorting_idxs, eperiods
 
 
-def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
-                     sorting_idxs=None, pla_factor=None):
-    # NB: sorting_idxs is used in test_claim
+def losses_by_period(losses, return_periods, num_events, eff_time=None,
+                     sorting=True, pla_factor=None):
+    # NB: sorting = False is used in test_claim
     """
-    :param losses: simulated losses
+    :param losses: simulated losses as an array, list or DataFrame column
     :param return_periods: return periods of interest
     :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
@@ -1495,18 +1504,12 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
     assert len(losses)
     if isinstance(losses, list):
         losses = numpy.array(losses)
-    num_losses = len(losses)
-    if num_events is None:
-        num_events = num_losses
-    elif num_events < num_losses:
-        num_events = num_losses
+    elif hasattr(losses, 'to_numpy'):  # DataFrame
+        losses = losses.to_numpy()
     if eff_time is None:
         eff_time = return_periods[-1]
-    if sorting_idxs is None:
-        losses = numpy.sort(losses)
-    else:
-        losses = losses[sorting_idxs]
-    losses, eperiods = fix_losses(losses, num_events, eff_time, pla_factor)
+    losses, sorting_idxs, eperiods = fix_losses(
+        losses, num_events, eff_time, sorting, pla_factor)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
     rperiods = [rp for rp in return_periods
