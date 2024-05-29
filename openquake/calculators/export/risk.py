@@ -277,11 +277,12 @@ def export_event_loss_table(ekey, dstore):
         del df['ses_id']
     if oq.collect_rlzs:
         df['rlz_id'] = 0
-    dfs = []
-    for (loss_id, rlz), df in df.groupby(['loss_id', 'rlz_id']):
-        df = df.sort_values('loss')
-        dfs.append(df)
-    df = pandas.concat(dfs)
+    if 'loss' in df.columns:  # missing for damage
+        dfs = []
+        for (loss_id, rlz), d in df.groupby(['loss_id', 'rlz_id']):
+            d = d.sort_values('loss')
+            dfs.append(d)
+        df = pandas.concat(dfs)
     del df['rlz_id']
     del df['loss_id']
     if 'scenario' in oq.calculation_mode:
