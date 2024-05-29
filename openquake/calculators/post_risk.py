@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
 from openquake.calculators import base, views

@@ -28,6 +28,7 @@ from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
     avglosses)
+from openquake.calculators import post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -261,6 +262,16 @@ def export_event_loss_table(ekey, dstore):
                        risk_investigation_time=oq.risk_investigation_time
                        or oq.investigation_time))
     events = dstore.read_df('events', 'id')
+    R = post_risk.fix_investigation_time(oq, dstore)
+    if oq.investigation_time:
+        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+
+    if R > 1:
+        num_events = numpy.bincount(
+            events.rlz_id, minlength=R)  # events by rlz
+    else:
+        num_events = numpy.array([len(events)])
+
     K = dstore.get_attr('risk_by_event', 'K', 0)
     try:
         lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
@@ -277,10 +288,18 @@ def export_event_loss_table(ekey, dstore):
         del df['ses_id']
     if oq.collect_rlzs:
         df['rlz_id'] = 0
+    try:
+        pla_factor = scientific.pla_factor(
+            dstore.read_df('post_loss_amplification'))
+    except KeyError:
+        pla_factor = None
     if 'loss' in df.columns:  # missing for damage
         dfs = []
         for (loss_id, rlz), d in df.groupby(['loss_id', 'rlz_id']):
+            eperiods = eff_time / numpy.arange(num_events[rlz], 0., -1)
             d = d.sort_values('loss')
+            if pla_factor:
+                d['pla_loss'] = pla_factor(eperiods) * d.loss
             dfs.append(d)
         df = pandas.concat(dfs)
     else:
@@ -571,6 +590,7 @@ def _fix(col):
     if col.endswith(('_aep', '_oep')):
         return col[:-4]  # strip suffix
     return col
+
 
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
