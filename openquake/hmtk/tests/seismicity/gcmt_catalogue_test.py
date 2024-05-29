@@ -85,10 +85,10 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=True)
 
             # Test
-            lines = open(fname_csv, newline='').readlines()
-            lines_exp = open(fname_expected, newline='').readlines()
-            for line, line_exp in zip(lines, lines_exp):
-                assert line == line_exp
+            with (open(fname_csv, newline='') as lines,
+                  open(fname_expected, newline='') as lines_exp):
+                for line, line_exp in zip(lines, lines_exp):
+                    assert line == line_exp
 
     def test_serialise_to_csv_hypocenter(self):
         """Test serialise hypocenter"""
@@ -105,7 +105,7 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=False)
 
             # Test
-            lines = open(fname_csv, newline='').readlines()
-            lines_exp = open(fname_expected, newline='').readlines()
-            for line, line_exp in zip(lines, lines_exp):
-                assert line == line_exp
+            with (open(fname_csv, newline='') as lines,
+                  open(fname_expected, newline='') as lines_exp):
+                for line, line_exp in zip(lines, lines_exp):
+                    assert line == line_exp
