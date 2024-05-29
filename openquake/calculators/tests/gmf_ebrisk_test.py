@@ -112,7 +112,7 @@ class EventRiskTestCase(CalculatorTestCase):
         # no amplification
         self.run_calc(case_6.__file__, 'job.ini',
                       post_loss_amplification_file='')
-        
+
         # check aggcurves-stats
         [tot, byid] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggcurves.csv', tot, delta=1e-5)
