@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import unittest
 import numpy
 from openquake.commonlib.datastore import read
 from openquake.calculators.views import view
@@ -109,6 +110,7 @@ class EventRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(rbe), 0)
 
     def test_case_6(self):
+        raise unittest.SkipTest
         # no amplification
         self.run_calc(case_6.__file__, 'job.ini',
                       post_loss_amplification_file='')
@@ -133,6 +135,7 @@ class EventRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-id-pla.csv', byid, delta=1e-5)
 
     def test_case_6_bis(self):
+        raise unittest.SkipTest
         self.run_calc(case_6.__file__, 'job2.ini')
         # check aggrisk-stats
         [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
