@@ -51,7 +51,6 @@
 import os
 import unittest
 import tempfile
-import filecmp
 
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
 
@@ -86,8 +85,8 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=True)
 
             # Test
-            lines = open(fname_csv).readlines()
-            lines_exp = open(fname_expected).readlines()
+            lines = open(fname_csv, newline='').readlines()
+            lines_exp = open(fname_expected, newline='').readlines()
             for line, line_exp in zip(lines, lines_exp):
                 assert line == line_exp
 
@@ -106,7 +105,7 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=False)
 
             # Test
-            lines = open(fname_csv).readlines()
-            lines_exp = open(fname_expected).readlines()
+            lines = open(fname_csv, newline='').readlines()
+            lines_exp = open(fname_expected, newline='').readlines()
             for line, line_exp in zip(lines, lines_exp):
                 assert line == line_exp
