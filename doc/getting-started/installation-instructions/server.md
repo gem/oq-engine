@@ -4,30 +4,34 @@
 
 ## Advanced configurations and Authentication support
 
-### Installation from Debian packages
+### Installation with the universal installer
 
 The OpenQuake Engine server supports authentication provided by [Django](https://docs.djangoproject.com/en/stable/topics/auth/) and its backends.
 
-Create a `/usr/share/openquake/engine/local_settings.py` and add:
+When installing the OpenQuake Engine with the universal installer the `local_settings.py` file must be located under the folder `openquake/server` of the oq-engine repository.
+
+For example if you clone the repository in the folder `/opt/openquake/src/oq-engine/` you must place the file in `/opt/openquake/src/oq-engine/openquake/server`
+
+Create a `local_settings.py` and add:
 ```python
 LOCKDOWN = True
 ```
 
 Upgrade the database to host users and sessions:
 ```console
-$ cd /usr/share/openquake/engine
-$ sudo -u openquake oq webui migrate 
+$ cd /opt/openquake/src/oq-engine/openquake/server
+$ sudo -u openquake oq webui migrate
 ```
 
 Add a new local superuser:
 ```console
-$ cd /usr/share/openquake/engine
+$ cd /opt/openquake/src/oq-engine/openquake/server
 $ sudo -u openquake oq webui createsuperuser
 ```
 
 Setup static files in Django
 
-Open the file `/usr/share/openquake/engine/local_settings.py` and add:
+Open the file `local_settings.py` and add:
 ```python
 # Static Folder
 STATIC_ROOT = '/var/www/webui'
@@ -36,37 +40,15 @@ STATIC_ROOT is the full, absolute path to your static files folder.
 Then issue the commands:
 
 ```console
-$ cd /usr/share/openquake/engine
+$ cd /opt/openquake/src/oq-engine/openquake/server
 $ sudo -u openquake oq webui collectstatic
 ```
-
-### Installation with the universal installer
-
-When installing the OpenQuake Engine with the universal installer the `local_settings.py` file must be located under the folder `openquake/server` of the oq-engine repository.
-
-For example if you clone the repository in the folder `/opt/openquake/src/oq-engine/` you must place the file in `/opt/openquake/src/oq-engine/openquake/server`
-
-The `oq` commands must be run as root user and the installation must be of kind `server` or `devel_server`.
-
-On that folder there is a template file `local_settings.py.pam` that you can rename o copy to `local_settings.py` to enable only the requested features.
-
+The `oq` commands must be run as openquake user and the installation must be of kind `server` or `devel_server`.
 if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
 
 ```console
-$ python3 -m openquake.server.manage <subcommand> 
+$ python3 -m openquake.server.manage <subcommand>
 ```
-An example configuration is the follow:
-
-```python
-# Enable authentication
-LOCKDOWN = True
-
-# Static Folder
-STATIC_ROOT = '/var/www/webui'
-```
-
-After the creation of the files, please perform the same steps of the package installation to set up the environment with the user root.
-
 #### Groups support
 
 Users can be part of groups. Members of the same group can have access to any calculation and output produced by any member of that group; only the owner of a calculation can delete it.
@@ -107,7 +89,7 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 
 ### gunicorn
 
-*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). For example:
+*gunicorn* can be installed either via `pip` in the venv of OpenQuake engine. For example:
 
 ```console
 $ sudo su -
@@ -115,8 +97,6 @@ $ sudo su -
 # pip install gunicorn
 # deactivate
 ```
-
-When using `python-oq-libs` for Debian, *gunicorn* is already provided.
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 

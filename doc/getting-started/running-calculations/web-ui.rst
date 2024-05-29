@@ -38,13 +38,6 @@ In a terminal type::
 
 	$ oq webui start
 
-*******************
-Linux from packages
-*******************
-
-A ``systemd`` service will take care of the OpenQuake engine server, starting it at boot. Please refer to
-:ref:`Configure the systemd services page <rhel>`.
-
 Using the OpenQuake engine WebUI
 --------------------------------
 

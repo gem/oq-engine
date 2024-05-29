@@ -26,7 +26,7 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import config, hdf5, parallel, performance, python3compat
+from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
@@ -79,10 +79,9 @@ def build_hcurves(calc):
     the stored GMFs. Works only for few sites.
     """
     oq = calc.oqparam
-    rlzs = calc.full_lt.get_realizations()
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
-    weights = [rlz.weight['weight'] for rlz in rlzs]
+    weights = calc.full_lt.weights[:, -1]
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
@@ -683,7 +682,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
-            self.full_lt = dstore.parent['full_lt']
+            self.full_lt = dstore.parent['full_lt'].init()
             set_mags(oq, dstore)
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)

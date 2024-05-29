@@ -526,7 +526,7 @@ class GCMTCatalogue(Catalogue):
             "magnitude",
             "sigmaMagnitude",
         ]
-        with open(filename, "wt", newline="") as fid:
+        with open(filename, "wt") as fid:
             writer = csv.DictWriter(fid, fieldnames=header_list)
             headers = dict((header, header) for header in header_list)
             writer.writerow(headers)

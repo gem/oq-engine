@@ -425,8 +425,8 @@ def _cdf(weighted_objects):
         w = obj.weight
         if isinstance(obj.weight, (float, int)):
             weights.append(w)
-        else:
-            weights.append(w['weight'])
+        else:  # assume array
+            weights.append(w[-1])
     return numpy.cumsum(weights)
 
 

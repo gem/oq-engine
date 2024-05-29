@@ -40,7 +40,7 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
@@ -48,12 +48,13 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
-    if isinstance(weights, list):  # IMT-dependent weights
+    
+    if weights.shape[1] > 1:  # IMT-dependent weights
         # this is slower since the arrays are shorter
         for imt in imtls:
             slc = imtls(imt)
-            ws = [w[imt] for w in weights]
-            if sum(ws) == 0:  # expect no data for this IMT
+            ws = wget(weights, imt)
+            if not ws.sum():  # expect no data for this IMT
                 continue
             if use_rates:
                 array[slc, 0] = to_probs(stat(to_rates(poes[:, slc]), ws))
@@ -61,9 +62,9 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
                 array[slc, 0] = stat(poes[:, slc], ws)
     else:
         if use_rates:
-            array[:, 0] = to_probs(stat(to_rates(poes), weights))
+            array[:, 0] = to_probs(stat(to_rates(poes), weights[:, -1]))
         else:
-            array[:, 0] = stat(poes, weights)
+            array[:, 0] = stat(poes, weights[:, -1])
     return array
 
 

@@ -191,7 +191,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for sid in self.sitecol.sids:
                     hcurve = self.pgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
-                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
+                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
+                        full_lt.wget)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs

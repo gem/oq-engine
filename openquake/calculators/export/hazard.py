@@ -567,8 +567,7 @@ def export_disagg_csv(ekey, dstore):
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
         if spec.startswith('rlzs') or oq.iml_disagg:
-            weights = numpy.array([rlzs[r].weight['weight']
-                                   for r in best_rlzs[s]])
+            weights = numpy.array([rlzs[r].weight[-1] for r in best_rlzs[s]])
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()

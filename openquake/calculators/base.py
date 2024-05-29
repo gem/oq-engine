@@ -117,7 +117,7 @@ def build_weights(realizations):
     """
     :returns: an array with the realization weights of shape R
     """
-    arr = numpy.array([rlz.weight['default'] for rlz in realizations])
+    arr = numpy.array([rlz.weight[-1] for rlz in realizations])
     return arr
 
 
@@ -1015,7 +1015,7 @@ class HazardCalculator(BaseCalculator):
         """
         if hasattr(self, 'full_lt'):  # no scenario
             self.realizations = self.full_lt.get_realizations()
-            if not self.realizations:
+            if len(self.realizations) == 0:
                 raise RuntimeError('Empty logic tree: too much filtering?')
         else:  # scenario
             self.full_lt = self.datastore['full_lt']

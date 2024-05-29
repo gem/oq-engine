@@ -37,7 +37,7 @@ def classical_risk(riskinputs, oqparam, monitor):
     """
     crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
-    weights = [w['default'] for w in oqparam._weights]
+    weights = oqparam._weights[:, -1]
     statnames, stats = zip(*oqparam._stats)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
@@ -94,12 +94,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         super().pre_execute()
         if '_rates' not in self.datastore:  # when building short report
             return
-        full_lt = self.datastore['full_lt']
+        full_lt = self.datastore['full_lt'].init()
         self.realizations = full_lt.get_realizations()
-        weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
         oq._stats = stats
-        oq._weights = weights
+        oq._weights = full_lt.weights
         self.riskinputs = self.build_riskinputs()
         self.A = len(self.assetcol)
         self.L = len(self.crmodel.loss_types)
