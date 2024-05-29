@@ -60,7 +60,8 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
-    User = get_user_model()
+    if settings.LOCKDOWN:
+        User = get_user_model()
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
