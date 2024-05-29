@@ -1450,9 +1450,11 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
 def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
                pla_factor=None):
     """
-    :param orig_losses: a sorted array of size num_losses
+    Possibly add zeros and sort the passed losses.
+
+    :param orig_losses: an array of size num_losses
     :param num_events: an integer >= num_losses
-    :returns: two arrays of size num_events
+    :returns: three arrays of size num_events
     """
     if sorting:
         sorting_idxs = numpy.argsort(orig_losses)
