@@ -1495,9 +1495,6 @@ def losses_by_period(losses, return_periods, num_events, eff_time=None,
     assert len(losses)
     if isinstance(losses, list):
         losses = numpy.array(losses)
-    num_losses = len(losses)
-    if num_events < num_losses:
-        num_events = num_losses
     if eff_time is None:
         eff_time = return_periods[-1]
     if sorting:
