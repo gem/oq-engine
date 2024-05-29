@@ -20,16 +20,11 @@ import os
 import getpass
 import requests
 import logging
-import django
 
 from time import sleep
 from django.conf import settings
 from django.apps import apps
 from openquake.engine import __version__ as oqversion
-
-if settings.LOCKDOWN:
-    django.setup()
-    from django.contrib.auth.models import User
 
 
 def is_superuser(request):
@@ -64,6 +59,7 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
+    from django.contrib.auth.models import User
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:

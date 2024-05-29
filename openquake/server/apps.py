@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import django
 from django.apps import AppConfig
 from django.conf import settings
 from openquake.baselib import config
@@ -62,3 +63,5 @@ class ServerConfig(AppConfig):
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
+        if settings.LOCKDOWN:
+            django.setup()
