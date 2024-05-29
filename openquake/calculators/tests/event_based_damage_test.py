@@ -92,7 +92,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
 
     def test_case_13b(self):
         # test event_based_damage, aggregate_by=taxonomy
-        self.run_calc(case_13.__file__, 'job_b.ini', concurrent_tasks='0')
+        self.run_calc(case_13.__file__, 'job_b.ini')
         self.check_damages('b_damage_table.txt', 'b_damages.txt')
 
         [f] = export(('risk_by_event', 'csv'), self.calc.datastore)
