@@ -63,5 +63,3 @@ class ServerConfig(AppConfig):
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
-        if settings.LOCKDOWN:
-            django.setup()
