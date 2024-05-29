@@ -268,7 +268,6 @@ def export_event_loss_table(ekey, dstore):
         lstates = []
     df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     df['loss_type'] = scientific.LOSSTYPE[df.loss_id.to_numpy()]
-    del df['loss_id']
     if 'variance' in df.columns:
         del df['variance']
     ren = {'dmg_%d' % i: lstate for i, lstate in enumerate(lstates, 1)}
@@ -276,12 +275,17 @@ def export_event_loss_table(ekey, dstore):
     df = df.join(events, on='event_id')
     if 'ses_id' in df.columns:
         del df['ses_id']
+    dfs = []
+    for (loss_id, rlz), df in df.groupby(['loss_id', 'rlz_id']):
+        df = df.sort_values('loss')
+        dfs.append(df)
+    df = pandas.concat(dfs)
     del df['rlz_id']
+    del df['loss_id']
     if 'scenario' in oq.calculation_mode:
         del df['rup_id']
         if 'year' in df.columns:
             del df['year']
-    df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
 
