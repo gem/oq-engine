@@ -283,6 +283,8 @@ def export_event_loss_table(ekey, dstore):
             d = d.sort_values('loss')
             dfs.append(d)
         df = pandas.concat(dfs)
+    else:
+        df = df.sort_values(['loss_id', 'event_id'])
     del df['rlz_id']
     del df['loss_id']
     if 'scenario' in oq.calculation_mode:
