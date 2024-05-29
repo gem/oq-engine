@@ -1454,7 +1454,7 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
     :param num_events: an integer >= num_losses
     :returns: two arrays of size num_events
     """
-    sorted_losses = numpy.sort(orig_losses) if sorting else orig_losses
+    sorted_losses = numpy.sort(orig_losses) if sorting else orig_losses.copy()
 
     # add zeros on the left if there are less losses than events.
     num_losses = len(sorted_losses)
@@ -1462,7 +1462,7 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True,
         losses = numpy.zeros(num_events, sorted_losses.dtype)
         losses[num_events - num_losses:num_events] = sorted_losses
     elif num_losses == num_events:
-        losses = sorted_losses.copy()
+        losses = sorted_losses
     elif num_events < num_losses:
         raise ValueError('More losses (%d) than events (%d) ??' %
                          (num_losses, num_events))
