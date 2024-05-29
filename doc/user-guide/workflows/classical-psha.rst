@@ -1,5 +1,5 @@
-Classical Probabilistic Seismic Hazard Analysis
-===============================================
+Classical PSHA
+==============
 
 Analysis Input data for the classical *Probabilistic Seismic Hazard Analysis* consist of a PSHA input model provided 
 together with calculation settings.

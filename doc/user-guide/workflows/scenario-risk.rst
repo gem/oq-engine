@@ -1,5 +1,5 @@
-Scenario Based Seismic Damage and Risk Analysis
-===============================================
+Scenario Damage and Risk
+========================
 
 .. _scenario-damage-assessment:
 

@@ -1,5 +1,5 @@
-Classical Probabilistic Seismic Damage and Risk Analysis
-========================================================
+Classical Damage and Risk
+=========================
 
 Classical Probabilistic Seismic Damage Analysis
 -----------------------------------------------

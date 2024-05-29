@@ -1,32 +1,38 @@
-Hazard Calculations
--------------------
+.. _common-params:
 
-This Chapter summarises the structure of the information necessary to define the different input data to be used with 
-the OpenQuake engine hazard calculators, i.e. the so called ``job.ini`` configuration file.
-Each calculator has its own specific parameters, however there are a few
-parameters which are common to all calculators, so they will be explained first.
+Common hazard parameters
+------------------------
 
-**Calculation type and description**::
+========
+
+*******
+general
+*******
+
+In a section conventionally called ``[general]``, the user specifies the parameters
+to specify the calculation type and description::
 
 	[general]
-	calculation_mode = classical
 	description = A demo OpenQuake-engine .ini file for classical PSHA
-
-In a section conventionally called ``[general]``, the user specifies the following parameters:
+	calculation_mode = classical
 
 - ``description``: a parameter that can be used to designate the model
 - ``calculation_mode``: used to set the kind of calculation. In this
   example it corresponds to ``classical``. Alternative options for the
   calculation_mode are described later in this manual.
 
-**Geometry of the area (or the sites) where hazard is computed**
+
+********
+geometry
+********
 
 A section conventionally called ``[geometry]`` is used to specify
 where the hazard will be computed. Two options are available.
 
 The first option is to define a polygon (usually a rectangle) and a
 distance (in km) to be used to discretize the polygon area. The
-polygon is defined by a list of longitude-latitude tuples.
+polygon is defined by a list of longitude-latitude tuples, and the 
+coordinates must be provided in either a clockwise or counterclockwise order.
 
 An example is provided below::
 
@@ -34,37 +40,40 @@ An example is provided below::
 	region = 10.0 43.0, 12.0 43.0, 12.0 46.0, 10.0 46.0
 	region_grid_spacing = 10.0
 
-The second option allows the definition of a number of sites where the hazard will be computed. Each site is specified 
+The second option allows the definition of a number of sites where the hazardwill be computed. Each site is specified 
 in terms of a longitude, latitude tuple. Optionally, if the user wants to consider the elevation of the sites, a value 
 of depth [km] can also be specified, where positive values indicate below sea level, and negative values indicate above 
-sea level (i.e. the topographic surface). If no value of depth is given for a site, it is assumed to be zero. An example 
-is provided below::
+sea level (i.e. the topographic surface). If no value of depth is given for a site, it is assumed to be zero. 
+
+An example is provided below::
 
 	[geometry]
 	sites = 10.0 43.0, 12.0 43.0, 12.0 46.0, 10.0 46.0
 
-If the list of sites is too long the user can specify the name of a csv file as shown below::
+If the list of sites is too long the user can specify the name of a CSV file as shown below::
 
 	[geometry]
 	sites_csv = <name_of_the_csv_file>
 
-The format of the csv file containing the list of sites is a sequence of points (one per row) specified in terms of the 
+The format of the CSV file containing the list of sites is a sequence of points (one per row) specified in terms of the 
 longitude, latitude tuple. Depth values are again optional. An example is provided below::
 
-        site_id,lon,lat
+    site_id,lon,lat
 	0,179.0,90.0
 	1,178.0,89.0
 	2,177.0,88.0
 
 For reasons of backward compatibility, it is also possible to skip the header and to omit the ``site_id`` column, however
-we recommend to avoid that format, since it is error prone given that many users tend to use the lat,lot convention
+we recommend to avoid that format, since it is error prone given that many users tend to use the lat,lon convention
 instead of the lon,lat convention that the engine honors::
 
 	179.0,90.0
 	178.0,89.0
 	177.0,88.0
 
-**Parameters describing site conditions**::
+***************
+site conditions
+***************
 
 Such parameters are used to specify local soil conditions and are normally listed in a section of the ``job.ini``
 file called ``[site_params]``. The simplest possibility is to define uniform site conditions 
@@ -129,16 +138,18 @@ calculations, so you need to study the implementation of the specific
 feature you are interested in to know what they mean and how they
 work.
 
+
 .. _classical-psha:
 
-**************
 Classical PSHA
-**************
+--------------
 
 In the following we describe the overall structure and the most typical parameters of a configuration file to be used 
 for the computation of a seismic hazard map using a classical PSHA methodology.
 
-**Logic tree sampling**
+*******************
+Logic tree sampling
+*******************
 
 The OpenQuake engine provides two options for processing the whole logic tree structure.
 
@@ -179,7 +190,9 @@ by the line::
 
 	complex_fault_mesh_spacing = 10
 
-**Calculation configuration**::
+*************************
+Calculation configuration
+*************************
 
 	[calculation]
 	source_model_logic_tree_file = source_model_logic_tree.xml
@@ -208,7 +221,8 @@ An example configuration for a maximum distance in Active Shallow Crust of 150 k
 	maximum_distance = {'Active Shallow Crust': 150.0,
 	                    'Stable Continental Crust': 200.0}
 
-**Output**::
+**Output
+********************
 
 	[output]
 	export_dir = outputs/
@@ -228,22 +242,24 @@ those specified by the later option ``poes``. The probabilities specified here c
 Specifying poes will output hazard maps. For more information about the outputs of the calculation, see the section: 
 “Description of hazard output” (page).
 
-**************************************
+
 Seismic Hazard Disaggregation Analysis
-**************************************
+--------------------------------------
 
 In this section we describe the structure of the configuration file to be used to complete a seismic hazard 
 disaggregation. Since only a few parts of the standard configuration file need to be changed we can use the description 
 given in Section :ref:`Classical PSHA <classical-psha>` as a reference and we emphasize herein major differences.::
 
 	[general]
-	description = A demo .ini file for PSHA disaggregation
+	description = A demo job.ini file for PSHA disaggregation
 	calculation_mode = disaggregation
 	random_seed = 1024
 
 The calculation mode parameter in this case is set as ``disaggregation``.
 
-**Geometry of the area (or the sites) where hazard is computed**::
+********
+geometry
+********
 
 	[geometry]
 	sites = 11.0 44.5
@@ -251,7 +267,9 @@ The calculation mode parameter in this case is set as ``disaggregation``.
 In the section it is necessary to specify the geographic coordinates of the site(s) where the disaggregation will be 
 performed. The coordinates of multiple site should be separated with a comma.
 
-**Disaggregation parameters**
+**************
+Disaggregation
+**************
 
 The disaggregation parameters need to be added to the the standard configuration file. They are shown in the following 
 example and a description of each parameter is provided below.::
@@ -306,14 +324,16 @@ section of the configuration file::
 
 .. _event-based-psha:
 
-****************
+
 Event based PSHA
-****************
+----------------
 
 In the following we describe the sections of the configuration file that are required to complete event based PSHA 
 calculations.
 
-**Calculation type and model info**
+*******
+general
+*******
 
 This part is almost identical to the corresponding one described in Section :ref:`Classical PSHA <classical-psha>`.
 
@@ -323,7 +343,9 @@ Note the setting of the ``calculation_mode`` parameter which now corresponds to 
 	description = A demo OpenQuake-engine .ini file for event based PSHA
 	calculation_mode = event_based
 
-**Event based parameters**
+**********************
+Event based parameters
+**********************
 
 This section is used to specify the number of stochastic event sets to be generated for each logic tree realisation 
 (each stochastic event set represents a potential realisation of seismicity during the ``investigation_time`` specified 
@@ -337,7 +359,53 @@ model to be used for the generation of ground motion fields.::
 The acceptable flags for the parameter ``vs30_clustering`` are ``False`` and ``True``, with a capital ``F`` and ``T`` 
 respectively. ``0`` and ``1`` are also acceptable flags.
 
-**Output**
+The difference between full enumeration and sampling
+====================================================
+
+Users are often confused about the difference between full enumeration and sampling. For this reason the engine 
+distribution comes with a pedagogical example that considers an extremely simplified situation comprising a single site, 
+a single rupture, and only two GMPEs. You can find the example in the engine repository under the directory 
+openquake/qa_tests_data/event_based/case_3. If you look at the ground motion logic tree file, the two GMPEs are 
+AkkarBommer2010 (with weight 0.9) and SadighEtAl1997 (with weight 0.1).
+
+The parameters in the job.ini are::
+
+	investigation_time = 1
+	ses_per_logic_tree_path = 5_000
+	number_of_logic_tree_paths = 0
+
+Since there are 2 realizations, the effective investigation time is 10,000 years. If you run the calculation, you will 
+generate (at least with version 3.13 of the engine, though the details may change with the version) 10,121 events, since 
+the occurrence rate of the rupture was chosen to be 1. Roughly half of the events will be associated with the first 
+GMPE (AkkarBommer2010) and half with the second GMPE (SadighEtAl1997). Actually, if you look at the test, the precise 
+numbers will be 5,191 and 4,930 events, i.e. 51% and 49% rather than 50% and 50%, but this is expected and by increasing 
+the investigation time you can get closer to the ideal equipartition. Therefore, even if the AkkarBommer2010 GMPE is 
+assigned a relative weight that is 9 times greater than SadighEtAl1997, *this is not reflected in the simulated event set.* 
+It means that when performing a computation (for instance to compute the mean ground motion field, or the average loss) 
+one has to keep the two realizations distinct, and only at the end to perform the weighted average.
+
+The situation is the opposite when sampling is used. In order to get the same effective investigation time of 10,000 
+years you should change the parameters in the job.ini to::
+
+	investigation_time = 1
+	ses_per_logic_tree_path = 1
+	number_of_logic_tree_paths = 10_000
+
+Now there are 10,000 realizations, not 2, and they all have the same weight .0001. The number of events per realization 
+is still roughly constant (around 1) and there are still 10,121 events, however now *the original weights are reflected 
+in the event set.* In particular there are 9,130 events associated to the AkkarBommer2010 GMPE and 991 events associated 
+to the SadighEtAl1997 GMPE. There is no need to keep the realizations separated: since they have all the same weigths, 
+you can trivially compute average quantities. AkkarBommer2010 will count more than SadighEtAl1997 simply because there 
+are 9 times more events for it (actually 9130/991 = 9.2, but the rate will tend to 9 when the effective time will tend 
+to infinity).
+
+**Note:** just to be clear, normally realizations are not in one-to-one correspondence with GMPEs. In this example, it is true 
+because there is a single tectonic region type. However, usually there are multiple tectonic region types, and a 
+realization is associated to a tuple of GMPEs.
+
+******
+Output
+******
 
 This part substitutes the ``Output`` part described in the
 configuration file example described in the Section :ref:`Classical
@@ -361,9 +429,9 @@ event- based ground motion values to provide hazard curves indicating
 the probabilities of exceeding the intensity measure levels set
 previously in the ``intensity_measure_types_and_levels`` option.
 
-***************
+
 Scenario Hazard
-***************
+---------------
 
 In order to run this calculator, the parameter ``calculation_mode`` needs to be set to ``scenario``. The user can run 
 scenario calculations with and without conditioning the ground shaking to station and macroseismic data. The ground 
@@ -419,7 +487,11 @@ standard deviations separately. If a GSIM of interest provides only the total st
 workaround might be for the user to specify the ratio between the within-event and between-event standard deviations, 
 which the engine will use to add the between and within standard deviations to the GSIM.
 
-**Station data csv file** This csv file contains the observed intensity values available from ground motion recordings 
+*********************
+Station data csv file
+*********************
+
+This CSV file contains the observed intensity values available from ground motion recordings 
 and macroseismic intensity data. One or multiple intensity measure types can be indicated for all observations. An 
 example of such a file is shown below in :ref:`the table below <example-station-data-csv>`.
 
@@ -428,7 +500,7 @@ to be provided for the set of sites in the station_data_file. This is specified 
 in the ``site_model_file`` section a ``site_model_stations.csv`` file.
 
 .. _example-station-data-csv:
-.. table:: Example of station data csv file
+.. table:: Example of station data CSV file
 
    +------------------+------------------+---------------+--------------+------------------+---------------+------------------+-------------------+----------------------+-------------------+----------------------+
    |  **STATION ID**  | **STATION_NAME** | **LONGITUDE** | **LATITUDE** | **STATION_TYPE** | **PGA_VALUE** | **PGA_LN_SIGMA** | **SA(0.3)_VALUE** | **SA(0.3)_LN_SIGMA** | **SA(1.0)_VALUE** | **SA(1.0)_LN_SIGMA** |
@@ -461,7 +533,10 @@ The following parameters are optional:
 - ``STATION_NAME``: string; free form and not subject to the same constraints as the ``STATION_ID`` field. The optional ``STATION_NAME`` field can contain information that aids in identifying a particular station.
 - Other fields: could contain notes about the station, flags indicating outlier status for the values reported by the station, site information, etc., but these optional fields will not be read by the station_data_file parser.
 
-**Ground motion models** The user can choose to specify one or multiple GSIMs (or GMPEs) for the scenario calculation using any of the options below. A list of available GSIMs can be obtained using ``oq info gsims`` in the terminal, and these are also documented at http://docs.openquake.org/oq-engine/stable/openquake.hazardlib.gsim.html.
+********************
+Ground motion models
+********************
+The user can choose to specify one or multiple GSIMs (or GMPEs) for the scenario calculation using any of the options below. A list of available GSIMs can be obtained using ``oq info gsims`` in the terminal, and these are also documented at http://docs.openquake.org/oq-engine/stable/openquake.hazardlib.gsim.html.
 
 - A single ground motion model, e.g., gsim = ``BooreAtkinson2008``.
 - A GSIM logic tree (see Section :ref:`The Ground Motion Logic Tree <gm-logic-tree>`). In this case multiple ground motion models can be specified in a GMPE logic tree file using the parameter ``gsim_logic_tree_file``. In this case, the OpenQuake engine generates ground motion fields for all GMPEs specified in the logic tree file. The *Branch* weights in the logic tree file are ignored in a scenario analysis and only the individual *Branch* results are computed. Mean or quantile ground motion fields will not be generated.

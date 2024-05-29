@@ -1,5 +1,5 @@
-Scenario Based Seismic Hazard Analysis
-======================================
+Scenario Hazard
+===============
 
 In case of Scenario Based Seismic Hazard Analysis, the engine simulates a set of ground motion fields (GMFs) at the 
 target sites for the requested set of intensity measure types. This set of GMFs can then be used in :ref:`Scenario Damage 

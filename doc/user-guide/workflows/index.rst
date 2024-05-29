@@ -41,7 +41,7 @@ be easily introduced, without affecting the overall calculation workflow. Each w
 the following sections.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Seismic Hazard:
 
    classical-psha
@@ -49,7 +49,7 @@ the following sections.
    scenario-based-sha
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Seismic Risk:
 
    scenario-risk
