@@ -1549,6 +1549,10 @@ class LossCurvesMapsBuilder(object):
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
                  weights, eff_time, risk_investigation_time, pla_factor=None):
+        if return_periods[-1] > eff_time:
+            raise ValueError(
+                'The return_period %s is longer than the eff_time=%s' %
+                (return_periods[-1], eff_time))
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt

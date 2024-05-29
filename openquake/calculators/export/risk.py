@@ -296,9 +296,9 @@ def export_event_loss_table(ekey, dstore):
     if 'loss' in df.columns:  # missing for damage
         dfs = []
         for (loss_id, rlz), d in df.groupby(['loss_id', 'rlz_id']):
-            eperiods = eff_time / numpy.arange(num_events[rlz], 0., -1)
             d = d.sort_values('loss')
             if pla_factor:
+                eperiods = eff_time / numpy.arange(num_events[rlz], 0., -1)
                 d['pla_loss'] = pla_factor(eperiods) * d.loss
             dfs.append(d)
         df = pandas.concat(dfs)
