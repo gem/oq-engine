@@ -541,12 +541,12 @@ class LossesByEventTestCase(unittest.TestCase):
         losses0 = losses[:1000]
         losses1 = losses[1000:]
         curve0 = scientific.losses_by_period(
-            losses0, periods, eff_time=eff_time)
+            losses0, periods, len(losses0), eff_time)
         curve1 = scientific.losses_by_period(
-            losses1, periods, eff_time=eff_time)
+            losses1, periods, len(losses1), eff_time)
         mean = (curve0 + curve1) / 2
         full = scientific.losses_by_period(
-            losses, periods, eff_time=2*eff_time)
+            losses, periods, len(losses), 2*eff_time)
         aae(mean, full, rtol=1E-2)  # converges only at 1%
 
     def test_maximum_probable_loss(self):
