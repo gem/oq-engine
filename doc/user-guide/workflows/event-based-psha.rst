@@ -1,3 +1,5 @@
+.. _event-based-psha-intro:
+
 Event Based PSHA
 ================
 
@@ -39,3 +41,6 @@ The main calculators used to perform this analysis are:
    corresponding hazard curve.
 
    This procedure is computationally intensive and is not recommended for investigating the hazard over large areas.
+
+The reader interested in learning more about the science behaind this calculator can explore the 
+:ref:`Underlying Science <underlying-science>` tab.

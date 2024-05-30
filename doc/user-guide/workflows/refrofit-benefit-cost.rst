@@ -1,3 +1,5 @@
+.. _refrofit-benefit-cost-intro:
+
 Refrofit Benefit-Cost Ratio
 ===========================
 

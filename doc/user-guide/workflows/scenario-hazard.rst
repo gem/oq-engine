@@ -1,17 +1,28 @@
+.. _scenario-hazard-intro:
+
 Scenario Hazard
 ===============
 
 In case of Scenario Based Seismic Hazard Analysis, the engine simulates a set of ground motion fields (GMFs) at the 
 target sites for the requested set of intensity measure types. This set of GMFs can then be used in :ref:`Scenario Damage 
-Assessment <scenario-damage-assessment>` and :ref:`Scenario Risk Assessment <scenario-risk-assessment>` to estimate the 
+Assessment <scenario-damage>` and :ref:`Scenario Risk Assessment <scenario-risk>` to estimate the 
 distribution of potential damage, economic losses, fatalities, and other consequences. The scenario calculator is 
 useful for simulating both historical and hypothetical earthquakes.
 
-In case of Scenario Based Seismic Hazard Analysis, The input data consist of a single earthquake rupture model and one 
+In case of Scenario Based Seismic Hazard Analysis, the input data consist of a single earthquake rupture model and one 
 or more ground-motion models (GSIMs). Using the Ground Motion Field Calculator, multiple realizations of ground shaking 
 can be computed, each realization sampling the aleatory uncertainties in the ground-motion model. The main calculator 
 used to perform this analysis is the Ground Motion Field Calculator, which was already introduced during the description 
 of the event based PSHA workflow (see Section :ref:`Event based PSHA <event-based-psha>`).
+
+As the scenario calculator does not need to determine the probability of occurrence of the specific rupture, but only 
+sufficient information to parameterise the location (as a three-dimensional surface), the magnitude and the 
+style-of-faulting of the rupture, a more simplified NRML structure is sufficient compared to the source model structures 
+described in :ref:`source typologies <source-typologies>`. A rupture model XML can be defined as presented in the 
+section :ref:`rupture-model`.
+
+Conditioning ground shaking to observations
+-------------------------------------------
 
 Starting from OpenQuake engine v3.16, it is possible to condition the ground shaking to observations, such as ground 
 motion recordings and macroseismic intensity observations. The simulated ground motion fields are cross-spatially 
@@ -19,108 +30,9 @@ correlated, and can reduce considerably the uncertainty and bias in the resultin
 implementation of the conditioning of ground motion fields in the engine was performed following closely the procedure 
 proposed by Engler et al. (2022).
 
-As the scenario calculator does not need to determine the probability of occurrence of the specific rupture, but only 
-sufficient information to parameterise the location (as a three-dimensional surface), the magnitude and the 
-style-of-faulting of the rupture, a more simplified NRML structure is sufficient compared to the source model structures 
-described in :ref:`source typologies <source-typologies>`. A rupture model XML can be defined in the following formats:
+To conditioning of ground shaking to observations in OpenQuake-engine, it is necessary to provide additional input files 
+and adjustments to the configuration file, as presented in the :ref:`input-models` section.
 
-1. *Simple Fault Rupture* - in which the geometry is defined by the trace of the fault rupture, the dip and the upper and lower seismogenic depths. An example is shown in the listing below::
-
-	      <?xml version='1.0' encoding='utf-8'?>
-	      <nrml xmlns:gml="http://www.opengis.net/gml"
-	            xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	          <simpleFaultRupture>
-	            <magnitude>6.7</magnitude>
-	            <rake>180.0</rake>
-	            <hypocenter lon="-122.02750" lat="37.61744" depth="6.7"/>
-	            <simpleFaultGeometry>
-	              <gml:LineString>
-	                <gml:posList>
-	                  -121.80236 37.39713
-	                  -121.91453 37.48312
-	                  -122.00413 37.59493
-	                  -122.05088 37.63995
-	                  -122.09226 37.68095
-	                  -122.17796 37.78233
-	                </gml:posList>
-	              </gml:LineString>
-	              <dip>76.0</dip>
-	              <upperSeismoDepth>0.0</upperSeismoDepth>
-	              <lowerSeismoDepth>13.4</lowerSeismoDepth>
-	            </simpleFaultGeometry>
-	          </simpleFaultRupture>
-	
-	      </nrml>
-
-2. *Planar & Multi-Planar Rupture* - in which the geometry is defined as a collection of one or more rectangular planes, each defined by four corners. An example of a multi-planar rupture is shown below in the listing below::
-
-	<?xml version='1.0' encoding='utf-8'?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	    <multiPlanesRupture>
-	        <magnitude>8.0</magnitude>
-	        <rake>90.0</rake>
-	        <hypocenter lat="-1.4" lon="1.1" depth="10.0"/>
-	            <planarSurface strike="90.0" dip="45.0">
-	                <topLeft lon="-0.8" lat="-2.3" depth="0.0" />
-	                <topRight lon="-0.4" lat="-2.3" depth="0.0" />
-	                <bottomLeft lon="-0.8" lat="-2.3890" depth="10.0" />
-	                <bottomRight lon="-0.4" lat="-2.3890" depth="10.0" />
-	            </planarSurface>
-	            <planarSurface strike="30.94744" dip="30.0">
-	                <topLeft lon="-0.42" lat="-2.3" depth="0.0" />
-	                <topRight lon="-0.29967" lat="-2.09945" depth="0.0" />
-	                <bottomLeft lon="-0.28629" lat="-2.38009" depth="10.0" />
-	                <bottomRight lon="-0.16598" lat="-2.17955" depth="10.0" />
-	            </planarSurface>
-	    </multiPlanesRupture>
-	
-	</nrml>
-
-3. *Complex Fault Rupture* - in which the geometry is defined by the upper, lower and (if applicable) intermediate edges of the fault rupture. An example of a complex fault rupture is shown below in the listing below::
-
-	<?xml version='1.0' encoding='utf-8'?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	    <complexFaultRupture>
-	        <magnitude>8.0</magnitude>
-	        <rake>90.0</rake>
-	        <hypocenter lat="-1.4" lon="1.1" depth="10.0"/>
-	        <complexFaultGeometry>
-	            <faultTopEdge>
-	                <gml:LineString>
-	                    <gml:posList>
-	                        0.6 -1.5 2.0
-	                        1.0 -1.3 5.0
-	                        1.5 -1.0 8.0
-	                    </gml:posList>
-	                </gml:LineString>
-	            </faultTopEdge>
-	            <intermediateEdge>
-	                <gml:LineString>
-	                    <gml:posList>
-	                        0.65 -1.55 4.0
-	                        1.1  -1.4  10.0
-	                        1.5  -1.2  20.0
-	                    </gml:posList>
-	                </gml:LineString>
-	            </intermediateEdge>
-	            <faultBottomEdge>
-	                <gml:LineString>
-	                    <gml:posList>
-	                        0.65 -1.7 8.0
-	                        1.1  -1.6 15.0
-	                        1.5  -1.7 35.0
-	                    </gml:posList>
-	                </gml:LineString>
-	            </faultBottomEdge>
-	        </complexFaultGeometry>
-	    </complexFaultRupture>
-	
-	</nrml>
 
 The concept of “mean” ground motion field
 -----------------------------------------
@@ -128,13 +40,9 @@ The concept of “mean” ground motion field
 The engine has at least three different kinds of mean ground motion field, computed 
 differently and used in different situations:
 
-Mean ground motion field by GMPE, used to reduce disk space and make risk 
-calculations faster.
-
-Mean ground motion field by event, used for debugging/plotting purposes.
-
-Single-rupture hazardlib mean ground motion field, used for analysis/plotting 
-purposes.
+	- Mean ground motion field by GMPE, used to reduce disk space and make risk calculations faster.
+	- Mean ground motion field by event, used for debugging/plotting purposes.
+	- Single-rupture hazardlib mean ground motion field, used for analysis/plotting purposes.
 
 Mean ground motion field by GMPE
 ********************************

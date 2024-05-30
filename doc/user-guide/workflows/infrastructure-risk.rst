@@ -1,3 +1,5 @@
+.. _infrastructure-risk-intro:
+
 Infrastructure Risk
 ===================
 

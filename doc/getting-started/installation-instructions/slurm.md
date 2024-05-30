@@ -1,6 +1,6 @@
 (slurm)=
 
-# Running the OpenQuake Engine on a SLURM cluster
+# Running on a SLURM cluster
 
 Most HPC clusters support a scheduler called SLURM (
 Simple Linux Utility for Resource Management). The OpenQuake engine

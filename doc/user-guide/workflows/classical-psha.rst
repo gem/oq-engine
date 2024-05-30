@@ -1,3 +1,6 @@
+
+.. _classical-psha-intro:
+
 Classical PSHA
 ==============
 
@@ -27,3 +30,6 @@ The main calculators used to perform this analysis are the following:
 
    The classical PSHA calculator uses the ERF and the Ground Motion model to compute hazard curves on each site 
    specified in the calculation settings.
+
+The reader interested in learning more about the science behaind this calculator can explore the 
+:ref:`Underlying Science <underlying-science>` tab.

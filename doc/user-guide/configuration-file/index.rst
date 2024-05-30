@@ -14,7 +14,15 @@ parameters which are common to all calculators, so they will be explained first.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-   hazard-calculations
-   risk-calculations
+   hazard-common-config
+   classical-psha-config
+   event-based-psha-config
+   scenario-hazard-config
+   risk-common-config
+   classical-risk-config
+   event-based-risk-config
+   scenario-risk-config
+   refrofit-benefit-cost-config
+   reinsurance-config
+

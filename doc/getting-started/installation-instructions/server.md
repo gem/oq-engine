@@ -1,6 +1,6 @@
 (server)=
 
-# The OpenQuake Engine Server and WebUI
+# Server and WebUI
 
 ## Advanced configurations and Authentication support
 

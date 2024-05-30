@@ -1,3 +1,5 @@
+.. _common-mistakes:
+
 Bad configuration parameters
 ============================
 

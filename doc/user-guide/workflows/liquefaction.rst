@@ -1,3 +1,5 @@
+.. _liquefaction-intro:
+
 Liquefaction and Landslide
 ==========================
 

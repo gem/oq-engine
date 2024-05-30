@@ -32,63 +32,6 @@ to run a ``classical_risk`` calculation starting from three different hazard inp
 	sensitivity_analysis = {
 	  "hazard_curves_file": ["hazard1.csv", "hazard2.csv", "hazard3.csv"]}
 
-The ``custom_site_id``
-----------------------
-
-Since engine v3.13, it is possible to assign 6-character ASCII strings as unique identifiers for the sites (8-characters 
-since engine v3.15). This can be convenient in various situations, especially when splitting a calculation in geographic 
-regions. The way to enable it is to add a field called ``custom_site_id`` to the site model file, which must be unique 
-for each site.
-
-The hazard curve and ground motion field exporters have been modified to export the ``custom_site_id`` instead of the 
-``site_id`` (if present).
-
-We used this feature to split the ESHM20 model in two parts (Northern Europe and Southern Europe). Then creating the 
-full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
-overlap, thus making impossible to join the outputs.
-
-A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
-unique identification of all potential sites across the globe.
-
-The ``minimum_distance`` parameter
-----------------------------------
-
-GMPEs often have a prescribed range of validity. In particular they may give unexpected results for points too close to 
-ruptures. To avoid this problem the engine recognizes a ``minimum_distance`` parameter: if it is set, then for distances 
-below the specified minimum distance, the GMPEs return the ground-motion value at the minimum distance. This avoids 
-producing extremely large (and physically unrealistic) ground-motion values at small distances. The minimum distance is 
-somewhat heuristic. It may be useful to experiment with different values of the ``minimum_distance``, to see how the 
-hazard and risk change.
-
-.. _equivalent-distance-approximation:
-
-Equivalent Epicenter Distance Approximation
--------------------------------------------
-
-The equivalent epicenter distance approximation (``reqv`` for short) was introduced in engine 3.2 to enable the comparison 
-of the OpenQuake engine with time-honored Fortran codes using the same approximation.
-
-You can enable it in the engine by adding a ``[reqv]`` section to the job.ini, like in our example in 
-openquake/qa_tests_data/logictree/case_02/job.ini::
-
-	reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
-	             'stable shallow crust': 'lookup_sta.hdf5'}
-
-For each tectonic region type to which the approximation should be applied, the user must provide a lookup table in 
-.hdf5 format containing arrays ``mags`` of shape M, ``repi`` of shape N and ``reqv`` of shape (M, N).
-
-The examples in openquake/qa_tests_data/classical/case_2 will give you the exact format required. M is the number of 
-magnitudes (in the examples there are 26 magnitudes ranging from 6.05 to 8.55) and N is the number of epicenter distances 
-(in the examples ranging from 1 km to 1000 km).
-
-Depending on the tectonic region type and rupture magnitude, the engine converts the epicentral distance ``repi`` into an 
-equivalent distance by looking at the lookup table and use it to determine the ``rjb`` and ``rrup`` distances, instead of 
-the regular routines. This means that within this approximation ruptures are treated as pointwise and not rectangular as 
-the engine usually does.
-
-Notice that the equivalent epicenter distance approximation only applies to ruptures coming from 
-PointSources/AreaSources/MultiPointSources, fault sources are untouched.
-
 Ruptures in CSV format
 ----------------------
 
@@ -151,8 +94,36 @@ changed the rupture classes or the surface classes, but we changed the seed algo
 different numbers to be generated (hopefully, statistically consistent). A bug fix or change of logic in the calculator 
 can also change the numbers across engine versions.
 
-``max_sites_disagg``
---------------------
+The ``custom_site_id``
+----------------------
+
+Since engine v3.13, it is possible to assign 6-character ASCII strings as unique identifiers for the sites (8-characters 
+since engine v3.15). This can be convenient in various situations, especially when splitting a calculation in geographic 
+regions. The way to enable it is to add a field called ``custom_site_id`` to the site model file, which must be unique 
+for each site.
+
+The hazard curve and ground motion field exporters have been modified to export the ``custom_site_id`` instead of the 
+``site_id`` (if present).
+
+We used this feature to split the ESHM20 model in two parts (Northern Europe and Southern Europe). Then creating the 
+full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
+overlap, thus making impossible to join the outputs.
+
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
+unique identification of all potential sites across the globe.
+
+The ``minimum_distance`` parameter
+----------------------------------
+
+GMPEs often have a prescribed range of validity. In particular they may give unexpected results for points too close to 
+ruptures. To avoid this problem the engine recognizes a ``minimum_distance`` parameter: if it is set, then for distances 
+below the specified minimum distance, the GMPEs return the ground-motion value at the minimum distance. This avoids 
+producing extremely large (and physically unrealistic) ground-motion values at small distances. The minimum distance is 
+somewhat heuristic. It may be useful to experiment with different values of the ``minimum_distance``, to see how the 
+hazard and risk change.
+
+The ``max_sites_disagg``
+------------------------
 
 There is a parameter in the *job.ini* called ``max_sites_disagg``, with a default value of 10. This parameter controls 
 the maximum number of sites on which it is possible to run a disaggregation. If you need to run a disaggregation on a 
@@ -173,3 +144,32 @@ uses a relatively aggressive strategy to collapse ruptures, but that requires mo
 In the many sites regime (``N > max_sites_disagg``) the engine does not store rupture information (otherwise it would 
 immediately run out of disk space, since typical hazard models have tens of millions of ruptures) and uses a much less 
 aggressive strategy to collapse ruptures, which has the advantage of requiring less RAM.
+
+.. _equivalent-distance-approximation:
+
+Equivalent Epicenter Distance Approximation
+-------------------------------------------
+
+The equivalent epicenter distance approximation (``reqv`` for short) was introduced in engine 3.2 to enable the comparison 
+of the OpenQuake engine with time-honored Fortran codes using the same approximation.
+
+You can enable it in the engine by adding a ``[reqv]`` section to the job.ini, like in our example in 
+openquake/qa_tests_data/logictree/case_02/job.ini::
+
+	reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
+	             'stable shallow crust': 'lookup_sta.hdf5'}
+
+For each tectonic region type to which the approximation should be applied, the user must provide a lookup table in 
+.hdf5 format containing arrays ``mags`` of shape M, ``repi`` of shape N and ``reqv`` of shape (M, N).
+
+The examples in openquake/qa_tests_data/classical/case_2 will give you the exact format required. M is the number of 
+magnitudes (in the examples there are 26 magnitudes ranging from 6.05 to 8.55) and N is the number of epicenter distances 
+(in the examples ranging from 1 km to 1000 km).
+
+Depending on the tectonic region type and rupture magnitude, the engine converts the epicentral distance ``repi`` into an 
+equivalent distance by looking at the lookup table and use it to determine the ``rjb`` and ``rrup`` distances, instead of 
+the regular routines. This means that within this approximation ruptures are treated as pointwise and not rectangular as 
+the engine usually does.
+
+Notice that the equivalent epicenter distance approximation only applies to ruptures coming from 
+PointSources/AreaSources/MultiPointSources, fault sources are untouched.
