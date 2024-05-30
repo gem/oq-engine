@@ -385,6 +385,17 @@ def compare_assetcol(calc_ids: int):
         print(f'Calc {calc_ids[1]}:\n{cols1}')
 
 
+def compare_sitecol(calc_ids: int):
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    len0 = len(ds0['sitecol'])
+    len1 = len(ds1['sitecol'])
+    if len0 != len1:
+        print(f'The sitecols have different lengths: {len0} != {len1}')
+    else:
+        print('The sitecols have the same lengths')
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -395,11 +406,12 @@ main = dict(rups=compare_rups,
             risk_by_event=compare_risk_by_event,
             sources=compare_sources,
             events=compare_events,
-            assetcol=compare_assetcol)
+            assetcol=compare_assetcol,
+            sitecol=compare_sitecol)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,
-          compare_events, compare_assetcol):
+          compare_events, compare_assetcol, compare_sitecol):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:
