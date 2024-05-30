@@ -1031,6 +1031,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
         haz_sitecol = get_site_collection(oqparam, h5)
     siteid = os.environ.get('OQ_DEBUG_SITE')
     if siteid:
+        oqparam.concurrent_tasks = 0
         haz_sitecol.array = haz_sitecol[
             haz_sitecol['custom_site_id'] == siteid.encode('ascii')]
     try:
