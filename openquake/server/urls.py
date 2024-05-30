@@ -38,11 +38,11 @@ if settings.WEBUI:
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
     ]
-    if settings.APPLICATION_MODE.upper() == 'AELO':
+    if settings.APPLICATION_MODE == 'AELO':
         urlpatterns.append(
             re_path(r'^engine/(\d+)/outputs_aelo$',
                     views.web_engine_get_outputs_aelo, name="outputs_aelo"))
-    elif settings.APPLICATION_MODE.upper() == 'ARISTOTLE':
+    elif settings.APPLICATION_MODE == 'ARISTOTLE':
         urlpatterns.append(
             re_path(r'^engine/(\d+)/outputs_aristotle$',
                     views.web_engine_get_outputs_aristotle,
@@ -53,12 +53,13 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.APPLICATION_MODE.upper() == 'TOOLS_ONLY':
+if settings.APPLICATION_MODE == 'TOOLS_ONLY':
     if settings.WEBUI:
         urlpatterns += [
             re_path(r'^$', RedirectView.as_view(
                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
+            path("cookies/", include("cookie_consent.urls")),
         ]
 else:
     urlpatterns += [
@@ -85,7 +86,7 @@ else:
             re_path(r'^engine/(\d+)/outputs$',
                     views.web_engine_get_outputs, name="outputs"),
         ]
-        if settings.APPLICATION_MODE.upper() == 'AELO':
+        if settings.APPLICATION_MODE == 'AELO':
             urlpatterns.append(
                 re_path(r'^engine/(\d+)/outputs_aelo$',
                         views.web_engine_get_outputs_aelo,
@@ -99,12 +100,17 @@ else:
 
         admin.autodiscover()
         admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
-        application_mode = settings.APPLICATION_MODE.upper()
+        application_mode = settings.APPLICATION_MODE
         if application_mode == 'AELO':
             email_template_name = (
                 'registration/password_reset_email_aelo.txt')
             subject_template_name = (
                 'registration/password_reset_subject_aelo.txt')
+        if application_mode == 'ARISTOTLE':
+            email_template_name = (
+                'registration/password_reset_email_aristotle.txt')
+            subject_template_name = (
+                'registration/password_reset_subject_aristotle.txt')
         else:
             email_template_name = (
                 'registration/password_reset_email.txt')

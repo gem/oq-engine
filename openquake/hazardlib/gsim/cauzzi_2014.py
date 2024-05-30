@@ -258,8 +258,7 @@ class CauzziEtAl2014(GMPE):
     #: style of faulting term
     sof = True
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
         self.adjustment_factor = np.log(adjustment_factor)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

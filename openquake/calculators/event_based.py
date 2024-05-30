@@ -29,7 +29,7 @@ from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
-from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
+from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
@@ -37,12 +37,12 @@ from openquake.hazardlib.calc.filters import (
     nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
-from openquake.commonlib import util, logs, readinput, logictree, datastore
+from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES)
@@ -67,7 +67,8 @@ rup_dt = numpy.dtype(
 
 
 def rup_weight(rup):
-    return math.ceil(rup['nsites'] / 100)
+    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
+    return math.ceil((rup['nsites'] or 1) / 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -78,10 +79,9 @@ def build_hcurves(calc):
     the stored GMFs. Works only for few sites.
     """
     oq = calc.oqparam
-    rlzs = calc.full_lt.get_realizations()
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
-    weights = [rlz.weight['weight'] for rlz in rlzs]
+    weights = calc.full_lt.weights[:, -1]
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
@@ -101,7 +101,7 @@ def build_hcurves(calc):
             poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
             for m, imt in enumerate(oq.imtls):
                 hcurves[rsi2str(rlz, sid, imt)] = poes[m]
-    pmaps = {r: ProbabilityMap(calc.sitecol.sids, L1*M, 1).fill(0)
+    pmaps = {r: MapArray(calc.sitecol.sids, L1*M, 1).fill(0)
              for r in range(R)}
     for key, poes in hcurves.items():
         r, sid, imt = str2rsi(key)
@@ -143,7 +143,7 @@ def build_hcurves(calc):
                 'hmaps-stats', site_id=N, stat=list(hstats),
                 imt=list(oq.imtls), poes=oq.poes)
         for s, stat in enumerate(hstats):
-            smap = ProbabilityMap(calc.sitecol.sids, L1, M)
+            smap = MapArray(calc.sitecol.sids, L1, M)
             [smap.array] = compute_stats(
                 numpy.array([p.array for p in pmaps]),
                 [hstats[stat]], weights)
@@ -151,30 +151,6 @@ def build_hcurves(calc):
             if oq.poes:
                 [hmap] = make_hmaps([smap], oq.imtls, oq.poes)
                 ds[:, s] = hmap.array
-
-    if oq.compare_with_classical:  # compute classical curves
-        export_dir = os.path.join(oq.export_dir, 'cl')
-        if not os.path.exists(export_dir):
-            os.makedirs(export_dir)
-        oq.export_dir = export_dir
-        oq.calculation_mode = 'classical'
-        with logs.init('job', vars(oq)) as log:
-            calc.cl = ClassicalCalculator(oq, log.calc_id)
-            # TODO: perhaps it is possible to avoid reprocessing the source
-            # model, however usually this is quite fast and do not dominate
-            # the computation
-            calc.cl.run()
-            engine.expose_outputs(calc.cl.datastore)
-            all = slice(None)
-            for imt in oq.imtls:
-                cl_mean_curves = get_mean_curve(calc.datastore, imt, all)
-                eb_mean_curves = get_mean_curve(calc.datastore, imt, all)
-                calc.rdiff, index = util.max_rel_diff_index(
-                    cl_mean_curves, eb_mean_curves)
-                logging.warning(
-                    'Relative difference with the classical '
-                    'mean curves: %d%% at site index %d, imt=%s',
-                    calc.rdiff * 100, index, imt)
 
 
 # ######################## GMF calculator ############################ #
@@ -244,6 +220,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    shr = monitor.shared
     oq = cmaker.oq
     alldata = []
     se_dt = sig_eps_dt(oq.imtls)
@@ -253,7 +230,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
     cmaker.scenario = 'scenario' in oq.calculation_mode
     with dstore:
@@ -281,7 +257,8 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                df = computer.compute_all(dstore, rmon, cmon, umon)
+                with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
+                    df = computer.compute_all([mea, tau, phi], cmon, umon)
             else:  # regular GMFs
                 with mmon:
                     mean_stds = cmaker.get_mean_stds(
@@ -339,6 +316,14 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
+    try:
+        vs30 = sitecol.vs30
+    except ValueError:  # in scenario test_case_14
+        pass
+    else:
+        if numpy.isnan(vs30).any():
+            raise ValueError('The vs30 is NaN, missing site model '
+                             'or site parameter')
     set_mags(oq, dstore)
     rups = dstore['ruptures'][:]
     logging.info('Reading {:_d} ruptures'.format(len(rups)))
@@ -363,6 +348,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
     if station_data is not None:
+        # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
@@ -374,28 +360,34 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
-        size = 3 * G * M * N * N * 8  # sig, tau, phi
-        logging.info('Storing %s in conditioned/gsim', humansize(size))
+        size = 2 * G * M * N * N * 8  # tau, phi
+        msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
+        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
-            raise ValueError(f'The calculation is too large: {G=}, {M=}, {N=}. '
-                             'You must reduce the number of sites i.e. enlarge '
-                             'region_grid_spacing)')
-        mean_covs = computer.get_mean_covs()
-        for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
-            for g in range(len(cmaker.gsims)):
-                name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore.create_dset(name, val[g])
+            raise ValueError(
+                f'The calculation is too large: {G=}, {M=}, {N=}. '
+                'You must reduce the number of sites i.e. enlarge '
+                'region_grid_spacing)')
+        mea, tau, phi = computer.get_mea_tau_phi()
         del proxy.geom  # to reduce data transfer
+
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
         save_tmp(smap.monitor)
+
+    # NB: for conditioned scenarios we are looping on a single trt
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        if station_data is not None:
+            if parallel.oq_distribute() == 'zmq':
+                logging.warning('Conditioned scenarios are not meant to be run'
+                                ' on a cluster')
+            smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
@@ -407,9 +399,20 @@ def set_mags(oq, dstore):
     Set the attribute oq.mags_by_trt
     """
     if 'source_mags' in dstore:
+        # classical or event_based
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
+    elif 'ruptures' in dstore:
+        # scenario
+        trts = dstore['full_lt'].trts
+        ruptures = dstore['ruptures'][:]
+        dic = {}
+        for trti, trt in enumerate(trts):
+            rups = ruptures[ruptures['trt_smr'] == trti]
+            mags = numpy.unique(numpy.round(rups['mag'], 2))
+            dic[trt] = ['%.02f' % mag for mag in mags]
+        oq.mags_by_trt = dic
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
@@ -492,7 +495,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
+            mosaic_df = readinput.read_mosaic_df(buffer=.1).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
@@ -585,7 +588,8 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
         if oq.rupture_dict:
-            mosaic_df = readinput.read_mosaic_df(buffer=0)
+            # the gsim_lt is read from the site_model.hdf5 file
+            mosaic_df = readinput.read_mosaic_df(buffer=1)
             lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
             sitemodel = oq.inputs.get('site_model', [''])[0]
@@ -604,6 +608,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 gsim_lt = logictree.GsimLogicTree.from_hdf5(
                     sitemodel, oq.mosaic_model,
                     oq.tectonic_region_type.encode('utf8'))
+        elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
+                and 'gmfs' not in oq.inputs):
+            raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
+                              oq.inputs['job_ini'])
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
@@ -674,7 +682,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
-            self.full_lt = dstore.parent['full_lt']
+            self.full_lt = dstore.parent['full_lt'].init()
             set_mags(oq, dstore)
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)
@@ -705,7 +713,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = (event_based if parallel.oq_distribute() == 'slurm'
+        eb = (event_based if ('station_data' in oq.inputs or
+                              parallel.oq_distribute() == 'slurm')
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
@@ -751,14 +760,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
-        imts = list(self.oqparam.imtls)
-        for imt in imts:
-            plt = plot_avg_gmf(self.datastore.calc_id, imt)
-            bio = io.BytesIO()
-            plt.savefig(bio, format='png', bbox_inches='tight')
-            fig_path = f'png/avg_gmf-{imt}.png'
-            logging.info(f'Saving {fig_path} into the datastore')
-            self.datastore[fig_path] = Image.open(bio)
+        # make avg_gmf plots only if running via the webui
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+            imts = list(self.oqparam.imtls)
+            for imt in imts:
+                plt = plot_avg_gmf(self.datastore.calc_id, imt)
+                bio = io.BytesIO()
+                plt.savefig(bio, format='png', bbox_inches='tight')
+                fig_path = f'png/avg_gmf-{imt}.png'
+                logging.info(f'Saving {fig_path} into the datastore')
+                self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam
@@ -777,3 +788,28 @@ class EventBasedCalculator(base.HazardCalculator):
                 msg = 'gmf_data has {:_d} rows'.format(size)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             build_hcurves(self)
+            if oq.compare_with_classical:  # compute classical curves
+                export_dir = os.path.join(oq.export_dir, 'cl')
+                if not os.path.exists(export_dir):
+                    os.makedirs(export_dir)
+                oq.export_dir = export_dir
+                oq.calculation_mode = 'classical'
+                with logs.init(vars(oq)) as log:
+                    self.cl = ClassicalCalculator(oq, log.calc_id)
+                    # TODO: perhaps it is possible to avoid reprocessing the
+                    # source model, however usually this is quite fast and
+                    # does not dominate the computation
+                    self.cl.run()
+                    engine.expose_outputs(self.cl.datastore)
+                    all = slice(None)
+                    for imt in oq.imtls:
+                        cl_mean_curves = get_mean_curve(
+                            self.datastore, imt, all)
+                        eb_mean_curves = get_mean_curve(
+                            self.datastore, imt, all)
+                        self.rdiff, index = util.max_rel_diff_index(
+                            cl_mean_curves, eb_mean_curves)
+                        logging.warning(
+                            'Relative difference with the classical '
+                            'mean curves: %d%% at site index %d, imt=%s',
+                            self.rdiff * 100, index, imt)

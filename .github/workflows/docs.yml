@@ -120,7 +120,7 @@ jobs:
           UPLOAD: ${{ github.event.inputs.git-ref }}
 
           # JUST TO TEST MULTI_DOCS
-          MULTI_DOCS_FOR_DEVEL: "true"
+          MULTI_DOCS_FOR_DEVEL: "false"
         run: |
           bash --version
           LTS_VER=$(grep '^Current LTS' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
@@ -380,7 +380,8 @@ jobs:
           # PAY ATTENTION: engine folder is 'doc', not 'docs'
           # cd doc && make html && make latexpdf
           cd doc && make html 2>&1 | tee full.log
-          grep WARNING < full.log > warnings.log
+          # NOTE: without '|| true' the action would fail if there are no warnings
+          grep WARNING < full.log > warnings.log || true
           echo
           echo "=== WARNINGS ==="
           echo

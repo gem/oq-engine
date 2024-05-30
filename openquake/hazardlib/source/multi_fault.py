@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
-
 import numpy as np
 from typing import Union
 
@@ -37,10 +36,12 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 U16 = np.uint16
+U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
 BLOCKSIZE = 5_000
 TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 # NB: if too large, very few sources will be generated and a lot of
 # memory will be used
 
@@ -109,7 +110,11 @@ class MultiFaultSource(BaseSeismicSource):
         """
         assert self.hdf5path
         with hdf5.File(self.hdf5path, 'r') as h5:
-            return h5[f'{self.source_id}/rupture_idxs'][:]
+            key = f'{self.source_id}/rupture_idxs'
+            try:
+                return h5[key][:]
+            except KeyError:
+                raise KeyError(f'{key} not found in {self.hdf5path}')
 
     def set_msparams(self, secparams, close_sec=None, ry0=False,
                      mon1=performance.Monitor(),
@@ -203,7 +208,8 @@ class MultiFaultSource(BaseSeismicSource):
                 srcid,
                 self.name,
                 self.tectonic_region_type,
-                [],
+                self._rupture_idxs[slc] if hasattr(
+                    self, '_rupture_idxs') else [],  # tested in test_ucerf
                 self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc],
@@ -249,23 +255,23 @@ def save(mfsources, sectiondict, hdf5path):
     """
     Utility to serialize MultiFaultSources and optionally computing msparams
     """
-    assert len(sectiondict) < TWO16, len(sectiondict)
+    assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
-    all_ridxs = []
+    all_rids = []
     for src in mfsources:
         try:
-            rids = [U16([s2i[idx] for idx in idxs])
+            rids = [U32([s2i[idx] for idx in idxs])
                     for idxs in src._rupture_idxs]
         except KeyError as exc:
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
-        all_ridxs.append(rids)
+        all_rids.append(rids)
         delattr(src, '_rupture_idxs')  # save memory
         src.hdf5path = hdf5path
 
     # store data
     with hdf5.File(hdf5path, 'w') as h5:
-        for src, rupture_idxs in zip(mfsources, all_ridxs):
+        for src, rupture_idxs in zip(mfsources, all_rids):
             for srcid, slc in src.gen_slices():
                 h5.save_vlen(f'{srcid}/rupture_idxs', rupture_idxs[slc])
                 h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]

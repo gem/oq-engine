@@ -49,7 +49,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -65,32 +65,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
-
-
-class Global:
-    """
-    Global variables to be reset at the end of each calculation/test
-    """
-    pmap = None
-    # set as side effect when the user reads hazard_curves from a file
-    # the hazard curves format does not split the site locations from the data
-    # (an unhappy legacy design choice that I fixed in the GMFs CSV format
-    # only) thus this hack is necessary, otherwise we would have to parse the
-    # file twice
-
-    exposure = None
-    # set as side effect when the user reads the site mesh; this hack is
-    # necessary, otherwise we would have to parse the exposure twice
-
-    gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
-    # populated when reading the gsim_logic_tree file; otherwise we would
-    # have to parse the file multiple times
-
-    @classmethod
-    def reset(cls):
-        cls.pmap = None
-        cls.exposure = None
-        cls.gsim_lt_cache.clear()
 
 
 class DuplicatedPoint(Exception):
@@ -226,6 +200,10 @@ def update(params, items, base_path):
                 assert len(fnames) in (0, 1)
                 for fname in fnames:
                     params['inputs'][input_type] = fname
+            else:
+                # remove the key if the value is empty
+                basekey, _file = key.rsplit('_', 1)
+                params['inputs'].pop(basekey, None)
         elif isinstance(value, str) and value.endswith('.hdf5'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
@@ -252,7 +230,7 @@ def check_params(cp, fname):
                 f'{fname}: parameter(s) {params_intersection} is(are) defined'
                 ' in multiple sections')
 
-
+        
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
 def get_params(job_ini, kw={}):
@@ -304,13 +282,12 @@ def get_params(job_ini, kw={}):
         fname = dic.pop('source_model_logic_tree_file')
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
-        items = list(dic.items())
+        items = dic.items()
     update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
     update(params, kw.items(), base_path)  # override on demand
-
     return params
 
 
@@ -372,33 +349,33 @@ def get_csv_header(fname, sep=','):
     return first, f
 
 
-def get_mesh(oqparam, h5=None):
+def get_mesh_exp(oqparam, h5=None):
     """
     Extract the mesh of points to compute from the sites,
     the sites_csv, the region, the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        a pair (mesh, exposure) both of which can be None
     """
-    if 'exposure' in oqparam.inputs and Global.exposure is None:
-        # read it only once
-        Global.exposure = get_exposure(oqparam, h5)
+    exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
-        return mesh
+        return mesh, exposure
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
-            mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
-            return mesh
+            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+            return mesh, exposure
         raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
-        elif Global.exposure:
+        elif exposure:
             # in case of implicit grid the exposure takes precedence over
             # the site model
-            poly = Global.exposure.mesh.get_convex_hull()
+            poly = exposure.mesh.get_convex_hull()
         elif 'site_model' in oqparam.inputs:
             # this happens in event_based/case_19, where there is an implicit
             # grid over the site model
@@ -412,7 +389,7 @@ def get_mesh(oqparam, h5=None):
             logging.info('Inferring the hazard grid')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
-            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
+            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats)), exposure
         except Exception:
             raise ValueError(
                 'Could not discretize region with grid spacing '
@@ -421,15 +398,13 @@ def get_mesh(oqparam, h5=None):
     # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
         logging.info('Extracting the hazard sites from the site model')
-        sm = get_site_model(oqparam)
-        if h5:
-            h5['site_model'] = sm
+        sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
-        mesh = Global.exposure.mesh
+        mesh = exposure.mesh
     else:
         mesh = None
-    return mesh
+    return mesh, exposure
 
 
 def get_poor_site_model(fname):
@@ -450,82 +425,99 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
+    hypo = rup.hypocenter
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
     idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
 
-def get_site_model(oqparam):
+def _smparse(fname, oqparam, arrays, sm_fieldsets):
+    # check if the file is a list of lon,lat without header
+    with open(fname, encoding='utf-8-sig') as f:
+        lon, *rest = next(f).split(',')
+        try:
+            valid.longitude(lon)
+        except ValueError:  # has a header
+            sm = hdf5.read_csv(fname, site.site_param_dt).array
+        else:
+            sm = get_poor_site_model(fname)
+
+    sm_fieldsets[fname] = set(sm.dtype.names)
+    # make sure site_id starts from 0, if given
+    if 'site_id' in sm.dtype.names:
+        if (sm['site_id'] != numpy.arange(len(sm))).any():
+            raise InvalidFile('%s: site_id not sequential from zero'
+                              % fname)
+
+    # round coordinates and check for duplicate points
+    sm['lon'] = numpy.round(sm['lon'], 5)
+    sm['lat'] = numpy.round(sm['lat'], 5)
+    dupl = get_duplicates(sm, 'lon', 'lat')
+    if dupl:
+        raise InvalidFile(
+            'Found duplicate sites %s in %s' % (dupl, fname))
+
+    # used global parameters is local ones are missing
+    params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
+    z = numpy.zeros(
+        len(sm), [(p, site.site_param_dt[p]) for p in params])
+    for name in z.dtype.names:
+        try:
+            z[name] = sm[name]
+        except ValueError:  # missing, use the global parameter
+            # exercised in the test classical/case_28_bis
+            z[name] = check_site_param(oqparam, name)
+    arrays.append(z)
+
+
+def check_site_param(oqparam, name):
+    """
+    Extract the value of the given parameter
+    """
+    longname = site.param[name]  # vs30 -> reference_vs30_value
+    value = getattr(oqparam, longname, None)
+    if value is None:
+        raise InvalidFile('Missing site_model_file specifying the parameter %s'
+                          % name)
+    if isinstance(value, float) and numpy.isnan(value):
+        raise InvalidFile(
+            f"{oqparam.inputs['job_ini']}: "
+            f"{site.param[name]} not specified")
+    elif name == 'vs30measured':  # special case
+        value = value == 'measured'
+    return value
+
+
+def get_site_model(oqparam, h5=None):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    if h5 and 'site_model' in h5:
+        return h5['site_model'][:]
+
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
-        rup = oqparam.rupture_dict
+        rup = get_rupture(oqparam)
         # global site model close to the rupture
-        dist = oqparam.maximum_distance('*')(rup['mag'])
+        dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
-    req_site_params = get_gsim_lt(oqparam).req_site_params
-    if 'amplification' in oqparam.inputs:
-        req_site_params.add('ampcode')
     arrays = []
     sm_fieldsets = {}
     for fname in fnames:
         if isinstance(fname, str) and not fname.endswith('.xml'):
-
-            # check if the file is a list of lon,lat without header
-            with open(fname, encoding='utf-8-sig') as f:
-                lon, *rest = next(f).split(',')
-                try:
-                    valid.longitude(lon)
-                except ValueError:  # has a header
-                    sm = hdf5.read_csv(fname, site.site_param_dt).array
-                else:
-                    sm = get_poor_site_model(fname)
-
-            sm_fieldsets[fname] = set(sm.dtype.names)
-            # make sure site_id starts from 0, if given
-            if 'site_id' in sm.dtype.names:
-                if (sm['site_id'] != numpy.arange(len(sm))).any():
-                    raise InvalidFile('%s: site_id not sequential from zero'
-                                      % fname)
-
-            # round coordinates and check for duplicate points
-            sm['lon'] = numpy.round(sm['lon'], 5)
-            sm['lat'] = numpy.round(sm['lat'], 5)
-            dupl = get_duplicates(sm, 'lon', 'lat')
-            if dupl:
-                raise InvalidFile(
-                    'Found duplicate sites %s in %s' % (dupl, fname))
-
-            # used global parameters is local ones are missing
-            params = sorted(set(sm.dtype.names) | req_site_params)
-            z = numpy.zeros(
-                len(sm), [(p, site.site_param_dt[p]) for p in params])
-            for name in z.dtype.names:
-                try:
-                    z[name] = sm[name]
-                except ValueError:  # missing, use the global parameter
-                    # exercised in the test classical/case_28
-                    value = getattr(oqparam, site.param[name])
-                    if isinstance(value, float) and numpy.isnan(value):
-                        raise InvalidFile(
-                            f"{oqparam.inputs['job_ini']}: "
-                            f"{site.param[name]} not specified")
-                    if name == 'vs30measured':  # special case
-                        value = value == 'measured'
-                    z[name] = value
-            arrays.append(z)
+            # parsing site_model.csv and populating arrays
+            _smparse(fname, oqparam, arrays, sm_fieldsets)
             continue
 
+        # parsing site_model.xml
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
-        missing = req_site_params - set(params[0])
+        missing = set(oqparam.req_site_params) - set(params[0])
         if 'vs30measured' in missing:  # use a default of False
             missing -= {'vs30measured'}
             for param in params:
@@ -569,20 +561,10 @@ def get_site_model(oqparam):
                     f'Fields {fieldsets_diff} present in'
                     f' {this_sm_fname} were not found in {other_sm_fname}')
 
-    return numpy.concatenate(arrays, dtype=arrays[0].dtype)
-
-
-def get_no_vect(gsim_lt):
-    """
-    :returns: the names of the non-vectorized GMPEs
-    """
-    names = set()
-    for gsims in gsim_lt.values.values():
-        for gsim in gsims:
-            compute = getattr(gsim.__class__, 'compute')
-            if 'ctx' not in compute.__annotations__:
-                names.add(gsim.__class__.__name__)
-    return names
+    sm = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    if h5:
+        h5['site_model'] = sm
+    return sm
 
 
 def get_site_collection(oqparam, h5=None):
@@ -595,29 +577,33 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
-    mesh = get_mesh(oqparam, h5)
+    mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
-        return
+        return None
     else:  # use the default site params
         if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
                 or 'shakemap' in oqparam.inputs):
             req_site_params = set()   # no parameters are required
         else:
-            req_site_params = get_gsim_lt(oqparam).req_site_params
-        if 'amplification' in oqparam.inputs:
-            req_site_params.add('ampcode')
+            req_site_params = oqparam.req_site_params
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
             sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
-            sm = get_site_model(oqparam)
+            sm = get_site_model(oqparam, h5)
             if len(sm) > len(mesh):  # the association will happen in base.py
                 sm = oqparam
+        elif 'site_model' not in oqparam.inputs:
+            # check the required site parameters are not NaN
+            sm = oqparam
+            for req_site_param in req_site_params:
+                if req_site_param in site.param:
+                    check_site_param(oqparam, req_site_param)
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
@@ -652,6 +638,7 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+    sitecol.exposure = exp
     return sitecol
 
 
@@ -670,9 +657,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
         return logictree.GsimLogicTree.from_(oqparam.gsim)
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    key = (gsim_file,) + tuple(sorted(trts))
-    if key in Global.gsim_lt_cache:
-        return Global.gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -701,34 +685,30 @@ def get_gsim_lt(oqparam, trts=('*',)):
     if oqparam.collapse_gsim_logic_tree:
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
-    Global.gsim_lt_cache[key] = gsim_lt
-    if trts != ('*',):  # not in get_input_files
-        no_vect = get_no_vect(gsim_lt)
-        if no_vect:
-            logging.info('The following GMPEs are not vectorized: %s', no_vect)
     return gsim_lt
 
 
 def get_rupture(oqparam):
     """
-    Read the `rupture_model` XML file and by filter the site collection
+    Read the `rupture_model` XML file or the `rupture_dict` dictionary
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an hazardlib rupture
     """
-    if oqparam.rupture_dict:
+    rupture_model = oqparam.inputs.get('rupture_model')
+    if rupture_model:
+        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
+    else:  # assume rupture_dict
         r = oqparam.rupture_dict
         hypo = Point(r['lon'], r['lat'], r['dep'])
         rup = source.rupture.build_planar(
             hypo, r['mag'], r.get('rake'),
             r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
-    else:
-        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
-        rup = conv.convert_node(rup_node)
-        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
     return rup
 
 
@@ -769,12 +749,13 @@ def get_full_lt(oqparam):
         elif trt.lower() not in trts_lower:
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    if len(oqparam.source_id) == 1:
-        oversampling = 'reduce-rlzs'
-    else:
-        oversampling = oqparam.oversampling
+    oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+
+    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
+        raise ValueError('use_rates=true cannot be used with imtWeight')
+
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
@@ -787,11 +768,11 @@ def get_full_lt(oqparam):
                                      len(unique)))
     else:  # full enumeration
         logging.info('There are {:_d} logic tree paths(s)'.format(p))
-        if oqparam.hazard_curves and p > oqparam.max_potential_paths:
+        if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set hazard_curves=false ' % p)
+                'full enumeration, or set use_rates=true ' % p)
         elif (oqparam.is_event_based() and
               (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
                 and p > oqparam.max_potential_paths / 100):
@@ -865,8 +846,10 @@ def get_composite_source_model(oqparam, dstore=None):
          an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
-    full_lt = get_full_lt(oqparam)
-    path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
+    h5 = dstore.hdf5 if dstore else None
+    with Monitor('building full_lt', measuremem=True, h5=h5) :
+        full_lt = get_full_lt(oqparam)  # builds the weights
+    path = get_cache_path(oqparam, h5)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
         with datastore.read(os.path.realpath(path)) as ds:
@@ -966,13 +949,15 @@ def get_exposure(oqparam, h5=None):
         an :class:`Exposure` instance or a compatible AssetCollection
     """
     oq = oqparam
+    if 'exposure' not in oq.inputs:
+        return
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
             # reading the assets around a rupture
-            sm = get_site_model(oq)
+            sm = get_site_model(oq, h5)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = Global.exposure = asset.Exposure.read_around(
+            exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
@@ -980,7 +965,7 @@ def get_exposure(oqparam, h5=None):
                     oq.all_cost_types = loss_types
                     oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
-            exposure = Global.exposure = asset.Exposure.read_all(
+            exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
                 oq.ignore_missing_costs,
                 errors='ignore' if oq.ignore_encoding_errors else None,
@@ -1041,12 +1026,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
-    exp = Global.exposure
-    if exp is None or oqparam.countries:  # not read already
-        exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+    try:
+        exp = haz_sitecol.exposure
+    except AttributeError:
+        exp = get_exposure(oqparam)
+
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
@@ -1100,7 +1087,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
             # tested in scenario_risk/test_case_8
             gh = sitecol.complete.geohash(8)
             sitecol.complete.add_col('custom_site_id', 'S8', gh)
-    return sitecol, assetcol, discarded
+    return sitecol, assetcol, discarded, exp
 
 
 def levels_from(header):
@@ -1197,6 +1184,20 @@ def _taxonomy_mapping(filename, taxdic):
     return out
 
 
+def assert_probabilities(array, fname):
+    """
+    Check that the array contains valid probabilities
+    """
+    for poe_field in (f for f in array.dtype.names if f.startswith('poe-')):
+        arr = array[poe_field]
+        if (arr > 1).any():
+            raise InvalidFile('%s: contains probabilities > 1: %s' %
+                              (fname, arr[arr > 1]))
+        if (arr < 0).any():
+            raise InvalidFile('%s: contains probabilities < 0: %s' %
+                              (fname, arr[arr < 0]))
+
+
 def get_pmap_from_csv(oqparam, fnames):
     """
     :param oqparam:
@@ -1209,7 +1210,9 @@ def get_pmap_from_csv(oqparam, fnames):
     read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     imtls = {}
     dic = {}
-    for wrapper in map(read, fnames):
+    for fname in fnames:
+        wrapper = read(fname)
+        assert_probabilities(wrapper.array, fname)
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
@@ -1228,9 +1231,9 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    Global.pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
-    Global.pmap.array = data.reshape(N, L, 1)
-    return mesh, Global.pmap
+    pmap = MapArray(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap.array = data.reshape(N, L, 1)
+    return mesh, pmap
 
 
 tag2code = {'multiFaultSource': b'F',
@@ -1376,7 +1379,7 @@ def get_reinsurance(oqparam, assetcol=None):
     :returns: (policy_df, treaty_df, field_map)
     """
     if assetcol is None:
-        sitecol, assetcol, discarded = get_sitecol_assetcol(oqparam)
+        sitecol, assetcol, discarded, exp = get_sitecol_assetcol(oqparam)
     [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
     # make sure the first aggregate by is policy
     if oqparam.aggregate_by[0] != ['policy']:
@@ -1521,7 +1524,7 @@ def read_geometries(fname, code, buffer=0):
     return pandas.DataFrame(dict(code=codes, geom=geoms))
 
 
-def read_mosaic_df(buffer=0.1):
+def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """

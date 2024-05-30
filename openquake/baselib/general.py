@@ -30,6 +30,7 @@ import socket
 import random
 import atexit
 import zipfile
+import logging
 import builtins
 import operator
 import warnings
@@ -486,6 +487,64 @@ def engine_version():
             # may not work properly
 
     return __version__ + gh
+
+
+def extract_dependencies(lines):
+    for line in lines:
+        longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
+        try:
+            pkg, version, *other = longname.split('-')
+        except ValueError:  # for instance a comment
+            continue
+        if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
+                   'python_pam'):
+            # not importable
+            continue
+        if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
+                   'importlib_metadata', 'zipp'):
+            # missing __version__
+            continue
+        elif pkg == 'pyzmq':
+            pkg = 'zmq'
+        elif pkg == 'Pillow':
+            pkg = 'PIL'
+        elif pkg == 'GDAL':
+            pkg = 'osgeo.gdal'
+        elif pkg == 'Django':
+            pkg = 'django'
+        elif pkg == 'pyshp':
+            pkg = 'shapefile'
+        yield pkg, version
+
+    
+def check_dependencies():
+    """
+    Print a warning if we forgot to update the dependencies.
+    Works only for development installations.
+    """
+    import openquake
+    if 'site-packages' in openquake.__path__[0]:
+        return  # do nothing for non-devel installations
+    pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
+    system = sys.platform
+    if system == 'linux':
+        system = 'linux64'
+    elif system == 'win32':
+        system = 'win64'
+    elif system == 'darwin':
+        system = 'macos_arm64'
+    else:
+        # unsupported OS, do not check dependencies
+        return
+    reqfile = 'requirements-py%s-%s.txt' % (pyver, system)
+    repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    with open(os.path.join(repodir, reqfile)) as f:
+        lines = f.readlines()
+    for pkg, expected in extract_dependencies(lines):
+        version = __import__(pkg).__version__
+        if version != expected:
+            logging.warning('%s is at version %s but the requirements say %s' %
+                            (pkg, version, expected))
 
 
 def run_in_process(code, *args):
@@ -1529,6 +1588,30 @@ def agg_probs(*probs):
     return 1. - acc
 
 
+class Param:
+    """
+    Container class for a set of parameters with defaults
+
+    >>> p = Param(a=1, b=2)
+    >>> p.a = 3
+    >>> p.a, p.b
+    (3, 2)
+    >>> p.c = 4
+    Traceback (most recent call last):
+      ...
+    AttributeError: Unknown parameter c
+    """
+    def __init__(self, **defaults):
+        for k, v in defaults.items():
+            self.__dict__[k] = v
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__:
+            object.__setattr__(self, name, value)
+        else:
+            raise AttributeError('Unknown parameter %s' % name)
+
+
 class RecordBuilder(object):
     """
     Builder for numpy records or arrays.
@@ -1658,3 +1741,35 @@ def decompress(cbytes):
     gunzip compressed bytes into a Python object
     """
     return pickle.loads(zlib.decompress(cbytes))
+
+# ########################### dumpa/loada ############################## #
+
+# the functions below as useful to avoid data transfer, to be used as
+
+# smap.share(arr=dumpa(big_object))
+
+# and then in the workers
+
+# with monitor.shared['arr'] as arr:
+#      big_object = loada(arr)
+
+def dumpa(obj):
+    """
+    Dump a Python object as an array of uint8:
+
+    >>> dumpa(23)
+    array([128,   5,  75,  23,  46], dtype=uint8)
+    """
+    buf = memoryview(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return numpy.ndarray(len(buf), dtype=numpy.uint8, buffer=buf)
+
+
+def loada(arr):
+    """
+    Convert an array of uint8 into a Python object:
+
+    >>> loada(numpy.array([128, 5, 75, 23, 46], numpy.uint8))
+    23
+    """
+    return pickle.loads(bytes(arr))
+    

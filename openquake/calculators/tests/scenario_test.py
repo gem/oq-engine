@@ -22,10 +22,11 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_26, case_27, case_28, case_29, case_30, case_31)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 
@@ -76,6 +77,19 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_2(self):
         medians = self.medians(case_2)['PGA']
         aae(medians, [0.37412136, 0.19021782, 0.1365383], decimal=2)
+
+    def test_case_2_bis(self):
+        # consider 2 different error situations
+
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_2.__file__, 'job.ini', gsim='')
+        self.assertIn('Missing gsim or gsim_logic_tree_file',
+                      str(ctx.exception))
+
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_2.__file__, 'job_wrong.ini')
+        self.assertIn('missing gsim or gsim_logic_tree_file',
+                      str(ctx.exception))
 
     def test_case_3(self):
         medians_dict = self.medians(case_3)
@@ -216,6 +230,10 @@ class ScenarioTestCase(CalculatorTestCase):
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
 
+        # check that stations are discarded when extracting avg_gmf
+        aw = extract(self.calc.datastore, 'avg_gmf?imt=PGA')
+        self.assertEqual(len(aw.PGA), 571)
+
     def test_case_21_different_columns_stations(self):
         # conditioned gmfs
         with self.assertRaises(InvalidFile) as ctx:
@@ -261,8 +279,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(ds['gmf_data/sid']), 40)
         df1 = self.calc.datastore.read_df('gmf_data')
         for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
-            for g1, g2 in zip(df0[gmv], df1[gmv]):
-                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
+            for g0, g1 in zip(df0[gmv], df1[gmv]):
+                assert abs(g0-g1) < 5E-6, (gmv, g0, g1)
 
     def test_case_23(self):
         # check exposure with duplicates
@@ -322,3 +340,8 @@ class ScenarioTestCase(CalculatorTestCase):
         # reading a multisurface mesh with non-homogeneous sizes
         self.run_calc(case_31.__file__, 'job.ini')
 
+    def test_case_32(self):
+        # CanadaSHM6 GMPEs with ModifiableGMPE
+        self.run_calc(case_32.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

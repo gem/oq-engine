@@ -251,7 +251,7 @@ Ground Motion Fields.::
 	calculation_mode = scenario_damage
 	
 	[hazard]
-	gmfs_file = gmfs.xml
+	gmfs_file = gmfs.csv
 	
 	[exposure]
 	exposure_file = exposure_model.xml
@@ -499,11 +499,6 @@ After the calculation is completed, a message similar to the following will be d
 
 All of the different ways of running a scenario damage calculation as illustrated through the examples of the previous 
 section are also applicable to the scenario risk calculator, though the examples are not repeated here.
-
-A few additional parameters related to the event based risk calculator that may be useful for controlling specific 
-aspects of the calculation are listed below:
-
-- ``ignore_covs``: this parameter controls the propagation of vulnerability uncertainty to losses. The vulnerability functions using continuous distributions (such as the lognormal distribution or beta distribution) to characterize the uncertainty in the loss ratio conditional on the shaking intensity level, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels. They are used to build the so called *Epsilon* matrix within the engine, which is how loss ratios are sampled from the distribution for each asset. There is clearly a performance penalty associated with the propagation of uncertainty in the vulnerability to losses. The *Epsilon* matrix has to be computed and stored, and then the worker processes have to read it, which involves large quantities of data transfer and memory usage. Setting ``ignore_covs = true`` in the job file will result in the engine using just the mean loss ratio conditioned on the shaking intensity and ignoring the uncertainty. This tradeoff of not propagating the vulnerabilty uncertainty to the loss estimates can lead to a significant boost in performance and tractability. The default value of ``ignore_covs`` is ``false``.
 
 .. _classical-psd-calculator:
 
@@ -1035,6 +1030,50 @@ By default, all event-based damage and risk calculations include the EP curves.
 
 _NOTE:_ When the calculation includes reinsurance treaties, the reinsurance curves (aggregated loss curves for retention, 
 claim, cession per treaty and overspills) are also estimated for OEP and AEP.
+
+**Post loss amplification (PLA)**
+
+Post-loss amplification (PLA) refers to the phenomenon where the demand for goods and services increases significantly 
+following an earthquake or other catastrophe. This surge in demand typically occurs when the impact exceeds 
+the local capacity to cope with the disaster and increases the costs for reconstruction, repair, and 
+replacement of damaged or destroyed infrastructure and belongings.
+Starting from engine v3.20, it is possible to export aggregated loss curves that include post-loss amplification factors. 
+
+The post-loss amplification (PLA) is typically modelled using an empirical relationship that correlates with 
+the return period of the ground-up economic loss. In OpenQuake, the PLA models only apply to 
+event-based risk or event-based damage calculations that incorporate economic losses 
+(i.e., loss_types structural, nonstructural, and contents, as well as the total_losses if present in the calculation).
+
+To include post-loss amplification in the calculation, the user can specify the parameter ``post_loss_amplification_file`` 
+in the configuration file, providing the name of the file containing the amplification model in CSV format::
+
+	[risk_calculation]
+	post_loss_amplification_file = pla_model.csv
+
+
+The amplification model is a CSV file with two columns ``return_period`` and ``pla_factor`` respectivly, with all values 
+as positive floats. The PLA model will utilize linear interpolation as needed. If the return period associated with the loss 
+falls below the minimum value specified in the PLA model, a pla_factor of 1 will be assigned. 
+Conversely, if the return period associated with the loss exceeds the maximum value specified in the PLA model, 
+the pla_factor corresponding to the maximum return period in the model will be applied.
+
+An example of a PLA input model is presented in the table below.
+
+.. _pla_model.csv:
+.. table:: Example of a post-loss amplification (PLA) inout model
+
+	+---------------+------------+
+	| return_period | pla_factor |
+	+===============+============+
+	| 1             | 1          |
+	| 5             | 1          |
+	| 10            | 1.092      |
+	| 50            | 1.1738     |
+	| 100           | 1.209      |
+	| 500           | 1.2908     |
+	| 1,000         | 1.326      |
+	| 5,000         | 1.4        |
+	+---------------+------------+
 
 
 **************************************

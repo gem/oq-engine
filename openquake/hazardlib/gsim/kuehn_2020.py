@@ -571,18 +571,22 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
         # Extend for extreme periods as needed
         if np.any(imt.period > model["periods"][-1]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]), axis=2)
+                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
+                axis=2)
             model_t = np.concatenate((model_t, [imt.period.max()]), axis=0)
         if np.any(imt.period < model["periods"][0]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model), axis=2)
+                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
+                axis=2)
             model_t = np.concatenate(([imt.period.min()], model_t), axis=0)
 
         # Linear interpolation
         interp = RegularGridInterpolator(
-            (model_m, model_r, np.log(model_t)), sigma_mu_model, bounds_error=True,)
+            (model_m, model_r, np.log(model_t)), sigma_mu_model,
+            bounds_error=True,)
         sigma_mu = interp(
-            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)), axis=1))
+            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)),
+                     axis=1))
 
     return sigma_mu
 
@@ -666,8 +670,7 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -689,7 +692,7 @@ class KuehnEtAl2020SInter(GMPE):
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
-            self.gmpe_table = True  # enable split by mag
+            self.gmpe_table = None  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:

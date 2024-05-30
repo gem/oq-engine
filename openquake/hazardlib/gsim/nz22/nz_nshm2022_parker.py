@@ -206,7 +206,6 @@ def get_sigma_epistemic(trt, region, imt):
     we are using only the global model.  Henec below the coefficients
     are just for the global model.
     """
-
     if region is None:
         if trt == const.TRT.SUBDUCTION_INTRASLAB:
             sigma_epsilon1 = 0.35
@@ -285,7 +284,6 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     Implements NZ NSHM 2022 Soil nonlinearity sigma model modification
     of ParkerEtAl2020SInter for NZ NSHM 2022.
     """
-
     def __init__(
         self,
         region=None,
@@ -293,20 +291,13 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
         basin=None,
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
-        **kwargs,
     ):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
         super().__init__(
-            region=region,
-            saturation_region=saturation_region,
-            basin=basin,
-            sigma_mu_epsilon=sigma_mu_epsilon,
-            modified_sigma=modified_sigma,
-            **kwargs,
-        )
+            region=region,  saturation_region=saturation_region, basin=basin)
         self.modified_sigma = modified_sigma
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -345,7 +336,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             )
             fp_pga = (
                 fp_pga + get_backarc_term(trt, PGA(), ctx)
-            )  # The backarc term applied to path function for reference rock PGA.
+            )  # backarc term applied to path function for reference rock PGA
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
             fb = _basin_term(self.region, self.basin, C, ctx)
@@ -355,7 +346,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             )
             fba = get_backarc_term(
                 trt, imt, ctx
-            )  # The backarc correction factor from BC Hydro at individual period.
+            )  # backarc correction factor from BC Hydro at individual period
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
@@ -366,11 +357,12 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                 mean[m] += self.sigma_mu_epsilon * get_sigma_epistemic(
                     trt, self.region, imt
                 )
-            # The default sigma is modified sigma that accounts for soil nonliearity.
+            # The default sigma is modified sigma that accounts for soil
+            # nonlinearity
             if self.modified_sigma:
                 pgar = np.exp(
                     fp_pga + fm_pga + c0_pga + fd_pga
-                )  # Note that the backarc correction is already applied in f_pga.
+                )  # the backarc correction is already applied in f_pga
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
                     C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30
                 )

@@ -1,12 +1,12 @@
-## Continuous integration and testing for OpenQuake
+# Continuous integration and testing for OpenQuake
 
-### Automatic testing
+## Automatic testing
 
 The OpenQuake code is automatically tested by Continuous integration systems (GitHub and GitLab Actions), at every merge and every night.
 
-### Manual testing
+## Manual testing
 
-The full suite of tests for the OpenQuake Engine can be run using `pytest` from [**source code**](installing/development.md):
+The full suite of tests for the OpenQuake Engine can be run using `pytest` from [**source code**](../getting-started/installation-instructions/development.rst):
 
 ```bash
 $ oq dbserver upgrade
@@ -32,5 +32,5 @@ See the `pytest` [documentation](https://docs.pytest.org/en/latest/contents.html
 
 ***
 
-## Getting help
+# Getting help
 If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users

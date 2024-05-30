@@ -29,6 +29,7 @@ from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
+from openquake.hazardlib.geo.utils import SiteAssociationError
 
 U8 = numpy.uint8
 U32 = numpy.uint32
@@ -564,6 +565,7 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('type', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
+
 # The fields in the exposure are complicated. For the global
 # risk model you will have things like the following:
 # fields = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
@@ -749,7 +751,8 @@ def assets2df(asset_nodes, fields, ignore_missing_costs):
                     rec[field] = asset[cost]
                 except KeyError:
                     if cost not in ignore_missing_costs:
-                        raise
+                        raise KeyError('Missing type="%s" for asset %s' %
+                                       (cost, rec['id']))
             else:
                 rec[field] = asset.attrib.get(field, '?')
     return pandas.DataFrame({f: array[f] for f, dt in dtlist}).set_index('id')
@@ -932,6 +935,9 @@ class Exposure(object):
             exp = f['exposure']
             sbg = f['assets/slice_by_gh3'][:]
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
+            if len(slices) == 0:
+                raise SiteAssociationError(
+                    'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
                 aristotle_read_assets(f, countries, start, stop)
                 for gh3, start, stop in slices)
@@ -1030,7 +1036,8 @@ class Exposure(object):
         ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
         assets_df['site_id'] = sids
         mesh = geo.Mesh(ll[:, 0], ll[:, 1])
-        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
+        logging.info(
+            'Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
         names = set(assets_df.columns)
         # vfields can be ['value-business_interruption', 'value-contents',

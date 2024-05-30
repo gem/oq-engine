@@ -9,7 +9,7 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-            <h2>Outputs from calculation {{ calc_id }}</h2>
+            <h2>Outputs from calculation {{ calc_id }}: {{ description }}</h2>
             {% if warnings %}
             <div id="warning-box" class="alert alert-warning" style=>
                 WARNING: {{ warnings }}
@@ -22,14 +22,21 @@
                 View advanced outputs page</a>
             </div>
             {% endcomment %}
-            <div class="outputs-general-btns-center">
+            <div class="outputs-general-btns-left">
               {% for img in avg_gmf %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
                   Show average GMF - {{ img|get_imt }}</a>
               </div>
               {% endfor %}
+              {% if assets %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
+                  Show assets</a>
+              </div>
+              {% endif %}
             </div>
+            <div class="outputs-general-btns-center"></div>
             <div class="outputs-general-btns-right">
               <div id="my-datastore">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
@@ -46,28 +53,36 @@
 
   {% block templates %}
   <script type="text/template" id="output-table-template">
-    <table id="aristotle-losses">
-      <thead>
-        <tr>
-          {% for header in losses_header %}
-            <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      {% for row in losses %}
-        <tr {% if forloop.last %}style="border-top: 2px solid black;"{% endif%}>
-          {% for item in row %}
-            <td {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>
-              {% if item|stringformat:"s"|floatformat %}
-                {{ item|stringformat:"s"|floatformat:"2" }}
-              {% else %}
-                {{ item|stringformat:"s" }}
-              {% endif %}
-            </td>
-          {% endfor %}
-        </tr>
-      {% endfor %}
-    </table>
+    <div class="aristotle-losses-container">
+      <table id="aristotle-losses">
+        <thead>
+          <tr>
+            {% for header in losses_header %}
+              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in losses %}
+          <tr {% if forloop.last %}style="border-top: 2px solid black;"{% endif%}>
+            {% for item in row %}
+              <td {% if forloop.counter == 2 %}style="border-right: 2px solid black; text-align: left;"{% else %}style="text-align: right;"{% endif %}>
+                {% if item|stringformat:"s"|floatformat %}
+                  {% if forloop.counter == 2 %}
+                  {{ item|floatformat:"6" }}
+                  {% else %}
+                  {{ item|floatformat:"2g" }}
+                  {% endif %}
+                {% else %}
+                  {{ item|stringformat:"s" }}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
     <div id="aristotle-losses-download">
       <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aggrisk" class="btn btn-sm output-action-btn">Download csv</a>
     </div>
@@ -77,6 +92,7 @@
         <tr>
           <th>ID</th>
           <th style="width: 500px;">Name</th>
+          <th>Type</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -92,6 +108,7 @@
             <%= output.get('name') %>
             <p style="clear:both;"></p>
           </td>
+          <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>
           <td>
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
@@ -99,7 +116,7 @@
               <%   return; // works like continue in underscore.js %>
               <% }%>
               <tr>
-                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
+                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm output-action-btn">Download <%= outtype %></a></td>
               </tr>
             <% }); %>
             </table>

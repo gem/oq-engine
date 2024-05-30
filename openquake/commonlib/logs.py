@@ -41,7 +41,7 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(readinput.read_mosaic_df().code)
+        MODELS.extend(readinput.read_mosaic_df(buffer=.1).code)
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR

@@ -717,7 +717,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):  # vulnerability
                     iml[rf.imt].append(rf.imls[0])
-        if sum(oq.minimum_intensity.values()) == 0 and iml:
+        if oq.aristotle:
+            pass  # don't set minimum_intensity
+        elif sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
 
     def eid_dmg_dt(self):

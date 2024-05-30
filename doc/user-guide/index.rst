@@ -9,7 +9,7 @@ several sections, each of which is intended to provide a detailed description
 of a specific aspect of the engine. 
 
 The first section, :ref:`workflows`, describes the various calculation workflows 
-that are curently supported by the OpenQuake engine. 
+that are currently supported by the OpenQuake engine. 
 
 The second section, :ref:`input-models`, describes the input models that are required
 to run various OpenQuake engine calculations and their file formats. 
@@ -44,5 +44,4 @@ oq commands.
    advanced-calculations
    working-with-the-dstore
    useful-oq-commands
-   faq
    extras/index

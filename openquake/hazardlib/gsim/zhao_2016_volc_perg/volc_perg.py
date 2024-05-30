@@ -47,9 +47,10 @@ def discretise_lines(ctx):
 
 def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
     """
-    Find the intercepts of the line from each rupture surface to each site within
-    each volcanic zone polygon (if present) and returns the distance traversed
-    per polygon
+    Find the intercepts of the line from each rupture surface to each site
+    within each volcanic zone polygon (if present) and returns the distance
+    traversed per polygon.
+
     :param l_mesh:
         l_mesh: Dict of meshes representing the line from each rupture to
         each site
@@ -109,7 +110,8 @@ def get_total_rvolc_per_path(r_zone_path, pgn_store):
         used to construct each polygon
     """
     # Stack dist per zone per path
-    r_values = np.stack([list(r_zone_path[path].values()) for path in r_zone_path])
+    r_values = np.stack([list(r_zone_path[path].values())
+                         for path in r_zone_path])
 
     # Sum over zones to get total r per path
     rvolc_per_path = r_values.sum(axis = 1)

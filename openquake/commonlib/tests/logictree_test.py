@@ -1335,6 +1335,14 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
         self.assertEqual(self.point_source.mfd.b_val, 0.9 - 0.2)
 
+    def test_relative_mmax_no_balance(self):
+        a_val = self.point_source.mfd.a_val
+        uncertainties = [('maxMagGRRelativeNoMoBalance', +1)]
+        for utype, uvalue in uncertainties:
+            lt.apply_uncertainty(utype, self.point_source, uvalue)
+        self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
+        self.assertEqual(self.point_source.mfd.a_val, a_val)
+
     def test_absolute_uncertainty(self):
         uncertainties = [('maxMagGRAbsolute', 9),
                          ('abGRAbsolute', (-1, 0.2))]
@@ -1411,30 +1419,6 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             edges=edges, rake=90.0)
 
-    def _make_planar_surface(self, planes):
-        surfaces = []
-        for plane in planes:
-            top_left = geo.Point(plane[0, 0], plane[0, 1], plane[0, 2])
-            top_right = geo.Point(plane[1, 0], plane[1, 1], plane[1, 2])
-            bottom_right = geo.Point(plane[2, 0], plane[2, 1], plane[2, 2])
-            bottom_left = geo.Point(plane[3, 0], plane[3, 1], plane[3, 2])
-            surfaces.append(geo.PlanarSurface.from_corner_points(
-                top_left, top_right, bottom_right, bottom_left))
-
-        if len(surfaces) > 1:
-            return geo.MultiSurface(surfaces)
-        else:
-            return surfaces[0]
-
-    def _make_characteristic_fault_source(self, surface):
-        return openquake.hazardlib.source.CharacteristicFaultSource(
-            source_id="CHARFLT0", name="Characteristic Fault",
-            tectonic_region_type="Active Shallow Crust",
-            mfd=EvenlyDiscretizedMFD(min_mag=7.0, bin_width=0.1,
-                                     occurrence_rates=[0.01]),
-            temporal_occurrence_model=PoissonTOM(50.),
-            surface=surface, rake=90)
-
     def test_simple_fault_dip_relative_uncertainty(self):
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         new_fault_source = deepcopy(self.fault_source)
@@ -1450,109 +1434,24 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         self.assertAlmostEqual(new_fault_source.dip, 55.)
 
     def test_simple_fault_geometry_uncertainty(self):
-        new_fault_source = deepcopy(self.fault_source)
-        new_trace = geo.Line([geo.Point(30.5, 30.0), geo.Point(31.2, 30.)])
-        new_dip = 50.
-        new_lsd = 12.
-        new_usd = 1.
-        utype, uvalue = ('simpleFaultGeometryAbsolute',
-                         (new_trace, new_usd, new_lsd, new_dip, 1.0))
-        lt.apply_uncertainty(utype, new_fault_source, uvalue)
-        self.assertEqual(new_fault_source.fault_trace, new_trace)
-        self.assertAlmostEqual(new_fault_source.upper_seismogenic_depth, 1.)
-        self.assertAlmostEqual(new_fault_source.lower_seismogenic_depth, 12.)
-        self.assertAlmostEqual(new_fault_source.dip, 50.)
+        # tested in logictree/case_20
+        pass
 
     def test_complex_fault_geometry_uncertainty(self):
-        top_edge = geo.Line([geo.Point(30.0, 30.1, 0.0),
-                             geo.Point(31.0, 30.1, 1.0)])
-        bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                geo.Point(31.0, 30.0, 9.0)])
-        fault_source = self._make_complex_fault_source([top_edge, bottom_edge],
-                                                       2.0)
-        new_top_edge = geo.Line([geo.Point(30.0, 30.2, 0.0),
-                                 geo.Point(31.0, 30.2, 0.0)])
-        new_bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                    geo.Point(31.0, 30.0, 10.0)])
-
-        utype, uvalue = ('complexFaultGeometryAbsolute',
-                         ([new_top_edge, new_bottom_edge], 2.0))
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        self.assertEqual(fault_source.edges[0], new_top_edge)
-        self.assertEqual(fault_source.edges[1], new_bottom_edge)
+        # tested in logictree/case_20
+        pass
 
     def test_characteristic_fault_planar_geometry_uncertainty(self):
-        # Define 2-plane fault
-        plane1 = numpy.array([[30.0, 30.0, 0.0],
-                              [30.5, 30.0, 0.0],
-                              [30.5, 30.0, 10.0],
-                              [30.0, 30.0, 10.0]])
-        plane2 = numpy.array([[30.5, 30.0, 0.0],
-                              [30.5, 30.5, 0.0],
-                              [30.5, 30.5, 10.0],
-                              [30.5, 30.0, 10.0]])
-        surface = self._make_planar_surface([plane1, plane2])
-        fault_source = self._make_characteristic_fault_source(surface)
-        # Move the planes
-        plane3 = numpy.array([[30.1, 30.0, 0.0],
-                              [30.6, 30.0, 0.0],
-                              [30.6, 30.0, 10.0],
-                              [30.1, 30.0, 10.0]])
-        plane4 = numpy.array([[30.6, 30.0, 0.0],
-                              [30.6, 30.5, 0.0],
-                              [30.6, 30.5, 10.0],
-                              [30.6, 30.0, 10.0]])
-        new_surface = self._make_planar_surface([plane3, plane4])
-        utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        # Only the longitudes are changing
-        numpy.testing.assert_array_almost_equal(
-            fault_source.surface.surfaces[0].corner_lons,
-            numpy.array([30.1, 30.6, 30.1, 30.6]))
-        numpy.testing.assert_array_almost_equal(
-            fault_source.surface.surfaces[1].corner_lons,
-            numpy.array([30.6, 30.6, 30.6, 30.6]))
+        # tested in logictree/case_20
+        pass
 
     def test_characteristic_fault_simple_geometry_uncertainty(self):
-        trace = geo.Line([geo.Point(30., 30.), geo.Point(31., 30.)])
-        usd = 0.0
-        lsd = 10.0
-        dip = 45.
-        # Surface
-        surface = geo.SimpleFaultSurface.from_fault_data(trace, usd, lsd, dip,
-                                                         1.0)
-        surface.dip = 45.0
-        fault_source = self._make_characteristic_fault_source(surface)
-        # Modify dip
-        new_surface = geo.SimpleFaultSurface.from_fault_data(trace, usd, lsd,
-                                                             65., 1.0)
-        utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        new_surface.dip = 65.0
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        self.assertAlmostEqual(fault_source.surface.get_dip(), 65.)
+        # tested in logictree/case_20
+        pass
 
     def test_characteristic_fault_complex_geometry_uncertainty(self):
-        top_edge = geo.Line([geo.Point(30.0, 30.1, 0.0),
-                             geo.Point(31.0, 30.1, 1.0)])
-        bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                geo.Point(31.0, 30.0, 9.0)])
-        surface = geo.ComplexFaultSurface.from_fault_data(
-            [top_edge, bottom_edge],
-            5.)
-        fault_source = self._make_characteristic_fault_source(surface)
-        # New surface
-        new_top_edge = geo.Line([geo.Point(30.0, 30.2, 0.0),
-                                 geo.Point(31.0, 30.2, 0.0)])
-        new_bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                    geo.Point(31.0, 30.0, 10.0)])
-
-        new_surface = geo.ComplexFaultSurface.from_fault_data(
-            [new_top_edge, new_bottom_edge], 5.)
-        utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        # If the surface has changed the first element in the latitude
-        # array of the surface mesh should be 30.2
-        self.assertAlmostEqual(new_surface.mesh.lats[0, 0], 30.2)
+        # tested in logictree/case_20
+        pass
 
 
 class BranchSetFilterTestCase(unittest.TestCase):
@@ -1573,8 +1472,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.area = openquake.hazardlib.source.AreaSource(
             source_id='area', name='area',
             tectonic_region_type=
@@ -1594,8 +1492,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                  openquake.hazardlib.geo.Point(0, 1),
                  openquake.hazardlib.geo.Point(1, 0)]),
             area_discretization=10, rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.simple_fault = openquake.hazardlib.source.SimpleFaultSource(
             source_id='simple_fault', name='simple fault',
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
@@ -1609,8 +1506,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 [openquake.hazardlib.geo.Point(0, 0),
                  openquake.hazardlib.geo.Point(1, 1)]),
             dip=45, rake=180,
-            temporal_occurrence_model=PoissonTOM(50.)
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.complex_fault = openquake.hazardlib.source.ComplexFaultSource(
             source_id='complex_fault', name='complex fault',
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
@@ -1625,13 +1521,11 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 openquake.hazardlib.geo.Line(
                     [openquake.hazardlib.geo.Point(0, 0, 2),
                      openquake.hazardlib.geo.Point(1, 1, 2)])],
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
 
         lons = numpy.array([-1., 1., -1., 1.])
         lats = numpy.array([0., 0., 0., 0.])
         depths = numpy.array([0., 0., 10., 10.])
-
         points = [openquake.hazardlib.geo.Point(lon, lat, depth)
                   for lon, lat, depth in
                   zip(lons, lats, depths)]
@@ -1971,7 +1865,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         probs = lt.random(1, self.seed, 'early_weights')
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
-        self.assertEqual(rlz.weight['default'], 0.5)
+        self.assertEqual(rlz.weight[-1], 0.5)
         self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
 
@@ -2004,7 +1898,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def mean(self, rlzs):
         R = len(rlzs)
         paths = ['_'.join(rlz.sm_lt_path) for rlz in rlzs]
-        return sum(self.value[path] * rlz.weight['weight']
+        return sum(self.value[path] * rlz.weight[-1]
                    for rlz, path in zip(rlzs, paths)) / R
 
     def test_full_path(self):
@@ -2037,7 +1931,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.1]       # b3_.
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
 
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.13375)
 
@@ -2056,7 +1950,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         # the weights are all equal
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
 
     def test_sampling_late_weights(self):
@@ -2075,7 +1969,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.18919751558, 0.09459875780, 0.094598757,
                    0.09459875779]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
 
     def test_smlt_bad(self):

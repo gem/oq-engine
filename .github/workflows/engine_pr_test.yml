@@ -68,7 +68,7 @@ jobs:
         cd openquake
         ruff check --preview --select NPY201 .
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+        pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
@@ -96,7 +96,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
+        OQ_APPLICATION_MODE=PUBLIC ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -124,7 +124,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
+        OQ_APPLICATION_MODE=READ_ONLY ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
@@ -152,4 +152,4 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+        OQ_APPLICATION_MODE=AELO OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode

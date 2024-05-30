@@ -18,6 +18,7 @@
 
 import os
 import json
+from unittest import mock
 import numpy
 import pandas
 try:
@@ -187,6 +188,32 @@ def test_JPN():
             dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
+
+    size = calc.oqparam.imtls.size  # size of the hazard curves
+    assert size == 75  # 3 IMT * 25 levels
+
+    M = len(calc.oqparam.imtls)  # PGA, SA(0.2), SA(1.0)
+    assert M == 3
+
+    P  = len(calc.oqparam.poes)  # [0.02, 0.05, 0.1, 0.2, 0.5]
+    assert P == 5
+
+    # check export hcurves and uhs
+    with mock.patch.dict(os.environ, {'OQ_APPLICATION_MODE': 'AELO'}):
+        [hcurves_fname] = export(('hcurves', 'csv'), calc.datastore)
+        [uhs_fname] = export(('uhs', 'csv'), calc.datastore)
+
+    df1 = pandas.read_csv(hcurves_fname, skiprows=1)
+    df2 = pandas.read_csv(uhs_fname, skiprows=1, index_col='period')
+    assert len(df1) == size
+    assert len(df2) == M
+    expected_uhs = '''\
+        poe-0.02  poe-0.05   poe-0.1   poe-0.2   poe-0.5
+period                                                  
+0.0     0.695452  0.506614  0.378868  0.263694  0.124536
+0.2     1.470866  1.059386  0.782419  0.538265  0.243294
+1.0     0.576505  0.415925  0.308323  0.210463  0.097187'''
+    assert str(df2) == expected_uhs
 
     if rtgmpy:
         # check all plots created

@@ -47,9 +47,7 @@ import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import (
-    ProbabilityMap, ProbabilityCurve
-)
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -103,7 +101,7 @@ def classical(group, sitecol, cmaker, pmap=None):
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
     if not_passed_pmap:
-        pmap = ProbabilityMap(
+        pmap = MapArray(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
         pmap.fill(rup_indep)
 
@@ -180,7 +178,7 @@ def calc_hazard_curves(
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
-    pmap = ProbabilityMap(sitecol.sids, imtls.size, 1).fill(0)
+    pmap = MapArray(sitecol.sids, imtls.size, 1).fill(0)
     for group in groups:
         trt = group.trt
         if sitecol is not srcfilter:
@@ -205,17 +203,16 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
     :param monitor: a Monitor instance (optional)
-    :returns: a ProbabilityCurve object
+    :returns: an array of shape (L, G)
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(1)
+    pmap = MapArray(site1.sids, oqparam.imtls.size, 1).fill(1)
     PmapMaker(cmaker, srcfilter, [src]).make(pmap)
     pmap.array[:] = 1. - pmap.array
     if not pmap:  # filtered away
-        zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
-        return ProbabilityCurve(zero)
-    return ProbabilityCurve(pmap.array[0])
+        return numpy.zeros((oqparam.imtls.size, len(gsims)))
+    return pmap.array[0]

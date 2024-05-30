@@ -48,14 +48,23 @@ oq info
 
 Probably the most important command. *oq info* has several features.
 
-3. It can be invoked to provide global information about the engine and its 
+1. It can be invoked to provide global information about the engine and its 
    libraries. Try, for instance::
 
 	$ oq info calculators # list available calculators
+        $ oq info cfg         # list openquake.cfg locations in order
+        # oq info consequences# list available consequences
 	$ oq info gsims       # list available GSIMs
+        $ oq info imt         # list known IMTs
 	$ oq info views       # list available views
 	$ oq info exports     # list available exports
+        $ oq info disagg      # list available disaggregation kinds
+        $ oq info extracts    # list available extractors
 	$ oq info parameters  # list all job.ini parameters
+        $ oq info sources     # list available source types
+        $ oq info mfd         # list available MFDs
+        $ oq info msr         # list available MSRs
+        $ oq info venv        # list location of the virtual environment
 
 2. It can be invoked with a *job.ini* file to extract information about the logic tree of the calculation.
 

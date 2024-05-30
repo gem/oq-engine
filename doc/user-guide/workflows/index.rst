@@ -40,11 +40,6 @@ each calculator can be extended independently of the others so that additional c
 be easily introduced, without affecting the overall calculation workflow. Each workflow is described in more detail in 
 the following sections.
 
-List of OpenQuake engine commands
----------------------------------
-
-The list of available commands for OpenQuake engine can be found `here <https://docs.openquake.org/oq-engine/master/reference/openquake.commands.html>`_
-
 .. toctree::
    :maxdepth: 1
    :caption: Seismic Hazard:

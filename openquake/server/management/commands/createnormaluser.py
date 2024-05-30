@@ -52,11 +52,16 @@ class Command(BaseCommand):
                 request.META['SERVER_PORT'] = '80'
         else:
             request.META['SERVER_PORT'] = settings.SERVER_PORT
-        if settings.APPLICATION_MODE.upper() == 'AELO':
+        if settings.APPLICATION_MODE == 'AELO':
             password_reset_subject = (
                 'registration/normal_user_creation_email_subject_aelo.txt')
             email_template_name = (
                 'registration/normal_user_creation_email_aelo.txt')
+        elif settings.APPLICATION_MODE == 'ARISTOTLE':
+            password_reset_subject = (
+                'registration/normal_user_creation_email_subject_aristotle.txt')  # NOQA
+            email_template_name = (
+                'registration/normal_user_creation_email_aristotle.txt')
         else:
             password_reset_subject = (
                 'registration/normal_user_creation_email_subject.txt')

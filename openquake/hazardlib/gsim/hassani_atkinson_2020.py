@@ -224,7 +224,7 @@ class HassaniAtkinson2020SInter(GMPE):
     """
     Hassani Atkinson (2020) for Subduction Interface.
     """
-    gmpe_table = True  # use split_by_mag
+    gmpe_table = None  # use split_by_mag
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
@@ -247,13 +247,10 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_ATTRIBUTES = {'kappa', 'backarc', 'forearc_ne', 'forearc_sw'}
 
-    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
-                 **kwargs):
+    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0):
         """
         Aditional parameters.
         """
-        super().__init__(kappa=kappa, backarc=backarc, forearc_ne=forearc_ne,
-                         forearc_sw=forearc_sw, **kwargs)
         # kappa parameter
         self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw

@@ -883,6 +883,20 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
+def get_planar_from_corners(corners, mag, rake, trt, msr=None):
+    """
+    :returns: a BaseRupture with a PlanarSurface
+    """
+    if msr is None:
+        from openquake.hazardlib.scalerel.wc1994 import WC1994
+        msr = WC1994()
+    surf = PlanarSurface.from_corner_points(*corners)
+    hc = surf.get_middle_point()
+    rup = BaseRupture(mag, rake, trt, hc, surf)
+    rup.rup_id = 0
+    return rup
+
+
 def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     """
     :returns: a BaseRupture with a PlanarSurface built around the site
@@ -896,6 +910,7 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     return rup
 
 
+# use a hard-coded MSR
 def _width_length(mag, rake):
     assert rake is None or -180 <= rake <= 180, rake
     if rake is None:

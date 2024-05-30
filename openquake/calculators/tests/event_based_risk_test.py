@@ -32,7 +32,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
-    case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
+    case_miriam, occupants, case_1f, case_1g, case_7a, case_8, case_9,
     recompute, reinsurance_1, reinsurance_2, reinsurance_3,
     reinsurance_4, reinsurance_5)
 
@@ -334,22 +334,7 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-4)
 
-    def test_case_master(self):
-        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
-        # it looks like the cholesky decomposition is OS-dependent, so
-        # the GMFs are different of macOS/Ubuntu20/Ubuntu18
-        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
-        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'avg_losses-stats not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-4)
-
-        # check event loss table
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
-
+    def check_case_master(self):
         # check total variance
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
         elt_df = self.calc.datastore.read_df(
@@ -406,6 +391,33 @@ agg_id
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-4)
 
+    def test_case_master(self):
+        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
+        # it looks like the cholesky decomposition is OS-dependent, so
+        # the GMFs are different in macOS / Ubuntu20 / Ubuntu18
+        self.run_calc(case_master.__file__, 'job.ini')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'avg_losses-stats not exported?'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-4)
+
+        # check event loss table
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-4)
+
+        self.check_case_master()
+
+    def test_case_9(self):
+        # aep, oep curves with post loss amplification
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        fnames = export(('aggcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'

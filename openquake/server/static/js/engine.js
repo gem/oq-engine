@@ -439,14 +439,16 @@
             calculations.fetch({reset: true});
             setTimer();
 
-            ajax = $.ajax({url: gem_oq_server_url + "/v1/engine_latest_version",
-                           async: true}).done(function (data) {
-                                                 /* None is returned in case of an error,
-                                                    but we don't care about errors here */
-                                                 if(data && data != 'None') {
-                                                     $('#new-release-box').html(data).show()
-                                                 }
-                                              });
+            if (!disable_version_warning) {
+                ajax = $.ajax({url: gem_oq_server_url + "/v1/engine_latest_version",
+                              async: true}).done(function (data) {
+                                  /* None is returned in case of an error,
+                                      but we don't care about errors here */
+                                  if(data && data != 'None') {
+                                      $('#new-release-box').html(data).show()
+                                  }
+                              });
+            }
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
@@ -498,6 +500,7 @@
                     lat: $("#lat").val(),
                     vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
                     siteid: $("#siteid").val(),
+                    asce_version: $("#asce_version").val()
                 };
                 $.ajax({
                     type: "POST",
@@ -530,22 +533,25 @@
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
-                var formData = {
-                    shakemap_id: $("#shakemap_id").val(),
-                };
+                $('#mosaic_model').text('');
+                var formData = new FormData();
+                formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
+                formData.append('usgs_id', $("#usgs_id").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
                     data: formData,
-                    dataType: "json",
+                    processData: false,
+                    contentType: false,
                     encode: true,
                 }).done(function (data) {
                     // console.log(data);
-                    $('#lat').val(data.lat);
                     $('#lon').val(data.lon);
+                    $('#lat').val(data.lat);
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
+                    $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
                         $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
@@ -566,28 +572,39 @@
                 });
                 event.preventDefault();
             });
+            $('#clearFile').click(function() {
+                $('#rupture_file_input').val('');
+            });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
             $("#aristotle_run_form").submit(function (event) {
                 $('#submit_aristotle_calc').prop('disabled', true);
-                var formData = {
-                    lon: $("#lon").val(),
-                    lat: $("#lat").val(),
-                    dep: $("#dep").val(),
-                    mag: $("#mag").val(),
-                    rake: $("#rake").val(),
-                    dip: $("#dip").val(),
-                    strike: $("#strike").val(),
-                    maximum_distance: $("#maximum_distance").val(),
-                    trt: $('#trt').val()
-                };
+                $('#submit_aristotle_calc').text('Processing...');
+                var formData = new FormData();
+                formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
+                formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('lon', $("#lon").val());
+                formData.append('lat', $("#lat").val());
+                formData.append('dep', $("#dep").val());
+                formData.append('mag', $("#mag").val());
+                formData.append('rake', $("#rake").val());
+                formData.append('dip', $("#dip").val());
+                formData.append('strike', $("#strike").val());
+                formData.append('maximum_distance', $("#maximum_distance").val());
+                formData.append('trt', $('#trt').val());
+                formData.append('truncation_level', $('#truncation_level').val());
+                formData.append('number_of_ground_motion_fields',
+                                $('#number_of_ground_motion_fields').val());
+                formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
+                formData.append('ses_seed', $('#ses_seed').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",
                     data: formData,
-                    dataType: "json",
-                    encode: true,
+                    processData: false,
+                    contentType: false,
+                    encode: true
                 }).done(function (data) {
                     console.log(data);
                 }).error(function (data) {
@@ -602,6 +619,7 @@
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aristotle_calc').prop('disabled', false);
+                    $('#submit_aristotle_calc').text('Submit');
                 });
                 event.preventDefault();
             });

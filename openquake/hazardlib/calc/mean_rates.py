@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_cmakers
 
 CUTOFF = 1E-12
@@ -54,7 +54,7 @@ def to_probs(rates, itime=1):
 
 def calc_rmap(src_groups, full_lt, sitecol, oq):
     """
-    :returns: a ProbabilityMap of rates with shape (N, L, Gt)
+    :returns: a MapArray of rates with shape (N, L, Gt)
     """
     oq.use_rates = True
     oq.disagg_by_src = False
@@ -64,7 +64,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     Gt = sum(len(cm.gsims) for cm in cmakers)
     logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
                  len(sitecol), oq.imtls.size, Gt)
-    rmap = ProbabilityMap(sitecol.sids, L, Gt).fill(0)
+    rmap = MapArray(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)
@@ -79,7 +79,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(rmap, gweights, imtls, imts=None):
+def calc_mean_rates(rmap, gweights, wget, imtls, imts=None):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
@@ -88,10 +88,11 @@ def calc_mean_rates(rmap, gweights, imtls, imts=None):
     if imts is None:
         imts = imtls
     M = len(imts)
+    if len(gweights.shape) == 1:  # fast_mean
+        return (rmap.array @ gweights).reshape(M, L1)
     rates = numpy.zeros((N, M, L1))
     for m, imt in enumerate(imts):
-        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [
-            gw[imt] for gw in gweights]
+        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ wget(gweights, imt)
     return rates
 
 
