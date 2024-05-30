@@ -17,10 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 
-# NOTE: before importing User or any other model, django.setup() is needed,
-#       otherwise it would raise:
-#       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
-
 import os
 import glob
 import sys
@@ -34,6 +30,7 @@ import logging
 
 import django
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.test import Client
 from django.conf import settings
 from openquake.commonlib.logs import dbcmd
@@ -42,7 +39,7 @@ from openquake.server.views import get_disp_val
 
 django.setup()
 try:
-    from django.contrib.auth.models import User  # noqa
+    User = get_user_model()
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \

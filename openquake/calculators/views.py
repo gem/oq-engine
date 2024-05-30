@@ -1332,18 +1332,15 @@ def view_delta_loss(token, dstore):
     efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
         dstore['weights'])
     periods = return_periods(efftime, num_events)[1:-1]
-    mod2 = df.index % 2
-    losses0 = df['loss'][mod2 == 0]
-    losses1 = df['loss'][mod2 == 1]
-    num_events = len(dstore['events'])
-    num_events0 = num_events // 2 + (num_events % 2)
-    num_events1 = num_events // 2
-    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
-    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    losses0 = df.loss[df.index % 2 == 0]
+    losses1 = df.loss.loc[df.index % 2 == 1]
+    c0 = losses_by_period(losses1, periods, len(losses1), efftime / 2)['curve']
+    c1 = losses_by_period(losses0, periods, len(losses0), efftime / 2)['curve']
     ok = (c0 != 0) & (c1 != 0)
     c0 = c0[ok]
     c1 = c1[ok]
-    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    res = losses_by_period(df['loss'], periods, num_events, efftime)
+    losses = res['curve'][ok]
     dic = dict(loss=losses, even=c0, odd=c1,
                delta=numpy.abs(c0 - c1) / (c0 + c1))
     return pandas.DataFrame(dic, periods[ok])

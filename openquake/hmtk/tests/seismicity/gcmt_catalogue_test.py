@@ -51,7 +51,6 @@
 import os
 import unittest
 import tempfile
-import filecmp
 
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
 
@@ -72,8 +71,6 @@ class TestGCMTCatalogue(unittest.TestCase):
         self.cat = prs.read_file()
 
     def test_serialise_to_csv_centroid(self):
-        """Test serialise centroid"""
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             # Expected - The content of the output file was manually checked
             # against the original .ndk file
@@ -86,14 +83,12 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=True)
 
             # Test
-            lines = open(fname_csv).readlines()
-            lines_exp = open(fname_expected).readlines()
-            for line, line_exp in zip(lines, lines_exp):
-                assert line == line_exp
+            with (open(fname_csv, newline='') as lines,
+                  open(fname_expected, newline='') as lines_exp):
+                for line, line_exp in zip(lines, lines_exp):
+                    assert line.strip() == line_exp.strip()
 
     def test_serialise_to_csv_hypocenter(self):
-        """Test serialise hypocenter"""
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             # Expected - The content of the output file was manually checked
             # against the original .ndk file
@@ -106,7 +101,7 @@ class TestGCMTCatalogue(unittest.TestCase):
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=False)
 
             # Test
-            lines = open(fname_csv).readlines()
-            lines_exp = open(fname_expected).readlines()
-            for line, line_exp in zip(lines, lines_exp):
-                assert line == line_exp
+            with (open(fname_csv, newline='') as lines,
+                  open(fname_expected, newline='') as lines_exp):
+                for line, line_exp in zip(lines, lines_exp):
+                    assert line.strip() == line_exp.strip()

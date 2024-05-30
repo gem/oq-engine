@@ -39,6 +39,8 @@ from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
 
+django.setup()
+
 
 class EngineServerPublicModeTestCase(EngineServerTestCase):
     """
