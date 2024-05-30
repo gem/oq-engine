@@ -332,6 +332,52 @@ def compare_events(calc_ids: int):
     print(df)
 
 
+def get_ids(ds):
+    ids = ds['assetcol']['id'][:]
+    if ds['oqparam'].aristotle:
+        N = 3  # length of mosaic model codes
+        ids = numpy.array([id_[N:] for id_ in ids])
+    return ids
+
+
+def compare_assetcol(calc_ids: int):
+    """
+    Compare assetcol DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    len0 = len(ds0['assetcol'])
+    len1 = len(ds1['assetcol'])
+    if len0 != len1:
+        print(f'The assetcols have different lengths: {len0} != {len1}')
+        return
+    ids0 = get_ids(ds0)
+    ids1 = get_ids(ds1)
+    # ids1 = numpy.array([b'a1', b'a2', b'a3', b'a4', b'a5', b'a6', b'a7'])
+    # print(ids0)
+    # print(ids1)
+    diff_idxs = numpy.where(ids0 != ids1)[0]
+    if len(diff_idxs) == 0:
+        print("The 'id' columns in both arrays are equal.")
+    else:
+        print("The following elements differ in the 'id' columns:")
+        for ordinal, idx in enumerate(diff_idxs):
+            if ordinal > 10:
+                print(f'[...] (tot: {len(diff_idxs)} differences)')
+                break
+            print(f"Index {idx}: {ids0[idx]} in calc {calc_ids[0]},"
+                  f" {ids1[idx]} in calc {calc_ids[1]}")
+        if numpy.array_equal(numpy.sort(ids0), numpy.sort(ids1)):
+            print('However, the sorted ids are equal')
+        else:
+            print('Ids remain different even after sorting them')
+
+    # df0 = ds0.read_df('assetcol', 'array')
+    # df1 = ds1.read_df('assetcol', 'array')
+    # df = df0.compare(df1)
+    # print(df)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -341,11 +387,12 @@ main = dict(rups=compare_rups,
             med_gmv=compare_med_gmv,
             risk_by_event=compare_risk_by_event,
             sources=compare_sources,
-            events=compare_events)
+            events=compare_events,
+            assetcol=compare_assetcol)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,
-          compare_events):
+          compare_events, compare_assetcol):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:
