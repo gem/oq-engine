@@ -23,9 +23,10 @@ multifault sources in HDF5-format, compressing the transferred data,
 transferring 32 bit rates instead of 64 bit probabilities, storing the
 rates more efficiently, changing the postprocessing phase producing
 the statistical hazard curves by taking advantage of the tiling
-functionality and more.
+functionality and more. Hower, not the memory usage of the classical
+calculator, depending on the calculation, is down from 0% to 50%.
 
-However, thanks to this work and some more, we were able to add
+Moreover, we were able to add
 support for the 2022 revision of the New Zealand National Seismic 
 Hazard Model ([NZ NSHM 2022](https://nshm.gns.cri.nz/)), which
 also features multifault sources. While the model had been implemented
@@ -37,29 +38,32 @@ and efficiently.
 Since we improved the way the logic tree is stored in memory and we
 implemented a better algorithm for computing the means if the
 parameter `use_rates` is set (we measured a 133x speedup in a
-calculation for Europe with ~260,000 sites) we can now run
-calculations with millions of realizations and it is not a problem to
-run the New Zealand model which has "_only_" 979,776
-realizations. Computing the quantiles is still impossible in practice,
-since you will run out of memory during the postprocessing phase.
+calculation with ~260,000 sites) we can now run
+calculations with millions of realizations. Therefore, it is quite
+possible to run the New Zealand model - which has "_only_" 979,776
+realizations - on a single machine. Computing the quantiles is still
+impossible in practice, since you will run out of memory during the
+postprocessing phase.
 
 # hazardlib
 
-The major thing in hazardlib was a refactoring removing `**kwargs` from the
-signature of hundreds of GMPEs. As a consequence, now each GMPEs knows the
-arguments it requires and if there is a typo in the gmpe logic tree
-file a clear error is raised. Before, any mispelled parameter was silently
-ignored, for instance in the seismic hazard model for Europe, where the
-parameter `theta6_adjustment` was mispelled as `theta_6_adjustment`
-and that went unnoticed for years ([#9486](https://github.com/gem/oq-engine/issues/9486)).
-Most sites are unaffected by the change, but some are. If you have an incorrect 
-version of the EUR model now you will immediately get an error.
+The major thing in hazardlib was a refactoring removing `**kwargs`
+from the signature of hundreds of GMPEs. As a consequence, now each
+GMPEs knows the arguments it requires and if there is a typo in the
+gmpe logic tree file a clear error is raised. Before, any mispelled
+parameter was silently ignored. In particular, we discovered that in
+the seismic hazard model for Europe, the parameter
+`theta6_adjustment` was mispelled as `theta_6_adjustment` and that
+went unnoticed for years
+([#9486](https://github.com/gem/oq-engine/issues/9486)).  Most sites
+are unaffected by the parameter, but some are. If you have an incorrect
+version of the EUR model now you will immediately get an error
 ```sh
-ValueError: FABATaperSFunc.__init__() got an unexpected keyword argument
-'theta_6_adjustment' in file EUR/in/gmmLT.xml
+ValueError: FABATaperSFunc.__init__() got an unexpected keyword
+argument 'theta_6_adjustment' in file EUR/in/gmmLT.xml
 ```
-that you can solve by renaming `theta_6_adjustment` -> `theta6_adjustment`
-in the file `gmmLT.xml`.
+that you can solve by renaming `theta_6_adjustment` -> `theta6_adjustment` in
+the file `gmmLT.xml`.
 
 We also fixed the passing of parameters in the `NRCan15SiteTerm`, without
 any impact on the results, since currently all models in the GEM mosaic do not
