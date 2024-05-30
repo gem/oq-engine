@@ -353,16 +353,13 @@ def compare_assetcol(calc_ids: int):
         return
     ids0 = get_ids(ds0)
     ids1 = get_ids(ds1)
-    # ids1 = numpy.array([b'a1', b'a2', b'a3', b'a4', b'a5', b'a6', b'a7'])
-    # print(ids0)
-    # print(ids1)
     diff_idxs = numpy.where(ids0 != ids1)[0]
     if len(diff_idxs) == 0:
-        print("The 'id' columns in both arrays are equal.")
+        print("The 'id' columns in both arrays are equal")
     else:
         print("The following elements differ in the 'id' columns:")
         for ordinal, idx in enumerate(diff_idxs):
-            if ordinal > 10:
+            if ordinal > 5:
                 print(f'[...] (tot: {len(diff_idxs)} differences)')
                 break
             print(f"Index {idx}: {ids0[idx]} in calc {calc_ids[0]},"
@@ -371,11 +368,21 @@ def compare_assetcol(calc_ids: int):
             print('However, the sorted ids are equal')
         else:
             print('Ids remain different even after sorting them')
-
-    # df0 = ds0.read_df('assetcol', 'array')
-    # df1 = ds1.read_df('assetcol', 'array')
-    # df = df0.compare(df1)
-    # print(df)
+    cols0 = ds0['assetcol'].array.dtype.names
+    cols1 = ds0['assetcol'].array.dtype.names
+    if numpy.array_equal(cols0, cols1):
+        print('The assetcol arrays have the same columns')
+    elif len(cols0) != len(cols1):
+        print('The assetcol arrays have different numbers of columns:')
+        print(f'Calc {calc_ids[0]}:\n{cols0}')
+        print(f'Calc {calc_ids[1]}:\n{cols1}')
+    elif numpy.array_equal(numpy.sort(cols0), numpy.sort(cols1)):
+        print('The assetcol arrays have the same columns, but ordered'
+              ' differently')
+    else:
+        print('The assetcol arrays have differend columns:')
+        print(f'Calc {calc_ids[0]}:\n{cols0}')
+        print(f'Calc {calc_ids[1]}:\n{cols1}')
 
 
 main = dict(rups=compare_rups,
