@@ -36,11 +36,12 @@ and efficiently.
 
 Since we improved the way the logic tree is stored in memory and we
 implemented a better algorithm for computing the means if the
-parameter `use_rates` is set, we can now run calculations with
-millions of realizations and it is not a problem to run the New
-Zealand model which has "_only_" 979,776 realizations. Computing the
-quantiles is still impossible in practice, since you will run out
-of memory during the postprocessing phase.
+parameter `use_rates` is set (we measured a 133x speedup in a
+calculation for Europe with ~260,000 sites) we can now run
+calculations with millions of realizations and it is not a problem to
+run the New Zealand model which has "_only_" 979,776
+realizations. Computing the quantiles is still impossible in practice,
+since you will run out of memory during the postprocessing phase.
 
 # hazardlib
 
