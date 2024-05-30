@@ -332,7 +332,7 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def get_ids(ds):
+def get_asset_ids(ds):
     ids = ds['assetcol']['id'][:]
     if ds['oqparam'].aristotle:
         N = 3  # length of mosaic model codes
@@ -351,8 +351,8 @@ def compare_assetcol(calc_ids: int):
     if len0 != len1:
         print(f'The assetcols have different lengths: {len0} != {len1}')
         return
-    ids0 = get_ids(ds0)
-    ids1 = get_ids(ds1)
+    ids0 = get_asset_ids(ds0)
+    ids1 = get_asset_ids(ds1)
     diff_idxs = numpy.where(ids0 != ids1)[0]
     if len(diff_idxs) == 0:
         print("The 'id' columns in both arrays are equal")
