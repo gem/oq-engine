@@ -1,5 +1,5 @@
 Version 3.20 is the culmination of 3 months of work involving over 200
-pull requests. It is aimed to users wanting the latest features, bug fixes
+pull requests. It is aimed at users wanting the latest features, bug fixes
 and maximum performance. Users valuing stability may want to stay with
 the LTS release instead (currently at version 3.16.8).
 
@@ -26,70 +26,71 @@ the statistical hazard curves by taking advantage of the tiling
 functionality and more.
 
 However, thanks to this work and some more, we were able to add
-support for the New Zealand 2022 National Seismic Hazard Model, which
-also features multifault sources. While the model has been implemented
+support for the 2022 revision of the New Zealand National Seismic 
+Hazard Model ([NZ NSHM 2022](https://nshm.gns.cri.nz/)), which
+also features multifault sources. While the model had been implemented
 with the OpenQuake engine from the very beginning, its calculation was
-extremely hard and required several tricks to be performed. It is only
-with engine 3.20 that the calculation runs out-of-the-box and
-efficiently.
+extremely challenging and required several tricks for it to run. 
+It is only with engine 3.20 that the calculation runs out-of-the-box 
+and efficiently.
 
 Since we improved the way the logic tree is stored in memory and we
 implemented a better algorithm for computing the means if the
 parameter `use_rates` is set, we can now run calculations with
 millions of realizations and it is not a problem to run the New
-Zealand model which has only 979,776 realizations. Computing the
+Zealand model which has "_only_" 979,776 realizations. Computing the
 quantiles is still impossible in practice, since you will run out
 of memory during the postprocessing phase.
 
 # hazardlib
 
-The major thing in hazardlib was a refactoring removing ``**kwargs` from the
-signature of hundreds of GMPEs. As a consequence now each GMPEs knows the
+The major thing in hazardlib was a refactoring removing `**kwargs` from the
+signature of hundreds of GMPEs. As a consequence, now each GMPEs knows the
 arguments it requires and if there is a typo in the gmpe logic tree
-file a clear error is raised. Before the mispelled parameter was silently
-ignored. That caused a half disaster in the model for Europe, where the
+file a clear error is raised. Before, any mispelled parameter was silently
+ignored, for instance in the seismic hazard model for Europe, where the
 parameter `theta6_adjustment` was mispelled as `theta_6_adjustment`
-and that went unnoticed for years. Most sites are unaffected by the
-change, but some are. If you have an incorrect version of the EUR model
-now you will get immediately an error
-
+and that went unnoticed for years ([#9486](https://github.com/gem/oq-engine/issues/9486)).
+Most sites are unaffected by the change, but some are. If you have an incorrect 
+version of the EUR model now you will immediately get an error.
+```sh
 ValueError: FABATaperSFunc.__init__() got an unexpected keyword argument
-'theta_6_adjustment' in file /home/michele/mosaic/EUR/in/gmmLT.xml
-
-that you can solve by renaming 'theta_6_adjustment' -> 'theta6_adjustment'
+'theta_6_adjustment' in file EUR/in/gmmLT.xml
+```
+that you can solve by renaming `theta_6_adjustment` -> `theta6_adjustment`
 in the file `gmmLT.xml`.
 
 We also fixed the passing of parameters in the `NRCan15SiteTerm`, without
 any impact on the results, since currently all models in the GEM mosaic do not
 require passing parameters to the underlying GMPE via the `NRCan15SiteTerm`.
 
-Marco Pagani added a new uncertainty in the logic tree processor,
-called moment `maxMagGRRelativeNoMoBalance`; an example of usage
-is in the test logictree/case_84.
+[Marco Pagani](https://github.com/mmpagani) added a new uncertainty 
+in the logic tree processor, called moment `maxMagGRRelativeNoMoBalance`; 
+an example of usage is in the test logictree/case_84.
 
 He also extended the `ChiouYoungs2014` class to accept many optional
 parameters, notably `use_hw`, `add_delta_c1`, `alpha_nm`,
-`stress_par_host`,, `stress_par_target`, `delta_gamma_tab` as
+`stress_par_host`, `stress_par_target`, `delta_gamma_tab` as
 specified by Boore et al. (2022).
 
-Fatemeh Alishahiha contributed a new class
-`AbrahamsonSilva1997Vertical` adding a vertical componend to the
-classical Abrahamson Silva GMPE and entirely new class
+[Fatemeh Alishahiha](https://github.com/FatemehAlsh) contributed a new class
+`AbrahamsonSilva1997Vertical` adding a vertical component to the
+classical Abrahamson Silva GMPE and also an entirely new class
 `GhasemiEtAl2009` implementing the Ghasemi et Al. GMPE for Iran.
 
 # Risk
 
 We saved a lot of memory and disk space in conditioned GMFs scenarios,
 making them also faster in many situations. This is a HUGE improvement
-since many calculations that before were impossible are not possible.
+since many calculations that before were impossible are now possible.
 We also improved the error checking for calculations with too many sites.
 
-We implemented a first version of Post Loss Amplification. The feature
-is undocumented and in experimental stage for the moment, see
-https://github.com/gem/oq-engine/issues/9633 for more.
+We implemented a first version of Post-Loss Amplification (PLA). 
+The feature is documented, but it is in the experimental stage for the moment.
+See https://github.com/gem/oq-engine/issues/9633 for more.
 
 We fixed the `avg_losses-stats` exporter in the case of a single realization
-for classical_risk calculation:
+for classical_risk calculation: [#9579](https://github.com/gem/oq-engine/issues/9579)
 
 # Bug fixes
 
@@ -97,7 +98,7 @@ We fixed a bug when importing a file `gmf_data.csv`: in rare situations
 with filtered site collections one could end up with site IDs in
 not present in the site mesh.
 
-In the engine longitude and latitude are rounded to 5 digits. However,
+In the engine, longitude and latitude are rounded to 5 digits. However,
 sometimes they were rounded by using `numpy.round` and sometimes by
 using Python round. That causes surprises in rare situations, producing
 a different a different rounding depending if the sites were listed
@@ -107,23 +108,23 @@ This has been fixed.
 We fixed a long standing bug, so that the full logic tree object could
 not be properly serialized in the datastore in some cases, i.e. when modifying
 `simpleFaultGeometryAbsolute`, `complexFaultGeometryAbsolute` and
-`characteristicFaultGeometryAbsolute`). The bug was low priority since
+`characteristicFaultGeometryAbsolute`). The bug was a low priority since
 such features are not used in any hazard model in the mosaic, however
 now it has been finally fixed.
 
 Using some special characters in the branchID tags of the source model
 logic tree caused some tricky errors, as it was happening in the New
-Zealand model. We have solve by issue by raising an early error if any
+Zealand model. We have solved the issue by raising an early error if any
 of the forbidden characters `.:;` is found.
 
 When using a magnitude-dependent maximum distance with a missing
 tectonic region type, the engine was giving a fake error. Now the
 engine simply ignores the missing tectonic region type if there are no
-sources associated to it, consistently with the behavior of version 3.16.
+sources associated to it, consistent with the behavior of version 3.16.
 
 The mixture-model feature (tested in classical/case_47) was introduced
 4 years ago and nearly immediately broken by a refactoring since the
-test was not testing due to a typo. The problem has now been fixed and
+test was not actually testing due to a typo. The problem has now been fixed and
 the feature is working as intended.
 
 There was an error when running scenarios with a ModifiableGMPE over a
@@ -131,11 +132,11 @@ table-based GMPE, since the `mags_by_trt` dictionary was not passed properly.
 It is now fixed.
 
 Finally, we removed two error-prone caches for the gsim logic tree and
-the exposure, by making them not needed anymore.
+the exposure, by avoiding the need for them.
 
 # New checks
 
-In presence of million of assets and events, calculating the
+In the presence of millions of assets and events, calculating the
 average losses can send the server out of memory; there is now
 an early check warning the user of the problem and suggesting a workaround.
 
@@ -146,7 +147,7 @@ late. Now the error is raised before starting the calculation.
 When a required site parameter is not provided, the engine is now raising
 a clear error message instead of giving NAN results.
 
-There were rare situations where complex fault sources where deemed
+There were rare situations where complex fault sources were deemed
 invalid even when correctly specified. This has been fixed in
 https://github.com/gem/oq-engine/pull/9596.
 
@@ -160,11 +161,11 @@ automatically set for sampling calculations and overriding
 `individual_rlzs=true`, in a way very surprising for the final
 user. Now he gets an error such as
 
-InvalidFile: you cannot have individual_rlzs=true with collect_rlzs=true
+```InvalidFile: you cannot have individual_rlzs=true with collect_rlzs=true```
 
 The `classical_risk` and `classical_damage` calculators are able to
-start from import hazard curves stored as CSV files. Such files must
-contain probabilities, i.e. floats in the range 0..1, however that
+start from imported hazard curves stored as CSV files. Such files must
+contain probabilities, i.e. floats in the range 0 to 1. However, that
 was not checked, causing NaN values to be generated in the outputs.
 Now the user gets a clear error message at import time.
 
@@ -172,7 +173,7 @@ Now the user gets a clear error message at import time.
 
 [Aristotle](https://www.globalquakemodel.org/proj/aristotle) is a
 project to provide Multi-Hazard advice to the European Research
-Coordination Centre in case of disasters. Currently it is in
+Coordination Centre in case of disasters. Currently, it is in
 a development/experimental status and it is meant to be tested
 but not trusted.
 
@@ -184,17 +185,17 @@ automatically notified when the calculations are done (currently
 for a single ShakeMap ID the engine can perform multiple calculations,
 since the earthquake can affect countries with different taxonomy mappings).
 
-In ARISTOTLE mode also a couple of simple plots are generated: for the
-moment one with the (geometric) average GMFs and one with the
-assets. They are used for debugging and subject to changes in future
+In ARISTOTLE mode, a couple of simple plots are generated: for the
+moment, one with the (geometric) average GMFs and one with the
+assets. They are used for debugging and are subject to changes in future
 versions of the tool.
 
-The procedure downloading the USGS rupture parameters has been enhanced
+The procedure for downloading the USGS rupture parameters has been enhanced
 so that if the file "rupture.json" is missing (because the USGS has not
 generated it yet) the "finite-fault" parameters are used instead.
 Moreover, it is possible to upload a custom file `rupture_model.xml`,
-if the user possess more information than the USGS or is interested
-in trying alternative models.
+if the user possesses additional or different information than the USGS
+or is interested in trying alternative models.
 
 # `oq` commands
 
@@ -211,20 +212,20 @@ the docstring of the specified MFD class, and added a command `oq info msr`
 with similar features for the MSR classes.
 
 We improved the command `oq plot avg_gmf`, which is now also displaying
-country borders. Moreover it is not showing the seismic stations in case of
+country borders. Moreover, it is not showing the seismic stations in case of
 conditioned GMFs calculations, since they were confusing.
 
 We fixed the command `oq zip` that was not zipping the exposure.csv files.
 
 The command `oq show delta_loss` has been enhanced and documented in the manual.
 
-We now raise a clear a `NotImplementedError` when trying to convert
+We now raise a clear `NotImplementedError` when trying to convert
 griddedSurfaces with the command `oq nrml to csv|gpkg`.
 
 # Documentation
 
 There was a lot of work on the documentation, in particular about
-Windows installations and event based outputs, that were both
+Windows installations and event-based outputs, which were both
 severely outdated.
 
 Many features implemented years ago have been finally
@@ -256,7 +257,7 @@ Finally, there were a couple of changes affecting development installations:
 
 1. we introduced a maximum limit of 90 lines of code and 16 arguments per
 function/method. The limits are enforced by the tests every time a
-user make a pull request to the engine repository. They are meant to
+user makes a pull request to the engine repository. They are meant to
 avoid excessive degradation of the code base quality.
 
 2. at the start of the WebUI a warning is printed if the
