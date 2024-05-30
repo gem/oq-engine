@@ -1029,6 +1029,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+    siteid = os.environ.get('OQ_DEBUG_SITE')
+    if siteid:
+        haz_sitecol.array = haz_sitecol[
+            haz_sitecol['custom_site_id'] == siteid.encode('ascii')]
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
