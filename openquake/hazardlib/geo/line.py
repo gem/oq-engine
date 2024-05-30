@@ -222,29 +222,34 @@ def get_ti_weights(ui, ti, segments_len):
     idx_on_trace = np.zeros(S2, dtype=np.bool_)
 
     for i in range(S1):
+        ti_ = ti[i]
+        ui_ = ui[i]
+        terma_ = terma[i]
+        term1_ = term1[i]
+        term2_ = term2[i]
+        ws = weights[i]
+        seglen = segments_len[i]
+
         # More general case
-        cond0 = np.abs(ti[i]) >= TOLERANCE
+        cond0 = np.abs(ti_) >= TOLERANCE
         if cond0.any():
-            terma[i][cond0] = segments_len[i] - ui[i][cond0]
-            term1[i][cond0] = np.arctan(terma[i][cond0] / ti[i][cond0])
-            term2[i][cond0] = np.arctan(-ui[i][cond0] / ti[i][cond0])
-            weights[i][cond0] = ((term1[i][cond0] - term2[i][cond0]) /
-                                 ti[i][cond0])
+            terma_[cond0] = seglen - ui_[cond0]
+            term1_[cond0] = np.arctan(terma_[cond0] / ti_[cond0])
+            term2_[cond0] = np.arctan(-ui_[cond0] / ti_[cond0])
+            weights[i][cond0] = (term1_[cond0] - term2_[cond0]) / ti_[cond0]
 
         # Case for sites on the extension of one segment
-        cond1 = np.abs(ti[i]) < TOLERANCE
-        cond2 = np.logical_or(ui[i] < (0. - TOLERANCE),
-                              ui[i] > (segments_len[i] + TOLERANCE))
+        cond1 = np.abs(ti_) < TOLERANCE
+        cond2 = np.logical_or(ui_ < (0. - TOLERANCE),
+                              ui_ > (seglen + TOLERANCE))
         iii = np.logical_and(cond1, cond2)
         if len(iii):
-            weights[i, iii] = (1. / (ui[i][iii] - segments_len[i])
-                               - 1. / ui[i][iii])
+            ws[iii] = 1. / (ui_[iii] - seglen) - 1. / ui_[iii]
 
         # Case for sites on one segment
-        cond3 = np.logical_and(ui[i] >= (0. - TOLERANCE),
-                               ui[i] <= (segments_len[i] + TOLERANCE))
+        cond3 = np.logical_and(ui_ >= - TOLERANCE, ui_ <= seglen + TOLERANCE)
         jjj = np.logical_and(cond1, cond3)
-        weights[i, jjj] = 1 / (-0.01 - segments_len[i]) + 1 / 0.01
+        ws[jjj] = 1 / (-0.01 - seglen) + 1 / 0.01
         idx_on_trace[jjj] = 1.0
 
     return weights, idx_on_trace
