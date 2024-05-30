@@ -1463,7 +1463,7 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True):
     if sorting:
         sorting_idxs = numpy.argsort(orig_losses)
     else:
-        sorting_idxs = numpy.arange(len(orig_losses))
+        sorting_idxs = slice(None)
     sorted_losses = orig_losses[sorting_idxs]
 
     # add zeros on the left if there are less losses than events.
