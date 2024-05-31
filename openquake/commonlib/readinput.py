@@ -627,6 +627,10 @@ def get_site_collection(oqparam, h5=None):
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
 
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
+        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+
     slc = oqparam.sites_slice
     if slc:
         if 'custom_site_id' not in sitecol.array.dtype.names:
@@ -638,10 +642,6 @@ def get_site_collection(oqparam, h5=None):
         assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
 
-    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
-    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
-    sitecol.exposure = exp
-
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation
@@ -649,11 +649,21 @@ def get_site_collection(oqparam, h5=None):
         # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
+
+    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
+            'ruptures' in h5.parent and 'site_model' in h5.parent):
+        # filter the far away sites, tested in ScenarioRiskTestCase::test_case_1g
+        rec = h5.parent['ruptures'][0]
+        dist = oqparam.maximum_distance('*')(rec['mag'])
+        sids = get_sids_around(h5.parent.filename, rec, dist)
+        sitecol = sitecol.filtered(sids)
+
+    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
+    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
+    sitecol.exposure = exp
     if h5:
         h5['sitecol'] = sitecol
-    if ('vs30' in sitecol.array.dtype.names and
-            not numpy.isnan(sitecol.vs30).any()):
-        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+
     return sitecol
 
 
@@ -1044,13 +1054,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
-    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
-            'ruptures' in h5.parent and 'site_model' in h5.parent):
-        # filter the far away sites, tested in ScenarioRiskTestCase::test_case_1g
-        rec = h5.parent['ruptures'][0]
-        dist = oqparam.maximum_distance('*')(rec['mag'])
-        sids = get_sids_around(h5.parent.filename, rec, dist)
-        haz_sitecol = haz_sitecol.filtered(sids)
 
     siteid = os.environ.get('OQ_DEBUG_SITE')
     if siteid:
