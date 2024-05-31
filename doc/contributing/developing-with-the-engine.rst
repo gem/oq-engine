@@ -83,7 +83,7 @@ If you want to understand what happened during the calculation you should genera
 be seen with the command ``$ oq show fullreport``. There you will find a lot of interesting information that it is worth
 studying and we will discuss in detail in the rest of this manual. The most important section of the report is probably
 the last one, titled “Slowest operations”. For that one can understand the bottlenecks of a calculation and, with
-experience, he can understand which part of the engine he needs to optimize. Also, it is very useful to play with the
+experience, the user can understand which part of the engine needs to optimize. Also, it is very useful to play with the
 parameters of the calculation (like the maximum distance, the area discretization, the magnitude binning, etc.) and see
 how the performance changes. There is also a command to plot hazard curves and a command to compare hazard curves between
 different calculations: it is common to be able to get big speedups simply by changing the input parameters in the
