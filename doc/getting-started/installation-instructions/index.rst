@@ -18,9 +18,7 @@ with 32 threads you would need at least 64 GB of RAM.
 
 If you have a Windows machine and you are not interested
 in developing with the engine, the recommended approach is to use
-the Windows installer:
-
-:ref:`Installing the OpenQuake Engine on Windows`
+the Windows installer: :ref:`windows`.
 
 If you have a Mac or Linux machine and you are not interested
 in developing with the engine, the recommended approach is to use
@@ -51,8 +49,8 @@ Installing the latest version
 See instructions for the :doc:`universal installer <universal>` script. 
 This script works for Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
-Changing the OpenQuake Engine version
--------------------------------------
+Changing the version
+--------------------
 
 To change the version of the engine, make sure to uninstall the current version, before installing a new version.
 See the corresponding chapters following the link below.

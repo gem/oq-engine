@@ -253,6 +253,8 @@ class LogContext:
             handler.setFormatter(
                 logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S'))
             logging.root.addHandler(handler)
+        if os.environ.get('NUMBA_DISABLE_JIT'):
+            logging.warning('NUMBA_DISABLE_JIT is set')
         return self
 
     def __exit__(self, etype, exc, tb):

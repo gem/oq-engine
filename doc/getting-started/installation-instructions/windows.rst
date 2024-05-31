@@ -1,5 +1,7 @@
-Installing the OpenQuake Engine on Windows
-==========================================
+.. _windows:
+
+Installing on Windows
+=====================
 
 The OpenQuake Engine can be installed on Windows with the :doc:`universal installer <universal>` script (recommended if you plan to develop GMPEs)
 or with a traditional .exe installer which can be downloaded from

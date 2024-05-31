@@ -1,5 +1,7 @@
-Liquefaction and Landslide Models
-=================================
+.. _liquefaction-intro:
+
+Liquefaction and Landslide
+==========================
 
 Landslides and liquefaction are well-known perils that accompany earthquakes. Basic models to describe their occurrence 
 have been around for decades and are constantly improving. However, these models have rarely been incorporated into PSHA.

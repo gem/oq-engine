@@ -1,6 +1,6 @@
 (slurm)=
 
-# Running the OpenQuake Engine on a SLURM cluster
+# Running on a SLURM cluster
 
 Most HPC clusters support a scheduler called SLURM (
 Simple Linux Utility for Resource Management). The OpenQuake engine
@@ -10,7 +10,7 @@ of the cluster.
 ## Running OpenQuake calculations with SLURM
 
 Let's consider a user with ssh access to a SLURM cluster. The only
-thing she has to do after logging in is to load the openquake
+thing the user has to do after logging in is to load the openquake
 libraries with the command
 ```
 $ load module openquake
