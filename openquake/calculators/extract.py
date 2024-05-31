@@ -982,20 +982,23 @@ def extract_avg_gmf(dstore, what):
     [imt] = qdict['imt']
     imti = info['imt'][imt]
     try:
-        sitecol = dstore['complete']
+        complete = dstore['complete']
     except KeyError:
-        sitecol = dstore['sitecol']
+        if dstore.parent:
+            complete = dstore.parent['sitecol'].complete
+        else:
+            complete = dstore['sitecol'].complete
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
         stations = dstore['station_data/site_id'][:]
-        ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
+        ok = (avg_gmf > 0) & ~numpy.isin(complete.sids, stations)
     else:
         ok = avg_gmf > 0
-    yield imt, avg_gmf[sitecol.sids[ok]]
-    yield 'sids', sitecol.sids[ok]
-    yield 'lons', sitecol.lons[ok]
-    yield 'lats', sitecol.lats[ok]
+    yield imt, avg_gmf[complete.sids[ok]]
+    yield 'sids', complete.sids[ok]
+    yield 'lons', complete.lons[ok]
+    yield 'lats', complete.lats[ok]
 
 
 @extract.add('num_events')

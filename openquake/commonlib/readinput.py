@@ -1029,6 +1029,15 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+    siteid = os.environ.get('OQ_DEBUG_SITE')
+    if siteid:
+        ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+        if 'station_data' in oqparam.inputs:
+            # keep the stations while restricting to the specified site
+            sdata, _imts = get_station_data(oqparam, haz_sitecol)
+            ok |= numpy.isin(haz_sitecol.sids, sdata.site_id.to_numpy())
+        haz_sitecol.array = haz_sitecol[ok]
+        oqparam.concurrent_tasks = 0
     try:
         exp = haz_sitecol.exposure
     except AttributeError:

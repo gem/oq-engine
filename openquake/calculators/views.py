@@ -1703,20 +1703,20 @@ def view_aggrisk(token, dstore):
     Returns a table with the aggregate risk by realization and loss type
     """
     gsim_lt = dstore['full_lt/gsim_lt']
-    gsims = [br.gsim for br in gsim_lt.branches]
-    ws = [br.weight['default'] for br in gsim_lt.branches]
     df = dstore.read_df('aggrisk', sel={'agg_id': 0})
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
-    rlzs = df.rlz_id.unique()
-    arr = numpy.zeros(rlzs.max() + 2, dt)
-    AVG = rlzs.max() + 1
-    for rlz, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+    rlzs = list(gsim_lt)
+    AVG = len(rlzs)
+    arr = numpy.zeros(AVG + 1, dt)
+    for r, rlz in enumerate(rlzs):
+        arr[r]['gsim'] = repr(repr(rlz.value[0]))
+        arr[r]['weight'] = rlz.weight
+    for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+        rlz = rlzs[r]
         lt = LOSSTYPE[loss_id]
-        arr[rlz]['gsim'] = gsims[rlz]
-        arr[rlz]['weight'] = ws[rlz]
-        arr[rlz][lt] = loss
-        arr[AVG][lt] += loss * ws[rlz]
+        arr[r][lt] = loss
+        arr[AVG][lt] += loss * rlz.weight
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr
