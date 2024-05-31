@@ -1,5 +1,5 @@
-Hazard Disaggregation Outputs
-=============================
+Hazard Disaggregation
+=====================
 
 The OpenQuake engine outputs for a disaggregation analysis correspond
 to projections of the multidimensional probability matrix containing

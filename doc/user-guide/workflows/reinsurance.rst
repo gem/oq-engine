@@ -1,5 +1,7 @@
-Reinsurance Loss Analysis
-=========================
+.. _reinsurance-intro:
+
+Reinsurance
+===========
 
 Starting from engine v3.16 reinsurance loss estimates for traditional property contracts are available for event-based 
 and scenario risk calculations.

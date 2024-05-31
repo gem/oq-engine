@@ -1,3 +1,6 @@
+  [Paolo Tormene, Michele Simionato]
+  * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
+
   [Michele Simionato]
   * Internal: added a command `oq reducexp exposure_xml site_model_csv`
 

@@ -8,7 +8,14 @@ sufficient information to parameterise the location (as a three-dimensional surf
 faulting of the rupture, a more simplified NRML structure is sufficient compared to the source model structures 
 described previously in Source typologies. A rupture model XML can be defined in the following formats:
 
-*Simple Fault Rupture* - in which the geometry is defined by the trace of the fault rupture, the dip and the upper and 
+	1. Simple fault rupture
+	1. Planar and Multi-Planar fault rupture
+	1. Complex fault rupture
+
+Simple Fault Rupture
+--------------------
+
+In a *Simple Fault Rupture* model, the geometry is defined by the trace of the fault rupture, the dip and the upper and 
 lower seismogenic depths. An example is shown in the listing below::
 
 	      <?xml version='1.0' encoding='utf-8'?>
@@ -38,7 +45,10 @@ lower seismogenic depths. An example is shown in the listing below::
 	
 	      </nrml>
 
-*Planar & Multi-Planar Rupture* - in which the geometry is defined as a collection of one or more rectangular planes, 
+Planar and Multi-Planar Rupture
+-------------------------------
+
+In a *Planar or Multi-Planar Rupture* model, the geometry is defined as a collection of one or more rectangular planes, 
 each defined by four corners. An example of a multi-planar rupture is shown below in the listing below::
 
 	<?xml version='1.0' encoding='utf-8'?>
@@ -65,7 +75,10 @@ each defined by four corners. An example of a multi-planar rupture is shown belo
 	
 	</nrml>
 
-*Complex Fault Rupture* - in which the geometry is defined by the upper, lower and (if applicable) intermediate edges 
+Complex Fault Rupture
+---------------------
+
+In a *Complex Fault Rupture* model, the geometry is defined by the upper, lower and (if applicable) intermediate edges 
 of the fault rupture. An example of a complex fault rupture is shown below in the listing below::
 
 	<?xml version='1.0' encoding='utf-8'?>
