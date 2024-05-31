@@ -419,15 +419,33 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
+def get_sids_around(site_model_hdf5, rec, dist):
+    """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rec: a record with 'mag' and 'hypo' fields
+    :returns: site model close to the rupture
+    """
+    with hdf5.File(site_model_hdf5) as f:
+        sm = f['site_model'][:]
+    x, y, z = rec['hypo']
+    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
+    return idxs
+
+
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rup: a rupture object or a record with a 'hypo' field
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
     hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
+    xyz = spherical_to_cartesian(x, y, z)
     idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
@@ -1029,6 +1047,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode(
+            'ruptures' in h5.parent and 'site_model' in h5.parent):
+        # filter the far away sites
+        rec = h5.parent['ruptures'][0]
+        dist = oqparam.maximum_distance('*')(rec['mag'])
+        sids = get_sids_around(h5.parent.filename, rec, dist)
+        haz_sitecol = haz_sitecol.filtered(sids)
+
     siteid = os.environ.get('OQ_DEBUG_SITE')
     if siteid:
         ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
