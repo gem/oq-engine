@@ -1,5 +1,5 @@
-Using Command Line
-==================
+Using the Command Line
+======================
 
 An OpenQuake engine analysis can be launched from the command line of a terminal.
 
