@@ -626,10 +626,7 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-        if 'station_data' in oqparam.inputs:  # extend the sitecol
-            df = pandas.read_csv(oqparam.inputs['station_data'])
-            sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
-                                     df.LATITUDE.to_numpy())
+
     ss = oqparam.sites_slice
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
@@ -1047,7 +1044,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
-    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode(
+    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
             'ruptures' in h5.parent and 'site_model' in h5.parent):
         # filter the far away sites
         rec = h5.parent['ruptures'][0]
