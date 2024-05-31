@@ -538,7 +538,7 @@ class EngineRunJobTestCase(unittest.TestCase):
     def test_sensitivity(self):
         # test the sensitivity of the UHS from the area_source_discretization
         job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
-        calc = sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
+        sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
         with Print.patch() as p:
             sap.runline('openquake.commands compare uhs -1 -2')
         print(p)

@@ -1,3 +1,6 @@
+  [Paolo Tormene, Michele Simionato]
+  * Added commands `oq compare assetcol` and `oq compare sitecol`
+
   [Paul Henshaw, Antonio Ettorre, Michele Simionato]
   * Updated the documentation about installing the engine
 
