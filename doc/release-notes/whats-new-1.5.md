@@ -153,8 +153,8 @@ to install.
 16. We added a check on the site parameters distance. If a site model
 file is provided in a hazard calculation, and if no site parameters are
 available within a radius of 5 km for a particular site, a
-warning is raised. The goal is to signal the user if she used an
-incorrect site model file with respect to the sites she is using. The
+warning is raised. The goal is to signal the user if they used an
+incorrect site model file with respect to the sites they are using. The
 calculation still runs and complete, since sometimes you may not have
 site parameters data close enough to the sites of interests.
 

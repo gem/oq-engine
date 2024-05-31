@@ -10,7 +10,7 @@ of the cluster.
 ## Running OpenQuake calculations with SLURM
 
 Let's consider a user with ssh access to a SLURM cluster. The only
-thing she has to do after logging in is to load the openquake
+thing the user has to do after logging in is to load the openquake
 libraries with the command
 ```
 $ load module openquake
