@@ -348,6 +348,10 @@ class CompareTestCase(unittest.TestCase):
             sap.runline(f"openquake.commands compare med_gmv PGA {id} {id}")
         self.assertIn('0_0!aFault_aPriori_D2_1: no differences within '
                       'the tolerances', str(p))
+        # test compare sitecol
+        with Print.patch() as p:
+            sap.runline(f"openquake.commands compare sitecol {id} {id}")
+        print(p)
 
 
 class SampleSmTestCase(unittest.TestCase):
@@ -534,11 +538,20 @@ class EngineRunJobTestCase(unittest.TestCase):
     def test_sensitivity(self):
         # test the sensitivity of the UHS from the area_source_discretization
         job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
-        sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
+        calc = sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
         with Print.patch() as p:
             sap.runline('openquake.commands compare uhs -1 -2')
         print(p)
         self.assertIn('rms-diff', str(p))
+        # testing different sitecols
+        with read(-1, 'r+') as ds1:
+            sitecol = ds1['sitecol']
+            sitecol.array['vs30'] = 750.
+            ds1['sitecol'] = sitecol
+        with Print.patch() as p:
+            sap.runline('openquake.commands compare sitecol -1 -2')
+        print(p)
+
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
@@ -597,6 +610,10 @@ Source Loss Table'''.splitlines())
         # run the damage part; emulate using a different user for the hazard
         dic['calculation_mode'] = 'event_based_damage'
         run_jobs(create_jobs([dic], 'error', hc_id=job.id))
+        with Print.patch() as p:
+            sap.runline(
+                f'openquake.commands compare assetcol {job.id} {job.id}')
+        print(p)
         shutil.rmtree(tempdir)
 
     def test_shakemap2gmfs(self):

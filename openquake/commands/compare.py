@@ -354,30 +354,29 @@ def same_length(ds0, ds1, what):
 def compare_column_values(array0, array1, what, calc_id0, calc_id1):
     diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
-        print(f"The '{what}' columns in both arrays are equal")
+        return
+    print(f"There are {len(diff_idxs)} different elements in the '{what}' column.")
+    for ordinal, idx in enumerate(diff_idxs):
+        if ordinal > 5:
+            print('[...]')
+            break
+        print(f"Index {idx}: {array0[idx]} in calc {calc_id0},"
+              f" {array1[idx]} in calc {calc_id1}")
+    if numpy.array_equal(numpy.sort(array0), numpy.sort(array1)):
+        print(f'However, the sorted "{what}"s are equal')
     else:
-        print(f"The following elements differ in the '{what}' columns:")
-        for ordinal, idx in enumerate(diff_idxs):
-            if ordinal > 5:
-                print(f'[...] (tot: {len(diff_idxs)} differences)')
-                break
-            print(f"Index {idx}: {array0[idx]} in calc {calc_id0},"
-                  f" {array1[idx]} in calc {calc_id1}")
-        if numpy.array_equal(numpy.sort(array0), numpy.sort(array1)):
-            print(f'However, the sorted "{what}"s are equal')
-        else:
-            print(f'"{what}"s remain different even after sorting them')
+        print(f'"{what}"s remain different even after sorting them')
 
 
-def check_array_columns(array0, array1, what, calc_id0, calc_id1):
+def check_column_names(array0, array1, what, calc_id0, calc_id1):
     cols0 = array0.dtype.names
     cols1 = array1.dtype.names
-    if numpy.array_equal(cols0, cols1):
-        print(f'The {what} arrays have the same columns')
-    elif len(cols0) != len(cols1):
+    if len(cols0) != len(cols1):
         print(f'The {what} arrays have different numbers of columns:')
         print(f'Calc {calc_id0}:\n{cols0}')
         print(f'Calc {calc_id1}:\n{cols1}')
+    elif numpy.array_equal(cols0, cols1):
+        print(f'The {what} arrays have the same columns')
     elif numpy.array_equal(numpy.sort(cols0), numpy.sort(cols1)):
         print(f'The {what} arrays have the same columns, but ordered'
               ' differently')
@@ -395,12 +394,21 @@ def compare_assetcol(calc_ids: int):
     ds1 = datastore.read(calc_ids[1])
     if not same_length(ds0, ds1, 'assetcol'):
         return
+    check_column_names(
+            ds0['assetcol'].array, ds1['assetcol'].array,
+            'assetcol', calc_ids[0], calc_ids[1])
     ids0 = get_asset_ids(ds0)
     ids1 = get_asset_ids(ds1)
     compare_column_values(ids0, ids1, 'id', calc_ids[0], calc_ids[1])
-    check_array_columns(
-            ds0['assetcol'].array, ds1['assetcol'].array,
-            'assetcol', calc_ids[0], calc_ids[1])
+    array0 = ds0['assetcol'].array
+    array1 = ds1['assetcol'].array
+    for col in ds0['assetcol'].array.dtype.names:
+        if col == 'id':
+            continue
+        values0 = array0[col]
+        values1 = array1[col]
+        compare_column_values(values0, values1,
+                              col, calc_ids[0], calc_ids[1])
 
 
 def compare_sitecol(calc_ids: int):
@@ -408,13 +416,16 @@ def compare_sitecol(calc_ids: int):
     ds1 = datastore.read(calc_ids[1])
     if not same_length(ds0, ds1, 'sitecol'):
         return
-    custom_site_ids0 = ds0['sitecol'].array['custom_site_id'][:]
-    custom_site_ids1 = ds1['sitecol'].array['custom_site_id'][:]
-    compare_column_values(custom_site_ids0, custom_site_ids1,
-                          'custom_site_id', calc_ids[0], calc_ids[1])
-    check_array_columns(
+    check_column_names(
             ds0['sitecol'].array, ds1['sitecol'].array,
             'sitecol', calc_ids[0], calc_ids[1])
+    array0 = ds0['sitecol'].array
+    array1 = ds1['sitecol'].array
+    for col in ds0['sitecol'].array.dtype.names:
+        values0 = array0[col]
+        values1 = array1[col]
+        compare_column_values(values0, values1,
+                              col, calc_ids[0], calc_ids[1])
 
 
 main = dict(rups=compare_rups,
