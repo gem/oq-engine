@@ -627,19 +627,20 @@ def get_site_collection(oqparam, h5=None):
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
 
-    ss = oqparam.sites_slice
-    if ss:
+    slc = oqparam.sites_slice
+    if slc:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
+        mask = (sitecol.sids >= slc[0]) & (sitecol.sids < slc[1])
         sitecol = sitecol.filter(mask)
-        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
+        assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
 
     sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
     sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
+    sitecol.exposure = exp
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -653,7 +654,6 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-    sitecol.exposure = exp
     return sitecol
 
 
@@ -1046,7 +1046,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
         haz_sitecol = get_site_collection(oqparam, h5)
     if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
             'ruptures' in h5.parent and 'site_model' in h5.parent):
-        # filter the far away sites
+        # filter the far away sites, tested in ScenarioRiskTestCase::test_case_1g
         rec = h5.parent['ruptures'][0]
         dist = oqparam.maximum_distance('*')(rec['mag'])
         sids = get_sids_around(h5.parent.filename, rec, dist)
