@@ -11,12 +11,12 @@ The main calculators used to perform this analysis are:
 1. *Logic Tree Processor*
 
    The Logic Tree Processor works in the same way described in the description of the Classical *Probabilistic Seismic 
-   Hazard Analysis* workflow (see Section :ref:`Classical PSHA <classical-psha>`).
+   Hazard Analysis* workflow (see Section :ref:`Classical PSHA <classical-psha-intro>`).
 
 2. *Earthquake Rupture Forecast Calculator*
 
    The Earthquake Rupture Forecast Calculator was already introduced in the description of the PSHA workflow (see 
-   Section :ref:`Classical PSHA <classical-psha>`).
+   Section :ref:`Classical PSHA <classical-psha-intro>`).
 
 3. *Stochastic Event Set Calculator*
 

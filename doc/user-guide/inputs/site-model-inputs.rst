@@ -35,7 +35,7 @@ longitude, latitude tuple. Depth values are again optional. An example is provid
 
 The complete list of valid site parameters that can go into a site model .csv file are listed here. Currently, the work
 in documentation to describe this input parameters more explicitly, and to provide short descriptions of each valid site 
-parameter and where they are needed is in progress.::
+parameter and where they are needed is in progress::
 
 	# dtype of each valid site parameter
 	site_param_dt = {
@@ -110,3 +110,21 @@ parameter and where they are needed is in progress.::
 	    'region': numpy.uint32,
 	    'in_cshm': bool  # used in mcverry
 	}
+
+The ``custom_site_id``
+----------------------
+
+Since engine v3.13, it is possible to assign 6-character ASCII strings as unique identifiers for the sites (8-characters 
+since engine v3.15). This can be convenient in various situations, especially when splitting a calculation in geographic 
+regions. The way to enable it is to add a field called ``custom_site_id`` to the site model file, which must be unique 
+for each site.
+
+The hazard curve and ground motion field exporters have been modified to export the ``custom_site_id`` instead of the 
+``site_id`` (if present).
+
+We used this feature to split the ESHM20 model in two parts (Northern Europe and Southern Europe). Then creating the 
+full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
+overlap, thus making impossible to join the outputs.
+
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
+unique identification of all potential sites across the globe.
