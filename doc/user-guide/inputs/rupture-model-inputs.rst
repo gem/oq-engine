@@ -8,48 +8,54 @@ sufficient information to parameterise the location (as a three-dimensional surf
 faulting of the rupture, a more simplified NRML structure is sufficient compared to the source model structures 
 described previously in Source typologies. A rupture model XML can be defined in the following formats:
 
-	1. Simple fault rupture
-	1. Planar and Multi-Planar fault rupture
-	1. Complex fault rupture
+#. Simple fault rupture
+#. Planar and Multi-Planar fault rupture
+#. Complex fault rupture
+#. Gridded Rupture
 
 Simple Fault Rupture
 --------------------
 
 In a *Simple Fault Rupture* model, the geometry is defined by the trace of the fault rupture, the dip and the upper and 
-lower seismogenic depths. An example is shown in the listing below::
+lower seismogenic depths. An example is shown in the listing below:
 
-	      <?xml version='1.0' encoding='utf-8'?>
-	      <nrml xmlns:gml="http://www.opengis.net/gml"
-	            xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	          <simpleFaultRupture>
-	            <magnitude>6.7</magnitude>
-	            <rake>180.0</rake>
-	            <hypocenter lon="-122.02750" lat="37.61744" depth="6.7"/>
-	            <simpleFaultGeometry>
-	              <gml:LineString>
-	                <gml:posList>
-	                  -121.80236 37.39713
-	                  -121.91453 37.48312
-	                  -122.00413 37.59493
-	                  -122.05088 37.63995
-	                  -122.09226 37.68095
-	                  -122.17796 37.78233
-	                </gml:posList>
-	              </gml:LineString>
-	              <dip>76.0</dip>
-	              <upperSeismoDepth>0.0</upperSeismoDepth>
-	              <lowerSeismoDepth>13.4</lowerSeismoDepth>
-	            </simpleFaultGeometry>
-	          </simpleFaultRupture>
-	
-	      </nrml>
+.. code-block:: xml
+
+	<?xml version='1.0' encoding='utf-8'?>
+	<nrml xmlns:gml="http://www.opengis.net/gml"
+		xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+		<simpleFaultRupture>
+		<magnitude>6.7</magnitude>
+		<rake>180.0</rake>
+		<hypocenter lon="-122.02750" lat="37.61744" depth="6.7"/>
+		<simpleFaultGeometry>
+			<gml:LineString>
+			<gml:posList>
+				-121.80236 37.39713
+				-121.91453 37.48312
+				-122.00413 37.59493
+				-122.05088 37.63995
+				-122.09226 37.68095
+				-122.17796 37.78233
+			</gml:posList>
+			</gml:LineString>
+			<dip>76.0</dip>
+			<upperSeismoDepth>0.0</upperSeismoDepth>
+			<lowerSeismoDepth>13.4</lowerSeismoDepth>
+		</simpleFaultGeometry>
+		</simpleFaultRupture>
+
+	</nrml>
+
 
 Planar and Multi-Planar Rupture
 -------------------------------
 
 In a *Planar or Multi-Planar Rupture* model, the geometry is defined as a collection of one or more rectangular planes, 
-each defined by four corners. An example of a multi-planar rupture is shown below in the listing below::
+each defined by four corners. An example of a multi-planar rupture is shown below in the listing below:
+
+.. code-block:: xml
 
 	<?xml version='1.0' encoding='utf-8'?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -79,12 +85,11 @@ Complex Fault Rupture
 ---------------------
 
 In a *Complex Fault Rupture* model, the geometry is defined by the upper, lower and (if applicable) intermediate edges 
-of the fault rupture. An example of a complex fault rupture is shown below in the listing below::
+of the fault rupture. An example of a complex fault rupture is shown below in the listing below:
+
+.. code-block:: xml
 
 	<?xml version='1.0' encoding='utf-8'?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
 	    <complexFaultRupture>
 	        <magnitude>8.0</magnitude>
 	        <rake>90.0</rake>
@@ -122,8 +127,12 @@ of the fault rupture. An example of a complex fault rupture is shown below in th
 	
 	</nrml>
 
+Gridded Rupture
+---------------
+In a *Gridded Rupture* the geometry is defined in terms of a GriddedSurface which is a mesh of points.
+An example of gridded rupture is shown below in the listing below::
 
-*Gridded Rupture* - in which the geometry is defined in terms of a GriddedSurface which is a mesh of points. An example of gridded rupture is shown below in the listing below::
+.. code-block:: xml
 
 	<?xml version='1.0' encoding='utf-8'?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"

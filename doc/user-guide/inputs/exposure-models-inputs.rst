@@ -13,7 +13,9 @@ followed by data regarding each individual asset in the portfolio.
 information, along with an xml file conatining the metadata section for the exposure model that has been described in the 
 examples above. See Example 8 below for an illustration of an exposure model using csv files.
 
-A simple *Exposure Model* comprising a single asset is shown in the listing below.::
+A simple *Exposure Model* comprising a single asset is shown in the listing below:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -48,7 +50,9 @@ A simple *Exposure Model* comprising a single asset is shown in the listing belo
 	</nrml>
 
 Let us take a look at each of the sections in the above example file in turn. The first part of the file contains the 
-metadata section::
+metadata section:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -92,7 +96,9 @@ below:
 - ``taxonomySource``: an optional attribute used to define the taxonomy being used to classify the assets.
 - ``description``: mandatory; a brief string (ASCII) with further information about the *Exposure Model*.
 
-Next, let us look at the part of the file describing the area and cost conversions::
+Next, let us look at the part of the file describing the area and cost conversions:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -176,7 +182,9 @@ to develop the *Exposure Model*, then it is likely that the built up area or eco
 be directly derived, and will be used for the estimation of economic losses.
 
 Finally, let us look at the part of the file describing the set of assets in the portfolio to be used in seismic damage 
-or risk calculations::
+or risk calculations:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -226,12 +234,15 @@ cost (``retrofitted``). The combination between the possible options in which th
 to four ways of storing the information about the assets. For each of these cases a brief explanation and example is 
 provided in this section.
 
-**Example 1**
+Example 1
+---------
 
 This example illustrates an *Exposure Model* in which the aggregated cost (structural, nonstructural, contents and 
 business interruption) of the assets of each taxonomy for a set of locations is directly provided. Thus, in order to 
 indicate how the various costs will be defined, the following information needs to be stored in the *Exposure Model* file, 
-as shown in the listing below.::
+as shown in the listing below:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -268,7 +279,9 @@ as shown in the listing below.::
 
 In this case, the cost ``type`` of each component as been defined as ``aggregated``. Once the way in which each cost is 
 going to be defined has been established, the values for each asset can be stored according to the format shown in the 
-listing.::
+listing:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -311,10 +324,13 @@ aggregated value for all structural units (within a given asset) at each locatio
 need to define other attributes such as ``number`` or ``area``. This mode of representing an *Exposure Model* is probably 
 the simplest one.
 
-**Example 2**
+Example 2
+---------
 
 In the snippet shown in the listing below, an *Exposure Model* containing the number of structural units and the 
-associated costs per unit of each asset is presented.::
+associated costs per unit of each asset is presented:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -350,7 +366,9 @@ associated costs per unit of each asset is presented.::
 	</nrml>
 
 For this case, the cost ``type`` has been set to ``per_asset``. Then, the information from each asset can be stored 
-following the format shown in the listing below.::
+following the format shown in the listing below:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -390,10 +408,13 @@ out the risk calculations in which the economic cost of each asset is provided, 
 asset, the number of units (buildings) by the “per asset” replacement cost. Note that in this case, there is no need to 
 specify the attribute ``area``.
 
-**Example 3**
+Example 3
+---------
 
 The example shown in the listing below comprises an *Exposure Model* containing the built up area of each asset, and the 
-associated costs are provided per unit area.::
+associated costs are provided per unit area:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -434,7 +455,9 @@ In order to compile an *Exposure Model* with this structure, the cost ``type`` s
 it is also necessary to specify if the ``area`` that is being store represents the aggregated area of number of units 
 within an asset, or the average area of a single unit. In this particular case, the ``area`` that is being stored is the 
 aggregated built up area per asset, and thus this attribute was set to ``aggregated``. The listing below illustrates the 
-definition of the assets for this example.::
+definition of the assets for this example:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -475,11 +498,14 @@ Once again, the OpenQuake engine needs to carry out some calculations in order t
 In this case, this value is computed by multiplying the aggregated built up ``area`` of each asset by the associated cost 
 per unit area. Notice that in this case, there is no need to specify the attribute ``number``.
 
-**Example 4**
+Example 4
+---------
 
 This example demonstrates an *Exposure Model* that defines the number of structural units for each asset, the average 
 built up area per structural unit and the associated costs per unit area. The listing below shows the metadata definition 
-for an *Exposure Model* built in this manner.::
+for an *Exposure Model* built in this manner:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -518,7 +544,9 @@ for an *Exposure Model* built in this manner.::
 
 Similarly to what was described in the previous example, the various costs ``type`` also need to be established as 
 ``per_area``, but the ``type`` of area is now defined as ``per_asset``. The listing below illustrates the definition of 
-the assets for this example.::
+the assets for this example:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -558,14 +586,17 @@ the assets for this example.::
 In this example, the OpenQuake engine will make use of all the parameters to estimate the various costs of each asset, by 
 multiplying the number of structural units by its average built up area, and then by the respective cost per unit area.
 
-**Example 5**
+Example 5
+---------
 
 In this example, additional information will be included, which is required for other risk analysis besides loss 
 estimation, such as the benefit/cost analysis.
 
 In order to perform a benefit/cost assessment, it is necessary to indicate the retrofitting cost. This parameter is 
 handled in the same manner as the structural cost, and it should be stored according to the format shown in the listing 
-below.::
+below:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -597,7 +628,8 @@ Despite the fact that for the demonstration of how the retrofitting cost can be 
 structure described in Example 1 was used, it is important to mention that any of the other cost storing approaches can 
 also be employed (Examples 2–4).
 
-**Example 6**
+Example 6
+---------
 
 The OpenQuake engine is also capable of estimating human losses, based on the number of occupants in an asset, at a 
 certain time of the day. The example *Exposure Model* shown in the listing below illustrates how this parameter is defined 
@@ -609,7 +641,9 @@ The ``structural`` cost is being defined as the aggregate replacement cost for a
 (Example 1), the ``nonstructural value`` is defined as the replacement cost per unit area where the area is defined per 
 building comprising the asset (Example 4), and the ``contents`` and ``business_interruption`` values are provided per 
 building comprising the asset (Example 2). The number of occupants at different times of the day are also provided as 
-aggregated values for all of the buildings comprising the asset.::
+aggregated values for all of the buildings comprising the asset:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -648,14 +682,17 @@ aggregated values for all of the buildings comprising the asset.::
 	
 	</nrml>
 
-**Example 7**
+Example 7
+---------
 
 Starting from OpenQuake engine v2.7, the user may also provide a set of tags for each asset in the *Exposure Model*. The 
 primary intended use case for the tags is to enable aggregation or accumulation of risk results (casualties / damages / 
 losses) for each tag. The tags could be used to specify location attributes, occupancy types, or insurance policy codes 
 for the different assets in the *Exposure Model*.
 
-The example *Exposure Model* shown in the listing below illustrates how one or more tags can be defined for each asset.::
+The example *Exposure Model* shown in the listing below illustrates how one or more tags can be defined for each asset:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -694,7 +731,9 @@ The example *Exposure Model* shown in the listing below illustrates how one or m
 	</nrml>
 
 The list of tag names that will be used in the *Exposure Model* must be provided in the metadata section of the exposure 
-file, as shown in the following snippet from the full file:::
+file, as shown in the following snippet from the full file::
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -733,7 +772,9 @@ file, as shown in the following snippet from the full file:::
 	</nrml>
 
 The tag values for the different tags can then be specified for each asset as shown in the following snippet from the 
-same file::
+same file:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -774,12 +815,15 @@ same file::
 Note that it is not mandatory that every tag name specified in the metadata section must be provided with a tag value 
 for each asset.
 
-**Example 8**
+Example 8
+---------
 
 This example illustrates the use of multiple csv files containing the assets information, in conjunction with the 
 metadata section in the usual xml format.
 
-Let us take a look at the metadata section of the Exposure Model, which is listed as usual in an xml file::
+Let us take a look at the metadata section of the Exposure Model, which is listed as usual in an xml file:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"

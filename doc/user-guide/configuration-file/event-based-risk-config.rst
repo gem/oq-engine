@@ -447,18 +447,21 @@ the pla_factor corresponding to the maximum return period in the model will be a
 An example of a PLA input model is presented in the table below.
 
 .. _pla_model.csv:
-.. table:: Example of a post-loss amplification (PLA) inout model
+.. table:: Example of a post-loss amplification (PLA) input model
 
-	+---------------+------------+
-	| return_period | pla_factor |
-	+===============+============+
-	| 1             | 1          |
-	| 5             | 1          |
-	| 10            | 1.092      |
-	| 50            | 1.1738     |
-	| 100           | 1.209      |
-	| 500           | 1.2908     |
-	| 1,000         | 1.326      |
-	| 5,000         | 1.4        |
-	+---------------+------------+
+    +---------------+------------+
+    | return_period | pla_factor |
+    +===============+============+
+    | 1             | 1          |
+    +---------------+------------+
+    | 5             | 1          |
+    +---------------+------------+
+    | 10            | 1.092      |
+    +---------------+------------+
+    | 50            | 1.1738     |
+    +---------------+------------+
+    | 100           | 1.209      |
+    +---------------+------------+
+    | 500           | 1.2908     |
+    +---------------+------------+
 
