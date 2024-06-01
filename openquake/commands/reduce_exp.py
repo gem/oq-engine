@@ -44,7 +44,7 @@ def main(exposure_xml, sites_csv):
     """
     with performance.Monitor() as mon:
         oq = oqvalidation.OqParam(inputs={'job_ini': '<in-memory>',
-                                          'sites': [sites_csv],
+                                          'sites': sites_csv,
                                           'exposure': [exposure_xml]},
                                   calculation_mode='custom',
                                   asset_hazard_distance='15',
