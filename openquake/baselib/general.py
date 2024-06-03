@@ -497,7 +497,7 @@ def extract_dependencies(lines):
         except ValueError:  # for instance a comment
             continue
         if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam', 'django_cors_headers'):
+                   'python_pam', 'django_cors_headers', 'django_cookie_consent'):
             # not importable
             continue
         if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
