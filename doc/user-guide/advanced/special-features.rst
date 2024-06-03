@@ -94,24 +94,6 @@ changed the rupture classes or the surface classes, but we changed the seed algo
 different numbers to be generated (hopefully, statistically consistent). A bug fix or change of logic in the calculator 
 can also change the numbers across engine versions.
 
-The ``custom_site_id``
-----------------------
-
-Since engine v3.13, it is possible to assign 6-character ASCII strings as unique identifiers for the sites (8-characters 
-since engine v3.15). This can be convenient in various situations, especially when splitting a calculation in geographic 
-regions. The way to enable it is to add a field called ``custom_site_id`` to the site model file, which must be unique 
-for each site.
-
-The hazard curve and ground motion field exporters have been modified to export the ``custom_site_id`` instead of the 
-``site_id`` (if present).
-
-We used this feature to split the ESHM20 model in two parts (Northern Europe and Southern Europe). Then creating the 
-full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
-overlap, thus making impossible to join the outputs.
-
-A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
-unique identification of all potential sites across the globe.
-
 The ``minimum_distance`` parameter
 ----------------------------------
 

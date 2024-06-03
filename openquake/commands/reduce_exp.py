@@ -38,13 +38,13 @@ def reduce_files(datafiles, okassets):
             rdf.to_csv(fname, index=None)
 
 
-def main(exposure_xml, site_model_csv):
+def main(exposure_xml, sites_csv):
     """
     Reduce the exposure model to the sites in the site model
     """
     with performance.Monitor() as mon:
         oq = oqvalidation.OqParam(inputs={'job_ini': '<in-memory>',
-                                          'site_model': [site_model_csv],
+                                          'sites': sites_csv,
                                           'exposure': [exposure_xml]},
                                   calculation_mode='custom',
                                   asset_hazard_distance='15',
@@ -56,4 +56,4 @@ def main(exposure_xml, site_model_csv):
 
 
 main.exposure_xml = 'path to the exposure file'
-main.site_model_csv = 'path to the site model file'
+main.sites_csv = 'path to the site model file'
