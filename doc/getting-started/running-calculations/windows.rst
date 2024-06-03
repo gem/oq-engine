@@ -1,4 +1,4 @@
-.. _windows:
+.. _running_on_windows:
 
 On Windows
 ==========

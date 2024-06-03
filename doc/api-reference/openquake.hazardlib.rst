@@ -95,10 +95,10 @@ pmf
     :undoc-members:
     :show-inheritance:
 
-probability_map
+map_array
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.probability_map
+.. automodule:: openquake.hazardlib.map_array
     :members:
     :undoc-members:
     :show-inheritance:
