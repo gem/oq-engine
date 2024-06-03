@@ -1069,8 +1069,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     siteid = os.environ.get('OQ_DEBUG_SITE')
     if siteid:
-        import pdb; pdb.set_trace()
         ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+        if not ok.any():
+            raise ValueError('There is not custom_site_id=%s', siteid)
         if 'station_data' in oqparam.inputs:
             # keep the stations while restricting to the specified site
             sdata, _imts = get_station_data(oqparam, haz_sitecol)
