@@ -55,9 +55,9 @@ installation the engine works as any other development installation in Python: y
 create and activate a virtualenv and then perform a *pip install -e* . from the engine main directory, as normal. You can
 find the details here:
 
-:ref:`gem/oq-engine <development>`
+:ref:`development page <development>`
 
-It is also possible to develop on Windows (:ref:`gem/oq-engine <development>`) but very few people in GEM are doing that, so you are on your
+It is also possible to develop on Windows (:ref:`development page <development>`) but very few people in GEM are doing that, so you are on your
 own, should you encounter difficulties. We recommend Linux, but Mac also works.
 
 Since you are going to develop with the engine, you should also install the development dependencies that by default are
