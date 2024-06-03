@@ -652,7 +652,7 @@ def get_site_collection(oqparam, h5=None):
 
     if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
             'ruptures' in h5.parent and 'site_model' in h5.parent):
-        # filter the far away sites, tested in ScenarioRiskTestCase::test_case_1g
+        # filter the far away sites, used in ScenarioRiskTestCase::test_case_1g
         rec = h5.parent['ruptures'][0]
         dist = oqparam.maximum_distance('*')(rec['mag'])
         sids = get_sids_around(h5.parent.filename, rec, dist)
