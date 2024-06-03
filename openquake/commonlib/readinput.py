@@ -419,15 +419,33 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
+def get_sids_around(site_model_hdf5, rec, dist):
+    """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rec: a record with 'mag' and 'hypo' fields
+    :returns: site model close to the rupture
+    """
+    with hdf5.File(site_model_hdf5) as f:
+        sm = f['site_model'][:]
+    x, y, z = rec['hypo']
+    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
+    return idxs
+
+
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rup: a rupture object or a record with a 'hypo' field
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
     hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
+    xyz = spherical_to_cartesian(x, y, z)
     idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
@@ -608,23 +626,21 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-        if 'station_data' in oqparam.inputs:  # extend the sitecol
-            df = pandas.read_csv(oqparam.inputs['station_data'])
-            sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
-                                     df.LATITUDE.to_numpy())
-    ss = oqparam.sites_slice
-    if ss:
+
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
+        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+
+    slc = oqparam.sites_slice
+    if slc:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
+        mask = (sitecol.sids >= slc[0]) & (sitecol.sids < slc[1])
         sitecol = sitecol.filter(mask)
-        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
+        assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
-
-    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
-    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -633,12 +649,21 @@ def get_site_collection(oqparam, h5=None):
         # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
+
+    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
+            'ruptures' in h5.parent and 'site_model' in h5.parent):
+        # filter the far away sites, used in ScenarioRiskTestCase::test_case_1g
+        rec = h5.parent['ruptures'][0]
+        dist = oqparam.maximum_distance('*')(rec['mag'])
+        sids = get_sids_around(h5.parent.filename, rec, dist)
+        sitecol = sitecol.filtered(sids)
+
+    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
+    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
+    sitecol.exposure = exp
     if h5:
         h5['sitecol'] = sitecol
-    if ('vs30' in sitecol.array.dtype.names and
-            not numpy.isnan(sitecol.vs30).any()):
-        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-    sitecol.exposure = exp
+
     return sitecol
 
 
@@ -1029,6 +1054,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
+
     siteid = os.environ.get('OQ_DEBUG_SITE')
     if siteid:
         ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
