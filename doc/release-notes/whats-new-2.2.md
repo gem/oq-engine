@@ -45,7 +45,7 @@ an issue, especially for non-linux users.
 
 The recommended way to install the packages is still via the official
 packages released by GEM for Linux, Windows and Mac OS X (see
-https://github.com/gem/oq-engine/blob/master/doc/installing/overview.md).
+https://github.com/gem/oq-engine/blob/engine-3.20/doc/installing/overview.md).
 However, the engine is also installable as any other Python software: create a
 [virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/)
 and run `pip install openquake.engine`:
