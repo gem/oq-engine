@@ -116,6 +116,14 @@ class MultiFaultSource(BaseSeismicSource):
             except KeyError:
                 raise KeyError(f'{key} not found in {self.hdf5path}')
 
+    def set_sections(self, sections):
+        """
+        Used in the UCERF converter, not in the engine
+        """
+        self.sections = sections
+        dic = {i: sec for i, sec in enumerate(sections)}
+        save([self], dic, f'{self.source_id}.hdf5', del_rupture_idxs=False)
+
     def set_msparams(self, secparams, close_sec=None, ry0=False,
                      mon1=performance.Monitor(),
                      mon2=performance.Monitor()):
@@ -251,7 +259,7 @@ class MultiFaultSource(BaseSeismicSource):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path
-def save(mfsources, sectiondict, hdf5path):
+def save(mfsources, sectiondict, hdf5path, del_rupture_idxs=True):
     """
     Utility to serialize MultiFaultSources and optionally computing msparams
     """
@@ -266,7 +274,8 @@ def save(mfsources, sectiondict, hdf5path):
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
         all_rids.append(rids)
-        delattr(src, '_rupture_idxs')  # save memory
+        if del_rupture_idxs:
+            delattr(src, '_rupture_idxs')  # save memory
         src.hdf5path = hdf5path
 
     # store data
