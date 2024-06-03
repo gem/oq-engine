@@ -1,3 +1,5 @@
+python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
+
   [Paolo Tormene, Michele Simionato]
   * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
 
@@ -103,6 +105,8 @@
   * Optimized postclassical both for regular and tiling calculations
   * Saving disk space in classical calculations (~4x) by gzipping the rates
   * Removed Python version checks in install.py
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 03 Jun 2024 07:57:30 +0000
 
 python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
 
