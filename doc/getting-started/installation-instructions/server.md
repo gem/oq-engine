@@ -12,6 +12,8 @@ When installing the OpenQuake Engine with the universal installer the `local_set
 
 For example if you clone the repository in the folder `/opt/openquake/src/oq-engine/` you must place the file in `/opt/openquake/src/oq-engine/openquake/server`
 
+If you only download install.py file and run the installation, the `local_settings.py` file must be located in `/opt/openquake/venv/lib/python3.11/site-packages/openquake/server` (replacing python3.11 with the actual python version)
+
 Create a `local_settings.py` and add:
 ```python
 APPLICATION_MODE = 'RESTRICTED'
