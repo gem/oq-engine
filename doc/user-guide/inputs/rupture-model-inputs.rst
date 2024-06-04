@@ -90,6 +90,8 @@ of the fault rupture. An example of a complex fault rupture is shown below in th
 .. code-block:: xml
 
 	<?xml version='1.0' encoding='utf-8'?>
+	<nrml xmlns:gml="http://www.opengis.net/gml"
+              xmlns="http://openquake.org/xmlns/nrml/0.5">
 	    <complexFaultRupture>
 	        <magnitude>8.0</magnitude>
 	        <rake>90.0</rake>
@@ -124,7 +126,6 @@ of the fault rupture. An example of a complex fault rupture is shown below in th
 	            </faultBottomEdge>
 	        </complexFaultGeometry>
 	    </complexFaultRupture>
-	
 	</nrml>
 
 Gridded Rupture
@@ -136,7 +137,7 @@ An example of gridded rupture is shown below in the listing below::
 
 	<?xml version='1.0' encoding='utf-8'?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
+            xmlns="http://openquake.org/xmlns/nrml/0.5">
             <griddedRupture probs_occur="0.984 0.016">
                 <magnitude>8.2</magnitude>
                 <rake>90.0</rake>
