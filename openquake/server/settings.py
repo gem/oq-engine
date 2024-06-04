@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -227,8 +227,9 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-
-if APPLICATION_MODE in ('TOOLS_ONLY',):
+# NOTE: we need cookie_consent also without authentication, for instance
+# for the TOOLS_ONLY application mode
+if APPLICATION_MODE != 'UNRESTRICTED':
     # add installed_apps for cookie-consent and corsheader
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
                 'cookie_consent', 'corsheaders',):
