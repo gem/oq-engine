@@ -176,9 +176,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 SERVER_NAME = socket.gethostname()
 
 APPLICATION_MODES = [
-    'UNRESTRICTED', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
+    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
 
-APPLICATION_MODE = 'UNRESTRICTED'
+APPLICATION_MODE = 'PUBLIC'
 
 # If False, a warning is displayed in case a newer version of the engine has
 # been released
@@ -227,9 +227,7 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-# NOTE: we need cookie_consent also without authentication, for instance
-# for the TOOLS_ONLY application mode
-if APPLICATION_MODE != 'UNRESTRICTED':
+if APPLICATION_MODE in ('TOOLS_ONLY',):
     # add installed_apps for cookie-consent and corsheader
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
                 'cookie_consent', 'corsheaders',):
