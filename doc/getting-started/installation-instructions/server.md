@@ -52,7 +52,7 @@ Add a new local superuser:
 cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake oq webui createsuperuser
 ```
-To setup static files in Django issue the commands:
+To setup static files in Django, issue the following commands, making sure to refer to the actual folder where the engine was installed or cloned (see above):
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
