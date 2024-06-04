@@ -137,7 +137,6 @@ Notice that the ``costType`` element defines a ``name``, a ``type``, and a ``uni
 The Natural hazards’ Risk Markup Language schema for the *Exposure Model* allows the definition of a structural cost, a 
 nonstructural components cost, a contents cost, and a business interruption or downtime cost for each asset in the 
 portfolio. Thus, the valid values for the ``name`` attribute of the ``costType`` element are the following:
-
 - ``structural``: used to specify the structural replacement cost of assets
 - ``nonstructural``: used to specify the replacement cost for the nonstructural components of assets
 - ``contents``: used to specify the contents replacement cost

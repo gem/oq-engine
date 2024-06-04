@@ -149,8 +149,8 @@ html_theme_options = {
 }
 html_context = {"default_mode": "light"}
 extensions = [
-#MN:FIXME    "sphinx.ext.autodoc",
-#MN:FIXME    "sphinx.ext.viewcode",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
     "myst_parser",
     "sphinx_copybutton",
     "sphinx_design",
