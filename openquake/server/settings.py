@@ -300,14 +300,16 @@ if LOCKDOWN:
         'openquake.server.middleware.LoginRequiredMiddleware',
     )
 
-    INSTALLED_APPS += (
+    for app in (
         'django.contrib.auth',
         'django.contrib.contenttypes',
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
-        'openquake.server.announcements',
-        )
+        'openquake.server.announcements',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
+
 
     # Official documentation suggests to override the entire TEMPLATES
     TEMPLATES = [
