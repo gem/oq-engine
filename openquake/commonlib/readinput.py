@@ -661,9 +661,21 @@ def get_site_collection(oqparam, h5=None):
     sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
     sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
     sitecol.exposure = exp
+
+    has_gmf = ('scenario' in oqparam.calculation_mode or 'event_based' in
+          oqparam.calculation_mode)
+    if has_gmf and 'custom_site_id' not in sitecol.array.dtype.names:
+        gh = sitecol.geohash(8)
+        if len(numpy.unique(gh)) < len(gh):
+            logging.error('geohashes are not unique')
+        sitecol.add_col('custom_site_id', 'S8', gh)
+        if sitecol is not sitecol.complete:
+            # tested in scenario_risk/test_case_8
+            gh = sitecol.complete.geohash(8)
+            sitecol.complete.add_col('custom_site_id', 'S8', gh)
+
     if h5:
         h5['sitecol'] = sitecol
-
     return sitecol
 
 
@@ -1058,6 +1070,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     siteid = os.environ.get('OQ_DEBUG_SITE')
     if siteid:
         ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+        if not ok.any():
+            raise ValueError('There is not custom_site_id=%s', siteid)
         if 'station_data' in oqparam.inputs:
             # keep the stations while restricting to the specified site
             sdata, _imts = get_station_data(oqparam, haz_sitecol)
@@ -1113,15 +1127,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
-    if 'custom_site_id' not in sitecol.array.dtype.names:
-        gh = sitecol.geohash(8)
-        if len(numpy.unique(gh)) < len(gh):
-            logging.error('geohashes are not unique')
-        sitecol.add_col('custom_site_id', 'S8', gh)
-        if sitecol is not sitecol.complete:
-            # tested in scenario_risk/test_case_8
-            gh = sitecol.complete.geohash(8)
-            sitecol.complete.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded, exp
 
 
