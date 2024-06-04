@@ -39,6 +39,13 @@ Open the file `local_settings.py` and add:
 STATIC_ROOT = '/var/www/webui'
 ```
 STATIC_ROOT is the full, absolute path to your static files folder.
+Please remember to create the folder /var/www and set the ownership to user openquake.
+
+```console
+sudo mkdir /var/www
+sudo chown -R openquake /var/www/
+```
+
 Then issue the commands:
 
 ```console
