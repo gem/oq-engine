@@ -332,6 +332,102 @@ def compare_events(calc_ids: int):
     print(df)
 
 
+def get_asset_ids(ds):
+    ids = ds['assetcol']['id'][:]
+    if ds['oqparam'].aristotle:
+        N = 3  # length of mosaic model codes
+        ids = numpy.array([id_[N:] for id_ in ids])
+    return ids
+
+
+def same_length(ds0, ds1, what):
+    len0 = len(ds0[what])
+    len1 = len(ds1[what])
+    if len0 != len1:
+        print(f'The {what}s have different lengths: {len0} != {len1}')
+        return False
+    else:
+        print(f'The {what}s have the same lengths')
+        return True
+
+
+def compare_column_values(array0, array1, what, calc_id0, calc_id1):
+    diff_idxs = numpy.where(array0 != array1)[0]
+    if len(diff_idxs) == 0:
+        return
+    print(f"There are {len(diff_idxs)} different elements in the '{what}' column.")
+    for ordinal, idx in enumerate(diff_idxs):
+        if ordinal > 5:
+            print('[...]')
+            break
+        print(f"Index {idx}: {array0[idx]} in calc {calc_id0},"
+              f" {array1[idx]} in calc {calc_id1}")
+    if numpy.array_equal(numpy.sort(array0), numpy.sort(array1)):
+        print(f'However, the sorted "{what}"s are equal')
+    else:
+        print(f'"{what}"s remain different even after sorting them')
+
+
+def check_column_names(array0, array1, what, calc_id0, calc_id1):
+    cols0 = array0.dtype.names
+    cols1 = array1.dtype.names
+    if len(cols0) != len(cols1):
+        print(f'The {what} arrays have different numbers of columns:')
+        print(f'Calc {calc_id0}:\n{cols0}')
+        print(f'Calc {calc_id1}:\n{cols1}')
+    elif numpy.array_equal(cols0, cols1):
+        print(f'The {what} arrays have the same columns')
+    elif numpy.array_equal(numpy.sort(cols0), numpy.sort(cols1)):
+        print(f'The {what} arrays have the same columns, but ordered'
+              ' differently')
+    else:
+        print(f'The {what} arrays have differend columns:')
+        print(f'Calc {calc_id0}:\n{cols0}')
+        print(f'Calc {calc_id1}:\n{cols1}')
+
+
+def compare_assetcol(calc_ids: int):
+    """
+    Compare assetcol DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    if not same_length(ds0, ds1, 'assetcol'):
+        return
+    check_column_names(
+            ds0['assetcol'].array, ds1['assetcol'].array,
+            'assetcol', calc_ids[0], calc_ids[1])
+    ids0 = get_asset_ids(ds0)
+    ids1 = get_asset_ids(ds1)
+    compare_column_values(ids0, ids1, 'id', calc_ids[0], calc_ids[1])
+    array0 = ds0['assetcol'].array
+    array1 = ds1['assetcol'].array
+    for col in ds0['assetcol'].array.dtype.names:
+        if col == 'id':
+            continue
+        values0 = array0[col]
+        values1 = array1[col]
+        compare_column_values(values0, values1,
+                              col, calc_ids[0], calc_ids[1])
+
+
+def compare_sitecol(calc_ids: int):
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    if not same_length(ds0, ds1, 'sitecol'):
+        return
+    check_column_names(
+            ds0['sitecol'].array, ds1['sitecol'].array,
+            'sitecol', calc_ids[0], calc_ids[1])
+    array0 = ds0['sitecol'].array
+    array1 = ds1['sitecol'].array
+    for col in ds0['sitecol'].array.dtype.names:
+        values0 = array0[col]
+        values1 = array1[col]
+        compare_column_values(values0, values1,
+                              col, calc_ids[0], calc_ids[1])
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -341,11 +437,13 @@ main = dict(rups=compare_rups,
             med_gmv=compare_med_gmv,
             risk_by_event=compare_risk_by_event,
             sources=compare_sources,
-            events=compare_events)
+            events=compare_events,
+            assetcol=compare_assetcol,
+            sitecol=compare_sitecol)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,
-          compare_events):
+          compare_events, compare_assetcol, compare_sitecol):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:

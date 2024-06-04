@@ -1,5 +1,7 @@
-Liquefaction and Landslide Models
-=================================
+.. _liquefaction-intro:
+
+Liquefaction and Landslide
+==========================
 
 Landslides and liquefaction are well-known perils that accompany earthquakes. Basic models to describe their occurrence 
 have been around for decades and are constantly improving. However, these models have rarely been incorporated into PSHA.
@@ -185,7 +187,7 @@ the fit. The regression coefficients are given in Table 2.:
 
 .. math::
 
-	L(P) = \frac{a}{1+b\,e^(-c\,P)}^2\ (11)
+	L(P) = \frac{a}{1+b\,e^{-c\,P}}^2\ (11)
 
 +------------+---------+----------+
 | Parameters | Model 1 | Model 2  |

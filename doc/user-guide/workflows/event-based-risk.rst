@@ -1,8 +1,10 @@
-Stochastic Event Based Probabilistic Seismic Damage and Risk Analysis
-=====================================================================
+Event Based Damage and Risk
+===========================
 
-Stochastic Event Based Probabilistic Seismic Damage Analysis
-------------------------------------------------------------
+.. _event-based-damage-intro:
+
+Event Based Damage
+------------------
 
 This calculator employs an event-based Monte Carlo simulation approach to probabilistic damage assessment in order to 
 estimate the damage distribution for individual assets and aggregated damage distribution for a spatially distributed 
@@ -60,8 +62,10 @@ nonstructural, contents, and business interruption) for which a *Fragility Model
 *Fragility Model* file for at least one loss type is mandatory for running an Event-Based Damage calculation, providing 
 corresponding *Consequence Model* files is optional.
 
-Stochastic Event Based Probabilistic Seismic Risk Analysis
-----------------------------------------------------------
+.. _event-based-risk-intro:
+
+Event Based Risk
+----------------
 
 This calculator employs an event-based Monte Carlo simulation approach to probabilistic risk assessment in order to 
 estimate the loss distribution for individual assets and aggregated loss distribution for a spatially distributed 

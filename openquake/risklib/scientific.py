@@ -1275,7 +1275,7 @@ def pla_factor(df):
     return interpolate.interp1d(df.return_period.to_numpy(),
                                 factors,
                                 bounds_error=False,
-                                fill_value=(factors[0], factors[-1]))
+                                fill_value=(1., factors[-1]))
 
 
 # ####################### statistics #################################### #
@@ -1463,7 +1463,7 @@ def fix_losses(orig_losses, num_events, eff_time=0, sorting=True):
     if sorting:
         sorting_idxs = numpy.argsort(orig_losses)
     else:
-        sorting_idxs = numpy.arange(len(orig_losses))
+        sorting_idxs = slice(None)
     sorted_losses = orig_losses[sorting_idxs]
 
     # add zeros on the left if there are less losses than events.
@@ -1549,6 +1549,10 @@ class LossCurvesMapsBuilder(object):
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
                  weights, eff_time, risk_investigation_time, pla_factor=None):
+        if return_periods[-1] > eff_time:
+            raise ValueError(
+                'The return_period %s is longer than the eff_time per rlz %s'
+                % (return_periods[-1], eff_time))
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt

@@ -23,7 +23,7 @@ Help! Should I disable hyperthreading on my laptop/desktop?
 
 Disabling hyperthreading - when possible - is recommended since it
 will save memory. Suppose for instance that you have a laptop with a
-i9 processor with 20 thread and 16 GB of RAM. It seems a lot at the
+i9 processor with 20 threads and 16 GB of RAM. It seems a lot at the
 time of this writing (early 2022). In reality it is not. The operating
 system will consume some memory, the browser will consume a lot of
 memory, you may have other applications open and you may end up with

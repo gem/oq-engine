@@ -227,10 +227,6 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE not in APPLICATION_MODES:
-    raise ValueError(
-        f'Invalid application mode: "{APPLICATION_MODE}". It must be'
-        f' one of {APPLICATION_MODES}')
 
 if APPLICATION_MODE in ('TOOLS_ONLY',):
     # add installed_apps for cookie-consent and corsheader
@@ -262,31 +258,6 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
 
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
-
-if LOCKDOWN and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    # check essential constants are defined
-    try:
-        EMAIL_BACKEND  # noqa
-    except NameError:
-        raise NameError(
-            f'If APPLICATION_MODE is {APPLICATION_MODE} an email'
-            f' backend must be defined')
-    if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
-        try:
-            EMAIL_HOST           # noqa
-            EMAIL_PORT           # noqa
-            EMAIL_USE_TLS        # noqa
-            EMAIL_HOST_USER      # noqa
-            EMAIL_HOST_PASSWORD  # noqa
-        except NameError:
-            raise NameError(
-                f'If APPLICATION_MODE is {APPLICATION_MODE}'
-                f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
-                f' must all be defined')
-    if not config.directory.mosaic_dir:
-        raise NameError(
-            f'If APPLICATION_MODE is {APPLICATION_MODE}, '
-            f'mosaic_dir must be specified in openquake.cfg')
 
 if LOCKDOWN:
     # do not log to file unless running through the webui

@@ -563,8 +563,10 @@ def lon_lat(value):
 
     >>> lon_lat('12 14')
     (12.0, 14.0)
+    >>> lon_lat('12,14')
+    (12.0, 14.0)
     """
-    lon, lat = value.split()
+    lon, lat = value.replace(',', ' ').split()
     return longitude(lon), latitude(lat)
 
 

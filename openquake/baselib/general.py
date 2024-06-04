@@ -497,7 +497,7 @@ def extract_dependencies(lines):
         except ValueError:  # for instance a comment
             continue
         if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam'):
+                   'python_pam', 'django_cors_headers', 'django_cookie_consent'):
             # not importable
             continue
         if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
@@ -516,7 +516,7 @@ def extract_dependencies(lines):
             pkg = 'shapefile'
         yield pkg, version
 
-    
+
 def check_dependencies():
     """
     Print a warning if we forgot to update the dependencies.
@@ -1715,7 +1715,7 @@ def smart_concat(arrays):
     dt = arrays[0][common].dtype
     return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
 
-    
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
@@ -1772,4 +1772,4 @@ def loada(arr):
     23
     """
     return pickle.loads(bytes(arr))
-    
+

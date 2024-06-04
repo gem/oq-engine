@@ -1,7 +1,6 @@
 (universal)=
 
-
-# Universal installation script
+# Universal installer
 
 Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed
 (currently Python 3.9, 3.10 and 3.11 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.

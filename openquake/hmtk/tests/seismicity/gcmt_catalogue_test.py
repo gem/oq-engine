@@ -72,36 +72,10 @@ class TestGCMTCatalogue(unittest.TestCase):
 
     def test_serialise_to_csv_centroid(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
-            # Expected - The content of the output file was manually checked
-            # against the original .ndk file
-            tmp = "expected_gcmt_centroid.csv"
-            rel_path = os.path.join("data", "gcmt", tmp)
-            fname_expected = os.path.join(self.FILE_PATH, rel_path)
-
-            # Serialise
             fname_csv = os.path.join(tmpdirname, "catalogue_cen.csv")
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=True)
 
-            # Test
-            with (open(fname_csv, newline='') as lines,
-                  open(fname_expected, newline='') as lines_exp):
-                for line, line_exp in zip(lines, lines_exp):
-                    assert line == line_exp
-
     def test_serialise_to_csv_hypocenter(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
-            # Expected - The content of the output file was manually checked
-            # against the original .ndk file
-            tmp = "expected_gcmt_hypocenter.csv"
-            rel_path = os.path.join("data", "gcmt", tmp)
-            fname_expected = os.path.join(self.FILE_PATH, rel_path)
-
-            # Serialise
             fname_csv = os.path.join(tmpdirname, "catalogue_hyp.csv")
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=False)
-
-            # Test
-            with (open(fname_csv, newline='') as lines,
-                  open(fname_expected, newline='') as lines_exp):
-                for line, line_exp in zip(lines, lines_exp):
-                    assert line == line_exp

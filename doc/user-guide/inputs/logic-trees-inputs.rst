@@ -847,7 +847,7 @@ sources and ruptures and the effective realizations.
 Depending on the location of the points and the maximum distance, one or more submodels could be completely filtered 
 out and could produce zero effective realizations, so the reduction effect could be even stronger.
 
-In any case *the warning tells the user what she should do* in order to remove the duplication and reduce the 
+In any case *the warning tells the user what should be done* in order to remove the duplication and reduce the 
 calculation only to the effective realizations, i.e. which are the TRTs to discard in the *job.ini* file.
 
 Source Specific Logic Trees

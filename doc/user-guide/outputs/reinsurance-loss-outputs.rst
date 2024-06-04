@@ -1,5 +1,5 @@
-Reinsurance Loss Outputs
-========================
+Reinsurance
+===========
 
 The reinsurance calculations generates estimates of retention and cession under the different
 reinsurance treaties. The following output files are produced:

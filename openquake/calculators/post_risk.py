@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
 from openquake.calculators import base, views
@@ -179,8 +179,11 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     max_events = num_events.max()
     periods = return_periods or oq.return_periods or scientific.return_periods(
         haz_time, max_events)  # in case_master [1, 2, 5, 10]
-    max_period = periods[-1]
-    pla_factor = readinput.get_pla_factor(oq, max_period / max_events)
+    if 'post_loss_amplification' in oq.inputs:
+        pla_factor = scientific.pla_factor(
+            dstore.read_df('post_loss_amplification'))
+    else:
+        pla_factor = None
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights,
