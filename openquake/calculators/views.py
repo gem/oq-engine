@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib import logictree, calc, source, geo, valid
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)
@@ -73,9 +73,9 @@ def form(value):
     >>> form(1003.4)
     '1_003'
     >>> form(103.41)
-    '103.4'
+    '103.4100'
     >>> form(9.3)
-    '9.30000'
+    '9.3000'
     >>> form(-1.2)
     '-1.2'
     """
@@ -84,8 +84,8 @@ def form(value):
             return str(value)
         elif value < .001:
             return '%.3E' % value
-        elif value < 10 and isinstance(value, FLOAT):
-            return '%.5f' % value
+        elif value <= 180 and isinstance(value, FLOAT):
+            return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
         elif numpy.isnan(value):
@@ -1676,6 +1676,16 @@ def compare_disagg_rates(token, dstore):
                              'disagg_rate': drates,
                              'interp_rate': irates}
                             ).sort_values(['imt', 'src'])
+
+
+
+@view.add('geohash')
+def view_geohash(token, dstore):
+    lon_lat = token.split(':')[1]
+    lon, lat = valid.lon_lat(lon_lat)
+    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
+    gh = b''.join([row.tobytes() for row in arr])
+    return gh.decode('ascii')
 
 
 @view.add('gh3')

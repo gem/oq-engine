@@ -585,6 +585,26 @@ def get_site_model(oqparam, h5=None):
     return sm
 
 
+def debug_site(oqparam, haz_sitecol):
+    """
+    Reduce the site collection to the custom_site_id specified in
+    OQ_DEBUG_SITE. For conditioned GMFs, keep the stations.
+    """
+    siteid = os.environ.get('OQ_DEBUG_SITE')
+    if siteid:
+        complete = copy.copy(haz_sitecol.complete)
+        ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+        if not ok.any():
+            raise ValueError('There is not custom_site_id=%s', siteid)
+        if 'station_data' in oqparam.inputs:
+            # keep the stations while restricting to the specified site
+            sdata, _imts = get_station_data(oqparam, haz_sitecol)
+            ok |= numpy.isin(haz_sitecol.sids, sdata.site_id.to_numpy())
+        haz_sitecol.array = haz_sitecol[ok]
+        haz_sitecol.complete = complete
+        oqparam.concurrent_tasks = 0
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -674,6 +694,7 @@ def get_site_collection(oqparam, h5=None):
             gh = sitecol.complete.geohash(8)
             sitecol.complete.add_col('custom_site_id', 'S8', gh)
 
+    debug_site(oqparam, sitecol)
     if h5:
         h5['sitecol'] = sitecol
     return sitecol
@@ -1066,18 +1087,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
-
-    siteid = os.environ.get('OQ_DEBUG_SITE')
-    if siteid:
-        ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
-        if not ok.any():
-            raise ValueError('There is not custom_site_id=%s', siteid)
-        if 'station_data' in oqparam.inputs:
-            # keep the stations while restricting to the specified site
-            sdata, _imts = get_station_data(oqparam, haz_sitecol)
-            ok |= numpy.isin(haz_sitecol.sids, sdata.site_id.to_numpy())
-        haz_sitecol.array = haz_sitecol[ok]
-        oqparam.concurrent_tasks = 0
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
