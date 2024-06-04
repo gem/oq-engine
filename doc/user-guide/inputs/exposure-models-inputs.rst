@@ -737,7 +737,7 @@ file, as shown in the following snippet from the full file::
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
-	    <exposureModel id="exposure_example_with_tags"
+          <exposureModel id="exposure_example_with_tags"
 	                 category="buildings"
 	                 taxonomySource="GEM_Building_Taxonomy_2.0">
 	    <description>Exposure Model Example with Tags</description>
