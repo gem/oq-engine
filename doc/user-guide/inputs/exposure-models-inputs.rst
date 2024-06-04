@@ -759,9 +759,7 @@ file, as shown in the following snippet from the full file::
 	        <costs>
 	          <cost type="structural" value="10000" />
 	        </costs>
-	        <occupancies>
-	          <occupancy occupants="20" period="day" />
-	        </occupancies>
+	        <occupancies><occupancy occupants="20" period="day" /></occupancies>
 	        <tags state="California" county="Solano" tract="252702" city="Suisun" zip="94585" cresta="A.11" />
 	      </asset>
 	    </assets>
