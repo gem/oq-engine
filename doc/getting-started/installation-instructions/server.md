@@ -36,33 +36,33 @@ Please note that the directory must be created if it does not exist yet.
 Furthermore, the user `openquake` must own that directory.
 
 ```console
-$ sudo mkdir /var/log/oq-engine
-$ sudo chown -R openquake /var/log/oq-engine
+sudo mkdir /var/log/oq-engine
+sudo chown -R openquake /var/log/oq-engine
 ```
 
 Upgrade the database to host users and sessions:
 
 ```console
-$ cd /opt/openquake/src/oq-engine/openquake/server
-$ sudo -u openquake oq webui migrate
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake oq webui migrate
 ```
 Add a new local superuser:
 
 ```console
-$ cd /opt/openquake/src/oq-engine/openquake/server
-$ sudo -u openquake oq webui createsuperuser
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake oq webui createsuperuser
 ```
 To setup static files in Django issue the commands:
 
 ```console
-$ cd /opt/openquake/src/oq-engine/openquake/server
-$ sudo -u openquake oq webui collectstatic
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake oq webui collectstatic
 ```
 The `oq` commands must be run as openquake user and the installation must be of kind `server` or `devel_server`.
 if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
 
 ```console
-$ python3 -m openquake.server.manage <subcommand>
+python3 -m openquake.server.manage <subcommand>
 ```
 
 #### Groups support
@@ -91,10 +91,10 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 *gunicorn* can be installed either via `pip` in the venv of OpenQuake engine. For example:
 
 ```console
-$ sudo su -
-# source /opt/openquake/venv/bin/activate
-# pip install gunicorn
-# deactivate
+sudo su -
+source /opt/openquake/venv/bin/activate
+pip install gunicorn
+deactivate
 ```
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
@@ -120,7 +120,7 @@ STATIC_ROOT = '/var/www/webui'
 then collect static files:
 
 ```console
-$ sudo oq webui collectstatic
+sudo oq webui collectstatic
 ```
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static content.
