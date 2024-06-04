@@ -37,7 +37,7 @@ Furthermore, the user `openquake` must own that directory.
 
 ```console
 $ sudo mkdir /var/log/oq-engine
-$ sudo chown -R openquake /var/www/
+$ sudo chown -R openquake /var/log/oq-engine
 ```
 
 Upgrade the database to host users and sessions:
