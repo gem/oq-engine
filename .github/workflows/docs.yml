@@ -382,6 +382,7 @@ jobs:
           cd doc && make html 2>&1 | tee full.log
           # NOTE: without '|| true' the action would fail if there are no warnings
           grep WARNING < full.log > warnings.log || true
+          grep ERROR < full.log > errors.log || true
           echo
           echo "=== WARNINGS ==="
           echo
@@ -391,7 +392,12 @@ jobs:
           echo "=== WARNINGS SUMMARY ==="
           cat warnings.log |  sed 's/.*WARNING/WARNING/g' | sed "s/WARNING: 'myst' cross-reference target not found.*/WARNING: 'myst' cross-reference target not found/g" | sed 's/WARNING: undefined label.*/WARNING: undefined label/g' | sed 's/WARNING: duplicate label.*/WARNING: duplicate label/g' | sed 's/WARNING: Duplicate explicit target name.*/WARNING: Duplicate explicit target name/g' | sort | uniq -c
 
-
+          echo
+          echo "=== ERRORS ==="
+          echo
+          cat errors.log
+          echo
+ 
 
           # if [ "$DOCS_SSH" ]; then
           #     echo "Uploading OpenQuake Manual (PDF)"
