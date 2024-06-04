@@ -84,8 +84,8 @@ def form(value):
             return str(value)
         elif value < .001:
             return '%.3E' % value
-        elif value < 10 and isinstance(value, FLOAT):
-            return '%.5f' % value
+        elif value <= 180 and isinstance(value, FLOAT):
+            return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
         elif numpy.isnan(value):
