@@ -14,7 +14,7 @@ For example if you clone the repository in the folder `/opt/openquake/src/oq-eng
 
 Create a `local_settings.py` and add:
 ```python
-LOCKDOWN = True
+APPLICATION_MODE = 'RESTRICTED'
 ```
 
 Upgrade the database to host users and sessions:

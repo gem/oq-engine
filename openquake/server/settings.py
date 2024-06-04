@@ -176,9 +176,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 SERVER_NAME = socket.gethostname()
 
 APPLICATION_MODES = [
-    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
+    'UNRESTRICTED', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
 
-APPLICATION_MODE = 'PUBLIC'
+APPLICATION_MODE = 'UNRESTRICTED'
 
 # If False, a warning is displayed in case a newer version of the engine has
 # been released
