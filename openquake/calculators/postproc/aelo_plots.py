@@ -257,7 +257,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax2.set_xlabel('Period (s)', fontsize=20)
     ax2.legend(loc="upper right", fontsize='13')
-    ax2.set_xlim([-0.02, 1.2])
+    ax2.set_xlim([-0.02, 2.0])
     ax1.set_xscale('log')
     ax1.set_yscale('log')
     ax2.set_xscale('linear')
