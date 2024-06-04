@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the GMF-based calculators to always set a `custom_site_id`
+  * Internal: added variable OQ_SITE_DEBUG
+
 python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene, Michele Simionato]
