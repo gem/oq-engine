@@ -117,17 +117,7 @@ ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --t
 
 *gunicorn* does not serve static content itself thus a frontend like *nginx* is needed.
 
-To the previous created `openquake/server/local_settings.py` add:
-
-```python
-STATIC_ROOT = '/var/www/webui'
-```
-
-then collect static files:
-
-```console
-sudo oq webui collectstatic
-```
+Please refer to the nginx installation istructions for your operating system.
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static content.
 
