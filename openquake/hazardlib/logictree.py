@@ -1262,11 +1262,13 @@ class FullLogicTree(object):
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
+            ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             i = 0
             for sm_rlz in self.sm_rlzs:
-                for gsim_rlz in gsim_rlzs:
-                    rlz = LtRealization(i, sm_rlz.lt_path, gsim_rlz,
-                                        sm_rlz.weight * gsim_rlz.weight)
+                smpath = sm_rlz.lt_path
+                weight = sm_rlz.weight * ws
+                for g, gsim_rlz in enumerate(gsim_rlzs):
+                    rlz = LtRealization(i, smpath, gsim_rlz, weight[g])
                     rlzs.append(rlz)
                     i += 1
         # rescale the weights if not one, see case_52
