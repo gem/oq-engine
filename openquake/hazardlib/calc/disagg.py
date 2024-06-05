@@ -37,6 +37,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.valid import corename
+from openquake.hazardlib.logictree import concat
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -389,8 +390,8 @@ class Disaggregator(object):
         self.mea, self.std = {}, {}  # magi -> array[G, M, U]
 
         self.g_by_rlz = {}  # dict rlz -> g
-        for g, rlzs in enumerate(cmaker.gsims.values()):
-            for rlz in rlzs:
+        for g, slices in enumerate(cmaker.gsims.values()):
+            for rlz in concat(slices):
                 self.g_by_rlz[rlz] = g
 
         if isinstance(srcs_or_ctxs[0], numpy.ndarray):
@@ -744,8 +745,8 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
-    trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
-                for rlzs in cm.gsims.values()]
+    trt_rlzs = [concat(slices) + cm.trti * TWO24 for cm in cmakers
+                for slices in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):

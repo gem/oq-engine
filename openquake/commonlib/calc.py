@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array
+from openquake.hazardlib import map_array, logictree
 from openquake.hazardlib.source.rupture import get_events
 from openquake.commonlib import util
 
@@ -184,7 +184,7 @@ class RuptureImporter(object):
         """
         :returns: a composite array with the associations eid->rlz
         """
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        rlzs = logictree.concat(list(rlzs_by_gsim.values()))
         return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):

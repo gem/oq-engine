@@ -21,7 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts, InvalidFile
+from openquake.hazardlib import contexts, InvalidFile, logictree
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates)
 from openquake.commonlib import readinput
@@ -703,8 +703,12 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
         cmakers = contexts.read_cmakers(self.calc.datastore)
-        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        for [got], exp in zip(
+                cmakers[0].gsims.values(), [[1, 3, 5], [2], [0, 4]]):
+            ae(got, exp)
+        for [got], exp in zip(
+                cmakers[1].gsims.values(), [[7, 9], [6, 8]]):
+            ae(got, exp)
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
 
     def test_case_73(self):

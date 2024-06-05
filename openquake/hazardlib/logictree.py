@@ -1017,7 +1017,28 @@ def _get_smr(source_id):
     return int(smr)
 
 
-def _ddic(trtis, smrs, get_rlzs):
+def to_slice(rlzs):  # valid only for full enumeration
+    n = len(rlzs)
+    assert n
+    start = rlzs[0]
+    if n == 1:
+        return slice(start, start + 1)
+    step = rlzs[1] - start
+    return slice(start, start + step * n, step)
+
+
+def concat(slices):
+    if hasattr(slices[0], 'start'):
+        # assume slices
+        rlzs = numpy.concatenate([
+            numpy.arange(slc.start, slc.stop, slc.step, dtype=U32)
+            for slc in slices], dtype=U32)
+    else:  # assume U32 arrays
+        rlzs = numpy.concatenate(slices, dtype=U32)
+    return rlzs
+
+
+def _ddic(trtis, smrs, get_rlzs, to_slice):
     # returns a double dictionary trt_smr -> gsim -> rlzs
     acc = AccumDict(accum=AccumDict(accum=[]))
     for smr in smrs:
@@ -1026,7 +1047,7 @@ def _ddic(trtis, smrs, get_rlzs):
             rbg = acc[smr + TWO24 * trti]
             for rlz in rlzs_sm:
                 rbg[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-            acc[smr + TWO24 * trti] = {gsim: U32(rbg[gsim])
+            acc[smr + TWO24 * trti] = {gsim: to_slice(rbg[gsim])
                                        for gsim in sorted(rbg)}
     return acc
 
@@ -1115,8 +1136,8 @@ class FullLogicTree(object):
         """
         data = []
         for trt_smrs in all_trt_smrs:
-            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
-                data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
+            for slices in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(concat(slices) + TWO24 * (trt_smrs[0] // TWO24))
         return data
 
     def g_weights(self, trt_rlzs):
@@ -1296,6 +1317,7 @@ class FullLogicTree(object):
         if not hasattr(self, '_rlzs_by'):
             rlzs = self.get_realizations()
             trtis = range(len(self.gsim_lt.values))
+            conv = U32 if self.num_samples else to_slice
             smrs = numpy.array([sm.ordinal for sm in self.sm_rlzs])
             if self.source_model_lt.filename == 'fake.xml':  # scenario
                 smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
@@ -1304,7 +1326,7 @@ class FullLogicTree(object):
                 for rlz in rlzs:		
                     smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                 self._rlzs_by = _ddic(trtis, smrs,
-                                      lambda smr: rlzs[smidx == smr])
+                                      lambda smr: rlzs[smidx == smr], conv)
             else:  # classical and event based
                 start = 0
                 slices = []
@@ -1312,7 +1334,7 @@ class FullLogicTree(object):
                     slices.append(slice(start, start + sm.samples))
                     start += sm.samples
                 self._rlzs_by = _ddic(trtis, smrs,
-                                      lambda smr: rlzs[slices[smr]])
+                                      lambda smr: rlzs[slices[smr]], conv)
         if not self._rlzs_by:
             return {}
         return self._rlzs_by[trt_smr]
@@ -1327,8 +1349,7 @@ class FullLogicTree(object):
             for t in trt_smr:
                 for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].append(rlzs)
-            return {k: numpy.concatenate(ls, dtype=U32)
-                    for k, ls in dic.items()}
+            return dic
         # event based
         return self._rlzs_by_gsim(trt_smr)
 
