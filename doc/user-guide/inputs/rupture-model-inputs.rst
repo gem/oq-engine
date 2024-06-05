@@ -147,5 +147,6 @@ An example of gridded rupture is shown below in the listing below::
 	                </griddedSurface>
 	
 	            </griddedRupture>
+	
 		</nrml>
 	
