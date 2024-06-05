@@ -8,7 +8,8 @@
 
 The OpenQuake Engine server supports authentication provided by [Django](https://docs.djangoproject.com/en/stable/topics/auth/) and its backends.
 
-When installing the OpenQuake Engine with the universal installer the `local_settings.py` file must be located under the folder `openquake/server` of the oq-engine repository.
+When installing the OpenQuake Engine with the universal installer (see [`server` installation](#server-installation))
+the `local_settings.py` file must be located under the folder `openquake/server` of the oq-engine repository.
 
 For example if you clone the repository in the folder `/opt/openquake/src/oq-engine/` you must place the file in `/opt/openquake/src/oq-engine/openquake/server`
 
