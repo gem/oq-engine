@@ -1305,9 +1305,10 @@ class FullLogicTree(object):
             trtsmrs = sm.ordinal + numpy.arange(
                 len(self.gsim_lt.values)) * TWO24
             for trtsmr in trtsmrs:
+                dic = acc[trtsmr]
                 trti = trtsmr // TWO24
                 for rlz in rlzs_sm:
-                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+                    dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
         return acc
 
     def _build_acc_scenario(self, rlzs):
