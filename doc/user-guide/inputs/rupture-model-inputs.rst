@@ -141,6 +141,8 @@ An example of gridded rupture is shown below in the listing below::
                 <magnitude>8.2</magnitude>
                 <rake>90.0</rake>
                 <hypocenter depth="19.2" lat="35.301" lon="140.859"/>
-                <griddedSurface><gml:posList>141.659 35.121 9.8 141.659 35.099 9.6 141.659 35.076 9.4 ...</gml:posList></griddedSurface>
+                <griddedSurface>
+                    <gml:posList>141.659 35.121 9.8 141.659 35.099 9.6 141.659 35.076 9.4 ...</gml:posList>
+                </griddedSurface>
             </griddedRupture>
 	</nrml>
