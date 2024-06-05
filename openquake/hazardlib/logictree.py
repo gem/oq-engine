@@ -1245,37 +1245,36 @@ class FullLogicTree(object):
         if hasattr(self, '_rlzs'):
             return self._rlzs
 
-        rlzs = []
         num_samples = self.source_model_lt.num_samples
         if num_samples:  # sampling
+            rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
             for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                    sm_rlzs[i].weight * gsim_rlz.weight)
-                rlzs.append(rlz)
+                rlzs[i] = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                        sm_rlzs[i].weight * gsim_rlz.weight)
             if self.sampling_method.startswith('early_'):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
+            ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
+            rlzs = numpy.empty(len(ws) * len(self.sm_rlzs), object)
             i = 0
             for sm_rlz in self.sm_rlzs:
-                for gsim_rlz in gsim_rlzs:
-                    rlz = LtRealization(i, sm_rlz.lt_path, gsim_rlz,
-                                        sm_rlz.weight * gsim_rlz.weight)
-                    rlzs.append(rlz)
+                smpath = sm_rlz.lt_path
+                for gsim_rlz, weight in zip(gsim_rlzs, sm_rlz.weight * ws):
+                    rlzs[i] = LtRealization(i, smpath, gsim_rlz, weight)
                     i += 1
         # rescale the weights if not one, see case_52
         tot_weight = sum(rlz.weight for rlz in rlzs)[-1]
         if tot_weight != 1.:
             for rlz in rlzs:
                 rlz.weight = rlz.weight / tot_weight
-        assert rlzs, 'No realizations found??'
-        self._rlzs = numpy.array(rlzs)
+        self._rlzs = rlzs
         return self._rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
