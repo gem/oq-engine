@@ -980,6 +980,8 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
+    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
+
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
         self.ordinal = ordinal
         self.sm_lt_path = tuple(sm_lt_path)
