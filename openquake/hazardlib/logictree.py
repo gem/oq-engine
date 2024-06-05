@@ -1302,9 +1302,10 @@ class FullLogicTree(object):
         acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
         trtis = range(len(self.gsim_lt.values))
         for sm in self.sm_rlzs:
-            rlzs_sm = rlzs[slices[sm.ordinal]]
+            smr = sm.ordinal
+            rlzs_sm = rlzs[slices[smr]]
             for trti in trtis:
-                dic = acc[sm.ordinal + TWO24 * trti]
+                dic = acc[smr + TWO24 * trti]
                 for rlz in rlzs_sm:
                     dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
         return acc
