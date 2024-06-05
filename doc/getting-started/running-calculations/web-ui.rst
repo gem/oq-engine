@@ -1,7 +1,7 @@
 .. _web-ui:
 
-Running the OpenQuake engine through the Web UI
-===============================================
+Using the Web UI
+================
 
 The OpenQuake engine server provides an `HTTP RESTful API <https://en.wikipedia.org/wiki/Representational_state_transfer>`_
 and a web GUI, the WebUI. It's built on top of `Django <https://www.djangoproject.com/>`_,
@@ -37,13 +37,6 @@ Linux and macOS from installers or from sources
 In a terminal type::
 
 	$ oq webui start
-
-*******************
-Linux from packages
-*******************
-
-A ``systemd`` service will take care of the OpenQuake engine server, starting it at boot. Please refer to
-:ref:`Configure the systemd services page <rhel>`.
 
 Using the OpenQuake engine WebUI
 --------------------------------

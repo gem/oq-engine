@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib import logictree, calc, source, geo, valid
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)
@@ -73,9 +73,9 @@ def form(value):
     >>> form(1003.4)
     '1_003'
     >>> form(103.41)
-    '103.4'
+    '103.4100'
     >>> form(9.3)
-    '9.30000'
+    '9.3000'
     >>> form(-1.2)
     '-1.2'
     """
@@ -84,8 +84,8 @@ def form(value):
             return str(value)
         elif value < .001:
             return '%.3E' % value
-        elif value < 10 and isinstance(value, FLOAT):
-            return '%.5f' % value
+        elif value <= 180 and isinstance(value, FLOAT):
+            return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
         elif numpy.isnan(value):
@@ -1332,18 +1332,15 @@ def view_delta_loss(token, dstore):
     efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
         dstore['weights'])
     periods = return_periods(efftime, num_events)[1:-1]
-    mod2 = df.index % 2
-    losses0 = df['loss'][mod2 == 0]
-    losses1 = df['loss'][mod2 == 1]
-    num_events = len(dstore['events'])
-    num_events0 = num_events // 2 + (num_events % 2)
-    num_events1 = num_events // 2
-    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
-    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    losses0 = df.loss[df.index % 2 == 0]
+    losses1 = df.loss.loc[df.index % 2 == 1]
+    c0 = losses_by_period(losses1, periods, len(losses1), efftime / 2)['curve']
+    c1 = losses_by_period(losses0, periods, len(losses0), efftime / 2)['curve']
     ok = (c0 != 0) & (c1 != 0)
     c0 = c0[ok]
     c1 = c1[ok]
-    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    res = losses_by_period(df['loss'], periods, num_events, efftime)
+    losses = res['curve'][ok]
     dic = dict(loss=losses, even=c0, odd=c1,
                delta=numpy.abs(c0 - c1) / (c0 + c1))
     return pandas.DataFrame(dic, periods[ok])
@@ -1681,6 +1678,16 @@ def compare_disagg_rates(token, dstore):
                             ).sort_values(['imt', 'src'])
 
 
+
+@view.add('geohash')
+def view_geohash(token, dstore):
+    lon_lat = token.split(':')[1]
+    lon, lat = valid.lon_lat(lon_lat)
+    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
+    gh = b''.join([row.tobytes() for row in arr])
+    return gh.decode('ascii')
+
+
 @view.add('gh3')
 def view_gh3(token, dstore):
     sitecol = dstore['sitecol']
@@ -1706,20 +1713,20 @@ def view_aggrisk(token, dstore):
     Returns a table with the aggregate risk by realization and loss type
     """
     gsim_lt = dstore['full_lt/gsim_lt']
-    gsims = [br.gsim for br in gsim_lt.branches]
-    ws = [br.weight['default'] for br in gsim_lt.branches]
     df = dstore.read_df('aggrisk', sel={'agg_id': 0})
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
-    rlzs = df.rlz_id.unique()
-    arr = numpy.zeros(rlzs.max() + 2, dt)
-    AVG = rlzs.max() + 1
-    for rlz, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+    rlzs = list(gsim_lt)
+    AVG = len(rlzs)
+    arr = numpy.zeros(AVG + 1, dt)
+    for r, rlz in enumerate(rlzs):
+        arr[r]['gsim'] = repr(repr(rlz.value[0]))
+        arr[r]['weight'] = rlz.weight
+    for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+        rlz = rlzs[r]
         lt = LOSSTYPE[loss_id]
-        arr[rlz]['gsim'] = gsims[rlz]
-        arr[rlz]['weight'] = ws[rlz]
-        arr[rlz][lt] = loss
-        arr[AVG][lt] += loss * ws[rlz]
+        arr[r][lt] = loss
+        arr[AVG][lt] += loss * rlz.weight
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr
