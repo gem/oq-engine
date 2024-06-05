@@ -1300,13 +1300,14 @@ class FullLogicTree(object):
             slices.append(slice(start, start + sm.samples))
             start += sm.samples
         acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
+        trtis = range(len(self.gsim_lt.values))
         for sm in self.sm_rlzs:
-            trtsmrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24
-            for trtsmr in trtsmrs:
-                trti, smr = divmod(trtsmr, TWO24)
-                for rlz in rlzs[slices[smr]]:
-                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+            smr = sm.ordinal
+            rlzs_sm = rlzs[slices[smr]]
+            for trti in trtis:
+                dic = acc[smr + TWO24 * trti]
+                for rlz in rlzs_sm:
+                    dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
         return acc
 
     def _build_acc_scenario(self, rlzs):
