@@ -1,5 +1,9 @@
+  [Michele Simionato]
+  * Cached `get_realizations` and optimized the memory occupation; now
+    302_990_625 realizations (i.e. EUR) require only 90 GB
+
   [Anna Rood]
-  * Updates to the AELO workflow: added additional spectral periods ranging 
+  * Updates to the AELO workflow: added additional spectral periods ranging
     from 0.02 to 10 s and added option to use ASCE7-22. NB: minor changes in
     the results of year 1 are expected
 
