@@ -1282,48 +1282,39 @@ class FullLogicTree(object):
         if not hasattr(self, '_rlzs_by'):
             rlzs = self.get_realizations()
             if self.source_model_lt.filename == 'fake.xml':  # scenario
-                acc = self._build_acc_scenario(rlzs)
+                smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
+                              for i, sm_rlz in enumerate(self.sm_rlzs)}
+                smidx = numpy.zeros(self.get_num_paths(), int)		
+                for rlz in rlzs:		
+                    smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
+                acc = self._buildacc(lambda smr: rlzs[smidx == smr])
             else:  # classical and event based
-                acc = self._build_acc(rlzs)
+                start = 0
+                slices = []
+                for sm in self.sm_rlzs:
+                    slices.append(slice(start, start + sm.samples))
+                    start += sm.samples
+                acc = self._buildacc(lambda smr: rlzs[slices[smr]])
             self._rlzs_by = {}
             for trtsmr, dic in acc.items():
                 self._rlzs_by[trtsmr] = {
-                    gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+                    gsim: rlzs for gsim, rlzs in sorted(dic.items())}
         if not self._rlzs_by:
             return {}
         return self._rlzs_by[trt_smr]
 
-    def _build_acc(self, rlzs):
-        start = 0
-        slices = []
-        for sm in self.sm_rlzs:
-            slices.append(slice(start, start + sm.samples))
-            start += sm.samples
+    def _buildacc(self, get_rlzs):
         acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
         trtis = range(len(self.gsim_lt.values))
         for sm in self.sm_rlzs:
             smr = sm.ordinal
-            rlzs_sm = rlzs[slices[smr]]
+            rlzs_sm = get_rlzs(smr)
             for trti in trtis:
                 dic = acc[smr + TWO24 * trti]
                 for rlz in rlzs_sm:
                     dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return acc
-
-    def _build_acc_scenario(self, rlzs):
-        smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
-                      for i, sm_rlz in enumerate(self.sm_rlzs)}
-        smidx = numpy.zeros(self.get_num_paths(), int)		
-        for rlz in rlzs:		
-            smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]		
-        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
-        for sm in self.sm_rlzs:
-            trtsmrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24		
-            for trtsmr in trtsmrs:
-                trti, smr = divmod(trtsmr, TWO24)
-                for rlz in rlzs[smidx == smr]:
-                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+                for k in dic:
+                    dic[k] = U32(dic[k])
         return acc
 
     def get_rlzs_by_gsim(self, trt_smr):
@@ -1336,7 +1327,8 @@ class FullLogicTree(object):
             for t in trt_smr:
                 for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].append(rlzs)
-            return {k: numpy.concatenate(ls, dtype=U32) for k, ls in dic.items()}
+            return {k: numpy.concatenate(ls, dtype=U32)
+                    for k, ls in dic.items()}
         # event based
         return self._rlzs_by_gsim(trt_smr)
 
