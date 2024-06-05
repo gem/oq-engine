@@ -130,6 +130,44 @@ of the fault rupture. An example of a complex fault rupture is shown below in th
 Gridded Rupture
 ---------------
 In a *Gridded Rupture* the geometry is defined in terms of a GriddedSurface which is a mesh of points.
+
+
+.. code-block:: xml
+
+	<?xml version="1.0" encoding="UTF-8"?>
+	<nrml xmlns:gml="http://www.opengis.net/gml"
+	      xmlns="http://openquake.org/xmlns/nrml/0.5">
+	
+	<exposureModel id="exposure_example"
+	               category="buildings"
+	               taxonomySource="GEM_Building_Taxonomy_2.0">
+	  <description>Exposure Model Example</description>
+	
+	  <conversions>
+	    <costTypes>
+	      <costType name="structural" type="per_area" unit="USD" />
+	    </costTypes>
+	    <area type="per_asset" unit="SQM" />
+	  </conversions>
+	
+	  <assets>
+	    <asset id="a1" taxonomy="Adobe" number="5" area="100" >
+	      <location lon="-122.000" lat="38.113" />
+	      <costs>
+	        <cost type="structural" value="10000" />
+	      </costs>
+	      <occupancies>
+	        <occupancy occupants="20" period="day" />
+	      </occupancies>
+	    </asset>
+	  </assets>
+	
+	</exposureModel>
+	
+	</nrml>
+
+
+
 An example of gridded rupture is shown below in the listing below::
 
 .. code-block:: xml
@@ -138,16 +176,16 @@ An example of gridded rupture is shown below in the listing below::
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
 	
-	    <griddedRupture probs_occur="0.984 0.016">
-	        <magnitude>8.2</magnitude>
-	        <rake>90.0</rake>
-	        <hypocenter depth="19.2" lat="35.301" lon="140.859"/>
-	        <griddedSurface>
-	        <gml:posList>123.11</gml:posList>
+	  <griddedRupture probs_occur="0.984 0.016">
+	    <magnitude>8.2</magnitude>
+	    <rake>90.0</rake>
+	    <hypocenter depth="19.2" lat="35.301" lon="140.859"/>
+	    <griddedSurface>
+	      <gml:posList>123.11</gml:posList>
 	
-	        </griddedSurface>
+	    </griddedSurface>
 	
-	    </griddedRupture>
+	  </griddedRupture>
 	
 	</nrml>
 	
