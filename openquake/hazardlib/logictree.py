@@ -1310,11 +1310,11 @@ class FullLogicTree(object):
             smr = sm.ordinal
             rlzs_sm = get_rlzs(smr)
             for trti in trtis:
-                dic = acc[smr + TWO24 * trti]
+                rbg = acc[smr + TWO24 * trti]
                 for rlz in rlzs_sm:
-                    dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-                for k in dic:
-                    dic[k] = U32(dic[k])
+                    rbg[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+                for gsim in rbg:
+                    rbg[gsim] = U32(rbg[gsim])
         return acc
 
     def get_rlzs_by_gsim(self, trt_smr):
