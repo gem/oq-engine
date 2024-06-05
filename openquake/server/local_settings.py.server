@@ -1,23 +1,10 @@
-# This feature requires:
-#  - https://github.com/FirefighterBlu3/python-pam
-#  - https://github.com/cnobile2012/django-pam
-
-from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
-
 # Enable authentication
 APPLICATION_MODE = 'RESTRICTED'
 # Disable sharing of results across users
 ACL_ON = True
 
-INSTALLED_APPS += (
-    'django_pam',
-)
-
-AUTHENTICATION_BACKENDS += (
-    'django_pam.auth.backends.PAMBackend',
-)
-
-#Static Folder
+# Folder STATIC_ROOT is the full, absolute path to your static files folder.
+# Furthermore, the user `openquake` must own that directory.
 STATIC_ROOT = '/var/www/webui'
 
 # WEBUI config uncomment and set properly if needed
@@ -27,8 +14,11 @@ STATIC_ROOT = '/var/www/webui'
 # USE_X_FORWARDED_HOST = True
 
 # enable WEBUI_PATHPREFIX to place webui pages below a specific path
+# the path must start with ``/`` and ending without it (e.g. ``'/path/prefix'``)
 # WEBUI_PATHPREFIX='/path/prefix'
 
+# Configure the directory to store the server user access log
+# Furthermore, the user `openquake` must own that directory.
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # Local time zone for this installation. Choices can be found here:
@@ -36,4 +26,4 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-# TIME_ZONE = 
+# TIME_ZONE =
