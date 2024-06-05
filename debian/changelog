@@ -1,6 +1,13 @@
   [Anna Rood]
   * Updates to the AELO workflow: added additional spectral periods ranging 
-    0.02 to 10 s and option to use ASCE7-22
+    from 0.02 to 10 s and added option to use ASCE7-22. NB: minor changes in
+    the results of year 1 are expected
+
+  [Michele Simionato]
+  * Changed the GMF-based calculators to always set a `custom_site_id`
+  * Internal: added variable OQ_SITE_DEBUG
+
+python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene, Michele Simionato]
   * Internal: added commands `oq compare assetcol` and `oq compare sitecol`

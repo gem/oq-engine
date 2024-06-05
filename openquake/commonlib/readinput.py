@@ -1044,6 +1044,9 @@ def get_station_data(oqparam, sitecol):
         the hazard site collection
     :returns: station_data, observed_imts
     """
+    if parallel.oq_distribute() == 'zmq':
+        logging.error('Conditioned scenarios are not meant to be run '
+                      ' on a cluster')
     complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])

@@ -632,7 +632,7 @@ class OrthographicProjection(object):
         else:
             return numpy.array([xx, yy, deps])
 
-        
+
 def get_middle_point(lon1, lat1, lon2, lat2):
     """
     Given two points return the point exactly in the middle lying on the same
@@ -814,6 +814,25 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def get_strike_from_plane_normal(nrml):
+    """
+    Computes the strike direction using the vector defining the normal to the
+    plane. The positive z-direction is pointing upwards.
+
+    :param nrml:
+        A vector with 3 elements
+    :returns:
+        A float defining the strike direction
+    """
+
+    # Make sure the vector normal to the plane points upwards
+    if nrml[2] < 0:
+        nrml *= -1
+
+    # Get the strike
+    return numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) - 90
 
 
 def bbox2poly(bbox):

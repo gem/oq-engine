@@ -408,7 +408,7 @@ class PlaneFit(unittest.TestCase):
 
     def test_plane_fit01(self):
         """
-        Tests the parameters of the plane obtained through the regression.
+        Tests the parameters of the plane obtained through the interpolation.
         """
         pnt, par = utils.plane_fit(self.points)
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-5, atol=0)
@@ -416,13 +416,50 @@ class PlaneFit(unittest.TestCase):
 
     def test_plane_fit02(self):
         """
-        Tests the parameters of the plane obtained through the regression.
+        Tests the parameters of the plane obtained through the interpolation.
         In this second case we add noise to the z values
         """
         self.points[:, 2] += numpy.random.random(self.npts) * 0.01
         pnt, par = utils.plane_fit(self.points)
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-3, atol=0)
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
+
+
+class PlaneStrike(unittest.TestCase):
+
+    def setUp(self):
+
+        points = numpy.zeros((4, 3))
+
+        points[:, 0] = [10.0, 10.1, 10.12, 10.02]
+        points[:, 1] = [45.0, 45.1, 45.08, 44.98]
+        points[:, 2] = [0.0, 0.0, 10.0, 10.0]
+
+        from openquake.hazardlib.geo import utils as geo_utils
+        from openquake.hazardlib.geo import Line, Point
+
+        # Create a projection centered in the center of the cloud of points
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(points[:, 0], points[:, 1])
+        )
+
+        coo = numpy.zeros((len(points[:, 0]), 3))
+        tmp = numpy.transpose(proj(points[:, 0], points[:, 1]))
+        coo[:, 0] = tmp[:, 0]
+        coo[:, 1] = tmp[:, 1]
+        coo[:, 2] = points[:, 2]
+        coo[:, 2] *= -1
+
+        # Fit plane
+        pnt0, self.vers = geo_utils.plane_fit(coo)
+
+        # Create a line
+        line = Line([Point(*coo[0, :]), Point(*coo[1, :])])
+        self.expected = line.azimuth
+
+    def test_get_strike(self):
+        strike = utils.get_strike_from_plane_normal(self.vers)
+        numpy.testing.assert_almost_equal(strike, self.expected, decimal=1)
 
 
 # NB: utils.assoc is tested in the engine
