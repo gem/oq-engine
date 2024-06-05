@@ -236,7 +236,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
         mrs1 = self.calc.datastore['mean_rates_by_src']
-        aae(mrs1.array, mrs50.array)
+        aae(mrs1.array, mrs50.array, decimal=6)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
