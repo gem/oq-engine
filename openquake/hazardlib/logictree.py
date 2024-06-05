@@ -1300,13 +1300,11 @@ class FullLogicTree(object):
             slices.append(slice(start, start + sm.samples))
             start += sm.samples
         acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
+        trtis = range(len(self.gsim_lt.values))
         for sm in self.sm_rlzs:
             rlzs_sm = rlzs[slices[sm.ordinal]]
-            trtsmrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24
-            for trtsmr in trtsmrs:
-                dic = acc[trtsmr]
-                trti = trtsmr // TWO24
+            for trti in trtis:
+                dic = acc[sm.ordinal + TWO24 * trti]
                 for rlz in rlzs_sm:
                     dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
         return acc
