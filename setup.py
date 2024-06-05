@@ -58,6 +58,7 @@ install_requires = [
     'setuptools',
     'h5py >=2.10',
     'numpy >=1.20',
+    'numba >=0.58',
     'scipy >=1.3',
     'pandas >=0.25',
     'pyzmq >=19.0',

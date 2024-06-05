@@ -980,6 +980,10 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
+    # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
+    # save little memory, from 95.3 GB down to 81.0 GB
+    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
+
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
         self.ordinal = ordinal
         self.sm_lt_path = tuple(sm_lt_path)
@@ -1065,8 +1069,8 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        if self.get_num_paths() >= 10_000:
-            logging.info('Building realizations')
+        R = self.get_num_paths()
+        logging.info('Building {:_d} realizations'.format(R))
         self.weights = numpy.array(
             [rlz.weight for rlz in self.get_realizations()])
         return self
@@ -1238,6 +1242,9 @@ class FullLogicTree(object):
         """
         :returns: the complete list of LtRealizations
         """
+        if hasattr(self, '_rlzs'):
+            return self._rlzs
+
         rlzs = []
         num_samples = self.source_model_lt.num_samples
         if num_samples:  # sampling
@@ -1268,7 +1275,8 @@ class FullLogicTree(object):
             for rlz in rlzs:
                 rlz.weight = rlz.weight / tot_weight
         assert rlzs, 'No realizations found??'
-        return numpy.array(rlzs)
+        self._rlzs = numpy.array(rlzs)
+        return self._rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
         # return dictionary gsim->rlzs

@@ -477,7 +477,7 @@ max_potential_gmfs:
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
-  Default: 15000
+  Default: 15_000
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -1402,6 +1402,13 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
+        
+        # check compute_rtgm will run
+        if 'rtgm' in self.postproc_func:
+            if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
+                raise InvalidFile('%s: the IMTs PGA, SA(0.2), and SA(1.0)'
+                                  ' are required to use compute_rtgm' % job_ini)
+
 
     def validate(self):
         """
@@ -1944,6 +1951,10 @@ class OqParam(valid.ParamSet):
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
+        for trt, val in self.maximum_distance.items():
+            if trt not in self._trts and trt != 'default':
+                # not a problem, the associated maxdist will simply be ignored
+                logging.warning('tectonic region %r not in %s', trt, gsim_lt)
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing

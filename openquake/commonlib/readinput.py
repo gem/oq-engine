@@ -419,15 +419,33 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
+def get_sids_around(site_model_hdf5, rec, dist):
+    """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rec: a record with 'mag' and 'hypo' fields
+    :returns: site model close to the rupture
+    """
+    with hdf5.File(site_model_hdf5) as f:
+        sm = f['site_model'][:]
+    x, y, z = rec['hypo']
+    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
+    return idxs
+
+
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rup: a rupture object or a record with a 'hypo' field
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
     hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
+    xyz = spherical_to_cartesian(x, y, z)
     idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
@@ -567,6 +585,26 @@ def get_site_model(oqparam, h5=None):
     return sm
 
 
+def debug_site(oqparam, haz_sitecol):
+    """
+    Reduce the site collection to the custom_site_id specified in
+    OQ_DEBUG_SITE. For conditioned GMFs, keep the stations.
+    """
+    siteid = os.environ.get('OQ_DEBUG_SITE')
+    if siteid:
+        complete = copy.copy(haz_sitecol.complete)
+        ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+        if not ok.any():
+            raise ValueError('There is not custom_site_id=%s', siteid)
+        if 'station_data' in oqparam.inputs:
+            # keep the stations while restricting to the specified site
+            sdata, _imts = get_station_data(oqparam, haz_sitecol)
+            ok |= numpy.isin(haz_sitecol.sids, sdata.site_id.to_numpy())
+        haz_sitecol.array = haz_sitecol[ok]
+        haz_sitecol.complete = complete
+        oqparam.concurrent_tasks = 0
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -608,23 +646,21 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-        if 'station_data' in oqparam.inputs:  # extend the sitecol
-            df = pandas.read_csv(oqparam.inputs['station_data'])
-            sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
-                                     df.LATITUDE.to_numpy())
-    ss = oqparam.sites_slice
-    if ss:
+
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
+        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+
+    slc = oqparam.sites_slice
+    if slc:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
+        mask = (sitecol.sids >= slc[0]) & (sitecol.sids < slc[1])
         sitecol = sitecol.filter(mask)
-        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
+        assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
-
-    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
-    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -633,12 +669,34 @@ def get_site_collection(oqparam, h5=None):
         # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
+
+    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
+            'ruptures' in h5.parent and 'site_model' in h5.parent):
+        # filter the far away sites, used in ScenarioRiskTestCase::test_case_1g
+        rec = h5.parent['ruptures'][0]
+        dist = oqparam.maximum_distance('*')(rec['mag'])
+        sids = get_sids_around(h5.parent.filename, rec, dist)
+        sitecol = sitecol.filtered(sids)
+
+    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
+    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
+    sitecol.exposure = exp
+
+    has_gmf = ('scenario' in oqparam.calculation_mode or 'event_based' in
+          oqparam.calculation_mode)
+    if has_gmf and 'custom_site_id' not in sitecol.array.dtype.names:
+        gh = sitecol.geohash(8)
+        if len(numpy.unique(gh)) < len(gh):
+            logging.error('geohashes are not unique')
+        sitecol.add_col('custom_site_id', 'S8', gh)
+        if sitecol is not sitecol.complete:
+            # tested in scenario_risk/test_case_8
+            gh = sitecol.complete.geohash(8)
+            sitecol.complete.add_col('custom_site_id', 'S8', gh)
+
+    debug_site(oqparam, sitecol)
     if h5:
         h5['sitecol'] = sitecol
-    if ('vs30' in sitecol.array.dtype.names and
-            not numpy.isnan(sitecol.vs30).any()):
-        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-    sitecol.exposure = exp
     return sitecol
 
 
@@ -767,7 +825,6 @@ def get_full_lt(oqparam):
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
                                      len(unique)))
     else:  # full enumeration
-        logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -986,6 +1043,9 @@ def get_station_data(oqparam, sitecol):
         the hazard site collection
     :returns: station_data, observed_imts
     """
+    if parallel.oq_distribute() == 'zmq':
+        logging.error('Conditioned scenarios are not meant to be run '
+                      ' on a cluster')
     complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
@@ -1078,15 +1138,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
-    if 'custom_site_id' not in sitecol.array.dtype.names:
-        gh = sitecol.geohash(8)
-        if len(numpy.unique(gh)) < len(gh):
-            logging.error('geohashes are not unique')
-        sitecol.add_col('custom_site_id', 'S8', gh)
-        if sitecol is not sitecol.complete:
-            # tested in scenario_risk/test_case_8
-            gh = sitecol.complete.geohash(8)
-            sitecol.complete.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded, exp
 
 
@@ -1398,23 +1449,6 @@ def get_reinsurance(oqparam, assetcol=None):
                 raise InvalidFile('%s: for policy %s there is a deductible '
                                   'also in the exposure!' % (fname, pol))
     return p, t, f
-
-
-def get_pla_factor(oqparam, minperiod=None):
-    """
-    :param oqparam: an OqParam instance
-    :returns: a function producing the period-dependent amplification factor
-    """
-    if 'post_loss_amplification' not in oqparam.inputs:
-        return
-    df = pandas.read_csv(oqparam.inputs['post_loss_amplification'])
-    if minperiod is not None:
-        # add minperiod with pla_factor of 1, as in the specs, see
-        # https://github.com/gem/oq-engine/issues/9633
-        dic = dict(return_period=[minperiod] + df['return_period'].tolist(),
-                   pla_factor=[1.] + df['pla_factor'].tolist())
-        df = pandas.DataFrame(dic)
-    return scientific.pla_factor(df)
 
 
 def get_input_files(oqparam):

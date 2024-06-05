@@ -30,6 +30,7 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
    seismic-source-models
    gmpes
    logic-trees
+   conditioning-gmf
    calculations
 
 .. _underlying-hazard-science:

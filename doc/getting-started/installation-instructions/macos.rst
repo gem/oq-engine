@@ -1,5 +1,7 @@
-Installing the OpenQuake Engine on MacOS
-========================================
+.. _macos:
+
+Installing on MacOS
+===================
 
 Requirements
 ------------
@@ -17,13 +19,11 @@ national or regional-scale models.
 Installation Procedure of Python 3
 ----------------------------------
 
-Before to use the universal installer you need to install Python3.
+Before using the universal installer you need to install Python3.
 
-Downloading the Python version from the official Python website
-(python.org) is the recommended) method for installing Python on a Mac.
+Downloading the Python version from the official Python website (python.org) is the recommended method for installing Python on a Mac.
 
-Download the installer from
-https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg
+Download the installer from  https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg
 
 The installation process is described in the following screenshots :
 
@@ -36,23 +36,21 @@ and double-click on the installer to start the installation.
 
 .. image:: _images/macos/run_installer.png
 
-
 IMPORTANT: Please note that the package includes its own private copy of OpenSSL 3.0.
 
 .. image:: _images/macos/openssl.png
 
-The installer will walk you through a wizard to complete the installation, and in most cases, the default settings work well, so install it like the other applications on macOS. You may also have to enter your Mac password to let it know that you
+The installer will walk you through a wizard to complete the installation, and in most cases, the default settings work well, so install it like the other applications on macOS. You may also have to enter your Mac password
 
 .. image:: _images/macos/install_certifi_1.png
 
-IMPORTANT Remember to double-click on Install Certificates to install it at the end of installation
+IMPORTANT: Remember to double-click on Install Certificates to install it at the end of the installation
 
 .. image:: _images/macos/install_certifi_2.png
 
-Close all windows after the Process is completed.
+Close all windows after the process is completed.
 
 .. image:: _images/macos/install_certifi_3.png
-
 
 Once Python 3.11 is installed, please see instructions for the :doc:`universal installer <universal>` script to install OpenQuake Engine
 

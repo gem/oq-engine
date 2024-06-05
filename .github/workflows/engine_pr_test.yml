@@ -68,7 +68,7 @@ jobs:
         cd openquake
         ruff check --preview --select NPY201 .
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+        pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
