@@ -172,11 +172,11 @@ An example of gridded rupture is shown below in the listing below::
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="utf-8"?>
+	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
-		xmlns="http://openquake.org/xmlns/nrml/0.5">
-
-	  <griddedRupture probs_occur="0.984 0.016">
+	      xmlns="http://openquake.org/xmlns/nrml/0.5">
+	
+	<griddedRupture probs_occur="0.984 0.016">
 
 	    <magnitude>8.2</magnitude>
 	    <rake>90.0</rake>
@@ -191,6 +191,6 @@ An example of gridded rupture is shown below in the listing below::
 
 	    </griddedSurface>
 
-	  </griddedRupture>
+	</griddedRupture>
 
 	</nrml>
