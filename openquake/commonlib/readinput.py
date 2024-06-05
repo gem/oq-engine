@@ -825,7 +825,6 @@ def get_full_lt(oqparam):
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
                                      len(unique)))
     else:  # full enumeration
-        logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
