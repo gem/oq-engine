@@ -1017,6 +1017,20 @@ def _get_smr(source_id):
     return int(smr)
 
 
+def _ddic(trtis, smrs, get_rlzs):
+    # returns a double dictionary trt_smr -> gsim -> rlzs
+    acc = AccumDict(accum=AccumDict(accum=[]))
+    for smr in smrs:
+        rlzs_sm = get_rlzs(smr)
+        for trti in trtis:
+            rbg = acc[smr + TWO24 * trti]
+            for rlz in rlzs_sm:
+                rbg[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+            acc[smr + TWO24 * trti] = {gsim: U32(rbg[gsim])
+                                       for gsim in sorted(rbg)}
+    return acc
+
+
 class FullLogicTree(object):
     """
     The full logic tree as composition of
@@ -1281,50 +1295,27 @@ class FullLogicTree(object):
         # return dictionary gsim->rlzs
         if not hasattr(self, '_rlzs_by'):
             rlzs = self.get_realizations()
+            trtis = range(len(self.gsim_lt.values))
+            smrs = numpy.array([sm.ordinal for sm in self.sm_rlzs])
             if self.source_model_lt.filename == 'fake.xml':  # scenario
-                acc = self._build_acc_scenario(rlzs)
+                smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
+                              for i, sm_rlz in enumerate(self.sm_rlzs)}
+                smidx = numpy.zeros(self.get_num_paths(), int)		
+                for rlz in rlzs:		
+                    smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
+                self._rlzs_by = _ddic(trtis, smrs,
+                                      lambda smr: rlzs[smidx == smr])
             else:  # classical and event based
-                acc = self._build_acc(rlzs)
-            self._rlzs_by = {}
-            for trtsmr, dic in acc.items():
-                self._rlzs_by[trtsmr] = {
-                    gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+                start = 0
+                slices = []
+                for sm in self.sm_rlzs:
+                    slices.append(slice(start, start + sm.samples))
+                    start += sm.samples
+                self._rlzs_by = _ddic(trtis, smrs,
+                                      lambda smr: rlzs[slices[smr]])
         if not self._rlzs_by:
             return {}
         return self._rlzs_by[trt_smr]
-
-    def _build_acc(self, rlzs):
-        start = 0
-        slices = []
-        for sm in self.sm_rlzs:
-            slices.append(slice(start, start + sm.samples))
-            start += sm.samples
-        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
-        trtis = range(len(self.gsim_lt.values))
-        for sm in self.sm_rlzs:
-            smr = sm.ordinal
-            rlzs_sm = rlzs[slices[smr]]
-            for trti in trtis:
-                dic = acc[smr + TWO24 * trti]
-                for rlz in rlzs_sm:
-                    dic[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return acc
-
-    def _build_acc_scenario(self, rlzs):
-        smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
-                      for i, sm_rlz in enumerate(self.sm_rlzs)}
-        smidx = numpy.zeros(self.get_num_paths(), int)		
-        for rlz in rlzs:		
-            smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]		
-        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
-        for sm in self.sm_rlzs:
-            trtsmrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24		
-            for trtsmr in trtsmrs:
-                trti, smr = divmod(trtsmr, TWO24)
-                for rlz in rlzs[smidx == smr]:
-                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return acc
 
     def get_rlzs_by_gsim(self, trt_smr):
         """
@@ -1336,7 +1327,8 @@ class FullLogicTree(object):
             for t in trt_smr:
                 for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].append(rlzs)
-            return {k: numpy.concatenate(ls, dtype=U32) for k, ls in dic.items()}
+            return {k: numpy.concatenate(ls, dtype=U32)
+                    for k, ls in dic.items()}
         # event based
         return self._rlzs_by_gsim(trt_smr)
 
