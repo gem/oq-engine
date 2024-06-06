@@ -31,11 +31,11 @@ from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, IA, CAV
 
-#CONSTS = {"c8": 0.0, not constant in cb19
+#CONSTS = {"c8": 0.0, not constant in CB19
 CONSTS = {"h4": 1.0,
           "c": 1.88,
           "n": 1.18,}
-          #"philnAF": 0.3} not constant in cb19
+          #"philnAF": 0.3} not constant in CB19
 
 
 def _get_alpha(C, vs30, pga_rock):
@@ -469,6 +469,12 @@ class CampbellBozorgnia2014(GMPE):
                         2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
 
             # Evaluate phi according to equation 30
+            # Note in CB19 cross-correlation coefficient is a function of magnitude. 
+            # For the meantime, IA and CAV are functions of magnitude, while other IMTs have constant cross-correlation coefficient.
+            # TO DO: Update the cross-correlation coefficient for other IMTs in the next PR.
+            # There is no phiC and rholny constant for IA and CAV, so it's set to N/A. Please see:
+            # Campbell, K. W., & Bozorgnia, Y. (2019). Ground motion models for the horizontal components of Arias intensity (AI)
+            # and cumulative absolute velocity (CAV) using the NGA-West2 database. Earthquake Spectra, 35(3), 1289-1310.
             if imt.string in ['CAV', 'IA']:
                 p = np.sqrt(
                 (_get_philny(C, ctx.mag))**2. + alpha**2. * _get_philny(C_PGA, ctx.mag) ** 2.
