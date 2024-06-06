@@ -307,7 +307,6 @@ if LOCKDOWN:
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
-
     # Official documentation suggests to override the entire TEMPLATES
     TEMPLATES = [
         {
