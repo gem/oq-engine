@@ -457,6 +457,8 @@ def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     xyz = spherical_to_cartesian(x, y, z)
     tree = cKDTree(xyz_all)
     idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    if len(idxs) < len(sm):
+        logging.info('Filtering %d/%d sites', len(idxs), len(sm))
     if mesh is not None:
         mesh.array = mesh.array[:, idxs]
     return sm[idxs]
