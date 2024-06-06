@@ -742,32 +742,42 @@ file, as shown in the following snippet from the full file::
 	  <exposureModel id="exposure_example_with_tags"
 	                 category="buildings"
 	                 taxonomySource="GEM_Building_Taxonomy_2.0">
+
 	    <description>Exposure Model Example with Tags</description>
 	
             <conversions>
+
 	      <costTypes>
+
 	        <costType name="structural" type="per_area" unit="USD" />
+
 	      </costTypes>
 	      <area type="per_asset" unit="SQM" />
+
 	    </conversions>
 	
 	    <tagNames>state county tract city zip cresta</tagNames>
 	
 	    <assets>
+
 	      <asset id="a1" taxonomy="Adobe" number="5" area="100" >
+
 	        <location lon="-122.000" lat="38.113" />
 	        <costs>
+
 	          <cost type="structural" value="10000"/>
 	
 	        </costs>
 	        <occupancies>
+
 	          <occupancy occupants="20" period="day" />
 	
 	        </occupancies>
 	        <tags state="California" county="Solano" tract="252702" city="Suisun" zip="94585" cresta="A.11"/>
+
 	      </asset>
+
 	    </assets>
-	
 	
 	</nrml>
 	
