@@ -103,7 +103,7 @@ def get_aelo_release_details():
             csv_reader = csv.DictReader(file)
             rows = list(csv_reader)
     except FileNotFoundError:
-        print(f"RELEASE_DETAILS_FILE {file_path} not found.")
+        print(f"RELEASE_DETAILS_FILE '{file_path}' not found.")
     aelo_release_details = rows[-1]  # TODO: discuss conventions (e.g.: last?)
     return aelo_release_details
 
