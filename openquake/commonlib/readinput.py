@@ -437,7 +437,8 @@ def rup_radius(rup):
     """
     hypo = rup.hypocenter
     xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    return cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    radius = cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    return radius
 
 
 def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
