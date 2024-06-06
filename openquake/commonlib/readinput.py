@@ -606,7 +606,7 @@ def debug_site(oqparam, haz_sitecol):
         complete = copy.copy(haz_sitecol.complete)
         ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
         if not ok.any():
-            raise ValueError('There is not custom_site_id=%s', siteid)
+            raise ValueError('There is no custom_site_id=%s', siteid)
         if 'station_data' in oqparam.inputs:
             # keep the stations while restricting to the specified site
             sdata, _imts = get_station_data(oqparam, haz_sitecol)
