@@ -615,9 +615,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
-        rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-               oq.inputs['rupture_model'].endswith('.xml'))
-        if rup:
+        if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
             if bsets > 1:

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the scenario calculators to discard the sites far away from
+    the rupture, with the effect of generating different GMFs
   * Cached `get_realizations` and optimized the memory occupation; now
     302_990_625 realizations (i.e. EUR) require only 90 GB
 
