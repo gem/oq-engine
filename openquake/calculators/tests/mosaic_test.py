@@ -21,9 +21,9 @@ from openquake.calculators.export import export
 from openquake.qa_tests_data.mosaic import case_01
 
 
-class ScenarioRiskTestCase(CalculatorTestCase):
+class MosaicScenarioTestCase(CalculatorTestCase):
 
-    def test_case_1(self):
+    def test_case_01(self):
         self.run_calc(case_01.__file__, 'job.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', fname, delta=1E-5)
