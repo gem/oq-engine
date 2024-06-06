@@ -155,7 +155,7 @@ list of comma-separated integers. For example::
 	[disaggregation]
 	rlz_index = 22,23
 
-If ``num_rlzs_disagg`` is specified, the user
+If ``num_rlzs_disagg`` is specified, the user cannot specify ``rlz_index``, and vice versa. If ``num_rlzs_disagg`` or 
 
 As mentioned above, the user also has the option to perform disaggregation by directly specifying the intensity measure 
 level to be disaggregated, rather than specifying the probability of exceedance. An example is shown below::
