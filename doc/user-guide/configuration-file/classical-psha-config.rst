@@ -155,7 +155,6 @@ list of comma-separated integers. For example::
 	[disaggregation]
 	rlz_index = 22,23
 
-If ``num_rlzs_disagg`` is specified, the user
 cannot specify ``rlz_index``, and vice
 versa. If ``num_rlzs_disagg`` or 
 ``rlz_index``is specified, then the mean disaggregation is automatically computed from the selected realizations.
