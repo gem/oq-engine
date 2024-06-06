@@ -128,7 +128,7 @@ ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --t
 Please refer to the nginx installation istructions for your operating system.
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static
-content (see [documentation]('https://docs.gunicorn.org/en/stable/deploy.html')).
+content (see [gunicorn documentation]('https://docs.gunicorn.org/en/stable/deploy.html')).
 
 When the reverse proxy is configured, add the following to `openquake/server/local_settings.py`:
 ```python
