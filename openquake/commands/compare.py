@@ -354,7 +354,7 @@ def same_length(ds0, ds1, what):
 def compare_column_values(array0, array1, what, calc_id0, calc_id1):
     diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
-        print(f'{what} is okay')
+        print(f'The column {what} is okay')
         return
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column.")
@@ -421,7 +421,7 @@ def check_intersect(array0, array1, kfield, vfields, calc_ids):
     array1.sort(order=kfield)
     val0 = array0[kfield]
     val1 = array1[kfield]
-    common = numpy.array(sorted(set(val0) & set(val1)))
+    common = numpy.intersect1d(val0, val1, assume_unique=True)
     print(f'Comparing {kfield=}, {len(val0)=}, {len(val1)=}, {len(common)=}')
     arr0 = array0[numpy.isin(val0, common)]
     arr1 = array1[numpy.isin(val1, common)]
@@ -439,10 +439,11 @@ def compare_sitecol(calc_ids: int):
     array1 = ds1['sitecol'].array
     check_column_names(array0, array1, 'sitecol', *calc_ids)
     if len(array0) != len(array1):
-        fields = set(array0.dtype.names) & set(array1.dtype.names) - {
-            'sids', 'custom_site_id'}
-        check_intersect(
-            array0, array1, 'custom_site_id', sorted(fields), calc_ids)
+        fields = set(array0.dtype.names) & set(array1.dtype.names) - {'sids'}
+        if 'custom_site_id' in fields:
+            check_intersect(
+                array0, array1, 'custom_site_id',
+                sorted(fields-{'custom_site_id'}), calc_ids)
         return
     for col in array0.dtype.names:
         values0 = array0[col]
