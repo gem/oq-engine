@@ -1,0 +1,37 @@
+{% extends "engine/base.html" %}
+
+  <title>{% block title %}AELO version details{% endblock %}</title>
+
+  {% block main %}
+  {{ block.super }}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <div id="aelo_release_details">
+            <h3 style="text-align: center;">AELO release details</h3>
+            <ul>
+            <li>
+                Release: {{ aelo_release_details.version }}
+            </li>
+            <li>
+                Date: {{ aelo_release_details.date }}
+            </li>
+            <li>
+                Requires: {{ aelo_release_details.requires }}
+            </li>
+            <li>
+                Notes: {{ aelo_release_details.notes }}
+            </li>
+            </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /.container -->
+  </div>
+  {% endblock main %}
+
+  {% block extra_script %}
+  {% endblock extra_script %}
