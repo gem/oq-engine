@@ -217,6 +217,10 @@ footer.footer a {
     color: rgb(0, 0, 0, 0.8);
 }
 
+footer.footer .pull-left span {
+    font-weight: bold;
+}
+
 #new-release-box {
     display: none;
 }
