@@ -354,8 +354,10 @@ def same_length(ds0, ds1, what):
 def compare_column_values(array0, array1, what, calc_id0, calc_id1):
     diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
+        print(f'{what} is okay')
         return
-    print(f"There are {len(diff_idxs)} different elements in the '{what}' column.")
+    print(f"There are {len(diff_idxs)} different elements "
+          f"in the '{what}' column.")
     for ordinal, idx in enumerate(diff_idxs):
         if ordinal > 5:
             print('[...]')
@@ -372,7 +374,7 @@ def check_column_names(array0, array1, what, calc_id0, calc_id1):
     cols0 = array0.dtype.names
     cols1 = array1.dtype.names
     if len(cols0) != len(cols1):
-        print(f'The {what} arrays have different numbers of columns:')
+        print(f'The {what} arrays have different columns:')
         print(f'Calc {calc_id0}:\n{cols0}')
         print(f'Calc {calc_id1}:\n{cols1}')
     elif numpy.array_equal(cols0, cols1):
@@ -411,17 +413,38 @@ def compare_assetcol(calc_ids: int):
                               col, calc_ids[0], calc_ids[1])
 
 
+def check_intersect(array0, array1, kfield, vfields, calc_ids):
+    """
+    Compare two structured arrays on the given field
+    """
+    array0.sort(order=kfield)
+    array1.sort(order=kfield)
+    val0 = array0[kfield]
+    val1 = array1[kfield]
+    common = numpy.array(sorted(set(val0) & set(val1)))
+    print(f'Comparing {kfield=}, {len(val0)=}, {len(val1)=}, {len(common)=}')
+    arr0 = array0[numpy.isin(val0, common)]
+    arr1 = array1[numpy.isin(val1, common)]
+    for col in vfields:
+        compare_column_values(arr0[col], arr1[col], col, *calc_ids)
+
+
 def compare_sitecol(calc_ids: int):
+    """
+    Compare the site collections of two calculations, looking for similarities
+    """
     ds0 = datastore.read(calc_ids[0])
     ds1 = datastore.read(calc_ids[1])
-    if not same_length(ds0, ds1, 'sitecol'):
-        return
-    check_column_names(
-            ds0['sitecol'].array, ds1['sitecol'].array,
-            'sitecol', calc_ids[0], calc_ids[1])
     array0 = ds0['sitecol'].array
     array1 = ds1['sitecol'].array
-    for col in ds0['sitecol'].array.dtype.names:
+    check_column_names(array0, array1, 'sitecol', *calc_ids)
+    if len(array0) != len(array1):
+        fields = set(array0.dtype.names) & set(array1.dtype.names) - {
+            'sids', 'custom_site_id'}
+        check_intersect(
+            array0, array1, 'custom_site_id', sorted(fields), calc_ids)
+        return
+    for col in array0.dtype.names:
         values0 = array0[col]
         values1 = array1[col]
         compare_column_values(values0, values1,
