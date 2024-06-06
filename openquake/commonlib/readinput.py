@@ -291,6 +291,17 @@ def get_params(job_ini, kw={}):
     return params
 
 
+def is_fraction(string):
+    """
+    :returns: True if the string can be converted to a probability
+    """
+    try:
+        f = float(string)
+    except ValueError:
+        return
+    return 0 < f < 1
+
+
 def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
@@ -313,7 +324,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
     re = os.environ.get('OQ_REDUCE')  # debugging facility
-    if re:
+    if is_fraction(re):
         # reduce the imtls to the first imt
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
@@ -321,8 +332,8 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         os.environ['OQ_SAMPLE_SITES'] = re
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
-            ses = str(int(numpy.ceil(int(ses) * float(re))))
-            job_ini['ses_per_logic_tree_path'] = ses
+            ses = int(numpy.ceil(int(ses) * float(re)))
+            job_ini['ses_per_logic_tree_path'] = str(ses)
         imtls = job_ini.get('intensity_measure_types_and_levels')
         if imtls:
             imtls = valid.intensity_measure_types_and_levels(imtls)

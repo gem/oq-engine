@@ -94,6 +94,7 @@ branch_dt = numpy.dtype([
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
+OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
 
 
 # this is very fast
@@ -226,7 +227,7 @@ def collect_info(smltpath, branchID=''):
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
                                 h5paths.add(hdf5file)
-                    if os.environ.get('OQ_REDUCE'):  # only take first branch
+                    if OQ_REDUCE:  # only take first branch
                         break
     return Info(sorted(smpaths), sorted(h5paths), applytosources)
 
@@ -554,7 +555,7 @@ class SourceModelLogicTree(object):
         bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
-        if os.environ.get('OQ_REDUCE'):  # only take first branch
+        if OQ_REDUCE:  # only take first branch
             branches = [branches[0]]
             branches[0].uncertaintyWeight.text = 1.
         values = []
