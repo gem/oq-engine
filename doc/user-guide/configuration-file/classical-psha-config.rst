@@ -149,16 +149,6 @@ example and a description of each parameter is provided below::
 - ``disagg_by_src``: optional; if specified and set to true, disaggregation by source is computed, if possible.
 - ``num_rlzs_disagg``: optional; specifies the number of realizations to be used, selecting those that yield intensity measure levels closest to the mean. Starting from engine 3.17 the default is 0, which means considering all realizations.
 
-Alternatively to ``num_rlzs_disagg``, the user can specify the index or indices of the realizations to disaggregate as a 
-list of comma-separated integers. For example::
-
-	[disaggregation]
-	rlz_index = 22,23
-
-cannot specify ``rlz_index``, and vice
-versa. If ``num_rlzs_disagg`` or 
-``rlz_index``is specified, then the mean disaggregation is automatically computed from the selected realizations.
-
 As mentioned above, the user also has the option to perform disaggregation by directly specifying the intensity measure 
 level to be disaggregated, rather than specifying the probability of exceedance. An example is shown below::
 
