@@ -438,18 +438,13 @@ def compare_sitecol(calc_ids: int):
     array0 = ds0['sitecol'].array
     array1 = ds1['sitecol'].array
     check_column_names(array0, array1, 'sitecol', *calc_ids)
-    if len(array0) != len(array1):
-        fields = set(array0.dtype.names) & set(array1.dtype.names) - {'sids'}
-        if 'custom_site_id' in fields:
-            check_intersect(
-                array0, array1, 'custom_site_id',
-                sorted(fields-{'custom_site_id'}), calc_ids)
-        return
-    for col in array0.dtype.names:
-        values0 = array0[col]
-        values1 = array1[col]
-        compare_column_values(values0, values1,
-                              col, calc_ids[0], calc_ids[1])
+    fields = set(array0.dtype.names) & set(array1.dtype.names) - {'sids'}
+    if 'custom_site_id' in fields:
+        check_intersect(
+            array0, array1, 'custom_site_id',
+            sorted(fields-{'custom_site_id'}), calc_ids)
+    else:
+        check_intersect(array0, array1, 'sids', sorted(fields), calc_ids)
 
 
 main = dict(rups=compare_rups,
