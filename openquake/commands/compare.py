@@ -332,22 +332,28 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def compare_column_values(array0, array1, what, calc_id0, calc_id1):
+def delta(a, b):
+    """
+    :returns: the relative differences between a and b; zeros return zeros
+    """
+    c = a + b
+    ok = c != 0.
+    res = numpy.zeros_like(a)
+    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
+    return res
+
+
+def compare_column_values(array0, array1, what):
     if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
-        diff_idxs = numpy.where(numpy.abs(array0 - array1) > 1E-5)[0]
+        diff_idxs = numpy.where(delta(array0, array1) > 1E-5)[0]
     else:
         diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
         print(f'The column {what} is okay')
         return
     print(f"There are {len(diff_idxs)} different elements "
-          f"in the '{what}' column.")
-    for ordinal, idx in enumerate(diff_idxs):
-        if ordinal > 1:
-            print('[...]')
-            break
-        print(f"Index {idx}: {array0[idx]} in calc {calc_id0},"
-              f" {array1[idx]} in calc {calc_id1}")
+          f"in the '{what}' column:")
+    print(array0[diff_idxs], array1[diff_idxs])
 
 
 def check_column_names(array0, array1, what, calc_id0, calc_id1):
@@ -401,7 +407,7 @@ def check_intersect(array0, array1, kfield, vfields, calc_ids):
     arr0 = array0[numpy.isin(val0, common)]
     arr1 = array1[numpy.isin(val1, common)]
     for col in vfields:
-        compare_column_values(arr0[col], arr1[col], col, *calc_ids)
+        compare_column_values(arr0[col], arr1[col], col)
 
 
 def compare_sitecol(calc_ids: int):
