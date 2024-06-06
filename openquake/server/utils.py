@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 import os
 import getpass
 import requests
@@ -96,13 +97,14 @@ def user_has_permission(request, owner):
 
 
 def get_aelo_release_details():
-    # FIXME: read from file
-    aelo_release_details = {
-        'version': '1.0.0',
-        'date': '2024-06-6',
-        'requires': 'OpenQuake Engine 3.20',
-        'notes': 'First official AELO release.',
-    }
+    file_path = settings.RELEASE_DETAILS_FILE
+    try:
+        with open(file_path, 'r') as file:
+            csv_reader = csv.DictReader(file)
+            rows = list(csv_reader)
+    except FileNotFoundError:
+        print(f"RELEASE_DETAILS_FILE {file_path} not found.")
+    aelo_release_details = rows[-1]  # TODO: discuss conventions (e.g.: last?)
     return aelo_release_details
 
 

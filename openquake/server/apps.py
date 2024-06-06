@@ -62,3 +62,11 @@ class ServerConfig(AppConfig):
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
+        if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
+            # NOTE: this might be needed also for ARISTOTLE
+            try:
+                settings.RELEASE_DETAILS_FILE
+            except NameError:
+                raise NameError(
+                    f'If APPLICATION_MODE is {settings.APPLICATION_MODE} the'
+                    f' RELEASE_DETAILS_FILE path must be defined')
