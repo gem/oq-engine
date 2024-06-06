@@ -297,7 +297,7 @@ def is_fraction(string):
     """
     try:
         f = float(string)
-    except ValueError:
+    except (ValueError, TypeError):
         return
     return 0 < f < 1
 
