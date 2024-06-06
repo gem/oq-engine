@@ -95,6 +95,17 @@ def user_has_permission(request, owner):
     return owner in get_valid_users(request) or not get_acl_on(request)
 
 
+def get_aelo_release_details():
+    # FIXME: read from file
+    aelo_release_details = {
+        'version': '1.0.0',
+        'date': '2024-06-6',
+        'requires': 'OpenQuake Engine 3.20',
+        'notes': 'First official AELO release.',
+    }
+    return aelo_release_details
+
+
 def oq_server_context_processor(request):
     """
     A custom context processor which allows injection of additional
@@ -124,8 +135,14 @@ def oq_server_context_processor(request):
     context['oq_engine_version'] = oqversion
     context['disable_version_warning'] = settings.DISABLE_VERSION_WARNING
     context['server_name'] = settings.SERVER_NAME
+    # NOTE: tools_only can be deleted if it is not used by other apps
     context['tools_only'] = settings.APPLICATION_MODE == 'TOOLS_ONLY'
+    context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
+    if settings.APPLICATION_MODE == 'AELO':
+        aelo_release_details = get_aelo_release_details()
+        aelo_version = aelo_release_details['version']
+        context['aelo_version'] = aelo_version
     return context
 
 

@@ -1236,7 +1236,8 @@ def calc_datastore(request, job_id):
 
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
-    params = {'application_mode': application_mode}
+    # NOTE: application_mode is already added by the context processor
+    params = {}
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
@@ -1284,8 +1285,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
-                       application_mode=application_mode))
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
+                  )
 
 
 def is_model_preliminary(ds):
@@ -1460,3 +1461,10 @@ def on_same_fs(request):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
+
+
+@require_http_methods(['GET'])
+def view_aelo_release_details(request, **kwargs):
+    aelo_release_details = utils.get_aelo_release_details()
+    return render(request, "engine/aelo_release_details.html",
+                  dict(aelo_release_details=aelo_release_details))
