@@ -20,7 +20,7 @@ import numpy
 import shapely
 import logging
 from openquake.commonlib import datastore
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import cross_idl, get_bbox
 from openquake.commands.plot import (
     add_borders, get_assetcol, get_country_iso_codes)
 
@@ -75,18 +75,19 @@ def main(calc_id: int = -1, site_model=False,
                       label='discarded', s=markersize_discarded)
     if oq.rupture_xml or oq.rupture_dict:
         lon, lat, dep = dstore['ruptures'][0]['hypo']
+        xlon, xlat = [lon], [lat]
         print('rupture(%s, %s)' % (lon, lat))
-        p.scatter([lon], [lat], marker='o', color='red', label='rupture')
+        p.scatter(xlon, xlat, marker='o', color='red', label='rupture')
+    else:
+        xlon, xlat = [], []
 
     ax = add_borders(ax)
 
     if region:
         minx, miny, maxx, maxy = region_geom.bounds
     else:
-        minx = assetcol['lon'].min()
-        maxx = assetcol['lon'].max()
-        miny = assetcol['lat'].min()
-        maxy = assetcol['lat'].max()
+        minx, miny, maxx, maxy = get_bbox(
+            assetcol['lon'], assetcol['lat'], xlon, xlat)
     w, h = maxx - minx, maxy - miny
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
