@@ -533,8 +533,8 @@ def get_site_model(oqparam, h5=None):
 
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
+        # read the site model close to the rupture
         rup = get_rupture(oqparam)
-        # global site model close to the rupture
         dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
@@ -1025,8 +1025,7 @@ def get_exposure(oqparam, h5=None):
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
-            # reading the assets around a rupture
-            sm = get_site_model(oq)
+            sm = get_site_model(oq)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)

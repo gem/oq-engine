@@ -1678,16 +1678,6 @@ def compare_disagg_rates(token, dstore):
                             ).sort_values(['imt', 'src'])
 
 
-
-@view.add('geohash')
-def view_geohash(token, dstore):
-    lon_lat = token.split(':')[1]
-    lon, lat = valid.lon_lat(lon_lat)
-    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
-    gh = b''.join([row.tobytes() for row in arr])
-    return gh.decode('ascii')
-
-
 @view.add('gh3')
 def view_gh3(token, dstore):
     sitecol = dstore['sitecol']
