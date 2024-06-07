@@ -406,3 +406,17 @@ table#aristotle-losses th td {
 #aristotle-losses-download {
   margin-top: 10px;
 }
+
+.changelog {
+    width: 50%;
+    margin: 50px auto;
+    border-collapse: collapse;
+}
+.changelog th, .changelog td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: center;
+}
+.changelog th {
+    background-color: #f2f2f2;
+}

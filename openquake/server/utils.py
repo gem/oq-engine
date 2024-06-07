@@ -99,6 +99,10 @@ def user_has_permission(request, owner):
     return owner in get_valid_users(request) or not get_acl_on(request)
 
 
+def remove_first_word(s):
+    return ' '.join(s.split(' ')[1:]) if isinstance(s, str) else s
+
+
 def get_aelo_changelog():
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
@@ -111,6 +115,11 @@ def get_aelo_changelog():
             dic[k].append(v)
     df = pandas.DataFrame(dic)
     df = df.drop(columns=['private'])
+    df['release'] = df['release'].apply(remove_first_word)
+    df = df[~df['release'].str.startswith('_')]
+    df = df.applymap(
+        lambda x: x.replace('\n', '<br>') if isinstance(x, str) else x)
+    df.columns = df.columns.str.capitalize()
     return df
 
 
@@ -149,7 +158,7 @@ def oq_server_context_processor(request):
     context['announcements'] = announcements
     if settings.APPLICATION_MODE == 'AELO':
         aelo_changelog = get_aelo_changelog()
-        aelo_version = aelo_changelog['release'][0].split(' ')[1]
+        aelo_version = aelo_changelog['Release'][0]
         context['aelo_version'] = aelo_version
     return context
 

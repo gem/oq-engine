@@ -1466,9 +1466,7 @@ def license(request, **kwargs):
 @require_http_methods(['GET'])
 def aelo_changelog(request, **kwargs):
     aelo_changelog = utils.get_aelo_changelog()
-    aelo_changelog = aelo_changelog.applymap(
-        lambda x: x.replace('\n', '<br>') if isinstance(x, str) else x)
     aelo_changelog_html = aelo_changelog.to_html(
-        index=False, escape=False, classes='dataframe', border=0)
+        index=False, escape=False, classes='changelog', border=0)
     return render(request, "engine/aelo_changelog.html",
                   dict(aelo_changelog=aelo_changelog_html))
