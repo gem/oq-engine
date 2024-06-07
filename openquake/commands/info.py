@@ -41,7 +41,7 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map, lon_lat
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
-from openquake.risklib import scientific
+from openquake.risklib import asset, scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
@@ -285,9 +285,14 @@ def main(what, report=False):
         print(mon)
     elif what.endswith('.xml'):
         node = nrml.read(what)
-        if node[0].tag.endswith('sourceModel'):
+        tag = node[0].tag
+        if tag.endswith('sourceModel'):
             print(source_model_info([node]))
-        elif node[0].tag.endswith('logicTree'):
+        elif tag.endswith('exposureModel'):
+            exp, df = asset.read_exp_df(what)
+            print(node.to_str())
+            print(df.set_index('id')[['lon', 'lat', 'taxonomy', 'value-structural']])
+        elif tag.endswith('logicTree'):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):
                 bset = bset[0]
