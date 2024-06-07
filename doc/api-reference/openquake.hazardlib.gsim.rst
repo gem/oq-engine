@@ -431,14 +431,6 @@ campbell_bozorgnia_2014
     :undoc-members:
     :show-inheritance:
 
-campbell_bozorgnia_2019_ia_cav
--------------------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2019_ia_cav
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 cauzzi_2014
 -------------------------------------------
 
