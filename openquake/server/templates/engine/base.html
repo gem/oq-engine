@@ -10,6 +10,7 @@
   <link href="{{ STATIC_URL }}css/engine.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}lib/outdatedbrowser/outdatedbrowser.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}css/cookie_consent.css" rel="stylesheet"/>
 </head>
 <body>
   {% block header %}
@@ -123,5 +124,6 @@
     })
   </script>
   {% endblock extra_script %}
+  {% include "includes/cookie_bar.html" %}
 </body>
 </html>
