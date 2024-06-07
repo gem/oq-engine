@@ -150,6 +150,8 @@ jobs:
         fi
     - name: Server 'AELO' mode tests
       run: |
+        # FIXME:
+        # make sure that aelo_changelog.ini exists in the mosaic_dir
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
         OQ_APPLICATION_MODE=AELO OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
