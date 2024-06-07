@@ -146,6 +146,9 @@ def gen_tasks(files, monitor):
 
 
 def store(exposures_xml, dstore):
+    """
+    Store the given exposures in the datastore
+    """
     csvfiles = []
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
