@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
 import operator
 import pandas
@@ -99,7 +98,8 @@ def store_tagcol(dstore):
         name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
         tagnames.append(name)
         tagvalues = numpy.concatenate(TAGS[tagname])
-        uvals, inv, counts = numpy.unique(tagvalues, return_inverse=1, return_counts=1)
+        uvals, inv, counts = numpy.unique(
+            tagvalues, return_inverse=1, return_counts=1)
         size = len(uvals) + 1
         tagsizes.append(size)
         logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
