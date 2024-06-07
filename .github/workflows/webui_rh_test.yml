@@ -9,6 +9,8 @@ on:
         required: true
   schedule:
     - cron: "05 15 * * *"
+  push:
+    branches: [ cookie_consent ]
 
 jobs:
   test_ui:
@@ -95,13 +97,15 @@ jobs:
          echo "Add settings for login and logging on webui before to start"
          cd /__w/oq-engine/oq-engine/
          cd openquake/server
-         cat > local_settings.py << EOF
-         LOCKDOWN = True
-         #
-         WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
-         EOF
-         echo "DISPLAY content of local_settings"
-         cat local_settings.py
+         cp local_settings.py.server local_settings.py
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
+         sleep 1
+         # Perform migration after setup local_settings
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
+         sleep 1
+         # Perform collectstatic after setup local_settings
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui collectstatic'
+         sleep 1
          # START WEBUI
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
          echo "Waiting WEBUI up on port 8800...."
@@ -109,10 +113,6 @@ jobs:
            sleep 5 # wait for 1/10 of the second before check again
          done
          echo "Test WebUI with curl before to test django"
-         sleep 1
-         # Perform migration after setup local_settings
-         cd /__w/oq-engine/oq-engine/openquake/engine/
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
          sleep 1
          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
          echo -n "Test Standalone Tools pages"
