@@ -27,7 +27,6 @@ from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import build_dstore_log
 from openquake.risklib.asset import _get_exposure
-from openquake.qa_tests_data import mosaic
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -44,7 +43,6 @@ for f in (None, 'ID_1'):
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
-MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
           'OCCUPANTS_PER_ASSET', 'OCCUPANTS_PER_ASSET_AVERAGE',
