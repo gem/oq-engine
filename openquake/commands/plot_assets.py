@@ -36,8 +36,9 @@ def main(calc_id: int = -1, site_model=False,
     from openquake.hmtk.plotting.patch import PolygonPatch
 
     dstore = datastore.read(calc_id)
+    oq = dstore['oqparam']
     try:
-        region = dstore['oqparam'].region
+        region = oq.region
     except KeyError:
         region = None
     sitecol = dstore['sitecol']
@@ -72,6 +73,10 @@ def main(calc_id: int = -1, site_model=False,
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
+    if oq.rupture_xml or oq.rupture_dict:
+        lon, lat, dep = dstore['ruptures'][0]['hypo']
+        print('rupture(%s, %s)' % (lon, lat))
+        p.scatter([lon], [lat], marker='o', color='red', label='rupture')
 
     ax = add_borders(ax)
 
