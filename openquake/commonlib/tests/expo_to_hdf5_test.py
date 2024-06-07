@@ -17,12 +17,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 from openquake.baselib import hdf5
-from openquake.risklib.expo_to_hdf5 import main
+from openquake.commonlib.expo_to_hdf5 import main
 
 
 def test_main():
     # only tests that it runs
-    expo_xml = os.path.join(os.path.dirname(__file__), 'data', 'grm_exposure.xml')
+    expo_xml = os.path.join(os.path.dirname(__file__),
+                            'data', 'grm_exposure.xml')
     out = main([expo_xml])
     with hdf5.File(out) as dstore:
         assets = list(dstore['assets/ASSET_ID'])
