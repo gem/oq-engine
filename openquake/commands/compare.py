@@ -332,42 +332,28 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def get_asset_ids(ds):
-    ids = ds['assetcol']['id'][:]
-    if ds['oqparam'].aristotle:
-        N = 3  # length of mosaic model codes
-        ids = numpy.array([id_[N:] for id_ in ids])
-    return ids
+def delta(a, b):
+    """
+    :returns: the relative differences between a and b; zeros return zeros
+    """
+    c = a + b
+    ok = c != 0.
+    res = numpy.zeros_like(a)
+    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
+    return res
 
 
-def same_length(ds0, ds1, what):
-    len0 = len(ds0[what])
-    len1 = len(ds1[what])
-    if len0 != len1:
-        print(f'The {what}s have different lengths: {len0} != {len1}')
-        return False
+def compare_column_values(array0, array1, what):
+    if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
+        diff_idxs = numpy.where(delta(array0, array1) > 1E-5)[0]
     else:
-        print(f'The {what}s have the same lengths')
-        return True
-
-
-def compare_column_values(array0, array1, what, calc_id0, calc_id1):
-    diff_idxs = numpy.where(array0 != array1)[0]
+        diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
         print(f'The column {what} is okay')
         return
     print(f"There are {len(diff_idxs)} different elements "
-          f"in the '{what}' column.")
-    for ordinal, idx in enumerate(diff_idxs):
-        if ordinal > 5:
-            print('[...]')
-            break
-        print(f"Index {idx}: {array0[idx]} in calc {calc_id0},"
-              f" {array1[idx]} in calc {calc_id1}")
-    if numpy.array_equal(numpy.sort(array0), numpy.sort(array1)):
-        print(f'However, the sorted "{what}"s are equal')
-    else:
-        print(f'"{what}"s remain different even after sorting them')
+          f"in the '{what}' column:")
+    print(array0[diff_idxs], array1[diff_idxs])
 
 
 def check_column_names(array0, array1, what, calc_id0, calc_id1):
@@ -394,23 +380,21 @@ def compare_assetcol(calc_ids: int):
     """
     ds0 = datastore.read(calc_ids[0])
     ds1 = datastore.read(calc_ids[1])
-    if not same_length(ds0, ds1, 'assetcol'):
-        return
-    check_column_names(
-            ds0['assetcol'].array, ds1['assetcol'].array,
-            'assetcol', calc_ids[0], calc_ids[1])
-    ids0 = get_asset_ids(ds0)
-    ids1 = get_asset_ids(ds1)
-    compare_column_values(ids0, ids1, 'id', calc_ids[0], calc_ids[1])
     array0 = ds0['assetcol'].array
     array1 = ds1['assetcol'].array
-    for col in ds0['assetcol'].array.dtype.names:
-        if col == 'id':
-            continue
-        values0 = array0[col]
-        values1 = array1[col]
-        compare_column_values(values0, values1,
-                              col, calc_ids[0], calc_ids[1])
+    oq0 = ds0['oqparam']
+    oq1 = ds1['oqparam']
+    if oq0.aristotle:
+        array0['id'] = [id[3:] for id in array0['id']]
+    if oq1.aristotle:
+        array1['id'] = [id[3:] for id in array1['id']]
+    check_column_names(array0, array1, 'assetcol', *calc_ids)
+    fields = set(array0.dtype.names) & set(array1.dtype.names) - {
+        'site_id', 'id', 'ordinal', 'taxonomy'}
+    arr0, arr1 = check_intersect(array0, array1, 'id', sorted(fields), calc_ids)
+    taxo0 = ds0['assetcol/tagcol/taxonomy'][:][arr0['taxonomy']]
+    taxo1 = ds1['assetcol/tagcol/taxonomy'][:][arr1['taxonomy']]
+    compare_column_values(taxo0, taxo1, 'taxonomy')
 
 
 def check_intersect(array0, array1, kfield, vfields, calc_ids):
@@ -423,10 +407,15 @@ def check_intersect(array0, array1, kfield, vfields, calc_ids):
     val1 = array1[kfield]
     common = numpy.intersect1d(val0, val1, assume_unique=True)
     print(f'Comparing {kfield=}, {len(val0)=}, {len(val1)=}, {len(common)=}')
+    if len(val0) < len(val1):
+        print('A missing asset is %s' % (set(val1)-set(val0)).pop())
+    elif len(val1) < len(val0):
+        print('A missing asset is %s' % (set(val0)-set(val1)).pop())
     arr0 = array0[numpy.isin(val0, common)]
     arr1 = array1[numpy.isin(val1, common)]
     for col in vfields:
-        compare_column_values(arr0[col], arr1[col], col, *calc_ids)
+        compare_column_values(arr0[col], arr1[col], col)
+    return arr0, arr1
 
 
 def compare_sitecol(calc_ids: int):
