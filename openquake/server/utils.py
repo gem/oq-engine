@@ -16,17 +16,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import csv
 import os
 import getpass
 import requests
 import logging
+import configparser
+import collections
+import pandas
 
 from time import sleep
 from django.conf import settings
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
+from openquake.baselib import config
 
 
 def is_superuser(request):
@@ -96,16 +99,17 @@ def user_has_permission(request, owner):
     return owner in get_valid_users(request) or not get_acl_on(request)
 
 
-def get_aelo_release_details():
-    file_path = settings.RELEASE_DETAILS_FILE
-    try:
-        with open(file_path, 'r') as file:
-            csv_reader = csv.DictReader(file)
-            rows = list(csv_reader)
-    except FileNotFoundError:
-        print(f"RELEASE_DETAILS_FILE '{file_path}' not found.")
-    aelo_release_details = rows[-1]  # TODO: discuss conventions (e.g.: last?)
-    return aelo_release_details
+def get_aelo_changelog():
+    dic = collections.defaultdict(list)
+    c = configparser.ConfigParser()
+    changelog_path = os.path.join(
+        config.directory.mosaic_dir, 'aelo_changelog.ini')
+    c.read(changelog_path)
+    for sec in c.sections():
+        dic['release'].append(sec)
+        for k, v in c.items(sec):
+            dic[k].append(v)
+    return pandas.DataFrame(dic)
 
 
 def oq_server_context_processor(request):
@@ -142,8 +146,8 @@ def oq_server_context_processor(request):
     context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
     if settings.APPLICATION_MODE == 'AELO':
-        aelo_release_details = get_aelo_release_details()
-        aelo_version = aelo_release_details['version']
+        aelo_changelog = get_aelo_changelog()
+        aelo_version = aelo_changelog['release'][0].split(' ')[1]
         context['aelo_version'] = aelo_version
     return context
 

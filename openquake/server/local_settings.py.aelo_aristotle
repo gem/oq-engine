@@ -46,8 +46,3 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
 # TIME_ZONE = 
-
-# A CSV file like the following example, adding rows corresponding to newer releases to the bottom:
-# version,date,requires,notes,private
-# 1.0.0,2024-06-06,OpenQuake Engine 3.20,First official AELO release,See /path/to/private.txt
-RELEASE_DETAILS_FILE = <fullpath>

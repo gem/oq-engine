@@ -1464,7 +1464,8 @@ def license(request, **kwargs):
 
 
 @require_http_methods(['GET'])
-def view_aelo_release_details(request, **kwargs):
-    aelo_release_details = utils.get_aelo_release_details()
-    return render(request, "engine/aelo_release_details.html",
-                  dict(aelo_release_details=aelo_release_details))
+def aelo_changelog(request, **kwargs):
+    aelo_changelog = utils.get_aelo_changelog()
+    aelo_changelog_html = aelo_changelog.to_html(classes='dataframe', border=0)
+    return render(request, "engine/aelo_changelog.html",
+                  dict(aelo_changelog=aelo_changelog_html))

@@ -2,7 +2,7 @@
     <div class="container">
       <div class="pull-left">
         {% if application_mode == 'AELO' %}
-        <a href="https://www.globalquakemodel.org/proj/aelo" target="_blank">AELO</a> <em><a href="{% url "view_aelo_release_details" %}">{{ aelo_version }}</a></em> |
+        <a href="https://www.globalquakemodel.org/proj/aelo" target="_blank">AELO</a> <em><a href="{% url "aelo_changelog" %}">{{ aelo_version }}</a></em> |
         {% endif %}
         <a href="https://github.com/gem/oq-engine" target="_blank">OpenQuake Engine</a> <em>{{ oq_engine_version }}</em> |
         <a href="{% url "license" %}">License</a> |
