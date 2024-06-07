@@ -41,6 +41,12 @@ Furthermore, the user `openquake` must own that directory.
 sudo mkdir /var/log/oq-engine
 sudo chown -R openquake /var/log/oq-engine
 ```
+Install fixtures for cookie consent:
+
+```console
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake oq webui loaddata ./fixtures/0001_cookie_consent.json
+```
 
 Upgrade the database to host users and sessions:
 
@@ -48,6 +54,7 @@ Upgrade the database to host users and sessions:
 cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake oq webui migrate
 ```
+
 Add a new local superuser:
 
 ```console
