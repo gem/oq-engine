@@ -103,7 +103,8 @@ jobs:
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
          sleep 1
          # Perform loaddata fixtures after migrate
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui dumpdata --natural-foreign --natural-primary --exclude > ./fixtures/0001_cookie_consent.json'
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui dumpdata --natural-foreign --natural-primary --exclude cookie.consent > ./fixtures/0001_cookie_consent.json'
+         less ./fixtures/0001_cookie_consent.json
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
          sleep 1
          # Perform collectstatic after setup local_settings
