@@ -1139,6 +1139,11 @@ class Exposure(object):
         for fname in self.datafiles:
             t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            asset = os.environ.get('OQ_DEBUG_ASSET')
+            if asset:
+                df = df[df.index == asset]
+                if len(df) == 0:
+                    continue
             add_dupl_fields(df, oqfields)
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
