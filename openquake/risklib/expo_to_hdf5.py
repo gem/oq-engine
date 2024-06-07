@@ -203,6 +203,7 @@ def main(exposures_xml):
     dstore, log = build_dstore_log()
     with dstore, log:
         store(exposures_xml, dstore)
+    return dstore.filename
 
 main.exposure_xml = dict(help='Exposure pathnames', nargs='+')
 
