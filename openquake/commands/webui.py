@@ -25,7 +25,7 @@ from openquake.baselib import config, general
 from openquake.server import dbserver, db
 from openquake.server.utils import check_webserver_running
 
-commands = ['start', 'migrate', 'createsuperuser', 'collectstatic', 'loaddata']
+commands = ['start', 'migrate', 'createsuperuser', 'collectstatic', 'dumpdata', 'loaddata']
 
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
