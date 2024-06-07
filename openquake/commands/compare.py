@@ -407,6 +407,10 @@ def check_intersect(array0, array1, kfield, vfields, calc_ids):
     val1 = array1[kfield]
     common = numpy.intersect1d(val0, val1, assume_unique=True)
     print(f'Comparing {kfield=}, {len(val0)=}, {len(val1)=}, {len(common)=}')
+    if len(val0) < len(val1):
+        print('A missing asset is %s' % (set(val1)-set(val0)).pop())
+    elif len(val1) < len(val0):
+        print('A missing asset is %s' % (set(val0)-set(val1)).pop())
     arr0 = array0[numpy.isin(val0, common)]
     arr1 = array1[numpy.isin(val1, common)]
     for col in vfields:
