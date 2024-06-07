@@ -390,8 +390,11 @@ def compare_assetcol(calc_ids: int):
         array1['id'] = [id[3:] for id in array1['id']]
     check_column_names(array0, array1, 'assetcol', *calc_ids)
     fields = set(array0.dtype.names) & set(array1.dtype.names) - {
-        'site_id', 'id', 'ordinal'}
-    check_intersect(array0, array1, 'id', sorted(fields), calc_ids)
+        'site_id', 'id', 'ordinal', 'taxonomy'}
+    arr0, arr1 = check_intersect(array0, array1, 'id', sorted(fields), calc_ids)
+    taxo0 = ds0['assetcol/tagcol/taxonomy'][:][arr0['taxonomy']]
+    taxo1 = ds1['assetcol/tagcol/taxonomy'][:][arr1['taxonomy']]
+    compare_column_values(taxo0, taxo1, 'taxonomy')
 
 
 def check_intersect(array0, array1, kfield, vfields, calc_ids):
@@ -408,6 +411,7 @@ def check_intersect(array0, array1, kfield, vfields, calc_ids):
     arr1 = array1[numpy.isin(val1, common)]
     for col in vfields:
         compare_column_values(arr0[col], arr1[col], col)
+    return arr0, arr1
 
 
 def compare_sitecol(calc_ids: int):
