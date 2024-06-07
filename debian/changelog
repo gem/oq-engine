@@ -1,3 +1,10 @@
+python3-oq-engine (3.20.1-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Antonio Ettorre, Armando Scarpati]
+  * Improved installation documentation
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 07 Jun 2024 09:13:03 +0000
+
 python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene, Michele Simionato]
