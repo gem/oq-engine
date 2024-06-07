@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: added utility `oq info geohash:<lon>,<lat>`
   * Changed the scenario calculators to discard the sites far away from
     the rupture, with the effect of generating different GMFs
   * Cached `get_realizations` and optimized the memory occupation; now
