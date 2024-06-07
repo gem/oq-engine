@@ -25,6 +25,7 @@ from openquake.commands.plot import (
     add_borders, get_assetcol, get_country_iso_codes)
 
 
+
 def main(calc_id: int = -1, site_model=False,
          save_to=None, *, show=True, assets_only=False):
     """
@@ -74,9 +75,11 @@ def main(calc_id: int = -1, site_model=False,
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
     if oq.rupture_xml or oq.rupture_dict:
-        lon, lat, dep = dstore['ruptures'][0]['hypo']
+        rec = dstore['ruptures'][0]
+        lon, lat, dep = rec['hypo']
         xlon, xlat = [lon], [lat]
-        print('rupture(%s, %s)' % (lon, lat))
+        dist = sitecol.get_cdist(rec)
+        print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         p.scatter(xlon, xlat, marker='o', color='red', label='rupture')
     else:
         xlon, xlat = [], []
