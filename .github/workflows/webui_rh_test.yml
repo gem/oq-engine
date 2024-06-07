@@ -97,11 +97,13 @@ jobs:
          echo "Add settings for login and logging on webui before to start"
          cd /__w/oq-engine/oq-engine/
          cd openquake/server
+         ls -lrt fixtures
          cp local_settings.py.server local_settings.py
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
-         sleep 1
          # Perform migration after setup local_settings
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
+         sleep 1
+         # Perform loaddata fixtures after migrate
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
          sleep 1
          # Perform collectstatic after setup local_settings
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui collectstatic'
