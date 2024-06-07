@@ -109,7 +109,9 @@ def get_aelo_changelog():
         dic['release'].append(sec)
         for k, v in c.items(sec):
             dic[k].append(v)
-    return pandas.DataFrame(dic)
+    df = pandas.DataFrame(dic)
+    df = df.drop(columns=['private'])
+    return df
 
 
 def oq_server_context_processor(request):
