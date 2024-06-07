@@ -53,7 +53,7 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.APPLICATION_MODE == 'TOOLS_ONLY':
+if settings.APPLICATION_MODE != 'PUBLIC':
     if settings.WEBUI:
         urlpatterns += [
             re_path(r'^$', RedirectView.as_view(
