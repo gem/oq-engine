@@ -171,6 +171,16 @@ class Comparator(object):
         return arrays
 
 
+def compare_rates(calc_1: int, calc_2: int):
+    """
+    Compare the ruptures affecting the given site ID as pandas DataFrames
+    """
+    with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
+        df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
+        df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
+    print(df1.compare(df2))
+
+
 # works only locally for the moment
 def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
@@ -441,6 +451,7 @@ main = dict(rups=compare_rups,
             uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
+            rates=compare_rates,
             avg_gmf=compare_avg_gmf,
             med_gmv=compare_med_gmv,
             risk_by_event=compare_risk_by_event,
