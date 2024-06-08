@@ -1362,6 +1362,23 @@ def view_composite_source_model(token, dstore):
     return numpy.array(lst, dt('grp_id trt num_sources'))
 
 
+@view.add('gids')
+def view_gids(token, dstore):
+    """
+    Show the meaning of the gids indices
+    """
+    full_lt = dstore['full_lt'].init()
+    ws = full_lt.weights
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gid = 0
+    data = []
+    for trt_smrs in all_trt_smrs:
+        for gsim, rlzs in full_lt.get_rlzs_by_gsim(trt_smrs).items():
+            data.append((gid, trt_smrs, gsim, ws[rlzs].sum(), len(rlzs)))
+            gid += 1
+    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
+
+
 @view.add('branches')
 def view_branches(token, dstore):
     """
