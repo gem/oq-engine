@@ -1,4 +1,4 @@
-.. _liquefaction-intro:
+.. _secondary-perils-intro:
 
 Liquefaction and Landslide
 ==========================
@@ -9,10 +9,73 @@ PSHA.
 
 The tools presented here are implementations of some of the more common and appropriate secondary perils models. The 
 intention is seamless incorporation of these models into PSH(R)A calculations done through the OpenQuake Engine, though 
-the incorporation is a work in progress.
+the incorporation is a work in progress. 
 
-Tools for preparing the data for these models are also presented. This can be a non-trivial challenge, and consistent 
-and correct data preparation is necessary for accurate secondary peril hazard and risk calculations.
+In what follows, we provide a brief overview of the implemented models, preceded by general considerations on the 
+spatial resolution at which these analyses are typically conducted. For more in-depth information on the geospatial 
+models, we recommend referring to the original studies. Additionally, we offer corresponding demonstration analyses, 
+which can be found in the  `demos section <https://github.com/gem/oq-engine/tree/master/demos>`_) of our GitHub 
+repository. We encourage users to check them out and and familiarize themselves with the required inputs for performing
+liquefaction or landslide assessment. We also provide tools to extract relevant information from digital elevation data
+and its derivatives, which are often given as rasters.
+
+
+General considerations
+----------------------
+
+
+*****************************************************************
+Spatial resolution and accuracy of data and site characterization
+*****************************************************************
+
+Much like traditional seismic hazard analysis, liquefaction analysis may range from low-resolution analysis over broad 
+regions to very high resolution analysis of smaller areas. With advances in computing power, it is possible to run 
+calculations for tens or hundreds of thousands of earthquakes at tens or hundreds of thousands of sites in a short 
+amount of time on a personal computer, giving us the ability to work at a high resolution over a broad area, and 
+considering a very comprehensive suite of earthquake sources. In principle, the methods should be reasonably 
+scale-independent but in practice this isn't always the case.
+
+Two of the major issues that can arise are the limited spatial resolutions of key datasets and the spatial misalignments 
+of different datasets.
+
+Some datasets, particularly those derived from digital elevation models, must be of a specific resolution or source to 
+be used accurately in these calculations. As we will see in the coming sections of this document, a common proxy to 
+most of the geospatial models is shear wave velocity in the top :math:`30 \, \text{m}`. For example, if :math:`V_{s30}` 
+is calculated from slope following methods developed by `Wald and Allen (2007) <https://pubs.geoscienceworld.org/ssa/bssa/article/97/5/1379/146527>`_, 
+the slope should be calculated from a DEM with a resolution of around 1 km. Higher resolution DEMs tend to have higher 
+slopes at a given point because the slope is averaged over smaller areas. The mathematical correspondance between slope 
+and :math:`V_{s30}` was developed for DEMs of about 1 km resolution, so if modern DEMs with resolutions of 90 m or less 
+are used, the resulting :math:`V_{s30}` values will be too high.
+
+In and of itself, this is not necessarily a problem. The issues can arise when the average spacing of the sites is much 
+lower than the resolution of the data, or the characteristics of the sites vary over spatial distances much less than 
+the data, so that important variability between sites is lost.
+
+
+##############################
+Getting raster values at sites
+##############################
+
+Digital elevation data and its derivatives are often given as rasters. However, in the case of probabilistic analysis 
+of secondary perils (particularly for risk analysis) the analyist may need to deal with sites that are not distributed 
+according to a raster grid.
+
+Raster values may be extracted at sites using a GIS program to perform a spatial join, but following inconvenient 
+historical precedent, this operation often produces new data files instead of simply appending the raster values to the 
+point data file.
+
+Therefore we have implemented a simple function, `srap <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L22>`_,
+to get the raster values. This function requires the filename of the raster, and the longitudes and latitudes of the 
+sites, and returns a Numpy array with the raster values at each point. This function can be easily incorporated into 
+a Python script or workflow in this manner.
+
+Additional function for :math:`V_{s30}` estimates is implemented in the engine `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L260>`_. 
+It requires that the slope is calculated as the gradient :math:`\frac{dy}{dx}` rather than an angular unit, and the 
+study area is categorized as tectonically *active* or *stable*.
+
+A more general wrapper function has also been written `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`_. 
+This function can calculate gradient from the slope in degrees (a more common formulation), and will be able to use 
+different formulas or relations between slope and :math:`V_{s30}` if and when those are implemented.
 
 Liquefaction models
 -------------------
@@ -23,16 +86,20 @@ susceptibility classes based on geotechnical characteristics, and a quanitative 
 susceptibility class. The remaining models are the academic geospatial models, i.e., statistical models that uses 
 globally available input variables as first-order proxies to characterise saturation and density properties of the 
 soil. The shaking component is expressed either in terms of Peak Ground Acceleration , :math:`PGA`, or Peak Ground 
-Velocity , :math:`PGV`.
+Velocity , :math:`PGV`. These methods are simplified from older, more comprehensive liquefaction evaluations 
+performed at a single site following in-depth geotechnical analysis.
 
 *****
 HAZUS
 *****
 
-The HAZUS model classifies each site into a liquefaction susceptibility class, :math:`LSC`, based on the geologic and 
-geotechnical characteristics of the site, such as the sedimentological type and the deposition age of the unit. In 
-addition to the :math:`LSC` and the local ground acceleration at each site, the depth to groundwater at the site and 
-the magnitude of the causative earthquake will affect the probability that a given site will experience liquefaction.
+The HAZUS model (see `HAZUS manual <https://www.hsdl.org/?view&did=12760>`_) classifies each site into a liquefaction 
+susceptibility class, :math:`LSC`, based on the geologic and geotechnical characteristics of the site, such as the 
+sedimentological type and the deposition age of the unit. Note that descriptions of the susceptibility classes may not 
+align perfectly with the descriptions of the geologic units.
+In addition to the :math:`LSC` and the local ground 
+acceleration at each site, the depth to groundwater at the site and the magnitude of the causative earthquake will 
+affect the probability that a given site will experience liquefaction.
 
 The equation that describes this probability is:
 
@@ -120,9 +187,9 @@ relation:
 	CTI = \ln (d_a / \tan \delta) \quad (5)
 
 where :math:`d_{a}` is the upstream drainage area per unit width through the flow direction (i.e. relating to the DEM 
-resolution). It was developed for hillslopes, and is not meaningful in certain very flat areas such as the valley 
-floors of major low-gradient rivers, where the upstream drainage areas are very large. Unfortunately, this is exactly 
-where liquefaction is most expected away from coastal settings.
+resolution). It ranges from :math:`0` to :math:`20`. It was developed for hillslopes, and is not meaningful in certain
+very flat areas such as the valley floors of major low-gradient rivers, where the upstream drainage areas are very 
+large. Unfortunately, this is exactly where liquefaction is most expected away from coastal settings. 
 
 Model's prediction can be transformed into binary class (liquefaction occurrence or nonoccurrence) via probability 
 threshold value. The authors proposed a threshold of 0.2.
@@ -150,22 +217,21 @@ Zhu et al. (2017)
 #################
 
 Two parametric models, a coastal model (Model 1), and a more general model (Model 2) are proposed by 
-`Zhu et al. (2017) <https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/
-An-Updated-Geospatial-Liquefaction-Model-for?redirectedFrom=fulltext>`_. A coastal event is defined as one where the
-liquefaction occurrences are, on average, within 20 km of the coast; or, for earthquakes with insignificant or no
-liquefaction, epicentral distances less than 50 km.The implemented geospatial models are for global use. An extended 
-set of input parameters is used to describe soil properties (its density and wetness). The ground shaking is 
-characterised by :math:`PGV \, [\text{cm/s}]`. Soil density is described by :math:`V_{s30} \, [\text{m/s}]`. Soil 
-wetness in Model 1 is chatacterised by a set of features: mean annual precipitation, :math:`precip \, [\text{mm}]`, 
-distance to the coast, :math:`d_{c} \, [\text{km}]`, and distance to the river, :math:`d_{r} \, [\text{km}]`. Distance
-to the coast also indicates the geologic age - younger deposits are found near the coast. Soil wetness in Model 2 is 
-characterised by closest distance to the water body, :math:`d_{w} \, [\text{km}]`, which is determined as 
-:math:`\min(d_{c}, d_{r})`, and the ground water table depth, :math:`gwd \, [\text{m}]`. Mean annual precipitation is 
-from a global layer developed by `Hijmans et al. (2005) <https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.1276>`_. 
-Distance to the nearest river is calculated based on the HydroSHEDS database by `Lehner et al. 2008 <https://agupubs.
-onlinelibrary.wiley.com/doi/10.1029/2008eo100001>`_. Water table depth is retreived from a global dataset by 
-`Fan et al (2013) <https://www.science.org/doi/10.1126/science.1229881>`_. Distance to the nearest coastline data was 
-computed from `here <https://oceancolor.gsfc.nasa.gov>`_.
+`Zhu et al. (2017) <https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/An-Updated-Geospatial-Liquefaction-Model-for?redirectedFrom=fulltext>`_. 
+A coastal event is defined as one where the liquefaction occurrences are, on average, within 20 km of the coast; or, 
+for earthquakes with insignificant or no liquefaction, epicentral distances less than 50 km.The implemented geospatial 
+models are for global use. An extended set of input parameters is used to describe soil properties (its density and 
+wetness). The ground shaking is characterised by :math:`PGV \, [\text{cm/s}]`. Soil density is described by 
+:math:`V_{s30} \, [\text{m/s}]`. Soil wetness in Model 1 is chatacterised by a set of features: mean annual 
+precipitation, :math:`precip \, [\text{mm}]`, distance to the coast, :math:`d_{c} \, [\text{km}]`, and distance to the 
+river, :math:`d_{r} \, [\text{km}]`. Distance to the coast also indicates the geologic age - younger deposits are found
+near the coast. Soil wetness in Model 2 is characterised by closest distance to the water body, 
+:math:`d_{w} \, [\text{km}]`, which is determined as :math:`\min(d_{c}, d_{r})`, and the ground water table depth, 
+:math:`gwd \, [\text{m}]`. Mean annual precipitation is from a global layer developed by `Hijmans et al. (2005) 
+<https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.1276>`_. Distance to the nearest river is calculated based on the 
+HydroSHEDS database by `Lehner et al. 2008 <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2008eo100001>`_. 
+Water table depth is retreived from a global dataset by `Fan et al (2013) <https://www.science.org/doi/10.1126/science.1229881>`_. 
+Distance to the nearest coastline data was computed from `here <https://oceancolor.gsfc.nasa.gov>`_.
 
 The explanatory varibale :math:`X` is calculated as:
 
@@ -225,16 +291,16 @@ Rashidian and Baise (2020)
 
 The model proposed by `Rashidian and Baise (2020) <https://www.sciencedirect.com/science/article/abs/pii/
 S0013795219312979>`_ keeps the same functional form as the general model (Model 2) proposed by `Zhu et al. (2017)
-<https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/An-Updated-Geospatial-Liquefaction-Model
--for?redirectedFrom=fulltext>`_; however, introdu- cing two constraints to address the overestimation of liquefaction 
-extent. The mean annual precipitation has been capped to :math:`1700 \, \text{mm}`. No liquefaction is heuristically 
-assign when :math:`PGA < 0.1 \, \text{g}` as an additional measure to decrease the overestimation of liquefaction. 
+<https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/An-Updated-Geospatial-Liquefaction-Model-for?redirectedFrom=fulltext>`_;
+however, introducing two constraints to address the overestimation of liquefaction extent. The mean annual 
+precipitation has been capped to :math:`1700 \, \text{mm}`. No liquefaction is heuristically assign when 
+:math:`PGA < 0.1 \, \text{g}` as an additional measure to decrease the overestimation of liquefaction. 
 Additional novelty introduced in this model is the magnitude scaling factor, :math:`MSF`, to multiply the :math:`PGV` 
 to mitigate the potential over-prediction in earthquake with low magnitude.
 
-The explanatory variable :math:`X` is evaluated using the equation (8) that corresponds to the general model of `Zhu et
-al. (2017) <https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/An-Updated-Geospatial-
-Liquefaction-Model-for?redirectedFrom=fulltext>`_ The spatial extent is evaluated identically using the equation (9).
+The explanatory variable :math:`X` is evaluated using the equation (8) that corresponds to the general model of 
+`Zhu et al. (2017) <https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/An-Updated-Geospatial-Liquefaction-Model-for?redirectedFrom=fulltext>`_. 
+The spatial extent is evaluated identically using the equation (9).
 
 The proposed probability threshold to convert to class outcome is 0.4.
 
@@ -242,14 +308,13 @@ The proposed probability threshold to convert to class outcome is 0.4.
 Akhlagi et al. (2021)
 #####################
 
-Expanding the liquefaction inventory to include 51 earthquake, `Akhlagi et al. (2021) <https://earthquake.usgs.gov/
-cfusion/external_grants/reports/G20AP00029.pdf>`_ proposed two candidate models to predict probability of liquefaction.
-Shaking is expressed in terms of :math:`PGV \, [\text{cm/s}]`. Soil saturation is characterised using the set of 
-proxies: distance to the nearest coastline, :math:`d_{c} \, [\text{km}]`, distance to the closest river, 
-:math:`d_{r} \, [\text{km}]`, elevation from the closest water body, :math:`Z_{wb} \, [\text{m}]`. Soil density is 
-characterised either by :math:`V_{s30} \, [\text{m/s}]` or topographic roughness index, :math:`TRI` which is defined as
-the mean difference between a central pixel and its eight surrounding cells. The explanatory variables of two candidate
-models are:
+Expanding the liquefaction inventory to include 51 earthquake, `Akhlagi et al. (2021) <https://earthquake.usgs.gov/cfusion/external_grants/reports/G20AP00029.pdf>`_ 
+proposed two candidate models to predict probability of liquefaction. Shaking is expressed in terms of 
+:math:`PGV \, [\text{cm/s}]`. Soil saturation is characterised using the set of proxies: distance to the nearest 
+coastline, :math:`d_{c} \, [\text{km}]`, distance to the closest river, :math:`d_{r} \, [\text{km}]`, elevation from 
+the closest water body, :math:`Z_{wb} \, [\text{m}]`. Soil density is characterised either by 
+:math:`V_{s30} \, [\text{m/s}]` or topographic roughness index, :math:`TRI` which is defined as the mean difference 
+between a central pixel and its eight surrounding cells. The explanatory variables of two candidate models are:
 
 Model 1: 
 
