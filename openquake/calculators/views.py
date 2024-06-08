@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source, geo, valid
+from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)
@@ -961,14 +961,14 @@ def view_extreme_gmvs(token, dstore):
 @view.add('mean_rates')
 def view_mean_rates(token, dstore):
     """
-    Display mean hazard rates for the first site
+    Display mean hazard rates, averaged on the sites
     """
     oq = dstore['oqparam']
-    assert oq.use_rates
-    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
-    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    poes = dstore.sel('hcurves-stats', stat='mean')  # shape (N, 1, M, L1)
+    mean_rates = calc.disagg.to_rates(poes).mean(axis=0)[0]  # shape (M, L1)
+    rates = numpy.zeros(mean_rates.shape[1], dt(oq.imtls))
     for m, imt in enumerate(oq.imtls):
-        rates[imt] = calc.disagg.to_rates(poes[m])
+        rates[imt] = mean_rates[m]
     return rates
 
 
@@ -1360,6 +1360,23 @@ def view_composite_source_model(token, dstore):
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
         lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
     return numpy.array(lst, dt('grp_id trt num_sources'))
+
+
+@view.add('gids')
+def view_gids(token, dstore):
+    """
+    Show the meaning of the gids indices
+    """
+    full_lt = dstore['full_lt'].init()
+    ws = full_lt.weights
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gid = 0
+    data = []
+    for trt_smrs in all_trt_smrs:
+        for gsim, rlzs in full_lt.get_rlzs_by_gsim(trt_smrs).items():
+            data.append((gid, trt_smrs, gsim, ws[rlzs].sum(), len(rlzs)))
+            gid += 1
+    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
 
 @view.add('branches')
