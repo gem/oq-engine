@@ -113,14 +113,6 @@ class InvalidCalculationID(Exception):
     """
 
 
-def build_weights(realizations):
-    """
-    :returns: an array with the realization weights of shape R
-    """
-    arr = numpy.array([rlz.weight[-1] for rlz in realizations])
-    return arr
-
-
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -1024,8 +1016,9 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('Empty logic tree: too much filtering?')
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-        self.datastore['weights'] = arr = build_weights(self.realizations)
-        self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+        if 'weights' not in self.datastore:
+            self.datastore['weights'] = F32(
+                [rlz.weight[-1] for rlz in self.realizations])
         if rel_ruptures:
             self.check_discardable(rel_ruptures)
 

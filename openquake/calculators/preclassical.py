@@ -342,6 +342,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Raise an error if the sources were all discarded
         """
+        self.datastore.create_dset(
+            'weights',
+            F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
         totsites = sum(row[source_reader.NUM_SITES]
                        for row in self.csm.source_info.values())
         if totsites == 0:
