@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source, geo, valid
+from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)

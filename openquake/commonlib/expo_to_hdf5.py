@@ -190,8 +190,7 @@ def store(exposures_xml, dstore):
         n = len(dstore['assets/' + name])
         assert n == num_assets, (name, n, num_assets)
 
-    logging.info('Stored {:_d} assets in {}'.
-                 format(n, dstore.filename))
+    logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
 
 
 def main(exposures_xml):
@@ -209,5 +208,5 @@ main.exposure_xml = dict(help='Exposure pathnames', nargs='+')
 
 
 if __name__ == '__main__':
-    # python -m openquake.risklib.expo_to_hdf5 exposure.xml
+    # python -m openquake.commonlib.expo_to_hdf5 exposure.xml
     sap.run(main)
