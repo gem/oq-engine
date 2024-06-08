@@ -45,6 +45,7 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
    event-based-risk-calculator
    classical-psha-risk-calculator
    retrofitting-benefit-cost-ratio
+   secondary-perils
 
 .. _underlying-risk-science:
 
