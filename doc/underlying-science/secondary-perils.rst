@@ -73,7 +73,7 @@ Additional function for :math:`V_{s30}` estimates is implemented in the engine `
 It requires that the slope is calculated as the gradient :math:`\frac{dy}{dx}` rather than an angular unit, and the 
 study area is categorized as tectonically *active* or *stable*.
 
-A more general wrapper function has also been written `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`_. 
+We also provide a more general `wrapper function <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`_. 
 This function can calculate gradient from the slope in degrees (a more common formulation), and will be able to use 
 different formulas or relations between slope and :math:`V_{s30}` if and when those are implemented.
 
@@ -231,7 +231,7 @@ near the coast. Soil wetness in Model 2 is characterised by closest distance to 
 <https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.1276>`_. Distance to the nearest river is calculated based on the 
 HydroSHEDS database by `Lehner et al. 2008 <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2008eo100001>`_. 
 Water table depth is retreived from a global dataset by `Fan et al (2013) <https://www.science.org/doi/10.1126/science.1229881>`_. 
-Distance to the nearest coastline data was computed from `here <https://oceancolor.gsfc.nasa.gov>`_.
+Distance to the nearest coastline data was computed from `Ocean Color <https://oceancolor.gsfc.nasa.gov>`_.
 
 The explanatory varibale :math:`X` is calculated as:
 
@@ -450,18 +450,14 @@ sliding surface, and is calculated as:
 
 .. math:: 
 
-   a_{c} =(F_{s}-1)\ - sin(\alpha)\cdot g \quad (17)
+   a_{c} =(F_{s}-1)\ - \sin(\alpha)\cdot g \quad (17)
 
 The lower bound of :math:`a_{c}` is set to 0.05 to avoid unrealistically large displacements. The static factor of 
 safety is calculated as:
 
 .. math::
 
-    F_s = \frac{c'}{\gamma t sin(\alpha)} + \frac{tan(\phi')}{tan(\alpha)}\ 
-    
-    
-.. math::    
-    -\frac{m \gamma_{w} tan(\phi')}{\gamma tan(\alpha)} \quad(18)
+    F_s = \frac{c'}{\gamma t \sin(\alpha)} + \frac{\tan(\phi')}{\tan(\alpha)} - \frac{m \gamma_{w} \tan(\phi')}{\gamma \tan(\alpha)} \quad(18)
 
 where: :math:`c \, [\text{Pa}]` is the effective cohession with typical values ranging from :math:`20 \text{kPa}` for
 soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`\alpha^\circ` is the slope angle. :math:`\phi'^\circ` is 
@@ -495,13 +491,9 @@ The rock-slope failures are the other common effect observed in earthquakes. The
 behavior associated with rock-slope failures and discontinuities common in rock masses. The static factor of safety 
 is computed as:
 
-... math::
+.. math:: 
 
-    F_s = \frac{2c \sin(\beta)}{\gamma h \sin(\beta - \alpha) \sin(\alpha)}\
-
-.. math::
-   
-   + \frac{\tan(\phi)}{\tan(\beta)} \quad (20)
+    F_s = \frac{2 c \sin(\beta)}{\gamma h (\beta-\alpha) \sin(\alpha)} + \frac{\tan(\phi}{\tan(\alpha} \quad (20)
 
 where: :math:`c \, [\text{Pa}]` is the cohession with typical values ranging from :math:`20 \, {kPa}` for soils up to 
 :math:`20 \, {MPa}` for unfaulted rocks. The cohesion provided by the root systems of vegetated hillslopes, 
