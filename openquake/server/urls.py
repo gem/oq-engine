@@ -37,6 +37,7 @@ if settings.WEBUI:
         re_path(r'^v1/available_gsims$', views.get_available_gsims),
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
+        path("cookies/", include("cookie_consent.urls")),
     ]
     if settings.APPLICATION_MODE == 'AELO':
         urlpatterns.append(
@@ -53,13 +54,12 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.APPLICATION_MODE != 'PUBLIC':
+if settings.APPLICATION_MODE == 'TOOLS_ONLY':
     if settings.WEBUI:
         urlpatterns += [
             re_path(r'^$', RedirectView.as_view(
                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
-            path("cookies/", include("cookie_consent.urls")),
         ]
 else:
     urlpatterns += [
