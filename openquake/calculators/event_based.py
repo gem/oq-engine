@@ -26,10 +26,10 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import config, hdf5, parallel, performance, python3compat
+from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
-from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
+from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
@@ -79,10 +79,9 @@ def build_hcurves(calc):
     the stored GMFs. Works only for few sites.
     """
     oq = calc.oqparam
-    rlzs = calc.full_lt.get_realizations()
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
-    weights = [rlz.weight['weight'] for rlz in rlzs]
+    weights = calc.full_lt.weights[:, -1]
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
@@ -102,7 +101,7 @@ def build_hcurves(calc):
             poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
             for m, imt in enumerate(oq.imtls):
                 hcurves[rsi2str(rlz, sid, imt)] = poes[m]
-    pmaps = {r: ProbabilityMap(calc.sitecol.sids, L1*M, 1).fill(0)
+    pmaps = {r: MapArray(calc.sitecol.sids, L1*M, 1).fill(0)
              for r in range(R)}
     for key, poes in hcurves.items():
         r, sid, imt = str2rsi(key)
@@ -144,7 +143,7 @@ def build_hcurves(calc):
                 'hmaps-stats', site_id=N, stat=list(hstats),
                 imt=list(oq.imtls), poes=oq.poes)
         for s, stat in enumerate(hstats):
-            smap = ProbabilityMap(calc.sitecol.sids, L1, M)
+            smap = MapArray(calc.sitecol.sids, L1, M)
             [smap.array] = compute_stats(
                 numpy.array([p.array for p in pmaps]),
                 [hstats[stat]], weights)
@@ -386,8 +385,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         if station_data is not None:
             if parallel.oq_distribute() == 'zmq':
-                logging.warning('Conditioned scenarios are not meant to be run'
-                                ' on a cluster')
+                logging.error('Conditioned scenarios are not meant to be run'
+                              ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
@@ -616,9 +615,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
-        rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-               oq.inputs['rupture_model'].endswith('.xml'))
-        if rup:
+        if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
             if bsets > 1:
@@ -683,7 +680,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
-            self.full_lt = dstore.parent['full_lt']
+            self.full_lt = dstore.parent['full_lt'].init()
             set_mags(oq, dstore)
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)

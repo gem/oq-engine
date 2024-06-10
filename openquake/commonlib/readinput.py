@@ -33,6 +33,7 @@ import itertools
 import numpy
 import pandas
 from scipy.spatial import cKDTree
+from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
 import fiona
@@ -49,9 +50,9 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
+from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3, get_dist
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.risklib.countries import code2country
@@ -291,6 +292,17 @@ def get_params(job_ini, kw={}):
     return params
 
 
+def is_fraction(string):
+    """
+    :returns: True if the string can be converted to a probability
+    """
+    try:
+        f = float(string)
+    except (ValueError, TypeError):
+        return
+    return 0 < f < 1
+
+
 def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
@@ -313,7 +325,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
     re = os.environ.get('OQ_REDUCE')  # debugging facility
-    if re:
+    if is_fraction(re):
         # reduce the imtls to the first imt
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
@@ -321,8 +333,8 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         os.environ['OQ_SAMPLE_SITES'] = re
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
-            ses = str(int(numpy.ceil(int(ses) * float(re))))
-            job_ini['ses_per_logic_tree_path'] = ses
+            ses = int(numpy.ceil(int(ses) * float(re)))
+            job_ini['ses_per_logic_tree_path'] = str(ses)
         imtls = job_ini.get('intensity_measure_types_and_levels')
         if imtls:
             imtls = valid.intensity_measure_types_and_levels(imtls)
@@ -419,16 +431,42 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
-def get_site_model_around(site_model_hdf5, rup, dist):
+def rup_radius(rup):
     """
+    Maximum distance from the rupture mesh to the hypocenter
+    """
+    hypo = rup.hypocenter
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
+    radius = cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    return radius
+
+
+def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
+    """
+    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
+    :param rup: a rupture object or a record with a 'hypo' field
+    :param dist: integration distance in km
+    :param mesh: if not None, also reduce the mesh
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
     hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z)
-    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
+    tree = cKDTree(xyz_all)
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+
+    # then fine filtering
+    sm = sm[idxs]
+    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
+    if len(idxs) < len(sm):
+        logging.info('Filtering %d/%d sites', len(idxs), len(sm))
+    if mesh is not None:
+        mesh.array = mesh.array[:, idxs]
     return sm[idxs]
 
 
@@ -501,8 +539,8 @@ def get_site_model(oqparam, h5=None):
 
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
+        # read the site model close to the rupture
         rup = get_rupture(oqparam)
-        # global site model close to the rupture
         dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
@@ -567,6 +605,26 @@ def get_site_model(oqparam, h5=None):
     return sm
 
 
+def debug_site(oqparam, haz_sitecol):
+    """
+    Reduce the site collection to the custom_site_id specified in
+    OQ_DEBUG_SITE. For conditioned GMFs, keep the stations.
+    """
+    siteid = os.environ.get('OQ_DEBUG_SITE')
+    if siteid:
+        complete = copy.copy(haz_sitecol.complete)
+        ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+        if not ok.any():
+            raise ValueError('There is no custom_site_id=%s', siteid)
+        if 'station_data' in oqparam.inputs:
+            # keep the stations while restricting to the specified site
+            sdata, _imts = get_station_data(oqparam, haz_sitecol)
+            ok |= numpy.isin(haz_sitecol.sids, sdata.site_id.to_numpy())
+        haz_sitecol.array = haz_sitecol[ok]
+        haz_sitecol.complete = complete
+        oqparam.concurrent_tasks = 0
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -591,7 +649,15 @@ def get_site_collection(oqparam, h5=None):
         else:
             req_site_params = oqparam.req_site_params
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
-            sm = h5['site_model'][:]
+            if (oqparam.rupture_dict or oqparam.rupture_xml) and (
+                    'station_data' not in oqparam.inputs) and (
+                        not oqparam.infrastructure_connectivity_analysis):
+                # filter the far away sites
+                rup = get_rupture(oqparam)
+                dist = oqparam.maximum_distance('*')(rup.mag)
+                sm = get_site_model_around(h5.filename, rup, dist, mesh)
+            else:
+                sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
@@ -608,23 +674,21 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
-        if 'station_data' in oqparam.inputs:  # extend the sitecol
-            df = pandas.read_csv(oqparam.inputs['station_data'])
-            sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
-                                     df.LATITUDE.to_numpy())
-    ss = oqparam.sites_slice
-    if ss:
+
+    if ('vs30' in sitecol.array.dtype.names and
+            not numpy.isnan(sitecol.vs30).any()):
+        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
+
+    slc = oqparam.sites_slice
+    if slc:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
+        mask = (sitecol.sids >= slc[0]) & (sitecol.sids < slc[1])
         sitecol = sitecol.filter(mask)
-        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
+        assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
-
-    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
-    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -633,12 +697,26 @@ def get_site_collection(oqparam, h5=None):
         # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
+
+    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
+    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
+    sitecol.exposure = exp
+
+    has_gmf = ('scenario' in oqparam.calculation_mode or 'event_based' in
+          oqparam.calculation_mode)
+    if has_gmf and 'custom_site_id' not in sitecol.array.dtype.names:
+        gh = sitecol.geohash(8)
+        if len(numpy.unique(gh)) < len(gh):
+            logging.error('geohashes are not unique')
+        sitecol.add_col('custom_site_id', 'S8', gh)
+        if sitecol is not sitecol.complete:
+            # tested in scenario_risk/test_case_8
+            gh = sitecol.complete.geohash(8)
+            sitecol.complete.add_col('custom_site_id', 'S8', gh)
+
+    debug_site(oqparam, sitecol)
     if h5:
         h5['sitecol'] = sitecol
-    if ('vs30' in sitecol.array.dtype.names and
-            not numpy.isnan(sitecol.vs30).any()):
-        assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-    sitecol.exposure = exp
     return sitecol
 
 
@@ -749,12 +827,13 @@ def get_full_lt(oqparam):
         elif trt.lower() not in trts_lower:
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    if len(oqparam.source_id) == 1:
-        oversampling = 'reduce-rlzs'
-    else:
-        oversampling = oqparam.oversampling
+    oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+
+    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
+        raise ValueError('use_rates=true cannot be used with imtWeight')
+
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
@@ -766,12 +845,11 @@ def get_full_lt(oqparam):
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
                                      len(unique)))
     else:  # full enumeration
-        logging.info('There are {:_d} logic tree paths(s)'.format(p))
-        if oqparam.hazard_curves and p > oqparam.max_potential_paths:
+        if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set hazard_curves=false ' % p)
+                'full enumeration, or set use_rates=true ' % p)
         elif (oqparam.is_event_based() and
               (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
                 and p > oqparam.max_potential_paths / 100):
@@ -845,8 +923,10 @@ def get_composite_source_model(oqparam, dstore=None):
          an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
-    full_lt = get_full_lt(oqparam)
-    path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
+    h5 = dstore.hdf5 if dstore else None
+    with Monitor('building full_lt', measuremem=True, h5=h5) :
+        full_lt = get_full_lt(oqparam)  # builds the weights
+    path = get_cache_path(oqparam, h5)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
         with datastore.read(os.path.realpath(path)) as ds:
@@ -951,8 +1031,7 @@ def get_exposure(oqparam, h5=None):
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
-            # reading the assets around a rupture
-            sm = get_site_model(oq, h5)
+            sm = get_site_model(oq)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)
@@ -983,6 +1062,9 @@ def get_station_data(oqparam, sitecol):
         the hazard site collection
     :returns: station_data, observed_imts
     """
+    if parallel.oq_distribute() == 'zmq':
+        logging.error('Conditioned scenarios are not meant to be run '
+                      ' on a cluster')
     complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
@@ -1075,15 +1157,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
-    if 'custom_site_id' not in sitecol.array.dtype.names:
-        gh = sitecol.geohash(8)
-        if len(numpy.unique(gh)) < len(gh):
-            logging.error('geohashes are not unique')
-        sitecol.add_col('custom_site_id', 'S8', gh)
-        if sitecol is not sitecol.complete:
-            # tested in scenario_risk/test_case_8
-            gh = sitecol.complete.geohash(8)
-            sitecol.complete.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded, exp
 
 
@@ -1228,7 +1301,7 @@ def get_pmap_from_csv(oqparam, fnames):
             level += 1
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
-    pmap = ProbabilityMap(numpy.arange(N, dtype=U32), len(data), 1)
+    pmap = MapArray(numpy.arange(N, dtype=U32), len(data), 1)
     pmap.array = data.reshape(N, L, 1)
     return mesh, pmap
 
@@ -1395,23 +1468,6 @@ def get_reinsurance(oqparam, assetcol=None):
                 raise InvalidFile('%s: for policy %s there is a deductible '
                                   'also in the exposure!' % (fname, pol))
     return p, t, f
-
-
-def get_pla_factor(oqparam, minperiod=None):
-    """
-    :param oqparam: an OqParam instance
-    :returns: a function producing the period-dependent amplification factor
-    """
-    if 'post_loss_amplification' not in oqparam.inputs:
-        return
-    df = pandas.read_csv(oqparam.inputs['post_loss_amplification'])
-    if minperiod is not None:
-        # add minperiod with pla_factor of 1, as in the specs, see
-        # https://github.com/gem/oq-engine/issues/9633
-        dic = dict(return_period=[minperiod] + df['return_period'].tolist(),
-                   pla_factor=[1.] + df['pla_factor'].tolist())
-        df = pandas.DataFrame(dic)
-    return scientific.pla_factor(df)
 
 
 def get_input_files(oqparam):

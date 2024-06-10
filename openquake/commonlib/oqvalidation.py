@@ -343,12 +343,6 @@ hazard_calculation_id:
   Example: *hazard_calculation_id = 42*.
   Default: None
 
-hazard_curves:
-   Used to disable the calculation of hazard curves when there are
-   too many realizations.
-   Example: *hazard_curves = false*
-   Default: True
-
 hazard_curves_from_gmfs:
   Used in scenario/event based calculations. If set, generates hazard curves
   from the ground motion fields.
@@ -483,7 +477,7 @@ max_potential_gmfs:
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
-  Default: 15000
+  Default: 15_000
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -571,10 +565,8 @@ number_of_logic_tree_samples:
 
 oversampling:
   When equal to "forbid" raise an error if tot_samples > num_paths in classical
-  calculations; when equal to "tolerate" do not raise the error (the default);
-  when equal to "reduce_rlzs" reduce the realizations to the unique paths with
-  weights num_samples/tot_samples
-  Example: *oversampling = reduce_rlzs*
+  calculations; when equal to "tolerate" do not raise the error (the default).
+  Example: *oversampling = forbid*
   Default: tolerate
 
 poes:
@@ -1021,7 +1013,6 @@ class OqParam(valid.ParamSet):
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
-    hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
@@ -1065,7 +1056,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
+        valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1411,6 +1402,13 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
+        
+        # check compute_rtgm will run
+        if 'rtgm' in self.postproc_func:
+            if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
+                raise InvalidFile('%s: the IMTs PGA, SA(0.2), and SA(1.0)'
+                                  ' are required to use compute_rtgm' % job_ini)
+
 
     def validate(self):
         """
@@ -1788,6 +1786,11 @@ class OqParam(valid.ParamSet):
         return cls()
 
     @property
+    def rupture_xml(self):
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
     def aristotle(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5
@@ -1795,6 +1798,14 @@ class OqParam(valid.ParamSet):
         """
         exposures = self.inputs.get('exposure', [])
         return exposures and exposures[0].endswith('.hdf5')
+
+    @property
+    def fastmean(self):
+        """
+        Return True if it is possible to use the fast mean algorithm
+        """
+        return (not self.individual_rlzs and self.soil_intensities is None
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
 
     def get_kinds(self, kind, R):
         """
@@ -1945,6 +1956,10 @@ class OqParam(valid.ParamSet):
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
+        for trt, val in self.maximum_distance.items():
+            if trt not in self._trts and trt != 'default':
+                # not a problem, the associated maxdist will simply be ignored
+                logging.warning('tectonic region %r not in %s', trt, gsim_lt)
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing

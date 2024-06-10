@@ -48,6 +48,7 @@ from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
+TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
@@ -73,9 +74,9 @@ def form(value):
     >>> form(1003.4)
     '1_003'
     >>> form(103.41)
-    '103.4'
+    '103.4100'
     >>> form(9.3)
-    '9.30000'
+    '9.3000'
     >>> form(-1.2)
     '-1.2'
     """
@@ -84,8 +85,8 @@ def form(value):
             return str(value)
         elif value < .001:
             return '%.3E' % value
-        elif value < 10 and isinstance(value, FLOAT):
-            return '%.5f' % value
+        elif value <= 180 and isinstance(value, FLOAT):
+            return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
         elif numpy.isnan(value):
@@ -961,14 +962,14 @@ def view_extreme_gmvs(token, dstore):
 @view.add('mean_rates')
 def view_mean_rates(token, dstore):
     """
-    Display mean hazard rates for the first site
+    Display mean hazard rates, averaged on the sites
     """
     oq = dstore['oqparam']
-    assert oq.use_rates
-    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
-    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    poes = dstore.sel('hcurves-stats', stat='mean')  # shape (N, 1, M, L1)
+    mean_rates = calc.disagg.to_rates(poes).mean(axis=0)[0]  # shape (M, L1)
+    rates = numpy.zeros(mean_rates.shape[1], dt(oq.imtls))
     for m, imt in enumerate(oq.imtls):
-        rates[imt] = calc.disagg.to_rates(poes[m])
+        rates[imt] = mean_rates[m]
     return rates
 
 
@@ -1315,29 +1316,32 @@ def view_delta_loss(token, dstore):
         return {'delta': numpy.zeros(1),
                 'loss_types': view_loss_ids(token, dstore),
                 'error': f"There are no relevant events for {loss_type=}"}
-    mod2 = df.index % 2
-    losses0 = df['loss'][mod2 == 0]
-    losses1 = df['loss'][mod2 == 1]
-    num_events = len(dstore['events'])
-    num_events0 = num_events // 2 + (num_events % 2)
-    num_events1 = num_events // 2
     if oq.calculation_mode == 'scenario_risk':
         if oq.number_of_ground_motion_fields == 1:
             return {'delta': numpy.zeros(1),
                     'error': 'number_of_ground_motion_fields=1'}
-        c0 = losses0.sum() / num_events0
-        c1 = losses1.sum() / num_events1
-        dic = dict(even=[c0], odd=[c1], delta=[numpy.abs(c0 - c1) / (c0 + c1)])
-        return pandas.DataFrame(dic, index=[loss_type])
+        R = len(dstore['weights'])
+        df['rlz_id'] = dstore['events']['rlz_id'][df.index]
+        c0, c1 = numpy.zeros(R), numpy.zeros(R)
+        for r in range(R):
+            loss = df.loss[df.rlz_id == r]
+            c0[r] = loss[::2].mean()  # even
+            c1[r] = loss[1::2].mean()  # odd
+        dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
+        return pandas.DataFrame(dic)
+    num_events = len(dstore['events'])
     efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
         dstore['weights'])
     periods = return_periods(efftime, num_events)[1:-1]
-    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
-    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    losses0 = df.loss[df.index % 2 == 0]
+    losses1 = df.loss.loc[df.index % 2 == 1]
+    c0 = losses_by_period(losses1, periods, len(losses1), efftime / 2)['curve']
+    c1 = losses_by_period(losses0, periods, len(losses0), efftime / 2)['curve']
     ok = (c0 != 0) & (c1 != 0)
     c0 = c0[ok]
     c1 = c1[ok]
-    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    res = losses_by_period(df['loss'], periods, num_events, efftime)
+    losses = res['curve'][ok]
     dic = dict(loss=losses, even=c0, odd=c1,
                delta=numpy.abs(c0 - c1) / (c0 + c1))
     return pandas.DataFrame(dic, periods[ok])
@@ -1357,6 +1361,28 @@ def view_composite_source_model(token, dstore):
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
         lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
     return numpy.array(lst, dt('grp_id trt num_sources'))
+
+
+@view.add('gids')
+def view_gids(token, dstore):
+    """
+    Show the meaning of the gids indices
+    """
+    full_lt = dstore['full_lt']
+    ws = dstore['weights'][:]
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gid = 0
+    data = []
+    for trt_smrs in all_trt_smrs:
+        for g, (gsim, rlzs) in enumerate(
+                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
+            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
+            if len(ts) == 1:
+                ts = ts[0]
+            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
+                         ws[rlzs].sum(), len(rlzs)))
+            gid += 1
+    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
 
 @view.add('branches')
@@ -1700,20 +1726,21 @@ def view_aggrisk(token, dstore):
     Returns a table with the aggregate risk by realization and loss type
     """
     gsim_lt = dstore['full_lt/gsim_lt']
-    gsims = [br.gsim for br in gsim_lt.branches]
-    ws = [br.weight['default'] for br in gsim_lt.branches]
-    df = dstore.read_df('aggrisk', sel={'agg_id': 0})
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('aggrisk', sel={'agg_id': K})
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
-    rlzs = df.rlz_id.unique()
-    arr = numpy.zeros(rlzs.max() + 2, dt)
-    AVG = rlzs.max() + 1
-    for rlz, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+    rlzs = list(gsim_lt)
+    AVG = len(rlzs)
+    arr = numpy.zeros(AVG + 1, dt)
+    for r, rlz in enumerate(rlzs):
+        arr[r]['gsim'] = repr(repr(rlz.value[0]))
+        arr[r]['weight'] = rlz.weight
+    for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+        rlz = rlzs[r]
         lt = LOSSTYPE[loss_id]
-        arr[rlz]['gsim'] = gsims[rlz]
-        arr[rlz]['weight'] = ws[rlz]
-        arr[rlz][lt] = loss
-        arr[AVG][lt] += loss * ws[rlz]
+        arr[r][lt] = loss
+        arr[AVG][lt] += loss * rlz.weight
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr

@@ -827,6 +827,45 @@ def make_figure_disagg_by_src(extractors, what):
     return plt
 
 
+def make_figure_gmf_scenario(extractors, what):
+    """
+    $ oq plot "gmf_scenario?imt=PGA&kind=rlz-0"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    arr = ex.get(what).array
+    E, N = arr.shape
+    sids = range(N)
+    for eid in range(E):
+        plt.plot(sids,
+                 arr[eid],
+                 marker='',
+                 linestyle='-',
+                 label=eid,
+                 linewidth=0.5)
+
+    # max_gmv / min_gmv ratio per site
+    min_values = arr.min(axis=0)
+    max_values = arr.max(axis=0)
+
+    # NB: maximum rates are interesting, but only if the max_gmv
+    # is large enough (>.1)
+    ok = (min_values > 0) & (max_values > .1)
+    if ok.any():
+        rates = max_values[ok] / min_values[ok]
+        idx = rates.argmax()
+        info = f'max_rate={rates.max():.1f} at site ID={idx} over {E} GMFs'
+    else:
+        info = ''
+    plt.xlabel('Site ID')
+    plt.ylabel('Ground motion value')
+    if info:
+        plt.title(info)
+    plt.grid(True)
+    return plt
+
+
 def plot_wkt(wkt_string):
     """
     Plot a WKT string describing a polygon

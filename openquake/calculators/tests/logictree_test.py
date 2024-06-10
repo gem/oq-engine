@@ -72,8 +72,9 @@ class LogicTreeTestCase(CalculatorTestCase):
             sitecol = self.calc.datastore['sitecol']
             trs = full_lt.get_trt_rlzs(self.calc.datastore['trt_smrs'][:])
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
+            wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
-                rmap, full_lt.g_weights(trs), oq.imtls)
+                rmap, full_lt.g_weights(trs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=1e-6)
@@ -279,16 +280,16 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names,
                          ('0.010000', '0.100000', '0.200000'))
 
-        # check deserialization of source_model_lt
+        # check ordering by rm_rlz.pid
         r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
         self.assertEqual(repr(r0),
                          "<Realization #0 ['source_model_1.xml', None], "
                          "path=SM1~., weight=0.5>")
         self.assertEqual(repr(r1), "<Realization #1 ['source_model_2.xml', "
-                         "(3.2, 0.8)], path=SM2~a3pt2b0pt8, "
+                         "(3.0, 1.0)], path=SM2~a3b1, "
                          "weight=0.25>")
         self.assertEqual(repr(r2), "<Realization #2 ['source_model_2.xml', "
-                         "(3.0, 1.0)], path=SM2~a3b1, weight=0.25>")
+                         "(3.2, 0.8)], path=SM2~a3pt2b0pt8, weight=0.25>")
 
     def test_case_16(self):   # sampling
         with unittest.mock.patch.dict(config.memory, limit=240):
@@ -381,19 +382,7 @@ hazard_uhs-std.csv
         got = [dict(zip(rlz.lt_path, rlz.value))
                for rlz in self.calc.datastore['full_lt'].source_model_lt]
 
-        exp0 = {'char_simple': [('simpleFaultGeometry',
-                                 ([(-64.5, -0.38221), (-64.5, 0.38221)],
-                                  2.0,
-                                  15.0,
-                                  90.0,
-                                  2.0))],
-                'cog1': ([[(-64.7, -0.38221, 0.0), (-64.7, 0.38221, 0.0)],
-                          [(-64.7, -0.38221, 12.0), (-64.7, 0.38221, 12.0)]],
-                         2.0),
-                'sg1': ([(-65.0, -0.38221), (-65.0, 0.38221)],
-                        0.0, 12.0, 90.0, 2.0),
-                'sm1': 'source_model.xml'}
-        exp1 = {'char_complex': [('complexFaultGeometry',
+        exp0 = {'char_complex': [('complexFaultGeometry',
                                   ([[(-64.5, -0.38221, 2.0),
                                      (-64.5, 0.38221, 4.0)],
                                     [(-64.5, -0.38221, 16.0),
@@ -405,7 +394,7 @@ hazard_uhs-std.csv
                 'sg1': ([(-65.0, -0.38221), (-65.0, 0.38221)],
                         0.0, 12.0, 90.0, 2.0),
                 'sm1': 'source_model.xml'}
-        exp2 = {'char_plane': [('planarSurface',
+        exp1 = {'char_plane': [('planarSurface',
                                 [(-64.5, -0.38221, 1.0),
                                  (-64.5, 0.0, 1.0),
                                  (-64.5, 0.0, 14.0),
@@ -415,6 +404,18 @@ hazard_uhs-std.csv
                                  (-64.5, 0.38221, 2.0),
                                  (-64.5, 0.38221, 16.0),
                                  (-64.5, 0.0, 16.0)])],
+                'cog1': ([[(-64.7, -0.38221, 0.0), (-64.7, 0.38221, 0.0)],
+                          [(-64.7, -0.38221, 12.0), (-64.7, 0.38221, 12.0)]],
+                         2.0),
+                'sg1': ([(-65.0, -0.38221), (-65.0, 0.38221)],
+                        0.0, 12.0, 90.0, 2.0),
+                'sm1': 'source_model.xml'}
+        exp2 = {'char_simple': [('simpleFaultGeometry',
+                                 ([(-64.5, -0.38221), (-64.5, 0.38221)],
+                                  2.0,
+                                  15.0,
+                                  90.0,
+                                  2.0))],
                 'cog1': ([[(-64.7, -0.38221, 0.0), (-64.7, 0.38221, 0.0)],
                           [(-64.7, -0.38221, 12.0), (-64.7, 0.38221, 12.0)]],
                          2.0),
@@ -682,8 +683,9 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
-        aac(rlzs['weight'], [.7, .3])
+        ae(rlzs['branch_path'], [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
+                                 b'AA~A', b'AA~A', b'B.~A', b'B.~A', b'B.~A'])
+        aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
         # check the hazard curves
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
@@ -704,13 +706,6 @@ hazard_uhs-std.csv
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-
-        # testing unique_paths mode
-        self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0',
-                      oversampling='reduce-rlzs')
-        self.assertEqual(len(self.calc.realizations), 5)
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurves.csv', fname)
 
     def test_case_73(self):
         # test LT

@@ -21,9 +21,9 @@ Build the site model for the world and store it into an HDF5 file.
 """
 import os
 import numpy
+import pandas
 from openquake.baselib import performance, hdf5, sap
-from openquake.hazardlib import gsim_lt
-from openquake.commonlib import readinput
+from openquake.hazardlib import gsim_lt, site
 
 F32 = numpy.float32
 dt = [('model', (numpy.bytes_, 3)), ('trt', numpy.bytes_, 61),
@@ -41,13 +41,38 @@ def get_gsim_lt(cwd):
     return gsim_lt.GsimLogicTree(f2)
 
 
-def main(mosaic_dir):
+def build_site_model(grm_dir):
+    """
+    Build the global site model starting from the CSV files in the
+    global_risk_model directory
+    """
+    dfs = []
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f.startswith('Site_model_') and f.endswith('.csv'):
+                print('Reading %s' % f)
+                dfs.append(pandas.read_csv(os.path.join(cwd, f)))
+    columns = set()
+    n = 0
+    for df in dfs:
+        columns.update(df.columns)
+        n += len(df)
+    dt = [(col, site.site_param_dt[col]) for col in sorted(columns)]
+    sm = numpy.zeros(n, dt)
+    row = 0
+    for df in dfs:
+        n = len(df)
+        recs = sm[row:row + n]
+        for col in df.columns:
+            recs[col] = df[col]
+        row += n
+    return sm
+
+
+def main(mosaic_dir, grm_dir):
     """
     Build global site_model.hdf5
     """
-    dic = {}
-    fields = {}
-    tot = 0
     rows = []
     for cwd, dirs, files in os.walk(mosaic_dir):
         for f in files:
@@ -58,24 +83,14 @@ def main(mosaic_dir):
                     for gsim in gsims:
                         q = (model, trt, str(gsim), gsim.weight['default'])
                         rows.append(q)
-                oq = readinput.get_oqparam(os.path.join(cwd, f))
-                sm = readinput.get_site_model(oq)
-                for row in sm:
-                    dic[row['lon'], row['lat']] = row
-                fields.update(sm.dtype.descr)
-                tot += len(sm)
-    fields['lon'] = F32
-    fields['lat'] = F32
-    smodel = numpy.zeros(len(dic), list(fields.items()))
-    for i, row in enumerate(dic.values()):
-        for n in row.dtype.names:
-            smodel[i][n] = row[n]
+    smodel = build_site_model(grm_dir)
     with hdf5.File('site_model.hdf5', 'w') as f:
         f['site_model'] = smodel
         f['model_trt_gsim_weight'] = numpy.array(rows, dt)
     print('Generated site_model.hdf5 with {:_d} sites'.format(len(smodel)))
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
+main.grm_dir = 'Directory containing the global risk model'
 
 
 if __name__ == '__main__':

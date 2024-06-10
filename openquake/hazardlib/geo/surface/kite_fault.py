@@ -27,7 +27,6 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from shapely.geometry import Polygon
 
-from openquake.hazardlib.geo import utils as geo_utils
 from openquake.baselib.node import Node
 from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo import geodetic

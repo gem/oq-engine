@@ -16,19 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import getpass
 import requests
 import logging
-import django
 
 from time import sleep
 from django.conf import settings
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
-
-if settings.LOCKDOWN:
-    django.setup()
-    from django.contrib.auth.models import User
 
 
 def is_superuser(request):
@@ -63,6 +60,8 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
+    if settings.LOCKDOWN:
+        User = get_user_model()
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
@@ -101,6 +100,10 @@ def oq_server_context_processor(request):
     A custom context processor which allows injection of additional
     context variables.
     """
+
+    # NOTE: defining env variable at runtime, instead of defining it when the
+    # engine imports variable from the server module
+    os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
 
     context = {}
 

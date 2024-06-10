@@ -425,8 +425,8 @@ def _cdf(weighted_objects):
         w = obj.weight
         if isinstance(obj.weight, (float, int)):
             weights.append(w)
-        else:
-            weights.append(w['weight'])
+        else:  # assume array
+            weights.append(w[-1])
     return numpy.cumsum(weights)
 
 
@@ -770,6 +770,8 @@ class Realization(object):
     Generic Realization object with attributes value, weight, ordinal, lt_path,
     samples.
     """
+    __slots__ = ['value', 'weight', 'ordinal', 'lt_path', 'samples']
+
     def __init__(self, value, weight, ordinal, lt_path, samples=1):
         self.value = value
         self.weight = weight

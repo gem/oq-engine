@@ -217,12 +217,9 @@ class LogContext:
             if os.path.exists(path):  # sanity check on the calculation ID
                 raise RuntimeError('There is a pre-existing file %s' % path)
             self.usedb = True
-        elif calc_id == -1:
-            # only works in single-user situations
-            self.calc_id = get_last_calc_id() + 1
-            self.usedb = False
         else:
             # assume the calc_id was alreay created in the db
+            assert calc_id > 0, calc_id
             self.calc_id = calc_id
             self.usedb = True
 
@@ -253,6 +250,8 @@ class LogContext:
             handler.setFormatter(
                 logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S'))
             logging.root.addHandler(handler)
+        if os.environ.get('NUMBA_DISABLE_JIT'):
+            logging.warning('NUMBA_DISABLE_JIT is set')
         return self
 
     def __exit__(self, etype, exc, tb):

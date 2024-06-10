@@ -41,7 +41,7 @@ def classical_damage(riskinputs, param, monitor):
     crmodel = monitor.read('crmodel')
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        R = ri.hazard_getter.num_rlzs
+        R = ri.hazard_getter.R
         L = len(crmodel.lti)
         D = len(crmodel.damage_states)
         result = AccumDict(accum=numpy.zeros((R, L, D), F32))
@@ -49,7 +49,7 @@ def classical_damage(riskinputs, param, monitor):
             haz = ri.hazard_getter.get_hazard()
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                hcurve = haz.extract(rlz)
+                hcurve = haz[:, rlz]
                 out = crmodel.get_output(assets, hcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     for a, frac in zip(assets.ordinal, out[loss_type]):

@@ -4,7 +4,7 @@
 			
 		<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
 			<logicTreeBranch branchID="b_01_03">
-				<uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+				<uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
 				<uncertaintyWeight>1.0</uncertaintyWeight>
 			</logicTreeBranch>
 		</logicTreeBranchSet>

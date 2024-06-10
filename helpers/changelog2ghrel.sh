@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
-set -x
+# set -x
 set -e
 
 which grep sed sort uniq >/dev/null

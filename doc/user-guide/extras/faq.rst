@@ -10,13 +10,12 @@ FAQ for IT issues
 Help! What is the recommended hardware to run engine calculations?
 ******************************************************************
 
-It depends on your use case and your level of expertise. Most of our users are scientists with little IT experience 
-and/or little support from their IT departments. For them we recommend to buy a very powerful server and not a cluster, 
-which is complex to manage. A server with 256 GB of RAM and 64 real cores is currently powerful enough to run all of the 
-calculations in the GEM global hazard and risk mosaic. If you have larger calculations and IT expertise, for a cluster 
-setup see the :ref:`hardware suggestions <hardware-requirements>` and :ref:`cluster <cluster>` pages.
-If you are running the OpenQuake engine on a multi-node cluster you should also have a look at :ref:`FAQ related to cluster 
-deployments <faq-cluster>`.
+It depends on your use case and your level of expertise. Most of our users are scientists with little IT experience
+and/or little support from their IT departments. For them we recommend to buy a very powerful server and not a cluster,
+which is complex to manage. A server with 256 GB of RAM and 64 real cores is currently powerful enough to run all of the
+calculations in the GEM global hazard and risk mosaic. If you have larger calculations and IT expertise, for a cluster
+setup see the pages :ref:`cluster <cluster>` 
+and :ref:`FAQ related to cluster deployments <faq-cluster>`.
 
 ***********************************************************
 Help! Should I disable hyperthreading on my laptop/desktop?
@@ -24,7 +23,7 @@ Help! Should I disable hyperthreading on my laptop/desktop?
 
 Disabling hyperthreading - when possible - is recommended since it
 will save memory. Suppose for instance that you have a laptop with a
-i9 processor with 20 thread and 16 GB of RAM. It seems a lot at the
+i9 processor with 20 threads and 16 GB of RAM. It seems a lot at the
 time of this writing (early 2022). In reality it is not. The operating
 system will consume some memory, the browser will consume a lot of
 memory, you may have other applications open and you may end up with
@@ -34,9 +33,9 @@ easily consume 0.5 GB per core, i.e. 10 GB, so you will run out of
 memory. With hyperthreading disabled you will still have 5 GB of
 available RAM.
 
-**Note**: on a linux machine you can try disable hyperthreading temporarily with the command ``sudo echo off > 
-/sys/devices/system/cpu/smt/control``: however, this setting will not survive a reboot. Also, on some systems this 
-command will not work. If you cannot disable hyperthreading just make sure that if you have enough memory: we 
+**Note**: on a linux machine you can try disable hyperthreading temporarily with the command ``sudo echo off >
+/sys/devices/system/cpu/smt/control``: however, this setting will not survive a reboot. Also, on some systems this
+command will not work. If you cannot disable hyperthreading just make sure that if you have enough memory: we
 recommend at least 2 GB per thread.
 
 *******************************************************
@@ -68,10 +67,10 @@ cores to be used on each machine.
 Help! I am running out of memory!
 *********************************
 
-If you are on a laptop, the first thing to do is close all memory consuming applications. Remember that running the 
-engine from the command-line is the most memory-efficient way to run calculations (browsers can use significant memory 
-from your laptop). You can also limit the number of parallel threads as explained before (i.e. disable hyperthreading, 
-reduce num_cores) or disable parallelism altogether. If you still run out of memory, then you must reduce your 
+If you are on a laptop, the first thing to do is close all memory consuming applications. Remember that running the
+engine from the command-line is the most memory-efficient way to run calculations (browsers can use significant memory
+from your laptop). You can also limit the number of parallel threads as explained before (i.e. disable hyperthreading,
+reduce num_cores) or disable parallelism altogether. If you still run out of memory, then you must reduce your
 calculation or upgrade your system.
 
 *************************************
@@ -97,8 +96,8 @@ Help! Is it possible to configure multiple installations of the engine to run in
 
 Yes, it is possible, as long as their virtual environments are stored in different directories.
 
-When you install the engine using the ``install.py`` script, you may specify the ``--venv`` parameter to choose in which 
-directory the engine virtual environment must be stored. On an existing installation of the engine, you can run the 
+When you install the engine using the ``install.py`` script, you may specify the ``--venv`` parameter to choose in which
+directory the engine virtual environment must be stored. On an existing installation of the engine, you can run the
 command::
 
 	$ oq info venv
@@ -120,15 +119,15 @@ e.g.::
 Can two installations of the engine share the same ``oqdata`` directory?
 ########################################################################
 
-The ``oqdata`` directory, that stores calculation data, can safely be shared between two different instances of the 
-engine working on a same computer. Each HDF5 dataset is independent from all others in the datastore and it has a unique 
-identifier. It is possible to determine the version of the engine that produced each HDF5 file (``calc_<calc_id>.hdf5``) 
+The ``oqdata`` directory, that stores calculation data, can safely be shared between two different instances of the
+engine working on a same computer. Each HDF5 dataset is independent from all others in the datastore and it has a unique
+identifier. It is possible to determine the version of the engine that produced each HDF5 file (``calc_<calc_id>.hdf5``)
 using the command::
 
 	$ oq show_attrs / <calc_id>
 
-where ``/`` indicates the root attributes (date, engine_version, etc.) and ``<calc_id>`` (an integer number) is the 
-calculation identifier. In case the calculation id is not specified, the attributes are retrieved for the latest 
+where ``/`` indicates the root attributes (date, engine_version, etc.) and ``<calc_id>`` (an integer number) is the
+calculation identifier. In case the calculation id is not specified, the attributes are retrieved for the latest
 calculation.
 
 -------
@@ -137,14 +136,14 @@ calculation.
 Different installation methods
 ******************************
 
-The OpenQuake engine has several installation methods. To choose the one that best fits your needs take a look at the 
+The OpenQuake engine has several installation methods. To choose the one that best fits your needs take a look at the
 :ref:`installation overview <installing-the-openquake-engine>`.
 
 ###########################
 Supported operating systems
 ###########################
 
-Binary packages are `provided for Windows <https://downloads.openquake.org/pkgs/windows/oq-engine>`__.  For all other 
+Binary packages are `provided for Windows <https://downloads.openquake.org/pkgs/windows/oq-engine>`__.  For all other
 systems use the :ref:`universal installer <universal>`. We also provide :ref:`Docker containers <docker>`.
 
 Binary packages are provided for the following 64bit operating systems::
@@ -173,7 +172,7 @@ These configurations however are not tested and we cannot guarantee on the quali
 32bit support
 #############
 
-The OpenQuake engine **requires a 64bit operating system**. Starting with version v2.3 of the Engine binary installers 
+The OpenQuake engine **requires a 64bit operating system**. Starting with version v2.3 of the Engine binary installers
 and packages aren't provided for 32bit operating systems anymore.
 
 .. _mpi-support:
@@ -182,11 +181,11 @@ and packages aren't provided for 32bit operating systems anymore.
 MPI support
 ###########
 
-MPI is not supported by the OpenQuake engine. Task distribution across network interconnected nodes is done via *zmq*. 
-The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on 
+MPI is not supported by the OpenQuake engine. Task distribution across network interconnected nodes is done via *zmq*.
+The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on
 TCP/IP connection.
 
-MPI support may be added in the future if sponsored by someone. If you would like to help support development of 
+MPI support may be added in the future if sponsored by someone. If you would like to help support development of
 OpenQuake engine, please contact us at partnership@globalquakemodel.org.
 
 -------
@@ -195,15 +194,15 @@ OpenQuake engine, please contact us at partnership@globalquakemodel.org.
 Python 2.7 compatibility
 ########################
 
-Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is 
+Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is
 OpenQuake engine version 2.9 (Jeffreys).
 
 ####################################
 Python scripts that import openquake
 ####################################
 
-If a third party python script (or a Jupyter notebook) needs to import openquake as a library 
-(as an example: ``from openquake.commonlib import readinput``) you must use a virtual environment and install a local 
+If a third party python script (or a Jupyter notebook) needs to import openquake as a library
+(as an example: ``from openquake.commonlib import readinput``) you must use a virtual environment and install a local
 copy of the Engine::
 
 	$ python3 -m venv </path/to/myvenv>
@@ -215,12 +214,12 @@ copy of the Engine::
 'The openquake master lost its controlling terminal' error
 ##########################################################
 
-When the OpenQuake engine is driven via the ``oq`` command over an SSH connection an associated terminal must exist 
-throughout the ``oq`` calculation lifecycle. The ``openquake.engine.engine.MasterKilled: The openquake master lost its 
-controlling terminal`` error usually means that the SSH connection has dropped or the controlling terminal has been 
+When the OpenQuake engine is driven via the ``oq`` command over an SSH connection an associated terminal must exist
+throughout the ``oq`` calculation lifecycle. The ``openquake.engine.engine.MasterKilled: The openquake master lost its
+controlling terminal`` error usually means that the SSH connection has dropped or the controlling terminal has been
 closed having a running computation attached to it.
 
-To avoid this error please use ``nohup``, ``screen``, ``tmux`` or ``byobu`` when using ``oq`` via SSH. More information 
+To avoid this error please use ``nohup``, ``screen``, ``tmux`` or ``byobu`` when using ``oq`` via SSH. More information
 is available on :ref:`Running the OpenQuake engine <unix>`.
 
 .. _certificate-verification-on-macOS:
@@ -276,7 +275,7 @@ On macOS you can get the following error::
 	    raise URLError(err)
 	urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
 
-Please have a look at ``/Applications/Python 3.8/ReadMe.rtf`` for possible solutions. If unsure run from a terminal the 
+Please have a look at ``/Applications/Python 3.8/ReadMe.rtf`` for possible solutions. If unsure run from a terminal the
 following command::
 
 	sudo /Applications/Python\ 3.8/install_certificates.command  # NB: use the appropriate Python version!
@@ -294,13 +293,13 @@ Since engine v3.15 you can. The trick is to run a reduced calculation first, by 
 
 	$ oq engine --run job.ini --sample-sources=0.01
 
-This will reduce the number of ruptures by ~100 times so that the reduced calculation will complete in a reasonable 
-amount of time. Then in the log you will see the estimate runtime for the full calculation. For instance for the SHARE 
+This will reduce the number of ruptures by ~100 times so that the reduced calculation will complete in a reasonable
+amount of time. Then in the log you will see the estimate runtime for the full calculation. For instance for the SHARE
 model on a computer with an i7 processor you will see something like this::
 
 	[2022-04-19 08:57:05 #4054 INFO] Estimated time 72.3 hours
 
-The estimate is rather rough, so do not take it at the letter. The runtime can be reduced by orders of magnitude by 
+The estimate is rather rough, so do not take it at the letter. The runtime can be reduced by orders of magnitude by
 tuning parameters like the ``pointsource_distance`` and ``ps_grid_spacing``, discussed at length in the advanced manual.
 
 *************************************************
@@ -313,9 +312,9 @@ This is explained in the :ref:`logic trees section <logic-trees>`
 How do I export the hazard curves/maps/uhs for each realization?
 ****************************************************************
 
-By default the engine only exports statistical results, i.e. the mean hazard curves/maps/uhs. If you want the individual 
-results you must set ``individual_rlzs=true`` in the job.ini files. Please take care: if you have thousands of realizations 
-(which is quite common) the data transfer and disk space requirements will be thousands of times larger than just 
+By default the engine only exports statistical results, i.e. the mean hazard curves/maps/uhs. If you want the individual
+results you must set ``individual_rlzs=true`` in the job.ini files. Please take care: if you have thousands of realizations
+(which is quite common) the data transfer and disk space requirements will be thousands of times larger than just
 returning the mean results: the calculation might fail. This is why by default ``individual_rlzs`` is false.
 
 *************************************************************************
@@ -326,7 +325,7 @@ No, just set ``individual_rlzs=true`` in the job.ini and run::
 
 	$ oq engine --run job.ini --hc=<ID> --exports csv
 
-where ``<ID>`` must be replaced with the ID of the original calculation. The individual outputs will be regenerated by 
+where ``<ID>`` must be replaced with the ID of the original calculation. The individual outputs will be regenerated by
 reusing the result of the previous calculation: it will be a lot faster than repeating the calculation from scratch.
 
 *************************************************************************
@@ -337,40 +336,40 @@ No, set the right poes in the job.ini and as before run::
 
 	$ oq engine --run job.ini --hc=<ID> --exports csv
 
-where ``<ID>`` must be replaced with the ID of the original calculation. Hazard maps and UHS can be regenerated from an 
+where ``<ID>`` must be replaced with the ID of the original calculation. Hazard maps and UHS can be regenerated from an
 existing calculation quite efficiently.
 
 ***********************************************************
 I am getting an error "disaggregation matrix is too large"!
 ***********************************************************
 
-This means that you have too many disaggregation bins. Please act on the binning parameters, i.e. on ``mag_bin_width``, 
-``distance_bin_width``, ``coordinate_bin_width``, ``num_epsilon_bins``. The most relevant parameter is ``coordinate_bin_width`` 
-which is quadratic: for instance by changing from ``coordinate_bin_width=0.1`` to ``coordinate_bin_width=1.0`` the size of 
+This means that you have too many disaggregation bins. Please act on the binning parameters, i.e. on ``mag_bin_width``,
+``distance_bin_width``, ``coordinate_bin_width``, ``num_epsilon_bins``. The most relevant parameter is ``coordinate_bin_width``
+which is quadratic: for instance by changing from ``coordinate_bin_width=0.1`` to ``coordinate_bin_width=1.0`` the size of
 your disaggregation matrix will be reduced by 100 times.
 
 ************************************************************************
 What is the relation between sources, ruptures, events and realizations?
 ************************************************************************
 
-A single rupture can produce multiple seismic events during the investigation time. How many depends on the number of 
-stochastic event sets, on the rupture occurrence rate and on the ``ses_seed`` parameters, as explained 
-:ref:`here <rupture-sampling-how-does-it-work>`. In the 
-engine a rupture is uniquely identified by a rupture ID, which is a 32 bit positive integer. Starting from engine v3.7, 
-seismic events are uniquely identified by an event ID, which is a 32 bit positive integer. The relation between event ID 
-and rupture ID is given encoded in the ``events`` table in the datastore, which also contains the realization associated 
-to the event. The properties of the rupture generating the events can be ascertained by looking inside the ``ruptures`` 
-table. In particular ther ``srcidx`` contains the index of the source that generated the rupture. The ``srcidx`` can be 
-used to extract the properties of the sources by looking inside the ``source_info`` table, which contains the ``source_id`` 
+A single rupture can produce multiple seismic events during the investigation time. How many depends on the number of
+stochastic event sets, on the rupture occurrence rate and on the ``ses_seed`` parameters, as explained
+:ref:`here <rupture-sampling-how-does-it-work>`. In the
+engine a rupture is uniquely identified by a rupture ID, which is a 32 bit positive integer. Starting from engine v3.7,
+seismic events are uniquely identified by an event ID, which is a 32 bit positive integer. The relation between event ID
+and rupture ID is given encoded in the ``events`` table in the datastore, which also contains the realization associated
+to the event. The properties of the rupture generating the events can be ascertained by looking inside the ``ruptures``
+table. In particular ther ``srcidx`` contains the index of the source that generated the rupture. The ``srcidx`` can be
+used to extract the properties of the sources by looking inside the ``source_info`` table, which contains the ``source_id``
 string used in the XML source model.
 
 ************************************************
 Can I run a calculation from a Jupyter notebook?
 ************************************************
 
-You can run any kind of calculation from a Jupyter notebook, but usually calculations are long and it is not convenient 
-to run them interactively. Scenarios are an exception, since they are usually fast, unless you use spatial correlation 
-with a lot of sites. Assuming the parameters of the calculation are in a ``job.ini`` file you can run the following lines 
+You can run any kind of calculation from a Jupyter notebook, but usually calculations are long and it is not convenient
+to run them interactively. Scenarios are an exception, since they are usually fast, unless you use spatial correlation
+with a lot of sites. Assuming the parameters of the calculation are in a ``job.ini`` file you can run the following lines
 in the notebook::
 
 	In[1]: from openquake.calculators.base import run_calc
@@ -380,7 +379,7 @@ Then you can inspect the contents of the datastore and perform your postprocessi
 
 	In[3]: calc.datastore.open('r')  # open the datastore for reading
 
-The inner format of the datastore is not guaranteed to be the same across releases and it is not documented, so this 
+The inner format of the datastore is not guaranteed to be the same across releases and it is not documented, so this
 approach is recommended to the most adventurous people.
 
 ***************************************************************
@@ -407,9 +406,9 @@ FAQ about running risk calculations
 What implications do ``random_seed``, ``ses_seed``, and ``master_seed`` have on my calculation?
 ***********************************************************************************************
 
-The OpenQuake engine uses (Monte Carlo) sampling strategies for propagating epistemic uncertainty at various stages in a 
-calculation. The sampling is based on numpy's pseudo-random number generator. Setting a 'seed' is useful for controlling 
-the initialization of the random number generator, and repeating a calculation using the same seed should result in 
+The OpenQuake engine uses (Monte Carlo) sampling strategies for propagating epistemic uncertainty at various stages in a
+calculation. The sampling is based on numpy's pseudo-random number generator. Setting a 'seed' is useful for controlling
+the initialization of the random number generator, and repeating a calculation using the same seed should result in
 identical random numbers being generated each time.
 
 Three different seeds are currently recognized and used by the OpenQuake engine.
@@ -422,52 +421,52 @@ Three different seeds are currently recognized and used by the OpenQuake engine.
 What values should I use for ``investigation_time``, ``ses_per_logic_tree_path``, and ``number_of_logic_tree_samples`` in my calculation? And what does the ``risk_investigation_time`` parameter for risk calculations do?
 ***************************************************************************************************************************************************************************************************************************
 
-Setting the ``number_of_logic_tree_samples`` is relatively straightforward. This parameter controls the method used for 
-propagation of epistemic uncertainty represented in the logic-tree structure and calculation of statistics such as the 
+Setting the ``number_of_logic_tree_samples`` is relatively straightforward. This parameter controls the method used for
+propagation of epistemic uncertainty represented in the logic-tree structure and calculation of statistics such as the
 mean, median, and quantiles of key results.
 
-``number_of_logic_tree_samples = 0`` implies that the engine will perform a so-called 'full-enumeration' of the 
-logic-tree, i.e., it will compute the requested results for every end-branch, or 'path' in the logic-tree. Statistics 
+``number_of_logic_tree_samples = 0`` implies that the engine will perform a so-called 'full-enumeration' of the
+logic-tree, i.e., it will compute the requested results for every end-branch, or 'path' in the logic-tree. Statistics
 are then computed with consideration of the relative weights assigned to each end-branch.
 
-For models that have complex logic-trees containing thousands, or even millions of end-branches, a full-enumeration 
-calculation will be computationally infeasible. In such cases, a sampling strategy might be more preferable and much 
-more tractable. Setting, for instance, ``number_of_logic_tree_samples = 100`` implies that the engine will randomly 
-choose (i.e., 'sample') 100 end-branches from the complete logic-tree based on the weight assignments. The requested 
-results will be computed for each of these 100 sampled end-branches. Statistics are then computed using the results from 
-the 100 sampled end-branches, where the 100 sampled end-branches are considered to be equi-weighted (1/100 weight for each 
-sampled end-branch). Note that once the end-branches have been chosen for the calculation, the initial weights assigned 
-in the logic-tree files have no further role to play in the computation of the statistics of the requested results. As 
-mentioned in the previous section, changing the ``random_seed`` will result in a different set of paths or end-branches 
+For models that have complex logic-trees containing thousands, or even millions of end-branches, a full-enumeration
+calculation will be computationally infeasible. In such cases, a sampling strategy might be more preferable and much
+more tractable. Setting, for instance, ``number_of_logic_tree_samples = 100`` implies that the engine will randomly
+choose (i.e., 'sample') 100 end-branches from the complete logic-tree based on the weight assignments. The requested
+results will be computed for each of these 100 sampled end-branches. Statistics are then computed using the results from
+the 100 sampled end-branches, where the 100 sampled end-branches are considered to be equi-weighted (1/100 weight for each
+sampled end-branch). Note that once the end-branches have been chosen for the calculation, the initial weights assigned
+in the logic-tree files have no further role to play in the computation of the statistics of the requested results. As
+mentioned in the previous section, changing the ``random_seed`` will result in a different set of paths or end-branches
 being sampled.
 
-The ``risk_investigation_time`` parameter is also fairly straightforward. It affects only the risk part of the computation 
-and does not affect the hazard calculations or results. Two of the most common risk metrics are (1) the time-averaged risk 
-value (damages, losses, fatalities) for a specified time-window, and (2) the risk values (damages, losses, fatalities) 
-corresponding to a set of return periods. The ``risk_investigation_time`` parameter controls the time-window used for 
-computing the former category of risk metrics. Specifically, setting ``risk_investigation_time = 1`` will produce average 
-annual risk values; such as average annual collapses, average annual losses, and average annual fatalities. This parameter 
-does not affect the computation of the latter category of risk metrics. For example, the loss exceedance curves will 
-remain the same irrespective of the value set for ``risk_investigation_time``, provided all other parameters are kept the 
+The ``risk_investigation_time`` parameter is also fairly straightforward. It affects only the risk part of the computation
+and does not affect the hazard calculations or results. Two of the most common risk metrics are (1) the time-averaged risk
+value (damages, losses, fatalities) for a specified time-window, and (2) the risk values (damages, losses, fatalities)
+corresponding to a set of return periods. The ``risk_investigation_time`` parameter controls the time-window used for
+computing the former category of risk metrics. Specifically, setting ``risk_investigation_time = 1`` will produce average
+annual risk values; such as average annual collapses, average annual losses, and average annual fatalities. This parameter
+does not affect the computation of the latter category of risk metrics. For example, the loss exceedance curves will
+remain the same irrespective of the value set for ``risk_investigation_time``, provided all other parameters are kept the
 same.
 
 Next, we come to the two parameters ``investigation_time`` and ``ses_per_logic_tree_path``.
 
-If the hazard model includes time-dependent sources, the choice of the ``investigation_time`` will most likely be dictated 
-by the source model(s), and the engine will raise an error unless you set the value to that required by the source 
-model(s). In this case, the ``ses_per_logic_tree_path`` parameter can be used to control the effective length of the 
-stochastic event-set (or event catalog) for each end-branch, or 'path', for both full-enumeration and sampling-based 
-calculations. As an example, suppose that the hazard model requires you to set ``investigation_time = 1``, because the 
-source model defines 1-year occurrence probabilities for the seismic sources. Further, suppose you have decided to sample 
-100 branches from the complete logic-tree as your strategy to propagate epistemic uncertainty. Now, setting 
-``ses_per_logic_tree_path = 10000`` will imply that the engine will generate 10,000 'event-sets' for each of the 100 
-sampled branches, where each 'event-set' spans 1 year. Note that some of these 1-year event-sets could be empty, implying 
+If the hazard model includes time-dependent sources, the choice of the ``investigation_time`` will most likely be dictated
+by the source model(s), and the engine will raise an error unless you set the value to that required by the source
+model(s). In this case, the ``ses_per_logic_tree_path`` parameter can be used to control the effective length of the
+stochastic event-set (or event catalog) for each end-branch, or 'path', for both full-enumeration and sampling-based
+calculations. As an example, suppose that the hazard model requires you to set ``investigation_time = 1``, because the
+source model defines 1-year occurrence probabilities for the seismic sources. Further, suppose you have decided to sample
+100 branches from the complete logic-tree as your strategy to propagate epistemic uncertainty. Now, setting
+``ses_per_logic_tree_path = 10000`` will imply that the engine will generate 10,000 'event-sets' for each of the 100
+sampled branches, where each 'event-set' spans 1 year. Note that some of these 1-year event-sets could be empty, implying
 that no events were generated in those particular 1-year intervals.
 
-On the other hand, if the hazard model contains only time-independent sources, there is no hard constraint on the 
-``investigation_time`` parameter. In this case, the ``ses_per_logic_tree_path`` parameter can be used in conjunction with 
-the ``investigation_time`` to control the effective length of the stochastic event-set (or event catalog) for each 
-end-branch, or 'path', for both full-enumeration and sampling-based calculations. For instance, the following three 
+On the other hand, if the hazard model contains only time-independent sources, there is no hard constraint on the
+``investigation_time`` parameter. In this case, the ``ses_per_logic_tree_path`` parameter can be used in conjunction with
+the ``investigation_time`` to control the effective length of the stochastic event-set (or event catalog) for each
+end-branch, or 'path', for both full-enumeration and sampling-based calculations. For instance, the following three
 calculation settings would produce statistically equivalent risk results:
 
 **Calculation 1**
@@ -497,18 +496,18 @@ calculation settings would produce statistically equivalent risk results:
 	ses_per_logic_tree_path = 1
 	risk_investigation_time = 1
 
-The effective catalog length per branch in such cases is ``investigation_time × ses_per_logic_tree_path``. The choice of 
-how to split the effective catalog length amongst the two parameters is up to the modeller/analyst's preferrence, and 
+The effective catalog length per branch in such cases is ``investigation_time × ses_per_logic_tree_path``. The choice of
+how to split the effective catalog length amongst the two parameters is up to the modeller/analyst's preferrence, and
 there are no performance implications for perferring particular choices.
 
-Note that if you were also computing hazard curves and maps in the above example calculations, the hazard curves output 
-in the first calculation would provide probabilities of exceedance in 1 year, whereas the hazard curves output in the 
-second calculation would provide probabilities of exceedance in 50 years. All **risk** results for the three calculations 
+Note that if you were also computing hazard curves and maps in the above example calculations, the hazard curves output
+in the first calculation would provide probabilities of exceedance in 1 year, whereas the hazard curves output in the
+second calculation would provide probabilities of exceedance in 50 years. All **risk** results for the three calculations
 will be statistically identical.
 
 *************************************************************************
 Why I am getting the warning "A big variation in the losses is expected"?
-**************************************************************************
+*************************************************************************
 
 In event based risk calculations the warning means that your effective
 investigation time is too small, you do not have enough events to have
@@ -571,15 +570,18 @@ still get the same warning if the average losses (averaged over the number
 of events) are quite different between odd and even events. In that case
 you can get something as follows::
 
-  $ oq show delta_loss:4
-                  even         odd     delta
-  occupants  78.734665  114.527138  0.185202
+  $ oq show delta_loss:1
+             even           odd     delta
+  0  5.242724e+09  5.175095e+09  0.006492
+  1  4.857120e+09  5.470883e+09  0.059427
+
+where the index correspond to the realization index (i.e. the GSIM).
 
 ***************************************
 Can I disaggregate my losses by source?
 ***************************************
 
-Starting from engine v3.10 you can get a summary of the total losses across your portfolio of assets arising from each 
+Starting from engine v3.10 you can get a summary of the total losses across your portfolio of assets arising from each
 seismic source, over the effective investigation time. For instance run the event based risk demo as follows::
 
 	$ oq engine --run job.ini
@@ -620,16 +622,16 @@ and export the output "Source Loss Table". You should see a table like the one b
 |     ⋮      |       ⋮       |        ⋮       |
 +------------+---------------+----------------+
 
-from which one can infer the sources causing the highest total losses for the portfolio of assets within the specified 
+from which one can infer the sources causing the highest total losses for the portfolio of assets within the specified
 effective investigation time.
 
 *************************************************************************
 How does the engine compute loss curves (a.k.a. Probable Maximum Losses)?
 *************************************************************************
 
-The PML for a given return period is built from the losses in the event loss table. The algorithm used is documented in 
-detail in the advanced manual at the end of the section about risk calculations. The section also explains why sometimes 
-the PML or the loss curves contain NaN values (the effective investigation time is too short compared to the return 
+The PML for a given return period is built from the losses in the event loss table. The algorithm used is documented in
+detail in the advanced manual at the end of the section about risk calculations. The section also explains why sometimes
+the PML or the loss curves contain NaN values (the effective investigation time is too short compared to the return
 period). Finally, it also explains why the PML is not additive.
 
 .. _faq-cluster:
@@ -641,7 +643,7 @@ FAQ related to cluster deployments
 What it is the proper way to install the engine on a supercomputer cluster?
 ***************************************************************************
 
-Normally a supercomputer cluster cannot be fully assigned to the OpenQuake engine, so you cannot perform the :ref:`regular 
+Normally a supercomputer cluster cannot be fully assigned to the OpenQuake engine, so you cannot perform the :ref:`regular
 cluster installation <cluster>`. We suggest to do the following instead:
 
 - install the engine in server mode on the machine that will host the database and set ``shared_dir=/opt/openquake`` in the openquake.cfg file; such machine can have low specs; optionally, you can run the WebUI there, so that the users can easily download the results
@@ -652,14 +654,14 @@ cluster installation <cluster>`. We suggest to do the following instead:
 Recover after a Out Of Memory (OOM) condition
 *********************************************
 
-When an Out Of Memory (OOM) condition occours on the master node the ``oq`` process is terminated by the operating system 
+When an Out Of Memory (OOM) condition occours on the master node the ``oq`` process is terminated by the operating system
 OOM killer via a ``SIGKILL`` signal.
 
-Due to the forcefully termination of ``oq``, processes may be left running, using resources (both CPU and RAM), until 
+Due to the forcefully termination of ``oq``, processes may be left running, using resources (both CPU and RAM), until
 the task execution reaches an end.
 
-To free up resources for a new run **you must kill all openquake processes on the workers nodes**; this will stop any 
-other running computation which is anyway highly probable to be already broken due to the OOM condition on the master 
+To free up resources for a new run **you must kill all openquake processes on the workers nodes**; this will stop any
+other running computation which is anyway highly probable to be already broken due to the OOM condition on the master
 node.
 
 ***********************************
@@ -686,8 +688,8 @@ A more detailed stack trace::
 	  File "h5py/h5f.pyx", line 78, in h5py.h5f.open
 	OSError: Unable to open file (unable to open file: name = '/home/openquake/oqdata/cache_1.hdf5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)
 
-This happens when the :ref:`shared dir <cluster>` 
-is not configured properly and workers cannot access data from the master node. Please note that starting with OpenQuake 
+This happens when the :ref:`shared dir <cluster>`
+is not configured properly and workers cannot access data from the master node. Please note that starting with OpenQuake
 engine 3.3 the shared directory is required on multi-node deployments.
 
 You can get more information about setting up the shared directory on the :ref:`cluster installation page <cluster>`.
@@ -698,5 +700,5 @@ You can get more information about setting up the shared directory on the :ref:`
 Get help
 ********
 
-If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake engine users mailing list: 
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake engine users mailing list:
 https://groups.google.com/g/openquake-users

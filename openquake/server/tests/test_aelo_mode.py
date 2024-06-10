@@ -17,10 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 
-# NOTE: before importing User or any other model, django.setup() is needed,
-#       otherwise it would raise:
-#       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
-
 import os
 import glob
 import sys
@@ -34,6 +30,7 @@ import logging
 
 import django
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.test import Client
 from django.conf import settings
 from openquake.commonlib.logs import dbcmd
@@ -42,7 +39,7 @@ from openquake.server.views import get_disp_val
 
 django.setup()
 try:
-    from django.contrib.auth.models import User  # noqa
+    User = get_user_model()
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
@@ -235,11 +232,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     def test_displayed_values(self):
 
-        test_vals_in = [0.0000, 0.30164, 1.10043, 0.00101, 0.00113, 0.00115,
-                     0.0101, 0.0109, 0.0110, 0.1234, 0.126, 0.109, 0.101,
-                     0.991, 0.999, 1.001, 1.011, 1.101, 1.1009, 1.5000]
-        expected = ['0.0', '0.30', '1.10', '0.0010', '0.0011', '0.0012','0.010',
-                    '0.011', '0.011', '0.12', '0.13', '0.11', '0.10', '0.99',
-                    '1.00', '1.00', '1.01', '1.10','1.10', '1.50']
+        test_vals_in = [
+            0.0000, 0.30164, 1.10043, 0.00101, 0.00113, 0.00115,
+            0.0101, 0.0109, 0.0110, 0.1234, 0.126, 0.109, 0.101,
+            0.991, 0.999, 1.001, 1.011, 1.101, 1.1009, 1.5000]
+        expected = [
+            '0.0', '0.30', '1.10', '0.0010', '0.0011', '0.0012', '0.010',
+            '0.011', '0.011', '0.12', '0.13', '0.11', '0.10', '0.99',
+            '1.00', '1.00', '1.01', '1.10', '1.10', '1.50']
         computed = [get_disp_val(v) for v in test_vals_in]
         assert expected == computed

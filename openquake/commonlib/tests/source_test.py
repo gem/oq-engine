@@ -714,7 +714,7 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('gB0', 'gA1'))
-        self.assertEqual(rlz.weight['default'], 1.)
+        self.assertEqual(rlz.weight, [1.])
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
