@@ -280,7 +280,7 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names,
                          ('0.010000', '0.100000', '0.200000'))
 
-        # check deserialization of source_model_lt
+        # check ordering by rm_rlz.pid
         r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
         self.assertEqual(repr(r0),
                          "<Realization #0 ['source_model_1.xml', None], "
