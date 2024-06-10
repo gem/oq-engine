@@ -178,7 +178,8 @@ def compare_rates(calc_1: int, calc_2: int):
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
         df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
         df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
-    print(df1.compare(df2))
+    delta = numpy.abs(df1 - df2).to_numpy().max()
+    print('Maximum difference in the rates =%s' % delta)
 
 
 # works only locally for the moment
