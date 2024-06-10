@@ -832,7 +832,7 @@ def get_strike_from_plane_normal(nrml):
         nrml *= -1
 
     # Get the strike
-    return numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) - 90
+    return _angles_diff(numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])), 90)
 
 
 def bbox2poly(bbox):
@@ -935,3 +935,9 @@ def geolocate(lonlats, geom_df, exclude=()):
             continue
         codes[contains_xy(geom, lonlats)] = code
     return codes
+
+def _angles_diff(ang_a, ang_b):
+    # Computes the difference between the first and the second angle. Both are
+    # in decimal degrees.
+    dff = ang_a - ang_b
+    return (dff + 180.0) % 360.0 - 180.0

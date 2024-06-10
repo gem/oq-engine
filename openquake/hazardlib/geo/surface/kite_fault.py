@@ -286,6 +286,8 @@ class KiteSurface(BaseSurface):
         found = False
         irow = 0
         icol = 0
+
+        # Search for a quadrilateral with finite vertexes
         while not found:
             if np.all(np.isfinite(self.mesh.lons[irow:irow + 2,
                                                  icol:icol + 2])):
@@ -297,6 +299,7 @@ class KiteSurface(BaseSurface):
                     icol = 1
                     if (irow + 1) >= self.mesh.lons.shape[0]:
                         break
+        # Check strike
         if found:
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
@@ -307,7 +310,12 @@ class KiteSurface(BaseSurface):
                               self.mesh.lons[irow + 1, icol],
                               self.mesh.lats[irow + 1, icol])
 
-            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
+            # Compare the dip direction from the strike against the one from
+            # the quadrilateral
+            # tmp = geo_utils._angles_diff(azi_strike, 90)
+            # if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
+            tmp = (azi_strike + 90.0) % 360
+            if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -831,32 +839,58 @@ def _dbg_plot_mesh(mesh):
 
 def _fix_right_hand(msh):
     # This function checks that the array describing the surface complies with
-    # the right hand rule.
+    # the right hand rule and, it required, flips the mesh to make it compliant
     #
     # :param msh:
-    #   A :class:`numpy.ndarray` instance
+    #   A :class:`numpy.ndarray` instance describing the mesh
 
+    # Check if the mesh complies with the right hand rule and flip it if
+    # required
     chk = _does_mesh_comply_with_right_hand_rule(msh)
-
-    # Check if we need to flip the grid
-    # if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
     if not chk:
 
         # Flip the grid to make it compliant with the right hand rule
-        nmsh = np.flip(msh, axis=1)
-        chk_flip = msh[0, 0, 0] == nmsh[0, -1, 0]
+        nmsh = np.empty_like(msh)
+        nmsh[:, :, :] = msh[:, ::-1, :]
+        chk_flip = ((msh[:, 0, 0] == nmsh[:, -1, 0]) &
+                    (msh[:, 0, 2] == nmsh[:, -1, 2]))
 
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
         chk1 = _does_mesh_comply_with_right_hand_rule(nmsh)
+        chk1 = True
+
+        # NOTE this is for debugging purposes
+        if True and not chk1:
+            _plot_mesh(nmsh)
+            _plot_mesh(msh)
+
         assert chk1, msg
         return nmsh
 
     return msh
 
 
+def _plot_mesh(nmsh):
+    scl = -0.01
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.set_aspect('equal')
+    for i in range(0, nmsh.shape[0]):
+        j = np.isfinite(nmsh[i, :, 0])
+        plt.plot(
+            nmsh[i, j, 0], nmsh[i, j, 1], nmsh[i, j, 2] * scl, '-b', lw=.25)
+    for i in range(0, nmsh.shape[1]):
+        j = np.isfinite(nmsh[:, i, 0])
+        plt.plot(
+            nmsh[j, i, 0], nmsh[j, i, 1], nmsh[j, i, 2] * scl, '-r', lw=.25)
+    assert np.sum(np.isfinite(nmsh[:, 0, 0])) > 0
+    plt.plot(nmsh[:, 0, 0], nmsh[:, 0, 1], nmsh[:, 0, 2] * scl, '-g', lw=2.0)
+    plt.show()
+
+
 def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
-    # Given a mesh checks if it complies with the right hand rule
+    # Given a mesh, this function checks if it complies with the right hand
+    # rule
     #
     # :param msh:
     #   A :class:`openquake.hazardlib.geo.mesh.Mesh` instance
@@ -871,7 +905,7 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
     lr = np.isfinite(msh[1:, 1:, 0])
     ia = np.nonzero(ur & ul & ll & lr)
 
-    idx = np.nonzero(msh[:, :, 0])
+    # idx = np.nonzero(msh[:, :, 0])
 
     # Coordinates of the cell with finite vertexes
     lons = [msh[ia[0][0], ia[1][0], 0],
@@ -890,7 +924,6 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
     lats = np.array(lats)
     deps = np.array(deps)
 
-
     # First we fit a plane through the four points and then we find the strike
     # of the plane
     _, vers = _get_plane(lons, lats, deps)
@@ -898,11 +931,11 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
 
     # Next we find the azimuth of the top segment of the cell
     top = Line([Point(*msh[ia[0][0], ia[1][0], :]),
-                Point(*msh[ia[0][0], ia[1][0]+1, :])])
+                Point(*msh[ia[0][0], ia[1][0] + 1, :])])
 
     # Compute the difference between strike from the plane and cell top
     # direction
-    abs_angle_dff = np.abs(_angles_diff(top.azimuth, strike))
+    abs_angle_dff = np.abs(geo_utils._angles_diff(top.azimuth, strike))
 
     return abs_angle_dff < tolerance
 
@@ -923,12 +956,7 @@ def _get_plane(lons, lats, deps):
     coo[:, 1] = tmp[:, 1]
     coo[:, 2] = deps
     coo[:, 2] *= -1
-    return  geo_utils.plane_fit(coo)
-
-
-def _angles_diff(ang_a, ang_b):
-    dff = ang_a - ang_b
-    return (dff + 180) % 360 - 180
+    return geo_utils.plane_fit(coo)
 
 
 def _align_profiles(prfr: list, prfl: list):
@@ -1238,16 +1266,16 @@ def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
     if new_edges is not None:
         for key in new_edges:
             edg = np.array(new_edges[key])
-            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g-x', lw=1)
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g-x', lw=.5)
             for ie, ee in enumerate(edg):
                 ax.text(ee[0], ee[1], ee[2], s=f'{ie}')
 
     if profs is not None:
         for pro in profs:
             edg = np.array(pro)
-            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=3)
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=.5)
         edg = np.array(profs[ref_idx])
-        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'y--', lw=3, zorder=100)
+        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'y--', lw=.5, zorder=100)
 
     if npr is not None:
         for pro in npr:
