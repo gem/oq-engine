@@ -45,7 +45,7 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
-from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.getters import get_ebrupture, MapGetter
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -1744,3 +1744,36 @@ def view_aggrisk(token, dstore):
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr
+
+
+@view.add('fastmean')
+def view_fastmean(token, dstore):
+    """
+    Compute the fast mean from the rates
+    """
+    site_id = int(token.split(':')[1])
+    oq = dstore['oqparam']
+    ws = dstore['weights'][:]
+    full_lt = dstore['full_lt']
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gws = []
+    for trt_smrs in all_trt_smrs:
+        for rlzs in full_lt.get_rlzs_by_gsim(trt_smrs).values():
+            gws.append(ws[rlzs].sum())
+    gweights =  numpy.array(gws)
+    slicedic = AccumDict(accum=[])
+    for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
+        slicedic[idx].append((start, stop))
+    M = len(oq.imtls)
+    L1 = oq.imtls.size // M
+    array = numpy.zeros(L1, oq.imt_dt(F32))
+    for slices in slicedic.values():
+        print(slices)
+        pgetter = MapGetter(dstore.filename, gweights, len(ws), slices, oq)
+        pgetter.init()
+        pmap = pgetter.get_fast_mean(gweights).to_rates()
+        for idx, sid in enumerate(pmap.sids):
+            if sid == site_id:
+                for m, imt in enumerate(oq.imtls):
+                    array[imt] = pmap.array[idx, m]
+    return array

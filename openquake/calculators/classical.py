@@ -753,7 +753,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         if oq.fastmean:
-            ws = self.datastore['weights'][:]
+            ws = self.datastore['weights'][:]  # converting to gweights
             weights = numpy.array([ws[trs % TWO24].sum() for trs in trt_rlzs])
             trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
         else:
