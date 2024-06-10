@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed the ordering of the realizations to depend on the source model
+    branch path also in the case of full enumeration: this is crucial to
+    get consistent results with the two approaches
   * Internal: added utility `oq info geohash:<lon>,<lat>`
   * Changed the scenario calculators to discard the sites far away from
     the rupture, with the effect of generating different GMFs
