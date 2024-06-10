@@ -552,6 +552,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         for cm in self.cmakers:
+            cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
@@ -604,6 +605,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         for cm in self.cmakers:
+            cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
