@@ -48,6 +48,7 @@ from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
+TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
@@ -1367,14 +1368,19 @@ def view_gids(token, dstore):
     """
     Show the meaning of the gids indices
     """
-    full_lt = dstore['full_lt'].init()
-    ws = full_lt.weights
+    full_lt = dstore['full_lt']
+    ws = dstore['weights'][:]
     all_trt_smrs = dstore['trt_smrs'][:]
     gid = 0
     data = []
     for trt_smrs in all_trt_smrs:
-        for gsim, rlzs in full_lt.get_rlzs_by_gsim(trt_smrs).items():
-            data.append((gid, trt_smrs, gsim, ws[rlzs].sum(), len(rlzs)))
+        for g, (gsim, rlzs) in enumerate(
+                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
+            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
+            if len(ts) == 1:
+                ts = ts[0]
+            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
+                         ws[rlzs].sum(), len(rlzs)))
             gid += 1
     return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
