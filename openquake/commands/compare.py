@@ -179,7 +179,7 @@ def compare_rates(calc_1: int, calc_2: int):
         df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
         df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
     delta = numpy.abs(df1 - df2).to_numpy().max()
-    print('Maximum difference in the rates =%s', delta)
+    print('Maximum difference in the rates =%s' % delta)
 
 
 # works only locally for the moment
