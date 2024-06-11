@@ -747,15 +747,14 @@ class ClassicalCalculator(base.HazardCalculator):
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         if oq.fastmean:
-            ws = self.datastore['weights'][:]  # converting to gweights
-            weights = numpy.array([ws[trs % TWO24].sum() for trs in trt_rlzs])
-            trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+            weights = self.full_lt.g_weights(dstore['trt_smrs'][:])
+            trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
         else:
+            if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+                trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
+            else:
+                trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
             weights = self.full_lt.weights
         wget = self.full_lt.wget
         allargs = [
