@@ -52,31 +52,6 @@ lower than the resolution of the data, or the characteristics of the sites vary 
 the data, so that important variability between sites is lost.
 
 
-##############################
-Getting raster values at sites
-##############################
-
-Digital elevation data and its derivatives are often given as rasters. However, in the case of probabilistic analysis 
-of secondary perils (particularly for risk analysis) the analyist may need to deal with sites that are not distributed 
-according to a raster grid.
-
-Raster values may be extracted at sites using a GIS program to perform a spatial join, but following inconvenient 
-historical precedent, this operation often produces new data files instead of simply appending the raster values to the 
-point data file.
-
-Therefore we have implemented a simple function, `srap <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L22>`_,
-to get the raster values. This function requires the filename of the raster, and the longitudes and latitudes of the 
-sites, and returns a Numpy array with the raster values at each point. This function can be easily incorporated into 
-a Python script or workflow in this manner.
-
-Additional function for :math:`V_{s30}` estimates is implemented in the engine `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L260>`_. 
-It requires that the slope is calculated as the gradient :math:`\frac{dy}{dx}` rather than an angular unit, and the 
-study area is categorized as tectonically *active* or *stable*.
-
-We also provide a more general `wrapper function <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`_. 
-This function can calculate gradient from the slope in degrees (a more common formulation), and will be able to use 
-different formulas or relations between slope and :math:`V_{s30}` if and when those are implemented.
-
 Liquefaction models
 -------------------
 
@@ -115,21 +90,21 @@ The equation that describes this probability is:
 potentially to account for the duration of shaking (longer shaking increases liquefaction probability). :math:`K_w` is 
 a groundwater depth correction factor (shallower groundwater increases liquefaction probability).
 
-+------------+------------------+--------------------+------------------+---------------+
-| :math:`LSC`| :math:`PGA_{min}`| :math:`PGA_{slope}`| :math:`PGA_{int}`| :math:`P_{ml}`|
-+============+==================+====================+==================+===============+
-| very high  | 0.09             | 9.09               | 0.82             | 0.25          |
-+------------+------------------+--------------------+------------------+---------------+
-| high       | 0.12             | 7.67               | 0.92             | 0.2           |
-+------------+------------------+--------------------+------------------+---------------+
-| moderate   | 0.15             |          6.67      | 1.0              | 0.1           |
-+------------+------------------+--------------------+------------------+---------------+
-| low        | 0.21             | 5.57               | 1.18             | 0.05          |
-+------------+------------------+--------------------+------------------+---------------+
-| very low   | 0.26             | 4.16               | 1.08             | 0.02          |
-+------------+------------------+--------------------+------------------+---------------+
-| none       | :math:`\infty`   | 0.0                | 0.0              | 0.0           |
-+------------+------------------+--------------------+------------------+---------------+
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
+|   :math:`LSC`  |   :math:`PGA_{min}`   |   :math:`PGA_{slope}`   |   :math:`PGA_{int}`   |   :math:`P_{ml}`   |
++================+=======================+=========================+=======================+====================+
+| very high      |         0.09          |         9.09            |        0.82           |         0.25       |
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
+| high           |         0.12          |         7.67            |        0.92           |         0.2        |
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
+| moderate       |         0.15          |         6.67            |        1.0            |         0.1        |
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
+| low            |         0.21          |         5.57            |        1.18           |         0.05       |
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
+| very low       |         0.26          |         4.16            |        1.08           |         0.02       |
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
+| none           |     :math:`\infty`    |         0.0             |        0.0            |         0.0        |
++----------------+-----------------------+-------------------------+-----------------------+--------------------+
 
 Table 1: Liquefaction values for different liquefaction susceptibility categories, :math:`LSC`. :math:`PGA_{min}` is 
 the minimum ground acceleration required to initiate liquefaction. :math:`PGA_{slope}` is the slope of the liquefaction
@@ -273,15 +248,15 @@ improve the fit. The regression coefficients are given in Table 2.:
 
    \vspace{10pt}
 
-+------------+---------+----------+
-| Parameters | Model 1 | Model 2  |
-+============+=========+==========+
-| a          | 42.08   | 49.15    |
-+------------+---------+----------+
-| b          | 62.59   | 42.40    |
-+------------+---------+----------+
-| c          | 11.43   | 9.165    |
-+------------+---------+----------+
++----------------+-------------+-------------+
+| **Parameters** | **Model 1** | **Model 2** |
++================+=============+=============+
+| a              |    42.08    |    49.15    |
++----------------+-------------+-------------+
+| b              |    62.59    |    42.40    |
++----------------+-------------+-------------+
+| c              |    11.43    |    9.165    |
++----------------+-------------+-------------+
 
 Table 2: Parameters for relating probabilities to areal liquefaction percent.
 
@@ -415,21 +390,21 @@ are given in Table 3 for the portion of a soil deposit estimated to experience l
 level. The expected settlements at the site is the product of the probability of liquefaction (equation 1) and the 
 characteristic settlement amplitude corresponding to the liquefaction susceptibility category, :math:`LSC`.
 
-+-----------+-----------------------+
-| LSC       | Settlements (inches)  |
-+===========+=======================+
-| very high | 12                    |
-+-----------+-----------------------+
-| high      | 6                     |
-+-----------+-----------------------+
-| moderate  | 2                     |
-+-----------+-----------------------+
-| low       | 1                     |
-+-----------+-----------------------+
-| very low  | 0                     |
-+-----------+-----------------------+
-| none      | 0                     |
-+-----------+-----------------------+
++---------------+--------------------------+
+| **LSC**       | **Settlements (inches)** |
++===============+==========================+
+| very high     |            12            |
++---------------+--------------------------+
+| high          |            6             |
++---------------+--------------------------+
+| moderate      |            2             |
++---------------+--------------------------+
+| low           |            1             |
++---------------+--------------------------+
+| very low      |            0             |
++---------------+--------------------------+
+| none          |            0             |
++---------------+--------------------------+
 
 Table 3: Ground settlements amplitudes for liquefaction susceptibility categories.
 
