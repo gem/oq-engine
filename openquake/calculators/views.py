@@ -1754,7 +1754,7 @@ def view_fastmean(token, dstore):
     site_id = int(token.split(':')[1])
     oq = dstore['oqparam']
     ws = dstore['weights'][:]
-    gweights =  dstore['_rates/weig'][:]
+    gweights =  dstore['gweights'][:]
     slicedic = AccumDict(accum=[])
     for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
         slicedic[idx].append((start, stop))
@@ -1762,14 +1762,13 @@ def view_fastmean(token, dstore):
     L1 = oq.imtls.size // M
     array = numpy.zeros(L1, oq.imt_dt(F32))
     for slices in slicedic.values():
-        print(slices)
         pgetter = MapGetter(dstore.filename, gweights, len(ws), slices, oq)
         pgetter.init()
         pmap = pgetter.get_fast_mean(gweights).to_rates()
         for idx, sid in enumerate(pmap.sids):
             if sid == site_id:
                 for m, imt in enumerate(oq.imtls):
-                    array[imt] = pmap.array[idx, m]
+                    array[imt] += pmap.array[idx, m]
     return array
 
 
