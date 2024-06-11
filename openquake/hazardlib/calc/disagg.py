@@ -744,8 +744,6 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
-    trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
-                for rlzs in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
@@ -761,7 +759,7 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
         drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
         disaggs.append(dis)
     std4D = collect_std(disaggs)
-    gws = reduced_lt.g_weights(trt_rlzs)
+    gws = reduced_lt.g_weights([cm.trt_smrs for cm in cmakers])
     rates3D = calc_mean_rates(rmap, gws, reduced_lt.gsim_lt.wget,
                               oq.imtls, list(imldic))  # (N, M, L1)
     return site.id, source_id, std4D, drates4D, rates3D[0]

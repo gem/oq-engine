@@ -660,7 +660,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     rup.tectonic_region_type)(rup.mag))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
-        self.realizations = fake.get_realizations()
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
