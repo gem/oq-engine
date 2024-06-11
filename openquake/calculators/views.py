@@ -1749,7 +1749,7 @@ def view_aggrisk(token, dstore):
 @view.add('fastmean')
 def view_fastmean(token, dstore):
     """
-    Compute the fast mean from the rates
+    Compute the mean hazard curves for the given site from the rates
     """
     site_id = int(token.split(':')[1])
     oq = dstore['oqparam']
@@ -1764,7 +1764,7 @@ def view_fastmean(token, dstore):
     for slices in slicedic.values():
         pgetter = MapGetter(dstore.filename, gweights, len(ws), slices, oq)
         pgetter.init()
-        pmap = pgetter.get_fast_mean(gweights).to_rates()
+        pmap = pgetter.get_fast_mean(gweights)
         for idx, sid in enumerate(pmap.sids):
             if sid == site_id:
                 for m, imt in enumerate(oq.imtls):
