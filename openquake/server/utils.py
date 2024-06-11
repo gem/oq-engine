@@ -118,7 +118,8 @@ def get_aelo_changelog():
     df['release'] = df['release'].apply(remove_first_word)
     df = df[~df['release'].str.startswith('_')]
     df = df.applymap(
-        lambda x: x.replace('\n', '<br>') if isinstance(x, str) else x)
+        lambda x: (x.replace('\n', '<br>').lstrip('<br>')
+                   if isinstance(x, str) else x))
     df.columns = df.columns.str.capitalize()
     return df
 
