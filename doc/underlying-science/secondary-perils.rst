@@ -1,5 +1,3 @@
-.. _secondary-perils-intro:
-
 Liquefaction and Landslide
 ==========================
 
