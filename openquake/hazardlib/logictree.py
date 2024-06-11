@@ -1134,12 +1134,15 @@ class FullLogicTree(object):
                 data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
         return data
 
-    def g_weights(self, trt_rlzs):
+    def g_weights(self, all_trt_smrs):
         """
         :returns: an array of weights of shape (Gt, 1) or (Gt, M+1)
         """
-        out = [self.weights[trs % TWO24].sum() for trs in trt_rlzs]
-        return numpy.array(out)
+        data = []
+        for trt_smrs in all_trt_smrs:
+            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(self.weights[rlzs].sum())
+        return numpy.array(data)
 
     def trt_by(self, trt_smr):
         """

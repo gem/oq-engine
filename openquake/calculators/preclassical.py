@@ -201,14 +201,13 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull(trt_smrs)
-        all_trt_rlzs = self.full_lt.get_trt_rlzs(trt_smrs)
-        gweights = self.full_lt.g_weights(all_trt_rlzs)
+        gweights = self.full_lt.g_weights(trt_smrs)
         self.datastore['gweights'] = gweights
 
         gw = numpy.round(gweights.sum(), 3)
         print('**********', gw)
         #assert gw == Gfull, (gw, Gfull)
-        Gt = len(all_trt_rlzs)
+        Gt = len(gweights)
         extra = f'< {Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
         # Gt is known before starting the preclassical

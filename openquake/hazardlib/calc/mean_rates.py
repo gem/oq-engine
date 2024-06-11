@@ -113,7 +113,8 @@ def main(job_ini):
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
     rmap, ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
-    rates = calc_mean_rates(rmap, csm.full_lt.g_weights, oq.imtls)
+    gws = csm.full_lt.g_weights([cm.trt_smrs for cm in cmakers])
+    rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())
     for m, imt in enumerate(oq.imtls):
