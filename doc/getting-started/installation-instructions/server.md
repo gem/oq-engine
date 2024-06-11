@@ -46,19 +46,19 @@ Upgrade the database to host users and sessions:
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake python3 manage.py migrate
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
 Add a new local superuser:
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake python3 manage.py createsuperuser
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py createsuperuser
 ```
 To setup static files in Django, issue the following commands, making sure to refer to the actual folder where the engine was installed or cloned (see above):
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake python3 manage.py  collectstatic
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py collectstatic
 ```
 The commands must be run as the `openquake` user and the installation must be of kind `server` or `devel_server`.
 if, for any reason, the commands are not available in the path, you can use the following syntax:
@@ -82,7 +82,7 @@ Authentication can rely on system users through `PAM`, the [Pluggable Authentica
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake python3 manage.py migrate
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
 
 Then restart the `WebUI` service.
