@@ -291,7 +291,7 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.itime = oq.investigation_time
-        self.weig = dstore['_rates/weig'][:]
+        self.weig = dstore['gweights'][:]
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
@@ -500,7 +500,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Will use the fast_mean algorithm')
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(
             self.datastore, self.full_lt)
-        self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
         rlzs = self.R == 1 or oq.individual_rlzs

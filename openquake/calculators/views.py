@@ -1754,13 +1754,7 @@ def view_fastmean(token, dstore):
     site_id = int(token.split(':')[1])
     oq = dstore['oqparam']
     ws = dstore['weights'][:]
-    full_lt = dstore['full_lt']
-    all_trt_smrs = dstore['trt_smrs'][:]
-    gws = []
-    for trt_smrs in all_trt_smrs:
-        for rlzs in full_lt.get_rlzs_by_gsim(trt_smrs).values():
-            gws.append(ws[rlzs].sum())
-    gweights =  numpy.array(gws)
+    gweights =  dstore['_rates/weig'][:]
     slicedic = AccumDict(accum=[])
     for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
         slicedic[idx].append((start, stop))
@@ -1777,3 +1771,8 @@ def view_fastmean(token, dstore):
                 for m, imt in enumerate(oq.imtls):
                     array[imt] = pmap.array[idx, m]
     return array
+
+
+@view.add('gw')
+def view_gw(token, dstore):
+    return dstore['_rates/weig'][:].sum()

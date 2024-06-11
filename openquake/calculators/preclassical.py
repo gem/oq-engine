@@ -200,10 +200,20 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gt = len(self.full_lt.get_trt_rlzs(trt_smrs))
+        Gfull = self.full_lt.gfull(trt_smrs)
+        all_trt_rlzs = self.full_lt.get_trt_rlzs(trt_smrs)
+        gweights = self.full_lt.g_weights(all_trt_rlzs)
+        self.datastore['gweights'] = gweights
+
+        gw = numpy.round(gweights.sum(), 3)
+        print('**********', gw)
+        #assert gw == Gfull, (gw, Gfull)
+        Gt = len(all_trt_rlzs)
+        extra = f'< {Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
-        logging.warning(f'The global pmap would require %s ({Gt=})',
-                        general.humansize(nbytes))
+        # Gt is known before starting the preclassical
+        logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+                        general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
