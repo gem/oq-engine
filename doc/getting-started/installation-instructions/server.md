@@ -106,6 +106,13 @@ pip install gunicorn
 deactivate
 ```
 
+*gunicorn* is usually managed by the OS init system.
+
+Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
+```console
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
+```
+
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
 ```console
@@ -114,12 +121,6 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
-*gunicorn* is usually managed by the OS init system.
-
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
-```console
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
-```
 
 ### nginx
 
