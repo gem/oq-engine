@@ -200,10 +200,16 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gt = len(self.full_lt.get_trt_rlzs(trt_smrs))
+        Gfull = self.full_lt.gfull(trt_smrs)
+        gweights = self.full_lt.g_weights(trt_smrs)
+        self.datastore['gweights'] = gweights
+
+        Gt = len(gweights)
+        extra = f'< {Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
-        logging.warning(f'The global pmap would require %s ({Gt=})',
-                        general.humansize(nbytes))
+        # Gt is known before starting the preclassical
+        logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+                        general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -249,6 +255,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = self.cmakers[grp_id]
+            cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):

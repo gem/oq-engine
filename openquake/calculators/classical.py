@@ -291,7 +291,7 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.itime = oq.investigation_time
-        self.weig = dstore['_rates/weig'][:]
+        self.weig = dstore['gweights'][:]
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
@@ -500,7 +500,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Will use the fast_mean algorithm')
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(
             self.datastore, self.full_lt)
-        self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -686,7 +685,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _create_hcurves_maps(self):
         oq = self.oqparam
         N = len(self.sitecol)
-        R = len(self.realizations)
+        R = len(self.datastore['weights'])
         if oq.individual_rlzs is None:  # not specified in the job.ini
             individual_rlzs = (N == 1) * (R > 1)
         else:
@@ -748,15 +747,14 @@ class ClassicalCalculator(base.HazardCalculator):
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         if oq.fastmean:
-            ws = self.datastore['weights'][:]
-            weights = numpy.array([ws[trs % TWO24].sum() for trs in trt_rlzs])
-            trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+            weights = dstore['gweights'][:]
+            trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
         else:
+            if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+                trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
+            else:
+                trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
             weights = self.full_lt.weights
         wget = self.full_lt.wget
         allargs = [
