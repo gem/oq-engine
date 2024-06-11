@@ -33,6 +33,7 @@ import itertools
 import numpy
 import pandas
 from scipy.spatial import cKDTree
+from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
 import fiona
@@ -51,7 +52,7 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
+from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3, get_dist
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.risklib.countries import code2country
@@ -291,6 +292,17 @@ def get_params(job_ini, kw={}):
     return params
 
 
+def is_fraction(string):
+    """
+    :returns: True if the string can be converted to a probability
+    """
+    try:
+        f = float(string)
+    except (ValueError, TypeError):
+        return
+    return 0 < f < 1
+
+
 def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
@@ -313,7 +325,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
     re = os.environ.get('OQ_REDUCE')  # debugging facility
-    if re:
+    if is_fraction(re):
         # reduce the imtls to the first imt
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
@@ -321,8 +333,8 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         os.environ['OQ_SAMPLE_SITES'] = re
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
-            ses = str(int(numpy.ceil(int(ses) * float(re))))
-            job_ini['ses_per_logic_tree_path'] = ses
+            ses = int(numpy.ceil(int(ses) * float(re)))
+            job_ini['ses_per_logic_tree_path'] = str(ses)
         imtls = job_ini.get('intensity_measure_types_and_levels')
         if imtls:
             imtls = valid.intensity_measure_types_and_levels(imtls)
@@ -419,25 +431,22 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
-def get_sids_around(site_model_hdf5, rec, dist):
+def rup_radius(rup):
     """
-    :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
-    :param rec: a record with 'mag' and 'hypo' fields
-    :returns: site model close to the rupture
+    Maximum distance from the rupture mesh to the hypocenter
     """
-    with hdf5.File(site_model_hdf5) as f:
-        sm = f['site_model'][:]
-    x, y, z = rec['hypo']
-    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
-    return idxs
+    hypo = rup.hypocenter
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
+    radius = cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    return radius
 
 
-def get_site_model_around(site_model_hdf5, rup, dist):
+def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
     :param rup: a rupture object or a record with a 'hypo' field
+    :param dist: integration distance in km
+    :param mesh: if not None, also reduce the mesh
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
@@ -446,7 +455,18 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
     xyz = spherical_to_cartesian(x, y, z)
-    idxs = cKDTree(xyz_all).query_ball_point(xyz, dist, eps=.001)
+
+    # first raw filtering
+    tree = cKDTree(xyz_all)
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+
+    # then fine filtering
+    sm = sm[idxs]
+    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
+    if len(idxs) < len(sm):
+        logging.info('Filtering %d/%d sites', len(idxs), len(sm))
+    if mesh is not None:
+        mesh.array = mesh.array[:, idxs]
     return sm[idxs]
 
 
@@ -519,8 +539,8 @@ def get_site_model(oqparam, h5=None):
 
     fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
+        # read the site model close to the rupture
         rup = get_rupture(oqparam)
-        # global site model close to the rupture
         dist = oqparam.maximum_distance('*')(rup.mag)
         return get_site_model_around(fnames[0], rup, dist)
 
@@ -595,7 +615,7 @@ def debug_site(oqparam, haz_sitecol):
         complete = copy.copy(haz_sitecol.complete)
         ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
         if not ok.any():
-            raise ValueError('There is not custom_site_id=%s', siteid)
+            raise ValueError('There is no custom_site_id=%s', siteid)
         if 'station_data' in oqparam.inputs:
             # keep the stations while restricting to the specified site
             sdata, _imts = get_station_data(oqparam, haz_sitecol)
@@ -629,7 +649,15 @@ def get_site_collection(oqparam, h5=None):
         else:
             req_site_params = oqparam.req_site_params
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
-            sm = h5['site_model'][:]
+            if (oqparam.rupture_dict or oqparam.rupture_xml) and (
+                    'station_data' not in oqparam.inputs) and (
+                        not oqparam.infrastructure_connectivity_analysis):
+                # filter the far away sites
+                rup = get_rupture(oqparam)
+                dist = oqparam.maximum_distance('*')(rup.mag)
+                sm = get_site_model_around(h5.filename, rup, dist, mesh)
+            else:
+                sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
@@ -669,14 +697,6 @@ def get_site_collection(oqparam, h5=None):
         # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
-
-    if h5 and h5.parent and 'scenario' in oqparam.calculation_mode and (
-            'ruptures' in h5.parent and 'site_model' in h5.parent):
-        # filter the far away sites, used in ScenarioRiskTestCase::test_case_1g
-        rec = h5.parent['ruptures'][0]
-        dist = oqparam.maximum_distance('*')(rec['mag'])
-        sids = get_sids_around(h5.parent.filename, rec, dist)
-        sitecol = sitecol.filtered(sids)
 
     sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
     sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
@@ -1011,8 +1031,7 @@ def get_exposure(oqparam, h5=None):
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
-            # reading the assets around a rupture
-            sm = get_site_model(oq, h5)
+            sm = get_site_model(oq)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)

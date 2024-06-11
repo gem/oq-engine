@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source, geo, valid
+from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)
@@ -48,6 +48,7 @@ from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
+TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
@@ -961,14 +962,14 @@ def view_extreme_gmvs(token, dstore):
 @view.add('mean_rates')
 def view_mean_rates(token, dstore):
     """
-    Display mean hazard rates for the first site
+    Display mean hazard rates, averaged on the sites
     """
     oq = dstore['oqparam']
-    assert oq.use_rates
-    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
-    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    poes = dstore.sel('hcurves-stats', stat='mean')  # shape (N, 1, M, L1)
+    mean_rates = calc.disagg.to_rates(poes).mean(axis=0)[0]  # shape (M, L1)
+    rates = numpy.zeros(mean_rates.shape[1], dt(oq.imtls))
     for m, imt in enumerate(oq.imtls):
-        rates[imt] = calc.disagg.to_rates(poes[m])
+        rates[imt] = mean_rates[m]
     return rates
 
 
@@ -1362,6 +1363,28 @@ def view_composite_source_model(token, dstore):
     return numpy.array(lst, dt('grp_id trt num_sources'))
 
 
+@view.add('gids')
+def view_gids(token, dstore):
+    """
+    Show the meaning of the gids indices
+    """
+    full_lt = dstore['full_lt']
+    ws = dstore['weights'][:]
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gid = 0
+    data = []
+    for trt_smrs in all_trt_smrs:
+        for g, (gsim, rlzs) in enumerate(
+                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
+            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
+            if len(ts) == 1:
+                ts = ts[0]
+            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
+                         ws[rlzs].sum(), len(rlzs)))
+            gid += 1
+    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
+
+
 @view.add('branches')
 def view_branches(token, dstore):
     """
@@ -1678,16 +1701,6 @@ def compare_disagg_rates(token, dstore):
                             ).sort_values(['imt', 'src'])
 
 
-
-@view.add('geohash')
-def view_geohash(token, dstore):
-    lon_lat = token.split(':')[1]
-    lon, lat = valid.lon_lat(lon_lat)
-    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
-    gh = b''.join([row.tobytes() for row in arr])
-    return gh.decode('ascii')
-
-
 @view.add('gh3')
 def view_gh3(token, dstore):
     sitecol = dstore['sitecol']
@@ -1713,7 +1726,8 @@ def view_aggrisk(token, dstore):
     Returns a table with the aggregate risk by realization and loss type
     """
     gsim_lt = dstore['full_lt/gsim_lt']
-    df = dstore.read_df('aggrisk', sel={'agg_id': 0})
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('aggrisk', sel={'agg_id': K})
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
     rlzs = list(gsim_lt)
