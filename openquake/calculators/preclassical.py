@@ -204,9 +204,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         gweights = self.full_lt.g_weights(trt_smrs)
         self.datastore['gweights'] = gweights
 
-        gw = numpy.round(gweights.sum(), 3)
-        print('**********', gw)
-        #assert gw == Gfull, (gw, Gfull)
         Gt = len(gweights)
         extra = f'< {Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
