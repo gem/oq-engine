@@ -52,7 +52,7 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
    :maxdepth: 1
    :caption: Secondary perils:
 
-   secondary-perils
+   secondary-perils-calculation
 
 .. _underlying-secondary-perils-science:
 
