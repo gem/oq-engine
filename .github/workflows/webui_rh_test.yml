@@ -111,7 +111,7 @@ jobs:
          sleep 10
          #runuser -l openquake -c '/opt/openquake/venv/bin/oq webui dumpdata --natural-foreign --natural-primary --exclude cookie.consent > cookie_consent.json'
          #runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 -m openquake.server.manage loaddata ./fixtures/0001_cookie_consent.json'
-         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; '/opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
+         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
          sleep 1
          # Perform collectstatic after setup local_settings
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui collectstatic'
