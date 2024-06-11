@@ -40,3 +40,4 @@ calculators.
    :maxdepth: 1
    :caption: Secondary Peril Inputs:
 
+   secondary-perils-inputs

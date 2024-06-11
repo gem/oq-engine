@@ -203,5 +203,6 @@ or simply:
 .. toctree::
    :maxdepth: 2
    :caption: Secondary Peril Outputs:
+   secondary-perils-outputs
 
    
