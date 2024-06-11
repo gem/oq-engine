@@ -130,7 +130,7 @@ class Comparator(object):
 
     def compare(self, what, imt, files, samplesites, rtol, atol):
         sids = self.getsids(samplesites)
-        if what == 'uhs':
+        if what == 'uhs':  # imt is -1, the last poe
             arrays = self.getuhs(what, imt, sids, rtol, atol)
         elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)

@@ -685,7 +685,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _create_hcurves_maps(self):
         oq = self.oqparam
         N = len(self.sitecol)
-        R = len(self.realizations)
+        R = len(self.datastore['weights'])
         if oq.individual_rlzs is None:  # not specified in the job.ini
             individual_rlzs = (N == 1) * (R > 1)
         else:
