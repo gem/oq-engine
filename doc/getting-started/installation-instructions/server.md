@@ -110,6 +110,7 @@ deactivate
 
 Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
+WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
 ```
 
