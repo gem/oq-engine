@@ -37,8 +37,11 @@ if settings.WEBUI:
         re_path(r'^v1/available_gsims$', views.get_available_gsims),
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
-        path("cookies/", include("cookie_consent.urls")),
     ]
+    if settings.APPLICATION_MODE != 'PUBLIC':
+        urlpatterns += [
+            path("cookies/", include("cookie_consent.urls")),
+        ]
     if settings.APPLICATION_MODE == 'AELO':
         urlpatterns.append(
             re_path(r'^engine/(\d+)/outputs_aelo$',

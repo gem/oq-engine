@@ -227,7 +227,7 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE != "PUBLIC":
+if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent and corsheader
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
                 'cookie_consent', 'corsheaders',):

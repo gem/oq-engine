@@ -124,6 +124,8 @@
     })
   </script>
   {% endblock extra_script %}
+  {% if application_mode != 'PUBLIC' %}
   {% include "./includes/cookie_bar.html" %}
+  {% endif %}
 </body>
 </html>
