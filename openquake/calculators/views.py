@@ -1768,10 +1768,10 @@ def view_fastmean(token, dstore):
         for idx, sid in enumerate(pmap.sids):
             if sid == site_id:
                 for m, imt in enumerate(oq.imtls):
-                    array[imt] += pmap.array[idx, m]
+                    array[imt] = pmap.array[idx, m]
     return array
 
 
 @view.add('gw')
 def view_gw(token, dstore):
-    return dstore['_rates/weig'][:].sum()
+    return numpy.round(dstore['gweights'][:].sum(), 3)
