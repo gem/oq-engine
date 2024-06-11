@@ -652,12 +652,16 @@ class SourceModelLogicTree(object):
                 yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
                 ordinal += 1
         else:  # full enumeration
-            ordinal = 0
+            rlzs = []
             for weight, branches in self.root_branchset.enumerate_paths():
                 value = [br.value for br in branches]
                 branch_ids = [branch.branch_id for branch in branches]
-                yield Realization(value, weight, ordinal, tuple(branch_ids))
-                ordinal += 1
+                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlzs.append(rlz)
+            rlzs.sort(key=operator.attrgetter('pid'))
+            for r, rlz in enumerate(rlzs):
+                rlz.ordinal = r
+                yield rlz
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
