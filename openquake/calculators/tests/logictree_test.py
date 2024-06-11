@@ -70,11 +70,11 @@ class LogicTreeTestCase(CalculatorTestCase):
             csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
-            trs = full_lt.get_trt_rlzs(self.calc.datastore['trt_smrs'][:])
+            trt_smrs = self.calc.datastore['trt_smrs']
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
-                rmap, full_lt.g_weights(trs), wget, oq.imtls)
+                rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=1e-6)
@@ -698,7 +698,7 @@ hazard_uhs-std.csv
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
         # trt_rlzs is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
-        self.assertEqual(len(self.calc.realizations), 10)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 10)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 

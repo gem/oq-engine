@@ -199,19 +199,26 @@ nav.main-nav ul li.tools {
 
 footer.footer {
     background: #bebebe;
-    font-size: 12px;
+    font-size: 16px;
     position: fixed;
     bottom: 0;
-    padding-left: 10%;
-    padding-right: 10%;
     float: left;
     width: 80%;
     height: auto;
-    padding-top: 0;
+    color: rgb(0, 0, 0, 0.8);
+    padding: 0.2rem 10%;
 }
 
 footer.footer form label {
     color: #fff;
+}
+
+footer.footer a {
+    color: rgb(0, 0, 0, 0.8);
+}
+
+footer.footer .pull-left span {
+    font-weight: bold;
 }
 
 #new-release-box {
