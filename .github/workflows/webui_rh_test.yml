@@ -9,8 +9,6 @@ on:
         required: true
   schedule:
     - cron: "05 15 * * *"
-  push:
-    branches: [django_commands]
 
 jobs:
   test_ui:
