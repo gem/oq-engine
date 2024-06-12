@@ -61,7 +61,7 @@ cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake /opt/openquake/venv/bin/python3 manage.py collectstatic
 ```
 The commands must be run as the `openquake` user and the installation must be of kind `server` or `devel_server`.
-if, for any reason, the commands are not available in the path, you can use the following syntax:
+If, for any reason, the commands are not available in the path, you can use the following syntax:
 
 ```console
 python3 -m openquake.server.manage <subcommand>
