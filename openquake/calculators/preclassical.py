@@ -205,7 +205,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore['gweights'] = gweights
 
         Gt = len(gweights)
-        extra = f'< {Gfull}' if Gt < Gfull else ''
+        extra = f'<{Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
         # Gt is known before starting the preclassical
         logging.warning(f'The global pmap would require %s ({Gt=}%s)',
