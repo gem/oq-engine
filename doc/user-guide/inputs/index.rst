@@ -40,4 +40,4 @@ calculators.
    :maxdepth: 1
    :caption: Secondary Peril Inputs:
 
-   liquefaction-inputs
+   secondary-perils-inputs

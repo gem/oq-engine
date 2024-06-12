@@ -1103,7 +1103,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
     :param exp_types: the expected loss types
-    :returns: (site collection, asset collection, discarded)
+    :returns: (site collection, asset collection, discarded, exposure)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:

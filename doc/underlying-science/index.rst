@@ -48,6 +48,14 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
 
 .. _underlying-risk-science:
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Secondary perils:
+
+   secondary-perils
+
+.. _underlying-secondary-perils-science:
+
 Appendices
 ----------
 
