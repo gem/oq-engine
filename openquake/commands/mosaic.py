@@ -86,7 +86,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     exclude subsets of sites from those specified in the CSV file:
 
     * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each
-      identified by the corresponding 3-charracters code) to be selected,
+      identified by the corresponding 3-characters code) to be selected,
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
