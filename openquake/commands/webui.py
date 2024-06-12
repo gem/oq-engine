@@ -28,43 +28,40 @@ from openquake.server.utils import check_webserver_running
 commands = ['start']
 
 
-def rundjango(subcmd, hostport=None, skip_browser=False):
-    args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
-    if subcmd == 'runserver':
-        # the reload functionality of the Django development server interferes
-        # with SIGCHLD and causes zombies, thus it is disabled
-        args.append('--noreload')
+def runserver(hostport=None, skip_browser=False):
+    args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
+    # the reload functionality of the Django development server interferes
+    # with SIGCHLD and causes zombies, thus it is disabled
+    args.append('--noreload')
     if hostport:
         args.append(hostport)
     p = subprocess.Popen(args)
-    if subcmd == 'runserver' and not skip_browser:
+    if not skip_browser:
         url = 'http://' + hostport
         if check_webserver_running(url):
             webbrowser.open(url)
     p.wait()
-
     if p.returncode != 0:
         sys.exit(p.returncode)
 
 
 def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     """
-    start the webui server in foreground or perform other operation on the
-    django application
+    Start the webui server in foreground. Other webui commands can be launched
+    after activating the openquake virtual environment, using Django’s
+    command-line utility for administrative tasks, e.g.: manage.py <command>
+    [options]
     """
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
-    if cmd == 'start':
-        general.check_dependencies()
-        dbserver.ensure_on()  # start the dbserver in a subprocess
-        # reset any computation left in the 'executing' state
-        db.actions.reset_is_running(dbserver.db)
-        print('Starting, using version %s' % general.engine_version())
-        rundjango('runserver', hostport, skip_browser)
-    elif cmd in commands:
-        rundjango(cmd)
+    general.check_dependencies()
+    dbserver.ensure_on()  # start the dbserver in a subprocess
+    # reset any computation left in the 'executing' state
+    db.actions.reset_is_running(dbserver.db)
+    print('Starting, using version %s' % general.engine_version())
+    runserver(hostport, skip_browser)
 
 
 main.cmd = dict(help='webui command', choices=commands)
