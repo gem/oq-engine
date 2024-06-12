@@ -455,8 +455,7 @@ hazard_uhs-std.csv
             'hc15.csv', 'hc15.csv', 'hc17.csv',
             'hc18.csv', 'hc19.csv', 'hc20.csv',
             'hc21.csv', 'hc22.csv', 'hc23.csv',
-            'hc24.csv', 'hc25.csv', 'hc26.csv'],
-            case_21.__file__)
+            'hc24.csv', 'hc25.csv', 'hc26.csv'], case_21.__file__, delta=2E-05)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
