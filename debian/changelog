@@ -6,11 +6,6 @@
   [Lana Todorovic]
   * Improved secondary perils documentation
 
-  [Kyle Smith]
-  * Added a new gsim file sandikkaya_2017.py to implement the
-    Arias Intensity and Cumulative Absoloute Velocity ground motion 
-    models from Sandikkaya and Akkar (2017).
-
   [Michele Simionato]
   * Fixed the ordering of the realizations to depend on the source model
     branch path also in the case of full enumeration: this is crucial to
