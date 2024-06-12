@@ -46,22 +46,22 @@ Upgrade the database to host users and sessions:
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui migrate
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
 Add a new local superuser:
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui createsuperuser
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py createsuperuser
 ```
 To setup static files in Django, issue the following commands, making sure to refer to the actual folder where the engine was installed or cloned (see above):
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui collectstatic
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py collectstatic
 ```
-The `oq` commands must be run as the `openquake` user and the installation must be of kind `server` or `devel_server`.
-if, for any reason, the `oq` command isn't available in the path, you can use the following syntax:
+The commands must be run as the `openquake` user and the installation must be of kind `server` or `devel_server`.
+If, for any reason, the commands are not available in the path, you can use the following syntax:
 
 ```console
 python3 -m openquake.server.manage <subcommand>
@@ -82,7 +82,7 @@ Authentication can rely on system users through `PAM`, the [Pluggable Authentica
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui migrate
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
 
 Then restart the `WebUI` service.
@@ -106,6 +106,14 @@ pip install gunicorn
 deactivate
 ```
 
+*gunicorn* is usually managed by the OS init system.
+
+Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
+```console
+WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
+```
+
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
 ```console
@@ -114,12 +122,6 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
-*gunicorn* is usually managed by the OS init system.
-
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
-```console
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
-```
 
 ### nginx
 
