@@ -652,12 +652,16 @@ class SourceModelLogicTree(object):
                 yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
                 ordinal += 1
         else:  # full enumeration
-            ordinal = 0
+            rlzs = []
             for weight, branches in self.root_branchset.enumerate_paths():
                 value = [br.value for br in branches]
                 branch_ids = [branch.branch_id for branch in branches]
-                yield Realization(value, weight, ordinal, tuple(branch_ids))
-                ordinal += 1
+                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlzs.append(rlz)
+            rlzs.sort(key=operator.attrgetter('pid'))
+            for r, rlz in enumerate(rlzs):
+                rlz.ordinal = r
+                yield rlz
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
@@ -1098,6 +1102,16 @@ class FullLogicTree(object):
             return weights[:, -1]
         return self.gsim_lt.wget(weights, imt)
 
+    def gfull(self, all_trt_smrs):
+        """
+        :returns: the total Gt = Σ_i G_i
+        """
+        Gt = 0
+        for trt_smrs in all_trt_smrs:
+            trt = self.trts[trt_smrs[0] // TWO24]
+            Gt += len(self.gsim_lt.values[trt])
+        return Gt
+
     def get_gids(self, all_trt_smrs):
         """
         :returns: list of of arrays of gids, one for each source group
@@ -1120,12 +1134,15 @@ class FullLogicTree(object):
                 data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
         return data
 
-    def g_weights(self, trt_rlzs):
+    def g_weights(self, all_trt_smrs):
         """
         :returns: an array of weights of shape (Gt, 1) or (Gt, M+1)
         """
-        out = [self.weights[trs % TWO24].sum() for trs in trt_rlzs]
-        return numpy.array(out)
+        data = []
+        for trt_smrs in all_trt_smrs:
+            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(self.weights[rlzs].sum())
+        return numpy.array(data)
 
     def trt_by(self, trt_smr):
         """

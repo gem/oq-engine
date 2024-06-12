@@ -113,14 +113,6 @@ class InvalidCalculationID(Exception):
     """
 
 
-def build_weights(realizations):
-    """
-    :returns: an array with the realization weights of shape R
-    """
-    arr = numpy.array([rlz.weight[-1] for rlz in realizations])
-    return arr
-
-
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -607,7 +599,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
-            self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
@@ -688,13 +679,11 @@ class HazardCalculator(BaseCalculator):
                     self.datastore.parent['oqparam'].risk_imtls)
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-            self.realizations = self.csm.full_lt.get_realizations()
         elif 'full_lt' in self.datastore:
             # for instance in classical damage case_8a
-            self.realizations = self.datastore['full_lt'].get_realizations()
+            pass
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.realizations = fake.get_realizations()
 
     @general.cached_property
     def R(self):
@@ -1019,13 +1008,13 @@ class HazardCalculator(BaseCalculator):
         :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
         if hasattr(self, 'full_lt'):  # no scenario
-            self.realizations = self.full_lt.get_realizations()
-            if len(self.realizations) == 0:
+            if self.full_lt.get_num_paths() == 0:
                 raise RuntimeError('Empty logic tree: too much filtering?')
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-        self.datastore['weights'] = arr = build_weights(self.realizations)
-        self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+        if 'weights' not in self.datastore:
+            self.datastore['weights'] = F32(
+                [rlz.weight[-1] for rlz in self.full_lt.get_realizations()])
         if rel_ruptures:
             self.check_discardable(rel_ruptures)
 

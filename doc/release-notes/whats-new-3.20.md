@@ -1,3 +1,6 @@
+Release notes v3.20
+===================
+
 Version 3.20 is the culmination of 3 months of work involving over 220
 pull requests. It is aimed at users wanting the latest features, bug fixes
 and maximum performance. Users valuing stability may want to stay with

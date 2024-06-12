@@ -95,7 +95,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if '_rates' not in self.datastore:  # when building short report
             return
         full_lt = self.datastore['full_lt'].init()
-        self.realizations = full_lt.get_realizations()
         stats = list(oq.hazard_stats().items())
         oq._stats = stats
         oq._weights = full_lt.weights

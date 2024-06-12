@@ -130,7 +130,7 @@ class Comparator(object):
 
     def compare(self, what, imt, files, samplesites, rtol, atol):
         sids = self.getsids(samplesites)
-        if what == 'uhs':
+        if what == 'uhs':  # imt is -1, the last poe
             arrays = self.getuhs(what, imt, sids, rtol, atol)
         elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
@@ -169,6 +169,17 @@ class Comparator(object):
         else:
             print(views.text_table(rows['all'], header, ext='org'))
         return arrays
+
+
+def compare_rates(calc_1: int, calc_2: int):
+    """
+    Compare the ruptures affecting the given site ID as pandas DataFrames
+    """
+    with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
+        df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
+        df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
+    delta = numpy.abs(df1 - df2).to_numpy().max()
+    print('Maximum difference in the rates =%s' % delta)
 
 
 # works only locally for the moment
@@ -441,6 +452,7 @@ main = dict(rups=compare_rups,
             uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
+            rates=compare_rates,
             avg_gmf=compare_avg_gmf,
             med_gmv=compare_med_gmv,
             risk_by_event=compare_risk_by_event,

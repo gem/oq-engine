@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source, geo, valid
+from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)
@@ -45,9 +45,10 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
-from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.getters import get_ebrupture, MapGetter
 from openquake.calculators.extract import extract
 
+TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
@@ -961,14 +962,14 @@ def view_extreme_gmvs(token, dstore):
 @view.add('mean_rates')
 def view_mean_rates(token, dstore):
     """
-    Display mean hazard rates for the first site
+    Display mean hazard rates, averaged on the sites
     """
     oq = dstore['oqparam']
-    assert oq.use_rates
-    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
-    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    poes = dstore.sel('hcurves-stats', stat='mean')  # shape (N, 1, M, L1)
+    mean_rates = calc.disagg.to_rates(poes).mean(axis=0)[0]  # shape (M, L1)
+    rates = numpy.zeros(mean_rates.shape[1], dt(oq.imtls))
     for m, imt in enumerate(oq.imtls):
-        rates[imt] = calc.disagg.to_rates(poes[m])
+        rates[imt] = mean_rates[m]
     return rates
 
 
@@ -1362,6 +1363,28 @@ def view_composite_source_model(token, dstore):
     return numpy.array(lst, dt('grp_id trt num_sources'))
 
 
+@view.add('gids')
+def view_gids(token, dstore):
+    """
+    Show the meaning of the gids indices
+    """
+    full_lt = dstore['full_lt']
+    ws = dstore['weights'][:]
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gid = 0
+    data = []
+    for trt_smrs in all_trt_smrs:
+        for g, (gsim, rlzs) in enumerate(
+                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
+            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
+            if len(ts) == 1:
+                ts = ts[0]
+            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
+                         ws[rlzs].sum(), len(rlzs)))
+            gid += 1
+    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
+
+
 @view.add('branches')
 def view_branches(token, dstore):
     """
@@ -1702,11 +1725,14 @@ def view_aggrisk(token, dstore):
     """
     Returns a table with the aggregate risk by realization and loss type
     """
-    gsim_lt = dstore['full_lt/gsim_lt']
+    oq = dstore['oqparam']
     K = dstore['risk_by_event'].attrs.get('K', 0)
     df = dstore.read_df('aggrisk', sel={'agg_id': K})
+    if 'damage' in oq.calculation_mode:
+        return df
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
+    gsim_lt = dstore['full_lt/gsim_lt']
     rlzs = list(gsim_lt)
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
@@ -1721,3 +1747,34 @@ def view_aggrisk(token, dstore):
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr
+
+
+@view.add('fastmean')
+def view_fastmean(token, dstore):
+    """
+    Compute the mean hazard curves for the given site from the rates
+    """
+    site_id = int(token.split(':')[1])
+    oq = dstore['oqparam']
+    ws = dstore['weights'][:]
+    gweights =  dstore['gweights'][:]
+    slicedic = AccumDict(accum=[])
+    for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
+        slicedic[idx].append((start, stop))
+    M = len(oq.imtls)
+    L1 = oq.imtls.size // M
+    array = numpy.zeros(L1, oq.imt_dt(F32))
+    for slices in slicedic.values():
+        pgetter = MapGetter(dstore.filename, gweights, len(ws), slices, oq)
+        pgetter.init()
+        pmap = pgetter.get_fast_mean(gweights)
+        for idx, sid in enumerate(pmap.sids):
+            if sid == site_id:
+                for m, imt in enumerate(oq.imtls):
+                    array[imt] = pmap.array[idx, m]
+    return array
+
+
+@view.add('gw')
+def view_gw(token, dstore):
+    return numpy.round(dstore['gweights'][:].sum(), 3)

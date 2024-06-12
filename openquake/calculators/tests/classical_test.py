@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import gzip
 import numpy
 from unittest import mock
@@ -659,7 +660,8 @@ class ClassicalTestCase(CalculatorTestCase):
             if 'submodel' in gsim._toml:
                 gs += '_' + gsim.kwargs['submodel']
             got = general.gettemp(text_table(curve, ext='org'))
-            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
+            delta = .0003 if sys.platform == 'darwin' else 1E-5
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM

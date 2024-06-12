@@ -52,7 +52,7 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
+from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3, get_dist
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.risklib.countries import code2country
@@ -455,8 +455,14 @@ def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
     xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
     tree = cKDTree(xyz_all)
     idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+
+    # then fine filtering
+    sm = sm[idxs]
+    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
     if len(idxs) < len(sm):
         logging.info('Filtering %d/%d sites', len(idxs), len(sm))
     if mesh is not None:
@@ -1097,7 +1103,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
     :param exp_types: the expected loss types
-    :returns: (site collection, asset collection, discarded)
+    :returns: (site collection, asset collection, discarded, exposure)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
