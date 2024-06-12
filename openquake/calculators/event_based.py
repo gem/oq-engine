@@ -171,7 +171,6 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
-    complete = srcfilter.sitecol.complete
     proxy.geom = rupgeoms[proxy['geom_id']]
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
@@ -180,10 +179,9 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
         stations = numpy.isin(sids, station_sitecol.sids)
         assert stations.sum(), 'There are no stations??'
         station_sids = sids[stations]
-        target_sids = sids[~stations]
         return ConditionedGmfComputer(
-            ebr, complete.filtered(target_sids),
-            complete.filtered(station_sids),
+            ebr, srcfilter.sitecol.filtered(sids),
+            srcfilter.sitecol.filtered(station_sids),
             station_data.loc[station_sids],
             oq.observed_imts,
             cmaker, oq.correl_model, oq.cross_correl,
@@ -192,7 +190,7 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
             oq._amplifier, oq._sec_perils)
 
     return GmfComputer(
-        ebr, complete.filtered(sids), cmaker,
+        ebr, srcfilter.sitecol.filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 

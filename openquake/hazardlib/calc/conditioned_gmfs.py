@@ -240,7 +240,8 @@ class ConditionedGmfComputer(GmfComputer):
             with umon:
                 self.update(data, array, rlzs, [mea])
         with umon:
-            return self.strip_zeros(data)
+            df = self.strip_zeros(data)
+            return df
 
     def compute(self, gsim, rlzs, mea, tau, phi, rng):
         """
