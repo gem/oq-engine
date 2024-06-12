@@ -1,3 +1,6 @@
+  [Lana Todorovic]
+  * Improved secondary perils documentation
+
   [Michele Simionato]
   * Fixed the ordering of the realizations to depend on the source model
     branch path also in the case of full enumeration: this is crucial to
