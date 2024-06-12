@@ -1360,6 +1360,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        calc_aelo_version = ds.get('aelo_version', None)
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
@@ -1370,6 +1371,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       calc_aelo_version=calc_aelo_version,
                        warnings=warnings))
 
 
@@ -1465,7 +1467,7 @@ def license(request, **kwargs):
 
 @require_http_methods(['GET'])
 def aelo_changelog(request, **kwargs):
-    aelo_changelog = utils.get_aelo_changelog()
+    aelo_changelog = base.get_aelo_changelog()
     aelo_changelog_html = aelo_changelog.to_html(
         index=False, escape=False, classes='changelog', border=0)
     return render(request, "engine/aelo_changelog.html",
