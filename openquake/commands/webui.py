@@ -49,8 +49,8 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     """
     Start the webui server in foreground. Other webui commands can be launched
     after activating the openquake virtual environment, using Django’s
-    command-line utility for administrative tasks, e.g.: manage.py <command>
-    [options]
+    command-line utility for administrative tasks, e.g.:
+    manage.py <command> [options]
     """
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
