@@ -53,7 +53,7 @@ Install fixtures for cookie consent:
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui loaddata ./fixtures/0001_cookie_consent.json
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0001_cookie_consent.json
 ```
 
 Add a new local superuser:
