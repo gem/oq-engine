@@ -42,7 +42,6 @@ python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene, Michele Simionato]
   * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
-=======
 
   [Michele Simionato]
   * Added another check for missing gsim in scenario calculations

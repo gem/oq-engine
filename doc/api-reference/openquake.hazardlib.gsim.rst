@@ -872,22 +872,6 @@ manea_2021
     :undoc-members:
     :show-inheritance:
 
-macedo_2019
-----------------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.macedo_2019
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-macedo_2021
-----------------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.macedo_2021
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 mcverry_2006
 --------------------------------------------
 
