@@ -1725,11 +1725,14 @@ def view_aggrisk(token, dstore):
     """
     Returns a table with the aggregate risk by realization and loss type
     """
-    gsim_lt = dstore['full_lt/gsim_lt']
+    oq = dstore['oqparam']
     K = dstore['risk_by_event'].attrs.get('K', 0)
     df = dstore.read_df('aggrisk', sel={'agg_id': K})
+    if 'damage' in oq.calculation_mode:
+        return df
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
+    gsim_lt = dstore['full_lt/gsim_lt']
     rlzs = list(gsim_lt)
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
