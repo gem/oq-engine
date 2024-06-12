@@ -9,8 +9,6 @@ on:
         required: true
   schedule:
     - cron: "05 15 * * *"
-  push:
-    branches: [ cookie_consent ]
 
 jobs:
   test_ui:
@@ -84,9 +82,7 @@ jobs:
          source /opt/openquake/venv/bin/activate
          pip freeze
          mkdir /var/log/oq-engine/
-         mkdir /var/www
          chown -R openquake /var/log/oq-engine/
-         chown -R openquake /var/www
          runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver upgrade &'
          # Wait the DbServer to come up
          #echo "Waiting DBServer up on port 1907...."
@@ -99,23 +95,13 @@ jobs:
          echo "Add settings for login and logging on webui before to start"
          cd /__w/oq-engine/oq-engine/
          cd openquake/server
-         ls -lrt
-         cp local_settings.py.server local_settings.py
-         # Perform migration after setup local_settings
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
-         sleep 1
-         # Perform loaddata fixtures after migrate
-         ls -lrt fixtures/*
-         runuser -l openquake -c 'pwd'
-         runuser -l openquake -c 'ls -lrt /__w/oq-engine/oq-engine/openquake/server/fixtures/'
-         sleep 10
-         #runuser -l openquake -c '/opt/openquake/venv/bin/oq webui dumpdata --natural-foreign --natural-primary --exclude cookie.consent > cookie_consent.json'
-         #runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 -m openquake.server.manage loaddata ./fixtures/0001_cookie_consent.json'
-         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/oq webui loaddata ./fixtures/0001_cookie_consent.json'
-         sleep 1
-         # Perform collectstatic after setup local_settings
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui collectstatic'
-         sleep 1
+         cat > local_settings.py << EOF
+         LOCKDOWN = True
+         #
+         WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+         EOF
+         echo "DISPLAY content of local_settings"
+         cat local_settings.py
          # START WEBUI
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
          echo "Waiting WEBUI up on port 8800...."
