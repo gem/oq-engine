@@ -32,9 +32,11 @@ import psutil
 import numpy
 import pandas
 from PIL import Image
+import configparser
+import collections
 
 from openquake.commands.plot_assets import main as plot_assets
-from openquake.baselib import general, hdf5, python3compat
+from openquake.baselib import general, hdf5, python3compat, config
 from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
@@ -65,6 +67,38 @@ TWO32 = 2 ** 32
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
+
+
+def remove_heading_2_words(s):
+    return ' '.join(s.split(' ')[2:]) if isinstance(s, str) else s
+
+
+def get_aelo_changelog():
+    dic = collections.defaultdict(list)
+    c = configparser.ConfigParser()
+    changelog_path = os.path.join(
+        config.directory.mosaic_dir, 'aelo_changelog.ini')
+    c.read(changelog_path)
+    for sec in c.sections():
+        dic['AELO VERSION'].append(sec)
+        for k, v in c.items(sec):
+            dic[k].append(v)
+    df = pandas.DataFrame(dic)
+    df = df.drop(columns=['private'])
+    # NOTE: extracting version from a string like "AELO VERSION 1.0.0"
+    df['AELO VERSION'] = df['AELO VERSION'].apply(remove_heading_2_words)
+    df = df[~df['AELO VERSION'].str.startswith('_')]
+    df = df.applymap(
+        lambda x: (x.replace('\n', '<br>').lstrip('<br>')
+                   if isinstance(x, str) else x))
+    df.columns = df.columns.str.upper()
+    return df
+
+
+def get_aelo_version():
+    aelo_changelog = get_aelo_changelog()
+    aelo_version = aelo_changelog['AELO VERSION'][0]
+    return aelo_version
 
 
 def check_imtls(this, parent):
@@ -143,6 +177,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
         self.engine_version = logs.dbcmd('engine_version')
+        if hasattr(self.oqparam, 'asce_version'):
+            # FIXME is this the correct way to check if this is a AELO calc?
+            self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
         # check in the workers
         self._monitor = Monitor(
@@ -179,6 +216,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = self.engine_version
+        if hasattr(self, 'aelo_version'):
+            attrs['aelo_version'] = self.aelo_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()

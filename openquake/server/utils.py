@@ -20,16 +20,13 @@ import os
 import getpass
 import requests
 import logging
-import configparser
-import collections
-import pandas
 
 from time import sleep
 from django.conf import settings
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
-from openquake.baselib import config
+from openquake.calculators.base import get_aelo_version
 
 
 def is_superuser(request):
@@ -99,31 +96,6 @@ def user_has_permission(request, owner):
     return owner in get_valid_users(request) or not get_acl_on(request)
 
 
-def remove_heading_2_words(s):
-    return ' '.join(s.split(' ')[2:]) if isinstance(s, str) else s
-
-
-def get_aelo_changelog():
-    dic = collections.defaultdict(list)
-    c = configparser.ConfigParser()
-    changelog_path = os.path.join(
-        config.directory.mosaic_dir, 'aelo_changelog.ini')
-    c.read(changelog_path)
-    for sec in c.sections():
-        dic['AELO version'].append(sec)
-        for k, v in c.items(sec):
-            dic[k].append(v)
-    df = pandas.DataFrame(dic)
-    df = df.drop(columns=['private'])
-    df['AELO version'] = df['AELO version'].apply(remove_heading_2_words)
-    df = df[~df['AELO version'].str.startswith('_')]
-    df = df.applymap(
-        lambda x: (x.replace('\n', '<br>').lstrip('<br>')
-                   if isinstance(x, str) else x))
-    df.columns = df.columns.str.upper()
-    return df
-
-
 def oq_server_context_processor(request):
     """
     A custom context processor which allows injection of additional
@@ -158,9 +130,7 @@ def oq_server_context_processor(request):
     context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
     if settings.APPLICATION_MODE == 'AELO':
-        aelo_changelog = get_aelo_changelog()
-        aelo_version = aelo_changelog['AELO VERSION'][0]
-        context['aelo_version'] = aelo_version
+        context['aelo_version'] = get_aelo_version()
     return context
 
 
