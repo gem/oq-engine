@@ -32,7 +32,7 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_trts_around(rupdic, mosaic_dir):
+def get_trts_around(rupdic, exposure_hdf5):
     """
     :returns: list of TRTs for the mosaic model covering lon, lat
     """
@@ -43,8 +43,7 @@ def get_trts_around(rupdic, mosaic_dir):
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
     if mosaic_model == '???':
         raise ValueError(f'({lon}, {lat}) is not covered by the mosaic!')
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    with hdf5.File(smodel) as f:
+    with hdf5.File(exposure_hdf5) as f:
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
     logging.info('Considering %s[%s]: (%s, %s)',
@@ -101,19 +100,20 @@ def get_rupture_dict(dic):
 
 def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
-                            asset_hazard_distance, ses_seed, mosaic_dir):
+                            asset_hazard_distance, ses_seed,
+                            exposure_hdf5=None):
     """
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [expo],
-              'site_model': [smodel],
+    if exposure_hdf5 is None:
+        exposure_hdf5 = os.path.join(
+            config.directory.mosaic_dir, 'exposure.hdf5')
+    inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict)
     rupture_file = rupdic.pop('rupture_file')
     if trt is None:
-        trts, _ = get_trts_around(rupdic, mosaic_dir)
+        trts, _ = get_trts_around(rupdic, exposure_hdf5)
         trt = trts[0]
     params = dict(
         calculation_mode='scenario_risk',
@@ -131,7 +131,7 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = get_tmap_keys(expo, countries)
+    tmap_keys = get_tmap_keys(exposure_hdf5, countries)
     logging.root.handlers = []  # avoid breaking the logs
     allparams = []
     for key in tmap_keys:
@@ -166,7 +166,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', mosaic_dir=config.directory.mosaic_dir):
+             ses_seed='42', exposure_hdf5=None):
     """
     This script is meant to be called from the command-line
     """
@@ -176,7 +176,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         allparams = get_aristotle_allparams(
             rupture_dict, maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, mosaic_dir)
+            ses_seed, exposure_hdf5)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
@@ -203,6 +203,8 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
+                          'and vulnerability functions')
 
 if __name__ == '__main__':
     sap.run(main_cmd)

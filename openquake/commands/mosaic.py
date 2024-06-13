@@ -300,7 +300,7 @@ def callback(job_id, params, exc=None):
     aristotle_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(mosaic_dir='', *,
+def aristotle(exposure_hdf5=None, *,
               rupfname: str = FAMOUS,
               maximum_distance: int = 300,
               number_of_ground_motion_fields: int = 10):
@@ -310,7 +310,7 @@ def aristotle(mosaic_dir='', *,
     a directory containing two files site_model.hdf5 and exposure.hdf5
     with a well defined structure.
     """
-    if not mosaic_dir and not config.directory.mosaic_dir:
+    if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = None
     truncation_level = 3
@@ -326,19 +326,20 @@ def aristotle(mosaic_dir='', *,
             rupdic['strike'] = 0.
             rupdic['rupture_file'] = None
             usgs_id = rupdic['usgs_id']
-            main_cmd(usgs_id, rupture_file, rupdic, callback,
-                     maximum_distance=maximum_distance,
-                     trt=trt, truncation_level=truncation_level,
-                     number_of_ground_motion_fields=number_of_ground_motion_fields,
-                     asset_hazard_distance=asset_hazard_distance,
-                     ses_seed=ses_seed, mosaic_dir=mosaic_dir)
-    else: # assume .xml
+            main_cmd(
+                usgs_id, rupture_file, rupdic, callback,
+                maximum_distance=maximum_distance,
+                trt=trt, truncation_level=truncation_level,
+                number_of_ground_motion_fields=number_of_ground_motion_fields,
+                asset_hazard_distance=asset_hazard_distance,
+                ses_seed=ses_seed, exposure_hdf5=exposure_hdf5)
+    else:  # assume .xml
         main_cmd('FromFile', rupfname, None, callback,
                  maximum_distance=maximum_distance,
                  trt=trt, truncation_level=truncation_level,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
-                 ses_seed=ses_seed, mosaic_dir=mosaic_dir)
+                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
@@ -347,7 +348,7 @@ def aristotle(mosaic_dir='', *,
         sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
 
 
-aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
+aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
 aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
 aristotle.maximum_distance = 'Maximum distance in km'

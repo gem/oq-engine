@@ -237,6 +237,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
+                if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+                    try:
+                        self._plot_assets()
+                    except Exception:
+                        logging.error('', exc_info=True)
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
@@ -994,7 +999,6 @@ class HazardCalculator(BaseCalculator):
             save_agg_values(
                 self.datastore, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
-            self._plot_assets()
 
         if 'post_loss_amplification' in oq.inputs:
             df = pandas.read_csv(oq.inputs['post_loss_amplification']

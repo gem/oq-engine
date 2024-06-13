@@ -372,6 +372,10 @@ def get_mesh_exp(oqparam, h5=None):
         a pair (mesh, exposure) both of which can be None
     """
     exposure = get_exposure(oqparam, h5)
+    if oqparam.aristotle:
+        sm = get_site_model(oqparam, h5)
+        mesh = geo.Mesh(sm['lon'], sm['lat'])
+        return mesh, exposure
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
         return mesh, exposure
@@ -441,12 +445,11 @@ def rup_radius(rup):
     return radius
 
 
-def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
+def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
-    :param rup: a rupture object or a record with a 'hypo' field
+    :param rup: a rupture object
     :param dist: integration distance in km
-    :param mesh: if not None, also reduce the mesh
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
@@ -457,6 +460,7 @@ def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     xyz = spherical_to_cartesian(x, y, z)
 
     # first raw filtering
+    logging.info('kdtree filtering of the site model')
     tree = cKDTree(xyz_all)
     idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
 
@@ -465,8 +469,6 @@ def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
     if len(idxs) < len(sm):
         logging.info('Filtering %d/%d sites', len(idxs), len(sm))
-    if mesh is not None:
-        mesh.array = mesh.array[:, idxs]
     return sm[idxs]
 
 
@@ -537,16 +539,15 @@ def get_site_model(oqparam, h5=None):
     if h5 and 'site_model' in h5:
         return h5['site_model'][:]
 
-    fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
         # read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
-        return get_site_model_around(fnames[0], rup, dist)
+        return get_site_model_around(oqparam.inputs['exposure'][0], rup, dist)
 
     arrays = []
     sm_fieldsets = {}
-    for fname in fnames:
+    for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and not fname.endswith('.xml'):
             # parsing site_model.csv and populating arrays
             _smparse(fname, oqparam, arrays, sm_fieldsets)
@@ -648,16 +649,16 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:  # comes from a site_model.csv
-            if (oqparam.rupture_dict or oqparam.rupture_xml) and (
-                    'station_data' not in oqparam.inputs) and (
-                        not oqparam.infrastructure_connectivity_analysis):
-                # filter the far away sites
-                rup = get_rupture(oqparam)
-                dist = oqparam.maximum_distance('*')(rup.mag)
-                sm = get_site_model_around(h5.filename, rup, dist, mesh)
-            else:
-                sm = h5['site_model'][:]
+        if oqparam.aristotle and (
+                'station_data' not in oqparam.inputs) and (
+                    not oqparam.infrastructure_connectivity_analysis):
+            # filter the far away sites
+            rup = get_rupture(oqparam)
+            dist = oqparam.maximum_distance('*')(rup.mag)
+            [expo_hdf5] = oqparam.inputs['exposure']
+            sm = get_site_model_around(expo_hdf5, rup, dist)
+        elif h5 and 'site_model' in h5:
+            sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model

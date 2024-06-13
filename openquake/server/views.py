@@ -694,7 +694,7 @@ def aristotle_get_rupture_data(request):
     [rupdic] = res
     try:
         trts, mosaic_model = get_trts_around(
-            rupdic, config.directory.mosaic_dir)
+            rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
     except Exception as exc:
         usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
@@ -807,8 +807,7 @@ def aristotle_run(request):
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed,
-            config.directory.mosaic_dir)
+            asset_hazard_distance, ses_seed)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
