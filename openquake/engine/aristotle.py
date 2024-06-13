@@ -182,8 +182,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, user, None)
+    jobctxs = engine.create_jobs(allparams, 'warn', None, user, None)
     for params, job in zip(allparams, jobctxs):
         try:
             engine.run_jobs([job])
