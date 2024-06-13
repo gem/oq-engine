@@ -100,10 +100,14 @@ def get_rupture_dict(dic):
 
 def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
-                            asset_hazard_distance, ses_seed, exposure_hdf5):
+                            asset_hazard_distance, ses_seed,
+                            exposure_hdf5=None):
     """
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
+    if exposure_hdf5 is None:
+        exposure_hdf5 = os.path.join(
+            config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict)
@@ -166,9 +170,6 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
     """
     This script is meant to be called from the command-line
     """
-    if exposure_hdf5 is None:
-        exposure_hdf5 = os.path.join(
-            config.directory.mosaic_dir, 'exposure_hdf5')
     if rupture_dict is None:
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
