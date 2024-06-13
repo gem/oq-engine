@@ -520,14 +520,6 @@ coeffs_table
     :undoc-members:
     :show-inheritance:
 
-conditional_gmpe
------------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.conditional_gmpe
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 convertito_2012
 -----------------------------------------------
 
