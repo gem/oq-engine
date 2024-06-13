@@ -177,8 +177,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
         self.engine_version = logs.dbcmd('engine_version')
-        if hasattr(self.oqparam, 'asce_version'):
-            # FIXME is this the correct way to check if this is a AELO calc?
+        if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
             self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
         # check in the workers

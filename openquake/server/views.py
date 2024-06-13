@@ -1363,7 +1363,6 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         try:
             calc_aelo_version = ds.get_attr('/', 'aelo_version')
         except KeyError:
-            # FIXME: we may want to use a default like 1.0.0?
             calc_aelo_version = None
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
