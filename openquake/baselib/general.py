@@ -1273,7 +1273,7 @@ def random_filter(objects, reduction_factor, seed=42):
         df = pandas.DataFrame({
             col: random_filter(df[col], reduction_factor, seed)
             for col in df.columns})
-        return df.set_index(name)
+        return df.set_index(name) if name else df
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:

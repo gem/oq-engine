@@ -130,7 +130,7 @@ def gen_tasks(files, sample_assets, monitor):
             usecols=file.fields, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             if sample_assets:
-                df = general.random_filter(df, sample_assets)
+                df = general.random_filter(df, float(sample_assets))
             if len(df) == 0:
                 continue
             if 'ID_1' not in df.columns:  # happens for many islands
