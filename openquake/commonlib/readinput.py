@@ -647,16 +647,16 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:  # comes from a site_model.csv
-            if (oqparam.rupture_dict or oqparam.rupture_xml) and (
-                    'station_data' not in oqparam.inputs) and (
-                        not oqparam.infrastructure_connectivity_analysis):
-                # filter the far away sites
-                rup = get_rupture(oqparam)
-                dist = oqparam.maximum_distance('*')(rup.mag)
-                sm = get_site_model_around(h5.filename, rup, dist, mesh)
-            else:
-                sm = h5['site_model'][:]
+        if oqparam.aristotle and (
+                'station_data' not in oqparam.inputs) and (
+                    not oqparam.infrastructure_connectivity_analysis):
+            # filter the far away sites
+            rup = get_rupture(oqparam)
+            dist = oqparam.maximum_distance('*')(rup.mag)
+            [expo_hdf5] = oqparam.inputs['exposure']
+            sm = get_site_model_around(expo_hdf5, rup, dist, mesh)
+        elif h5 and 'site_model' in h5:
+            sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
