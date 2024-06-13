@@ -238,7 +238,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if self.result is not None:
                     self.post_execute(self.result)
                 if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
-                    self._plot_assets()
+                    try:
+                        self._plot_assets()
+                    except Exception:
+                        logging.error('', exc_info=True)
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
