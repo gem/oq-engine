@@ -372,6 +372,10 @@ def get_mesh_exp(oqparam, h5=None):
         a pair (mesh, exposure) both of which can be None
     """
     exposure = get_exposure(oqparam, h5)
+    if oqparam.aristotle:
+        sm = get_site_model(oqparam, h5)
+        mesh = geo.Mesh(sm['lon'], sm['lat'])
+        return mesh, exposure
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
         return mesh, exposure
@@ -441,12 +445,11 @@ def rup_radius(rup):
     return radius
 
 
-def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
+def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
-    :param rup: a rupture object or a record with a 'hypo' field
+    :param rup: a rupture object
     :param dist: integration distance in km
-    :param mesh: if not None, also reduce the mesh
     :returns: site model close to the rupture
     """
     with hdf5.File(site_model_hdf5) as f:
@@ -457,6 +460,7 @@ def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     xyz = spherical_to_cartesian(x, y, z)
 
     # first raw filtering
+    logging.info('kdtree filtering of the site model')
     tree = cKDTree(xyz_all)
     idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
 
@@ -465,8 +469,6 @@ def get_site_model_around(site_model_hdf5, rup, dist, mesh=None):
     idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
     if len(idxs) < len(sm):
         logging.info('Filtering %d/%d sites', len(idxs), len(sm))
-    if mesh is not None:
-        mesh.array = mesh.array[:, idxs]
     return sm[idxs]
 
 
@@ -654,7 +656,7 @@ def get_site_collection(oqparam, h5=None):
             rup = get_rupture(oqparam)
             dist = oqparam.maximum_distance('*')(rup.mag)
             [expo_hdf5] = oqparam.inputs['exposure']
-            sm = get_site_model_around(expo_hdf5, rup, dist, mesh)
+            sm = get_site_model_around(expo_hdf5, rup, dist)
         elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
