@@ -112,7 +112,7 @@ jobs:
          sleep 1
          # Perform migration after setup local_settings
          cd /__w/oq-engine/oq-engine/openquake/engine/
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
+         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
          sleep 1
          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
          echo -n "Test Standalone Tools pages"

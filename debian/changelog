@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Fixed the avg_gmf exporter in presence of a filtered site collection
+
+  [Lana Todorovic]
+  * Improved secondary perils documentation
+
+  [Michele Simionato]
   * Fixed the ordering of the realizations to depend on the source model
     branch path also in the case of full enumeration: this is crucial to
     get consistent results with the two approaches
