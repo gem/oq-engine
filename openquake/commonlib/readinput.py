@@ -537,16 +537,15 @@ def get_site_model(oqparam, h5=None):
     if h5 and 'site_model' in h5:
         return h5['site_model'][:]
 
-    fnames = oqparam.inputs['site_model']
     if oqparam.aristotle:
         # read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
-        return get_site_model_around(fnames[0], rup, dist)
+        return get_site_model_around(oqparam.inputs['exposure'][0], rup, dist)
 
     arrays = []
     sm_fieldsets = {}
-    for fname in fnames:
+    for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and not fname.endswith('.xml'):
             # parsing site_model.csv and populating arrays
             _smparse(fname, oqparam, arrays, sm_fieldsets)

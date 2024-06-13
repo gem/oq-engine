@@ -21,7 +21,7 @@ import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, performance, hdf5
+from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.commonlib.datastore import build_dstore_log
@@ -114,12 +114,17 @@ def build_site_model(grm_dir):
     Build the global site model starting from the CSV files in the
     global_risk_model directory
     """
+    factor = float(os.environ.get('OQ_SAMPLE_ASSETS', 1))
     dfs = []
     for cwd, dirs, files in os.walk(grm_dir):
         for f in files:
             if f.startswith('Site_model_') and f.endswith('.csv'):
                 print('Reading %s' % f)
-                dfs.append(pandas.read_csv(os.path.join(cwd, f)))
+                df = pandas.read_csv(os.path.join(cwd, f))
+                if factor < 1:
+                    df = general.random_filter(df, factor*10)
+                if len(df):
+                    dfs.append(df)
     columns = set()
     n = 0
     for df in dfs:
