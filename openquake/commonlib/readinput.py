@@ -652,7 +652,9 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.aristotle and (
+        if h5 and 'site_model' in h5:
+            sm = h5['site_model'][:]
+        elif oqparam.aristotle and (
                 'station_data' not in oqparam.inputs) and (
                     not oqparam.infrastructure_connectivity_analysis):
             # filter the far away sites
@@ -660,8 +662,6 @@ def get_site_collection(oqparam, h5=None):
             dist = oqparam.maximum_distance('*')(rup.mag)
             [expo_hdf5] = oqparam.inputs['exposure']
             sm = get_site_model_around(expo_hdf5, rup, dist)
-        elif h5 and 'site_model' in h5:
-            sm = h5['site_model'][:]
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
@@ -1035,7 +1035,7 @@ def get_exposure(oqparam, h5=None):
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.aristotle:
-            sm = get_site_model(oq)  # the site model around the rupture
+            sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(
                 fnames[0], gh3, oqparam.countries)
