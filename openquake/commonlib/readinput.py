@@ -543,7 +543,10 @@ def get_site_model(oqparam, h5=None):
         # read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
-        return get_site_model_around(oqparam.inputs['exposure'][0], rup, dist)
+        sm = get_site_model_around(oqparam.inputs['exposure'][0], rup, dist)
+        if h5:
+            h5['site_model'] = sm
+        return sm
 
     arrays = []
     sm_fieldsets = {}

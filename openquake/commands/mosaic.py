@@ -301,9 +301,10 @@ def callback(job_id, params, exc=None):
 
 
 def aristotle(exposure_hdf5=None, *,
-              rupfname: str = FAMOUS,
-              maximum_distance: int = 300,
-              number_of_ground_motion_fields: int = 10):
+              rupfname: str=FAMOUS,
+              maximum_distance: float=300.,
+              asset_hazard_distance: float=15.,
+              number_of_ground_motion_fields: int=10):
     """
     Run Aristotle calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
@@ -314,18 +315,20 @@ def aristotle(exposure_hdf5=None, *,
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = None
     truncation_level = 3
-    asset_hazard_distance = 15
     ses_seed = 42
     t0 = time.time()
     if rupfname.endswith('.csv'):
         rupture_file = None
-        for i, row in pandas.read_csv(rupfname).iterrows():
+        df = pandas.read_csv(rupfname)
+        for i, row in df.iterrows():
             rupdic = row.to_dict()
             rupdic['rake'] = 0.
             rupdic['dip'] = 90.
             rupdic['strike'] = 0.
             rupdic['rupture_file'] = None
             usgs_id = rupdic['usgs_id']
+            print('###################### %s [%d/%d] #######################' %
+                  (usgs_id, i + 1, len(df)))
             main_cmd(
                 usgs_id, rupture_file, rupdic, callback,
                 maximum_distance=maximum_distance,
