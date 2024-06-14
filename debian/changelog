@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: extended `Starmap.apply` to split DataFrames
   * Fixed the avg_gmf exporter in presence of a filtered site collection
 
   [Lana Todorovic]
