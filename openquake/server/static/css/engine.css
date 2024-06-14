@@ -199,7 +199,7 @@ nav.main-nav ul li.tools {
 
 footer.footer {
     background: #bebebe;
-    font-size: 16px;
+    font-size: 14px;
     position: fixed;
     bottom: 0;
     float: left;
@@ -412,4 +412,31 @@ table#aristotle-losses th td {
 
 #aristotle-losses-download {
   margin-top: 10px;
+}
+
+.changelog {
+    width: 80%;
+    margin: 50px auto;
+    border-collapse: collapse;
+}
+.changelog th, .changelog td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+}
+.changelog th {
+    background-color: #f2f2f2;
+}
+
+.changelog td:nth-child(1), .changelog th:nth-child(1) {
+    width: 15%;
+}
+.changelog td:nth-child(2), .changelog th:nth-child(2) {
+    width: 15%;
+}
+.changelog td:nth-child(3), .changelog th:nth-child(3) {
+    width: 15%;
+}
+.changelog td:nth-child(4), .changelog th:nth-child(4) {
+    width: 55%;
 }

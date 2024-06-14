@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import logging
 import operator
 import pandas
@@ -118,7 +119,7 @@ def store_tagcol(dstore):
     dstore.getitem('tagcol').attrs.update(dic)
 
 
-def gen_tasks(files, monitor):
+def gen_tasks(files, sample_assets, monitor):
     """
     Generate tasks of kind exposure_by_geohash for large files
     """
@@ -128,6 +129,8 @@ def gen_tasks(files, monitor):
             file.fname, names=file.header, dtype=CONV,
             usecols=file.fields, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
+            if sample_assets:
+                df = general.random_filter(df, float(sample_assets))
             if len(df) == 0:
                 continue
             if 'ID_1' not in df.columns:  # happens for many islands
@@ -162,7 +165,8 @@ def store(exposures_xml, dstore):
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
     dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
     dstore.swmr_on()
-    smap = Starmap.apply(gen_tasks, (files,),
+    sa = os.environ.get('OQ_SAMPLE_ASSETS')
+    smap = Starmap.apply(gen_tasks, (files, sa),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient

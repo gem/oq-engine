@@ -585,27 +585,30 @@ class EventBasedCalculator(base.HazardCalculator):
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
-        if oq.rupture_dict:
-            # the gsim_lt is read from the site_model.hdf5 file
+        if oq.aristotle:
+            # the gsim_lt is read from the exposure.hdf5 file
             mosaic_df = readinput.read_mosaic_df(buffer=1)
-            lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            if oq.rupture_dict:
+                lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            elif oq.rupture_xml:
+                hypo = readinput.get_rupture(oq).hypocenter
+                lonlat = [[hypo.x, hypo.y]]
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
-            sitemodel = oq.inputs.get('site_model', [''])[0]
-            if sitemodel.endswith('.hdf5'):
-                if oq.mosaic_model == '???':
-                    raise ValueError(
-                        '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
-                        oq.rupture_dict)
-                if oq.gsim != '[FromFile]':
-                    raise ValueError(
-                        'In Aristotle mode the gsim can not be specified in'
-                        ' the job.ini: %s' % oq.gsim)
-                if oq.tectonic_region_type == '*':
-                    raise ValueError(
-                        'The tectonic_region_type parameter must be specified')
-                gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                    sitemodel, oq.mosaic_model,
-                    oq.tectonic_region_type.encode('utf8'))
+            [expo_hdf5] = oq.inputs['exposure']
+            if oq.mosaic_model == '???':
+                raise ValueError(
+                    '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                    oq.rupture_dict)
+            if oq.gsim != '[FromFile]':
+                raise ValueError(
+                    'In Aristotle mode the gsim can not be specified in'
+                    ' the job.ini: %s' % oq.gsim)
+            if oq.tectonic_region_type == '*':
+                raise ValueError(
+                    'The tectonic_region_type parameter must be specified')
+            gsim_lt = logictree.GsimLogicTree.from_hdf5(
+                expo_hdf5, oq.mosaic_model,
+                oq.tectonic_region_type.encode('utf8'))
         elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %

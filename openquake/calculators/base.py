@@ -32,9 +32,11 @@ import psutil
 import numpy
 import pandas
 from PIL import Image
+import configparser
+import collections
 
 from openquake.commands.plot_assets import main as plot_assets
-from openquake.baselib import general, hdf5, python3compat
+from openquake.baselib import general, hdf5, python3compat, config
 from openquake.baselib import performance, parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
@@ -65,6 +67,31 @@ TWO32 = 2 ** 32
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
+
+
+def get_aelo_changelog():
+    dic = collections.defaultdict(list)
+    c = configparser.ConfigParser()
+    changelog_path = os.path.join(
+        config.directory.mosaic_dir, 'aelo_changelog.ini')
+    c.read(changelog_path)
+    for sec in c.sections():
+        dic['AELO_VERSION'].append(sec)
+        for k, v in c.items(sec):
+            dic[k].append(v)
+    df = pandas.DataFrame(dic)
+    df = df.drop(columns=['private'])
+    df = df.applymap(
+        lambda x: (x.replace('\n', '<br>').lstrip('<br>')
+                   if isinstance(x, str) else x))
+    df.columns = df.columns.str.upper()
+    return df
+
+
+def get_aelo_version():
+    aelo_changelog = get_aelo_changelog()
+    aelo_version = aelo_changelog['AELO_VERSION'][0]
+    return aelo_version
 
 
 def check_imtls(this, parent):
@@ -143,6 +170,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
         self.engine_version = logs.dbcmd('engine_version')
+        if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+            self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
         # check in the workers
         self._monitor = Monitor(
@@ -179,6 +208,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = self.engine_version
+        if hasattr(self, 'aelo_version'):
+            attrs['aelo_version'] = self.aelo_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()
@@ -237,6 +268,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
+                if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+                    try:
+                        self._plot_assets()
+                    except Exception:
+                        logging.error('', exc_info=True)
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
@@ -994,7 +1030,6 @@ class HazardCalculator(BaseCalculator):
             save_agg_values(
                 self.datastore, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
-            self._plot_assets()
 
         if 'post_loss_amplification' in oq.inputs:
             df = pandas.read_csv(oq.inputs['post_loss_amplification']
