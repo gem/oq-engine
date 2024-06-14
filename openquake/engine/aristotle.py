@@ -129,7 +129,7 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     if rupture_file:
         inputs['rupture_model'] = rupture_file
     if station_data_file:
-        inputs['station_data_file'] = station_data_file
+        inputs['station_data'] = station_data_file
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
