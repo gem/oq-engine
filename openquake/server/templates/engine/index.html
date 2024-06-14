@@ -84,7 +84,7 @@
               <div class="aristotle_form_row">
                 <label for"rupture_file">{{ aristotle_form_labels.rupture_file }}</label>
                 <input class="aristotle-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ aristotle_form_placeholders.rupture_file }}" >
-                <button type="button" id="clearFile">Clear File</button>
+                <button type="button" id="clearRuptureFile">Clear File</button>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
@@ -145,6 +145,11 @@
               <div class="aristotle_form_row">
                 <label for"ses_seed">{{ aristotle_form_labels.ses_seed }}</label>
                 <input class="aristotle-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ aristotle_form_placeholders.ses_seed }}" value="42"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"station_data_file">{{ aristotle_form_labels.station_data_file }}</label>
+                <input class="aristotle-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ aristotle_form_placeholders.station_data_file }}" >
+                <button type="button" id="clearStationDataFile">Clear File</button>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>

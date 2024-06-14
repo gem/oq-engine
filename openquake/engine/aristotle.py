@@ -101,6 +101,7 @@ def get_rupture_dict(dic):
 def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
                             asset_hazard_distance, ses_seed,
+                            station_data_file=None,
                             exposure_hdf5=None):
     """
     :returns: a list of dictionaries suitable for an Aristotle calculation
@@ -127,6 +128,8 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         inputs=inputs)
     if rupture_file:
         inputs['rupture_model'] = rupture_file
+    if station_data_file:
+        inputs['station_data_file'] = station_data_file
     oq = readinput.get_oqparam(params)
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
