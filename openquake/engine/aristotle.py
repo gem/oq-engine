@@ -169,7 +169,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', exposure_hdf5=None):
+             ses_seed='42', station_data_file=None, exposure_hdf5=None):
     """
     This script is meant to be called from the command-line
     """
@@ -179,7 +179,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         allparams = get_aristotle_allparams(
             rupture_dict, maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, exposure_hdf5)
+            ses_seed, station_data_file, exposure_hdf5)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
@@ -205,6 +205,7 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.station_data_file = 'CSV file with the station data (optional)'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
 

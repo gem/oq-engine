@@ -302,6 +302,7 @@ def callback(job_id, params, exc=None):
 
 def aristotle(exposure_hdf5=None, *,
               rupfname: str=FAMOUS,
+              station_data_file: str=None,
               maximum_distance: float=300.,
               asset_hazard_distance: float=15.,
               number_of_ground_motion_fields: int=10):
@@ -342,7 +343,8 @@ def aristotle(exposure_hdf5=None, *,
                  trt=trt, truncation_level=truncation_level,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
-                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5)
+                 ses_seed=ses_seed, station_data_file=station_data_file,
+                 exposure_hdf5=exposure_hdf5)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
@@ -354,6 +356,7 @@ def aristotle(exposure_hdf5=None, *,
 aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
 aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
+aristotle.station_data_file = 'CSV file with the station data (optional)'
 aristotle.maximum_distance = 'Maximum distance in km'
 aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
 
