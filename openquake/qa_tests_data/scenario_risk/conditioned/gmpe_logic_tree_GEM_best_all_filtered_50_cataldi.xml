@@ -11,18 +11,9 @@ xmlns:gml="http://www.opengis.net/gml"
         branchSetID="Shallow_Def"
         uncertaintyType="gmpeModel"
         >
-      <logicTreeBranch branchID="b1">
-        <uncertaintyModel>
-          [KothaEtAl2020ESHM20SlopeGeology]
-          c3_epsilon = 1.73205100
-        </uncertaintyModel>
-        <uncertaintyWeight>0.5</uncertaintyWeight>
-      </logicTreeBranch>
       <logicTreeBranch branchID="b2">
-        <uncertaintyModel>
-          BooreAtkinson2011
-        </uncertaintyModel>
-        <uncertaintyWeight>0.5</uncertaintyWeight>
+        <uncertaintyModel>BooreAtkinson2011</uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>    
   </logicTree>
