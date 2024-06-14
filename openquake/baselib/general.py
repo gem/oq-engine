@@ -360,7 +360,12 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
-    if isinstance(sequence, int):
+    if isinstance(sequence, pandas.DataFrame):
+        num_elements = len(sequence)
+        out = numpy.array_split(
+            sequence, num_elements if num_elements < hint else hint)
+        return out
+    elif isinstance(sequence, int):
         return split_in_slices(sequence, hint)
     elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
