@@ -1363,7 +1363,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         try:
             calc_aelo_version = ds.get_attr('/', 'aelo_version')
         except KeyError:
-            calc_aelo_version = None
+            calc_aelo_version = '1.0.0'
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:

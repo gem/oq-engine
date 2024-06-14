@@ -69,10 +69,6 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('len', U16)])
 
 
-def remove_first_2_words(s):
-    return ' '.join(s.split(' ')[2:]) if isinstance(s, str) else s
-
-
 def get_aelo_changelog():
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
@@ -85,8 +81,6 @@ def get_aelo_changelog():
             dic[k].append(v)
     df = pandas.DataFrame(dic)
     df = df.drop(columns=['private'])
-    # NOTE: extracting version from a string like "AELO VERSION 1.0.0"
-    df['AELO VERSION'] = df['AELO VERSION'].apply(remove_first_2_words)
     df = df.applymap(
         lambda x: (x.replace('\n', '<br>').lstrip('<br>')
                    if isinstance(x, str) else x))

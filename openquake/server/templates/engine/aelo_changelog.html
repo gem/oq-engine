@@ -1,6 +1,6 @@
 {% extends "engine/base.html" %}
 
-  <title>{% block title %}AELO version details{% endblock %}</title>
+  <title>{% block title %}AELO changelog{% endblock %}</title>
 
   {% block main %}
   {{ block.super }}
@@ -10,7 +10,7 @@
         <div id="oq-body-wrapper">
           <div class="span12">
             <div id="aelo_release_details">
-            <h3 style="text-align: center;">AELO changelog</h3>
+            <h2 style="text-align: center;">AELO changelog</h3>
             {{ aelo_changelog | safe  }}
             </div>
           </div>
