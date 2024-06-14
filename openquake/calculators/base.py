@@ -76,7 +76,7 @@ def get_aelo_changelog():
         config.directory.mosaic_dir, 'aelo_changelog.ini')
     c.read(changelog_path)
     for sec in c.sections():
-        dic['AELO VERSION'].append(sec)
+        dic['AELO_VERSION'].append(sec)
         for k, v in c.items(sec):
             dic[k].append(v)
     df = pandas.DataFrame(dic)
@@ -90,7 +90,7 @@ def get_aelo_changelog():
 
 def get_aelo_version():
     aelo_changelog = get_aelo_changelog()
-    aelo_version = aelo_changelog['AELO VERSION'][0]
+    aelo_version = aelo_changelog['AELO_VERSION'][0]
     return aelo_version
 
 
