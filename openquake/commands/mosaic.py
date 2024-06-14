@@ -356,7 +356,7 @@ def aristotle(exposure_hdf5=None, *,
 aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
 aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
-aristotle.station_data_file = 'CSV file with the station data (optional)'
+aristotle.station_data_file = 'CSV file with the station data'
 aristotle.maximum_distance = 'Maximum distance in km'
 aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
 

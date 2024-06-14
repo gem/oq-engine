@@ -205,7 +205,7 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
-main_cmd.station_data_file = 'CSV file with the station data (optional)'
+main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
 
