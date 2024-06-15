@@ -291,7 +291,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', fname)
 
-        
+
 def losses(aid, alt):
     E = len(alt.event_id.unique())
     losses = numpy.zeros(E, int)
