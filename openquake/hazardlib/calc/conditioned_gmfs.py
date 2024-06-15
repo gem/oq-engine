@@ -275,7 +275,7 @@ class ConditionedGmfComputer(GmfComputer):
             cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
             arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=num_events,
-                check_valid="warn", tol=1e-5, method="cholesky")
+                check_valid="raise", tol=1e-5, method="cholesky")
             gmf = exp(arr, imt != "MMI").T
         return gmf  # shapes (N, E)
 
