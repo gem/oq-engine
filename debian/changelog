@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the issue of small negative eigenvalues in conditioned GMFs
+    calculations by adding a correlation_cutoff
   * Internal: extended `Starmap.apply` to split DataFrames
   * Fixed the avg_gmf exporter in presence of a filtered site collection
 
