@@ -154,10 +154,8 @@ class StarmapTestCase(unittest.TestCase):
     def test_apply_to_dataframe(self):
         orig_df = pandas.DataFrame(dict(mag=[5.0, 5.1, 5.2, 5.3],
                                         dist=[100., 110., 120., 99.]))
-        dfs = []
-        for df in parallel.Starmap.apply(process_df, (orig_df,)):
-            dfs.append(df)
-        out_df = pandas.concat(dfs).sort_values('mag')
+        smap = parallel.Starmap.apply(process_df, (orig_df,))
+        out_df = pandas.concat(smap).sort_values('mag')
         self.assertEqual(list(out_df.mag), [5.0, 5.1, 5.2, 5.3])
         self.assertEqual(list(out_df.dist), [200.0, 220.0, 240.0, 198.0])
 
