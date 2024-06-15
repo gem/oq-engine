@@ -285,4 +285,3 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                               ignore_gsd_fields, delta=1E-5)
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
-
