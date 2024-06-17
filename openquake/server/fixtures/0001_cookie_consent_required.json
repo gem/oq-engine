@@ -1,19 +1,6 @@
 [
 {
     "model": "cookie_consent.cookiegroup",
-    "pk": 2,
-    "fields": {
-        "varname": "social",
-        "name": "Social media",
-        "description": "Used to collect anonymous statistics.",
-        "is_required": false,
-        "is_deletable": true,
-        "ordering": 0,
-        "created": "2022-03-17T14:29:13.596Z"
-    }
-},
-{
-    "model": "cookie_consent.cookiegroup",
     "pk": 3,
     "fields": {
         "varname": "required",
@@ -22,19 +9,7 @@
         "is_required": true,
         "is_deletable": true,
         "ordering": 0,
-        "created": "2022-03-17T15:04:22.896Z"
-    }
-},
-{
-    "model": "cookie_consent.cookie",
-    "pk": 2,
-    "fields": {
-        "cookiegroup": 2,
-        "name": "*",
-        "description": "",
-        "path": "/",
-        "domain": ".google.com",
-        "created": "2022-03-17T15:03:38.616Z"
+        "created": "2024-06-17T15:04:22.896Z"
     }
 },
 {
@@ -46,7 +21,7 @@
         "description": "",
         "path": "/",
         "domain": "",
-        "created": "2022-03-17T15:05:07.063Z"
+        "created": "2024-06-17T15:05:07.063Z"
     }
 },
 {
@@ -58,7 +33,7 @@
         "description": "",
         "path": "/",
         "domain": "",
-        "created": "2022-03-17T15:05:21.282Z"
+        "created": "2024-06-17T15:05:21.282Z"
     }
 }
 ]

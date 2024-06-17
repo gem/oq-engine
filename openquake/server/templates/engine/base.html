@@ -127,5 +127,8 @@
   {% if application_mode != 'PUBLIC' %}
   {% include "./includes/cookie_bar.html" %}
   {% endif %}
+  {% if application_mode != 'TOOLS_ONLY' %}
+  {% include "./includes/cookie_analytics.html" %}
+  {% endif %}
 </body>
 </html>
