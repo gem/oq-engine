@@ -3,8 +3,8 @@
     "model": "cookie_consent.cookiegroup",
     "pk": 3,
     "fields": {
-        "varname": "required",
-        "name": "Required cookies",
+        "varname": "essential",
+        "name": "Essential cookies",
         "description": "These cookies are necessary for the website to function properly.",
         "is_required": true,
         "is_deletable": true,
