@@ -194,6 +194,8 @@ WEBUI = True
 
 MAX_AELO_SITE_NAME_LEN = 256
 
+GOOGLE_ANALYTICS_TOKEN = None
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (

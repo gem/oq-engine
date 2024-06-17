@@ -53,7 +53,14 @@ Install fixtures for cookie consent:
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0001_cookie_consent.json
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0001_cookie_consent_required.json
+```
+
+If the current installation requires Google Analytics, please add the `GOOGLE_ANALITICS_TOKEN` to `local_settings.py` and install another optional fixture:
+
+```console
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0002_cookie_consent_analytics.json
 ```
 
 Add a new local superuser:

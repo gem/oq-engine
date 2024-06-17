@@ -126,6 +126,7 @@ def oq_server_context_processor(request):
     context['server_name'] = settings.SERVER_NAME
     context['tools_only'] = settings.APPLICATION_MODE == 'TOOLS_ONLY'
     context['announcements'] = announcements
+    context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
     return context
 
 
