@@ -1,7 +1,7 @@
 [
 {
     "model": "cookie_consent.cookiegroup",
-    "pk": 2,
+    "pk": 3,
     "fields": {
         "varname": "analytics",
         "name": "Google Analytics",
@@ -14,9 +14,9 @@
 },
 {
     "model": "cookie_consent.cookie",
-    "pk": 2,
+    "pk": 4,
     "fields": {
-        "cookiegroup": 2,
+        "cookiegroup": 3,
         "name": "*",
         "description": "",
         "path": "/",
