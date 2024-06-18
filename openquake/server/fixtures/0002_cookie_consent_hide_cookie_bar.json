@@ -4,7 +4,7 @@
     "pk": 2,
     "fields": {
         "varname": "hide_cookie_bar_group",
-        "name": "Optional cookie to hide/show cookie bar",
+        "name": "Optional cookie to hide the cookie bar",
         "description": "",
         "is_required": false,
         "is_deletable": true,
