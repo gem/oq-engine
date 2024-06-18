@@ -41,6 +41,7 @@
                             }
                             return cookieValue;
                         };
+                        /* We may want to logout the user when pressing 'Decline all'
                         const csrftoken = getCookie('csrftoken');
                         fetch("{% url 'logout' %}", {
                             method: 'POST',
@@ -56,6 +57,7 @@
                             }
                         })
                         .catch(error => console.error('Error:', error));
+                        */
                     }
                 });
             });
