@@ -20,3 +20,11 @@ def no_optional_cookie_groups_except_hide_cookie_bar_exist(request):
         return True
     else:
         return False
+
+
+@register.simple_tag()
+def hide_cookie_bar_accepted(request):
+    from cookie_consent.util import get_cookie_value_from_request
+    return get_cookie_value_from_request(
+        request, "hide_cookie_bar_group",
+        "hide_cookie_bar_group:hide_cookie_bar")
