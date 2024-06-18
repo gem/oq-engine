@@ -18,9 +18,9 @@
             $(document).ready(function() {
                 showCookieBar({
                     {% if no_optional_groups %}
-                    content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}<div class="cookie-bar">This site needs essential cookies to function properly. <a href="{{ url_accept }}" class="cc-cookie-accept">Accept and continue</a> <a href="{{ url_decline }}" class="cc-cookie-decline" style="display: none;">Decline and logout</a> <a href="{{ url_cookies }}">Cookies info</a></div>{% endwith %}{% endfilter %}",
+                    content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}<div class="cookie-bar">This site needs essential cookies to function properly. <a href="{{ url_accept }}" class="cc-cookie-accept">Accept and continue</a> <a href="{{ url_decline }}" class="cc-cookie-decline" style="display: none;">Decline</a> <a href="{{ url_cookies }}">Cookies info</a></div>{% endwith %}{% endfilter %}",
                     {% else %} {# at least one group of optional cookies exists #}
-                    content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}<div class="cookie-bar">This site uses {# cookie_groups #} cookies for better performance and user experience. <a href="{{ url_accept }}" class="cc-cookie-accept">Accept all and continue</a> <a href="{{ url_decline }}" class="cc-cookie-decline">Decline all and logout</a> <a href="{{ url_cookies }}">Customize cookies</a></div>{% endwith %}{% endfilter %}",
+                    content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}<div class="cookie-bar">This site uses {# cookie_groups #} cookies for better performance and user experience. <a href="{{ url_accept }}" class="cc-cookie-accept">Accept all and continue</a> <a href="{{ url_decline }}" class="cc-cookie-decline">Decline all</a> <a href="{{ url_cookies }}">Customize cookies</a></div>{% endwith %}{% endfilter %}",
                     {% endif %}
                     cookie_groups: cookie_groups,
                     cookie_decline: "{% get_decline_cookie_groups_cookie_string request cookie_groups %}",
@@ -50,7 +50,7 @@
                             },
                         }).then(response => {
                             if (response.ok) {
-                                window.location.href = '/'; // Redirect to the homepage or any other page after logout
+                                window.location.href = '/'; // Redirect to the homepage
                             } else {
                                 console.error('Logout failed');
                             }

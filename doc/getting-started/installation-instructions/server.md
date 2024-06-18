@@ -67,7 +67,7 @@ If the current installation requires Google Analytics, please add the `GOOGLE_AN
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0002_cookie_consent_analytics.json
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0003_cookie_consent_analytics.json
 ```
 
 Add a new local superuser:
