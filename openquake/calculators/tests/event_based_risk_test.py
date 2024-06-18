@@ -611,6 +611,9 @@ agg_id
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
 
+        # test that imported ruptures can be exported
+        export(('ruptures', 'csv'), self.calc.datastore)
+
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario
         self.run_calc(recompute.__file__, 'job_scenario.ini')
