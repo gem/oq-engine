@@ -1,7 +1,14 @@
   [Kyle Smith]
-  * Added a new gsim file sandikkaya_2017.py to implement the
+  * Added a new gsim file sandikkaya_akkar_2017.py to implement the
     Arias Intensity and Cumulative Absoloute Velocity ground motion 
     models from Sandikkaya and Akkar (2017).
+
+  [Michele Simionato]
+  * Fixed exporting the ruptures when imported from a CSV
+  * Fixed the issue of small negative eigenvalues in conditioned GMFs
+    calculations by adding a correlation_cutoff
+  * Internal: extended `Starmap.apply` to split DataFrames
+  * Fixed the avg_gmf exporter in presence of a filtered site collection
 
   [Lana Todorovic]
   * Improved secondary perils documentation

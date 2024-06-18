@@ -1375,7 +1375,10 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        if 'source_mags' not in dstore:  # ruptures import from CSV
+            mags = numpy.unique(dstore['ruptures']['mag'])
+        else:
+            mags = dstore[f'source_mags/{rgetter.trt}'][:]
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:
