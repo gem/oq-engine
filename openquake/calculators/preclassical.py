@@ -191,6 +191,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         csm = self.csm
         self.store()
+        logging.info('Building cmakers')
         self.cmakers = read_cmakers(self.datastore, csm)
         trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
@@ -199,10 +200,16 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gt = len(self.full_lt.get_trt_rlzs(trt_smrs))
+        Gfull = self.full_lt.gfull(trt_smrs)
+        gweights = self.full_lt.g_weights(trt_smrs)
+        self.datastore['gweights'] = gweights
+
+        Gt = len(gweights)
+        extra = f'<{Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
-        logging.warning(f'The global pmap would require %s ({Gt=})',
-                        general.humansize(nbytes))
+        # Gt is known before starting the preclassical
+        logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+                        general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -248,6 +255,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = self.cmakers[grp_id]
+            cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
@@ -341,6 +349,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Raise an error if the sources were all discarded
         """
+        self.datastore.create_dset(
+            'weights',
+            F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
         totsites = sum(row[source_reader.NUM_SITES]
                        for row in self.csm.source_info.values())
         if totsites == 0:

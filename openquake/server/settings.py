@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -227,7 +227,6 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-
 if APPLICATION_MODE in ('TOOLS_ONLY',):
     # add installed_apps for cookie-consent and corsheader
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
@@ -299,14 +298,14 @@ if LOCKDOWN:
         'openquake.server.middleware.LoginRequiredMiddleware',
     )
 
-    INSTALLED_APPS += (
-        'django.contrib.auth',
-        'django.contrib.contenttypes',
-        'django.contrib.messages',
-        'django.contrib.sessions',
-        'django.contrib.admin',
-        'openquake.server.announcements',
-        )
+    for app in ('django.contrib.auth',
+                'django.contrib.contenttypes',
+                'django.contrib.messages',
+                'django.contrib.sessions',
+                'django.contrib.admin',
+                'openquake.server.announcements',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
 
     # Official documentation suggests to override the entire TEMPLATES
     TEMPLATES = [

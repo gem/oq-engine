@@ -1,5 +1,5 @@
-Scenario Risk Outputs
-=====================
+Scenario Risk
+=============
 
 The Scenario Risk Calculator produces the following set of output files:
 

@@ -770,6 +770,8 @@ class Realization(object):
     Generic Realization object with attributes value, weight, ordinal, lt_path,
     samples.
     """
+    __slots__ = ['value', 'weight', 'ordinal', 'lt_path', 'samples']
+
     def __init__(self, value, weight, ordinal, lt_path, samples=1):
         self.value = value
         self.weight = weight

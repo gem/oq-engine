@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.19.0-git4c037a7582', start_date='2024-01-12T06:37:06', checksum=397494009, investigation_time=None, risk_investigation_time=None"
+#,,,,"generated_by='OpenQuake engine 3.21.0-git4f0e60bf2d', start_date='2024-06-13T09:09:23', checksum=397494009, investigation_time=None, risk_investigation_time=None"
 asset_id,taxonomy,lon,lat,structural
 road1962,EMCA_PRIM_2L,74.45000,42.97000,3.75281E+03
 bridge481,steel_spl,74.61400,42.84800,2.01888E+04

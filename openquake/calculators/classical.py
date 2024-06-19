@@ -55,13 +55,13 @@ slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 # NB: using 32 bit ratemaps
-def get_pmaps_gb(dstore):
+def get_pmaps_gb(dstore, full_lt=None):
     """
     :returns: memory required on the master node to keep the pmaps
     """
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
-    full_lt = dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt'].init()
     all_trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(all_trt_smrs)
     gids = full_lt.get_gids(all_trt_smrs)
@@ -291,7 +291,7 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.itime = oq.investigation_time
-        self.weig = dstore['_rates/weig'][:]
+        self.weig = dstore['gweights'][:]
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
@@ -498,8 +498,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        self.datastore['_rates/weig'] = self.full_lt.g_weights(self.trt_rlzs)
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(
+            self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -551,6 +551,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         for cm in self.cmakers:
+            cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
@@ -603,6 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         for cm in self.cmakers:
+            cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
@@ -683,7 +685,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _create_hcurves_maps(self):
         oq = self.oqparam
         N = len(self.sitecol)
-        R = len(self.realizations)
+        R = len(self.datastore['weights'])
         if oq.individual_rlzs is None:  # not specified in the job.ini
             individual_rlzs = (N == 1) * (R > 1)
         else:
@@ -745,15 +747,14 @@ class ClassicalCalculator(base.HazardCalculator):
         nslices = sum(len(slices) for slices in allslices)
         logging.info('There are %.1f slices of rates per task',
                      nslices / len(slicedic))
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         if oq.fastmean:
-            ws = self.datastore['weights'][:]
-            weights = numpy.array([ws[trs % TWO24].sum() for trs in trt_rlzs])
-            trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+            weights = dstore['gweights'][:]
+            trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
         else:
+            if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+                trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
+            else:
+                trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
             weights = self.full_lt.weights
         wget = self.full_lt.wget
         allargs = [

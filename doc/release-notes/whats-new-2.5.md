@@ -58,7 +58,7 @@ measure types, realization and sites; it can easily become quite
 large. Thanks to the `disagg_outputs` feature, the user can specify on
 the `job.ini` file which kind of outputs should be exported. For
 instance, if the user is interested only in the magnitude-distance
-disaggregation, she can set
+disaggregation, the user can set
 
    `disagg_outputs = Mag_Dist`
   

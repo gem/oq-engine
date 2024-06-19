@@ -360,7 +360,12 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
-    if isinstance(sequence, int):
+    if isinstance(sequence, pandas.DataFrame):
+        num_elements = len(sequence)
+        out = numpy.array_split(
+            sequence, num_elements if num_elements < hint else hint)
+        return out
+    elif isinstance(sequence, int):
         return split_in_slices(sequence, hint)
     elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
@@ -497,7 +502,7 @@ def extract_dependencies(lines):
         except ValueError:  # for instance a comment
             continue
         if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam'):
+                   'python_pam', 'django_cors_headers', 'django_cookie_consent'):
             # not importable
             continue
         if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
@@ -516,7 +521,7 @@ def extract_dependencies(lines):
             pkg = 'shapefile'
         yield pkg, version
 
-    
+
 def check_dependencies():
     """
     Print a warning if we forgot to update the dependencies.
@@ -1268,12 +1273,10 @@ def random_filter(objects, reduction_factor, seed=42):
         return objects
     rnd = random.Random(seed)
     if isinstance(objects, pandas.DataFrame):
-        name = objects.index.name
-        df = objects.reset_index()
         df = pandas.DataFrame({
-            col: random_filter(df[col], reduction_factor, seed)
-            for col in df.columns})
-        return df.set_index(name)
+            col: random_filter(objects[col], reduction_factor, seed)
+            for col in objects.columns})
+        return df
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
@@ -1715,7 +1718,7 @@ def smart_concat(arrays):
     dt = arrays[0][common].dtype
     return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
 
-    
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
@@ -1772,4 +1775,4 @@ def loada(arr):
     23
     """
     return pickle.loads(bytes(arr))
-    
+

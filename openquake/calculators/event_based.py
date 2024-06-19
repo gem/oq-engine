@@ -171,7 +171,6 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
-    complete = srcfilter.sitecol.complete
     proxy.geom = rupgeoms[proxy['geom_id']]
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
@@ -180,10 +179,9 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
         stations = numpy.isin(sids, station_sitecol.sids)
         assert stations.sum(), 'There are no stations??'
         station_sids = sids[stations]
-        target_sids = sids[~stations]
         return ConditionedGmfComputer(
-            ebr, complete.filtered(target_sids),
-            complete.filtered(station_sids),
+            ebr, srcfilter.sitecol.filtered(sids),
+            srcfilter.sitecol.filtered(station_sids),
             station_data.loc[station_sids],
             oq.observed_imts,
             cmaker, oq.correl_model, oq.cross_correl,
@@ -192,7 +190,7 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
             oq._amplifier, oq._sec_perils)
 
     return GmfComputer(
-        ebr, complete.filtered(sids), cmaker,
+        ebr, srcfilter.sitecol.filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
@@ -385,8 +383,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         if station_data is not None:
             if parallel.oq_distribute() == 'zmq':
-                logging.warning('Conditioned scenarios are not meant to be run'
-                                ' on a cluster')
+                logging.error('Conditioned scenarios are not meant to be run'
+                              ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
@@ -587,27 +585,30 @@ class EventBasedCalculator(base.HazardCalculator):
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
-        if oq.rupture_dict:
-            # the gsim_lt is read from the site_model.hdf5 file
+        if oq.aristotle:
+            # the gsim_lt is read from the exposure.hdf5 file
             mosaic_df = readinput.read_mosaic_df(buffer=1)
-            lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            if oq.rupture_dict:
+                lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            elif oq.rupture_xml:
+                hypo = readinput.get_rupture(oq).hypocenter
+                lonlat = [[hypo.x, hypo.y]]
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
-            sitemodel = oq.inputs.get('site_model', [''])[0]
-            if sitemodel.endswith('.hdf5'):
-                if oq.mosaic_model == '???':
-                    raise ValueError(
-                        '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
-                        oq.rupture_dict)
-                if oq.gsim != '[FromFile]':
-                    raise ValueError(
-                        'In Aristotle mode the gsim can not be specified in'
-                        ' the job.ini: %s' % oq.gsim)
-                if oq.tectonic_region_type == '*':
-                    raise ValueError(
-                        'The tectonic_region_type parameter must be specified')
-                gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                    sitemodel, oq.mosaic_model,
-                    oq.tectonic_region_type.encode('utf8'))
+            [expo_hdf5] = oq.inputs['exposure']
+            if oq.mosaic_model == '???':
+                raise ValueError(
+                    '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                    oq.rupture_dict)
+            if oq.gsim != '[FromFile]':
+                raise ValueError(
+                    'In Aristotle mode the gsim can not be specified in'
+                    ' the job.ini: %s' % oq.gsim)
+            if oq.tectonic_region_type == '*':
+                raise ValueError(
+                    'The tectonic_region_type parameter must be specified')
+            gsim_lt = logictree.GsimLogicTree.from_hdf5(
+                expo_hdf5, oq.mosaic_model,
+                oq.tectonic_region_type.encode('utf8'))
         elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
@@ -615,9 +616,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
-        rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-               oq.inputs['rupture_model'].endswith('.xml'))
-        if rup:
+        if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
             if bsets > 1:
@@ -662,7 +661,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     rup.tectonic_region_type)(rup.mag))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
-        self.realizations = fake.get_realizations()
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()

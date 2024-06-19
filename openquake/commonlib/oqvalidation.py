@@ -157,6 +157,12 @@ collect_rlzs:
   Example: *collect_rlzs=true*.
   Default: None
 
+correlation_cutoff:
+  Used in conditioned GMF calculation to avoid small negative eigenvalues
+  wreaking havoc with the numerics
+  Example: *correlation_cutoff = 1E-11*
+  Default: 1E-12
+
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
   so that the hazard curves can be compared.
@@ -987,6 +993,7 @@ class OqParam(valid.ParamSet):
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
+    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     cachedir = valid.Param(valid.utf8, '')
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -1402,6 +1409,13 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
+        
+        # check compute_rtgm will run
+        if 'rtgm' in self.postproc_func:
+            if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
+                raise InvalidFile('%s: the IMTs PGA, SA(0.2), and SA(1.0)'
+                                  ' are required to use compute_rtgm' % job_ini)
+
 
     def validate(self):
         """
@@ -1547,6 +1561,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
+        #if 'scenario' in self.calculation_mode:  # disable min_iml
+        #    return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
@@ -1777,6 +1793,11 @@ class OqParam(valid.ParamSet):
         except AttributeError:
             return None
         return cls()
+
+    @property
+    def rupture_xml(self):
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.xml'))
 
     @property
     def aristotle(self):

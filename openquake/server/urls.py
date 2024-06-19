@@ -39,9 +39,13 @@ if settings.WEBUI:
                 name="ini_defaults"),
     ]
     if settings.APPLICATION_MODE == 'AELO':
-        urlpatterns.append(
+        urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_aelo$',
-                    views.web_engine_get_outputs_aelo, name="outputs_aelo"))
+                    views.web_engine_get_outputs_aelo, name="outputs_aelo"),
+            re_path(r'^engine/aelo_changelog$',
+                    views.aelo_changelog,
+                    name="aelo_changelog"),
+        ]
     elif settings.APPLICATION_MODE == 'ARISTOTLE':
         urlpatterns.append(
             re_path(r'^engine/(\d+)/outputs_aristotle$',

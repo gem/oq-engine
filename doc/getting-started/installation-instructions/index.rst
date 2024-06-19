@@ -16,11 +16,14 @@ at least 2 GB of RAM per thread for hazard calculations and even more
 memory for risk calculations. For instance, on a recent i9 processor
 with 32 threads you would need at least 64 GB of RAM.
 
+If you want to use the latest feature of the engine you should install
+the latest available version, noting the there is a new version every 3-4
+months. If you want stability, you should install the Long Term
+Support version that changes only every two years.
+
 If you have a Windows machine and you are not interested
 in developing with the engine, the recommended approach is to use
-the Windows installer:
-
-:ref:`Installing the OpenQuake Engine on Windows`
+the Windows installer: :ref:`windows`.
 
 If you have a Mac or Linux machine and you are not interested
 in developing with the engine, the recommended approach is to use
@@ -30,29 +33,8 @@ Users wanting to develop with the engine (for instance to implement
 new GMPES) must clone the engine reepository and
 use the :doc:`universal installer <universal>` in ``devel`` mode.
 
-Installing the Long Term Support (LTS) version
-----------------------------------------------
-
-**On Windows**
-
-Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.7-1.exe . 
-Then follow the wizard on screen.
-
-	Warning: Administrator level access may be required.
-
-**On MacOS or Linux**
-
-See instructions for the :doc:`universal installer <universal>` script, 
-and consider the specific LTS to be installed.
-
-Installing the latest version
------------------------------
-
-See instructions for the :doc:`universal installer <universal>` script. 
-This script works for Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
-
-Changing the OpenQuake Engine version
--------------------------------------
+Changing the version
+--------------------
 
 To change the version of the engine, make sure to uninstall the current version, before installing a new version.
 See the corresponding chapters following the link below.
@@ -69,19 +51,19 @@ The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/op
 in any Python 3 environment via ``pip``::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt openquake.engine
+	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-linux64.txt openquake.engine
 	```
 
 This works for Linux and Python 3.11. You can trivially adapt the command to other operating systems. For instance for Windows it would be::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-win64.txt openquake.engine
+	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-win64.txt openquake.engine
 	```
 
 and for Mac, it would be::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos.txt openquake.engine
+	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-macos.txt openquake.engine
 	```
 
 Cloud

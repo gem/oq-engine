@@ -464,6 +464,24 @@ def check_extent(lons, lats, msg=''):
     return int(dx), int(dy), int(dz)
 
 
+def get_bbox(lons, lats, xlons=(), xlats=()):
+    """
+    :returns: (minlon, minlat, maxlon, maxlat)
+    """
+    assert len(lons) == len(lats)
+    assert len(xlons) == len(xlats)
+    arr = numpy.empty(len(lons) + len(xlons), [('lon', float), ('lat', float)])
+    if len(xlons):
+        arr['lon'] = numpy.concatenate([lons, xlons])
+    else:
+        arr['lon'] = lons
+    if len(xlats):
+        arr['lat'] = numpy.concatenate([lats, xlats])
+    else:
+        arr['lat'] = lats
+    return get_bounding_box(arr, 0)
+
+
 def get_bounding_box(obj, maxdist):
     """
     Return the dilated bounding box of a geometric object.
@@ -632,7 +650,7 @@ class OrthographicProjection(object):
         else:
             return numpy.array([xx, yy, deps])
 
-        
+
 def get_middle_point(lon1, lat1, lon2, lat2):
     """
     Given two points return the point exactly in the middle lying on the same

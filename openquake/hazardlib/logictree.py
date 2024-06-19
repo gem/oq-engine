@@ -94,6 +94,7 @@ branch_dt = numpy.dtype([
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
+OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
 
 
 # this is very fast
@@ -226,7 +227,7 @@ def collect_info(smltpath, branchID=''):
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
                                 h5paths.add(hdf5file)
-                    if os.environ.get('OQ_REDUCE'):  # only take first branch
+                    if OQ_REDUCE:  # only take first branch
                         break
     return Info(sorted(smpaths), sorted(h5paths), applytosources)
 
@@ -554,7 +555,7 @@ class SourceModelLogicTree(object):
         bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
-        if os.environ.get('OQ_REDUCE'):  # only take first branch
+        if OQ_REDUCE:  # only take first branch
             branches = [branches[0]]
             branches[0].uncertaintyWeight.text = 1.
         values = []
@@ -651,12 +652,16 @@ class SourceModelLogicTree(object):
                 yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
                 ordinal += 1
         else:  # full enumeration
-            ordinal = 0
+            rlzs = []
             for weight, branches in self.root_branchset.enumerate_paths():
                 value = [br.value for br in branches]
                 branch_ids = [branch.branch_id for branch in branches]
-                yield Realization(value, weight, ordinal, tuple(branch_ids))
-                ordinal += 1
+                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlzs.append(rlz)
+            rlzs.sort(key=operator.attrgetter('pid'))
+            for r, rlz in enumerate(rlzs):
+                rlz.ordinal = r
+                yield rlz
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
@@ -980,9 +985,13 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
+    # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
+    # save little memory, from 95.3 GB down to 81.0 GB
+    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
+
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
         self.ordinal = ordinal
-        self.sm_lt_path = tuple(sm_lt_path)
+        self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
 
@@ -1011,6 +1020,20 @@ def _get_smr(source_id):
     suffix = source_id.split(';')[1]
     smr = suffix.split('.')[0]
     return int(smr)
+
+
+def _ddic(trtis, smrs, get_rlzs):
+    # returns a double dictionary trt_smr -> gsim -> rlzs
+    acc = AccumDict(accum=AccumDict(accum=[]))
+    for smr in smrs:
+        rlzs_sm = get_rlzs(smr)
+        for trti in trtis:
+            rbg = acc[smr + TWO24 * trti]
+            for rlz in rlzs_sm:
+                rbg[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+            acc[smr + TWO24 * trti] = {gsim: U32(rbg[gsim])
+                                       for gsim in sorted(rbg)}
+    return acc
 
 
 class FullLogicTree(object):
@@ -1065,8 +1088,8 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        if self.get_num_paths() >= 10_000:
-            logging.info('Building realizations')
+        R = self.get_num_paths()
+        logging.info('Building {:_d} realizations'.format(R))
         self.weights = numpy.array(
             [rlz.weight for rlz in self.get_realizations()])
         return self
@@ -1078,6 +1101,16 @@ class FullLogicTree(object):
         if self.num_samples:
             return weights[:, -1]
         return self.gsim_lt.wget(weights, imt)
+
+    def gfull(self, all_trt_smrs):
+        """
+        :returns: the total Gt = Σ_i G_i
+        """
+        Gt = 0
+        for trt_smrs in all_trt_smrs:
+            trt = self.trts[trt_smrs[0] // TWO24]
+            Gt += len(self.gsim_lt.values[trt])
+        return Gt
 
     def get_gids(self, all_trt_smrs):
         """
@@ -1101,12 +1134,15 @@ class FullLogicTree(object):
                 data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
         return data
 
-    def g_weights(self, trt_rlzs):
+    def g_weights(self, all_trt_smrs):
         """
         :returns: an array of weights of shape (Gt, 1) or (Gt, M+1)
         """
-        out = [self.weights[trs % TWO24].sum() for trs in trt_rlzs]
-        return numpy.array(out)
+        data = []
+        for trt_smrs in all_trt_smrs:
+            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(self.weights[rlzs].sum())
+        return numpy.array(data)
 
     def trt_by(self, trt_smr):
         """
@@ -1238,85 +1274,66 @@ class FullLogicTree(object):
         """
         :returns: the complete list of LtRealizations
         """
-        rlzs = []
+        if hasattr(self, '_rlzs'):
+            return self._rlzs
+
         num_samples = self.source_model_lt.num_samples
         if num_samples:  # sampling
+            rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
             for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                    sm_rlzs[i].weight * gsim_rlz.weight)
-                rlzs.append(rlz)
+                rlzs[i] = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                        sm_rlzs[i].weight * gsim_rlz.weight)
             if self.sampling_method.startswith('early_'):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
+            ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
+            rlzs = numpy.empty(len(ws) * len(self.sm_rlzs), object)
             i = 0
             for sm_rlz in self.sm_rlzs:
-                for gsim_rlz in gsim_rlzs:
-                    rlz = LtRealization(i, sm_rlz.lt_path, gsim_rlz,
-                                        sm_rlz.weight * gsim_rlz.weight)
-                    rlzs.append(rlz)
+                smpath = sm_rlz.lt_path
+                for gsim_rlz, weight in zip(gsim_rlzs, sm_rlz.weight * ws):
+                    rlzs[i] = LtRealization(i, smpath, gsim_rlz, weight)
                     i += 1
         # rescale the weights if not one, see case_52
         tot_weight = sum(rlz.weight for rlz in rlzs)[-1]
         if tot_weight != 1.:
             for rlz in rlzs:
                 rlz.weight = rlz.weight / tot_weight
-        assert rlzs, 'No realizations found??'
-        return numpy.array(rlzs)
+        self._rlzs = rlzs
+        return self._rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
         # return dictionary gsim->rlzs
         if not hasattr(self, '_rlzs_by'):
             rlzs = self.get_realizations()
+            trtis = range(len(self.gsim_lt.values))
+            smrs = numpy.array([sm.ordinal for sm in self.sm_rlzs])
             if self.source_model_lt.filename == 'fake.xml':  # scenario
-                acc = self._build_acc_scenario(rlzs)
+                smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
+                              for i, sm_rlz in enumerate(self.sm_rlzs)}
+                smidx = numpy.zeros(self.get_num_paths(), int)		
+                for rlz in rlzs:		
+                    smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
+                self._rlzs_by = _ddic(trtis, smrs,
+                                      lambda smr: rlzs[smidx == smr])
             else:  # classical and event based
-                acc = self._build_acc(rlzs)
-            self._rlzs_by = {}
-            for trtsmr, dic in acc.items():
-                self._rlzs_by[trtsmr] = {
-                    gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+                start = 0
+                slices = []
+                for sm in self.sm_rlzs:
+                    slices.append(slice(start, start + sm.samples))
+                    start += sm.samples
+                self._rlzs_by = _ddic(trtis, smrs,
+                                      lambda smr: rlzs[slices[smr]])
         if not self._rlzs_by:
             return {}
         return self._rlzs_by[trt_smr]
-
-    def _build_acc(self, rlzs):
-        start = 0
-        slices = []
-        for sm in self.sm_rlzs:
-            slices.append(slice(start, start + sm.samples))
-            start += sm.samples
-        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
-        for sm in self.sm_rlzs:
-            trtsmrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24
-            for trtsmr in trtsmrs:
-                trti, smr = divmod(trtsmr, TWO24)
-                for rlz in rlzs[slices[smr]]:
-                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return acc
-
-    def _build_acc_scenario(self, rlzs):
-        smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
-                      for i, sm_rlz in enumerate(self.sm_rlzs)}
-        smidx = numpy.zeros(self.get_num_paths(), int)		
-        for rlz in rlzs:		
-            smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]		
-        acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
-        for sm in self.sm_rlzs:
-            trtsmrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24		
-            for trtsmr in trtsmrs:
-                trti, smr = divmod(trtsmr, TWO24)
-                for rlz in rlzs[smidx == smr]:
-                    acc[trtsmr][rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return acc
 
     def get_rlzs_by_gsim(self, trt_smr):
         """
@@ -1328,7 +1345,8 @@ class FullLogicTree(object):
             for t in trt_smr:
                 for gsim, rlzs in self._rlzs_by_gsim(t).items():
                     dic[gsim].append(rlzs)
-            return {k: numpy.concatenate(ls, dtype=U32) for k, ls in dic.items()}
+            return {k: numpy.concatenate(ls, dtype=U32)
+                    for k, ls in dic.items()}
         # event based
         return self._rlzs_by_gsim(trt_smr)
 

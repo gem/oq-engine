@@ -1,7 +1,7 @@
 .. _unix:
 
-Running the OpenQuake Engine via Unix
-=====================================
+Via Unix
+========
 
 The OpenQuake Engine can be run via a command line interface or a WebUI. For the WebUI have a look to :ref:`its documentation <web-ui>`.
 

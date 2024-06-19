@@ -55,9 +55,9 @@ installation the engine works as any other development installation in Python: y
 create and activate a virtualenv and then perform a *pip install -e* . from the engine main directory, as normal. You can
 find the details here:
 
-`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/doc/getting-started/installation-instructions/development.rst>`_
+:ref:`development page <development>`
 
-It is also possible to develop on Windows (`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/doc/getting-started/installation-instructions/development.rst>`_) but very few people in GEM are doing that, so you are on your
+It is also possible to develop on Windows (:ref:`development page <development>`) but very few people in GEM are doing that, so you are on your
 own, should you encounter difficulties. We recommend Linux, but Mac also works.
 
 Since you are going to develop with the engine, you should also install the development dependencies that by default are
@@ -83,7 +83,7 @@ If you want to understand what happened during the calculation you should genera
 be seen with the command ``$ oq show fullreport``. There you will find a lot of interesting information that it is worth
 studying and we will discuss in detail in the rest of this manual. The most important section of the report is probably
 the last one, titled “Slowest operations”. For that one can understand the bottlenecks of a calculation and, with
-experience, he can understand which part of the engine he needs to optimize. Also, it is very useful to play with the
+experience, the user can understand which part of the engine needs to optimize. Also, it is very useful to play with the
 parameters of the calculation (like the maximum distance, the area discretization, the magnitude binning, etc.) and see
 how the performance changes. There is also a command to plot hazard curves and a command to compare hazard curves between
 different calculations: it is common to be able to get big speedups simply by changing the input parameters in the

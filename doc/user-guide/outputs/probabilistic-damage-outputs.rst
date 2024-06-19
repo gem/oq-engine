@@ -1,5 +1,5 @@
-Probabilistic Damage Outputs
-============================
+Classical Damage
+================
 
 Probabilistic Damage Distribution
 ---------------------------------
