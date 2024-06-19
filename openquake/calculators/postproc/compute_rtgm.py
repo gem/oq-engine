@@ -118,15 +118,14 @@ def get_DLLs(job_imts, vs30):
 
     for imt, t in zip(job_imts, T_job):
         if imt in imt_table.values:
-                DLLs.append(D[imt_table == imt].values[0])
+            DLLs.append(D[imt_table == imt].values[0])
         else: # interpolate for any IMT not included in the table 
-                T_up = T_table[np.where(T_table > np.array(t))[0][0]]
-                T_low = T_table[np.where(T_table < np.array(t))[0][-2]]
-                DLL_up = D[np.where(T_table > np.array(t))[0][0]]
-                DLL_low = D[np.where(T_table < np.array(t))[0][-2]]
-
-                f1 = interpolate.interp1d([T_low, T_up], [DLL_low, DLL_up])
-                DLLs.append(f1(t))
+            T_up = T_table[np.where(T_table > np.array(t))[0][0]]
+            T_low = T_table[np.where(T_table < np.array(t))[0][-2]]
+            DLL_up = D[np.where(T_table > np.array(t))[0][0]]
+            DLL_low = D[np.where(T_table < np.array(t))[0][-2]]
+            dll = np.interp(t, [T_low, T_up], [DLL_low, DLL_up])
+            DLLs.append(dll)
                 
     return DLLs
 
