@@ -25,12 +25,13 @@ import logging
 import operator
 import collections
 
+import numpy
+import pandas
 import fiona
 from shapely.geometry import shape
-import numpy
 from decorator import FunctionMaker
 
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import nrml, imt, logictree, site, geo
@@ -283,6 +284,13 @@ def main(what, report=False):
             with mock.patch.object(logging.root, 'info'):  # reduce logging
                 do_build_reports(what)
         print(mon)
+    elif what.endswith('.csv'):
+        [rec] = hdf5.sniff([what])
+        df = pandas.read_csv(what, skiprows=rec.skip)
+        if len(df) > 25:
+            dots = pandas.DataFrame({col: ['...'] for col in df.columns})
+            df = pandas.concat([df[:10], dots, df[-10:]])
+        print(text_table(df, ext='org'))
     elif what.endswith('.xml'):
         node = nrml.read(what)
         tag = node[0].tag
