@@ -455,7 +455,7 @@ class CampbellBozorgnia2014(GMPE):
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
             phi_lnpga_b = np.sqrt(_get_philny(C_PGA, ctx.mag) ** 2. -
-                                  C["philnAF"] ** 2.)
+                                  C_PGA["philnAF"] ** 2.)
 
             # Get tau_lny on the basement rock
             tau_lnyb = _get_taulny(C, ctx.mag)
@@ -466,14 +466,18 @@ class CampbellBozorgnia2014(GMPE):
             alpha = _get_alpha(C, ctx.vs30, pga1100)
 
             if imt.string in ['CAV', 'IA']:
+                # Use formula in CB19 supplementary spreadsheet
                 t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                        2.0 * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
+                2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
 
                 p = np.sqrt(
-                (_get_philny(C, ctx.mag))**2. + alpha**2. * _get_philny(C_PGA, ctx.mag) ** 2.
-                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * (_get_philny(C, ctx.mag)) * _get_philny(C_PGA, ctx.mag))
+                (_get_philny(C, ctx.mag))**2. 
+                + alpha**2. * _get_philny(C_PGA, ctx.mag) ** 2.
+                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * \
+                    (_get_philny(C, ctx.mag)) * _get_philny(C_PGA, ctx.mag))
             
             else:
+                # Use formula in CB14 supplementary spreadsheet
                 t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
                         2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
 
@@ -513,8 +517,6 @@ class CampbellBozorgnia2014(GMPE):
     cav      -4.75  1.397   0.282  -1.062   -0.17  -1.624  0.134  6.325  0.054    -0.1  0.469   1.015   1.208  1.777   0.1248  -0.191  1.087   0.0432  0.0127  0.00429  -0.0043     0  0.167  0.241  1.474  -0.715  -0.337   -0.27   400  -1.311      1  0.514  0.394  0.276  0.257    0.842     0.78          0.3      0       0
     ia     -10.272  2.318    0.88  -2.672  -0.837  -4.441  0.416  4.869  0.187  -0.196  1.165   1.596   2.829   2.76    0.108  -0.315  1.612   0.1311  0.0453  0.01242  -0.0103     0  0.167  0.241  1.474  -0.715  -0.337   -0.27   400  -1.982      1  1.174  0.809  0.614  0.435    0.948    0.911  0.615989848      0       0
     """)
-
-
 
 
 class CampbellBozorgnia2014HighQ(CampbellBozorgnia2014):
@@ -585,6 +587,7 @@ class CampbellBozorgnia2014LowQ(CampbellBozorgnia2014):
     cav      -4.75  1.397   0.282  -1.062   -0.17  -1.624  0.134  6.325  0.054    -0.1  0.469   1.015   1.208  1.777   0.1248  -0.191  1.087   0.0432  0.0127  0.00429  -0.0043  -0.0024  0.167  0.241  1.474  -0.715  -0.337   -0.27   400  -1.311      1  0.514  0.394  0.276  0.257    0.842     0.78          0.3      0       0
     ia     -10.272  2.318    0.88  -2.672  -0.837  -4.441  0.416  4.869  0.187  -0.196  1.165   1.596   2.829   2.76    0.108  -0.315  1.612   0.1311  0.0453  0.01242  -0.0103  -0.0051  0.167  0.241  1.474  -0.715  -0.337   -0.27   400  -1.982      1  1.174  0.809  0.614  0.435    0.948    0.911  0.615989848      0       0
     """)
+
 
 class CampbellBozorgnia2014JapanSite(CampbellBozorgnia2014):
     """
