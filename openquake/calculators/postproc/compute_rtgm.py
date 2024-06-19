@@ -45,6 +45,7 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.baselib import hdf5
+from scipy import interpolate
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -77,7 +78,7 @@ SA(5.0),0.10,0.11,0.13,0.19,0.26,0.36,0.49,0.61
 SA(7.5),0.063,0.068,0.080,0.11,0.15,0.19,0.26,0.31
 SA(10.0),0.042,0.045,0.052,0.069,0.089,0.11,0.14,0.17
 PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
-'''), index_col='imt')
+'''))
 
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
@@ -85,9 +86,48 @@ ASCE_DECIMALS = 5
 # TODO: interpolate DLLs for vs30 != 760
 
 
-def get_DLLs(job_imts):
-    D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-    DLLs = [D[imt] for imt in job_imts]
+def get_DLLs(job_imts, vs30):
+    
+    if vs30 > 1524:
+        soil_class_asce = 'A'
+    elif vs30 > 914:
+        soil_class_asce = 'B'
+    elif vs30 > 640:
+        soil_class_asce = 'BC'
+    elif vs30 > 442:
+        soil_class_asce = 'C'
+    elif vs30 > 305:
+        soil_class_asce = 'CD'    
+    elif vs30 > 213:
+        soil_class_asce = 'D'
+    elif vs30 > 152:
+        soil_class_asce = 'DE'
+    else:
+        soil_class_asce = 'E'
+        
+    D = DLL_df[soil_class_asce]    
+    imt_table = DLL_df['imt']
+
+    T_table, T_job = [], []
+    for imt in imt_table:
+        T_table.append(from_string(imt).period )
+    for imt in job_imts:
+        T_job.append(from_string(imt).period)
+
+    DLLs = []
+
+    for imt, t in zip(job_imts, T_job):
+        if imt in imt_table.values:
+                DLLs.append(D[imt_table == imt].values[0])
+        else: # interpolate for any IMT not included in the table 
+                T_up = T_table[np.where(T_table > np.array(t))[0][0]]
+                T_low = T_table[np.where(T_table < np.array(t))[0][-2]]
+                DLL_up = D[np.where(T_table > np.array(t))[0][0]]
+                DLL_low = D[np.where(T_table < np.array(t))[0][-2]]
+
+                f1 = interpolate.interp1d([T_low, T_up], [DLL_low, DLL_up])
+                DLLs.append(f1(t))
+                
     return DLLs
 
 
@@ -110,7 +150,8 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
     job_imts = list(oq.imtls)
     M = len(job_imts)
-    DLLs = get_DLLs(job_imts)
+    sid = site.id
+    DLLs = get_DLLs(job_imts, site.vs30)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
@@ -441,7 +482,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
-        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disagg by rel sources
+        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():  # do not disagg by rel sources
             yield site, rtgm_df, 'Only probabilistic MCE'
 
         else:
@@ -466,7 +507,7 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            job_imts, det_imt, DLLs, rtgm_df, sid)
+            job_imts, det_imt, DLLs[sid], rtgm_df, sid)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
@@ -489,8 +530,13 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
-    DLLs = get_DLLs(job_imts)
-
+    
+    sitecol = dstore['sitecol']
+    DLLs= {}
+    for s, site in enumerate(dstore['sitecol']):
+        sid = site.id
+        DLLs[sid] = get_DLLs(job_imts, site.vs30)
+   
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
@@ -524,7 +570,7 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs, rtgm_df, sid, low_haz=True)
+                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
