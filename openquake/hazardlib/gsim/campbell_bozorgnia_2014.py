@@ -367,8 +367,8 @@ def _update_ctx(gsim, ctx):
 
 def _get_rholnpga(C, mag):
     """
-    Returns the inter-event random effects coefficient (tau)
-    Equation 28.
+    Returns the magnitude-dependent correlation coefficient (rho) —
+    Equation 5 of CB19.
     """
     rho_ln_pga = C["rho2pga"] + (C["rho1pga"] - C["rho2pga"]) * (5.5 - mag)
     rho_ln_pga[mag <= 4.5] = C["rho1pga"]
@@ -465,14 +465,6 @@ class CampbellBozorgnia2014(GMPE):
             # Get site scaling term
             alpha = _get_alpha(C, ctx.vs30, pga1100)
 
-            # Evaluate tau according to equation 29
-            # Evaluate phi according to equation 30
-            # Note in CB19 cross-correlation coefficient is a function of magnitude. 
-            # For the meantime, IA and CAV are functions of magnitude, while other IMTs have constant cross-correlation coefficient.
-            # TO DO: Update the cross-correlation coefficient for other IMTs in the next PR.
-            # There is no phiC and rholny constant for IA and CAV, so it's set to N/A. Please see:
-            # Campbell, K. W., & Bozorgnia, Y. (2019). Ground motion models for the horizontal components of Arias intensity (AI)
-            # and cumulative absolute velocity (CAV) using the NGA-West2 database. Earthquake Spectra, 35(3), 1289-1310.
             if imt.string in ['CAV', 'IA']:
                 t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
                         2.0 * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
