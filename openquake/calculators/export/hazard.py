@@ -534,14 +534,13 @@ def export_mean_disagg_by_src(ekey, dstore):
 
 @export.add(('disagg-rlzs', 'csv'),
             ('disagg-stats', 'csv'),
-            ('disagg-rlzs-traditional', 'csv'),
-            ('disagg-stats-traditional', 'csv'))
+            ('disagg-rlzs-traditional', 'csv'))
 def export_disagg_csv(ekey, dstore):
     name, ext = ekey
     spec = name[7:]  # rlzs, stats, rlzs-traditional, stats-traditional
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs = dstore['full_lt'].get_realizations()
+    ws = dstore['weights'][:]
     best_rlzs = dstore['best_rlzs'][:]
     N = len(best_rlzs)
     P = len(oq.poes) or 1
@@ -569,7 +568,7 @@ def export_disagg_csv(ekey, dstore):
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
         if spec.startswith('rlzs') or oq.iml_disagg:
-            weights = numpy.array([rlzs[r].weight[-1] for r in best_rlzs[s]])
+            weights = ws[best_rlzs[s]]
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()
