@@ -831,8 +831,3 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(2.0).csv'],
             case_87.__file__)
 
-    def test_case_85(self):
-        # Conditional GMM (Macedo et al. (2019)) for Arias Inensity
-        self.run_calc(case_85.__file__, 'job.ini')
-        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-mean-IA.csv', f1)

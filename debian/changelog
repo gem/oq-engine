@@ -129,6 +129,11 @@ python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
   * Reduced `conditioned_gmfs_gb` to 8 GB by default
   * Parallelized `get_mean_covs` when conditioning the GMFs
 
+  [Kyle Smith]
+  * Added a new gsim file macedo_2021.py to implement the
+    Arias Intensity and Cumulative Absoloute Velocity conditional 
+    ground motion models from Macedo et al. (2020).
+
   [Christopher Brooks]
   * Added Seattle Basin classes of Kuehn et al. (2020) NGASUB GMM (uses
     Cascadia coeffs except for basin term).
