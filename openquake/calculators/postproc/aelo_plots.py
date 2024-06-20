@@ -55,18 +55,18 @@ def _find_fact_maxC(T, ASCE_version):
         elif T <= 0.2:
             fact_maxC = 1.1
         elif T <= 1:
-            fact_maxC = np.interp(T, [0.2, 1], [1.1, 1.3])
+            fact_maxC = numpy.interp(T, [0.2, 1], [1.1, 1.3])
         elif T <= 5:
-            fact_maxC = np.interp(T, [1, 5], [1.3, 1.5])
+            fact_maxC = numpy.interp(T, [1, 5], [1.3, 1.5])
         else:
             fact_maxC = 1.5
     elif ASCE_version == 'ASCE7-22':
         if T <= 0.2:
             fact_maxC = 1.2
         elif T <= 1:
-            fact_maxC = np.interp(T, [0.2, 1], [1.2, 1.25])
+            fact_maxC = numpy.interp(T, [0.2, 1], [1.2, 1.25])
         elif T <= 10:
-            fact_maxC = np.interp(T, [1, 10], [1.25, 1.3])
+            fact_maxC = numpy.interp(T, [1, 10], [1.25, 1.3])
         else:
             fact_maxC = 1.5
     return numpy.round(fact_maxC, 3)

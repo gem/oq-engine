@@ -45,7 +45,6 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.baselib import hdf5
-from scipy import interpolate
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -106,27 +105,20 @@ def get_DLLs(job_imts, vs30):
         soil_class_asce = 'E'
         
     D = DLL_df[soil_class_asce]    
-    imt_table = DLL_df['imt']
+    imt_table = DLL_df.imt
 
-    T_table, T_job = [], []
-    for imt in imt_table:
-        T_table.append(from_string(imt).period )
-    for imt in job_imts:
-        T_job.append(from_string(imt).period)
-
+    T_table = np.array([from_string(imt).period for imt in DLL_df.imt])
+    T_job = [from_string(imt).period for imt in job_imts]
     DLLs = []
 
     for imt, t in zip(job_imts, T_job):
         if imt in imt_table.values:
             DLLs.append(D[imt_table == imt].values[0])
-        else: # interpolate for any IMT not included in the table 
-            T_up = T_table[np.where(T_table > np.array(t))[0][0]]
-            T_low = T_table[np.where(T_table < np.array(t))[0][-2]]
-            DLL_up = D[np.where(T_table > np.array(t))[0][0]]
-            DLL_low = D[np.where(T_table < np.array(t))[0][-2]]
-            dll = np.interp(t, [T_low, T_up], [DLL_low, DLL_up])
+        else: # interpolate for any IMT not included in the table
+            up = np.where(T_table > t)[0][0]
+            low = np.where(T_table < t)[0][-2]
+            dll = np.interp(t, [T_table[low], T_table[up]], [D[low], D[up]])
             DLLs.append(dll)
-                
     return DLLs
 
 
