@@ -60,7 +60,8 @@ class CSVFile:
     skip: int
 
     def read_df(self):
-        return pandas.read_csv(self.fname, skiprows=self.skip)
+        return pandas.read_csv(
+            self.fname, skiprows=self.skip, usecols=self.fields)
 
 
 def sanitize(value):
