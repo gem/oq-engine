@@ -21,6 +21,8 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
+from openquake.calculators.postproc.plots import (
+    add_borders, get_assetcol, get_country_iso_codes)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -32,8 +34,6 @@ def main(calc_id: int = -1, site_model=False,
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
-    from openquake.commands.plot import (
-        add_borders, get_assetcol, get_country_iso_codes)
 
     dstore = datastore.read(calc_id)
     oq = dstore['oqparam']
