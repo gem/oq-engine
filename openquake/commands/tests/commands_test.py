@@ -21,7 +21,7 @@ import os
 import re
 import sys
 import unittest.mock as mock
-from contextlib import redirect_stdout, chdir
+from contextlib import redirect_stdout
 import shutil
 import zipfile
 import tempfile
@@ -31,7 +31,7 @@ import numpy
 from pathlib import Path
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, chdir
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.tests.flake8_test import check_newlines
