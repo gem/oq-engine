@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import hdf5, sap
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.commonlib import readinput
 from openquake.calculators.postproc.plots import add_borders
 
 
@@ -38,12 +38,9 @@ def main(files_csv):
     ax.grid(True)
     markersize = 5
     for csvfile, df in zip(csvfiles, dfs):
-        lons, lats = df.lon.to_numpy(), df.lat.to_numpy()
-        if len(lons) > 1 and cross_idl(*lons):
-            lons %= 360
-        p.scatter(lons, lats, marker='o',
+        p.scatter(df.lon, df.lat, marker='o',
                   label=csvfile.fname, s=markersize)
-    ax = add_borders(ax)
+    add_borders(ax, readinput.read_mosaic_df)
     p.show()
     return p
 

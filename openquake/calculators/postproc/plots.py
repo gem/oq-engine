@@ -32,9 +32,9 @@ def import_plt():
     return plt
 
 
-def add_borders(ax):
+def add_borders(ax, read_df=readinput.read_countries_df):
     plt = import_plt()
-    polys = readinput.read_countries_df(buffer=0)['geom']
+    polys = read_df(buffer=0)['geom']
     cm = plt.get_cmap('RdBu')
     num_colours = len(polys)
     for idx, poly in enumerate(polys):
