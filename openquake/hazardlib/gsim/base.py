@@ -31,7 +31,6 @@ import numpy
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, simple_cmaker, set_poes)
@@ -464,7 +463,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         loglevels = cmaker.loglevels.array
         phi_b = cmaker.phi_b
-        M, L1 = loglevels.shape
+        _, L1 = loglevels.shape
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
             adj = cmaker.adj[self][cmaker.slc]
             outs = []
