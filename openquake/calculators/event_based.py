@@ -51,7 +51,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
-from openquake.commands.plot import plot_avg_gmf
+from openquake.calculators.postproc.plots import plot_avg_gmf
 from PIL import Image
 
 U8 = numpy.uint8
