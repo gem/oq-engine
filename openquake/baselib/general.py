@@ -1690,6 +1690,21 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
+# NB: this is present in contextlib in Python 3.11, but
+# we still support Python 3.9, so it cannot be removed yet
+@contextmanager
+def chdir(path):
+    """
+    Context manager to temporarily change the CWD
+    """
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
+
+
 def smart_concat(arrays):
     """
     Concatenated structured arrays by considering only the common fields
