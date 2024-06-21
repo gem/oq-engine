@@ -27,7 +27,7 @@ from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats, probability_map, valid
+from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.commonlib import util
@@ -173,15 +173,15 @@ class DisaggregationCalculator(base.HazardCalculator):
             oq, self.sitecol, self.R)
         logging.info(self.shapedic)
         self.save_bin_edges(edges)
-        self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         nrows = len(dstore['_rates/sid'])
-        self.pgetter = getters.PmapGetter(
-            dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
+        trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        self.pgetter = getters.MapGetter(
+            dstore.filename, trt_rlzs, self.R, [(0, nrows + 1)], oq)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -191,10 +191,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for sid in self.sitecol.sids:
                     hcurve = self.pgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
-                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
+                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
+                        full_lt.wget)
                     # get the closest realization to the mean
-                    rlzs[sid] = util.closest_to_ref(
-                        hcurve.array.T, mean.array)[:Z]
+                    rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
@@ -213,7 +213,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for m, imt in enumerate(oq.imtls):
                 iml3[:, m] = oq.iml_disagg[imt]
         else:
-            iml3 = probability_map.compute_hmaps(
+            iml3 = map_array.compute_hmaps(
                 mean_curves, oq.imtls, oq.poes)
         if iml3.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')

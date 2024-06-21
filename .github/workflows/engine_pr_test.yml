@@ -68,7 +68,7 @@ jobs:
         cd openquake
         ruff check --preview --select NPY201 .
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+        pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
@@ -153,31 +153,3 @@ jobs:
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
         OQ_APPLICATION_MODE=AELO OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
-
-  # server_aristotle_mode:
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-latest]
-  #       python-version: ["3.11"]
-  #   env:
-  #     GITHUB_HEAD_REF:  ${{ github.head_ref }}
-  #     FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Set up Python  ${{ matrix.python-version }}
-  #     uses: actions/setup-python@v4
-  #     with:
-  #       python-version:  ${{ matrix.python-version }}
-  #   - name: Install dependencies
-  #     run: |
-  #       if [[ $FROM_FORK == "true" ]]; then
-  #         python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-  #       else
-  #         python install.py devel --version=$GITHUB_HEAD_REF
-  #       fi
-  #   - name: Server 'ARISTOTLE' mode tests
-  #     run: |
-  #       source ~/openquake/bin/activate
-  #       # -v 2 also logs the test names
-  #       OQ_APPLICATION_MODE=ARISTOTLE OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode

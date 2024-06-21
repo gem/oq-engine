@@ -25,29 +25,32 @@ import logging
 import operator
 import collections
 
+import numpy
+import pandas
 import fiona
 from shapely.geometry import shape
-import numpy
 from decorator import FunctionMaker
 
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, imt, logictree, site
+from openquake.hazardlib import nrml, imt, logictree, site, geo
 from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
-from openquake.hazardlib.valid import pmf_map
+from openquake.hazardlib.valid import pmf_map, lon_lat
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
-from openquake.risklib import scientific
+from openquake.risklib import asset, scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import DISPLAY_NAME
 
+F32 = numpy.float32
+U8 = numpy.uint8
 
 def print_features(fiona_file):
     rows = []
@@ -119,6 +122,13 @@ def print_gsim(what):
                 break
         else:
             print('Unknown GSIM %s' % split[1])
+
+
+def print_geohash(what):
+    lon, lat = lon_lat(what.split(':')[1])
+    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
+    gh = b''.join([row.tobytes() for row in arr])
+    print(gh.decode('ascii'))
 
 
 def source_model_info(sm_nodes):
@@ -237,6 +247,8 @@ def main(what, report=False):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):
         print_subclass(what, BaseMSR)
+    elif what.startswith('geohash'):
+        print_geohash(what)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':
@@ -272,11 +284,23 @@ def main(what, report=False):
             with mock.patch.object(logging.root, 'info'):  # reduce logging
                 do_build_reports(what)
         print(mon)
+    elif what.endswith('.csv'):
+        [rec] = hdf5.sniff([what])
+        df = pandas.read_csv(what, skiprows=rec.skip)
+        if len(df) > 25:
+            dots = pandas.DataFrame({col: ['...'] for col in df.columns})
+            df = pandas.concat([df[:10], dots, df[-10:]])
+        print(text_table(df, ext='org'))
     elif what.endswith('.xml'):
         node = nrml.read(what)
-        if node[0].tag.endswith('sourceModel'):
+        tag = node[0].tag
+        if tag.endswith('sourceModel'):
             print(source_model_info([node]))
-        elif node[0].tag.endswith('logicTree'):
+        elif tag.endswith('exposureModel'):
+            exp, df = asset.read_exp_df(what)
+            print(node.to_str())
+            print(df.set_index('id')[['lon', 'lat', 'taxonomy', 'value-structural']])
+        elif tag.endswith('logicTree'):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):
                 bset = bset[0]

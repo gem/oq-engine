@@ -130,7 +130,7 @@ class Comparator(object):
 
     def compare(self, what, imt, files, samplesites, rtol, atol):
         sids = self.getsids(samplesites)
-        if what == 'uhs':
+        if what == 'uhs':  # imt is -1, the last poe
             arrays = self.getuhs(what, imt, sids, rtol, atol)
         elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
@@ -169,6 +169,17 @@ class Comparator(object):
         else:
             print(views.text_table(rows['all'], header, ext='org'))
         return arrays
+
+
+def compare_rates(calc_1: int, calc_2: int):
+    """
+    Compare the ruptures affecting the given site ID as pandas DataFrames
+    """
+    with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
+        df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
+        df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
+    delta = numpy.abs(df1 - df2).to_numpy().max()
+    print('Maximum difference in the rates =%s' % delta)
 
 
 # works only locally for the moment
@@ -332,20 +343,142 @@ def compare_events(calc_ids: int):
     print(df)
 
 
+def delta(a, b):
+    """
+    :returns: the relative differences between a and b; zeros return zeros
+    """
+    c = a + b
+    ok = c != 0.
+    res = numpy.zeros_like(a)
+    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
+    return res
+
+
+def compare_column_values(array0, array1, what):
+    if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
+        diff_idxs = numpy.where(delta(array0, array1) > 1E-5)[0]
+    else:
+        diff_idxs = numpy.where(array0 != array1)[0]
+    if len(diff_idxs) == 0:
+        print(f'The column {what} is okay')
+        return
+    print(f"There are {len(diff_idxs)} different elements "
+          f"in the '{what}' column:")
+    print(array0[diff_idxs], array1[diff_idxs])
+
+
+def check_column_names(array0, array1, what, calc_id0, calc_id1):
+    cols0 = array0.dtype.names
+    cols1 = array1.dtype.names
+    if len(cols0) != len(cols1):
+        print(f'The {what} arrays have different columns:')
+        print(f'Calc {calc_id0}:\n{cols0}')
+        print(f'Calc {calc_id1}:\n{cols1}')
+    elif numpy.array_equal(cols0, cols1):
+        print(f'The {what} arrays have the same columns')
+    elif numpy.array_equal(numpy.sort(cols0), numpy.sort(cols1)):
+        print(f'The {what} arrays have the same columns, but ordered'
+              ' differently')
+    else:
+        print(f'The {what} arrays have differend columns:')
+        print(f'Calc {calc_id0}:\n{cols0}')
+        print(f'Calc {calc_id1}:\n{cols1}')
+
+
+def compare_assetcol(calc_ids: int):
+    """
+    Compare assetcol DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    array0 = ds0['assetcol'].array
+    array1 = ds1['assetcol'].array
+    oq0 = ds0['oqparam']
+    oq1 = ds1['oqparam']
+    if oq0.aristotle:
+        array0['id'] = [id[3:] for id in array0['id']]
+    if oq1.aristotle:
+        array1['id'] = [id[3:] for id in array1['id']]
+    check_column_names(array0, array1, 'assetcol', *calc_ids)
+    fields = set(array0.dtype.names) & set(array1.dtype.names) - {
+        'site_id', 'id', 'ordinal', 'taxonomy'}
+    arr0, arr1 = check_intersect(array0, array1, 'id', sorted(fields), calc_ids)
+    taxo0 = ds0['assetcol/tagcol/taxonomy'][:][arr0['taxonomy']]
+    taxo1 = ds1['assetcol/tagcol/taxonomy'][:][arr1['taxonomy']]
+    compare_column_values(taxo0, taxo1, 'taxonomy')
+
+
+def check_intersect(array0, array1, kfield, vfields, calc_ids):
+    """
+    Compare two structured arrays on the given field
+    """
+    array0.sort(order=kfield)
+    array1.sort(order=kfield)
+    val0 = array0[kfield]
+    val1 = array1[kfield]
+    common = numpy.intersect1d(val0, val1, assume_unique=True)
+    print(f'Comparing {kfield=}, {len(val0)=}, {len(val1)=}, {len(common)=}')
+    if len(val0) < len(val1):
+        print('A missing asset is %s' % (set(val1)-set(val0)).pop())
+    elif len(val1) < len(val0):
+        print('A missing asset is %s' % (set(val0)-set(val1)).pop())
+    arr0 = array0[numpy.isin(val0, common)]
+    arr1 = array1[numpy.isin(val1, common)]
+    for col in vfields:
+        compare_column_values(arr0[col], arr1[col], col)
+    return arr0, arr1
+
+
+def compare_sitecol(calc_ids: int):
+    """
+    Compare the site collections of two calculations, looking for similarities
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    array0 = ds0['sitecol'].array
+    array1 = ds1['sitecol'].array
+    check_column_names(array0, array1, 'sitecol', *calc_ids)
+    fields = set(array0.dtype.names) & set(array1.dtype.names) - {'sids'}
+    if 'custom_site_id' in fields:
+        check_intersect(
+            array0, array1, 'custom_site_id',
+            sorted(fields-{'custom_site_id'}), calc_ids)
+    else:
+        check_intersect(array0, array1, 'sids', sorted(fields), calc_ids)
+
+
+def compare_oqparam(calc_ids: int):
+    """
+    Compare the dictionaries of parameters associated to the calculations
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    dic0 = vars(ds0['oqparam'])
+    dic1 = vars(ds1['oqparam'])
+    common = sorted(set(dic0) & set(dic1))
+    for key in common:
+        if dic0[key] != dic1[key]:
+            print('%s: %s != %s' % (key, dic0[key], dic1[key]))
+
+    
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
+            rates=compare_rates,
             avg_gmf=compare_avg_gmf,
             med_gmv=compare_med_gmv,
             risk_by_event=compare_risk_by_event,
             sources=compare_sources,
-            events=compare_events)
+            events=compare_events,
+            assetcol=compare_assetcol,
+            sitecol=compare_sitecol,
+            oqparam=compare_oqparam)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,
-          compare_events):
+          compare_events, compare_assetcol, compare_sitecol, compare_oqparam):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:

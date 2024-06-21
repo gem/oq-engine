@@ -541,12 +541,12 @@ class LossesByEventTestCase(unittest.TestCase):
         losses0 = losses[:1000]
         losses1 = losses[1000:]
         curve0 = scientific.losses_by_period(
-            losses0, periods, eff_time=eff_time)
+            losses0, periods, len(losses0), eff_time)['curve']
         curve1 = scientific.losses_by_period(
-            losses1, periods, eff_time=eff_time)
+            losses1, periods, len(losses1), eff_time)['curve']
         mean = (curve0 + curve1) / 2
         full = scientific.losses_by_period(
-            losses, periods, eff_time=2*eff_time)
+            losses, periods, len(losses), 2*eff_time)['curve']
         aae(mean, full, rtol=1E-2)  # converges only at 1%
 
     def test_maximum_probable_loss(self):
@@ -559,11 +559,11 @@ class LossesByEventTestCase(unittest.TestCase):
         retention = claim - cession
         idxs = numpy.argsort(claim)
         claim_mpl = scientific.maximum_probable_loss(
-            claim, period, efftime, idxs)
+            claim[idxs], period, efftime, sorting=False)
         cession_mpl = scientific.maximum_probable_loss(
-            cession, period, efftime, idxs)
+            cession[idxs], period, efftime, sorting=False)
         ret_mpl = scientific.maximum_probable_loss(
-            retention, period, efftime, idxs)
+            retention[idxs], period, efftime, sorting=False)
         self.assertEqual(claim_mpl, cession_mpl + ret_mpl)
         # print('claim', claim[idxs], claim_mpl)
         # print('cession', cession[idxs], cession_mpl)
@@ -583,11 +583,11 @@ class LossesByEventTestCase(unittest.TestCase):
         retention = claim - cession
         idxs = numpy.argsort(claim)
         claim_curve = scientific.losses_by_period(
-            claim, periods, n, efftime, idxs)
+            claim[idxs], periods, n, efftime, sorting=False)['curve']
         cession_curve = scientific.losses_by_period(
-            cession, periods, n, efftime, idxs)
+            cession[idxs], periods, n, efftime, sorting=False)['curve']
         ret_curve = scientific.losses_by_period(
-            retention, periods, n, efftime, idxs)
+            retention[idxs], periods, n, efftime, sorting=False)['curve']
         aae(claim_curve, cession_curve + ret_curve)
         print('keeping event associations')
         print('claim', claim_curve)
@@ -602,11 +602,11 @@ class LossesByEventTestCase(unittest.TestCase):
             plt.show()
 
         claim_curve = scientific.losses_by_period(
-            claim, periods, n, efftime)
+            claim, periods, n, efftime)['curve']
         cession_curve = scientific.losses_by_period(
-            cession, periods, n, efftime)
+            cession, periods, n, efftime)['curve']
         ret_curve = scientific.losses_by_period(
-            retention, periods, n, efftime)
+            retention, periods, n, efftime)['curve']
         print('not keeping event associations')
         print('claim', claim_curve)
         print('cession', cession_curve)
@@ -621,15 +621,12 @@ class PlaFactorTestCase(unittest.TestCase):
         pla_factor = scientific.pla_factor(df)
 
         # no interp
-        self.assertEqual(pla_factor(1), 1)
-        self.assertEqual(pla_factor(1000), 1.326)
+        numpy.testing.assert_allclose(pla_factor([1, 1000]), [1, 1.326])
 
         # interp
         self.assertEqual(pla_factor(1.1), 1.0)
         self.assertAlmostEqual(pla_factor(900), 1.31896)
 
         # extrap
-        with self.assertRaises(ValueError):
-            pla_factor(0.9)
-        with self.assertRaises(ValueError):
-            pla_factor(1001)
+        self.assertAlmostEqual(pla_factor(0.9), 1.0)
+        self.assertAlmostEqual(pla_factor(1001), 1.326)

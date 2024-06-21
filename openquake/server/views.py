@@ -694,7 +694,7 @@ def aristotle_get_rupture_data(request):
     [rupdic] = res
     try:
         trts, mosaic_model = get_trts_around(
-            rupdic, config.directory.mosaic_dir)
+            rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
     except Exception as exc:
         usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
@@ -791,6 +791,7 @@ def aristotle_run(request):
 
     :param request:
         a `django.http.HttpRequest` object containing
+        usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed
@@ -806,8 +807,7 @@ def aristotle_run(request):
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed,
-            config.directory.mosaic_dir)
+            asset_hazard_distance, ses_seed)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
@@ -818,6 +818,7 @@ def aristotle_run(request):
         allparams, config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
+    response_data = dict()
     for jobctx in jobctxs:
         job_id = jobctx.calc_id
         outputs_uri_web = request.build_absolute_uri(
@@ -828,11 +829,11 @@ def aristotle_run(request):
             reverse('log', args=[job_id, '0', '']))
         traceback_uri = request.build_absolute_uri(
             reverse('traceback', args=[job_id]))
-        response_data = dict(
+        response_data[job_id] = dict(
             status='created', job_id=job_id, outputs_uri=outputs_uri_api,
             log_uri=log_uri, traceback_uri=traceback_uri)
         if not job_owner_email:
-            response_data['WARNING'] = (
+            response_data[job_id]['WARNING'] = (
                 'No email address is speficied for your user account,'
                 ' therefore email notifications will be disabled. As soon as'
                 ' the job completes, you can access its outputs at the'
@@ -1234,7 +1235,8 @@ def calc_datastore(request, job_id):
 
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
-    params = {'application_mode': application_mode}
+    # NOTE: application_mode is already added by the context processor
+    params = {}
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
@@ -1282,8 +1284,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
-                       application_mode=application_mode))
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
+                  )
 
 
 def is_model_preliminary(ds):
@@ -1357,6 +1359,10 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
@@ -1367,6 +1373,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       calc_aelo_version=calc_aelo_version,
                        warnings=warnings))
 
 
@@ -1458,3 +1465,12 @@ def on_same_fs(request):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
+
+
+@require_http_methods(['GET'])
+def aelo_changelog(request, **kwargs):
+    aelo_changelog = base.get_aelo_changelog()
+    aelo_changelog_html = aelo_changelog.to_html(
+        index=False, escape=False, classes='changelog', border=0)
+    return render(request, "engine/aelo_changelog.html",
+                  dict(aelo_changelog=aelo_changelog_html))

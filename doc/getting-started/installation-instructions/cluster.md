@@ -1,6 +1,6 @@
 (cluster)=
 
-# Running the OpenQuake Engine on multiple nodes (cluster/zmq)
+# Running on multiple nodes (cluster/zmq)
 
 If you have a HPC cluster using the SLURM scheduler you are on the wrong
 page and you should [go here](slurm.md) instead. This page documents how to

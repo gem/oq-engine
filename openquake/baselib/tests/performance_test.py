@@ -41,7 +41,6 @@ class MonitorTestCase(unittest.TestCase):
             with mon:
                 ls.append(list(range(100000)))  # allocate some RAM
                 time.sleep(0.1)
-        self.assertGreaterEqual(mon.mem, 0)
 
     def test_children(self):
         mon1 = self.mon('child1')

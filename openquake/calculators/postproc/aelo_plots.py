@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -252,7 +252,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax2.set_xlabel('Period (s)', fontsize=20)
     ax2.legend(loc="upper right", fontsize='13')
-    ax2.set_xlim([-0.02, 1.2])
+    ax2.set_xlim([-0.02, 2.0])
     ax1.set_xscale('log')
     ax1.set_yscale('log')
     ax2.set_xscale('linear')

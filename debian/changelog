@@ -1,7 +1,66 @@
+  [Michele Simionato]
+  * Internal: added commands `oq compare oqparam` and `oq plot_sites csvfiles`
+  * Fixed exporting the ruptures when imported from a CSV
+  * Fixed the issue of small negative eigenvalues in conditioned GMFs
+    calculations by adding a correlation_cutoff
+  * Internal: extended `Starmap.apply` to split DataFrames
+  * Fixed the avg_gmf exporter in presence of a filtered site collection
+
+  [Lana Todorovic]
+  * Improved secondary perils documentation
+
+  [Michele Simionato]
+  * Fixed the ordering of the realizations to depend on the source model
+    branch path also in the case of full enumeration: this is crucial to
+    get consistent results with the two approaches
+  * Saved data transfer in the context makers in classical calculations
+  * Internal: added utility `oq info geohash:<lon>,<lat>`
+  * Changed the scenario calculators to discard the sites far away from
+    the rupture, with the effect of generating different GMFs
+  * Cached `get_realizations` and optimized the memory occupation; now
+    302_990_625 realizations (i.e. EUR) require only 90 GB
+
+  [Anna Rood]
+  * Updates to the AELO workflow: added additional spectral periods ranging
+    from 0.02 to 10 s and added option to use ASCE7-22. NB: minor changes in
+    the results of year 1 are expected
+
+  [Michele Simionato]
+  * Changed the GMF-based calculators to always set a `custom_site_id`
+  * Internal: added variable OQ_SITE_DEBUG
+
+python3-oq-engine (3.20.1-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Antonio Ettorre, Armando Scarpati]
+  * Improved installation documentation
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 07 Jun 2024 09:13:03 +0000
+
+python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Michele Simionato]
+  * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
+
+  [Michele Simionato]
+  * Internal: added a command `oq reducexp exposure_xml site_model_csv`
+
+  [Paul Henshaw, Antonio Ettorre, Michele Simionato]
+  * Updated the documentation about installing the engine
+
+  [Michele Simionato]
+  * Raised the default `max_potential_paths` to 1,000,000
+  * Optimized the calculation of mean hazard curves when `use_rates=true`;
+    now it is possible to compute exactly mean curves even with millions
+    of realizations
+
+  [Paolo Tormene, Michele Simionato]
+  * Added command `oq plot 'gmf_scenario?imt=PGA&kind=rlz-0'`
+
   [Fatemeh Alishahiha]
   * Added vertical component to `abrahamson_silva_1997` gsim library
 
   [Michele Simionato]
+  * Internal: removed ProbabilityCurve and rename ProbabilityMap->MapArray
   * Optimized building the CompositeSourceModel for complex logic trees
   * Optimized "reading rates" in postclassical
   * Extended the `delta_loss` warning to scenario_risk calculations
@@ -84,6 +143,8 @@
   * Optimized postclassical both for regular and tiling calculations
   * Saving disk space in classical calculations (~4x) by gzipping the rates
   * Removed Python version checks in install.py
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 03 Jun 2024 07:57:30 +0000
 
 python3-oq-engine (3.19.0-1~xenial01) xenial; urgency=low
 

@@ -157,6 +157,12 @@ collect_rlzs:
   Example: *collect_rlzs=true*.
   Default: None
 
+correlation_cutoff:
+  Used in conditioned GMF calculation to avoid small negative eigenvalues
+  wreaking havoc with the numerics
+  Example: *correlation_cutoff = 1E-11*
+  Default: 1E-12
+
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
   so that the hazard curves can be compared.
@@ -343,12 +349,6 @@ hazard_calculation_id:
   Example: *hazard_calculation_id = 42*.
   Default: None
 
-hazard_curves:
-   Used to disable the calculation of hazard curves when there are
-   too many realizations.
-   Example: *hazard_curves = false*
-   Default: True
-
 hazard_curves_from_gmfs:
   Used in scenario/event based calculations. If set, generates hazard curves
   from the ground motion fields.
@@ -483,7 +483,7 @@ max_potential_gmfs:
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
-  Default: 15000
+  Default: 15_000
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -571,10 +571,8 @@ number_of_logic_tree_samples:
 
 oversampling:
   When equal to "forbid" raise an error if tot_samples > num_paths in classical
-  calculations; when equal to "tolerate" do not raise the error (the default);
-  when equal to "reduce_rlzs" reduce the realizations to the unique paths with
-  weights num_samples/tot_samples
-  Example: *oversampling = reduce_rlzs*
+  calculations; when equal to "tolerate" do not raise the error (the default).
+  Example: *oversampling = forbid*
   Default: tolerate
 
 poes:
@@ -995,6 +993,7 @@ class OqParam(valid.ParamSet):
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
+    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     cachedir = valid.Param(valid.utf8, '')
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -1021,7 +1020,6 @@ class OqParam(valid.ParamSet):
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
-    hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
@@ -1065,7 +1063,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
+        valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1563,6 +1561,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
+        #if 'scenario' in self.calculation_mode:  # disable min_iml
+        #    return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
@@ -1795,6 +1795,11 @@ class OqParam(valid.ParamSet):
         return cls()
 
     @property
+    def rupture_xml(self):
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
     def aristotle(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5
@@ -1802,6 +1807,14 @@ class OqParam(valid.ParamSet):
         """
         exposures = self.inputs.get('exposure', [])
         return exposures and exposures[0].endswith('.hdf5')
+
+    @property
+    def fastmean(self):
+        """
+        Return True if it is possible to use the fast mean algorithm
+        """
+        return (not self.individual_rlzs and self.soil_intensities is None
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
 
     def get_kinds(self, kind, R):
         """
@@ -1952,6 +1965,10 @@ class OqParam(valid.ParamSet):
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
+        for trt, val in self.maximum_distance.items():
+            if trt not in self._trts and trt != 'default':
+                # not a problem, the associated maxdist will simply be ignored
+                logging.warning('tectonic region %r not in %s', trt, gsim_lt)
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
@@ -2169,6 +2186,17 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
+    # tested in geese; expected to work for the hazard mosaic
+    def to_ini(self):
+        """
+        Converts the parameters into a string in .ini format
+        """
+        dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        del dic['base_path']
+        del dic['req_site_params']
+        del dic['export_dir']
+        return '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
 
@@ -2194,3 +2222,44 @@ class OqParam(valid.ParamSet):
         if hasattr(self, 'maximum_distance') and not isinstance(
                 self.maximum_distance, Idist):
             self.maximum_distance = Idist(**self.maximum_distance)
+
+
+def _rel_fnames(obj, P):
+    # strip the first P characters and convert to relative paths
+    if isinstance(obj, str):
+        return obj[P:]
+    elif isinstance(obj, list):
+        return '\n  '.join(s[P:] for s in obj)
+    else:  # assume dict
+        dic = {k: v[P:] for k, v in obj.items()}
+        return str(dic)
+
+
+def to_ini(key, val):
+    """
+    Converts key, val into .ini format
+    """
+    if key == 'inputs':
+        fnames = []
+        for v in val.values():
+            if isinstance(v, str):
+                fnames.append(v)
+            elif isinstance(v, list):
+                fnames.extend(v)
+            elif isinstance(v, dict):
+                fnames.extend(v.values())
+        del val['job_ini']
+        P = len(os.path.commonprefix(fnames))
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
+                         for k, v in val.items()
+                         if not k.startswith('_'))
+    elif key == 'sites':
+        sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
+        return f"sites = {sites}"
+    elif key == 'hazard_imtls':
+        return f"intensity_measure_types_and_levels = {val}"
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles'):
+        return f"{key} = {' '.join(map(str, val))}"
+    else:
+        return f'{key} = {val}'
+

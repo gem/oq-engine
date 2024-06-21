@@ -21,6 +21,7 @@ Test of flake8 violations
 """
 import io
 import os
+import sys
 import ast
 import importlib
 import unittest
@@ -141,10 +142,11 @@ def fix_encoding(fname, encoding):
     with open(fname, newline='', encoding=encoding) as f:
         lines = f.read().splitlines()
     fix_newlines(fname, lines)
+    print('fixed', fname, file=sys.stderr)
 
 
 # check encoding and newlines
-def test_csv(OVERWRITE=False):
+def test_csv():
     for cwd, dirs, files in os.walk(REPO):
         for f in files:
             if f.endswith('.csv'):
@@ -154,17 +156,19 @@ def test_csv(OVERWRITE=False):
                     try:
                         lines = f.read().splitlines()
                     except UnicodeDecodeError as exc:
-                        if OVERWRITE:
+                        if os.environ.get('OQ_OVERWRITE'):
                             fix_encoding(fname, 'latin1')
                         else:
                             raise UnicodeDecodeError('%s: %s' % (fname, exc))
                 # read in binary, check newlines
                 error = check_newlines(open(fname, 'rb').read())
-                if error and OVERWRITE:
+                if error and os.environ.get('OQ_OVERWRITE'):
                     try:
                         fix_newlines(fname, lines)
                     except Exception as exc:
                         raise ValueError('%s: %s' % (fname, exc))
+                elif error:
+                    print('Wrong line ending in', fname, file=sys.stderr)
                 elif error == 1:
                     raise ValueError('Found \\n line ending in %s' % fname)
                 elif error == 2:
