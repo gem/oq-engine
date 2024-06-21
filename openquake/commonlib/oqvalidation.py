@@ -2186,6 +2186,17 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
+    # tested in geese; expected to work for the hazard mosaic
+    def to_ini(self):
+        """
+        Converts the parameters into a string in .ini format
+        """
+        dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        del dic['base_path']
+        del dic['req_site_params']
+        del dic['export_dir']
+        return '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
 
@@ -2211,3 +2222,44 @@ class OqParam(valid.ParamSet):
         if hasattr(self, 'maximum_distance') and not isinstance(
                 self.maximum_distance, Idist):
             self.maximum_distance = Idist(**self.maximum_distance)
+
+
+def _rel_fnames(obj, P):
+    # strip the first P characters and convert to relative paths
+    if isinstance(obj, str):
+        return obj[P:]
+    elif isinstance(obj, list):
+        return '\n  '.join(s[P:] for s in obj)
+    else:  # assume dict
+        dic = {k: v[P:] for k, v in obj.items()}
+        return str(dic)
+
+
+def to_ini(key, val):
+    """
+    Converts key, val into .ini format
+    """
+    if key == 'inputs':
+        fnames = []
+        for v in val.values():
+            if isinstance(v, str):
+                fnames.append(v)
+            elif isinstance(v, list):
+                fnames.extend(v)
+            elif isinstance(v, dict):
+                fnames.extend(v.values())
+        del val['job_ini']
+        P = len(os.path.commonprefix(fnames))
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
+                         for k, v in val.items()
+                         if not k.startswith('_'))
+    elif key == 'sites':
+        sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
+        return f"sites = {sites}"
+    elif key == 'hazard_imtls':
+        return f"intensity_measure_types_and_levels = {val}"
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles'):
+        return f"{key} = {' '.join(map(str, val))}"
+    else:
+        return f'{key} = {val}'
+
