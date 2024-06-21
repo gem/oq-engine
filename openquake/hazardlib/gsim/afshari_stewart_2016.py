@@ -186,7 +186,7 @@ class AfshariStewart2016(GMPE):
     #: Requires vs30
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
-    #: Required rupture parameters are magnitude and top of rupture depth
+    #: Required rupture parameters are magnitude and rake
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is closest distance to rupture
