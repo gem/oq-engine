@@ -209,6 +209,14 @@ class GsimLogicTree(object):
         self.shortener = {}
         self.branches = self._build_branches(trts)  # sorted by trt
         if trts != ['*']:
+            # reduce _ltnode to the listed TRTs
+            oknodes = []
+            for blnode in self._ltnode:
+                [bset] = bsnodes(self.filename, blnode)
+                if bset['applyToTectonicRegionType'] in trts:
+                    oknodes.append(bset)
+            self._ltnode.nodes = oknodes
+
             # reduce self.values to the listed TRTs
             values = {}
             for trt in trts:
