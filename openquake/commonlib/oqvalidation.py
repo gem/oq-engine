@@ -2186,7 +2186,7 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    # tested in geese
+    # tested in geese; expected to work for the hazard mosaic
     def to_ini(self):
         """
         Converts the parameters into a string in .ini format
