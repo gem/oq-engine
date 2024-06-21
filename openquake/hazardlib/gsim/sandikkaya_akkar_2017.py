@@ -29,27 +29,27 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import CAV, IA
 
 
-_compute_logarithmic_distance_term = CallableDict()
+compute_logarithmic_distance_term = CallableDict()
 
 
-@_compute_logarithmic_distance_term.add("rjb")
-def _compute_logarithmic_distance_term_1(kind, C, ctx):
+@compute_logarithmic_distance_term.add("rjb")
+def compute_logarithmic_distance_term_1(kind, C, ctx):
     """uses rjb for distance part"""
     return (C["a4"] + C["a5"] * (ctx.mag - 6.75)) * np.log(
         np.sqrt(ctx.rjb**2 + C["a6"] ** 2)
     )
 
 
-@_compute_logarithmic_distance_term.add("repi")
-def _compute_logarithmic_distance_term_2(kind, C, ctx):
+@compute_logarithmic_distance_term.add("repi")
+def compute_logarithmic_distance_term_2(kind, C, ctx):
     """uses repi for distance part"""
     return (C["a4"] + C["a5"] * (ctx.mag - 6.75)) * np.log(
         np.sqrt(ctx.repi**2 + C["a6"] ** 2)
     )
 
 
-@_compute_logarithmic_distance_term.add("rhypo")
-def _compute_logarithmic_distance_term_3(kind, C, ctx):
+@compute_logarithmic_distance_term.add("rhypo")
+def compute_logarithmic_distance_term_3(kind, C, ctx):
     """uses rhypo for distance part"""
     return (C["a4"] + C["a5"] * (ctx.mag - 6.75)) * np.log(
         np.sqrt(ctx.rhypo**2 + C["a6"] ** 2)
@@ -68,7 +68,7 @@ def get_mean_values(kind, C, ctx):
         C["a1"]
         + C["a2"] * (ctx.mag - 6.75)
         + C["a3"] * (8.5 - ctx.mag) ** 2
-        + _compute_logarithmic_distance_term(kind, C, ctx)
+        + compute_logarithmic_distance_term(kind, C, ctx)
         + C["a7"] * FNM
         + C["a8"] * FRV
         + C["a9"] * np.log(np.minimum(ctx.vs30, 1000) / 750)
@@ -110,6 +110,7 @@ class SandikkayaAkkar2017Rjb(GMPE):
         super().__init__(**kwargs)
         [self.kind] = self.REQUIRES_DISTANCES
 
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -123,7 +124,7 @@ class SandikkayaAkkar2017Rjb(GMPE):
             conv_fact2 = 0
             ofact = 100
             gfact = 9.81
-            if str(imt) == "CAV":
+            if imt.string == "CAV":
                 # convert from cm/s to m/s
                 conv_fact = np.log(1 / ofact)
                 # convert from m/s to g-s
