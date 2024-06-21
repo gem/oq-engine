@@ -2224,7 +2224,8 @@ class OqParam(valid.ParamSet):
             self.maximum_distance = Idist(**self.maximum_distance)
 
 
-def to_fnames(obj, P):
+def _rel_fnames(obj, P):
+    # strip the first P characters and convert to relative paths
     if isinstance(obj, str):
         return obj[P:]
     elif isinstance(obj, list):
@@ -2249,7 +2250,7 @@ def to_ini(key, val):
                 fnames.extend(v.values())
         del val['job_ini']
         P = len(os.path.commonprefix(fnames))
-        return '\n'.join(f'{k}_file = {to_fnames(v, P)}'
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
                          for k, v in val.items()
                          if not k.startswith('_'))
     elif key == 'sites':
@@ -2257,9 +2258,7 @@ def to_ini(key, val):
         return f"sites = {sites}"
     elif key == 'hazard_imtls':
         return f"intensity_measure_types_and_levels = {val}"
-    elif key == 'reqv_ignore_sources':
-        return f"{key} = {' '.join(val)}"
-    elif key in ('poes', 'quantiles'):
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles'):
         return f"{key} = {' '.join(map(str, val))}"
     else:
         return f'{key} = {val}'
