@@ -111,6 +111,14 @@ def preshape(obj):
     return ()
 
 
+class FakeDataset:
+    """
+    Used for null saving
+    """
+    def flush(self):
+        pass
+
+
 def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
@@ -119,6 +127,8 @@ def extend(dset, array, **attrs):
     :param array: an array of length L
     :returns: the total length of the dataset (i.e. initial length + L)
     """
+    if isinstance(dset, FakeDataset):  # save nothing
+        return 0
     length = len(dset)
     if len(array) == 0:
         return length

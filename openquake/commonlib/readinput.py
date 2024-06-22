@@ -655,7 +655,6 @@ def get_site_collection(oqparam, h5=None):
         if h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.aristotle and (
-                'station_data' not in oqparam.inputs) and (
                     not oqparam.infrastructure_connectivity_analysis):
             # filter the far away sites
             rup = get_rupture(oqparam)
@@ -1069,12 +1068,16 @@ def get_station_data(oqparam, sitecol):
     if parallel.oq_distribute() == 'zmq':
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
-    complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
-    dic = {(lo, la): sid for lo, la, sid in complete[['lon', 'lat', 'sids']]}
+    nsites = len(sitecol.complete)
+    sitecol.extend(lons, lats)
+    logging.info('Extended complete site collection from %d to %d sites',
+                 nsites, len(sitecol.complete))
+    dic = {(lo, la): sid
+           for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
     sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values

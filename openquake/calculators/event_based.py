@@ -177,17 +177,19 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
 
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        assert stations.sum(), 'There are no stations??'
-        station_sids = sids[stations]
-        return ConditionedGmfComputer(
-            ebr, srcfilter.sitecol.filtered(sids),
-            srcfilter.sitecol.filtered(station_sids),
-            station_data.loc[station_sids],
-            oq.observed_imts,
-            cmaker, oq.correl_model, oq.cross_correl,
-            oq.ground_motion_correlation_params,
-            oq.number_of_ground_motion_fields,
-            oq._amplifier, oq._sec_perils)
+        if stations.any():
+            station_sids = sids[stations]
+            return ConditionedGmfComputer(
+                ebr, srcfilter.sitecol.filtered(sids),
+                srcfilter.sitecol.filtered(station_sids),
+                station_data.loc[station_sids],
+                oq.observed_imts,
+                cmaker, oq.correl_model, oq.cross_correl,
+                oq.ground_motion_correlation_params,
+                oq.number_of_ground_motion_fields,
+                oq._amplifier, oq._sec_perils)
+        else:
+            logging.warning('There are no stations!')
 
     return GmfComputer(
         ebr, srcfilter.sitecol.filtered(sids), cmaker,

@@ -1738,12 +1738,12 @@ def view_aggrisk(token, dstore):
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):
         arr[r]['gsim'] = repr(repr(rlz.value[0]))
-        arr[r]['weight'] = rlz.weight
+        arr[r]['weight'] = rlz.weight[-1]
     for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
         rlz = rlzs[r]
         lt = LOSSTYPE[loss_id]
         arr[r][lt] = loss
-        arr[AVG][lt] += loss * rlz.weight
+        arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr
