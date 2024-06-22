@@ -188,6 +188,8 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
                 oq.ground_motion_correlation_params,
                 oq.number_of_ground_motion_fields,
                 oq._amplifier, oq._sec_perils)
+        else:
+            logging.warning('There are no stations!')
 
     return GmfComputer(
         ebr, srcfilter.sitecol.filtered(sids), cmaker,
