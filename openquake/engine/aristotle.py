@@ -130,7 +130,9 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     if rupture_file:
         inputs['rupture_model'] = rupture_file
     oq = readinput.get_oqparam(params)
-    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+    # NB: fake h5 to cache `get_site_model` and avoid multiple associations
+    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(
+        oq, h5={'performance_data': hdf5.FakeDataset()})
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(exposure_hdf5, countries)
