@@ -2256,10 +2256,17 @@ def to_ini(key, val):
     elif key == 'sites':
         sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
         return f"sites = {sites}"
+    elif key == 'region':
+        coords = val[9:-2].split(',')  # strip POLYGON((...))
+        return f'{key} = {", ".join(c for c in coords[:-1])}'
+    elif key == 'sites_slice':
+        return 'sites_slice = %d:%d' % val
     elif key == 'hazard_imtls':
         return f"intensity_measure_types_and_levels = {val}"
-    elif key in ('reqv_ignore_sources', 'poes', 'quantiles'):
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles',
+                 'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
     else:
+        if val is None:
+            val = ''
         return f'{key} = {val}'
-
