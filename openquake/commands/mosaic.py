@@ -343,7 +343,8 @@ def aristotle(exposure_hdf5=None, *,
                  trt=trt, truncation_level=truncation_level,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
-                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5)
+                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
+                 station_data_file=stations)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
