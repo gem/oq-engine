@@ -285,6 +285,12 @@ class GsimLogicTree(object):
                                     'for %s' % (imt, gsim))
 
     def to_node(self):
+        """
+        Converts the GsimLogicTree instance into a node object which
+        can be written in XML format.
+        NB: IMT-weight information is lost, but is not a problem if
+        the logic tree is meant to be used for scenarios/event based.
+        """
         root = N('logicTree', {'logicTreeID': 'lt'})
         bsno = 0
         for trt, branches in itertools.groupby(
