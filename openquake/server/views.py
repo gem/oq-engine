@@ -823,7 +823,8 @@ def aristotle_run(request):
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed, station_data_file)
+            asset_hazard_distance, ses_seed,
+            station_data_file=station_data_file)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),

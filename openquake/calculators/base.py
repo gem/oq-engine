@@ -976,7 +976,7 @@ class HazardCalculator(BaseCalculator):
             oq.observed_imts = self.observed_imts
 
         if hasattr(self, 'sitecol') and self.sitecol:
-            if 'site_model' in oq.inputs:
+            if 'site_model' in oq.inputs or oq.aristotle:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
