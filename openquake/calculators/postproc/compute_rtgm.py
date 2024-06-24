@@ -524,9 +524,7 @@ def main(dstore, csm):
     
     sitecol = dstore['sitecol']
     DLLs= {}
-    for s, site in enumerate(dstore['sitecol']):
-        sid = site.id
-        DLLs[sid] = get_DLLs(job_imts, site.vs30)
+    DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']}
    
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
