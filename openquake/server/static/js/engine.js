@@ -572,8 +572,11 @@
                 });
                 event.preventDefault();
             });
-            $('#clearFile').click(function() {
+            $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
+            });
+            $('#clearStationDataFile').click(function() {
+                $('#station_data_file_input').val('');
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
@@ -598,6 +601,7 @@
                                 $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
+                formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",

@@ -129,6 +129,8 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
+    if station_data_file:
+        inputs['station_data'] = station_data_file
     oq = readinput.get_oqparam(params)
     # NB: fake h5 to cache `get_site_model` and avoid multiple associations
     sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(
@@ -206,6 +208,7 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
 
