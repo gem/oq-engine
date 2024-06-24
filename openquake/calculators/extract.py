@@ -1163,7 +1163,8 @@ def extract_disagg(dstore, what):
     else:
         poei = slice(None)
     if 'traditional' in spec:
-        spec = spec[:4]  # rlzs or stats
+        spec = spec.split('-')[0]
+        assert spec in {'rlzs', 'stats'}, spec
         traditional = True
     else:
         traditional = False
@@ -1208,8 +1209,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weight = dstore['full_lt'].init().rlzs['weight']
-        weights = weight[rlzs]
+        weights = dstore['weights'][:][rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
@@ -1375,7 +1375,10 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        if 'source_mags' not in dstore:  # ruptures import from CSV
+            mags = numpy.unique(dstore['ruptures']['mag'])
+        else:
+            mags = dstore[f'source_mags/{rgetter.trt}'][:]
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:

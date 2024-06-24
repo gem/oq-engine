@@ -51,7 +51,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
-from openquake.commands.plot import plot_avg_gmf
+from openquake.calculators.postproc.plots import plot_avg_gmf
 from PIL import Image
 
 U8 = numpy.uint8
@@ -171,28 +171,28 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
-    complete = srcfilter.sitecol.complete
     proxy.geom = rupgeoms[proxy['geom_id']]
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        assert stations.sum(), 'There are no stations??'
-        station_sids = sids[stations]
-        target_sids = sids[~stations]
-        return ConditionedGmfComputer(
-            ebr, complete.filtered(target_sids),
-            complete.filtered(station_sids),
-            station_data.loc[station_sids],
-            oq.observed_imts,
-            cmaker, oq.correl_model, oq.cross_correl,
-            oq.ground_motion_correlation_params,
-            oq.number_of_ground_motion_fields,
-            oq._amplifier, oq._sec_perils)
+        if stations.any():
+            station_sids = sids[stations]
+            return ConditionedGmfComputer(
+                ebr, srcfilter.sitecol.filtered(sids),
+                srcfilter.sitecol.filtered(station_sids),
+                station_data.loc[station_sids],
+                oq.observed_imts,
+                cmaker, oq.correl_model, oq.cross_correl,
+                oq.ground_motion_correlation_params,
+                oq.number_of_ground_motion_fields,
+                oq._amplifier, oq._sec_perils)
+        else:
+            logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, complete.filtered(sids), cmaker,
+        ebr, srcfilter.sitecol.filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 

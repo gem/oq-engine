@@ -447,6 +447,20 @@ def compare_sitecol(calc_ids: int):
         check_intersect(array0, array1, 'sids', sorted(fields), calc_ids)
 
 
+def compare_oqparam(calc_ids: int):
+    """
+    Compare the dictionaries of parameters associated to the calculations
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    dic0 = vars(ds0['oqparam'])
+    dic1 = vars(ds1['oqparam'])
+    common = sorted(set(dic0) & set(dic1))
+    for key in common:
+        if dic0[key] != dic1[key]:
+            print('%s: %s != %s' % (key, dic0[key], dic1[key]))
+
+    
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -459,11 +473,12 @@ main = dict(rups=compare_rups,
             sources=compare_sources,
             events=compare_events,
             assetcol=compare_assetcol,
-            sitecol=compare_sitecol)
+            sitecol=compare_sitecol,
+            oqparam=compare_oqparam)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,
-          compare_events, compare_assetcol, compare_sitecol):
+          compare_events, compare_assetcol, compare_sitecol, compare_oqparam):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:

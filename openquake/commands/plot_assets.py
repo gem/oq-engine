@@ -21,9 +21,8 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
-from openquake.commands.plot import (
+from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes)
-
 
 
 def main(calc_id: int = -1, site_model=False,

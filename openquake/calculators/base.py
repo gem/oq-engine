@@ -542,14 +542,6 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
-        if 'station_data' in oq.inputs:
-            logging.info('Reading station data from %s',
-                         oq.inputs['station_data'])
-            self.station_data, self.observed_imts = \
-                readinput.get_station_data(oq, self.sitecol)
-            self.datastore.create_df('station_data', self.station_data)
-            oq.observed_imts = self.observed_imts
-
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
@@ -973,6 +965,16 @@ class HazardCalculator(BaseCalculator):
 
     def _read_risk3(self):
         oq = self.oqparam
+        if 'station_data' in oq.inputs:
+            logging.info('Reading station data from %s',
+                         oq.inputs['station_data'])
+            # NB: get_station_data is extending the complete sitecol
+            # which then is associated to the site parameters below
+            self.station_data, self.observed_imts = \
+                readinput.get_station_data(oq, self.sitecol)
+            self.datastore.create_df('station_data', self.station_data)
+            oq.observed_imts = self.observed_imts
+
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
                 assoc_dist = (oq.region_grid_spacing * 1.414
