@@ -157,6 +157,12 @@ collect_rlzs:
   Example: *collect_rlzs=true*.
   Default: None
 
+correlation_cutoff:
+  Used in conditioned GMF calculation to avoid small negative eigenvalues
+  wreaking havoc with the numerics
+  Example: *correlation_cutoff = 1E-11*
+  Default: 1E-12
+
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
   so that the hazard curves can be compared.
@@ -987,6 +993,7 @@ class OqParam(valid.ParamSet):
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
+    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     cachedir = valid.Param(valid.utf8, '')
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -1554,6 +1561,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
+        #if 'scenario' in self.calculation_mode:  # disable min_iml
+        #    return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
@@ -2177,6 +2186,17 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
+    # tested in geese; expected to work for the hazard mosaic
+    def to_ini(self):
+        """
+        Converts the parameters into a string in .ini format
+        """
+        dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        del dic['base_path']
+        del dic['req_site_params']
+        del dic['export_dir']
+        return '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
 
@@ -2202,3 +2222,51 @@ class OqParam(valid.ParamSet):
         if hasattr(self, 'maximum_distance') and not isinstance(
                 self.maximum_distance, Idist):
             self.maximum_distance = Idist(**self.maximum_distance)
+
+
+def _rel_fnames(obj, P):
+    # strip the first P characters and convert to relative paths
+    if isinstance(obj, str):
+        return obj[P:]
+    elif isinstance(obj, list):
+        return '\n  '.join(s[P:] for s in obj)
+    else:  # assume dict
+        dic = {k: v[P:] for k, v in obj.items()}
+        return str(dic)
+
+
+def to_ini(key, val):
+    """
+    Converts key, val into .ini format
+    """
+    if key == 'inputs':
+        fnames = []
+        for v in val.values():
+            if isinstance(v, str):
+                fnames.append(v)
+            elif isinstance(v, list):
+                fnames.extend(v)
+            elif isinstance(v, dict):
+                fnames.extend(v.values())
+        del val['job_ini']
+        P = len(os.path.commonprefix(fnames))
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
+                         for k, v in val.items()
+                         if not k.startswith('_'))
+    elif key == 'sites':
+        sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
+        return f"sites = {sites}"
+    elif key == 'region':
+        coords = val[9:-2].split(',')  # strip POLYGON((...))
+        return f'{key} = {", ".join(c for c in coords[:-1])}'
+    elif key == 'sites_slice':
+        return 'sites_slice = %d:%d' % val
+    elif key == 'hazard_imtls':
+        return f"intensity_measure_types_and_levels = {val}"
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles',
+                 'source_id', 'source_nodes', 'soil_intensities'):
+        return f"{key} = {' '.join(map(str, val))}"
+    else:
+        if val is None:
+            val = ''
+        return f'{key} = {val}'

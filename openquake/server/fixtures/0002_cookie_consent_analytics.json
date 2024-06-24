@@ -5,7 +5,7 @@
     "fields": {
         "varname": "analytics",
         "name": "Google Analytics",
-        "description": "Used to collect anonymous statistics.",
+        "description": "Optional cookies used to collect anonymous statistics.",
         "is_required": false,
         "is_deletable": true,
         "ordering": 0,
@@ -18,7 +18,7 @@
     "fields": {
         "cookiegroup": 3,
         "name": "*",
-        "description": "",
+        "description": "Optional cookie used to collect anonymous statistics.",
         "path": "/",
         "domain": ".google.com",
         "created": "2024-06-17T15:03:38.616Z"

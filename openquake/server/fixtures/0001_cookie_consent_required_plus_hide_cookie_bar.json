@@ -18,7 +18,7 @@
     "fields": {
         "cookiegroup": 1,
         "name": "csrftoken",
-        "description": "",
+        "description": "A Cross-Site Request Forgery (CSRF) Token is a secret, unique and unpredictable value a server-side application generates in order to protect CSRF vulnerable resources.",
         "path": "/",
         "domain": "",
         "created": "2024-06-17T15:05:07.063Z"
@@ -30,7 +30,7 @@
     "fields": {
         "cookiegroup": 1,
         "name": "sessionid",
-        "description": "",
+        "description": "Session cookies are server-specific cookies that last for a session and that track the movements of the user within the website.",
         "path": "/",
         "domain": "",
         "created": "2024-06-17T15:05:21.282Z"
@@ -41,7 +41,7 @@
     "pk": 2,
     "fields": {
         "varname": "hide_cookie_bar_group",
-        "name": "Optional cookie to hide the cookie bar",
+        "name": "Optional cookie to hide the cookie consent banner.",
         "description": "",
         "is_required": false,
         "is_deletable": true,
@@ -55,7 +55,7 @@
     "fields": {
         "cookiegroup": 2,
         "name": "hide_cookie_bar",
-        "description": "",
+        "description": "Hide the cookie consent banner.",
         "path": "/",
         "domain": "",
         "created": "2024-06-17T14:58:17.990Z"

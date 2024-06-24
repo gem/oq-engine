@@ -209,6 +209,14 @@ class GsimLogicTree(object):
         self.shortener = {}
         self.branches = self._build_branches(trts)  # sorted by trt
         if trts != ['*']:
+            # reduce _ltnode to the listed TRTs
+            oknodes = []
+            for blnode in self._ltnode:
+                [bset] = bsnodes(self.filename, blnode)
+                if bset['applyToTectonicRegionType'] in trts:
+                    oknodes.append(bset)
+            self._ltnode.nodes = oknodes
+
             # reduce self.values to the listed TRTs
             values = {}
             for trt in trts:
@@ -275,6 +283,34 @@ class GsimLogicTree(object):
                                 raise ValueError(
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
+
+    def to_node(self):
+        """
+        Converts the GsimLogicTree instance into a node object which
+        can be written in XML format.
+        NB: IMT-weight information is lost, but is not a problem if
+        the logic tree is meant to be used for scenarios/event based.
+        """
+        root = N('logicTree', {'logicTreeID': 'lt'})
+        bsno = 0
+        for trt, branches in itertools.groupby(
+                self.branches, operator.attrgetter('trt')):
+            bsnode = N('logicTreeBranchSet',
+                       {'applyToTectonicRegionType': trt,
+                        'branchSetID': "bs%d" % bsno,
+                        'uncertaintyType': 'gmpeModel'})
+            bsno += 1
+            brno = 0
+            for br in branches:
+                brnode = N('logicTreeBranch', {'branchID': 'br%d' % brno})
+                brnode.nodes.append(
+                    N('uncertaintyModel', text=repr(br.gsim)))
+                brnode.nodes.append(
+                    N('uncertaintyWeight', text=br.weight['default']))
+                bsnode.nodes.append(brnode)
+                brno += 1
+            root.nodes.append(bsnode)    
+        return root
 
     def __toh5__(self):
         weights = set()

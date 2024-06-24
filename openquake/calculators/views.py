@@ -310,7 +310,11 @@ def view_full_lt(token, dstore):
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
-    full_lt.get_trt_rlzs(dstore['trt_smrs'][:])  # set _rlzs_by
+    try:
+        trt_smrs = dstore['trt_smrs'][:]
+    except KeyError:  # scenario
+        trt_smrs = [[0]]
+    full_lt.get_trt_rlzs(trt_smrs)  # set _rlzs_by
     header = ['trt_smr', 'gsim', 'rlzs']
     rows = []
     for trt_smr, rbg in full_lt._rlzs_by.items():
@@ -1738,12 +1742,12 @@ def view_aggrisk(token, dstore):
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):
         arr[r]['gsim'] = repr(repr(rlz.value[0]))
-        arr[r]['weight'] = rlz.weight
+        arr[r]['weight'] = rlz.weight[-1]
     for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
         rlz = rlzs[r]
         lt = LOSSTYPE[loss_id]
         arr[r][lt] = loss
-        arr[AVG][lt] += loss * rlz.weight
+        arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr

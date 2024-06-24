@@ -1,4 +1,16 @@
   [Michele Simionato]
+  * Internal: added method GsimLogicTree.to_node
+  * Internal: added commands `oq compare oqparam` and `oq plot_sites csvfiles`
+  * Fixed exporting the ruptures when imported from a CSV
+  * Fixed the issue of small negative eigenvalues in conditioned GMFs
+    calculations by adding a correlation_cutoff
+  * Internal: extended `Starmap.apply` to split DataFrames
+  * Fixed the avg_gmf exporter in presence of a filtered site collection
+
+  [Lana Todorovic]
+  * Improved secondary perils documentation
+
+  [Michele Simionato]
   * Fixed the ordering of the realizations to depend on the source model
     branch path also in the case of full enumeration: this is crucial to
     get consistent results with the two approaches
