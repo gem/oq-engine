@@ -135,6 +135,12 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
 
+        # test gsim_lt is writeable as XML
+        gnode = self.calc.datastore['full_lt'].gsim_lt.to_node()
+        tmp = general.gettemp(suffix='.xml')
+        with open(tmp, 'wb') as f:
+            nrml.write([gnode], f)
+
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',
                       calculation_mode='preclassical')

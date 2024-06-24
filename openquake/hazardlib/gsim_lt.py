@@ -284,6 +284,28 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
+    def to_node(self):
+        root = N('logicTree', {'logicTreeID': 'lt'})
+        bsno = 0
+        for trt, branches in itertools.groupby(
+                self.branches, operator.attrgetter('trt')):
+            bsnode = N('logicTreeBranchSet',
+                       {'applyToTectonicRegionType': trt,
+                        'branchSetID': "bs%d" % bsno,
+                        'uncertaintyType': 'gmpeModel'})
+            bsno += 1
+            brno = 0
+            for br in branches:
+                brnode = N('logicTreeBranch', {'branchID': 'br%d' % brno})
+                brnode.nodes.append(
+                    N('uncertaintyModel', text=repr(br.gsim)))
+                brnode.nodes.append(
+                    N('uncertaintyWeight', text=br.weight['default']))
+                bsnode.nodes.append(brnode)
+                brno += 1
+            root.nodes.append(bsnode)    
+        return root
+
     def __toh5__(self):
         weights = set()
         for branch in self.branches:

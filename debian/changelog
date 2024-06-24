@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: added method GsimLogicTree.to_node
   * Internal: added commands `oq compare oqparam` and `oq plot_sites csvfiles`
   * Fixed exporting the ruptures when imported from a CSV
   * Fixed the issue of small negative eigenvalues in conditioned GMFs
