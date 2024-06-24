@@ -625,7 +625,7 @@ class HazardCalculator(BaseCalculator):
             df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            self.datastore['full_lt'] = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
             self.save_crmodel()
             self.datastore.swmr_on()
@@ -711,7 +711,7 @@ class HazardCalculator(BaseCalculator):
             # for instance in classical damage case_8a
             pass
         else:  # build a fake; used by risk-from-file calculators
-            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            self.datastore['full_lt'] = logictree.FullLogicTree.fake()
 
     @general.cached_property
     def R(self):
@@ -925,7 +925,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if oq.job_type == 'risk':
             # the decode below is used in aristotle calculations
-            taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
+            taxonomies = python3compat.decode(
+                self.assetcol.tagcol.taxonomy[1:])
             uniq = numpy.unique(self.assetcol['taxonomy'])
             taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
                       if taxi in uniq}
@@ -1133,7 +1134,8 @@ class RiskCalculator(HazardCalculator):
         if not hasattr(self.crmodel, 'tmap'):
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxdic)
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam,
+                                                           taxdic)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
