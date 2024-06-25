@@ -20,7 +20,6 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 
-import toml
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
@@ -210,9 +209,9 @@ def _dict_to_coeffs_table(input_dict, name):
 
 class ModifiableGMPE(GMPE):
     """
-    This is a fully configurable GMPE. Accepts in input a dictionary
-    {'gmpe': dict_of_params} and then some extra keyword arguments where
-    the keys define the required modifications. See examples in the tests.
+    This is a class to modify an underlying GMPE.
+    It should NEVER be instantiated directly; users should call
+    hazardlib.valid.modifiable_gmpe(gmpe, **kwargs) instead.
     """
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
