@@ -24,7 +24,8 @@ import json
 import logging
 import operator
 import itertools
-from collections import namedtuple, defaultdict
+from dataclasses import dataclass
+from collections import defaultdict
 import toml
 import numpy
 
@@ -35,10 +36,17 @@ from openquake.baselib.general import (
     duplicated, BASE183, group_array, cached_property)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
-BranchTuple = namedtuple('BranchTuple', 'trt id gsim weight effective')
+
+@dataclass
+class BranchTuple:
+    trt: str
+    id: str
+    gsim: GMPE
+    weight: dict
+    effective: bool
 
 
 class InvalidLogicTree(Exception):
@@ -304,7 +312,7 @@ class GsimLogicTree(object):
             for br in branches:
                 brnode = N('logicTreeBranch', {'branchID': 'br%d' % brno})
                 brnode.nodes.append(
-                    N('uncertaintyModel', text=repr(br.gsim)))
+                    N('uncertaintyModel', text=br.gsim._toml))
                 brnode.nodes.append(
                     N('uncertaintyWeight', text=br.weight['default']))
                 bsnode.nodes.append(brnode)
