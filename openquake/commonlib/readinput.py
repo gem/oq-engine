@@ -705,9 +705,10 @@ def get_site_collection(oqparam, h5=None):
     sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
     sitecol.exposure = exp
 
-    has_gmf = ('scenario' in oqparam.calculation_mode or 'event_based' in
-          oqparam.calculation_mode)
-    if has_gmf and 'custom_site_id' not in sitecol.array.dtype.names:
+    # add custom_site_id in risk calculations (or GMF calculations)
+    custom_site_id = any(x in oqparam.calculation_mode
+                         for x in ('scenario', 'event_based', 'risk', 'damage'))
+    if custom_site_id and 'custom_site_id' not in sitecol.array.dtype.names:
         gh = sitecol.geohash(8)
         if len(numpy.unique(gh)) < len(gh):
             logging.error('geohashes are not unique')

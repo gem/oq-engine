@@ -128,6 +128,7 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance',
     'ses_seed': 'SES seed',
+    'station_data_file': 'Station data CSV',
 }
 
 # NOTE: currently placeholders are equal to labels. We might re-define
@@ -649,6 +650,7 @@ def aristotle_callback(
     # number_of_ground_motion_fields: 100
     # asset_hazard_distance: 15.0
     # ses_seed: 42
+    # station_data_file: None
     # countries: TUR
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
@@ -732,6 +734,16 @@ def aristotle_validate(request):
         del request._files['rupture_file']
     else:
         rupture_path = None
+    station_data_file = request.FILES.get('station_data_file')
+    if station_data_file:
+        station_data_path = station_data_file.temporary_file_path()
+        # NOTE: by default, Django deletes all the uploaded temporary files
+        # (tracked in request._files) when the request is destroyed. We need to
+        # prevent this from happening, because the engine has to read the
+        # station_data_file from the process that runs the calculation
+        del request._files['station_data_file']
+    else:
+        station_data_path = None
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -767,6 +779,10 @@ def aristotle_validate(request):
         else:
             params[fieldname] = value
 
+    # FIXME: validate station_data_file
+    if station_data_path is not None:
+        params['station_data_file'] = station_data_path
+
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -794,20 +810,21 @@ def aristotle_run(request):
         usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed
+        asset_hazard_distance, ses_seed, station_data_file
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed) = res
+     asset_hazard_distance, ses_seed, station_data_file) = res
     try:
         allparams = get_aristotle_allparams(
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed)
+            asset_hazard_distance, ses_seed,
+            station_data_file=station_data_file)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
