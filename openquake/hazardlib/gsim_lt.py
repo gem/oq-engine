@@ -41,7 +41,7 @@ from openquake.hazardlib.imt import from_string
 
 
 @dataclass
-class BranchTuple:
+class GsimBranch:
     trt: str
     id: str
     gsim: GMPE
@@ -371,7 +371,7 @@ class GsimLogicTree(object):
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
                 weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
                 gsim.weight = weight
-                bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
+                bt = GsimBranch(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
 
@@ -388,7 +388,7 @@ class GsimLogicTree(object):
             new.branches = []
             for br in self.branches:
                 if br.trt in trts:
-                    branch = BranchTuple(br.trt, br.id, br.gsim, br.weight, 1)
+                    branch = GsimBranch(br.trt, br.id, br.gsim, br.weight, 1)
                     new.branches.append(branch)
         return new
 
@@ -424,7 +424,7 @@ class GsimLogicTree(object):
                 new.values[trt] = [gsim]
                 br_id = 'gA' + str(trti)
                 new.shortener[br_id] = keyno(br_id, trti, 0)
-                branch = BranchTuple(trt, br_id, gsim, sum(weights), True)
+                branch = GsimBranch(trt, br_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
                 new.branches.append(br)
@@ -501,7 +501,7 @@ class GsimLogicTree(object):
 
                 gsim.weight = weight
                 self.values[trt].append(gsim)
-                bt = BranchTuple(
+                bt = GsimBranch(
                     branchset['applyToTectonicRegionType'],
                     branch_id, gsim, weight, effective)
                 if effective:
