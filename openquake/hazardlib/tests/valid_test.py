@@ -159,6 +159,6 @@ class ValidationTestCase(unittest.TestCase):
 
     def test_modifiable_gmpe(self):
         gsim = valid.gsim('Lin2011foot')
-        gmpe = valid.modifiable_gmpe(
+        gmpe = valid.modified_gsim(
             gsim, add_between_within_stds={'with_betw_ratio':1.5})
         valid.gsim(gmpe._toml)  # make sure the generated _toml is valid

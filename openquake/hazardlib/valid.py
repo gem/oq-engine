@@ -188,7 +188,7 @@ def gsim(value, basedir=''):
     return gs
 
 
-def modifiable_gmpe(gmpe, **kwargs):
+def modified_gsim(gmpe, **kwargs):
     """
     Builds a ModifiableGMPE from a gmpe
     """
