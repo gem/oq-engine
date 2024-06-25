@@ -55,6 +55,8 @@ jobs:
           Write-Host $Env:GITHUB_REF
           echo "Branch environment"
           Write-Host $Env:BRANCH
+          echo "Display informaion on Locale"
+          Get-WinUserLanguageList
       - name: Install engine on developer mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
