@@ -63,9 +63,9 @@ cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0002_cookie_consent_analytics.json
 ```
 
-Cookies and groups of required or optional cookies can be added, removed or edited via the Django Admin interface.
+Required or optional cookies or groups of them can be added, removed or edited via the Django Admin interface.
 New custom cookies can be managed similarly to what is done in `openquake/server/templates/engine/includes/cookie_analytics.html`.
-Please refer to `https://django-cookie-consent.readthedocs.io/en/latest/` for further details on how to use cookies in Django.
+Please refer to `https://django-cookie-consent.readthedocs.io/en/latest/` for further details on how to customize cookies in Django.
 
 Add a new local superuser:
 
