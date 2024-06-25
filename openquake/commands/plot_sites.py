@@ -21,18 +21,21 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.calculators.postproc.plots import add_borders
 
+def get_lon_lat(csvfile):
+    lon = 'Longitude' if 'Longitude' in csvfile.fields else 'lon'
+    lat = 'Latitude' if 'Latitude' in csvfile.fields else 'lat'
+    return csvfile.read_df().rename(columns={lon: 'lon', lat: 'lat'})
+
 
 def main(files_csv):
     """
     Plot the sites contained in the file
     """
-
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
 
     csvfiles = hdf5.sniff(files_csv)
-    dfs = [csvfile.read_df()[['lon', 'lat']]
-           for csvfile in csvfiles]
+    dfs = [get_lon_lat(csvfile) for csvfile in csvfiles]
     
     fig = p.figure()
     ax = fig.add_subplot(111)
@@ -45,8 +48,10 @@ def main(files_csv):
                   label=csvfile.fname, s=markersize)
         for model, lon, lat in zip(models, df.lon, df.lat):
             ax.annotate(model, (lon, lat))
+        #for model, id, lon, lat in zip(models, df.ID, df.lon, df.lat):
+        #    ax.annotate(model + str(id), (lon, lat))
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
-    add_borders(ax, readinput.read_mosaic_df, buffer=.9)
+    #add_borders(ax, readinput.read_mosaic_df, buffer=.9)
     p.show()
     return p
 
