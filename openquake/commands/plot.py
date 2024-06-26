@@ -108,8 +108,7 @@ def make_figure_avg_gmf(extractors, what):
     """
     [ex] = extractors
     imt = what.split('=')[1]
-    calc_id = ex.calc_id
-    plt = plot_avg_gmf(calc_id, imt)
+    plt = plot_avg_gmf(ex, imt)
     return plt
 
 
