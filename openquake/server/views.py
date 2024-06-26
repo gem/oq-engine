@@ -693,7 +693,7 @@ def aristotle_get_rupture_data(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    [rupdic, _] = res
+    [rupdic] = res
     try:
         trts, mosaic_model = get_trts_around(
             rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
@@ -784,7 +784,9 @@ def aristotle_validate(request):
             params[fieldname] = value
 
     # FIXME: validate station_data_file
-    params['station_data_file'] = station_data_path
+    if 'lon' in request.POST:
+        # NOTE: if the request contains all form parameters
+        params['station_data_file'] = station_data_path
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -813,7 +815,7 @@ def aristotle_run(request):
         usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed
+        asset_hazard_distance, ses_seed, station_data_file
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
