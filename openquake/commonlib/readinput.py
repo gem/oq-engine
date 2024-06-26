@@ -445,6 +445,31 @@ def rup_radius(rup):
     return radius
 
 
+def filter_site_array_around(array, rup, dist):
+    """
+    :param sitecol: SiteCollection
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: site model close to the rupture
+    """
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
+    logging.info('kdtree filtering of the site model')
+    tree = cKDTree(xyz_all)
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+
+    # then fine filtering
+    array = array[idxs]
+    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
+    if len(idxs) < len(array):
+        logging.info('Filtering %d/%d sites', len(idxs), len(array))
+    return array[idxs]
+
+
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
@@ -454,22 +479,9 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    hypo = rup.hypocenter
-    x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-
-    # first raw filtering
-    logging.info('kdtree filtering of the site model')
-    tree = cKDTree(xyz_all)
-    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
-
-    # then fine filtering
-    sm = sm[idxs]
-    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
-    if len(idxs) < len(sm):
-        logging.info('Filtering %d/%d sites', len(idxs), len(sm))
-    return sm[idxs]
+    filt_sites = filter_sites_around(sm, rup, dist)
+        
+    return filt_sites
 
 
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
