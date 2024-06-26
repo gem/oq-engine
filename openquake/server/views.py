@@ -693,7 +693,7 @@ def aristotle_get_rupture_data(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    [rupdic] = res
+    [rupdic, _] = res
     try:
         trts, mosaic_model = get_trts_around(
             rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
@@ -718,32 +718,36 @@ def aristotle_get_rupture_data(request):
                         status=200)
 
 
+def copy_to_temp_dir_with_unique_name(source_file_path):
+    temp_dir = tempfile.gettempdir()
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+    temp_file_path = temp_file.name
+    # Close the NamedTemporaryFile to prevent conflicts on Windows
+    temp_file.close()
+    shutil.copy(source_file_path, temp_file_path)
+    return temp_file_path
+
+
+def get_uploaded_file_path(request, filename):
+    file = request.FILES.get(filename)
+    if not file:
+        return None
+    # NOTE: we could not find a reliable way to avoid the deletion of the
+    # uploaded file right after the request is consumed, therefore we need to
+    # store a copy of it
+    file_path = copy_to_temp_dir_with_unique_name(
+        file.temporary_file_path())
+    return file_path
+
+
 def aristotle_validate(request):
     # this is called by aristotle_get_rupture_data and aristotle_run.
     # In the first case the form contains only usgs_id and rupture_file and
     # returns rupdic only.
     # In the second case the form contains all fields and it returns rupdic
     # plus the calculation parameters (like maximum_ditance, etc.)
-    rupture_file = request.FILES.get('rupture_file')
-    if rupture_file:
-        rupture_path = rupture_file.temporary_file_path()
-        # NOTE: by default, Django deletes all the uploaded temporary files
-        # (tracked in request._files) when the request is destroyed. We need to
-        # prevent this from happening, because the engine has to read the
-        # rupture_file from the process that runs the calculation
-        del request._files['rupture_file']
-    else:
-        rupture_path = None
-    station_data_file = request.FILES.get('station_data_file')
-    if station_data_file:
-        station_data_path = station_data_file.temporary_file_path()
-        # NOTE: by default, Django deletes all the uploaded temporary files
-        # (tracked in request._files) when the request is destroyed. We need to
-        # prevent this from happening, because the engine has to read the
-        # station_data_file from the process that runs the calculation
-        del request._files['station_data_file']
-    else:
-        station_data_path = None
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -780,8 +784,7 @@ def aristotle_validate(request):
             params[fieldname] = value
 
     # FIXME: validate station_data_file
-    if station_data_path is not None:
-        params['station_data_file'] = station_data_path
+    params['station_data_file'] = station_data_path
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -810,7 +813,7 @@ def aristotle_run(request):
         usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, station_data_file
+        asset_hazard_distance, ses_seed
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
