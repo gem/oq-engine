@@ -479,7 +479,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    filt_sites = filter_sites_around(sm, rup, dist)
+    filt_sites = filter_site_array_around(sm, rup, dist)
         
     return filt_sites
 
