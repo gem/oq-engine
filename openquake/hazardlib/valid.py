@@ -192,9 +192,7 @@ def modified_gsim(gmpe, **kwargs):
     """
     Builds a ModifiableGMPE from a gmpe
     """
-    text = '[ModifiableGMPE]\n'
-    [(gmpe_name, kw)] = toml.loads(gmpe._toml).items()
-    text += f'gmpe.{gmpe_name} = {_fix_toml(kw)}\n'
+    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
     text += toml.dumps({'ModifiableGMPE': kwargs})
     return gsim(text)
 
