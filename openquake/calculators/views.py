@@ -1790,7 +1790,10 @@ def view_long_ruptures(token, dstore):
     for src in dstore['_csm'].get_sources():
         maxlen = source.point.get_rup_maxlen(src)
         if src.code in b'MPA' and maxlen > 900.:
-            lst.append((src.source_id, maxlen))
-    arr = numpy.array(lst, [('source_id', object), ('maxlen', float)])
+            usd = src.upper_seismogenic_depth
+            lsd = src.lower_seismogenic_depth
+            lst.append((src.source_id, maxlen, usd, lsd))
+    arr = numpy.array(lst, [('source_id', object), ('maxlen', float),
+                            ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
