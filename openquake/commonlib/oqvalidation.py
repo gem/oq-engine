@@ -1469,6 +1469,8 @@ class OqParam(valid.ParamSet):
             im = from_string(imt)
             if imt.startswith("SA"):
                 imts.add("SA")
+            elif imt.startswith("SDi"):
+                imts.add("SDi")
             elif imt.startswith("EAS"):
                 imts.add("EAS")
             elif imt.startswith("FAS"):

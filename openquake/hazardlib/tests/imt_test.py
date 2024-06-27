@@ -38,12 +38,14 @@ class ImtOrderingTestCase(unittest.TestCase):
 
     def test_from_string(self):
         sa = imt_module.from_string('SA(0.1)')
-        self.assertEqual(sa, ('SA(0.1)', 0.1, 5.0))
+        self.assertEqual(sa, ('SA(0.1)', 0.1, 5.0, None))
         pga = imt_module.from_string('PGA')
-        self.assertEqual(pga, ('PGA', 0, 5.0))
+        self.assertEqual(pga, ('PGA', 0, 5.0, None))
         avgsa = imt_module.from_string('AvgSA')
-        self.assertEqual(avgsa, ("AvgSA", 0.0, 5.0))
+        self.assertEqual(avgsa, ("AvgSA", 0.0, 5.0, None))
         avgsa_t = imt_module.from_string('AvgSA(0.5)')
-        self.assertEqual(avgsa_t, ("AvgSA(0.5)", 0.5, 5.0))
+        self.assertEqual(avgsa_t, ("AvgSA(0.5)", 0.5, 5.0, None))
+        sdi = imt_module.from_string('SDi(0.1,3.5)')
+        self.assertEqual(sdi, ("SDi(0.1,3.5)", 0.1, 5.0, 3.5))
         with self.assertRaises(KeyError):
             imt_module.from_string('XXX')
