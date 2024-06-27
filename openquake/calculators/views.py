@@ -1782,3 +1782,19 @@ def view_fastmean(token, dstore):
 @view.add('gw')
 def view_gw(token, dstore):
     return numpy.round(dstore['gweights'][:].sum(), 3)
+
+
+@view.add('long_ruptures')
+def view_long_ruptures(token, dstore):
+    lst = []
+    for src in dstore['_csm'].get_sources():
+        maxlen = source.point.get_rup_maxlen(src)
+        if src.code in b'MPA' and maxlen > 900.:
+            usd = src.upper_seismogenic_depth
+            lsd = src.lower_seismogenic_depth
+            maxmag, rate = src.get_annual_occurrence_rates()[-1]
+            lst.append((src.source_id, maxlen, maxmag, usd, lsd))
+    arr = numpy.array(lst, [('source_id', object), ('maxlen', float),
+                            ('maxmag', float), ('usd', float), ('lsd', float)])
+    arr.sort(order='maxlen')
+    return arr
