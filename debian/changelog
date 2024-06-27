@@ -1,3 +1,6 @@
+  [Michele Simionato, Christopher Brooks]
+  * Added function for filtering of a SiteCollection array around a rupture
+
   [Michele Simionato]
   * Internal: added method GsimLogicTree.to_node
   * Internal: added commands `oq compare oqparam` and `oq plot_sites csvfiles`
