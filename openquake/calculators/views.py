@@ -1782,3 +1782,15 @@ def view_fastmean(token, dstore):
 @view.add('gw')
 def view_gw(token, dstore):
     return numpy.round(dstore['gweights'][:].sum(), 3)
+
+
+@view.add('long_ruptures')
+def view_long_ruptures(token, dstore):
+    lst = []
+    for src in dstore['_csm'].get_sources():
+        maxlen = source.point.get_rup_maxlen(src)
+        if src.code in b'MPA' and maxlen > 900.:
+            lst.append((src.source_id, maxlen))
+    arr = numpy.array(lst, [('source_id', object), ('maxlen', float)])
+    arr.sort(order='maxlen')
+    return arr
