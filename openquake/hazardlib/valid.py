@@ -188,6 +188,15 @@ def gsim(value, basedir=''):
     return gs
 
 
+def modified_gsim(gmpe, **kwargs):
+    """
+    Builds a ModifiableGMPE from a gmpe
+    """
+    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
+    text += toml.dumps({'ModifiableGMPE': kwargs})
+    return gsim(text)
+
+
 def occurrence_model(value):
     """
     Converts a TOML string into a TOM instance

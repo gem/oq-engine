@@ -542,14 +542,6 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
-        if 'station_data' in oq.inputs:
-            logging.info('Reading station data from %s',
-                         oq.inputs['station_data'])
-            self.station_data, self.observed_imts = \
-                readinput.get_station_data(oq, self.sitecol)
-            self.datastore.create_df('station_data', self.station_data)
-            oq.observed_imts = self.observed_imts
-
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
@@ -633,7 +625,7 @@ class HazardCalculator(BaseCalculator):
             df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            self.datastore['full_lt'] = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
             self.save_crmodel()
             self.datastore.swmr_on()
@@ -719,7 +711,7 @@ class HazardCalculator(BaseCalculator):
             # for instance in classical damage case_8a
             pass
         else:  # build a fake; used by risk-from-file calculators
-            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            self.datastore['full_lt'] = logictree.FullLogicTree.fake()
 
     @general.cached_property
     def R(self):
@@ -933,7 +925,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if oq.job_type == 'risk':
             # the decode below is used in aristotle calculations
-            taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
+            taxonomies = python3compat.decode(
+                self.assetcol.tagcol.taxonomy[1:])
             uniq = numpy.unique(self.assetcol['taxonomy'])
             taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
                       if taxi in uniq}
@@ -973,8 +966,18 @@ class HazardCalculator(BaseCalculator):
 
     def _read_risk3(self):
         oq = self.oqparam
+        if 'station_data' in oq.inputs:
+            logging.info('Reading station data from %s',
+                         oq.inputs['station_data'])
+            # NB: get_station_data is extending the complete sitecol
+            # which then is associated to the site parameters below
+            self.station_data, self.observed_imts = \
+                readinput.get_station_data(oq, self.sitecol)
+            self.datastore.create_df('station_data', self.station_data)
+            oq.observed_imts = self.observed_imts
+
         if hasattr(self, 'sitecol') and self.sitecol:
-            if 'site_model' in oq.inputs:
+            if 'site_model' in oq.inputs or oq.aristotle:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
@@ -1131,7 +1134,8 @@ class RiskCalculator(HazardCalculator):
         if not hasattr(self.crmodel, 'tmap'):
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxdic)
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam,
+                                                           taxdic)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

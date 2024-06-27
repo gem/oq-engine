@@ -1163,7 +1163,8 @@ def extract_disagg(dstore, what):
     else:
         poei = slice(None)
     if 'traditional' in spec:
-        spec = spec[:4]  # rlzs or stats
+        spec = spec.split('-')[0]
+        assert spec in {'rlzs', 'stats'}, spec
         traditional = True
     else:
         traditional = False
@@ -1208,8 +1209,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weight = dstore['full_lt'].init().rlzs['weight']
-        weights = weight[rlzs]
+        weights = dstore['weights'][:][rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']

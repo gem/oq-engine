@@ -128,6 +128,7 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance',
     'ses_seed': 'SES seed',
+    'station_data_file': 'Station data CSV',
 }
 
 # NOTE: currently placeholders are equal to labels. We might re-define
@@ -649,6 +650,7 @@ def aristotle_callback(
     # number_of_ground_motion_fields: 100
     # asset_hazard_distance: 15.0
     # ses_seed: 42
+    # station_data_file: None
     # countries: TUR
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
@@ -716,22 +718,36 @@ def aristotle_get_rupture_data(request):
                         status=200)
 
 
+def copy_to_temp_dir_with_unique_name(source_file_path):
+    temp_dir = tempfile.gettempdir()
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+    temp_file_path = temp_file.name
+    # Close the NamedTemporaryFile to prevent conflicts on Windows
+    temp_file.close()
+    shutil.copy(source_file_path, temp_file_path)
+    return temp_file_path
+
+
+def get_uploaded_file_path(request, filename):
+    file = request.FILES.get(filename)
+    if not file:
+        return None
+    # NOTE: we could not find a reliable way to avoid the deletion of the
+    # uploaded file right after the request is consumed, therefore we need to
+    # store a copy of it
+    file_path = copy_to_temp_dir_with_unique_name(
+        file.temporary_file_path())
+    return file_path
+
+
 def aristotle_validate(request):
     # this is called by aristotle_get_rupture_data and aristotle_run.
     # In the first case the form contains only usgs_id and rupture_file and
     # returns rupdic only.
     # In the second case the form contains all fields and it returns rupdic
     # plus the calculation parameters (like maximum_ditance, etc.)
-    rupture_file = request.FILES.get('rupture_file')
-    if rupture_file:
-        rupture_path = rupture_file.temporary_file_path()
-        # NOTE: by default, Django deletes all the uploaded temporary files
-        # (tracked in request._files) when the request is destroyed. We need to
-        # prevent this from happening, because the engine has to read the
-        # rupture_file from the process that runs the calculation
-        del request._files['rupture_file']
-    else:
-        rupture_path = None
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -767,6 +783,11 @@ def aristotle_validate(request):
         else:
             params[fieldname] = value
 
+    # FIXME: validate station_data_file
+    if 'lon' in request.POST:
+        # NOTE: if the request contains all form parameters
+        params['station_data_file'] = station_data_path
+
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -794,20 +815,21 @@ def aristotle_run(request):
         usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed
+        asset_hazard_distance, ses_seed, station_data_file
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed) = res
+     asset_hazard_distance, ses_seed, station_data_file) = res
     try:
         allparams = get_aristotle_allparams(
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed)
+            asset_hazard_distance, ses_seed,
+            station_data_file=station_data_file)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),

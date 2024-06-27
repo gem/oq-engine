@@ -551,7 +551,10 @@ class EngineRunJobTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline('openquake.commands compare sitecol -1 -2')
         print(p)
-
+        # test compare oqparam
+        with Print.patch() as p:
+            sap.runline("openquake.commands compare oqparam -1 -2")
+        self.assertIn('area_source_discretization: 40.0 != 39.9', str(p))
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,

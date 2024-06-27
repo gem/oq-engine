@@ -310,7 +310,11 @@ def view_full_lt(token, dstore):
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
-    full_lt.get_trt_rlzs(dstore['trt_smrs'][:])  # set _rlzs_by
+    try:
+        trt_smrs = dstore['trt_smrs'][:]
+    except KeyError:  # scenario
+        trt_smrs = [[0]]
+    full_lt.get_trt_rlzs(trt_smrs)  # set _rlzs_by
     header = ['trt_smr', 'gsim', 'rlzs']
     rows = []
     for trt_smr, rbg in full_lt._rlzs_by.items():
@@ -1738,12 +1742,12 @@ def view_aggrisk(token, dstore):
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):
         arr[r]['gsim'] = repr(repr(rlz.value[0]))
-        arr[r]['weight'] = rlz.weight
+        arr[r]['weight'] = rlz.weight[-1]
     for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
         rlz = rlzs[r]
         lt = LOSSTYPE[loss_id]
         arr[r][lt] = loss
-        arr[AVG][lt] += loss * rlz.weight
+        arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
     return arr
@@ -1778,3 +1782,19 @@ def view_fastmean(token, dstore):
 @view.add('gw')
 def view_gw(token, dstore):
     return numpy.round(dstore['gweights'][:].sum(), 3)
+
+
+@view.add('long_ruptures')
+def view_long_ruptures(token, dstore):
+    lst = []
+    for src in dstore['_csm'].get_sources():
+        maxlen = source.point.get_rup_maxlen(src)
+        if src.code in b'MPA' and maxlen > 900.:
+            usd = src.upper_seismogenic_depth
+            lsd = src.lower_seismogenic_depth
+            maxmag, rate = src.get_annual_occurrence_rates()[-1]
+            lst.append((src.source_id, maxlen, maxmag, usd, lsd))
+    arr = numpy.array(lst, [('source_id', object), ('maxlen', float),
+                            ('maxmag', float), ('usd', float), ('lsd', float)])
+    arr.sort(order='maxlen')
+    return arr

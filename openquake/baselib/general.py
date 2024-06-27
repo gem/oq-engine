@@ -1474,6 +1474,8 @@ def getsizeof(o, ids=None):
 
     if hasattr(o, 'nbytes'):
         return o.nbytes
+    elif hasattr(o, 'array'):
+        return o.array.nbytes
 
     nbytes = sys.getsizeof(o)
     ids.add(id(o))
@@ -1690,7 +1692,8 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
-# NB: there is something like this in contextlib in Python 3.11
+# NB: this is present in contextlib in Python 3.11, but
+# we still support Python 3.9, so it cannot be removed yet
 @contextmanager
 def chdir(path):
     """
@@ -1717,6 +1720,16 @@ def smart_concat(arrays):
     common = sorted(common)
     dt = arrays[0][common].dtype
     return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
+
+
+def around(vec, value, delta):
+    """
+    :param vec: a numpy vector or pandas column
+    :param value: a float value
+    :param delta: a positive float
+    :returns: array of booleans for the range [value-delta, value+delta]
+    """
+    return (vec <= value + delta) & (vec >= value - delta)
 
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #

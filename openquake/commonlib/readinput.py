@@ -445,6 +445,30 @@ def rup_radius(rup):
     return radius
 
 
+def filter_site_array_around(array, rup, dist):
+    """
+    :param array: array with fields 'lon', 'lat'
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: slice to the rupture
+    """
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
+    tree = cKDTree(xyz_all)
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+
+    # then fine filtering
+    array = array[idxs]
+    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
+    if len(idxs) < len(array):
+        logging.info('Filtered %d/%d sites', len(idxs), len(array))
+    return array[idxs]
+
+
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
@@ -454,22 +478,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    hypo = rup.hypocenter
-    x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-
-    # first raw filtering
-    logging.info('kdtree filtering of the site model')
-    tree = cKDTree(xyz_all)
-    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
-
-    # then fine filtering
-    sm = sm[idxs]
-    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
-    if len(idxs) < len(sm):
-        logging.info('Filtering %d/%d sites', len(idxs), len(sm))
-    return sm[idxs]
+    return filter_site_array_around(sm, rup, dist)
 
 
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
@@ -655,7 +664,6 @@ def get_site_collection(oqparam, h5=None):
         if h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.aristotle and (
-                'station_data' not in oqparam.inputs) and (
                     not oqparam.infrastructure_connectivity_analysis):
             # filter the far away sites
             rup = get_rupture(oqparam)
@@ -706,9 +714,10 @@ def get_site_collection(oqparam, h5=None):
     sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
     sitecol.exposure = exp
 
-    has_gmf = ('scenario' in oqparam.calculation_mode or 'event_based' in
-          oqparam.calculation_mode)
-    if has_gmf and 'custom_site_id' not in sitecol.array.dtype.names:
+    # add custom_site_id in risk calculations (or GMF calculations)
+    custom_site_id = any(x in oqparam.calculation_mode
+                         for x in ('scenario', 'event_based', 'risk', 'damage'))
+    if custom_site_id and 'custom_site_id' not in sitecol.array.dtype.names:
         gh = sitecol.geohash(8)
         if len(numpy.unique(gh)) < len(gh):
             logging.error('geohashes are not unique')
@@ -1069,12 +1078,16 @@ def get_station_data(oqparam, sitecol):
     if parallel.oq_distribute() == 'zmq':
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
-    complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
-    dic = {(lo, la): sid for lo, la, sid in complete[['lon', 'lat', 'sids']]}
+    nsites = len(sitecol.complete)
+    sitecol.extend(lons, lats)
+    logging.info('Extended complete site collection from %d to %d sites',
+                 nsites, len(sitecol.complete))
+    dic = {(lo, la): sid
+           for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
     sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values

@@ -435,8 +435,5 @@ table#aristotle-losses th td {
     width: 15%;
 }
 .changelog td:nth-child(3), .changelog th:nth-child(3) {
-    width: 15%;
-}
-.changelog td:nth-child(4), .changelog th:nth-child(4) {
-    width: 55%;
+    width: 70%;
 }

@@ -156,3 +156,9 @@ class ValidationTestCase(unittest.TestCase):
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
         finally:
             del registry['FakeGsim']
+
+    def test_modifiable_gmpe(self):
+        gsim = valid.gsim('Lin2011foot')
+        gmpe = valid.modified_gsim(
+            gsim, add_between_within_stds={'with_betw_ratio':1.5})
+        valid.gsim(gmpe._toml)  # make sure the generated _toml is valid

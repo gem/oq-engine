@@ -101,7 +101,7 @@ def get_rupture_dict(dic):
 def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
                             asset_hazard_distance, ses_seed,
-                            exposure_hdf5=None):
+                            exposure_hdf5=None, station_data_file=None):
     """
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
@@ -110,8 +110,9 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
             config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
+    if station_data_file:
+        inputs['station_data'] = station_data_file
     rupdic = get_rupture_dict(rupture_dict)
-    rupture_file = rupdic.pop('rupture_file')
     if trt is None:
         trts, _ = get_trts_around(rupdic, exposure_hdf5)
         trt = trts[0]
@@ -125,10 +126,15 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
+    rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
+    if station_data_file:
+        inputs['station_data'] = station_data_file
     oq = readinput.get_oqparam(params)
-    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+    # NB: fake h5 to cache `get_site_model` and avoid multiple associations
+    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(
+        oq, h5={'performance_data': hdf5.FakeDataset()})
     id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(exposure_hdf5, countries)
@@ -166,7 +172,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', exposure_hdf5=None):
+             ses_seed='42', exposure_hdf5=None, station_data_file=None):
     """
     This script is meant to be called from the command-line
     """
@@ -176,7 +182,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         allparams = get_aristotle_allparams(
             rupture_dict, maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, exposure_hdf5)
+            ses_seed, exposure_hdf5, station_data_file)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
@@ -202,6 +208,7 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
 
