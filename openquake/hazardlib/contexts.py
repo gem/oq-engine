@@ -65,7 +65,7 @@ azimuthcp rvolc clon_clat clon clat'''.split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 # the MULTIPLIER is fundamental for the memory consumption in the contexts
-MULTIPLIER = 50  # len(mean_stds arrays) / len(poes arrays)
+MULTIPLIER = 25  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 bymag = operator.attrgetter('mag')
