@@ -235,7 +235,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 normal_sources.extend(sg)
         if multifaults:
             # this is ultra-fast
-            secparams = build_secparams(multifaults[0].get_sections())
+            sections = multifaults[0].get_sections()
+            secparams = build_secparams(sections)
             logging.warning(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))
