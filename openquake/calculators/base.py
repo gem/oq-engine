@@ -235,7 +235,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, remove=True,
+    def run(self, pre_execute=True, concurrent_tasks=None, remove=False,
             shutdown=False, **kw):
         """
         Run the calculation and return the exported outputs.
