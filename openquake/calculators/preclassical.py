@@ -101,7 +101,7 @@ def get_closest_sections(allsections, allsources, sitecol1):
     """
     :param multifaults: a list of multifault sources
     :param sitecol1: a SiteCollection with a single site
-    :returns: an array with fields src_id, rup_id, sec_idx
+    :returns: an array with fields src_id, rup_id, sec_id
     """
     dists = numpy.array([sec.get_min_distance(sitecol1)[0]
                          for sec in allsections])
@@ -111,7 +111,7 @@ def get_closest_sections(allsections, allsources, sitecol1):
             for rup_id, ridxs in enumerate(src.rupture_idxs):
                 idx = ridxs[numpy.argmin(dists[ridxs])]
                 out.append((src_id, rup_id, idx))
-    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('sec_idx', U32)])
+    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('sec_id', U32)])
 
 
 def preclassical(srcs, sites, cmaker, secparams, monitor):
