@@ -110,7 +110,7 @@ def get_closest_sections(allsections, allsources, sitecol1):
         if src.code == b'F':
             for rup_id, ridxs in enumerate(src.rupture_idxs):
                 idx = ridxs[numpy.argmin(dists[ridxs])]
-                out.append((src_id, rup_id, idx))
+                out.append((src_id, rup_id + src.offset, idx))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('sec_id', U32)])
 
 
