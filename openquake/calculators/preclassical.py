@@ -45,8 +45,12 @@ TWO32 = 2 ** 32
 
 
 def source_data(sources):
+    """
+    Set the source .id attribute to the index in the source_info table
+    :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
+    """
     data = AccumDict(accum=[])
-    for src in sources:
+    for id, src in enumerate(sources):
         data['src_id'].append(src.source_id)
         data['nsites'].append(src.nsites)
         data['nrupts'].append(src.num_ruptures)
@@ -91,6 +95,23 @@ def _filter(srcs, min_mag):
     for ss in out:
         ss.num_ruptures = ss.count_ruptures()
     return out
+
+
+def get_closest_sections(allsections, allsources, sitecol1):
+    """
+    :param multifaults: a list of multifault sources
+    :param sitecol1: a SiteCollection with a single site
+    :returns: an array with fields src_id, rup_id, sec_idx
+    """
+    dists = numpy.array([sec.get_min_distance(sitecol1)[0]
+                         for sec in allsections])
+    out = []
+    for src_id, src in enumerate(allsources):
+        if src.code == b'F':
+            for rup_id, ridxs in enumerate(src.rupture_idxs):
+                idx = ridxs[numpy.argmin(dists[ridxs])]
+                out.append((src_id, rup_id, idx))
+    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('sec_idx', U32)])
 
 
 def preclassical(srcs, sites, cmaker, secparams, monitor):
@@ -223,7 +244,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
-                    multifaults.extend(split_source(src))
+                    multifaults.append(src)
                 if reqv and sg.trt in oq.inputs['reqv']:
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
@@ -243,7 +264,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             secparams = ()
         self._process(atomic_sources, normal_sources, sites, secparams)
-        self.store_source_info(source_data(csm.get_sources()))
+        allsources = csm.get_sources()
+        self.store_source_info(source_data(allsources))
+        if multifaults and len(sites) == 1:
+            logging.info('Storing the closest section per rupture')
+            self.datastore['section_by_rup'] = get_closest_sections(
+                sections, allsources, sites)
 
     def _process(self, atomic_sources, normal_sources, sites, secparams):
         # run preclassical in parallel for non-atomic sources
