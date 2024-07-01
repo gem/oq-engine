@@ -186,7 +186,7 @@ class MultiSurface(BaseSurface):
         if msparam is None:
             # slow operation: happens only in hazardlib, NOT in the engine
             secparams = build_secparams(self.surfaces)
-            idxs = range(len(self.surfaces))
+            idxs = np.arange(len(self.surfaces))
             self.msparam = build_msparams([idxs], secparams)[0]
         else:
             self.msparam = msparam
