@@ -89,7 +89,7 @@ def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
             idxs = idxs[close_sec[idxs]]
             if len(idxs) == 0:  # all sections are far away
                 continue
-                
+
             # building u_max
             tors = [lines[idx] for idx in idxs]
             if ry0:
