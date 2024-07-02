@@ -38,6 +38,10 @@ if settings.WEBUI:
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
     ]
+    if settings.APPLICATION_MODE != 'PUBLIC':
+        urlpatterns += [
+            path("cookies/", include("cookie_consent.urls")),
+        ]
     if settings.APPLICATION_MODE == 'AELO':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_aelo$',
@@ -63,7 +67,6 @@ if settings.APPLICATION_MODE == 'TOOLS_ONLY':
             re_path(r'^$', RedirectView.as_view(
                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
-            path("cookies/", include("cookie_consent.urls")),
         ]
 else:
     urlpatterns += [

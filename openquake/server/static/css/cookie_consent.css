@@ -1,0 +1,14 @@
+body.with-cookie-bar {
+  padding-top: 30px;
+  background-position: 0 90px;
+}
+.cookie-bar {
+  position: fixed;
+  width: 100%;
+  top: 40px;
+  text-align: center;
+  height: 30px;
+  line-height: 30px;
+  background: #eee;
+  font-size: 1.2rem;
+}

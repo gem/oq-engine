@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,6 @@ from openquake.server import dbserver, db
 from openquake.server.utils import check_webserver_running
 
 commands = ['start']
-
 
 def runserver(hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']

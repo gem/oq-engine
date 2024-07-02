@@ -48,6 +48,25 @@ Upgrade the database to host users and sessions:
 cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
+
+Install fixtures for cookie consent:
+
+```console
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
+```
+
+If the current installation requires Google Analytics, please add the `GOOGLE_ANALYTICS_TOKEN` to `local_settings.py` and install another optional fixture:
+
+```console
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0002_cookie_consent_analytics.json
+```
+
+Required or optional cookies or groups of them can be added, removed or edited via the Django Admin interface.
+New custom cookies can be managed similarly to what is done in `openquake/server/templates/engine/includes/cookie_analytics.html`.
+Please refer to `https://django-cookie-consent.readthedocs.io/en/latest/` for further details on how to customize cookies in Django.
+
 Add a new local superuser:
 
 ```console

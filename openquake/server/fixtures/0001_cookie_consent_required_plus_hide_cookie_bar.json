@@ -1,0 +1,64 @@
+[
+{
+    "model": "cookie_consent.cookiegroup",
+    "pk": 1,
+    "fields": {
+        "varname": "essential",
+        "name": "Essential cookies",
+        "description": "These cookies are necessary for the website to function properly.",
+        "is_required": true,
+        "is_deletable": true,
+        "ordering": 0,
+        "created": "2024-06-17T15:04:22.896Z"
+    }
+},
+{
+    "model": "cookie_consent.cookie",
+    "pk": 1,
+    "fields": {
+        "cookiegroup": 1,
+        "name": "csrftoken",
+        "description": "A Cross-Site Request Forgery (CSRF) Token is a secret, unique and unpredictable value a server-side application generates in order to protect CSRF vulnerable resources.",
+        "path": "/",
+        "domain": "",
+        "created": "2024-06-17T15:05:07.063Z"
+    }
+},
+{
+    "model": "cookie_consent.cookie",
+    "pk": 2,
+    "fields": {
+        "cookiegroup": 1,
+        "name": "sessionid",
+        "description": "Session cookies are server-specific cookies that last for a session and that track the movements of the user within the website.",
+        "path": "/",
+        "domain": "",
+        "created": "2024-06-17T15:05:21.282Z"
+    }
+},
+{
+    "model": "cookie_consent.cookiegroup",
+    "pk": 2,
+    "fields": {
+        "varname": "hide_cookie_bar_group",
+        "name": "Optional cookie to hide the cookie consent banner.",
+        "description": "",
+        "is_required": false,
+        "is_deletable": true,
+        "ordering": 0,
+        "created": "2024-06-17T14:57:11.749Z"
+    }
+},
+{
+    "model": "cookie_consent.cookie",
+    "pk": 3,
+    "fields": {
+        "cookiegroup": 2,
+        "name": "hide_cookie_bar",
+        "description": "Hide the cookie consent banner.",
+        "path": "/",
+        "domain": "",
+        "created": "2024-06-17T14:58:17.990Z"
+    }
+}
+]
