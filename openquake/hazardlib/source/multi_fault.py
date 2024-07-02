@@ -306,7 +306,7 @@ def save_and_split(mfsources, sectiondict, site1, hdf5path, del_rupture_idxs=Tru
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rupture_idxs in zip(mfsources, all_rids):
             if hasattr(src, 'tags'):
-                items = [(f'{src.source_id}__{tag}', idxs)
+                items = [(f'{src.source_id}!{tag}', idxs)
                          for tag, idxs in idxs_by_tag(src.tags).items()]
             else:
                 items = [(tag, np.arange(slc.start, slc.stop))
