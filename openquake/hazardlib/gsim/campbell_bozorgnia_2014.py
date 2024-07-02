@@ -67,15 +67,12 @@ def _get_basin_response_term(SJ, C, z2pt5):
     """
     Returns the basin response term defined in equation 20
     """
-    ##print("----------test f_sed term-----------")
-    ##print(f"z2pt5: {z2pt5}")
     f_sed = np.zeros(len(z2pt5))
     idx = z2pt5 < 1.0
     f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
     idx = z2pt5 > 3.0
     f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) * (
         1. - np.exp(-0.25 * (z2pt5[idx] - 3.)))
-    ##print("----------test f_sed term-----------")
     return f_sed
 
 
@@ -310,17 +307,6 @@ def get_mean_values(SJ, C, ctx, a1100=None):
         temp_vs30 = 1100.0 * np.ones(len(ctx))
         temp_z2pt5 = _select_basin_model(SJ, 1100.0) * \
             np.ones_like(temp_vs30)
-    
-    #print check f-term values
-    #print("f_mag mag_term: " + str(_get_magnitude_term(C, ctx.mag)))
-    #print("f_dis geom_att_term: " + str(_get_geometric_attenuation_term(C, ctx.mag, ctx.rrup)))
-    #print("f_flt style_fault_term: " + str(_get_style_of_faulting_term(C, ctx)))
-    #print("f_hng ngwall_term: " + str(_get_hanging_wall_term(C, ctx)))
-    #print("f_site shall_site_term: " + str(_get_shallow_site_response_term(SJ, C, temp_vs30, a1100)))
-    #print("f_sed basin_term: " + str(_get_basin_response_term(SJ, C, temp_z2pt5)))
-    #print("f_hyp hypodepth_term: " + str(_get_hypocentral_depth_term(C, ctx)))
-    #print("f_dip faultdip_term: " + str(_get_fault_dip_term(C, ctx)))
-    #print("f_atn anel_att_term: "  + str(_get_anelastic_attenuation_term(C, ctx.rrup)))
 
     return (_get_magnitude_term(C, ctx.mag) +
             _get_geometric_attenuation_term(C, ctx.mag, ctx.rrup) +
@@ -449,23 +435,10 @@ class CampbellBozorgnia2014(GMPE):
             ctx = ctx.copy()
             _update_ctx(self, ctx)
 
-        # print check what is ctx?
-        #print('CTX; ' + 'type:' + str(type(ctx)))
-        # for field in ctx.dtype.names:
-        #     for value in ctx[field]:
-                #print(f"Field: {field}, DataType: {ctx[field].dtype}, Value: {value}")
-        #print()
-
-        # #print(str(ctx))
-        #print("\n-------checking pga1100---------\n")
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx))
-        #print(f"use pga_rock A1100: {pga1100}")
-        #print("\n-------checking pga1100---------\n")
-
-        
-
+     
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
@@ -480,9 +453,6 @@ class CampbellBozorgnia2014(GMPE):
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
-            
-            #print check mean
-            #print(str(imt) + ' mean: ' + str(np.exp(mean[m])))
 
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
@@ -530,10 +500,6 @@ class CampbellBozorgnia2014(GMPE):
             sig[m] = np.sqrt(t**2 + p**2)
             tau[m] = t
             phi[m] = p
-
-            # print check sigma tau phi
-            #print(f"sigma: {sig[m]} tau: {tau[m]} phi: {phi[m]}")
-            # #print(f"use pga_rock A1100: {pga1100}")
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0     c1      c2      c3      c4      c5     c6     c7     c8      c9    c10     c11     c12    c13      c14     c15    c16      c17     c18      c19      c20  Dc20     a2     h1     h2      h3      h5      h6    k1      k2     k3   phi1   phi2   tau1   tau2  rho1pga  rho2pga      philnAF   phiC  rholny
