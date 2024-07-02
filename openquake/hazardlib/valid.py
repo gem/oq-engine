@@ -1431,6 +1431,11 @@ def corename(src):
     :returns: the core name of a source
     """
     src = src if isinstance(src, str) else src.source_id
+    # @ section of multifault source
+    # ! source model logic tree branch
+    # : component of mutex source
+    # ; alternate logictree version of a source
+    # . component of split source
     return re.split('[!:;.]', src)[0]
 
 

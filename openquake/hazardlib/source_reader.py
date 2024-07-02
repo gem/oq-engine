@@ -24,8 +24,8 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
-from openquake.hazardlib.source.multi_fault import save
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
+from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 
@@ -355,6 +355,20 @@ def find_false_duplicates(smdict):
     return found
 
 
+def replace(lst, splitdic, key):
+    """
+    Replace a list of named elements with the split elements in splitdic
+    """
+    new = []
+    for el in lst:
+        tag = getattr(el, key)
+        if tag in splitdic:
+            new.extend(splitdic[tag])
+        else:
+            new.append(el)
+    lst[:] = new
+
+
 def fix_geometry_sections(smdict, csm, dstore):
     """
     If there are MultiFaultSources, fix the sections according to the
@@ -379,12 +393,20 @@ def fix_geometry_sections(smdict, csm, dstore):
         # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
+        oq = dstore['oqparam']
         mfsources = []
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
                     mfsources.append(src)
-        save(mfsources, sections, dstore.tempname)
+        if oq.sites and len(oq.sites) == 1 and oq.use_rates:
+            lon, lat, _dep = oq.sites[0]
+            site1 = site.SiteCollection.from_points([lon], [lat])
+        else:
+            site1 = None
+        split_dic = save_and_split(mfsources, sections, dstore.tempname, site1)
+        for sg in csm.src_groups:
+            replace(sg.sources, split_dic, 'source_id')
 
 
 def _groups_ids(smlt_dir, smdict, fnames):

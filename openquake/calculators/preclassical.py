@@ -45,6 +45,10 @@ TWO32 = 2 ** 32
 
 
 def source_data(sources):
+    """
+    Set the source .id attribute to the index in the source_info table
+    :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
+    """
     data = AccumDict(accum=[])
     for src in sources:
         data['src_id'].append(src.source_id)
@@ -223,7 +227,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
-                    multifaults.extend(split_source(src))
+                    multifaults.append(src)
                 if reqv and sg.trt in oq.inputs['reqv']:
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
@@ -243,7 +247,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             secparams = ()
         self._process(atomic_sources, normal_sources, sites, secparams)
-        self.store_source_info(source_data(csm.get_sources()))
+        allsources = csm.get_sources()
+        self.store_source_info(source_data(allsources))
 
     def _process(self, atomic_sources, normal_sources, sites, secparams):
         # run preclassical in parallel for non-atomic sources
@@ -263,10 +268,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code == b'F':  # multi fault source
-                    for split in split_source(src):
-                        smap.submit(([split], sites, cmaker, secparams))
-                elif src.code in b'CN':  # other heavy sources
+                elif src.code in b'CFN':  # other heavy sources
                     smap.submit(([src], sites, cmaker, secparams))
                 else:
                     others.append(src)

@@ -450,6 +450,7 @@ class SourceModelLogicTree(object):
         """
         :returns: a new logic tree reduced to a single source
         """
+        # NB: source_id can contain "@" in the case of a split multi fault source
         num_samples = self.num_samples if num_samples is None else num_samples
         new = self.__class__(self.filename, self.seed, num_samples,
                              self.sampling_method, self.test_mode,
@@ -590,7 +591,8 @@ class SourceModelLogicTree(object):
                 if self.branchID and branchnode['branchID'] != self.branchID:
                     value = ''  # reduce all branches except branchID
                 elif self.source_id:  # only the files containing source_id
-                    value = ' '.join(reduce_fnames(vals, self.source_id))
+                    srcid = self.source_id.split('@')[0]
+                    value = ' '.join(reduce_fnames(vals, srcid))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
@@ -823,7 +825,8 @@ class SourceModelLogicTree(object):
         :returns: the number of sources in the source model portion
         """
         with self._get_source_model(fname) as sm:
-            trt_by_src = get_trt_by_src(sm, self.source_id.split('!')[0])
+            src = self.source_id.split('!')[0].split('@')[0]
+            trt_by_src = get_trt_by_src(sm, src)
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
@@ -1222,6 +1225,7 @@ class FullLogicTree(object):
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
             if smr is None:  # called by .reduce_groups
+                srcid = srcid.split('@')[0]
                 try:
                     # check if ambiguous source ID
                     srcid, fname = srcid.rsplit('!')
