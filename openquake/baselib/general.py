@@ -1152,12 +1152,12 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
 def idxs_by_tag(tags):
     """
     >>> idxs_by_tag([2, 1, 1, 2])
-    {2: array([0, 3]), 1: array([1, 2])}
+    {2: array([0, 3], dtype=uint32), 1: array([1, 2], dtype=uint32)}
     """
     dic = AccumDict(accum=[])
     for i, tag in enumerate(tags):
         dic[tag].append(i)
-    return {tag: numpy.array(dic[tag]) for tag in dic}
+    return {tag: numpy.uint32(dic[tag]) for tag in dic}
 
 
 def count(groupiter):

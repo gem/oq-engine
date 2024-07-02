@@ -355,17 +355,18 @@ def find_false_duplicates(smdict):
     return found
 
 
-def replace(lst, splitdic):
+def replace(lst, splitdic, key):
     """
     Replace a list of named elements with the split elements in splitdic
     """
     new = []
     for el in lst:
-        if el.source_id in splitdic:
-            new.extend(splitdic[el.source_id])
+        tag = getattr(el, key)
+        if tag in splitdic:
+            new.extend(splitdic[tag])
         else:
             new.append(el)
-    return new
+    lst[:] = new
 
 
 def fix_geometry_sections(smdict, csm, dstore):
@@ -405,7 +406,7 @@ def fix_geometry_sections(smdict, csm, dstore):
             site1 = None
         split_dic = save_and_split(mfsources, sections, dstore.tempname, site1)
         for sg in csm.src_groups:
-            sg.sources = replace(sg.sources, split_dic)
+            replace(sg.sources, split_dic, 'source_id')
 
 
 def _groups_ids(smlt_dir, smdict, fnames):

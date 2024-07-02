@@ -123,7 +123,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         self.sections = sections
         dic = {i: sec for i, sec in enumerate(sections)}
-        save([self], dic, f'{self.source_id}.hdf5', del_rupture_idxs=False)
+        save_and_split([self], dic, f'{self.source_id}.hdf5', del_rupture_idxs=False)
 
     def set_msparams(self, secparams, close_sec=None, ry0=False,
                      mon1=performance.Monitor(),
@@ -259,12 +259,8 @@ class MultiFaultSource(BaseSeismicSource):
         return west - a2, south - a1, east + a2, north + a1
 
 
-def set_tags(mfsources, allsections, sitecol1, s2i):
-    """
-    :param mfsources: a list of multifault sources
-    :param allsections: complete list of sections
-    :param sitecol1: a SiteCollection with a single site
-    """
+def _set_tags(mfsources, allsections, sitecol1, s2i):
+    # set attribute .tags for each source in the mfsources
     dists = np.array([sec.get_min_distance(sitecol1)[0]
                          for sec in allsections])
     for src_id, src in enumerate(mfsources):
@@ -294,7 +290,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idx
 
     # add tags
     if site1 is not None:
-         set_tags(mfsources, sectiondict.values(), site1, s2i)
+         _set_tags(mfsources, sectiondict.values(), site1, s2i)
 
     # save memory
     for src in mfsources:
@@ -304,7 +300,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idx
     # save split sources
     split_dic = general.AccumDict(accum=[])
     with hdf5.File(hdf5path, 'w') as h5:
-        for src, rupture_idxs in zip(mfsources, all_rids):
+        for src, rids in zip(mfsources, all_rids):
             if hasattr(src, 'tags'):
                 items = [(f'{src.source_id}@{tag}', idxs)
                          for tag, idxs in idxs_by_tag(src.tags).items()]
@@ -318,7 +314,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idx
                 split.mags = src.mags[slc]
                 split.rakes = src.rakes[slc]
                 h5.save_vlen(f'{source_id}/rupture_idxs',
-                             [rupture_idxs[i] for i in slc])
+                             [rids[rupid] for rupid in slc])
                 h5[f'{source_id}/probs_occur'] = split.probs_occur
                 h5[f'{source_id}/mags'] = split.mags
                 h5[f'{source_id}/rakes'] = split.rakes

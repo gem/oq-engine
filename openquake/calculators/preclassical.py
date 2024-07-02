@@ -50,7 +50,7 @@ def source_data(sources):
     :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
     """
     data = AccumDict(accum=[])
-    for id, src in enumerate(sources):
+    for src in sources:
         data['src_id'].append(src.source_id)
         data['nsites'].append(src.nsites)
         data['nrupts'].append(src.num_ruptures)
