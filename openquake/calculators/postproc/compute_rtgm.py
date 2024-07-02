@@ -454,12 +454,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
-                ' ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                ' ASCE 7 and ASCE 41 parameters cannot be computed.'
                 ' See User Guide.')
             yield site, None, warning
 
         elif mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
+            warning = ('Very low hazard: ASCE 7 and ASCE 41'
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
 
@@ -467,7 +467,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
                 'The MCE at the site is very low. Users may need to'
-                ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                ' increase the ASCE 7 and ASCE 41 parameter values'
                 ' to user-specified minimums (e.g., Ss=0.11g and'
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
@@ -503,8 +503,8 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
-        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
+        logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
         yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 

@@ -86,11 +86,12 @@ def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
     # building msparams, slow due to the computation of u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
-            # building u_max
-            tors = [lines[idx] for idx in idxs if close_sec[idx]]
-            if not tors:  # all sections are far away
+            idxs = idxs[close_sec[idxs]]
+            if len(idxs) == 0:  # all sections are far away
                 continue
 
+            # building u_max
+            tors = [lines[idx] for idx in idxs]
             if ry0:
                 msparam['u_max'] = geo.MultiLine(tors).get_u_max()
 
@@ -185,7 +186,7 @@ class MultiSurface(BaseSurface):
         if msparam is None:
             # slow operation: happens only in hazardlib, NOT in the engine
             secparams = build_secparams(self.surfaces)
-            idxs = range(len(self.surfaces))
+            idxs = np.arange(len(self.surfaces))
             self.msparam = build_msparams([idxs], secparams)[0]
         else:
             self.msparam = msparam

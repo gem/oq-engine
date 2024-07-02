@@ -1382,6 +1382,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
             calc_aelo_version = ds.get_attr('/', 'aelo_version')
         except KeyError:
             calc_aelo_version = '1.0.0'
@@ -1396,6 +1401,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        calc_aelo_version=calc_aelo_version,
+                       asce_version=asce_version,
                        warnings=warnings))
 
 

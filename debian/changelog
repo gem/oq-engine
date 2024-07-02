@@ -3,6 +3,10 @@
     Arias Intensity and Cumulative Absoloute Velocity ground motion 
     models from Sandikkaya and Akkar (2017).
 
+  [Michele Simionato]
+  * Disabled check on too many branches if smlt_branch is given
+  * Worked on disaggregation by multifault source
+
   [Michele Simionato, Christopher Brooks]
   * Internal: added a function for filtering sites around a rupture
 
