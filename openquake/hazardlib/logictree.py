@@ -562,7 +562,7 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        if len(branches) > len(BASE183):
+        if self.branchID == '' and len(branches) > len(BASE183):
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
                    'oq-engine/advanced/latest/logic_trees.html')
