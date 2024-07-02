@@ -77,7 +77,7 @@ SA(5.0),0.10,0.11,0.13,0.19,0.26,0.36,0.49,0.61
 SA(7.5),0.063,0.068,0.080,0.11,0.15,0.19,0.26,0.31
 SA(10.0),0.042,0.045,0.052,0.069,0.089,0.11,0.14,0.17
 PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
-'''), index_col='imt')
+'''))
 
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
@@ -85,9 +85,40 @@ ASCE_DECIMALS = 5
 # TODO: interpolate DLLs for vs30 != 760
 
 
-def get_DLLs(job_imts):
-    D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-    DLLs = [D[imt] for imt in job_imts]
+def get_DLLs(job_imts, vs30):
+    
+    if vs30 > 1524:
+        soil_class_asce = 'A'
+    elif vs30 > 914:
+        soil_class_asce = 'B'
+    elif vs30 > 640:
+        soil_class_asce = 'BC'
+    elif vs30 > 442:
+        soil_class_asce = 'C'
+    elif vs30 > 305:
+        soil_class_asce = 'CD'    
+    elif vs30 > 213:
+        soil_class_asce = 'D'
+    elif vs30 > 152:
+        soil_class_asce = 'DE'
+    else:
+        soil_class_asce = 'E'
+        
+    D = DLL_df[soil_class_asce]    
+    imt_table = DLL_df.imt
+
+    T_table = np.array([from_string(imt).period for imt in DLL_df.imt])
+    T_job = [from_string(imt).period for imt in job_imts]
+    DLLs = []
+
+    for imt, t in zip(job_imts, T_job):
+        if imt in imt_table.values:
+            DLLs.append(D[imt_table == imt].values[0])
+        else: # interpolate for any IMT not included in the table
+            up = np.where(T_table > t)[0][0]
+            low = np.where(T_table < t)[0][-2]
+            dll = np.interp(t, [T_table[low], T_table[up]], [D[low], D[up]])
+            DLLs.append(dll)
     return DLLs
 
 
@@ -110,7 +141,7 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
     job_imts = list(oq.imtls)
     M = len(job_imts)
-    DLLs = get_DLLs(job_imts)
+    DLLs = get_DLLs(job_imts, site.vs30)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
@@ -423,12 +454,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
-                ' ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                ' ASCE 7 and ASCE 41 parameters cannot be computed.'
                 ' See User Guide.')
             yield site, None, warning
 
         elif mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
+            warning = ('Very low hazard: ASCE 7 and ASCE 41'
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
 
@@ -436,12 +467,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
                 'The MCE at the site is very low. Users may need to'
-                ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                ' increase the ASCE 7 and ASCE 41 parameter values'
                 ' to user-specified minimums (e.g., Ss=0.11g and'
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
-        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disagg by rel sources
+        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():  # do not disagg by rel sources
             yield site, rtgm_df, 'Only probabilistic MCE'
 
         else:
@@ -466,14 +497,14 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            job_imts, det_imt, DLLs, rtgm_df, sid)
+            job_imts, det_imt, DLLs[sid], rtgm_df, sid)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
-        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
+        logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
         yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 
@@ -489,22 +520,19 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
-    DLLs = get_DLLs(job_imts)
-
+    DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']}
+   
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    N = len(dstore['sitecol'])
+    N = len(dstore['sitecol/sids'])
     asce07 = {}
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
-    dummy_det = {}
-
-    for imt in job_imts:
-        dummy_det[imt] = ''
+    dummy_det = {imt: '' for imt in job_imts}
 
     for site, rtgm_df, warning in process_sites(dstore, csm, DLLs,
                                                 ASCE_version):
@@ -524,7 +552,7 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs, rtgm_df, sid, low_haz=True)
+                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)

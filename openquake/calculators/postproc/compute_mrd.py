@@ -72,7 +72,6 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
     """
     crosscorr = getattr(cc, cross_correlation)()
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt'].init()
     N = len(dstore['sitecol'])
     L1 = oq.imtls.size // len(oq.imtls) - 1
     if L1 > 24:
@@ -91,5 +90,4 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
                      meabins, sigbins, method))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    trt_smrs = dstore['trt_smrs'][:]
-    mrd[:] = combine_mrds(acc, full_lt.g_weights(trt_smrs))
+    mrd[:] = combine_mrds(acc, dstore['gweights'][:])

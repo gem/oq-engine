@@ -161,6 +161,12 @@ class ClassicalTestCase(CalculatorTestCase):
         hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
+        # test gsim_lt is writeable as XML
+        gnode = self.calc.datastore['full_lt'].gsim_lt.to_node()
+        tmp = general.gettemp(suffix='.xml')
+        with open(tmp, 'wb') as f:
+            nrml.write([gnode], f)
+
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles

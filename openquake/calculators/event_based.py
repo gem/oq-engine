@@ -50,8 +50,9 @@ from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.extract import Extractor
+from openquake.calculators.postproc.plots import plot_avg_gmf
 from openquake.engine import engine
-from openquake.commands.plot import plot_avg_gmf
 from PIL import Image
 
 U8 = numpy.uint8
@@ -177,17 +178,19 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
 
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        assert stations.sum(), 'There are no stations??'
-        station_sids = sids[stations]
-        return ConditionedGmfComputer(
-            ebr, srcfilter.sitecol.filtered(sids),
-            srcfilter.sitecol.filtered(station_sids),
-            station_data.loc[station_sids],
-            oq.observed_imts,
-            cmaker, oq.correl_model, oq.cross_correl,
-            oq.ground_motion_correlation_params,
-            oq.number_of_ground_motion_fields,
-            oq._amplifier, oq._sec_perils)
+        if stations.any():
+            station_sids = sids[stations]
+            return ConditionedGmfComputer(
+                ebr, srcfilter.sitecol.filtered(sids),
+                srcfilter.sitecol.filtered(station_sids),
+                station_data.loc[station_sids],
+                oq.observed_imts,
+                cmaker, oq.correl_model, oq.cross_correl,
+                oq.ground_motion_correlation_params,
+                oq.number_of_ground_motion_fields,
+                oq._amplifier, oq._sec_perils)
+        else:
+            logging.warning('There are no stations!')
 
     return GmfComputer(
         ebr, srcfilter.sitecol.filtered(sids), cmaker,
@@ -762,7 +765,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             imts = list(self.oqparam.imtls)
             for imt in imts:
-                plt = plot_avg_gmf(self.datastore.calc_id, imt)
+                plt = plot_avg_gmf(Extractor(self.datastore.calc_id), imt)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
                 fig_path = f'png/avg_gmf-{imt}.png'

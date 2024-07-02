@@ -232,10 +232,10 @@ def sbatch(mon):
     """
     Start a SLURM script via sbatch
     """
+    sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon)
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
-        python = config.distribution.python
-        f.write(SLURM_BATCH.format(python=python, mon=mon))
+        f.write(sh)
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
@@ -244,6 +244,7 @@ def sbatch(mon):
 
     # if SLURM is not installed, fake it
     logging.info(f'Faking SLURM for {mon.operation}')
+    logging.info(sh)
     pool = mp_context.Pool()
     for task_id in range(1, mon.task_no + 1):
         pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
