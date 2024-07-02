@@ -467,22 +467,11 @@ class CampbellBozorgnia2014(GMPE):
             # Get site scaling term
             alpha = _get_alpha(C, ctx.vs30, pga1100)
 
-            p = np.sqrt(
-                phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b
-            )
-
             if imt.string in ['CAV', 'IA']:
                 # Use formula in CB19 supplementary spreadsheet
                 t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
                 2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
 
-                # p = np.sqrt(
-                # (_get_philny(C, ctx.mag))**2. 
-                # + alpha**2. * _get_philny(C_PGA, ctx.mag) ** 2.
-                # + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * \
-                #     (_get_philny(C, ctx.mag)) * _get_philny(C_PGA, ctx.mag))
-                
                 p = np.sqrt(
                 phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
                 + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b
