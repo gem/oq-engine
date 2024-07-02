@@ -562,7 +562,7 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        if len(branches) > len(BASE183):
+        if self.branchID == '' and len(branches) > len(BASE183):
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
                    'oq-engine/advanced/latest/logic_trees.html')
@@ -588,7 +588,7 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.branchID and branchnode['branchID'] != self.branchID:
+                if self.branchID and self.branchID not in branchnode['branchID']:
                     value = ''  # reduce all branches except branchID
                 elif self.source_id:  # only the files containing source_id
                     srcid = self.source_id.split('@')[0]
@@ -607,7 +607,8 @@ class SourceModelLogicTree(object):
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            self.shortener[branch_id] = keyno(branch_id, bsno, brno)
+            if self.branchID == '':
+                self.shortener[branch_id] = keyno(branch_id, bsno, brno)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
