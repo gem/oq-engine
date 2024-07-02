@@ -607,7 +607,8 @@ class SourceModelLogicTree(object):
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            self.shortener[branch_id] = keyno(branch_id, bsno, brno)
+            if self.branchID == '':
+                self.shortener[branch_id] = keyno(branch_id, bsno, brno)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
