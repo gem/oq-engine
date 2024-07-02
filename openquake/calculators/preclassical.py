@@ -97,23 +97,6 @@ def _filter(srcs, min_mag):
     return out
 
 
-def get_closest_sections(allsections, allsources, sitecol1):
-    """
-    :param multifaults: a list of multifault sources
-    :param sitecol1: a SiteCollection with a single site
-    :returns: an array with fields src_id, rup_id, sec_id
-    """
-    dists = numpy.array([sec.get_min_distance(sitecol1)[0]
-                         for sec in allsections])
-    out = []
-    for src_id, src in enumerate(allsources):
-        if src.code == b'F':
-            for rup_id, ridxs in enumerate(src.rupture_idxs):
-                idx = ridxs[numpy.argmin(dists[ridxs])]
-                out.append((src_id, rup_id + src.offset, idx))
-    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('sec_id', U32)])
-
-
 def preclassical(srcs, sites, cmaker, secparams, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
@@ -266,10 +249,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         self._process(atomic_sources, normal_sources, sites, secparams)
         allsources = csm.get_sources()
         self.store_source_info(source_data(allsources))
-        if multifaults and len(sites) == 1:
-            logging.info('Storing the closest section per rupture')
-            self.datastore['section_by_rup'] = get_closest_sections(
-                sections, allsources, sites)
 
     def _process(self, atomic_sources, normal_sources, sites, secparams):
         # run preclassical in parallel for non-atomic sources
@@ -289,10 +268,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code == b'F':  # multi fault source
-                    for split in split_source(src):
-                        smap.submit(([split], sites, cmaker, secparams))
-                elif src.code in b'CN':  # other heavy sources
+                elif src.code in b'CFN':  # other heavy sources
                     smap.submit(([src], sites, cmaker, secparams))
                 else:
                     others.append(src)

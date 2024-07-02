@@ -17,11 +17,12 @@
 Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
+import copy
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5, performance
-from openquake.baselib.general import gen_slices
+from openquake.baselib import hdf5, performance, general
+from openquake.baselib.general import gen_slices, idxs_by_tag
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
@@ -39,7 +40,7 @@ U16 = np.uint16
 U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 5_000
+BLOCKSIZE = 5000
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 # NB: if too large, very few sources will be generated and a lot of
@@ -258,10 +259,25 @@ class MultiFaultSource(BaseSeismicSource):
         return west - a2, south - a1, east + a2, north + a1
 
 
-# NB: as side effect delete _rupture_idxs and add .hdf5path
-def save(mfsources, sectiondict, hdf5path, del_rupture_idxs=True):
+def set_tags(mfsources, allsections, sitecol1, s2i):
     """
-    Utility to serialize MultiFaultSources and optionally computing msparams
+    :param mfsources: a list of multifault sources
+    :param allsections: complete list of sections
+    :param sitecol1: a SiteCollection with a single site
+    """
+    dists = np.array([sec.get_min_distance(sitecol1)[0]
+                         for sec in allsections])
+    for src_id, src in enumerate(mfsources):
+        src.tags = []
+        for idxs in src._rupture_idxs:
+            rids = U32([s2i[idx] for idx in idxs])
+            src.tags.append(rids[np.argmin(dists[rids])])
+
+
+# NB: as side effect delete _rupture_idxs and add .hdf5path and possibly .tags
+def save_and_split(mfsources, sectiondict, site1, hdf5path, del_rupture_idxs=True):
+    """
+    Serialize MultiFaultSources
     """
     assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
@@ -274,27 +290,50 @@ def save(mfsources, sectiondict, hdf5path, del_rupture_idxs=True):
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
         all_rids.append(rids)
-        if del_rupture_idxs:
-            delattr(src, '_rupture_idxs')  # save memory
         src.hdf5path = hdf5path
 
-    # store data
+    # add tags
+    if site1 is not None:
+         set_tags(mfsources, sectiondict.values(), site1, s2i)
+
+    # save memory
+    for src in mfsources:
+        if del_rupture_idxs:
+            delattr(src, '_rupture_idxs')
+
+    # save split sources
+    split_dic = general.AccumDict(accum=[])
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rupture_idxs in zip(mfsources, all_rids):
-            for srcid, slc in src.gen_slices():
-                h5.save_vlen(f'{srcid}/rupture_idxs', rupture_idxs[slc])
-                h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]
-                h5[f'{srcid}/mags'] = src.mags[slc]
-                h5[f'{srcid}/rakes'] = src.rakes[slc]
+            if hasattr(src, 'tags'):
+                items = [(f'{src.source_id}__{tag}', idxs)
+                         for tag, idxs in idxs_by_tag(src.tags).items()]
+            else:
+                items = [(tag, np.arange(slc.start, slc.stop))
+                         for tag, slc in src.gen_slices()]
+            for source_id, slc in items:
+                split = copy.copy(src)
+                split.source_id = source_id
+                split.probs_occur = src.probs_occur[slc]
+                split.mags = src.mags[slc]
+                split.rakes = src.rakes[slc]
+                h5.save_vlen(f'{source_id}/rupture_idxs',
+                             [rupture_idxs[i] for i in slc])
+                h5[f'{source_id}/probs_occur'] = split.probs_occur
+                h5[f'{source_id}/mags'] = split.mags
+                h5[f'{source_id}/rakes'] = split.rakes
 
                 # save attributes
-                attrs = h5[f'{srcid}'].attrs
+                attrs = h5[f'{source_id}'].attrs
                 attrs['name'] = src.name
                 attrs['tectonic_region_type'] = src.tectonic_region_type
                 attrs['investigation_time'] = src.investigation_time
                 attrs['infer_occur_rates'] = src.infer_occur_rates
+                split_dic[src.source_id].append(split)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
+
+    return split_dic
 
 
 def load(hdf5path):
