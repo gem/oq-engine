@@ -403,7 +403,7 @@ def fix_geometry_sections(smdict, csm, dstore):
             site1 = site.SiteCollection.from_points([lon], [lat])
         else:
             site1 = None
-        split_dic = save_and_split(mfsources, sections, site1, dstore.tempname)
+        split_dic = save_and_split(mfsources, sections, dstore.tempname, site1)
         for sg in csm.src_groups:
             sg.sources = replace(sg.sources, split_dic)
 

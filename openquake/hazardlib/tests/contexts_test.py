@@ -405,7 +405,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save_and_split([self.src], geom.sections, None, gettemp(suffix='.hdf5'))
+        save_and_split([self.src], geom.sections, gettemp(suffix='.hdf5'))
         set_msparams(self.src, geom.sections)
 
         # Create site-collection
@@ -459,7 +459,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save_and_split([self.src], geom.sections, None, gettemp(suffix='.hdf5'))
+        save_and_split([self.src], geom.sections, gettemp(suffix='.hdf5'))
         set_msparams(self.src, geom.sections)
 
         # Create site-collection

@@ -454,7 +454,7 @@ class SourceModelLogicTree(object):
         num_samples = self.num_samples if num_samples is None else num_samples
         new = self.__class__(self.filename, self.seed, num_samples,
                              self.sampling_method, self.test_mode,
-                             self.branchID, source_id.split('@')[0])
+                             self.branchID, source_id)
         return new
 
     def parse_tree(self, tree_node):
@@ -591,7 +591,8 @@ class SourceModelLogicTree(object):
                 if self.branchID and branchnode['branchID'] != self.branchID:
                     value = ''  # reduce all branches except branchID
                 elif self.source_id:  # only the files containing source_id
-                    value = ' '.join(reduce_fnames(vals, self.source_id))
+                    srcid = self.source_id.split('@')[0]
+                    value = ' '.join(reduce_fnames(vals, srcid))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
@@ -824,7 +825,8 @@ class SourceModelLogicTree(object):
         :returns: the number of sources in the source model portion
         """
         with self._get_source_model(fname) as sm:
-            trt_by_src = get_trt_by_src(sm, self.source_id.split('!')[0])
+            src = self.source_id.split('!')[0].split('@')[0]
+            trt_by_src = get_trt_by_src(sm, src)
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
@@ -1212,7 +1214,7 @@ class FullLogicTree(object):
         sd = self.sd
         out = []
         for src in srcs:
-            srcid = valid.corename(src).split('@')[0]
+            srcid = valid.corename(src)
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
@@ -1223,6 +1225,7 @@ class FullLogicTree(object):
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
             if smr is None:  # called by .reduce_groups
+                srcid = srcid.split('@')[0]
                 try:
                     # check if ambiguous source ID
                     srcid, fname = srcid.rsplit('!')

@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, python3compat, general, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
-    MultiFaultSource, save, load)
+    MultiFaultSource, save_and_split, load)
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
@@ -98,7 +98,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
-        save([src], self.sections, fname)
+        save_and_split([src], self.sections, fname)
         [got] = load(fname)
         for name in 'mags rakes probs_occur'.split():
             numpy.testing.assert_almost_equal(
@@ -159,7 +159,7 @@ class MultiFaultTestCase(unittest.TestCase):
         mfs = MultiFaultSource("01", "test", "Moon Crust",
                                rup_idxs, self.pmfs, self.mags, self.rakes)
         with self.assertRaises(IndexError) as ctx:
-            save([mfs], self.sections, 'dummy.hdf5')
+            save_and_split([mfs], self.sections, 'dummy.hdf5')
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 

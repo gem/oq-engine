@@ -275,7 +275,7 @@ def set_tags(mfsources, allsections, sitecol1, s2i):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path and possibly .tags
-def save_and_split(mfsources, sectiondict, site1, hdf5path, del_rupture_idxs=True):
+def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idxs=True):
     """
     Serialize MultiFaultSources
     """
