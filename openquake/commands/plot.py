@@ -18,6 +18,8 @@
 import gzip
 import json
 import logging
+import pickle
+import zlib
 import shapely
 import numpy
 import pandas
@@ -415,6 +417,20 @@ def make_figure_memory(extractors, what):
         ax.plot(range(start, start + len(mem)), mem, label=task_name)
         start += len(mem)
     ax.legend()
+    return plt
+
+
+def make_figure_source(extractors, what):
+    plt = import_plt()
+    [ex] = extractors
+    source_id = what.split('?')[1].split('=')[1]
+    grp_by_src = dict(ex.dstore['source_info'][:][['source_id', 'grp_id']])
+    grp_id = grp_by_src[source_id.encode('utf8')]
+    arr = ex.dstore.getitem('_csm')[grp_id]
+    sources = pickle.loads(zlib.decompress(arr.tobytes()))
+    for src in sources:
+        if src.source_id == source_id:
+            print(src)
     return plt
 
 
