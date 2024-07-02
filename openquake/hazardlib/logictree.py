@@ -588,7 +588,7 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.branchID and branchnode['branchID'] != self.branchID:
+                if self.branchID and self.branchID not in branchnode['branchID']:
                     value = ''  # reduce all branches except branchID
                 elif self.source_id:  # only the files containing source_id
                     srcid = self.source_id.split('@')[0]
