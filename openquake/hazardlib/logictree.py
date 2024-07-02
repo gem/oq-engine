@@ -450,10 +450,11 @@ class SourceModelLogicTree(object):
         """
         :returns: a new logic tree reduced to a single source
         """
+        # NB: source_id can contain "@" in the case of a split multi fault source
         num_samples = self.num_samples if num_samples is None else num_samples
         new = self.__class__(self.filename, self.seed, num_samples,
                              self.sampling_method, self.test_mode,
-                             self.branchID, source_id)
+                             self.branchID, source_id.split('@')[0])
         return new
 
     def parse_tree(self, tree_node):
@@ -1211,7 +1212,7 @@ class FullLogicTree(object):
         sd = self.sd
         out = []
         for src in srcs:
-            srcid = valid.corename(src)
+            srcid = valid.corename(src).split('@')[0]
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini

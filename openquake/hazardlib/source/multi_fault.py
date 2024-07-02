@@ -202,7 +202,7 @@ class MultiFaultSource(BaseSeismicSource):
 
     def gen_slices(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
-            yield self.source_id, slice(None)
+            yield self.source_id, slice(0, len(self.mags))
             return
         for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
             yield '%s.%d' % (self.source_id, i), slc
@@ -306,7 +306,7 @@ def save_and_split(mfsources, sectiondict, site1, hdf5path, del_rupture_idxs=Tru
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rupture_idxs in zip(mfsources, all_rids):
             if hasattr(src, 'tags'):
-                items = [(f'{src.source_id}!{tag}', idxs)
+                items = [(f'{src.source_id}@{tag}', idxs)
                          for tag, idxs in idxs_by_tag(src.tags).items()]
             else:
                 items = [(tag, np.arange(slc.start, slc.stop))
