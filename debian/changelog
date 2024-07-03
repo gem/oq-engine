@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Extended the maximum number of source model branches to 33,489
+  * Fixed export realizations which was truncating the branch_path
   * Extended logic tree filtering via `smlt_branch`
   * Worked on disaggregation by multifault source
 
