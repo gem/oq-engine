@@ -122,14 +122,14 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, bsno, brno):
+def keyno(branch_id, bsno, brno, base=BASE183):
     """
     :param branch_id: a branch ID string
     :param bsno: number of the branchset (starting from 0)
     :param brno: number of the branch in the branchset (starting from 0)
     :returns: a short unique alias for the branch_id
     """
-    return BASE183[brno] + str(bsno)
+    return base[brno] + str(bsno)
 
 
 # currently not used

@@ -40,7 +40,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
-    cached_property, groupby, group_array, AccumDict, BASE183)
+    cached_property, groupby, group_array, AccumDict, BASE183, BASE33489)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
@@ -567,12 +567,12 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        if self.branchID == '' and len(branches) > len(BASE183):
+        maxlen = 183 if bsno else 33489  # the sourceModel branchset can be longer
+        if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
                    'oq-engine/advanced/latest/logic_trees.html')
-            raise InvalidFile(
-                msg % (self.filename, bs_id, len(branches), len(BASE183)))
+            raise InvalidFile(msg % (self.filename, bs_id, len(branches), maxlen))
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -612,8 +612,9 @@ class SourceModelLogicTree(object):
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            if self.branchID == '':
-                self.shortener[branch_id] = keyno(branch_id, bsno, brno)
+            # use two-letter abbrev for the first branchset (sourceModel)
+            base = BASE183 if bsno else BASE33489
+            self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
