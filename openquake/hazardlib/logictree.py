@@ -263,10 +263,14 @@ def read_source_groups(fname):
 
 def shorten(path_tuple, shortener):
     """
-    :path:  sequence of strings
+    :path: sequence of strings
     :shortener: dictionary longstring -> shortstring
     :returns: shortened version of the path
     """
+    # NB: path_tuple can have the form ('EDF_areas',
+    # 'Mmax:10-br#0', 'Mmax:11-br#0', ..., 'ab:4014-br#23')
+    # with shortener['EDF_areas'] = 'A0',
+    # shortener['ab:4014-br#23'] = 'X138'
     if len(shortener) == 1:
         return 'A'
     chars = []
@@ -274,6 +278,7 @@ def shorten(path_tuple, shortener):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
+            # shortener[key] has the form letter+number
             chars.append(shortener[key][0])
     return ''.join(chars)
 
