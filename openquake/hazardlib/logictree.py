@@ -572,7 +572,17 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        maxlen = 183 if bsno else 33489  # the sourceModel branchset can be longer
+        # NB: because the engine lacks the ability to apply correlated uncertainties
+        # to all the sources in a source model, people build spurious source
+        # models in preprocessing; for instance EDF/CEA have 4 real source
+        # models which are extended to 400 source models; this is bad, since the
+        # required disk space is 100x larger, the read time is 100x larger
+        # copying the files is an issue, etc.
+        # To stop people to commit such abuses there is a limit of 183 branches;
+        # however, you can actually raise the limit to 33489 branches by
+        # commenting/uncommenting the two lines below, if you really need
+        maxlen = 183
+        # maxlen = 183 if bsno else 33489  # the sourceModel branchset can be longer
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
