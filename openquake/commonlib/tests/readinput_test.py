@@ -558,8 +558,8 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
-                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        expected = ['AA.CA', 'AA.CB', 'AA.DA', 'AA.DB', 'ABACA', 'ABACB',
+                    'ABADA', 'ABADB', 'ABBCA', 'ABBCB', 'ABBDA', 'ABBDB']
         self.assertEqual(paths, expected)
 
 
