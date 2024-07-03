@@ -261,10 +261,11 @@ def read_source_groups(fname):
     return src_groups
 
 
-def shorten(path_tuple, shortener):
+def shorten(path_tuple, shortener, kind):
     """
-    :path: sequence of strings
-    :shortener: dictionary longstring -> shortstring
+    :param path: sequence of strings
+    :param shortener: dictionary longstring -> shortstring
+    :param kind: 'smlt' or 'gslt'
     :returns: shortened version of the path
     """
     # NB: path_tuple can have the form ('EDF_areas',
@@ -274,12 +275,16 @@ def shorten(path_tuple, shortener):
     if len(shortener) == 1:
         return 'A'
     chars = []
-    for key in path_tuple:
+    for bsno, key in enumerate(path_tuple):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            # shortener[key] has the form letter+number
-            chars.append(shortener[key][0])
+            if kind == 'smlt' and bsno == 0:
+                # shortener[key] has the form 2-letters+number
+                chars.append(shortener[key][:2])
+            else:
+                # shortener[key] has the form letter+number
+                chars.append(shortener[key][0])
     return ''.join(chars)
 
 
@@ -961,7 +966,9 @@ class SourceModelLogicTree(object):
                     uvalue = row['uvalue']  # not really deserializable :-(
                 br = Branch(bsid, row['branch'], row['weight'], uvalue)
                 self.branches[br.branch_id] = br
-                self.shortener[br.branch_id] = keyno(br.branch_id, ordinal, no)
+                base = BASE33489 if utype == 'sourceModel' else BASE183
+                self.shortener[br.branch_id] = keyno(
+                    br.branch_id, ordinal, no, base)
                 bset.branches.append(br)
             bsets.append(bset)
         CompositeLogicTree(bsets)  # perform attach_to_branches
@@ -1407,8 +1414,8 @@ class FullLogicTree(object):
         sh2 = self.gsim_lt.shortener
         tups = []
         for r in self.get_realizations():
-            path = '%s~%s' % (shorten(r.sm_lt_path, sh1),
-                              shorten(r.gsim_rlz.lt_path, sh2))
+            path = '%s~%s' % (shorten(r.sm_lt_path, sh1, 'smlt'),
+                              shorten(r.gsim_rlz.lt_path, sh2, 'gslt'))
             tups.append((r.ordinal, path, r.weight[-1]))
         return numpy.array(tups, rlz_dt)
 
