@@ -39,6 +39,16 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
+class SmltTestCase(unittest.TestCase):
+    def test_400_source_models(self):
+        # test that too many branches is not raised
+        fname = os.path.join(DATADIR, 'drouet_smtlt.xml')
+        with self.assertRaises((lt.LogicTreeError, logictree.InvalidFile)) as ctx:
+            logictree.SourceModelLogicTree(fname)
+        msg = str(ctx.exception)
+        assert 'No such file or directory:' in msg or 'too many branches' in msg
+
+
 class CompositeLtTestCase(unittest.TestCase):
     def test(self):
         # logic tree for Canada 2015

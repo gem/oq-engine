@@ -40,7 +40,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
-    cached_property, groupby, group_array, AccumDict, BASE183)
+    cached_property, groupby, group_array, AccumDict, BASE183, BASE33489)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
@@ -261,20 +261,30 @@ def read_source_groups(fname):
     return src_groups
 
 
-def shorten(path_tuple, shortener):
+def shorten(path_tuple, shortener, kind):
     """
-    :path:  sequence of strings
-    :shortener: dictionary longstring -> shortstring
+    :param path: sequence of strings
+    :param shortener: dictionary longstring -> shortstring
+    :param kind: 'smlt' or 'gslt'
     :returns: shortened version of the path
     """
+    # NB: path_tuple can have the form ('EDF_areas',
+    # 'Mmax:10-br#0', 'Mmax:11-br#0', ..., 'ab:4014-br#23')
+    # with shortener['EDF_areas'] = 'A0',
+    # shortener['ab:4014-br#23'] = 'X138'
     if len(shortener) == 1:
         return 'A'
     chars = []
-    for key in path_tuple:
+    for bsno, key in enumerate(path_tuple):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            chars.append(shortener[key][0])
+            if kind == 'smlt' and bsno == 0:
+                # shortener[key] has the form 2-letters+number
+                chars.append(shortener[key][:2])
+            else:
+                # shortener[key] has the form letter+number
+                chars.append(shortener[key][0])
     return ''.join(chars)
 
 
@@ -562,12 +572,22 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        if self.branchID == '' and len(branches) > len(BASE183):
+        # NB: because the engine lacks the ability to apply correlated uncertainties
+        # to all the sources in a source model, people build spurious source
+        # models in preprocessing; for instance EDF/CEA have 4 real source
+        # models which are extended to 400 source models; this is bad, since the
+        # required disk space is 100x larger, the read time is 100x larger
+        # copying the files is an issue, etc.
+        # To stop people to commit such abuses there is a limit of 183 branches;
+        # however, you can actually raise the limit to 33489 branches by
+        # commenting/uncommenting the two lines below, if you really need
+        maxlen = 183
+        # maxlen = 183 if bsno else 33489  # the sourceModel branchset can be longer
+        if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
                    'oq-engine/advanced/latest/logic_trees.html')
-            raise InvalidFile(
-                msg % (self.filename, bs_id, len(branches), len(BASE183)))
+            raise InvalidFile(msg % (self.filename, bs_id, len(branches), maxlen))
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -607,8 +627,9 @@ class SourceModelLogicTree(object):
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            if self.branchID == '':
-                self.shortener[branch_id] = keyno(branch_id, bsno, brno)
+            # use two-letter abbrev for the first branchset (sourceModel)
+            base = BASE183 if bsno else BASE33489
+            self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
@@ -955,7 +976,9 @@ class SourceModelLogicTree(object):
                     uvalue = row['uvalue']  # not really deserializable :-(
                 br = Branch(bsid, row['branch'], row['weight'], uvalue)
                 self.branches[br.branch_id] = br
-                self.shortener[br.branch_id] = keyno(br.branch_id, ordinal, no)
+                base = BASE33489 if utype == 'sourceModel' else BASE183
+                self.shortener[br.branch_id] = keyno(
+                    br.branch_id, ordinal, no, base)
                 bset.branches.append(br)
             bsets.append(bset)
         CompositeLogicTree(bsets)  # perform attach_to_branches
@@ -1401,8 +1424,8 @@ class FullLogicTree(object):
         sh2 = self.gsim_lt.shortener
         tups = []
         for r in self.get_realizations():
-            path = '%s~%s' % (shorten(r.sm_lt_path, sh1),
-                              shorten(r.gsim_rlz.lt_path, sh2))
+            path = '%s~%s' % (shorten(r.sm_lt_path, sh1, 'smlt'),
+                              shorten(r.gsim_rlz.lt_path, sh2, 'gslt'))
             tups.append((r.ordinal, path, r.weight[-1]))
         return numpy.array(tups, rlz_dt)
 

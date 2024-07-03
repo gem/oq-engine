@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Disabled check on too many branches if smlt_branch is given
+  * Fixed export realizations which was truncating the branch_path
+  * Extended logic tree filtering via `smlt_branch`
   * Worked on disaggregation by multifault source
 
   [Michele Simionato, Christopher Brooks]
