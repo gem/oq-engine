@@ -647,10 +647,7 @@ def get_site_collection(oqparam, h5=None):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if h5 and 'sitecol' in h5:
-        if oqparam.tile_spec:
-            return h5['complete']
-        else:
-            return h5['sitecol']
+        return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
