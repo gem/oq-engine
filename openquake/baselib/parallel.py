@@ -223,6 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --time=10:00:00
 #SBATCH --mem-per-cpu=1G
+#SBATCH --cpus-per-task=1
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
