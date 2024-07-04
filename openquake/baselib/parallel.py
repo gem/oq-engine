@@ -240,7 +240,7 @@ def sbatch(mon):
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
         proc = subprocess.run(['sbatch', path], capture_output=True)
-        out = proc.stdout.encode('utf8')
+        out = proc.stdout.decode('utf8')
         # out will be a string like "Submitted batch job 5573363"
         slurm_job_id = re.search(r'\d+', out).group(0)
         return slurm_job_id
