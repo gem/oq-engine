@@ -1798,3 +1798,13 @@ def view_long_ruptures(token, dstore):
                             ('maxmag', float), ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
+
+
+@view.add('slurm_error')
+def view_slurm_error(token, dstore):
+    calc_dir = dstore.filename[:-5]  # strip .hdf5
+    fname = os.path.join(calc_dir, '1.err')
+    if os.path.exists(fname):
+        with open(fname) as f:
+            return fname + '\n' + f.read()
+    return 'No error file'

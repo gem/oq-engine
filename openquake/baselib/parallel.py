@@ -223,6 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --time=10:00:00
 #SBATCH --mem-per-cpu=1G
+#SBATCH --cpus-per-task=1
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
@@ -232,27 +233,31 @@ def sbatch(mon):
     """
     Start a SLURM script via sbatch
     """
+    if mon.task_no == 1:
+        # there is only one task, run it in-core
+        slurm_task(mon.calc_dir, '1')
+        return 'Single task in-core'
     sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon)
+    logging.info(sh)
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
         f.write(sh)
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
-        proc = subprocess.run(['sbatch', path],
+        partition = config.distribution.slurm_partition
+        proc = subprocess.run(['sbatch', '-p', partition, path],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        return proc.stdout.decode('utf8')
+        return proc.stdout.decode('utf8').strip()
         # out will be a string like "Submitted batch job 5573363"
-
-    # if SLURM is not installed, fake it
-    logging.info(f'Faking SLURM for {mon.operation}')
-    logging.info(sh)
-    pool = mp_context.Pool()
-    for task_id in range(1, mon.task_no + 1):
-        pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
-    pool.close()
-    pool.join()
-
+    else:
+        # if SLURM is not installed, fake it
+        pool = mp_context.Pool()
+        for task_id in range(1, mon.task_no + 1):
+            pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
+        pool.close()
+        pool.join()
+        return 'Done'
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):

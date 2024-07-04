@@ -24,12 +24,12 @@ import inspect
 import logging
 import functools
 import collections
-import multiprocessing
 import numpy
 import pandas
 import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import DictArray, AccumDict, cached_property
 from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
@@ -986,8 +986,7 @@ class OqParam(valid.ParamSet):
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
-    concurrent_tasks = valid.Param(
-        valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
+    concurrent_tasks = valid.Param(valid.positiveint, Starmap.CT)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     countries = valid.Param(valid.namelist, ())
