@@ -646,8 +646,11 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
-        return h5['sitecol']
+    if h5 and 'sitecol' in h5:
+        if oqparam.tile_pair:
+            return h5['complete']
+        else:
+            return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -691,15 +694,16 @@ def get_site_collection(oqparam, h5=None):
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
-    slc = oqparam.sites_slice
-    if slc:
+    if oqparam.tile_pair:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        mask = (sitecol.sids >= slc[0]) & (sitecol.sids < slc[1])
+        tileno, ntiles = oqparam.tile_pair
+        assert len(sitecol) > ntiles, (len(sitecol), ntiles)
+        mask = sitecol.sids % ntiles == tileno - 1
+        oqparam.max_sites_disagg = 1
         sitecol = sitecol.filter(mask)
-        assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')

@@ -1137,6 +1137,13 @@ def positiveints(value):
     return ints
 
 
+def tile_pair(value):
+    no, ntiles = map(int, value.split(':'))
+    assert no > 0, no
+    assert ntiles > 0, ntiles
+    return no, ntiles
+
+
 def simple_slice(value):
     """
     >>> simple_slice('2:5')

@@ -754,7 +754,7 @@ sites:
   Used to specify a list of sites.
   Example: *sites = 10.1 45, 10.2 45*.
 
-sites_slice:
+tile_pair:
   INTERNAL
 
 smlt_branch:
@@ -1108,7 +1108,7 @@ class OqParam(valid.ParamSet):
     site_effects = valid.Param(
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
-    sites_slice = valid.Param(valid.simple_slice, None)
+    tile_pair = valid.Param(valid.tile_pair, None)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
@@ -2258,8 +2258,8 @@ def to_ini(key, val):
     elif key == 'region':
         coords = val[9:-2].split(',')  # strip POLYGON((...))
         return f'{key} = {", ".join(c for c in coords[:-1])}'
-    elif key == 'sites_slice':
-        return 'sites_slice = %d:%d' % val
+    elif key == 'tile_pair':
+        return 'tile_pair = %d:%d' % val
     elif key == 'hazard_imtls':
         return f"intensity_measure_types_and_levels = {val}"
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles',
