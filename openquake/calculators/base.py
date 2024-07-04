@@ -903,7 +903,7 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
                 self.datastore['sitecol'] = self.sitecol
-            else:
+            else:  # base case
                 self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
