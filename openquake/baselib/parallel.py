@@ -241,10 +241,8 @@ def sbatch(mon):
     if sbatch:
         proc = subprocess.run(['sbatch', path],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        out = proc.stdout.decode('utf8')
+        return proc.stdout.decode('utf8')
         # out will be a string like "Submitted batch job 5573363"
-        slurm_job_id = re.search(r'\d+', out).group(0)
-        return slurm_job_id
 
     # if SLURM is not installed, fake it
     logging.info(f'Faking SLURM for {mon.operation}')
@@ -982,8 +980,7 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
-            slurm_job_id = sbatch(self.monitor)
-            logging.info('Submitted SLURM job %s', slurm_job_id)
+            logging.info('%s', sbatch(self.monitor))
 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]
