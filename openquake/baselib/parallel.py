@@ -232,6 +232,10 @@ def sbatch(mon):
     """
     Start a SLURM script via sbatch
     """
+    if mon.task_no == 1:
+        # there is only one task, run it in-core
+        slurm_task(mon.calc_dir, '1')
+        return 'Single task in-core'
     sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon)
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
@@ -239,20 +243,20 @@ def sbatch(mon):
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
-        proc = subprocess.run(['sbatch', path],
+        partition = config.distribution.slurm_partition
+        proc = subprocess.run(['sbatch', '-p', partition, path],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        return proc.stdout.decode('utf8')
+        return proc.stdout.decode('utf8').strip()
         # out will be a string like "Submitted batch job 5573363"
-
-    # if SLURM is not installed, fake it
-    logging.info(f'Faking SLURM for {mon.operation}')
-    logging.info(sh)
-    pool = mp_context.Pool()
-    for task_id in range(1, mon.task_no + 1):
-        pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
-    pool.close()
-    pool.join()
-
+    else:
+        # if SLURM is not installed, fake it
+        logging.info(f'Faking SLURM for {mon.operation}\n{sh}')
+        pool = mp_context.Pool()
+        for task_id in range(1, mon.task_no + 1):
+            pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
+        pool.close()
+        pool.join()
+        return 'Done'
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
