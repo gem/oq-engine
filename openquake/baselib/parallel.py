@@ -237,6 +237,7 @@ def sbatch(mon):
         slurm_task(mon.calc_dir, '1')
         return 'Single task in-core'
     sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon)
+    logging.info(sh)
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
         f.write(sh)
@@ -250,7 +251,6 @@ def sbatch(mon):
         # out will be a string like "Submitted batch job 5573363"
     else:
         # if SLURM is not installed, fake it
-        logging.info(f'Faking SLURM for {mon.operation}\n{sh}')
         pool = mp_context.Pool()
         for task_id in range(1, mon.task_no + 1):
             pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
