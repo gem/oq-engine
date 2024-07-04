@@ -647,7 +647,7 @@ def get_site_collection(oqparam, h5=None):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if h5 and 'sitecol' in h5:
-        if oqparam.tile_pair:
+        if oqparam.tile_spec:
             return h5['complete']
         else:
             return h5['sitecol']
@@ -694,12 +694,12 @@ def get_site_collection(oqparam, h5=None):
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
-    if oqparam.tile_pair:
+    if oqparam.tile_spec:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        tileno, ntiles = oqparam.tile_pair
+        tileno, ntiles = oqparam.tile_spec
         assert len(sitecol) > ntiles, (len(sitecol), ntiles)
         mask = sitecol.sids % ntiles == tileno - 1
         oqparam.max_sites_disagg = 1

@@ -590,13 +590,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/disagg_by_mag_false.org', fname)
 
     def test_case_66(self):
-        # tile_pair
-        self.run_calc(case_66.__file__, 'job.ini')  # tile_pair=2:2
+        # tile_spec
+        self.run_calc(case_66.__file__, 'job.ini')  # tile_spec=2:2
         export(('hcurves', 'csv'), self.calc.datastore)
         export(('uhs', 'csv'), self.calc.datastore)
         [fname1] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap1.csv', fname1, delta=1E-4)
-        self.run_calc(case_66.__file__, 'job.ini', tile_pair='1:2')
+        self.run_calc(case_66.__file__, 'job.ini', tile_spec='1:2')
         [fname2] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap2.csv', fname2, delta=1E-4)
 
