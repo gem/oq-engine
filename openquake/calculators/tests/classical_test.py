@@ -596,7 +596,7 @@ class ClassicalTestCase(CalculatorTestCase):
         export(('uhs', 'csv'), self.calc.datastore)
         [fname1] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap1.csv', fname1, delta=1E-4)
-        self.run_calc(case_66.__file__, 'job.ini', tile_spec='1:2')
+        self.run_calc(case_66.__file__, 'job.ini', tile_spec='2:2')
         [fname2] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap2.csv', fname2, delta=1E-4)
 
