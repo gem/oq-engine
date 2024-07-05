@@ -2258,8 +2258,6 @@ def to_ini(key, val):
     elif key == 'region':
         coords = val[9:-2].split(',')  # strip POLYGON((...))
         return f'{key} = {", ".join(c for c in coords[:-1])}'
-    #elif key == 'tile_spec':
-    #    return 'tile_spec = [%d,%d]' % val
     elif key == 'hazard_imtls':
         return f"intensity_measure_types_and_levels = {val}"
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles',
