@@ -63,7 +63,6 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
-    print('See the output with silx view %s' % calc.datastore.filename)
     calc_path, _ = os.path.splitext(calc.datastore.filename)  # used below
     return calc
 
@@ -113,7 +112,10 @@ def main(job_ini,
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)
+        if concurrent_tasks:
+            job.params['concurrent_tasks'] = str(concurrent_tasks)
     run_jobs(jobs)
+    return jobs[0].calc_id
 
 
 main.job_ini = dict(help='calculation configuration file '
