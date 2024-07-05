@@ -713,11 +713,6 @@ secondary_perils:
 secondary_simulations:
   INTERNAL
 
-sensitivity_analysis:
-  Dictionary describing a sensitivity analysis.
-  Example: *sensitivity_analysis = {'maximum_distance': [200, 300]}*.
-  Default: empty dictionary
-
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
   event based calculations.
@@ -1104,7 +1099,6 @@ class OqParam(valid.ParamSet):
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
-    sensitivity_analysis = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)

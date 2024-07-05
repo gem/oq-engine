@@ -323,20 +323,8 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
         dic['hazard_calculation_id'] = hc_id
-        if 'sensitivity_analysis' in dic:
-            # this part is tested in commands_test and in oq-risk-tests
-            analysis = valid.dictionary(dic['sensitivity_analysis'])
-            for values in itertools.product(*analysis.values()):
-                jobdic = copy.deepcopy(dic)
-                pars = dict(zip(analysis, map(str, values)))
-                readinput.update(jobdic, pars.items(), dic['base_path'])
-                jobdic['description'] = '%s %s' % (dic['description'], pars)
-                new = logs.init('job', jobdic, log_level, log_file,
-                                user_name, hc_id, host)
-                jobs.append(new)
-        else:
-            jobs.append(logs.init('job', dic, log_level, log_file,
-                                  user_name, hc_id, host))
+        jobs.append(logs.init('job', dic, log_level, log_file,
+                              user_name, hc_id, host))
     if multi:
         for job in jobs:
             job.multi = True

@@ -24,6 +24,7 @@ import unittest.mock as mock
 from contextlib import redirect_stdout
 import shutil
 import zipfile
+import subprocess
 import tempfile
 import unittest
 import numpy
@@ -537,8 +538,18 @@ class EngineRunJobTestCase(unittest.TestCase):
 
     def test_sensitivity(self):
         # test the sensitivity of the UHS from the area_source_discretization
+        expected = '''#!/bin/bash
+job_id=(`oq create_jobs 2`)
+oq run /home/michele/oq-engine/openquake/qa_tests_data/logictree/case_56/job.ini -p area_source_discretization=39.9 description="Logic tree sampling [area_source_discretization=39.9]" job_id=${job_id[0]}
+oq run /home/michele/oq-engine/openquake/qa_tests_data/logictree/case_56/job.ini -p area_source_discretization=40.0 description="Logic tree sampling [area_source_discretization=40.0]" job_id=${job_id[1]}
+oq collect_jobs ${job_id[@]}
+'''
         job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
-        sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
+        with Print.patch() as p:
+            sap.runline(f'openquake.commands sensitivity_analysis {job_ini} '
+                        'area_source_discretization=[39.9,40.0]')
+        assert str(p) == expected
+        subprocess.run(['bash', '-c', str(p)])
         with Print.patch() as p:
             sap.runline('openquake.commands compare uhs -1 -2')
         print(p)
