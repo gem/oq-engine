@@ -435,6 +435,11 @@ investigation_time:
   Example: *investigation_time = 50*.
   Default: no default
 
+job_id:
+   ID of a job in the database
+   Example: *job_id = 42*.
+   Default: 0 (meaning create a new job)
+
 limit_states:
    Limit states used in damage calculations.
    Example: *limit_states = moderate, complete*
@@ -1036,6 +1041,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
