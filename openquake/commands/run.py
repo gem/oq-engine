@@ -74,7 +74,7 @@ def main(job_ini,
          *,
          slowest: int = None,
          hc: int = None,
-         param='',
+         param=(),
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info'):
@@ -89,7 +89,10 @@ def main(job_ini,
     except Exception:  # gaierror
         host = None
     if param:
-        params = dict(p.split('=', 1) for p in param.split(','))
+        params = {}
+        for par in param:
+            k, v = par.split('=', 1)
+            params[k] = v
     else:
         params = {}
     if hc:
@@ -122,7 +125,7 @@ main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
 main.reuse_input = dict(help='reuse source model and exposure')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
-main.param = dict(help='override parameter with the syntax NAME=VALUE,...')
+main.param = dict(help='override parameters with TOML syntax', nargs='*')
 main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',

@@ -18,13 +18,11 @@
 
 from openquake.commonlib import logs
 
-def main(number: int, calculation_mode):
+def main(number: int):
     """
     Create a number of jobs in the database and print the job IDs
     """
-    jobs = [logs.init(dict(calculation_mode=calculation_mode))
-            for _ in range(number)]
+    jobs = [logs.init(dict(calculation_mode='custom')) for _ in range(number)]
     print(' '.join(str(job.calc_id) for job in jobs))
 
 main.number = dict(help='number of jobs to create in the database')
-main.calculation_mode = dict(help='calculation_mode')
