@@ -108,9 +108,6 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    if len(job_ini) == 1:
-        return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
-                    loglevel, exports, params, user_name, host)
     jobs = create_jobs(job_ini, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     for job in jobs:
