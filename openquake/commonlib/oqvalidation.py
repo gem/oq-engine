@@ -435,6 +435,11 @@ investigation_time:
   Example: *investigation_time = 50*.
   Default: no default
 
+job_id:
+   ID of a job in the database
+   Example: *job_id = 42*.
+   Default: 0 (meaning create a new job)
+
 limit_states:
    Limit states used in damage calculations.
    Example: *limit_states = moderate, complete*
@@ -707,11 +712,6 @@ secondary_perils:
 
 secondary_simulations:
   INTERNAL
-
-sensitivity_analysis:
-  Dictionary describing a sensitivity analysis.
-  Example: *sensitivity_analysis = {'maximum_distance': [200, 300]}*.
-  Default: empty dictionary
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -1036,6 +1036,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
@@ -1098,7 +1099,6 @@ class OqParam(valid.ParamSet):
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
-    sensitivity_analysis = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)

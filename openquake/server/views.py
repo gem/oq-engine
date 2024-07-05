@@ -1007,15 +1007,10 @@ def submit_job(request_files, ini, username, hc_id):
         job_ini = store(request_files, ini, job.calc_id)
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
-        if oq.sensitivity_analysis:
-            logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
-            jobs = engine.create_jobs([job_ini], config.distribution.log_level,
-                                      None, username, hc_id, True)
-        else:
-            dic = dict(calculation_mode=oq.calculation_mode,
-                       description=oq.description, hazard_calculation_id=hc_id)
-            logs.dbcmd('update_job', job.calc_id, dic)
-            jobs = [job]
+        dic = dict(calculation_mode=oq.calculation_mode,
+                   description=oq.description, hazard_calculation_id=hc_id)
+        logs.dbcmd('update_job', job.calc_id, dic)
+        jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
