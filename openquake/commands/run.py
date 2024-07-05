@@ -107,13 +107,14 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    jobs = create_jobs(job_ini, loglevel, hc_id=hc,
-                       user_name=user_name, host=host, multi=False)
-    for job in jobs:
-        job.params.update(params)
-        job.params['exports'] = ','.join(exports)
+    dics = [readinput.get_params(ini) for ini in job_ini]
+    for dic in dics:
+        dic.update(params)
+        dic['exports'] = ','.join(exports)
         if concurrent_tasks:
-            job.params['concurrent_tasks'] = str(concurrent_tasks)
+            dic['concurrent_tasks'] = str(concurrent_tasks)
+    jobs = create_jobs(dics, loglevel, hc_id=hc,
+                       user_name=user_name, host=host, multi=False)
     run_jobs(jobs)
     return jobs[0].calc_id
 

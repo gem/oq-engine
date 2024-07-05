@@ -26,6 +26,7 @@ def main(job_ids):
     """
     while True:
         rows = logs.dbcmd('SELECT id, status FROM job WHERE id in (?X)', job_ids)
+        # print(rows)
         failed = [row for row in rows if row.status == 'failed']
         if failed:
             sys.exit('Job %d failed' % failed[0])
