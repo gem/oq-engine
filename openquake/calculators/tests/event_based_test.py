@@ -526,12 +526,12 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(len(self.calc.datastore['ruptures']), 15)
         hc_id = str(self.calc.datastore.calc_id)
 
-        self.run_calc(case_27.__file__, 'job.ini', sites_slice="0:41",
+        self.run_calc(case_27.__file__, 'job.ini', tile_spec="[1,2]",
                       hazard_calculation_id=hc_id)
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf1.csv', fname)
 
-        self.run_calc(case_27.__file__, 'job.ini', sites_slice="41:82",
+        self.run_calc(case_27.__file__, 'job.ini', tile_spec="[2,2]",
                       hazard_calculation_id=hc_id)
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf2.csv', fname)
