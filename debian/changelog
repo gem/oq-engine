@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq submit n job_ini` for usage in supercomputers
   * Reimplemented the sensitivity analysis in a supercomputer-friendly way
   * Fixed export realizations which was truncating the branch_path
   * Extended logic tree filtering via `smlt_branch`
