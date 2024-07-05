@@ -1143,15 +1143,15 @@ def tile_spec(value):
     where `no` is an integer in the range `1..nt` and `nt`
     is the total number of tiles.
 
-    >>> tile_spec('1:2')
-    (1, 2)
-    >>> tile_spec('2:2')
-    (2, 2)
+    >>> tile_spec('[1,2]')
+    [1, 2]
+    >>> tile_spec('[2,2]')
+    [2, 2]
     """
-    no, ntiles = map(int, value.split(':'))
+    no, ntiles = ast.literal_eval(value)
     assert ntiles > 0, ntiles
     assert no > 0 and no <= ntiles, no
-    return no, ntiles
+    return [no, ntiles]
 
 
 def simple_slice(value):
