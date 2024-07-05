@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Internal: reimplemented the sensitivity analysis framework
+  * Reimplemented the sensitivity analysis in a supercomputer-friendly way
   * Fixed export realizations which was truncating the branch_path
   * Extended logic tree filtering via `smlt_branch`
   * Worked on disaggregation by multifault source
