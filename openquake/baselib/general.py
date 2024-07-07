@@ -602,7 +602,7 @@ def import_all(module_or_package):
             # the current working directory is not a subpackage
             continue
         for f in files:
-            if f.endswith('.py'):
+            if f.endswith('.py') and not f.startswith('__init__'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
