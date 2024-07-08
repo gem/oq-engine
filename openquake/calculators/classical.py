@@ -792,7 +792,7 @@ class ClassicalCalculator(base.HazardCalculator):
             est_time = self.classical_time / float(fraction) + delta
             logging.info('Estimated time: %.1f hours', est_time / 3600)
 
-        if 'hmaps-stats' in self.datastore:
+        if 'hmaps-stats' in self.datastore and not oq.tile_spec:
             self.plot_hmaps()
 
     def plot_hmaps(self):

@@ -193,11 +193,11 @@ def export_aelo_csv(key, dstore):
         array = numpy.zeros(M*L1, [('imt', hdf5.vstr), ('iml', float),
                                    ('poe', float)])
         for m, imt in enumerate(oq.imtls):
-            for l, iml in enumerate(oq.imtls[imt]):
-                row = array[m*L1 + l]
+            for li, iml in enumerate(oq.imtls[imt]):
+                row = array[m*L1 + li]
                 row['imt'] = imt
                 row['iml'] = iml
-                row['poe'] = arr[m, l]
+                row['poe'] = arr[m, li]
         writers.write_csv(fname, array, comment=comment)
 
     elif key == 'uhs':
@@ -668,7 +668,6 @@ def export_mce(ekey, dstore):
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']    
     for s, site in enumerate(sitecol):
-        sid = site.id
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
