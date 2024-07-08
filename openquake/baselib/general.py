@@ -500,11 +500,12 @@ def extract_dependencies(lines):
     for line in lines:
         longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
         try:
-            pkg, version, *other = longname.split('-')
+            pkg, version, _other = longname.split('-', 2)
         except ValueError:  # for instance a comment
             continue
         if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam', 'django_cors_headers', 'django_cookie_consent'):
+                   'python_pam', 'django_cors_headers',
+                   'django_cookie_consent'):
             # not importable
             continue
         if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
@@ -1782,6 +1783,7 @@ def decompress(cbytes):
 # with monitor.shared['arr'] as arr:
 #      big_object = loada(arr)
 
+
 def dumpa(obj):
     """
     Dump a Python object as an array of uint8:
@@ -1801,4 +1803,3 @@ def loada(arr):
     23
     """
     return pickle.loads(bytes(arr))
-

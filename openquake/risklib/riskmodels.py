@@ -562,7 +562,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
                 if len(coeffs):
-                    consequence, tagname = byname.split('_by_')
                     # the taxonomy map is a dictionary loss_type ->
                     # [[(risk_taxon, weight]),...] for each asset taxonomy
                     for pairs in tmap[loss_type].values():
@@ -628,7 +627,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
-                consequence, tagname = byname.split('_by_')
+                consequence, _tagname = byname.split('_by_')
                 # the taxonomy map is a dictionary loss_type ->
                 # [[(risk_taxon, weight]),...] for each asset taxonomy
                 for risk_t, weight in self.tmap[loss_type][asset['taxonomy']]:

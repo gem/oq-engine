@@ -69,7 +69,7 @@ def make_figure_uhs_cluster(extractors, what):
     import matplotlib.cm as cm
     kstr = what.split('?')[1]
     k = int(kstr.split('=')[1])
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     [ex] = extractors
     trts = ex.get('full_lt').trts
     hmaps = ex.get('hmaps?kind=rlzs')
@@ -353,7 +353,7 @@ def make_figure_task_info(extractors, what):
     [ex] = extractors
     dic = ex.get(what).to_dict()
     del dic['extra']
-    [(task_name, task_info)] = dic.items()
+    [(_task_name, task_info)] = dic.items()
     x = task_info['duration']
     if plt.__name__ == 'plotext':
         mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
@@ -383,7 +383,7 @@ def make_figure_source_data(extractors, what):
     $ oq plot "source_data?taskno=XX"
     """
     plt = import_plt()
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     [ex] = extractors
     aw = ex.get(what)
     x, y = aw.ctimes, aw.weight
@@ -405,7 +405,7 @@ def make_figure_memory(extractors, what):
     [ex] = extractors
     task_info = ex.get('task_info').to_dict()
     del task_info['extra']
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     ax.set_xlabel('tasks')
     ax.set_ylabel('GB')
@@ -430,7 +430,7 @@ def make_figure_sources(extractors, what):
     info = ex.get(what)
     wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
     srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
     pp = PolygonPlotter(ax)
@@ -472,7 +472,7 @@ def make_figure_gridded_sources(extractors, what):
     plt = import_plt()
     [ex] = extractors
     dic = json.loads(ex.get(what).json)  # id -> lonlats
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
     tot = 0
@@ -499,7 +499,7 @@ def make_figure_rupture_info(extractors, what):
     plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     n = 0
     tot = 0
@@ -592,7 +592,7 @@ def make_figure_dist_by_mag(extractors, what):
     [ex] = extractors
     effect = ex.get('effect')
     mags = ['%.2f' % mag for mag in effect.mags]
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     trti = 0
     for trt, dists in effect.dist_bins.items():
         dic = dict(zip(mags, effect[:, :, trti]))
@@ -634,7 +634,7 @@ def make_figure_effect_by_mag(extractors, what):
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)
         effect = numpy.array(list(ebm.values()))
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     trti = 0
     for trt in gsims_by_trt:
         ax.plot(mags, effect[:, -1, trti], label=trt)
@@ -684,7 +684,7 @@ def make_figure_csq_curves(extractors, what):
     got = {}  # (calc_id, limit_state) -> curve
     for i, ex in enumerate(extractors):
         aw = ex.get(what)
-        P, C = aw.shape
+        P, _C = aw.shape
         if P < 2:
             raise RuntimeError('Not enough return periods: %d' % P)
         for c, csq in enumerate(aw.consequences):

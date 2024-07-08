@@ -52,6 +52,7 @@ from openquake.calculators.export import DISPLAY_NAME
 F32 = numpy.float32
 U8 = numpy.uint8
 
+
 def print_features(fiona_file):
     rows = []
     for feature in fiona_file:
@@ -297,9 +298,10 @@ def main(what, report=False):
         if tag.endswith('sourceModel'):
             print(source_model_info([node]))
         elif tag.endswith('exposureModel'):
-            exp, df = asset.read_exp_df(what)
+            _exp, df = asset.read_exp_df(what)
             print(node.to_str())
-            print(df.set_index('id')[['lon', 'lat', 'taxonomy', 'value-structural']])
+            print(df.set_index('id')[[
+                'lon', 'lat', 'taxonomy', 'value-structural']])
         elif tag.endswith('logicTree'):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):

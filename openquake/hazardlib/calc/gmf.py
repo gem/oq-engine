@@ -34,6 +34,7 @@ from openquake.hazardlib.imt import from_string
 U32 = numpy.uint32
 F32 = numpy.float32
 
+
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
         self.corr = corr
@@ -69,7 +70,7 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
         iml = max_iml[m]
         for n in range(N):
             # capping the gmv at the median value if val > max_iml[m]
-            maxval = exp(mean[m, n], m!=mmi_index)
+            maxval = exp(mean[m, n], m != mmi_index)
             for e in range(E):
                 val = array[n, m, e]
                 if val > iml:
@@ -133,9 +134,9 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     N = len(sitecol)
     M = len(cmaker.imtls)
     [ctx] = cmaker.get_ctx_iter([ebrupture.rupture], sitecol)
-    mean, sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
+    mean, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
     rlzs = numpy.concatenate(list(cmaker.gsims.values()))
-    eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
+    _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
     rng = numpy.random.default_rng(ebrupture.seed)
     cross_correl = NoCrossCorrelation(cmaker.truncation_level)
     ccdist = cross_correl.distribution
@@ -369,7 +370,7 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
-            gmf = exp(mean, im!='MMI')[:, None].repeat(len(idxs), axis=1)
+            gmf = exp(mean, im != 'MMI')[:, None].repeat(len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -378,7 +379,7 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
-            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im!='MMI')
+            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im != 'MMI')
             self.sig[idxs, m] = numpy.nan
         else:
             # the [:, None] is used to implement multiplication by row;
@@ -394,7 +395,7 @@ class GmfComputer(object):
 
             inter_res = tau[:, None] * self.eps[idxs, m]
             # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + intra_res + inter_res, im!='MMI')
+            gmf = exp(mean[:, None] + intra_res + inter_res, im != 'MMI')
             self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
         return gmf  # shapes (N, E)
 

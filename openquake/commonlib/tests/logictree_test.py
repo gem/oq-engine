@@ -43,10 +43,12 @@ class SmltTestCase(unittest.TestCase):
     def test_400_source_models(self):
         # test that too many branches is not raised
         fname = os.path.join(DATADIR, 'drouet_smtlt.xml')
-        with self.assertRaises((lt.LogicTreeError, logictree.InvalidFile)) as ctx:
+        with self.assertRaises(
+                (lt.LogicTreeError, logictree.InvalidFile)) as ctx:
             logictree.SourceModelLogicTree(fname)
         msg = str(ctx.exception)
-        assert 'No such file or directory:' in msg or 'too many branches' in msg
+        assert ('No such file or directory:' in msg
+                or 'too many branches' in msg)
 
 
 class CompositeLtTestCase(unittest.TestCase):
@@ -1189,7 +1191,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                ))
              ]
             )
-        sb1, sb2, sb3 = lt.root_branchset.branches
+        sb1, _sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.bset is sb3.bset)
         self.assertEqual(
             str(lt), '<_TestableSourceModelLogicTree<sourceModel(3)>>')
@@ -1560,7 +1562,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_tectonic_region_type(self):
-        def test(trt, source): 
+        def test(trt, source):
             return logictree.BranchSet(
                 None, filters={'applyToTectonicRegionType': trt}
             ).filter_source(source)

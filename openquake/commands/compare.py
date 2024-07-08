@@ -31,7 +31,7 @@ def get_diff_idxs(array, rtol, atol):
     compute the relative differences and discard the one below the tolerance.
     :returns: indices where there are sensible differences.
     """
-    C, N, L = array.shape
+    C, N, _L = array.shape
     diff_idxs = set()  # indices of the sites with differences
     for n in range(N):
         for c in range(1, C):
@@ -402,7 +402,8 @@ def compare_assetcol(calc_ids: int):
     check_column_names(array0, array1, 'assetcol', *calc_ids)
     fields = set(array0.dtype.names) & set(array1.dtype.names) - {
         'site_id', 'id', 'ordinal', 'taxonomy'}
-    arr0, arr1 = check_intersect(array0, array1, 'id', sorted(fields), calc_ids)
+    arr0, arr1 = check_intersect(
+        array0, array1, 'id', sorted(fields), calc_ids)
     taxo0 = ds0['assetcol/tagcol/taxonomy'][:][arr0['taxonomy']]
     taxo1 = ds1['assetcol/tagcol/taxonomy'][:][arr1['taxonomy']]
     compare_column_values(taxo0, taxo1, 'taxonomy')
@@ -460,7 +461,7 @@ def compare_oqparam(calc_ids: int):
         if dic0[key] != dic1[key]:
             print('%s: %s != %s' % (key, dic0[key], dic1[key]))
 
-    
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,

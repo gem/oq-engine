@@ -181,7 +181,7 @@ def get_eff_rlzs(sm_rlzs, gsim_rlzs):
     ordinal = 0
     effective = []
     for rows in groupby(triples, operator.itemgetter(0)).values():
-        pid, sm_rlz, gsim_rlz = rows[0]
+        _pid, sm_rlz, gsim_rlz = rows[0]
         weight = numpy.array([len(rows) / len(triples)])
         effective.append(
             LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
@@ -238,7 +238,7 @@ def reduce_fnames(fnames, source_id):
     the filenames containing the source, otherwise return all the filenames
     """
     try:
-        srcid, fname = source_id.split('!')
+        _srcid, fname = source_id.split('!')
     except ValueError:
         return fnames
     return [f for f in fnames if fname in f]
@@ -572,22 +572,24 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        # NB: because the engine lacks the ability to apply correlated uncertainties
-        # to all the sources in a source model, people build spurious source
-        # models in preprocessing; for instance EDF/CEA have 4 real source
-        # models which are extended to 400 source models; this is bad, since the
-        # required disk space is 100x larger, the read time is 100x larger
-        # copying the files is an issue, etc.
-        # To stop people to commit such abuses there is a limit of 183 branches;
-        # however, you can actually raise the limit to 33489 branches by
-        # commenting/uncommenting the two lines below, if you really need
+        # NB: because the engine lacks the ability to apply correlated
+        # uncertainties to all the sources in a source model, people build
+        # spurious source models in preprocessing; for instance EDF/CEA have 4
+        # real source models which are extended to 400 source models; this is
+        # bad, since the required disk space is 100x larger, the read time is
+        # 100x larger copying the files is an issue, etc.
+        # To stop people to commit such abuses there is a limit of 183
+        # branches; however, you can actually raise the limit to 33489 branches
+        # by commenting/uncommenting the two lines below, if you really need
         maxlen = 183
-        # maxlen = 183 if bsno else 33489  # the sourceModel branchset can be longer
+        # maxlen = 183 if bsno else 33489  # the sourceModel branchset
+        #                                    can be longer
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
                    'oq-engine/advanced/latest/logic_trees.html')
-            raise InvalidFile(msg % (self.filename, bs_id, len(branches), maxlen))
+            raise InvalidFile(
+                msg % (self.filename, bs_id, len(branches), maxlen))
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -1346,8 +1348,8 @@ class FullLogicTree(object):
             if self.source_model_lt.filename == 'fake.xml':  # scenario
                 smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
                               for i, sm_rlz in enumerate(self.sm_rlzs)}
-                smidx = numpy.zeros(self.get_num_paths(), int)		
-                for rlz in rlzs:		
+                smidx = numpy.zeros(self.get_num_paths(), int)
+                for rlz in rlzs:
                     smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                 self._rlzs_by = _ddic(trtis, smrs,
                                       lambda smr: rlzs[smidx == smr])
