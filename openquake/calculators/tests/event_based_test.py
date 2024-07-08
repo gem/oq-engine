@@ -96,7 +96,7 @@ class EventBasedTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df('gmf_data', 'sid')
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
-        [(sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
+        [(_sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
         aac(avg_gmf[:, 0], avgstd)
 
@@ -111,7 +111,7 @@ class EventBasedTestCase(CalculatorTestCase):
         gmf_df = pandas.DataFrame(dict(eid=eids[ok], gmv_0=gmvs[ok]),
                                   numpy.zeros(E, int)[ok])
         weights = numpy.ones(E)
-        [(sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
+        [(_sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
         # aac(avgstd, [[0.13664978], [1.63127694]]) without cutting min_iml
         # aac(avgstd, [[0.14734], [1.475266]], atol=1E-6)  # cutting at .10
         aac(avgstd, [[0.137023], [1.620616]], atol=1E-6)
@@ -485,18 +485,18 @@ class EventBasedTestCase(CalculatorTestCase):
         # extra2.xml contains "4"
         # extra3.xml contains "7"
         self.run_calc(case_25.__file__, 'job.ini')
-        mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
+        mean = export(('hcurves', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
 
     def test_case_25_bis(self):
         self.run_calc(case_25.__file__, 'job2.ini')
-        mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
+        mean = export(('hcurves', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
 
     def test_case_25_tris(self):
         # test with common1.xml present into branchs and sampling
         self.run_calc(case_25.__file__, 'job_common.ini')
-        mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
+        mean = export(('ruptures', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/ruptures.csv', mean)
 
     def test_case_26_land(self):

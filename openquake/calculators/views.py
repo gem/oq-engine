@@ -983,7 +983,7 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
-    N, M, P = dstore['hmap3'].shape
+    N, _M, P = dstore['hmap3'].shape
     tbl = []
     kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
@@ -1207,7 +1207,7 @@ def view_calc_risk(token, dstore):
             continue
         out = crmodel.get_output(adf, df, oq._sec_losses, rng)
         outs.append(out)
-    avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
+    _avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
     del alt['event_id']
     del alt['variance']
     alt['type'] = LOSSTYPE[alt.loss_id]
@@ -1480,7 +1480,7 @@ def view_sum(token, dstore):
     """
     _, arrayname = token.split(':')  # called as sum:damages-rlzs
     dset = dstore[arrayname]
-    A, R, L, *D = dset.shape
+    _A, R, L, *D = dset.shape
     cols = ['RL'] + tup2str(itertools.product(*[range(d) for d in D]))
     arr = dset[:].sum(axis=0)  # shape R, L, *D
     z = numpy.zeros(R * L, dt(cols))
@@ -1709,7 +1709,7 @@ def compare_disagg_rates(token, dstore):
 def view_gh3(token, dstore):
     sitecol = dstore['sitecol']
     gh3 = geo.utils.geohash3(sitecol.lons, sitecol.lats)
-    uni, cnt = numpy.unique(gh3, return_counts=True)
+    _uni, cnt = numpy.unique(gh3, return_counts=True)
     # print(sorted(cnt))
     return numpy.array([stats('gh3', cnt)],
                        dt('kind counts mean stddev min max'))
@@ -1792,7 +1792,7 @@ def view_long_ruptures(token, dstore):
         if src.code in b'MPA' and maxlen > 900.:
             usd = src.upper_seismogenic_depth
             lsd = src.lower_seismogenic_depth
-            maxmag, rate = src.get_annual_occurrence_rates()[-1]
+            maxmag, _rate = src.get_annual_occurrence_rates()[-1]
             lst.append((src.source_id, maxlen, maxmag, usd, lsd))
     arr = numpy.array(lst, [('source_id', object), ('maxlen', float),
                             ('maxmag', float), ('usd', float), ('lsd', float)])

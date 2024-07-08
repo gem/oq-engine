@@ -133,9 +133,9 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         inputs['station_data'] = station_data_file
     oq = readinput.get_oqparam(params)
     # NB: fake h5 to cache `get_site_model` and avoid multiple associations
-    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(
+    _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
         oq, h5={'performance_data': hdf5.FakeDataset()})
-    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
+    id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(exposure_hdf5, countries)
     logging.root.handlers = []  # avoid breaking the logs

@@ -537,7 +537,7 @@ def export_mean_disagg_by_src(ekey, dstore):
             ('disagg-stats', 'csv'),
             ('disagg-rlzs-traditional', 'csv'))
 def export_disagg_csv(ekey, dstore):
-    name, ext = ekey
+    name, _ext = ekey
     spec = name[7:]  # rlzs, stats, rlzs-traditional, stats-traditional
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']

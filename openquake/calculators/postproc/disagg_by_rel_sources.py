@@ -140,7 +140,7 @@ def collect_results(smap, src2idx, weights, edges, shp,
     :returns: sid -> (mean_disagg_by_src, sigma_by_src)
     """
     out = {}
-    mags, dists, lons, lats, eps, trts = edges
+    mags, dists, _lons, _lats, eps, _trts = edges
     for sid in sorted(rel_ids_by_imt):
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         Ns, M1 = len(rel_ids), len(imts)

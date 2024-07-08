@@ -38,7 +38,7 @@ def classical_risk(riskinputs, oqparam, monitor):
     crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
     weights = oqparam._weights[:, -1]
-    statnames, stats = zip(*oqparam._stats)
+    _statnames, stats = zip(*oqparam._stats)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         A = len(ri.asset_df)

@@ -620,7 +620,7 @@ class HazardCalculator(BaseCalculator):
                 oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            mesh, pmap = readinput.get_pmap_from_csv(
+            _mesh, pmap = readinput.get_pmap_from_csv(
                 oq, oq.inputs['hazard_curves'])
             df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
@@ -1063,7 +1063,7 @@ class HazardCalculator(BaseCalculator):
         keep_trts = set()
         nrups = []
         for grp_id, trt_smrs in enumerate(self.csm.get_trt_smrs()):
-            trti, smrs = numpy.divmod(trt_smrs, 2**24)
+            trti, _smrs = numpy.divmod(trt_smrs, 2**24)
             trt = self.full_lt.trts[trti[0]]
             nr = rel_ruptures.get(grp_id, 0)
             nrups.append(nr)
@@ -1417,7 +1417,7 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
-        N, E, M = gmfs.shape
+        N, E, _M = gmfs.shape
         events = numpy.zeros(E, rupture.events_dt)
         events['id'] = numpy.arange(E, dtype=U32)
         calc.datastore['events'] = events

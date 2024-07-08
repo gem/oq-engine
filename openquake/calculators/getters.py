@@ -285,7 +285,7 @@ def multiline(array3RC):
     :param array3RC: array of shape (3, R, C)
     :returns: a MULTILINESTRING
     """
-    D, R, C = array3RC.shape
+    D, R, _C = array3RC.shape
     assert D == 3, D
     lines = 'MULTILINESTRING(%s)' % ', '.join(
         line(array3RC[:, r, :].T) for r in range(R))
