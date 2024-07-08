@@ -532,6 +532,8 @@ class EngineRunJobTestCase(unittest.TestCase):
             run_jobs(create_jobs([job_ini]))
 
     def test_sensitivity(self):
+        if sys.platform == 'win32':
+            raise unittest.SkipTest('Not supported on windows')
         # test the sensitivity of the UHS from the area_source_discretization
         job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
         with Print.patch() as p:
