@@ -726,18 +726,19 @@ class SharedArray(object):
         self.sm.unlink()
 
 
+# use only the "visible" cores, not the total system cores
+# if the underlying OS supports it (macOS does not)
+try:
+    tot_cores = len(psutil.Process().cpu_affinity())
+except AttributeError:
+    tot_cores = psutil.cpu_count()
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
-    num_cores = int(config.distribution.get('num_cores', '0'))
-    if not num_cores:
-        # use only the "visible" cores, not the total system cores
-        # if the underlying OS supports it (macOS does not)
-        try:
-            num_cores = len(psutil.Process().cpu_affinity())
-        except AttributeError:
-            num_cores = psutil.cpu_count()
+    num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
     CT = num_cores * 2
 
     @classmethod
@@ -751,8 +752,8 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = mp_context.Pool(
-                cls.num_cores, init_workers,
-                maxtasksperchild=cls.maxtasksperchild)
+                cls.num_cores if cls.num_cores <= tot_cores else tot_cores,
+                init_workers, maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine

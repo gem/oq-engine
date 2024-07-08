@@ -797,7 +797,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def plot_hmaps(self):
         """
-        Generate hazard map plots if there are more the  1000 sites
+        Generate hazard map plots if there are more than 1000 sites
         """
         hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
         maxhaz = hmaps.max(axis=(0, 1, 3))
@@ -817,6 +817,6 @@ class ClassicalCalculator(base.HazardCalculator):
                            calc_id=self.datastore.calc_id,
                            array=hmaps[:, 0, m, p])
                 allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
-        smap = parallel.Starmap(make_hmap_png, allargs)
+        smap = parallel.Starmap(make_hmap_png, allargs, distribute='no')
         for dic in smap:
             self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
