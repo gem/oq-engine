@@ -22,7 +22,7 @@ from openquake.commonlib import readinput
 script = '''#!/bin/bash
 job_id=(`oq create_jobs %(n)d`)
 %(lines)s
-oq collect_jobs ${job_id[@]}
+time oq collect_jobs ${job_id[@]}
 '''
 
 def main(n: int, job_ini):

@@ -18,9 +18,46 @@
 
 import sys
 import time
-from openquake.commonlib import logs
+import numpy
+from openquake.hazardlib.site import SiteCollection
+from openquake.commonlib import logs, datastore
 
-def main(job_ids):
+
+def collect(job_ids, dstore):
+    """
+    Collect from job_ids and save the concatenated arrays in dstore
+    """
+    sitecols = []
+    dic = {'performance_data': [], 'hcurves-stats': [], 'hmaps-stats': []}
+    for job_id in job_ids:
+        with datastore.read(job_id) as ds:
+            sitecols.append(ds['sitecol'].array)
+            for name in dic:
+                if name in ds:
+                    dic[name].append(ds[name][:])
+
+    last = datastore.read(job_ids[-1])
+    sitecol = object.__new__(SiteCollection)
+    sitecol.array = numpy.concatenate(sitecols)
+    dstore['sitecol'] = sitecol
+    dstore['oqparam'] = last['oqparam']
+    if 'source_info' in last:
+        dstore['source_info'] = last['source_info'][:]
+    if 'weights' in last:
+        dstore['weights'] = last['weights'][:]
+    if 'full_lt' in last:
+        dstore['full_lt'] = last['full_lt']
+    for key in ('engine_version', 'date', 'checksum32'):
+        dstore['/'].attrs[key] = last['/'].attrs[key]
+    for name, arrays in dic.items():
+        if arrays:
+            dstore[name] = numpy.concatenate(arrays)
+            js = last[name].attrs.get('json')
+            if js:
+                dstore[name].attrs['json'] = js
+
+
+def main(job_ids: int):
     """
     Wait for the given jobs to finish and then collect the results
     """
@@ -32,7 +69,10 @@ def main(job_ids):
             sys.exit('Job %d failed' % failed[0].id)
         complete = [row for row in rows if row.status == 'complete']
         if len(complete) == len(rows):
-            print('All jobs completed correctly')
+            dstore, log = datastore.build_dstore_log('-'.join(map(str, job_ids)))
+            with dstore, log:
+                collect(job_ids, dstore)
+            print('All jobs completed correctly, saved result in', dstore.filename)
             break
         time.sleep(30.)
 
