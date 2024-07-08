@@ -534,15 +534,16 @@ class EngineRunJobTestCase(unittest.TestCase):
     def test_sensitivity(self):
         if sys.platform == 'win32':
             raise unittest.SkipTest('Not supported on windows')
+
         # test the sensitivity of the UHS from the area_source_discretization
         job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
         with Print.patch() as p:
             sap.runline(f'openquake.commands sensitivity_analysis {job_ini} '
                         'area_source_discretization=[39.9,40.0]')
         print(p)
-        subprocess.run(['bash', '-c', str(p)])
+        subprocess.run(['bash', '-c', str(p)])  # run the generated script
         with Print.patch() as p:
-            sap.runline('openquake.commands compare uhs -1 -2')
+            sap.runline('openquake.commands compare uhs -2 -3')
         print(p)
         self.assertIn('rms-diff', str(p))
         # testing different sitecols
@@ -551,13 +552,18 @@ class EngineRunJobTestCase(unittest.TestCase):
             sitecol.array['vs30'] = 750.
             ds1['sitecol'] = sitecol
         with Print.patch() as p:
-            sap.runline('openquake.commands compare sitecol -1 -2')
+            sap.runline('openquake.commands compare sitecol -2 -3')
         print(p)
         # test compare oqparam
         with Print.patch() as p:
-            sap.runline("openquake.commands compare oqparam -1 -2")
+            sap.runline("openquake.commands compare oqparam -2 -3")
         self.assertIn('area_source_discretization: 40.0 != 39.9', str(p))
 
+        # test collect_jobs
+        with Print.patch() as p:
+            sap.runline("openquake.commands collect_jobs -2 -3")
+        self.assertIn('All jobs completed correctly', str(p))
+        
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
