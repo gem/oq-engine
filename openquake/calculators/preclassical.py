@@ -63,7 +63,7 @@ def check_maxmag(pointlike):
     """Check for pointlike sources with high magnitudes"""
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
-        if maxmag >= 8.:
+        if maxmag >= 9.:
             logging.info('%s %s has maximum magnitude %s',
                          src.__class__.__name__, src.source_id, maxmag)
 
