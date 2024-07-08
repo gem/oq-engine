@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = False
+PLOTTING = True
 aae = np.testing.assert_almost_equal
 
 

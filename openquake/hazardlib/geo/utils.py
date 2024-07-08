@@ -840,7 +840,7 @@ def get_strike_from_plane_normal(nrml):
     plane. The positive z-direction is pointing upwards.
 
     :param nrml:
-        A vector with 3 elements
+        A vector with 3 elements defining the normal to the plane
     :returns:
         A float defining the strike direction
     """
@@ -850,7 +850,12 @@ def get_strike_from_plane_normal(nrml):
         nrml *= -1
 
     # Get the strike
-    return _angles_diff(numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])), 90)
+    if nrml[1] >= 0:
+        tmp = (numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) + 90.0) % 360.0
+    else:
+        tmp = (numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) + 270.0) % 360.0
+
+    return tmp
 
 
 def bbox2poly(bbox):

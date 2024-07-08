@@ -295,9 +295,10 @@ class KiteSurface(BaseSurface):
                 icol += 1
                 if (icol + 1) >= self.mesh.lons.shape[1]:
                     irow += 1
-                    icol = 1
+                    icol = 0
                     if (irow + 1) >= self.mesh.lons.shape[0]:
                         break
+
         # Check strike
         if found:
             azi_strike = azimuth(self.mesh.lons[irow, icol],
@@ -308,6 +309,25 @@ class KiteSurface(BaseSurface):
                               self.mesh.lats[irow, icol],
                               self.mesh.lons[irow + 1, icol],
                               self.mesh.lats[irow + 1, icol])
+
+            coo = np.empty((4, 3))
+            coo[0, 0] = self.mesh.lons[irow, icol]
+            coo[0, 1] = self.mesh.lats[irow, icol]
+            coo[0, 1] = self.mesh.depths[irow, icol]
+            coo[1, 0] = self.mesh.lons[irow+1, icol]
+            coo[1, 1] = self.mesh.lats[irow+1, icol]
+            coo[1, 2] = self.mesh.depths[irow+1, icol]
+            coo[2, 0] = self.mesh.lons[irow+1, icol+1]
+            coo[2, 1] = self.mesh.lats[irow+1, icol+1]
+            coo[2, 2] = self.mesh.depths[irow+1, icol+1]
+            coo[3, 0] = self.mesh.lons[irow, icol+1]
+            coo[3, 1] = self.mesh.lats[irow, icol+1]
+            coo[3, 2] = self.mesh.depths[irow, icol+1]
+
+            from openquake.hazardlib.geo.utils import (
+                plane_fit, get_strike_from_plane_normal)
+            pnt_plane, nrml_plane = plane_fit(coo)
+            tmp_strike = get_strike_from_plane_normal(nrml_plane)
 
             # Compare the dip direction from the strike against the one from
             # the quadrilateral
