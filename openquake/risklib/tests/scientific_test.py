@@ -594,7 +594,7 @@ class LossesByEventTestCase(unittest.TestCase):
         print('cession', cession_curve)
         print('retention', ret_curve)
         if PLOTTING:
-            fig, ax = plt.subplots()
+            _fig, ax = plt.subplots()
             ax.plot(periods, claim_curve, label='claim')
             ax.plot(periods, cession_curve, label='cession')
             ax.plot(periods, ret_curve, label='retention')

@@ -509,7 +509,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         max_gb = float(config.memory.pmap_max_gb)
-        if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb:
+        if (oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb
+            or oq.tile_spec):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
@@ -792,12 +793,12 @@ class ClassicalCalculator(base.HazardCalculator):
             est_time = self.classical_time / float(fraction) + delta
             logging.info('Estimated time: %.1f hours', est_time / 3600)
 
-        if 'hmaps-stats' in self.datastore:
+        if 'hmaps-stats' in self.datastore and not oq.tile_spec:
             self.plot_hmaps()
 
     def plot_hmaps(self):
         """
-        Generate hazard map plots if there are more the  1000 sites
+        Generate hazard map plots if there are more than 1000 sites
         """
         hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
         maxhaz = hmaps.max(axis=(0, 1, 3))
@@ -817,6 +818,6 @@ class ClassicalCalculator(base.HazardCalculator):
                            calc_id=self.datastore.calc_id,
                            array=hmaps[:, 0, m, p])
                 allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
-        smap = parallel.Starmap(make_hmap_png, allargs)
+        smap = parallel.Starmap(make_hmap_png, allargs, distribute='no')
         for dic in smap:
             self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']

@@ -847,7 +847,7 @@ def extract_aggregate(dstore, what):
     /extract/aggregate/avg_losses?
     kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
     """
-    name, qstring = what.split('?', 1)
+    _name, qstring = what.split('?', 1)
     info = get_info(dstore)
     qdic = parse(qstring, info)
     suffix = '-rlzs' if qdic['rlzs'] else '-stats'
@@ -1047,7 +1047,7 @@ def build_damage_array(data, damage_dt):
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, L, D = data.shape
+    A, _L, _D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for li, lt in enumerate(damage_dt.names):
@@ -1256,7 +1256,7 @@ def extract_mean_rates_by_src(dstore, what):
     site_id = int(site_id)
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id]
-    L1, Ns = rates.shape
+    _L1, Ns = rates.shape
     arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
     arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])

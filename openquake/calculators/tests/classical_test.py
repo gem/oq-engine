@@ -316,7 +316,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # checking fullreport can be exported, see https://
         # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ
-        [fname] = export(('fullreport', 'rst'), self.calc.datastore)
+        export(('fullreport', 'rst'), self.calc.datastore)
 
     def test_case_41(self):
         # SERA Site Amplification Models including EC8 Site Classes and Geology

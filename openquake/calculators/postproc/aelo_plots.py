@@ -215,7 +215,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     :returns: image of governing MCE
     """
     plt = import_plt()
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
+    _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     # get imls and imts, make arrays
     mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
     det_mce = mce_df['DetMCE']

@@ -29,7 +29,7 @@ def main(job_ids):
         # print(rows)
         failed = [row for row in rows if row.status == 'failed']
         if failed:
-            sys.exit('Job %d failed' % failed[0])
+            sys.exit('Job %d failed' % failed[0].id)
         complete = [row for row in rows if row.status == 'complete']
         if len(complete) == len(rows):
             print('All jobs completed correctly')
