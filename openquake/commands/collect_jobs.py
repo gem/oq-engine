@@ -31,7 +31,9 @@ def collect(job_ids, dstore):
     dic = {'performance_data': [], 'hcurves-stats': [], 'hmaps-stats': []}
     for job_id in job_ids:
         with datastore.read(job_id) as ds:
-            sitecols.append(ds['sitecol'].array)
+            arr = ds['sitecol'].array
+            fields = sorted(arr.dtype.names)
+            sitecols.append(arr[fields])
             for name in dic:
                 if name in ds:
                     dic[name].append(ds[name][:])
