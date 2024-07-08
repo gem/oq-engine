@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -117,7 +117,7 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
         """
-        bval, sigma_b, aval, sigma_a = self.b_ml.calculate(
+        bval, _sigma_b, _aval, _sigma_a = self.b_ml.calculate(
             self.catalogue, self.config, self.compl
         )
         self.assertAlmostEqual(self.bval, bval, 1)

@@ -273,8 +273,8 @@ def _build_disagg_matrix(bdata, bins):
     :returns:
         a 7D-matrix of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
     """
-    dist_bins, lon_bins, lat_bins, eps_bins = bins
-    dim1, dim2, dim3, dim4 = shape = [len(b) - 1 for b in bins]
+    dist_bins, lon_bins, lat_bins, _eps_bins = bins
+    dim1, dim2, dim3, _dim4 = shape = [len(b) - 1 for b in bins]
 
     # find bin indexes of rupture attributes; bins are assumed closed
     # on the lower bound, and open on the upper bound, that is [ )
@@ -293,7 +293,7 @@ def _build_disagg_matrix(bdata, bins):
     dists_idx[dists_idx == dim1] = dim1 - 1
     lons_idx[lons_idx == dim2] = dim2 - 1
     lats_idx[lats_idx == dim3] = dim3 - 1
-    U, E, M, P = bdata.pnes.shape
+    _U, _E, M, P = bdata.pnes.shape
     mat6D = numpy.ones(shape + [M, P])
     for i_dist, i_lon, i_lat, pne in zip(
             dists_idx, lons_idx, lats_idx, bdata.pnes):
@@ -498,7 +498,9 @@ class Disaggregator(object):
                 mw = sum(self.weights)
             else:
                 mw = 1.
-            res = {'trti': self.cmaker.trti, 'magi': self.magi, 'sid': self.sid}
+            res = {'trti': self.cmaker.trti,
+                   'magi': self.magi,
+                   'sid': self.sid}
             for rlz in rlzs:
                 try:
                     g = self.g_by_rlz[rlz]
@@ -671,6 +673,7 @@ def disaggregation(
             mat4 = dis._disagg6D({imt: [iml]}, 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
+
 
 # ###################### disagg by source ################################ #
 

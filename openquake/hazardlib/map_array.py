@@ -165,7 +165,7 @@ def get_lvl(hcurve, imls, poe):
     return numpy.searchsorted(imls, iml)
 
 
-############################## probability maps ###############################
+# ############################# probability maps ##############################
 
 # numbified below
 def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
@@ -251,7 +251,7 @@ class MapArray(object):
         """
         :yields: G MapArrays of shape (N, L, 1)
         """
-        N, L, G = self.array.shape
+        _N, L, G = self.array.shape
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
@@ -340,7 +340,7 @@ class MapArray(object):
         :returns: an array of shape (N, M, P, Z)
         """
         poes3 = self.array
-        N, L, Z = poes3.shape
+        N, _L, Z = poes3.shape
         M = len(imtls)
         P = len(poes)
         L1 = len(imtls[next(iter(imtls))])

@@ -286,10 +286,11 @@ class WorkerPool(object):
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
                     elif isinstance(cmd, tuple):
-                        func, args, taskno, mon = cmd
+                        _func, _args, taskno, mon = cmd
                         self.pool.apply_async(
                             call, cmd + (self.executing,),
-                            error_callback=functools.partial(errback, mon.calc_id, taskno))
+                            error_callback=functools.partial(
+                                errback, mon.calc_id, taskno))
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')

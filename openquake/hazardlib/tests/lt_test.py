@@ -2,7 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright (C) 2020, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
@@ -134,7 +134,7 @@ class CollapseTestCase(unittest.TestCase):
 
     def plot(self, mean, coll):
         import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
+        _fig, ax = plt.subplots()
         ax.grid(True)
         ax.loglog(self.imtls['PGA'], mean, label='mean')
         ax.loglog(self.imtls['PGA'], coll, label='coll')

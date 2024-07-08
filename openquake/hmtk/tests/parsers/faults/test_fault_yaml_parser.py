@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -204,7 +204,7 @@ class TestFaultYamlParser(unittest.TestCase):
     def test_simple_fault_input(self):
         # Tests a simple fault input
         self.parser = FaultYmltoSource(SIMPLE_GEOMETRY_FILE)
-        fault_model, tect_reg = self.parser.read_file()
+        fault_model, _tect_reg = self.parser.read_file()
         # Test that the area is correct and the slip rate
         self.assertAlmostEqual(fault_model.faults[0].area, 3851.9052498454062)
         expected_slip = [(18.0, 0.3), (20.0, 0.5), (23.0, 0.2)]
@@ -224,7 +224,7 @@ class TestFaultYamlParser(unittest.TestCase):
         # Tests a complex fault input
         # Quick test - just ensure that the area and the slip rate are expected
         self.parser = FaultYmltoSource(COMPLEX_GEOMETRY_FILE)
-        fault_model, tect_reg = self.parser.read_file(2.0)
+        fault_model, _tect_reg = self.parser.read_file(2.0)
         # Test that the area is correct and the slip rate
         self.assertAlmostEqual(fault_model.faults[0].area, 13745.614848626545)
         expected_slip = [(18.0, 0.3), (20.0, 0.5), (23.0, 0.2)]

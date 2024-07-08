@@ -482,9 +482,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_02.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        found, _total = readinput.reduce_source_model(smlt, [], remove=False)
         self.assertEqual(found, 0)
-        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        found, _total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
 
     def test_wrong_trts(self):
@@ -528,14 +528,14 @@ class SitecolAssetcolTestCase(unittest.TestCase):
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.region_grid_spacing = 15
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
     def test_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)

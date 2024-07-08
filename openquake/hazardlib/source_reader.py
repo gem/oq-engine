@@ -223,7 +223,7 @@ def check_duplicates(smdict, strict):
     if found:
         logging.warning('Found different sources with same ID %s',
                         general.shortlist(found))
-    
+
 
 def get_csm(oq, full_lt, dstore=None):
     """
@@ -288,7 +288,7 @@ def get_csm(oq, full_lt, dstore=None):
             for src in sg:
                 segments.append(int(src.source_id.split(':')[1]))
                 t = (src.source_id, src.grp_id,
-                     src.count_ruptures(),src.mutex_weight)
+                     src.count_ruptures(), src.mutex_weight)
                 out.append(t)
             probs.append((src.grp_id, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
@@ -430,7 +430,7 @@ def _build_groups(full_lt, smdict):
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         while (bset_values and
                bset_values[0][0].uncertainty_type == 'extendModel'):
-            (bset, value), *bset_values = bset_values
+            (_bset, value), *bset_values = bset_values
             extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
             if common:

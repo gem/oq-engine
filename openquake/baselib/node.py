@@ -910,7 +910,7 @@ class ValidatingXmlParser(object):
 
     def _start_element(self, longname, attrs):
         try:
-            xmlns, name = longname.split('}')
+            _xmlns, name = longname.split('}')
         except ValueError:  # no namespace in the longname
             name = tag = longname
         else:  # fix the tag with an opening brace

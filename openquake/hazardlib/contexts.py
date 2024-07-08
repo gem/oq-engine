@@ -126,7 +126,7 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
                 ctx.ry0[neg] = numpy.abs(uut[neg])
                 big = uut > u_max
                 ctx.ry0[big] = uut[big] - u_max
-        elif param == 'rjb' :
+        elif param == 'rjb':
             rjbs = _get(rup.surface.surfaces, 'rjb', dparam, mask)
             ctx['rjb'] = numpy.min(rjbs, axis=0)
             '''
@@ -423,7 +423,7 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
     if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
         closest = project_back(planar, xx, yy)  # (3, U, N)
     # set distances
-    zeroctx['rrup'] = rrup 
+    zeroctx['rrup'] = rrup
     for par in cmaker.REQUIRES_DISTANCES - {'rrup'}:
         zeroctx[par] = get_distances_planar(planar, sites, par)
     for par in cmaker.REQUIRES_DISTANCES:
@@ -497,7 +497,7 @@ def genctxs_Pp(src, sitecol, cmaker):
 
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
-                       if par in dd]
+                         if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     with cmaker.ir_mon:
@@ -773,7 +773,7 @@ class ContextMaker(object):
             if not self.conv[gsim]:
                 continue
             for m, imt in enumerate(self.imts):
-                me, si, ta, ph = mean_stds[:, g, m]
+                me, si, _ta, _ph = mean_stds[:, g, m]
                 conv_median, conv_sigma, rstd = self.conv[gsim][imt]
                 me[:] = numpy.log(numpy.exp(me) / conv_median)
                 si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
