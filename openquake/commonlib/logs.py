@@ -56,7 +56,8 @@ def dbcmd(action, *args):
     :param tuple args: arguments
     """
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if dbhost == 'local':
+    if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
+        # access the database directly
         if action.startswith('workers_'):
             master = w.WorkerMaster()  # zworkers
             return getattr(master, action[8:])()
@@ -67,6 +68,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
+
+    # send a command to the database
     tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
     sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
