@@ -171,7 +171,7 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.listen, config.dbserver.port)
+        addr = (config.dbserver.host, config.dbserver.port)
 
     # create the db directory if needed
     dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))
