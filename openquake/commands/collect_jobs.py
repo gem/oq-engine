@@ -29,18 +29,25 @@ def collect(job_ids, dstore):
     """
     sitecols = []
     dic = {'performance_data': [], 'hcurves-stats': [], 'hmaps-stats': []}
-    for job_id in job_ids:
+    ntiles = len(job_ids)
+    nsites = 0
+    for tileno, job_id in enumerate(job_ids):
         with datastore.read(job_id) as ds:
             arr = ds['sitecol'].array
+            nsites += len(arr)
             fields = sorted(arr.dtype.names)
             sitecols.append(arr[fields])
             for name in dic:
                 if name in ds:
                     dic[name].append(ds[name][:])
-
+    sids = numpy.arange(nsites)
+    allsids = [sids[sids % ntiles == t] for t in range(ntiles)]
     last = datastore.read(job_ids[-1])
     sitecol = object.__new__(SiteCollection)
-    sitecol.array = numpy.concatenate(sitecols)
+    array = numpy.concatenate(sitecols)
+    array['sids'] = numpy.concatenate(allsids)
+    idxs = array.argsort(order='sids')
+    sitecol.array = array[idxs]
     dstore['sitecol'] = sitecol
     dstore['oqparam'] = last['oqparam']
     if 'source_info' in last:
@@ -53,7 +60,10 @@ def collect(job_ids, dstore):
         dstore['/'].attrs[key] = last['/'].attrs[key]
     for name, arrays in dic.items():
         if arrays:
-            dstore[name] = numpy.concatenate(arrays)
+            array = numpy.concatenate(arrays)
+            if name in {'hcurves-stats', 'hmaps-stats'}:
+                array = array[idxs]
+            dstore[name] = array
             js = last[name].attrs.get('json')
             if js:
                 dstore[name].attrs['json'] = js
