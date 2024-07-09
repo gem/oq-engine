@@ -151,5 +151,8 @@ jobs:
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
+        ./openquake/server/manage.py migrate
+        ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
+        ./openquake/server/manage.py collectstatic --noinput
         # -v 2 also logs the test names
         OQ_APPLICATION_MODE=AELO OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
