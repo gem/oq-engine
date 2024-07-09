@@ -429,6 +429,6 @@ class Row(collections.abc.Sequence):
 
 db = Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
         isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
-        timeout=60)
-# NB: I am increasing the timeout from 5 to 60 seconds and the random
+        timeout=20)
+# NB: I am increasing the timeout from 5 to 20 seconds and the random
 # OperationalError: "database is locked" disappears in the WebUI tests
