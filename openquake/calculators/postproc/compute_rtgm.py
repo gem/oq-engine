@@ -557,7 +557,7 @@ def main(dstore, csm):
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
-            prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
+            _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
                 job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
