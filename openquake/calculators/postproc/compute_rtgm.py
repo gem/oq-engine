@@ -82,9 +82,6 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
-# TODO: interpolate DLLs for vs30 != 760
-
-
 def get_DLLs(job_imts, vs30):
     
     if vs30 > 1524:
@@ -458,12 +455,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
-                ' ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                ' ASCE 7 and ASCE 41 parameters cannot be computed.'
                 ' See User Guide.')
             yield site, None, warning
 
         elif mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
+            warning = ('Very low hazard: ASCE 7 and ASCE 41'
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
 
@@ -471,7 +468,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
                 'The MCE at the site is very low. Users may need to'
-                ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                ' increase the ASCE 7 and ASCE 41 parameter values'
                 ' to user-specified minimums (e.g., Ss=0.11g and'
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
@@ -501,15 +498,15 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
-        prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
+        _prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
             job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
-        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
+        logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
         yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 
