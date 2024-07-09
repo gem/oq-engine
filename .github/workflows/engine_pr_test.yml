@@ -79,6 +79,7 @@ jobs:
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: PUBLIC
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
@@ -96,7 +97,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=PUBLIC ./openquake/server/manage.py test -v 2 tests.test_public_mode
+        ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -107,6 +108,7 @@ jobs:
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: READ_ONLY
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
@@ -124,7 +126,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=READ_ONLY ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
+        ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
@@ -135,6 +137,8 @@ jobs:
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: AELO
+      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
@@ -155,4 +159,4 @@ jobs:
         ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
         ./openquake/server/manage.py collectstatic --noinput
         # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=AELO OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+        ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
