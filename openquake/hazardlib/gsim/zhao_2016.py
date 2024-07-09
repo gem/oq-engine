@@ -196,7 +196,6 @@ def get_sof_term_asc(trt, C, ctx):
     return res
 
 
-
 @get_sof_term.add(const.TRT.UPPER_MANTLE)
 def get_sof_term_um(trt, C, ctx):
     """
@@ -285,7 +284,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
     idx = x_ij <= 30.0
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                      x_ij[idx] + gn_exp)    
+                                      x_ij[idx] + gn_exp)
     # equation 5
     c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
@@ -344,8 +343,8 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
     """
     Returns the distance scaling term in equation 2a
 
-    Non-ergodic path effects are applied here if specified within an implementation
-    of :class:`ZhaoEtAl2016SSlabPErg`. 
+    Non-ergodic path effects are applied here if specified within an
+    implementation of :class:`ZhaoEtAl2016SSlabPErg`.
     """
     cctx = copy.copy(ctx)
     # Check if need to apply non-ergodic path effects
@@ -613,7 +612,7 @@ class ZhaoEtAl2016Asc(GMPE):
             C = self.COEFFS[imt]
             C_SITE = self.COEFFS_SITE[imt]
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-            s_c, idx = _get_site_classification(ctx.vs30)
+            _s_c, idx = _get_site_classification(ctx.vs30)
             volc_arc_str = self.volc_arc_str
             pgn_store = self.pgn_store
             pgn_per_zone = self.pgn_per_zone
@@ -946,7 +945,7 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     # Additional rupture parameters required for ray tracing
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth',
                                    'ztor', 'rake', 'strike', 'dip'}
-    
+
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}
 

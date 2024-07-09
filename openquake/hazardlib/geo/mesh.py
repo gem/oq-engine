@@ -36,7 +36,7 @@ F32 = numpy.float32
 
 def debug_plot(polygons):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     pp = geo_utils.PolygonPlotter(ax)
     for i, polygon in enumerate(polygons, 1):
         pp.add(polygon, alpha=i * .1)
@@ -416,7 +416,8 @@ class Mesh(object):
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flatten(), self.lats.flatten()))
+        coords = numpy.transpose(
+            proj(self.lons.flatten(), self.lats.flatten()))
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
@@ -493,7 +494,7 @@ class Mesh(object):
             sfc_xx, sfc_yy = proj(self.lons, self.lats)
             points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
             shaper = Alpha_Shaper(points)
-            alpha_opt, polygon = shaper.optimize()
+            _alpha_opt, polygon = shaper.optimize()
 
         else:
             proj, polygon = self._get_proj_enclosing_polygon()

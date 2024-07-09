@@ -84,7 +84,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver upgrade}
           cd D:\a\oq-engine\oq-engine
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
 
@@ -93,7 +93,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver upgrade}
           sleep 10
           cd D:\a\oq-engine\oq-engine\openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
@@ -103,7 +103,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver upgrade}
           sleep 10
           cd D:\a\oq-engine\oq-engine
           $Env:OQ_APPLICATION_MODE='PUBLIC'
@@ -115,7 +115,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver upgrade}
           sleep 10
           cd D:\a\oq-engine\oq-engine
           $Env:OQ_APPLICATION_MODE='READ_ONLY'
@@ -126,7 +126,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver upgrade}
           Write-Host "Run all demos having only job.ini"
           $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
           foreach($iniFilePath in $iniFilePaths) {

@@ -222,7 +222,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         gmm_adj_all = ChiouYoungs2014(stress_par_host=100,
                                       stress_par_target=120,
                                       delta_gamma_tab=path_adj_table)
-        
+
         # Settings
         imt_str = 'SA(0.1)'
         imt = from_string('SA(0.1)')
@@ -238,30 +238,30 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         ctxm_ori = ContextMaker('fake', [gmm_ori], oqp)
         ctxs_ori = list(ctxm_ori.get_ctx_iter(rups, SiteCollection([site1])))
         ctxs_ori = ctxs_ori[0]
-        
+
         # ContextMaker for the SOURCE ADJUSTED version of CY14
         ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
         ctxs_adj_src = list(ctxm_adj_src.get_ctx_iter(rups,
                                                       SiteCollection([site1])))
         ctxs_adj_src = ctxs_adj_src[0]
-    
+
         # ContextMaker for the SOURCE AND PATH ADJUSTED version of CY14
         ctxm_adj_all = ContextMaker('fake', [gmm_adj_all], oqp)
         ctxs_adj_all = list(ctxm_adj_all.get_ctx_iter(rups,
                                                       SiteCollection([site1])))
         ctxs_adj_all = ctxs_adj_all[0]
-    
+
         # Compute mean values of ground motion
-        [mea_ori, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
+        [_, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
         [mea_adj_src, _, _, _] = ctxm_adj_src.get_mean_stds([ctxs_adj_src])
         [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
-    
+
         # Check mean adjusted values are as expected
-        expected_adj_src = -2.5796011    
+        expected_adj_src = -2.5796011
         expected_adj_all = -2.935969
         self.assertAlmostEqual(mea_adj_src[0][0][0], expected_adj_src)
         self.assertAlmostEqual(mea_adj_all[0][0][0], expected_adj_all)
-        
+
         # Test delta_cm term
         delta_cm = _get_delta_cm(gmm_adj_all.conf, imt)
         expected_delta_cm = 0.149652555  # From hand-made calc
@@ -281,13 +281,9 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         # Test delta_g term
         path_adj = _get_delta_g(gmm_adj_all.conf['delta_gamma_tab'],
                                 ctxs_adj_all, imt)
-        expected_path_adj = np.array([-0.0065052, -0.0065052]) # Value is
-                                                               # obtained from
-                                                               # central branch
-                                                               # (branch 3) of
-                                                               # table 2 for
-                                                               # SA(0.1) when
-                                                               # using eq 13
+        # Value is obtained from central branch (branch 3) of table 2 for
+        # SA(0.1) when using eq 13
+        expected_path_adj = np.array([-0.0065052, -0.0065052])
         msg = f"The value of the path adjustment {path_adj} is different \n"
         msg += f"than the expected one {expected_path_adj}"
         np.testing.assert_almost_equal(

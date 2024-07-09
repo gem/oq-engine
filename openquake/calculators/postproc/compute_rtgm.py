@@ -141,7 +141,6 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
     job_imts = list(oq.imtls)
     M = len(job_imts)
-    sid = site.id
     DLLs = get_DLLs(job_imts, site.vs30)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
@@ -455,12 +454,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
-                ' ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                ' ASCE 7 and ASCE 41 parameters cannot be computed.'
                 ' See User Guide.')
             yield site, None, warning
 
         elif mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
+            warning = ('Very low hazard: ASCE 7 and ASCE 41'
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
 
@@ -468,7 +467,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
                 'The MCE at the site is very low. Users may need to'
-                ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                ' increase the ASCE 7 and ASCE 41 parameter values'
                 ' to user-specified minimums (e.g., Ss=0.11g and'
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
@@ -497,15 +496,15 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
-        prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
+        _prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
             job_imts, det_imt, DLLs[sid], rtgm_df, sid)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
-        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
+        logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
         yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 
@@ -521,25 +520,19 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
-    
-    sitecol = dstore['sitecol']
-    DLLs= {}
     DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']}
    
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    N = len(dstore['sitecol'])
+    N = len(dstore['sitecol/sids'])
     asce07 = {}
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
-    dummy_det = {}
-
-    for imt in job_imts:
-        dummy_det[imt] = ''
+    dummy_det = {imt: '' for imt in job_imts}
 
     for site, rtgm_df, warning in process_sites(dstore, csm, DLLs,
                                                 ASCE_version):
@@ -558,7 +551,7 @@ def main(dstore, csm):
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
-            prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
+            _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
                 job_imts, dummy_det, DLLs[sid], rtgm_df, sid, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)

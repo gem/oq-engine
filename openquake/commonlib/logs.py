@@ -191,21 +191,19 @@ class LogContext:
     multi = False
     oqparam = None
 
-    def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
+    def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, tag=''):
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
-        if isinstance(job_ini, dict):  # dictionary of parameters
-            self.params = job_ini
-        else:  # path to job.ini file
-            self.params = readinput.get_params(job_ini)
+        self.params = params
         if 'inputs' not in self.params:  # for reaggregate
             self.tag = tag
         else:
             self.tag = tag or get_tag(self.params['inputs']['job_ini'])
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
+        calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
             datadir = get_datadir()
             self.calc_id = dbcmd(
@@ -298,5 +296,7 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     """
     if job_ini in ('job', 'calc'):  # backward compatibility
         job_ini = dummy
-    return LogContext(job_ini, 0, log_level, log_file,
+    if not isinstance(job_ini, dict):
+        job_ini = readinput.get_params(job_ini)
+    return LogContext(job_ini, log_level, log_file,
                       user_name, hc_id, host, tag)

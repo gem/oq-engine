@@ -141,7 +141,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
         self.oqparam.mags_by_trt = self.datastore['source_mags']
-        all_edges, shapedic = disagg.get_edges_shapedic(
+        all_edges, _shapedic = disagg.get_edges_shapedic(
             self.oqparam, self.sitecol, self.R)
         *b, trts = all_edges
         T = len(trts)

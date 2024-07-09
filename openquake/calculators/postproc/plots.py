@@ -19,7 +19,6 @@
 import os
 import numpy
 from shapely.geometry import MultiPolygon
-from openquake.calculators.extract import Extractor
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -59,8 +58,7 @@ def get_country_iso_codes(calc_id, assetcol):
     return id_0_str
 
 
-def plot_avg_gmf(calc_id, imt):
-    [ex] = [Extractor(calc_id)]
+def plot_avg_gmf(ex, imt):
     plt = import_plt()
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -69,9 +67,9 @@ def plot_avg_gmf(calc_id, imt):
     ax.set_ylabel('Lat')
 
     title = 'Avg GMF for %s' % imt
-    assetcol = get_assetcol(calc_id)
+    assetcol = get_assetcol(ex.calc_id)
     if assetcol is not None:
-        country_iso_codes = get_country_iso_codes(calc_id, assetcol)
+        country_iso_codes = get_country_iso_codes(ex.calc_id, assetcol)
         if country_iso_codes is not None:
             title += ' (Countries: %s)' % country_iso_codes
     ax.set_title(title)
@@ -96,11 +94,13 @@ def plot_avg_gmf(calc_id, imt):
 
 
 def get_assetcol(calc_id):
-    assetcol = None
-    dstore = datastore.read(calc_id)
+    try:
+        dstore = datastore.read(calc_id)
+    except OSError:
+        return
     if 'assetcol' in dstore:
         try:
             assetcol = dstore['assetcol'][()]
         except AttributeError:
             assetcol = dstore['assetcol'].array
-    return assetcol
+        return assetcol

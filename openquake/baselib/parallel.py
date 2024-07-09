@@ -223,6 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --time=10:00:00
 #SBATCH --mem-per-cpu=1G
+#SBATCH --cpus-per-task=1
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
@@ -232,24 +233,31 @@ def sbatch(mon):
     """
     Start a SLURM script via sbatch
     """
+    if mon.task_no == 1:
+        # there is only one task, run it in-core
+        slurm_task(mon.calc_dir, '1')
+        return 'Single task in-core'
+    sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon)
+    logging.info(sh)
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
-        python = config.distribution.python
-        f.write(SLURM_BATCH.format(python=python, mon=mon))
+        f.write(sh)
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
-        subprocess.run(['sbatch', path], capture_output=True)
-        return  # TODO: return the SLURM job ID
-
-    # if SLURM is not installed, fake it
-    logging.info(f'Faking SLURM for {mon.operation}')
-    pool = mp_context.Pool()
-    for task_id in range(1, mon.task_no + 1):
-        pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
-    pool.close()
-    pool.join()
-
+        cmd = config.distribution.submit_cmd.split()[:-2] + [path]  # strip oq run
+        logging.info(' '.join(cmd))
+        proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        return proc.stdout.decode('utf8').strip()
+        # out will be a string like "Submitted batch job 5573363"
+    else:
+        # if SLURM is not installed, fake it
+        pool = mp_context.Pool()
+        for task_id in range(1, mon.task_no + 1):
+            pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
+        pool.close()
+        pool.join()
+        return 'Done'
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
@@ -718,18 +726,19 @@ class SharedArray(object):
         self.sm.unlink()
 
 
+# use only the "visible" cores, not the total system cores
+# if the underlying OS supports it (macOS does not)
+try:
+    tot_cores = len(psutil.Process().cpu_affinity())
+except AttributeError:
+    tot_cores = psutil.cpu_count()
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
-    num_cores = int(config.distribution.get('num_cores', '0'))
-    if not num_cores:
-        # use only the "visible" cores, not the total system cores
-        # if the underlying OS supports it (macOS does not)
-        try:
-            num_cores = len(psutil.Process().cpu_affinity())
-        except AttributeError:
-            num_cores = psutil.cpu_count()
+    num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
     CT = num_cores * 2
 
     @classmethod
@@ -743,8 +752,8 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = mp_context.Pool(
-                cls.num_cores, init_workers,
-                maxtasksperchild=cls.maxtasksperchild)
+                cls.num_cores if cls.num_cores <= tot_cores else tot_cores,
+                init_workers, maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
@@ -977,8 +986,8 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
-            sbatch(self.monitor)
-                
+            logging.info('%s', sbatch(self.monitor))
+
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]
             self.task_queue[:] = self.task_queue[self.CT:]

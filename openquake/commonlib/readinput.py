@@ -52,7 +52,8 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3, get_dist
+from openquake.hazardlib.geo.utils import (
+    spherical_to_cartesian, geohash3, get_dist)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.risklib.countries import code2country
@@ -231,7 +232,7 @@ def check_params(cp, fname):
                 f'{fname}: parameter(s) {params_intersection} is(are) defined'
                 ' in multiple sections')
 
-        
+
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
 def get_params(job_ini, kw={}):
@@ -382,7 +383,7 @@ def get_mesh_exp(oqparam, h5=None):
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
-            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+            mesh, _pmap = get_pmap_from_csv(oqparam, fname)
             return mesh, exposure
         raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
@@ -445,6 +446,30 @@ def rup_radius(rup):
     return radius
 
 
+def filter_site_array_around(array, rup, dist):
+    """
+    :param array: array with fields 'lon', 'lat'
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: slice to the rupture
+    """
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
+    tree = cKDTree(xyz_all)
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+
+    # then fine filtering
+    array = array[idxs]
+    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
+    if len(idxs) < len(array):
+        logging.info('Filtered %d/%d sites', len(idxs), len(array))
+    return array[idxs]
+
+
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
@@ -454,28 +479,13 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    hypo = rup.hypocenter
-    x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-
-    # first raw filtering
-    logging.info('kdtree filtering of the site model')
-    tree = cKDTree(xyz_all)
-    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
-
-    # then fine filtering
-    sm = sm[idxs]
-    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
-    if len(idxs) < len(sm):
-        logging.info('Filtering %d/%d sites', len(idxs), len(sm))
-    return sm[idxs]
+    return filter_site_array_around(sm, rup, dist)
 
 
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
     # check if the file is a list of lon,lat without header
     with open(fname, encoding='utf-8-sig') as f:
-        lon, *rest = next(f).split(',')
+        lon, _rest = next(f).split(',', 1)
         try:
             valid.longitude(lon)
         except ValueError:  # has a header
@@ -637,7 +647,7 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
+    if h5 and 'sitecol' in h5:
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -682,15 +692,16 @@ def get_site_collection(oqparam, h5=None):
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
-    slc = oqparam.sites_slice
-    if slc:
+    if oqparam.tile_spec:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
             assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
             sitecol.add_col('custom_site_id', 'S6', gh)
-        mask = (sitecol.sids >= slc[0]) & (sitecol.sids < slc[1])
+        tileno, ntiles = oqparam.tile_spec
+        assert len(sitecol) > ntiles, (len(sitecol), ntiles)
+        mask = sitecol.sids % ntiles == tileno - 1
+        oqparam.max_sites_disagg = 1
         sitecol = sitecol.filter(mask)
-        assert sitecol is not None, 'No sites in the slice %d:%d' % slc
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -707,7 +718,8 @@ def get_site_collection(oqparam, h5=None):
 
     # add custom_site_id in risk calculations (or GMF calculations)
     custom_site_id = any(x in oqparam.calculation_mode
-                         for x in ('scenario', 'event_based', 'risk', 'damage'))
+                         for x in ('scenario', 'event_based',
+                                   'risk', 'damage'))
     if custom_site_id and 'custom_site_id' not in sitecol.array.dtype.names:
         gh = sitecol.geohash(8)
         if len(numpy.unique(gh)) < len(gh):
@@ -928,7 +940,7 @@ def get_composite_source_model(oqparam, dstore=None):
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     h5 = dstore.hdf5 if dstore else None
-    with Monitor('building full_lt', measuremem=True, h5=h5) :
+    with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
     path = get_cache_path(oqparam, h5)
     if os.path.exists(path):
@@ -1457,13 +1469,13 @@ def get_reinsurance(oqparam, assetcol=None):
     :returns: (policy_df, treaty_df, field_map)
     """
     if assetcol is None:
-        sitecol, assetcol, discarded, exp = get_sitecol_assetcol(oqparam)
-    [(loss_type, fname)] = oqparam.inputs['reinsurance'].items()
+        _sitecol, assetcol, _discarded, _exp = get_sitecol_assetcol(oqparam)
+    [(_loss_type, fname)] = oqparam.inputs['reinsurance'].items()
     # make sure the first aggregate by is policy
     if oqparam.aggregate_by[0] != ['policy']:
         raise InvalidFile('%s: aggregate_by=%s' %
                           (fname, oqparam.aggregate_by))
-    [(key, fname)] = oqparam.inputs['reinsurance'].items()
+    [(_key, fname)] = oqparam.inputs['reinsurance'].items()
     p, t, f = reinsurance.parse(fname, assetcol.tagcol.policy_idx)
 
     # check ideductible

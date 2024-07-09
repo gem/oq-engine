@@ -449,13 +449,14 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def get_close(self, tors):
+    def get_close(self, secparams):
         """
-        :param tors: a structured array with fields tl0, tl1, tr0, tr1
-        :returns: an array with the number of close sites per bbox
+        :param secparams: a structured array with fields tl0, tl1, tr0, tr1
+        :returns: an array with the number of close sites per secparams
         """
         xyz = self.sitecol.xyz
-        tl0, tl1, tr0, tr1 = tors['tl0'], tors['tl1'], tors['tr0'], tors['tr1']
+        tl0, tl1, tr0, tr1 = (secparams['tl0'], secparams['tl1'],
+                              secparams['tr0'], secparams['tr1'])
         distl = distance.cdist(xyz, spherical_to_cartesian(tl0, tl1))
         distr = distance.cdist(xyz, spherical_to_cartesian(tr0, tr1))
         dists = numpy.min([distl, distr], axis=0)  # shape (N, S)
