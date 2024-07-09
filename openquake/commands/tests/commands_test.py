@@ -75,7 +75,7 @@ SIMPLE_FAULT_SRC_MODEL = os.path.join(
 
 
 def setup_module():
-    os.environ['OQ_DATABASE'] = 'local'
+    os.environ['OQ_DATABASE'] = '127.0.0.1'
 
 
 class Print(object):
