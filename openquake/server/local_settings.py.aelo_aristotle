@@ -40,9 +40,6 @@ USE_REVERSE_PROXY = <True|False>
 
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
-# to install fixtures for cookie_consent
-USE_TZ = True
-
 # cors-headers
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_URLS_REGEX = r'^/taxtweb/explanation/.*$'

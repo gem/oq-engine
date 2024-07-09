@@ -89,6 +89,22 @@ AUTHENTICATION_BACKENDS = ()
 # system time zone.
 TIME_ZONE = 'UTC'
 
+# USE_TZ = True is the default for Django >= 5.0. From Django documentation:
+# "
+# When support for time zones is enabled, Django stores datetime information
+# in UTC in the database, uses time-zone-aware datetime objects internally,
+# and translates them to the end user’s time zone in templates and forms.
+# This is handy if your users live in more than one time zone and you want
+# to display datetime information according to each user’s wall clock.
+# Even if your website is available in only one time zone, it’s still good
+# practice to store data in UTC in your database. The main reason is daylight
+# saving time (DST). Many countries have a system of DST, where clocks are
+# moved forward in spring and backward in autumn. If you’re working in local
+# time, you’re likely to encounter errors twice a year, when the transitions
+# happen.
+# "
+USE_TZ = True
+
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = 'en-us'
