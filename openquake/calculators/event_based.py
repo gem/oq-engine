@@ -306,6 +306,8 @@ def filter_stations(station_df, complete, rup, maxdist):
     else:
         station_data = station_df[
             numpy.isin(station_df.index, station_sites.sids)]
+        assert len(station_data) == len(station_sites), (
+            len(station_data), len(station_sites))
         if len(station_data) < ns:
             logging.info('Discarded %d/%d stations more distant than %d km',
                          ns - len(station_data), ns, maxdist)

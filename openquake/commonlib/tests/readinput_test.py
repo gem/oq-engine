@@ -585,3 +585,13 @@ class ReadGeometryTestCase(unittest.TestCase):
         t1 = time.time()
         self.assertEqual(len(sites_df), 55)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
+
+
+class ReadRiskTestCase(unittest.TestCase):
+    def test_read_station_data(self):
+        oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
+        sitecol = readinput.get_site_collection(oq)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_station_data(oq, sitecol)
+        self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
+                      str(ctx.exception))

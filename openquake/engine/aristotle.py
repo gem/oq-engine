@@ -110,8 +110,6 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
             config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
-    if station_data_file:
-        inputs['station_data'] = station_data_file
     rupdic = get_rupture_dict(rupture_dict)
     if trt is None:
         trts, _ = get_trts_around(rupdic, exposure_hdf5)
