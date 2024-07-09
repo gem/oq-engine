@@ -129,6 +129,8 @@ def oq_server_context_processor(request):
     context['tools_only'] = settings.APPLICATION_MODE == 'TOOLS_ONLY'
     context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
+    if settings.GOOGLE_ANALYTICS_TOKEN is not None:
+        context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
     if settings.APPLICATION_MODE == 'AELO':
         context['aelo_version'] = get_aelo_version()
     return context

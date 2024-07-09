@@ -194,6 +194,8 @@ WEBUI = True
 
 MAX_AELO_SITE_NAME_LEN = 256
 
+GOOGLE_ANALYTICS_TOKEN = None
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
@@ -227,7 +229,7 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE in ('TOOLS_ONLY',):
+if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent and corsheader
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
                 'cookie_consent', 'corsheaders',):
@@ -332,7 +334,7 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
     LOGIN_EXEMPT_URLS = (
         '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
-        'reset_password', 'reset/',
+        'reset_password', 'reset/', 'cookies/',
     )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 
