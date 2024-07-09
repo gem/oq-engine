@@ -34,15 +34,16 @@ def main(n: int, job_ini):
         num_cores = config.distribution.num_cores
     except AttributeError:
         num_cores = parallel.tot_cores
-    submit_cmd = config.distribution.submit_cmd.replace(
-        '--cpus-per-task=1', '--cpus-per_task=%s' % num_cores)
+    submit_cmd = config.distribution.submit_cmd.split()
+    if submit_cmd[0] == 'sbatch':
+        submit_cmd.insert(1, '--cpus-per-task=%s' % num_cores)
     descr = readinput.get_params(job_ini)['description']
     lines = []
     for i in range(n):
         spec = '[%d,%d]' % (i+1, n) 
         params = "tile_spec='%s' description=\"%s%s\" job_id=${job_id[%d]}" % (
             spec, descr, spec, i)
-        lines.append(submit_cmd + f" {job_ini} -p {params}")
+        lines.append(' '.join(submit_cmd) + f" {job_ini} -p {params}")
     print(script % dict(n=len(lines), lines='\n'.join(lines)))
 
 main.n = dict(help='number of jobs to generate')
