@@ -245,9 +245,9 @@ def sbatch(mon):
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
-        partition = config.distribution.slurm_partition
-        proc = subprocess.run(['sbatch', '-p', partition, path],
-                              stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        cmd = config.distribution.submit_cmd.split()[:-2] + [path]  # strip oq run
+        logging.info(' '.join(cmd))
+        proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         return proc.stdout.decode('utf8').strip()
         # out will be a string like "Submitted batch job 5573363"
     else:
