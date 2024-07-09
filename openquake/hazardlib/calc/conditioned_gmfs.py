@@ -187,6 +187,8 @@ class ConditionedGmfComputer(GmfComputer):
             observed_imt_strs, cmaker, spatial_correl=None,
             cross_correl_between=None, ground_motion_correlation_params=None,
             number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
+        assert len(station_data) == len(station_sitecol), (
+            len(station_data), len(station_sitecol))
         GmfComputer.__init__(
             self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
             correlation_model=spatial_correl,
