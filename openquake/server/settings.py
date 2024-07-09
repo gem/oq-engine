@@ -217,10 +217,17 @@ CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
-        'openquakeplatform',
+        'openquakeplatform', 'corsheaders',
     )
 
     INSTALLED_APPS += STANDALONE_APPS
+
+    # cors-headers configuration
+    corsheader_middleware = 'corsheaders.middleware.CorsMiddleware'
+    if corsheader_middleware not in MIDDLEWARE:
+        MIDDLEWARE += (corsheader_middleware,)
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_URLS_REGEX = r'^/taxtweb/explanation/.*$'
 
     FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
@@ -247,16 +254,11 @@ except ImportError:
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
 if APPLICATION_MODE not in ('PUBLIC',):
-    # add installed_apps for cookie-consent and corsheader
+    # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent', 'corsheaders',):
+                'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
-
-    # add middleware for corsheader
-    for app_cors in ('corsheaders.middleware.CorsMiddleware',):
-        if app_cors not in MIDDLEWARE:
-            MIDDLEWARE += (app_cors,)
 
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
