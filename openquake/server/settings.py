@@ -196,6 +196,8 @@ MAX_AELO_SITE_NAME_LEN = 256
 
 GOOGLE_ANALYTICS_TOKEN = None
 
+CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
@@ -206,7 +208,6 @@ if STANDALONE and WEBUI:
 
     FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
-    CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
     CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
 
@@ -242,7 +243,8 @@ if APPLICATION_MODE not in ('PUBLIC',):
             MIDDLEWARE += (app_cors,)
 
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
-        CONTEXT_PROCESSORS.append('django.template.context_processors.request')
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.template.context_processors.request')
     COOKIE_CONSENT_NAME = "cookie_consent"
     COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
     COOKIE_CONSENT_LOG_ENABLED = False
