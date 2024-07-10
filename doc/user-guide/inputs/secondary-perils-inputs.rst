@@ -20,23 +20,23 @@ Getting raster values at sites
 ------------------------------
 
 Digital elevation data and its derivatives are often given as rasters. However, in the case of probabilistic analysis 
-of secondary perils (particularly for risk analysis) the analyist may need to deal with sites that are not distributed 
+of secondary perils (particularly for risk analysis) the analyst may need to deal with sites that are not distributed 
 according to a raster grid.
 
 Raster values may be extracted at sites using a GIS program to perform a spatial join, but following inconvenient 
 historical precedent, this operation often produces new data files instead of simply appending the raster values to the 
 point data file.
 
-Therefore we have implemented a simple function, `srap <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L22>`_,
+Therefore we have implemented a simple function, `sample_raster_at_points <https://github.com/gem/oq-engine/blob/engine-3.20/openquake/sep/utils.py#L19>`_,
 to get the raster values. This function requires the filename of the raster, and the longitudes and latitudes of the 
 sites, and returns a Numpy array with the raster values at each point. This function can be easily incorporated into 
 a Python script or workflow in this manner.
 
-Additional function for :math:`V_{s30}` estimates is implemented in the engine `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L260>`_. 
+Additional function for :math:`V_{s30}` estimates, `vs30_from_slope_wald_allen_2007 <https://github.com/gem/oq-engine/blob/engine-3.20/openquake/sep/utils.py#L260>`_ is implemented in the engine. 
 It requires that the slope is calculated as the gradient :math:`\frac{dy}{dx}` rather than an angular unit, and the 
 study area is categorized as tectonically *active* or *stable*.
 
-We also provide a more general `wrapper function <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`_. 
+We also provide a more general, wrapper function, `slope_angle_to_gradient <https://github.com/gem/oq-engine/blob/engine-3.20/openquake/sep/utils.py#L228>`_. 
 This function can calculate gradient from the slope in degrees (a more common formulation), and will be able to use 
 different formulas or relations between slope and :math:`V_{s30}` if and when those are implemented.
 
@@ -45,7 +45,7 @@ Site model
 ----------
 Besides usual input required for hazard assessment due to ground-shaking, several additional parameters are required to
 supplement the ``site_model.csv``. Before building up the site model, one should refer to the underlying science behind
-these analyses and familirize themselves with additional parameter requirements, as different models may require
+these analyses and familiarise themselves with additional parameter requirements, as different models may require
 different parameters. Below we present an example of a site model including several parameters that are characterising 
 soil density and wetness.
 
