@@ -22,11 +22,14 @@ import shapely
 import numpy
 import pandas
 from scipy.stats import linregress
+from shapely.geometry import Polygon, LineString, mapping, shape
+from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
-from openquake.calculators.postproc.plots import plot_avg_gmf, import_plt
+from openquake.calculators.postproc.plots import (
+    plot_avg_gmf, import_plt, add_borders)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
 
@@ -776,6 +779,109 @@ def make_figure_gmf_scenario(extractors, what):
     if info:
         plt.title(info)
     plt.grid(True)
+    return plt
+
+
+def df_to_geojson(df, geometry_col='geometry'):
+    features = []
+    for _, row in df.iterrows():
+        geom = row[geometry_col]
+        geom_geojson = mapping(geom)
+        properties = row.drop(geometry_col).to_dict()
+        feature = {
+            "type": "Feature",
+            "geometry": geom_geojson,
+            "properties": properties
+        }
+        features.append(feature)
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+    return geojson
+
+
+def plot_geojson(data, ax, color, label):
+    for feature in data['features']:
+        geom = shape(feature['geometry'])
+        if geom.geom_type == 'Polygon':
+            x, y = geom.exterior.xy
+            ax.plot(x, y, color=color, label=label)
+        elif geom.geom_type == 'MultiPolygon':
+            for polygon in geom:
+                x, y = polygon.exterior.xy
+                ax.plot(x, y, color=color, label=label)
+        elif geom.geom_type == 'LineString':
+            x, y = geom.xy
+            ax.plot(x, y, color=color, label=label)
+        else:
+            raise NotImplementedError(
+                f'Unable to plot geometry type {geom.geom_type}')
+
+
+def get_boundary_2d(smsh):
+    """ Returns a polygon """
+    coo = []
+    # Upper boundary + trace
+    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[0, :]))[0]
+    tmp = [(smsh.mesh.lons[0, i], smsh.mesh.lats[0, i]) for i in idx]
+    trace = LineString(tmp)
+    coo.extend(tmp)
+    # Right boundary
+    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, -1]))[0]
+    tmp = [(smsh.mesh.lons[i, -1], smsh.mesh.lats[i, -1]) for i in idx]
+    coo.extend(tmp)
+    # Lower boundary
+    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[-1, :]))[0]
+    tmp = [(smsh.mesh.lons[-1, i], smsh.mesh.lats[-1, i])
+           for i in numpy.flip(idx)]
+    coo.extend(tmp)
+    # Left boundary
+    idx = idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, 0]))[0]
+    tmp = [(smsh.mesh.lons[i, 0], smsh.mesh.lats[i, 0])
+           for i in numpy.flip(idx)]
+    coo.extend(tmp)
+    return trace, Polygon(coo)
+
+
+def make_figure_surfaces(extractors, what):
+    """
+    $ oq plot "surfaces?"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    csm = dstore['_csm']
+    # TODO: add an argument to pick another source instead of the first one
+    src = csm.get_sources()[0]
+    # rup = list(src.iter_ruptures())[0]
+    secs = src.get_sections()
+    # idxs = [surf.idx for surf in rup.surface.surfaces]
+    # for idx in idxs:
+    #     print(secs[idx])
+    traces = []
+    polys = []
+    suids = []
+    for sec in secs:
+        trace, poly = get_boundary_2d(sec)
+        traces.append(trace)
+        polys.append(poly)
+        suids.append(sec.idx)
+    daf_polys = pandas.DataFrame({'suid': suids, 'geometry': polys})
+    daf_polys_geojson = df_to_geojson(daf_polys)
+    daf_traces = pandas.DataFrame({'suid': suids, 'geometry': traces})
+    daf_traces_geojson = df_to_geojson(daf_traces)
+
+    _fig, ax = plt.subplots()
+    plot_geojson(daf_polys_geojson, ax, color='blue', label='Sections')
+    plot_geojson(daf_traces_geojson, ax, color='red', label='Traces')
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    # ax.set_aspect('equal')
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
     return plt
 
 
