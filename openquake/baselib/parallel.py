@@ -216,15 +216,14 @@ MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
-# see https://scicomp.aalto.fi/triton/tut/array
 SLURM_BATCH = '''\
 #!/bin/bash
 #SBATCH --job-name={mon.operation}
 #SBATCH --time=10:00:00
-#SBATCH --mem-per-cpu=1G
+#SBATCH --mem-per-cpu=800M
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} {start} {stop}
 '''
-
+SLURM_CHUNK = 250
 
 def sbatch(mon):
     """
@@ -236,18 +235,17 @@ def sbatch(mon):
         return 'Single task in-core'
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     out = []
-    for start in range(1, mon.task_no + 1, Starmap.num_cores * 2):
-        stop = min(mon.task_no, start + Starmap.num_cores * 2 - 1)
+    for start in range(1, mon.task_no + 1, SLURM_CHUNK):
+        stop = min(mon.task_no, start + SLURM_CHUNK - 1)
         sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon,
                                 start=start, stop=stop)
         path = os.path.join(mon.calc_dir, 'slurm.sh')
         with open(path, 'w') as f:
             f.write(sh)
         os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
-        cpus = '--cpus-per-task=%d' % Starmap.num_cores
+        cpus = '--cpus-per-task=%d' % min(Starmap.num_cores, stop - start + 1)
         cmd = config.distribution.submit_cmd.split()[:-2] + [cpus, path]
-        logging.info(f'sbatch {config.distribution.python} -m openquake.baselib.slurm '
-                     f'{mon.calc_dir} {start} {stop}')
+        logging.info(f'{cpus} {mon.calc_dir} {start} {stop}')
         if sbatch:
             proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
             out.append(proc.stdout.decode('utf8').strip())
@@ -1110,7 +1108,7 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, chunksize=Starmap.num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
     """
     Spawn processes with the given arguments
     """
@@ -1123,7 +1121,7 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores, logfinish=True):
         proc = mp_context.Process(target=func, args=args)
         proc.start()
         procs[proc.sentinel] = proc
-        while len(procs) >= chunksize:  # wait for something to finish
+        while len(procs) >= nprocs:  # wait for something to finish
             for finished in wait(procs):
                 procs[finished].join()
                 del procs[finished]
@@ -1154,4 +1152,5 @@ def slurm_tasks(calc_dir, start, stop):
     stop = int(stop)
     allargs = [(calc_dir, str(task_id))
                for task_id in range(start, stop + 1)]
-    multispawn(slurm_task, allargs, logfinish=False)
+    nprocs= min(stop + 1 - start, Starmap.num_cores)
+    multispawn(slurm_task, allargs, nprocs, logfinish=False)
