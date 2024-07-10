@@ -220,14 +220,11 @@ host_cores = config.zworkers.host_cores.split(',')
 SLURM_BATCH = '''\
 #!/bin/bash
 #SBATCH --job-name={mon.operation}
-#SBATCH --array=1-{mon.task_no}
 #SBATCH --time=10:00:00
 #SBATCH --mem-per-cpu=1G
-#SBATCH --cpus-per-task=1
-#SBATCH --output={mon.calc_dir}/%a.out
-#SBATCH --error={mon.calc_dir}/%a.err
-srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
+srun {python} -m openquake.baselib.slurm {mon.calc_dir} {start} {stop}
 '''
+
 
 def sbatch(mon):
     """
@@ -237,27 +234,29 @@ def sbatch(mon):
         # there is only one task, run it in-core
         slurm_task(mon.calc_dir, '1')
         return 'Single task in-core'
-    sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon)
-    logging.info(sh)
-    path = os.path.join(mon.calc_dir, 'slurm.sh')
-    with open(path, 'w') as f:
-        f.write(sh)
-    os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
-    if sbatch:
-        cmd = config.distribution.submit_cmd.split()[:-2] + [path]  # strip oq run
-        logging.info(' '.join(cmd))
-        proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        return proc.stdout.decode('utf8').strip()
-        # out will be a string like "Submitted batch job 5573363"
-    else:
-        # if SLURM is not installed, fake it
-        pool = mp_context.Pool()
-        for task_id in range(1, mon.task_no + 1):
-            pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
-        pool.close()
-        pool.join()
-        return 'Done'
+    out = []
+    for start in range(1, mon.task_no + 1, Starmap.num_cores * 2):
+        stop = min(mon.task_no, start + Starmap.num_cores * 2 - 1)
+        sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon,
+                                start=start, stop=stop)
+        path = os.path.join(mon.calc_dir, 'slurm.sh')
+        with open(path, 'w') as f:
+            f.write(sh)
+        os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
+        cpus = '--cpus-per-task=%d' % Starmap.num_cores
+        cmd = config.distribution.submit_cmd.split()[:-2] + [cpus, path]
+        logging.info(f'sbatch {config.distribution.python} -m openquake.baselib.slurm '
+                     f'{mon.calc_dir} {start} {stop}')
+        if sbatch:
+            proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+            out.append(proc.stdout.decode('utf8').strip())
+            # out will be a string like "Submitted batch job 5573363"
+        else:
+            # if SLURM is not installed, fake it
+            slurm_tasks(mon.calc_dir, start, stop)
+    return ' '.join(out)
+
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
@@ -1111,12 +1110,11 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, chunksize=Starmap.num_cores):
+def multispawn(func, allargs, chunksize=Starmap.num_cores, logfinish=True):
     """
     Spawn processes with the given arguments
     """
     tot = len(allargs)
-    logging.info('Running %d jobs', tot)
     allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {}  # sentinel -> process
     n = 1
@@ -1129,13 +1127,17 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             for finished in wait(procs):
                 procs[finished].join()
                 del procs[finished]
-                n = logfinish(n, tot)
+                if logfinish:
+                    logging.info('Finished %d of %d jobs', n, tot)
+                n += 1
                 
     while procs:
         for finished in wait(procs):
             procs[finished].join()
             del procs[finished]
-            n = logfinish(n, tot)
+            if logfinish:
+                logging.info('Finished %d of %d jobs', n, tot)
+            n += 1
 
 
 def slurm_task(calc_dir: str, task_id: str):
@@ -1145,3 +1147,11 @@ def slurm_task(calc_dir: str, task_id: str):
     with open(calc_dir + '/' + task_id + '.inp', 'rb') as f:
         func, args, mon = pickle.load(f)
     safely_call(func, args, int(task_id) - 1, mon)
+
+
+def slurm_tasks(calc_dir, start, stop):
+    start = int(start)
+    stop = int(stop)
+    allargs = [(calc_dir, str(task_id))
+               for task_id in range(start, stop + 1)]
+    multispawn(slurm_task, allargs, logfinish=False)

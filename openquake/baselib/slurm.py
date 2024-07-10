@@ -1,5 +1,5 @@
 import sys
-from openquake.baselib.parallel import slurm_task
+from openquake.baselib.parallel import slurm_tasks
 
 if __name__ == '__main__':
-    slurm_task(*sys.argv[1:])
+    slurm_tasks(*sys.argv[1:])
