@@ -536,7 +536,7 @@ class SiteCollection(object):
         """
         return self.split(numpy.ceil(len(self) / max_sites))
 
-    def split(self, ntiles):
+    def split(self, ntiles, minsize=1):
         """
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
@@ -544,6 +544,8 @@ class SiteCollection(object):
         # if ntiles > nsites produce N tiles with a single site each
         ntiles = min(int(numpy.ceil(ntiles)), len(self))
         if ntiles <= 1:
+            return [self]
+        if len(self) < ntiles * minsize:  # do not split
             return [self]
         tiles = []
         for i in range(ntiles):

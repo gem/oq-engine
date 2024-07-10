@@ -610,7 +610,8 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
             else:
-                tiles = self.sitecol.split(numpy.ceil(sg.weight / maxw))
+                tiles = self.sitecol.split(
+                    numpy.ceil(sg.weight / maxw), minsize=oq.max_sites_disagg)
                 logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
                 for tile in tiles:
                     allargs.append((gid, tile, cm, ds))
