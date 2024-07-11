@@ -39,11 +39,12 @@ def main(n: int, job_ini):
         submit_cmd.insert(1, '--cpus-per-task=%s' % num_cores)
     descr = readinput.get_params(job_ini)['description']
     lines = []
+    pp = 'OQ_DISTRIBUTE=processpool '
     for i in range(n):
         spec = '[%d,%d]' % (i+1, n) 
         params = "tile_spec='%s' description=\"%s%s\" job_id=${job_id[%d]}" % (
             spec, descr, spec, i)
-        lines.append(' '.join(submit_cmd) + f" {job_ini} -p {params}")
+        lines.append(pp + ' '.join(submit_cmd) + f" {job_ini} -p {params}")
     print(script % dict(n=len(lines), lines='\n'.join(lines)))
 
 main.n = dict(help='number of jobs to generate')

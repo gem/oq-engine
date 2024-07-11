@@ -223,7 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --mem-per-cpu=800M
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} {start} {stop}
 '''
-SLURM_CHUNK = 250
+SLURM_CHUNK = int(config.distribution.slurm_chunk)
 
 def sbatch(mon):
     """
@@ -234,8 +234,8 @@ def sbatch(mon):
         slurm_task(mon.calc_dir, '1')
         return 'Single task in-core'
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
-    out = []
-    for start in range(1, mon.task_no + 1, SLURM_CHUNK):
+    starts = numpy.arange(1, mon.task_no + 1, SLURM_CHUNK)
+    for no, start in enumerate(starts, 1):
         stop = min(mon.task_no, start + SLURM_CHUNK - 1)
         sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon,
                                 start=start, stop=stop)
@@ -245,15 +245,17 @@ def sbatch(mon):
         os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
         cpus = '--cpus-per-task=%d' % min(Starmap.num_cores, stop - start + 1)
         cmd = config.distribution.submit_cmd.split()[:-2] + [cpus, path]
-        logging.info(f'{cpus} {mon.calc_dir} {start} {stop}')
-        if sbatch:
-            proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-            out.append(proc.stdout.decode('utf8').strip())
-            # out will be a string like "Submitted batch job 5573363"
+        logging.info(f'{no=} {cpus} {mon.calc_dir} {start} {stop}')
+        if no == len(starts) or not sbatch:
+            # spawn a few tasks on the current node
+            for task_id in range(start, stop + 1):
+                mp_context.Process(
+                    target=slurm_task, args=(mon.calc_dir, str(task_id))
+                ).start()
         else:
-            # if SLURM is not installed, fake it
-            slurm_tasks(mon.calc_dir, start, stop)
-    return ' '.join(out)
+            proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+            # logging a string like "Submitted batch job 5573363"
+            logging.info(proc.stdout.decode('utf8').strip())
 
 
 @submit.add('no')
@@ -289,7 +291,7 @@ def ipp_submit(self, func, args, monitor):
 
 @submit.add('slurm')
 def slurm_submit(self, func, args, monitor):
-    calc_dir = monitor.calc_dir  # $HOME/oqdata/calc_XXX
+    calc_dir = monitor.calc_dir  # custom_tmp/calc_XXX
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
     inpname = str(self.task_no + 1) + '.inp'
@@ -983,7 +985,7 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
-            logging.info('%s', sbatch(self.monitor))
+            sbatch(self.monitor)
 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]
@@ -1152,5 +1154,5 @@ def slurm_tasks(calc_dir, start, stop):
     stop = int(stop)
     allargs = [(calc_dir, str(task_id))
                for task_id in range(start, stop + 1)]
-    nprocs= min(stop + 1 - start, Starmap.num_cores)
+    nprocs = min(stop + 1 - start, Starmap.num_cores)
     multispawn(slurm_task, allargs, nprocs, logfinish=False)
