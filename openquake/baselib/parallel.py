@@ -234,8 +234,7 @@ def sbatch(mon):
         slurm_task(mon.calc_dir, '1')
         return 'Single task in-core'
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
-    starts = numpy.arange(1, mon.task_no + 1, SLURM_CHUNK)
-    for no, start in enumerate(starts, 1):
+    for no, start in enumerate(range(1, mon.task_no + 1, SLURM_CHUNK)):
         stop = min(mon.task_no, start + SLURM_CHUNK - 1)
         sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon,
                                 start=start, stop=stop)
@@ -246,9 +245,12 @@ def sbatch(mon):
         cpus = '--cpus-per-task=%d' % min(Starmap.num_cores, stop - start + 1)
         cmd = config.distribution.submit_cmd.split()[:-2] + [cpus, path]
         logging.info(f'{no=} {cpus} {mon.calc_dir} {start} {stop}')
-        if no == len(starts) or not sbatch:
+        if no == 0 or not sbatch:
             # spawn tasks on the current node
-            slurm_tasks(mon.calc_dir, start, stop)
+            for task_id in range(start, stop + 1):
+                mp_context.Process(
+                    target=slurm_task, args=(mon.calc_dir, str(task_id))
+                ).start()
         else:
             proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
             # logging a string like "Submitted batch job 5573363"
