@@ -849,7 +849,7 @@ def get_boundary_2d(smsh):
 
 def make_figure_multi_fault(extractors, what):
     """
-    $ oq plot "multi_fault?rup_id=3"
+    $ oq plot "multi_fault?source_id=xxx"
     """
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
@@ -857,22 +857,25 @@ def make_figure_multi_fault(extractors, what):
     dstore = ex.dstore
     kwargs = what.split('?')[1]
     if kwargs:
-        rup_ids = [int(r) for r in parse_qs(kwargs)['rup_id']]
+        src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
     else:
-        rup_ids = []
+        src_ids = []
     csm = dstore['_csm']
     mfs = [src for src in csm.get_sources() if src.code == b'F']
     assert mfs, 'There are no multi fault sources to plot'
     src = mfs[0]
     sections = src.get_sections()
-    if rup_ids:
-        all_rups = list(src.iter_ruptures())
-        rups = numpy.array(all_rups)[rup_ids]
+    if src_ids:
         secs = set()
-        for rup in rups:
-            secs.update(sections[surf.idx] for surf in rup.surface.surfaces)
+        for src in mfs:
+            if src.source_id in src_ids:
+                for rup in src.iter_ruptures():
+                    secs.update(
+                        sections[surf.idx] for surf in rup.surface.surfaces)
     else:
         secs = sections
+        print([mf.source_id for mf in mfs])
+    print('Found %d sections' % len(secs))
     traces = []
     polys = []
     suids = []
