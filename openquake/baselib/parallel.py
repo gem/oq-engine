@@ -354,7 +354,7 @@ class Pickled(object):
     def unpickle(self):
         """Unpickle the underlying object"""
         if self.stored:
-            with open(self.stored) as f:
+            with open(self.stored, 'rb') as f:
                 return pickle.load(f)
         pik = decompress(self.pik) if self.compressed else self.pik
         return pickle.loads(pik)
@@ -525,10 +525,12 @@ def sendback(res, zsocket, savepik, idx=0):
     nbytes = len(res.pik)
     try:
         if savepik:
-            res.stored = os.path.join(savepik, '%d.out' % idx)
-            with open(res.stored, 'w') as f:
-                f.write(res.pik)
-            res.pik = None
+            if not os.path.exists(savepik):
+                os.mkdir(savepik)
+            res.pik.stored = os.path.join(savepik, '%d.out' % idx)
+            with open(res.pik.stored, 'wb') as f:
+                f.write(res.pik.pik)
+            res.pik.pik = b''
             zsocket.send(res)
         else:
             zsocket.send(res)
