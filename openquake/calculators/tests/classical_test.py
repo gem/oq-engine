@@ -28,6 +28,7 @@ from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_12, case_18, case_22, case_23,
@@ -170,7 +171,9 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}):
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.object(ClassicalCalculator,
+                               'fix_maxw_tsize', lambda self, m, t: (m, t)):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
