@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Rewritten the SLURM algorithm to work around the submission limit
+  * Added uniqueness check for the station coordinates
+  * Internal: removed parameter [dbserver]listen in openquake.cfg
   * Added command `oq submit n job_ini` for usage in supercomputers
   * Reimplemented the sensitivity analysis in a supercomputer-friendly way
   * Fixed export realizations which was truncating the branch_path

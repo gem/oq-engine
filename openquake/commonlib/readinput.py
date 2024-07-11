@@ -1066,6 +1066,20 @@ def get_exposure(oqparam, h5=None):
     return exposure
 
 
+def read_df(fname, lon, lat, id):
+    """
+    Read a DataFrame containing lon-lat-id fields and raise an error
+    for duplicate sites, if any
+    """
+    dframe = pandas.read_csv(fname)
+    dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
+    dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
+    for key, df in dframe.groupby([lon, lat]):
+        if len(df) > 1:
+            raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
+    return dframe
+
+
 def get_station_data(oqparam, sitecol):
     """
     Read the station data input file and build a list of
@@ -1082,9 +1096,10 @@ def get_station_data(oqparam, sitecol):
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = pandas.read_csv(oqparam.inputs['station_data'])
-    lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
-    lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
+    df = read_df(oqparam.inputs['station_data'],
+                 'LONGITUDE', 'LATITUDE', 'STATION_ID')
+    lons = df['LONGITUDE'].to_numpy()
+    lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
     sitecol.extend(lons, lats)
     logging.info('Extended complete site collection from %d to %d sites',
