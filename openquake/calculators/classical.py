@@ -108,7 +108,7 @@ def to_rates(pnemap, gid, tiling, disagg_by_src):
     """
     rates = pnemap.to_rates()
     if tiling:
-        return rates.to_dict(gid)
+        return rates.to_array(gid)
     if disagg_by_src:
         return rates
     return rates.remove_zeros()
@@ -326,10 +326,10 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        if isinstance(pnemap, dict):  # already converted (tiling)
+        if isinstance(pnemap, numpy.ndarray):  # already converted (tiling)
             rates = pnemap
         else:
-            rates = pnemap.to_dict()
+            rates = pnemap.to_array()
         if len(rates['sid']) == 0:  # happens in case_60
             return self.offset * 12 
         hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
