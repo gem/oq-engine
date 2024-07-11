@@ -18,6 +18,7 @@
 import gzip
 import json
 import logging
+from urllib.parse import parse_qs
 import shapely
 import numpy
 import pandas
@@ -27,7 +28,8 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.calculators.extract import Extractor, WebExtractor, clusterize
+from openquake.calculators.extract import (
+    Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders)
 from openquake.calculators.postproc.aelo_plots import (
@@ -845,22 +847,32 @@ def get_boundary_2d(smsh):
     return trace, Polygon(coo)
 
 
-def make_figure_surfaces(extractors, what):
+def make_figure_multi_fault(extractors, what):
     """
-    $ oq plot "surfaces?"
+    $ oq plot "multi_fault?rup_id=3"
     """
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
     dstore = ex.dstore
+    kwargs = what.split('?')[1]
+    if kwargs:
+        rup_ids = [int(r) for r in parse_qs(kwargs)['rup_id']]
+    else:
+        rup_ids = []
     csm = dstore['_csm']
-    # TODO: add an argument to pick another source instead of the first one
-    src = csm.get_sources()[0]
-    # rup = list(src.iter_ruptures())[0]
-    secs = src.get_sections()
-    # idxs = [surf.idx for surf in rup.surface.surfaces]
-    # for idx in idxs:
-    #     print(secs[idx])
+    mfs = [src for src in csm.get_sources() if src.code == b'F']
+    assert mfs, 'There are no multi fault sources to plot'
+    src = mfs[0]
+    sections = src.get_sections()
+    if rup_ids:
+        all_rups = list(src.iter_ruptures())
+        rups = numpy.array(all_rups)[rup_ids]
+        secs = set()
+        for rup in rups:
+            secs.update(sections[surf.idx] for surf in rup.surface.surfaces)
+    else:
+        secs = sections
     traces = []
     polys = []
     suids = []
@@ -878,7 +890,7 @@ def make_figure_surfaces(extractors, what):
     plot_geojson(daf_polys_geojson, ax, color='blue', label='Sections')
     plot_geojson(daf_traces_geojson, ax, color='red', label='Traces')
     ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
-    # ax.set_aspect('equal')
+    ax.set_aspect('equal')
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
