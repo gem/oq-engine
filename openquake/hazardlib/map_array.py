@@ -322,15 +322,18 @@ class MapArray(object):
         rates = -numpy.log(pnes).astype(F32)
         return self.new(rates / itime)
 
-    def to_dict(self, gid=0):
+    def to_array(self, gid=0):
         """
         Assuming self contains an array of rates,
-        returns a dictionary of arrays with keys sid, lid, gid, rate
+        returns a composite array with fields sid, lid, gid, rate
         """
         rates = self.array
         idxs, lids, gids = rates.nonzero()
-        out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
-                   gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
+        out = numpy.zeros(len(idxs), rates_dt)
+        out['sid'] = self.sids[idxs]
+        out['lid'] = lids
+        out['gid'] = gids + gid
+        out['rate'] = rates[idxs, lids, gids]
         return out
 
     def interp4D(self, imtls, poes):
@@ -366,7 +369,8 @@ class MapArray(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        return pandas.DataFrame(self.to_rates().to_dict())
+        arr = self.to_rates().to_array()
+        return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """
