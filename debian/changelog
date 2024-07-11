@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Making sure that the tiles contains at least 100 sites in classical tiling
+    calculations
   * Rewritten the SLURM algorithm to work around the submission limit
   * Added uniqueness check for the station coordinates
   * Internal: removed parameter [dbserver]listen in openquake.cfg

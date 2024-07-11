@@ -113,6 +113,16 @@ def to_rates(pnemap, gid, tiling, disagg_by_src):
         return rates
     return rates.remove_zeros()
 
+
+def get_tile_size(oq, N, csm, maxw=0):
+    """
+    :returns: the number of sites in the smallest tile
+    """
+    maxw = maxw or csm.get_max_weight(oq)
+    sizes = [maxw / sg.weight * N for sg in csm.src_groups]
+    return int(min(sizes))
+
+    
 #  ########################### task functions ############################ #
 
 
@@ -588,6 +598,14 @@ class ClassicalCalculator(base.HazardCalculator):
             ok = got[m] < 10.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
+    def fix_maxw_tsize(self, maxw, tsize):
+        if tsize < 100:  # less than 100 sites per tile
+            logging.info('concurrent_tasks=%d is too large, producing less tiles',
+                         self.oqparam.concurrent_tasks)
+            maxw = maxw * 100/ tsize
+            tsize = get_tile_size(self.oqparam, self.N, self.csm, maxw)
+        return maxw, tsize
+
     def execute_big(self, maxw):
         """
         Use parallel tiling
@@ -595,6 +613,9 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
+        tsize = get_tile_size(oq, self.N, self.csm, maxw)
+        maxw, tsize = self.fix_maxw_tsize(maxw, tsize)
+        logging.info('min_tile_size = {:_d}'.format(tsize))
         allargs = []
         self.ntiles = []
         if '_csm' in self.datastore.parent:
