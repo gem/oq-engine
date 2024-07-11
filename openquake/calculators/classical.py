@@ -840,6 +840,6 @@ class ClassicalCalculator(base.HazardCalculator):
                            calc_id=self.datastore.calc_id,
                            array=hmaps[:, 0, m, p])
                 allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
-        smap = parallel.Starmap(make_hmap_png, allargs, distribute='no')
+        smap = parallel.Starmap(make_hmap_png, allargs, distribute='processpool')
         for dic in smap:
             self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
