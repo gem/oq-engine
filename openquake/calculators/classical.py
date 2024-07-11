@@ -161,8 +161,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        for slc in gen_slices(0, len(rates), 1000):
-            result['pnemap'] = rates[slc]
+        if tiling:
+            for slc in gen_slices(0, len(rates), 1000):
+                yield {'pnemap': rates[slc], 'cfactor': result['cfactor']}
+        else:
+            result['pnemap'] = rates
             yield result
 
 
