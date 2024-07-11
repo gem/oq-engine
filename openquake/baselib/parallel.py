@@ -290,7 +290,7 @@ def ipp_submit(self, func, args, monitor):
 
 @submit.add('slurm')
 def slurm_submit(self, func, args, monitor):
-    calc_dir = monitor.calc_dir  # custom_tmp/oqdata/calc_XXX
+    calc_dir = monitor.calc_dir  # custom_tmp/calc_XXX
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
     inpname = str(self.task_no + 1) + '.inp'

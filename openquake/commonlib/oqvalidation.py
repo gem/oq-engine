@@ -1880,6 +1880,12 @@ class OqParam(valid.ParamSet):
             return self.ps_grid_spacing == 0
         return True
 
+    def is_valid_concurrent_tasks(self):
+        """
+        At most you can use 30_000 tasks
+        """
+        return self.concurrent_tasks <= 30_000
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
