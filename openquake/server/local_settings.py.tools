@@ -1,7 +1,5 @@
 APPLICATION_MODE = 'TOOLS_ONLY'
 
-# Enable authentication
-LOCKDOWN = False
 # Disable sharing of results across users
 ACL_ON = True
 
