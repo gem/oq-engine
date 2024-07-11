@@ -30,7 +30,7 @@ from PIL import Image
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize)
+    AccumDict, DictArray, block_splitter, gen_slices, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -160,8 +160,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
-        result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
-        yield result
+        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
+        for slc in gen_slices(0, len(rates), 1000):
+            result['pnemap'] = rates[slc]
+            yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
