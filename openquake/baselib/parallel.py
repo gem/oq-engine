@@ -329,6 +329,7 @@ class Pickled(object):
     :param obj: the object to pickle
     """
     compressed = False
+    stored = False
 
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
@@ -352,6 +353,9 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
+        if self.stored:
+            with open(self.stored) as f:
+                return pickle.load(f)
         pik = decompress(self.pik) if self.compressed else self.pik
         return pickle.loads(pik)
 
@@ -510,7 +514,7 @@ dummy_mon.backurl = None
 DEBUG = False
 
 
-def sendback(res, zsocket):
+def sendback(res, zsocket, savepik, idx=0):
     """
     Send back to the master node the result by using the zsocket.
 
@@ -520,7 +524,14 @@ def sendback(res, zsocket):
     task_no = res.mon.task_no
     nbytes = len(res.pik)
     try:
-        zsocket.send(res)
+        if savepik:
+            res.stored = os.path.join(savepik, '%d.out' % idx)
+            with open(res.stored, 'w') as f:
+                f.write(res.pik)
+            res.pik = None
+            zsocket.send(res)
+        else:
+            zsocket.send(res)
         if DEBUG:
             from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
@@ -569,7 +580,12 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon.inject:
         args += (mon,)
     sentbytes = 0
+    if mon.config.distribution.oq_distribute == 'slurm':
+        savepik = mon.calc_dir
+    else:
+        savepik = ''
     if isgenfunc:
+        idx = 0
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
             it = func(*args)
             while True:
@@ -578,12 +594,13 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 if res.msg == 'TASK_ENDED':
                     zsocket.send(res)
                     break
-                sentbytes += sendback(res, zsocket)
+                sentbytes += sendback(res, zsocket, savepik, idx)
+                idx += 1
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-            sentbytes += sendback(res, zsocket)
+            sentbytes += sendback(res, zsocket, savepik)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
             zsocket.send(end)

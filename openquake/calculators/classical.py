@@ -156,19 +156,12 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
     else:
-        # size_mb is the maximum size of the pmap array in GB
-        size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
-                   * 8 / 1024**2)
-        # NB: the parameter config.memory.pmap_max_mb avoids the hanging
-        # of oq1 due to too large zmq packets
-        itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
-        for sites in sitecol.split_in_tiles(itiles):
-            pmap = MapArray(
-                sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                    cmaker.rup_indep)
-            result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
-            yield result
+        pmap = MapArray(
+            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+                cmaker.rup_indep)
+        result = hazclassical(sources, sitecol, cmaker, pmap)
+        result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
