@@ -46,6 +46,7 @@ F64 = numpy.float64
 I64 = numpy.int64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+CHUNKS = 256
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
@@ -62,7 +63,7 @@ def _store(rates, h5):
     hdf5.extend(h5['_rates/rate'], rates['rate'])
 
 
-def store_rates(rates, sites_per_task, mon):
+def store_rates(rates, mon):
     """
     Store the rates in the datastore if there is no tiling, otherwise
     store in temporary files of the form `calc_dir/poesXXX.hdf5`
@@ -70,8 +71,11 @@ def store_rates(rates, sites_per_task, mon):
     calc_dir = mon.calc_dir
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
-    chunks = rates['sid'] // sites_per_task
-    for chunk in numpy.unique(chunks):
+    chunks = rates['sid'] % CHUNKS
+    for chunk in range(CHUNKS):
+        okrates = rates[chunks == chunk]
+        if len(okrates) == 0:
+            continue
         chunk_dir = os.path.join(calc_dir, str(chunk))
         try:
             os.mkdir(chunk_dir)
@@ -79,7 +83,7 @@ def store_rates(rates, sites_per_task, mon):
             pass
         fname = os.path.join(calc_dir, f'{chunk}/{mon.task_no}.hdf5')
         with hdf5.File(fname, 'a') as h5:
-            _store(rates[chunks == chunk], h5)
+            _store(okrates, h5)
 
 
 class Set(set):
@@ -164,7 +168,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if config.distribution.save_on_tmp and tiling:
-            store_rates(rates, cmaker.sites_per_task, monitor)
+            store_rates(rates, monitor)
         else:
             result['pnemap'] = rates
         yield result
@@ -482,7 +486,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         max_gb = float(config.memory.pmap_max_gb)
-        self.sites_per_task = int(numpy.ceil(self.N / (oq.concurrent_tasks or 1)))
         if (oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb
             or oq.tile_spec):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
@@ -526,7 +529,6 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.sites_per_task = self.sites_per_task
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
@@ -593,7 +595,6 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.sites_per_task = self.sites_per_task
             gid = self.gids[cm.grp_id][0]
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
