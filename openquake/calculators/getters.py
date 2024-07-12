@@ -19,7 +19,7 @@
 import operator
 import numpy
 
-from openquake.baselib import general, hdf5, performance
+from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
@@ -181,19 +181,18 @@ class MapGetter(object):
         if self._map:
             return self._map
         with hdf5.File(self.filename) as dstore:
-            slices = performance.idx_start_stop(dstore['_rates/sid'][:])
-            for idx, start, stop in slices:
-                # reading one slice at the time to save memory
-                rates_df = dstore.read_df('_rates', slc=slice(start, stop))
-                # not using groupby to save memory
-                for sid in rates_df.sid.unique():
-                    df = rates_df[rates_df.sid == sid]
-                    try:
-                        array = self._map[sid]
-                    except KeyError:
-                        array = numpy.zeros((self.L, self.G))
-                        self._map[sid] = array
-                    array[df.lid, df.gid] = df.rate
+            rates_df = dstore.read_df('_rates')
+            # not using groupby to save memory
+            for sid in rates_df.sid.unique():
+                df = rates_df[rates_df.sid == sid]
+                try:
+                    array = self._map[sid]
+                except KeyError:
+                    array = numpy.zeros((self.L, self.G))
+                    self._map[sid] = array
+                array[df.lid, df.gid] = df.rate
+                #if sid == 4123:
+                #    print(df)
         return self._map
 
     # used in risk calculations where there is a single site per getter
