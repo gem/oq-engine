@@ -300,12 +300,12 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
-def map_getters(dstore):
+def map_getters(dstore, full_lt=None):
     """
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     req_gb, trt_rlzs, gids = get_pmaps_gb(dstore, full_lt)
     if oq.fastmean:
@@ -767,7 +767,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         wget = self.full_lt.wget
         allargs = [(getter, weights, wget, hstats, individual, oq.max_sites_disagg,
-                    self.amplifier) for getter, weights in map_getters(dstore)]
+                    self.amplifier)
+                   for getter, weights in map_getters(dstore, self.full_lt)]
         if not allargs:  # case_60
             return
         self.hazard = {}  # kind -> array
