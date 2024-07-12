@@ -30,7 +30,7 @@ from PIL import Image
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, gen_slices, groupby, humansize)
+    AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -162,9 +162,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if tiling:
-            for gid in numpy.unique(rates['gid']):
-                yield {'pnemap': rates[rates['gid']==gid],
-                       'cfactor': result['cfactor']}
+            yield {'pnemap': rates,
+                   'cfactor': result['cfactor']}
         else:
             result['pnemap'] = rates
             yield result
