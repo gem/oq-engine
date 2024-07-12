@@ -161,12 +161,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if tiling:
-            yield {'pnemap': rates,
-                   'cfactor': result['cfactor']}
-        else:
-            result['pnemap'] = rates
-            yield result
+        result['pnemap'] = rates
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -559,7 +555,6 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
@@ -623,7 +618,6 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             gid = self.gids[cm.grp_id][0]
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
