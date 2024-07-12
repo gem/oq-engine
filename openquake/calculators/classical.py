@@ -446,9 +446,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
-        self.datastore.create_dset('_rates/slice_by_idx', slice_dt,
-                                   compression='gzip')
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
+        self.datastore.create_dset('_rates/slice_by_idx', slice_dt)
 
         oq = self.oqparam
         if oq.disagg_by_src:
