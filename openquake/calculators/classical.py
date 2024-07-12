@@ -601,6 +601,7 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
+        sizes = []
         for cm in self.cmakers:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
@@ -615,8 +616,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
                 for tile in tiles:
                     allargs.append((gid, tile, cm, ds))
+                    sizes.append(len(cm.gsims) * oq.imtls.size * len(tile)
+                                 * 8 / 1024**2)
                     self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles', max(self.ntiles))
+        logging.warning('Generated at most %d tiles, maxsize=%.1f M',
+                        max(self.ntiles), max(sizes))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
@@ -741,17 +745,19 @@ class ClassicalCalculator(base.HazardCalculator):
                 trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
             weights = self.full_lt.weights
         wget = self.full_lt.wget
-        if hasattr(self, 'ntiles'):
-            fnames = [os.path.join(self._monitor.calc_dir, f)
-                      for f in os.listdir(self._monitor.calc_dir)]
-        elif len(dstore['_rates/sid']) == 0:  # in case_60
-            return
-        else:
-            fnames = [dstore.filename]
+        calc_dir = self._monitor.calc_dir
+        if os.path.exists(calc_dir):
+            fnames = [os.path.join(calc_dir, f)
+                      for f in os.listdir(calc_dir)]
+            dirnames = filter(os.path.isdir, fnames)
+        else:  # not tiling
+            if len(dstore['_rates/sid']) == 0:  # in case_60
+                return
+            dirnames = [dstore.filename]
         allargs = [
-            (getters.MapGetter(fname, trt_rlzs, self.R, oq),
+            (getters.MapGetter(dirname, trt_rlzs, self.R, oq),
              weights, wget, hstats, individual, oq.max_sites_disagg,
-             self.amplifier) for fname in fnames]
+             self.amplifier) for dirname in dirnames]
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
