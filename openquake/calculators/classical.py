@@ -750,8 +750,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if hasattr(self, 'ntiles'):
             fnames = [os.path.join(self._monitor.calc_dir, f)
                       for f in os.listdir(self._monitor.calc_dir)]
+        elif len(dstore['_rates/sid']) == 0:  # in case_60
+            return
         else:
-            fnames = [self.datastore.filename]
+            fnames = [dstore.filename]
         allargs = [
             (getters.MapGetter(fname, trt_rlzs, self.R, oq),
              weights, wget, hstats, individual, oq.max_sites_disagg,
