@@ -72,13 +72,6 @@ def store_rates(rates, sites_per_task, mon):
     Store the rates in the datastore if there is no tiling, otherwise
     store in temporary files of the form `calc_dir/poesXXX.hdf5`
     """
-    if mon.task_no == -1:  # no tiling
-        hdf5.extend(mon.h5['_rates/sid'], rates['sid'])
-        hdf5.extend(mon.h5['_rates/gid'], rates['gid'])
-        hdf5.extend(mon.h5['_rates/lid'], rates['lid'])
-        hdf5.extend(mon.h5['_rates/rate'], rates['rate'])
-        return
-
     calc_dir = mon.calc_dir
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
@@ -562,7 +555,11 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            self.haz.store_rates(self.pmap, self._monitor)
+            rates = self.pmap.to_array()
+            hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
+            hdf5.extend(self.datastore['_rates/gid'], rates['gid'])
+            hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
+            hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)

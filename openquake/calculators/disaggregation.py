@@ -178,10 +178,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        nrows = len(dstore['_rates/sid'])
         trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.pgetter = getters.MapGetter(
-            dstore.filename, trt_rlzs, self.R, [(0, nrows + 1)], oq)
+            dstore.filename, trt_rlzs, self.R, oq)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
