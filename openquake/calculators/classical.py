@@ -67,21 +67,32 @@ def get_pmaps_gb(dstore, full_lt=None):
     return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
 
 
-def store_rates(rates, mon):
-    if mon.task_no > -1:  # tiling
-        calc_dir = mon.calc_dir
-        if not os.path.exists(calc_dir):
-            os.mkdir(calc_dir)
-        fname = f'_poes{mon.task_no}.hdf5'
-        h5 = hdf5.File(os.path.join(calc_dir, fname), 'a')
-        if '_rates' not in h5:
-            h5.create_df('_rates', [(n, rates_dt[n]) for n in rates_dt.names])
-    else:
-        h5 = mon.h5
-    hdf5.extend(h5['_rates/sid'], rates['sid'])
-    hdf5.extend(h5['_rates/gid'], rates['gid'])
-    hdf5.extend(h5['_rates/lid'], rates['lid'])
-    hdf5.extend(h5['_rates/rate'], rates['rate'])
+def store_rates(rates, sites_per_task, mon):
+    """
+    Store the rates in the datastore if there is no tiling, otherwise
+    store in temporary files of the form `calc_dir/poesXXX.hdf5`
+    """
+    if mon.task_no == -1:  # no tiling
+        hdf5.extend(mon.h5['_rates/sid'], rates['sid'])
+        hdf5.extend(mon.h5['_rates/gid'], rates['gid'])
+        hdf5.extend(mon.h5['_rates/lid'], rates['lid'])
+        hdf5.extend(mon.h5['_rates/rate'], rates['rate'])
+        return
+
+    calc_dir = mon.calc_dir
+    if not os.path.exists(calc_dir):
+        os.mkdir(calc_dir)
+    chunks = rates['sid'] // sites_per_task
+    for chunk in numpy.unique(chunks):
+        rats = rates[chunks == chunk]
+        fname = os.path.join(calc_dir, f'_poes{chunk}.hdf5')
+        with hdf5.File(fname, 'a') as h5:
+            if '_rates' not in h5:
+                h5.create_df('_rates', [(n, rates_dt[n]) for n in rates_dt.names])
+            hdf5.extend(h5['_rates/sid'], rats['sid'])
+            hdf5.extend(h5['_rates/gid'], rats['gid'])
+            hdf5.extend(h5['_rates/lid'], rats['lid'])
+            hdf5.extend(h5['_rates/rate'], rats['rate'])
 
 
 class Set(set):
@@ -330,7 +341,7 @@ class Hazard:
         else:
             rates = pnemap.to_array()
         if len(rates['sid']):  # happens in case_60
-            store_rates(rates, mon)
+            store_rates(rates, self.sites_per_task, mon)
 
     def store_mean_rates_by_src(self, dic):
         """
@@ -551,7 +562,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            self.haz.store_rates(self.pmap, self._monitor)
+            self.haz.store_rates(self.pmap, self.N, self._monitor)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
