@@ -53,6 +53,15 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
+def _store(rates, h5):
+    if '_rates' not in h5:
+        h5.create_df('_rates', [(n, rates_dt[n]) for n in rates_dt.names])
+    hdf5.extend(h5['_rates/sid'], rates['sid'])
+    hdf5.extend(h5['_rates/gid'], rates['gid'])
+    hdf5.extend(h5['_rates/lid'], rates['lid'])
+    hdf5.extend(h5['_rates/rate'], rates['rate'])
+
+
 def store_rates(rates, sites_per_task, mon):
     """
     Store the rates in the datastore if there is no tiling, otherwise
@@ -68,15 +77,9 @@ def store_rates(rates, sites_per_task, mon):
             os.mkdir(chunk_dir)
         except FileExistsError:  # somebody else wrote it
             pass
-        rats = rates[chunks == chunk]
         fname = os.path.join(calc_dir, f'{chunk}/{mon.task_no}.hdf5')
         with hdf5.File(fname, 'a') as h5:
-            if '_rates' not in h5:
-                h5.create_df('_rates', [(n, rates_dt[n]) for n in rates_dt.names])
-            hdf5.extend(h5['_rates/sid'], rats['sid'])
-            hdf5.extend(h5['_rates/gid'], rats['gid'])
-            hdf5.extend(h5['_rates/lid'], rats['lid'])
-            hdf5.extend(h5['_rates/rate'], rats['rate'])
+            _store(rates[chunks == chunk], h5)
 
 
 class Set(set):
@@ -160,7 +163,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if tiling:
+        if config.distribution.save_on_tmp and tiling:
             store_rates(rates, cmaker.sites_per_task, monitor)
         else:
             result['pnemap'] = rates
@@ -537,11 +540,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            rates = self.pmap.to_array()
-            hdf5.extend(self.datastore['_rates/sid'], rates['sid'])
-            hdf5.extend(self.datastore['_rates/gid'], rates['gid'])
-            hdf5.extend(self.datastore['_rates/lid'], rates['lid'])
-            hdf5.extend(self.datastore['_rates/rate'], rates['rate'])
+            _store(self.pmap.to_array(), self.datastore)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -583,7 +582,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('min_tile_size = {:_d}'.format(tsize))
         allargs = []
         self.ntiles = []
-        self.datastore['tile_dir'] = self._monitor.calc_dir
+        if config.distribution.save_on_tmp:
+            self.datastore['tile_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -611,6 +611,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
+            if 'pnemap' in dic:
+                _store(dic['pnemap'], self.datastore)
         return {}
 
     def store_info(self):
