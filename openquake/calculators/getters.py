@@ -175,6 +175,18 @@ def map_getters(dstore, full_lt=None):
             for dirname in dirnames]
 
 
+class ZeroGetter(object):
+    """
+    Return an array of zeros of shape (L, R)
+    """
+    def __init__(self, L, R):
+        self.L = L
+        self.R = R
+
+    def get_hazard(self):
+        return numpy.zeros((self.L, self.R))
+
+
 class CurveGetter(object):
     """
     Hazard curve builder used in classical_risk/classical_damage.
@@ -190,7 +202,7 @@ class CurveGetter(object):
             for sid in pmap:
                 rates[sid] = pmap[sid]  # shape (L, G)
         return {sid: cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
-                for sid in rates}
+                for sid in rates}, ZeroGetter(mgetter.L, mgetter.R)
 
     def __init__(self, sid, rates, trt_rlzs, R):
         self.sid = sid
