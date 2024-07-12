@@ -179,8 +179,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        self.pgetter = getters.MapGetter(
-            dstore.filename, trt_rlzs, self.R, oq)
+        names = ['_rates%03d' % sid for sid in self.sitecol.sids]
+        self.pgetters = [getters.MapGetter(
+            dstore.filename, name, trt_rlzs, self.R, oq) for name in names]
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -188,7 +189,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
-                    hcurve = self.pgetter.get_hcurve(sid)
+                    hcurve = self.pgetters[sid].get_hcurve(sid)
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
                         full_lt.wget)

@@ -718,10 +718,10 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        if self.datastore.parent:
-            dstore = self.datastore.parent
-        else:
+        if '_rates000' in set(self.datastore):
             dstore = self.datastore
+        else:
+            dstore = self.datastore.parent
         wget = self.full_lt.wget
         allargs = [(getter, wget, hstats, individual, oq.max_sites_disagg,
                     self.amplifier) for getter in getters.map_getters(
