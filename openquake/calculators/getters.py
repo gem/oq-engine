@@ -166,13 +166,15 @@ def map_getters(dstore, full_lt=None):
     try:
         tile_dir = dstore['tile_dir'][()]
         fnames = [os.path.join(tile_dir, f) for f in os.listdir(tile_dir)]
-        dirnames = filter(os.path.isdir, fnames)
+        names = filter(os.path.isdir, fnames)
     except KeyError:  # no tiling
-        if len(dstore['_rates/sid']) == 0:  # in case_60
-            return []
-        dirnames = [dstore.filename]
-    return [(MapGetter(dirname, trt_rlzs, R, oq), weights)
-            for dirname in dirnames]
+        names = [name for name in dstore if name.startswith('_rates')]
+    out = []
+    for name in names:
+        getter = MapGetter(dstore.filename, name, trt_rlzs, R, oq)
+        getter.weights = weights
+        out.append(getter)
+    return out
 
 
 class ZeroGetter(object):
@@ -197,7 +199,7 @@ class CurveGetter(object):
     @classmethod
     def build(cls, dstore):
         rates = {}
-        for mgetter, _w in map_getters(dstore):
+        for mgetter in map_getters(dstore):
             pmap = mgetter.init()
             for sid in pmap:
                 rates[sid] = pmap[sid]  # shape (L, G)
@@ -225,8 +227,9 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filename, trt_rlzs, R, oq):
+    def __init__(self, filename, name, trt_rlzs, R, oq):
         self.filename = filename
+        self.name = name
         self.trt_rlzs = trt_rlzs
         self.R = R
         self.imtls = oq.imtls
@@ -267,37 +270,25 @@ class MapGetter(object):
         """
         if self._map:
             return self._map
+        '''
         if os.path.isdir(self.filename):
             fnames = [os.path.join(self.filename, f)
                       for f in os.listdir(self.filename)]
         else:
             fnames = [self.filename]
-        for fname in fnames:
-            with hdf5.File(fname) as dstore:
-                rates_df = dstore.read_df('_rates')
-                # not using groupby to save memory
-                for sid in rates_df.sid.unique():
-                    df = rates_df[rates_df.sid == sid]
-                    try:
-                        array = self._map[sid]
-                    except KeyError:
-                        array = numpy.zeros((self.L, self.G))
-                        self._map[sid] = array
-                    array[df.lid, df.gid] = df.rate
+        '''
+        with hdf5.File(self.filename) as dstore:
+            rates_df = dstore.read_df(self.name)
+            # not using groupby to save memory
+            for sid in rates_df.sid.unique():
+                df = rates_df[rates_df.sid == sid]
+                try:
+                    array = self._map[sid]
+                except KeyError:
+                    array = numpy.zeros((self.L, self.G))
+                    self._map[sid] = array
+                array[df.lid, df.gid] = df.rate
         return self._map
-
-    # used in risk calculations where there is a single site per getter
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: a probability curve of shape (L, R) for the given site
-        """
-        self.init()
-        if not self.sids:
-            # this happens when the poes are all zeros, as in
-            # classical_risk/case_3 for the first site
-            return numpy.zeros((self.L, self.R))
-        return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
         """

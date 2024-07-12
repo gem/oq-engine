@@ -55,12 +55,15 @@ get_weight = operator.attrgetter('weight')
 
 
 def _store(rates, h5):
-    if '_rates' not in h5:
-        h5.create_df('_rates', [(n, rates_dt[n]) for n in rates_dt.names])
-    hdf5.extend(h5['_rates/sid'], rates['sid'])
-    hdf5.extend(h5['_rates/gid'], rates['gid'])
-    hdf5.extend(h5['_rates/lid'], rates['lid'])
-    hdf5.extend(h5['_rates/rate'], rates['rate'])
+    chunks = rates['sid'] % CHUNKS
+    for chunk in numpy.unique(chunks):
+        ch_rates = rates[chunks == chunk]
+        name = '_rates%03d' % chunk
+        h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+        hdf5.extend(h5[f'{name}/sid'], ch_rates['sid'])
+        hdf5.extend(h5[f'{name}/gid'], ch_rates['gid'])
+        hdf5.extend(h5[f'{name}/lid'], ch_rates['lid'])
+        hdf5.extend(h5[f'{name}/rate'], ch_rates['rate'])
 
 
 def store_rates(rates, mon):
@@ -72,10 +75,8 @@ def store_rates(rates, mon):
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
     chunks = rates['sid'] % CHUNKS
-    for chunk in range(CHUNKS):
-        okrates = rates[chunks == chunk]
-        if len(okrates) == 0:
-            continue
+    for chunk in numpy.unique(chunks):
+        ch_rates = rates[chunks == chunk]
         chunk_dir = os.path.join(calc_dir, str(chunk))
         try:
             os.mkdir(chunk_dir)
@@ -83,7 +84,7 @@ def store_rates(rates, mon):
             pass
         fname = os.path.join(calc_dir, f'{chunk}/{mon.task_no}.hdf5')
         with hdf5.File(fname, 'a') as h5:
-            _store(okrates, h5)
+            _store(ch_rates, h5)
 
 
 class Set(set):
@@ -176,7 +177,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
-def fast_mean(pgetter, gweights, monitor):
+def fast_mean(pgetter, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param gweights: an array of G weights
@@ -186,7 +187,7 @@ def fast_mean(pgetter, gweights, monitor):
         pgetter.init()
     
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean(gweights)
+        hcurves = pgetter.get_fast_mean(pgetter.weights)
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -196,11 +197,10 @@ def fast_mean(pgetter, gweights, monitor):
     return pmap_by_kind
 
 
-def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
+def postclassical(pgetter, wget, hstats, individual_rlzs,
                   max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param weights: a list of ImtWeights
     :param wget: function (weights[:, :], imt) -> weights[:]
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
@@ -256,7 +256,7 @@ def postclassical(pgetter, weights, wget, hstats, individual_rlzs,
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, weights, wget, pgetter.use_rates)
+                        pc, imtls, stat, pgetter.weights, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -417,8 +417,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
         oq = self.oqparam
         if oq.disagg_by_src:
             M = len(oq.imtls)
@@ -464,7 +462,7 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if '_rates' in parent:
+            if any(name.startswith('_rates') for name in parent):
                 self.build_curves_maps()  # repeat post-processing
                 return {}
         else:
@@ -504,7 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
                 int(self.cfactor[1]), int(self.cfactor[0]),
                 self.cfactor[1] / self.cfactor[0]))
-        if '_rates' in self.datastore:
+        if any(name.startswith('_rates') for name in self.datastore):
             self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
@@ -720,14 +718,13 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        if '_rates' in set(self.datastore):
-            dstore = self.datastore
-        else:
+        if self.datastore.parent:
             dstore = self.datastore.parent
-
+        else:
+            dstore = self.datastore
         wget = self.full_lt.wget
-        allargs = [(getter, weights, wget, hstats, individual, oq.max_sites_disagg,
-                    self.amplifier) for getter, weights in getters.map_getters(
+        allargs = [(getter, wget, hstats, individual, oq.max_sites_disagg,
+                    self.amplifier) for getter in getters.map_getters(
                         dstore, self.full_lt)]
         if not allargs:  # case_60
             return
@@ -744,7 +741,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         if oq.fastmean:
             parallel.Starmap(
-                fast_mean, [args[0:2] for args in allargs],
+                fast_mean, [args[0:1] for args in allargs],
                 distribute='no' if self.few_sites else None,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
