@@ -157,7 +157,7 @@ def map_getters(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    req_gb, trt_rlzs, gids = get_pmaps_gb(dstore, full_lt)
+    _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
     if oq.fastmean:
         weights = dstore['gweights'][:]
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
@@ -284,8 +284,6 @@ class MapGetter(object):
                         array = numpy.zeros((self.L, self.G))
                         self._map[sid] = array
                     array[df.lid, df.gid] = df.rate
-                    #if sid == 4123:
-                    #    print(df)
         return self._map
 
     # used in risk calculations where there is a single site per getter
