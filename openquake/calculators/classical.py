@@ -78,8 +78,10 @@ def store_rates(rates, sites_per_task, mon):
     chunks = rates['sid'] // sites_per_task
     for chunk in numpy.unique(chunks):
         chunk_dir = os.path.join(calc_dir, str(chunk))
-        if not os.path.exists(chunk_dir):
+        try:
             os.mkdir(chunk_dir)
+        except FileExistsError:  # somebody else wrote it
+            pass
         rats = rates[chunks == chunk]
         fname = os.path.join(calc_dir, f'{chunk}/{mon.task_no}.hdf5')
         with hdf5.File(fname, 'a') as h5:
