@@ -300,6 +300,35 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
+def map_getters(dstore):
+    """
+    :returns: a list of pairs (MapGetter, weights)
+    """
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt'].init()
+    R = full_lt.get_num_paths()
+    req_gb, trt_rlzs, gids = get_pmaps_gb(dstore, full_lt)
+    if oq.fastmean:
+        weights = dstore['gweights'][:]
+        trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
+    else:
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            trt_rlzs = full_lt.get_trt_rlzs([[0]])
+        else:
+            trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        weights = full_lt.weights
+    try:
+        tile_dir = dstore['tile_dir'][()]
+        fnames = [os.path.join(tile_dir, f) for f in os.listdir(tile_dir)]
+        dirnames = filter(os.path.isdir, fnames)
+    except KeyError:  # no tiling
+        if len(dstore['_rates/sid']) == 0:  # in case_60
+            return []
+        dirnames = [dstore.filename]
+    return [(getters.MapGetter(dirname, trt_rlzs, R, oq), weights)
+            for dirname in dirnames]
+
+
 class Hazard:
     """
     Helper class for storing the rates
@@ -597,6 +626,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('min_tile_size = {:_d}'.format(tsize))
         allargs = []
         self.ntiles = []
+        self.datastore['tile_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -735,29 +765,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
 
-        if oq.fastmean:
-            weights = dstore['gweights'][:]
-            trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
-        else:
-            if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-                trt_rlzs = self.full_lt.get_trt_rlzs([[0]])
-            else:
-                trt_rlzs = self.full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-            weights = self.full_lt.weights
         wget = self.full_lt.wget
-        calc_dir = self._monitor.calc_dir
-        if os.path.exists(calc_dir):
-            fnames = [os.path.join(calc_dir, f)
-                      for f in os.listdir(calc_dir)]
-            dirnames = filter(os.path.isdir, fnames)
-        else:  # not tiling
-            if len(dstore['_rates/sid']) == 0:  # in case_60
-                return
-            dirnames = [dstore.filename]
-        allargs = [
-            (getters.MapGetter(dirname, trt_rlzs, self.R, oq),
-             weights, wget, hstats, individual, oq.max_sites_disagg,
-             self.amplifier) for dirname in dirnames]
+        allargs = [(getter, weights, wget, hstats, individual, oq.max_sites_disagg,
+                    self.amplifier) for getter, weights in map_getters(dstore)]
+        if not allargs:  # case_60
+            return
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
