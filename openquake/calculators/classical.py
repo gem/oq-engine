@@ -156,19 +156,13 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
     else:
-        # size_mb is the maximum size of the pmap array in GB
-        size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
-                   * 8 / 1024**2)
-        # NB: the parameter config.memory.pmap_max_mb avoids the hanging
-        # of oq1 due to too large zmq packets
-        itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
-        for sites in sitecol.split_in_tiles(itiles):
-            pmap = MapArray(
-                sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                    cmaker.rup_indep)
-            result = hazclassical(sources, sites, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
-            yield result
+        pmap = MapArray(
+            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+                cmaker.rup_indep)
+        result = hazclassical(sources, sitecol, cmaker, pmap)
+        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
+        result['pnemap'] = rates
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -448,9 +442,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
-        self.datastore.create_dset('_rates/slice_by_idx', slice_dt,
-                                   compression='gzip')
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
+        self.datastore.create_dset('_rates/slice_by_idx', slice_dt)
 
         oq = self.oqparam
         if oq.disagg_by_src:
@@ -562,7 +555,6 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
@@ -626,7 +618,6 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             gid = self.gids[cm.grp_id][0]
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
