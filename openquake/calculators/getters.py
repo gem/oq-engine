@@ -19,7 +19,7 @@
 import operator
 import numpy
 
-from openquake.baselib import general, hdf5
+from openquake.baselib import general, hdf5, performance
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
@@ -34,6 +34,7 @@ TWO24 = 2 ** 24
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
+slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 class NotFound(Exception):
@@ -137,11 +138,10 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filename, trt_rlzs, R, slices, oq):
+    def __init__(self, filename, trt_rlzs, R, oq):
         self.filename = filename
         self.trt_rlzs = trt_rlzs
         self.R = R
-        self.slices = slices
         self.imtls = oq.imtls
         self.poes = oq.poes
         self.use_rates = oq.use_rates
@@ -178,10 +178,11 @@ class MapGetter(object):
         """
         Build the _map from the underlying dataframes
         """
-        if self._map or len(self.slices) == 0:
+        if self._map:
             return self._map
         with hdf5.File(self.filename) as dstore:
-            for start, stop in self.slices:
+            slices = performance.idx_start_stop(dstore['_rates/sid'][:])
+            for idx, start, stop in slices:
                 # reading one slice at the time to save memory
                 rates_df = dstore.read_df('_rates', slc=slice(start, stop))
                 # not using groupby to save memory
