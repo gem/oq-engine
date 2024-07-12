@@ -133,6 +133,81 @@ class HcurvesGetter(object):
         return weights @ curves
 
 
+# NB: using 32 bit ratemaps
+def get_pmaps_gb(dstore, full_lt=None):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol'])
+    L = dstore['oqparam'].imtls.size
+    full_lt = full_lt or dstore['full_lt'].init()
+    if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+        trt_smrs = [[0]]
+    else:
+        trt_smrs = dstore['trt_smrs'][:]
+    trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
+    gids = full_lt.get_gids(trt_smrs)
+    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
+
+
+def map_getters(dstore, full_lt=None):
+    """
+    :returns: a list of pairs (MapGetter, weights)
+    """
+    oq = dstore['oqparam']
+    full_lt = full_lt or dstore['full_lt'].init()
+    R = full_lt.get_num_paths()
+    req_gb, trt_rlzs, gids = get_pmaps_gb(dstore, full_lt)
+    if oq.fastmean:
+        weights = dstore['gweights'][:]
+        trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
+    else:
+       weights = full_lt.weights
+    try:
+        tile_dir = dstore['tile_dir'][()]
+        fnames = [os.path.join(tile_dir, f) for f in os.listdir(tile_dir)]
+        dirnames = filter(os.path.isdir, fnames)
+    except KeyError:  # no tiling
+        if len(dstore['_rates/sid']) == 0:  # in case_60
+            return []
+        dirnames = [dstore.filename]
+    return [(MapGetter(dirname, trt_rlzs, R, oq), weights)
+            for dirname in dirnames]
+
+
+class CurveGetter(object):
+    """
+    Hazard curve builder used in classical_risk/classical_damage.
+
+    :param sid: site index
+    :param rates: array of shape (L, G) for the given site
+    """
+    @classmethod
+    def build(cls, dstore):
+        rates = {}
+        for mgetter, _w in map_getters(dstore):
+            pmap = mgetter.init()
+            for sid in pmap:
+                rates[sid] = pmap[sid]  # shape (L, G)
+        return {sid: cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
+                for sid in rates}
+
+    def __init__(self, sid, rates, trt_rlzs, R):
+        self.sid = sid
+        self.rates = rates
+        self.trt_rlzs = trt_rlzs
+        self.R = R
+
+    def get_hazard(self):
+        r0 = numpy.zeros((len(self.rates), self.R))
+        for g, t_rlzs in enumerate(self.trt_rlzs):
+            rlzs = t_rlzs % TWO24
+            rates = self.rates[:, g]
+            for rlz in rlzs:
+                r0[:, rlz] += rates
+        return to_probs(r0)
+
+    
 class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a

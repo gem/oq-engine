@@ -1152,18 +1152,16 @@ class RiskCalculator(HazardCalculator):
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        full_lt = dstore['full_lt'].init()
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        getterdict = getters.CurveGetter.build(dstore)
         for sid, assets in asset_df.groupby(asset_df.index):
+            try:
+                cgetter = getterdict[sid]  # zero hazard
+            except KeyError:
+                continue
             # hcurves, shape (R, N)
-            getter = getters.MapGetter(
-                dstore.filename, trt_rlzs, self.R, self.oqparam)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
-                out.append(riskinput.RiskInput(getter, assets[slc]))
+                out.append(riskinput.RiskInput(cgetter, assets[slc]))
             if slc.stop - slc.start >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               slc.stop - slc.start, sid)

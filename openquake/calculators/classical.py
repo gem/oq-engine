@@ -53,20 +53,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
-# NB: using 32 bit ratemaps
-def get_pmaps_gb(dstore, full_lt=None):
-    """
-    :returns: memory required on the master node to keep the pmaps
-    """
-    N = len(dstore['sitecol'])
-    L = dstore['oqparam'].imtls.size
-    full_lt = full_lt or dstore['full_lt'].init()
-    all_trt_smrs = dstore['trt_smrs'][:]
-    trt_rlzs = full_lt.get_trt_rlzs(all_trt_smrs)
-    gids = full_lt.get_gids(all_trt_smrs)
-    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
-
-
 def store_rates(rates, sites_per_task, mon):
     """
     Store the rates in the datastore if there is no tiling, otherwise
@@ -300,35 +286,6 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
-def map_getters(dstore, full_lt=None):
-    """
-    :returns: a list of pairs (MapGetter, weights)
-    """
-    oq = dstore['oqparam']
-    full_lt = full_lt or dstore['full_lt'].init()
-    R = full_lt.get_num_paths()
-    req_gb, trt_rlzs, gids = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean:
-        weights = dstore['gweights'][:]
-        trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
-    else:
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        weights = full_lt.weights
-    try:
-        tile_dir = dstore['tile_dir'][()]
-        fnames = [os.path.join(tile_dir, f) for f in os.listdir(tile_dir)]
-        dirnames = filter(os.path.isdir, fnames)
-    except KeyError:  # no tiling
-        if len(dstore['_rates/sid']) == 0:  # in case_60
-            return []
-        dirnames = [dstore.filename]
-    return [(getters.MapGetter(dirname, trt_rlzs, R, oq), weights)
-            for dirname in dirnames]
-
-
 class Hazard:
     """
     Helper class for storing the rates
@@ -508,7 +465,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(
+        req_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
             self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
@@ -767,8 +724,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         wget = self.full_lt.wget
         allargs = [(getter, weights, wget, hstats, individual, oq.max_sites_disagg,
-                    self.amplifier)
-                   for getter, weights in map_getters(dstore, self.full_lt)]
+                    self.amplifier) for getter, weights in getters.map_getters(
+                        dstore, self.full_lt)]
         if not allargs:  # case_60
             return
         self.hazard = {}  # kind -> array
