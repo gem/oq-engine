@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import os
 import operator
 import numpy
 
@@ -180,19 +180,25 @@ class MapGetter(object):
         """
         if self._map:
             return self._map
-        with hdf5.File(self.filename) as dstore:
-            rates_df = dstore.read_df('_rates')
-            # not using groupby to save memory
-            for sid in rates_df.sid.unique():
-                df = rates_df[rates_df.sid == sid]
-                try:
-                    array = self._map[sid]
-                except KeyError:
-                    array = numpy.zeros((self.L, self.G))
-                    self._map[sid] = array
-                array[df.lid, df.gid] = df.rate
-                #if sid == 4123:
-                #    print(df)
+        if os.path.isdir(self.filename):
+            fnames = [os.path.join(self.filename, f)
+                      for f in os.listdir(self.filename)]
+        else:
+            fnames = [self.filename]
+        for fname in fnames:
+            with hdf5.File(fname) as dstore:
+                rates_df = dstore.read_df('_rates')
+                # not using groupby to save memory
+                for sid in rates_df.sid.unique():
+                    df = rates_df[rates_df.sid == sid]
+                    try:
+                        array = self._map[sid]
+                    except KeyError:
+                        array = numpy.zeros((self.L, self.G))
+                        self._map[sid] = array
+                    array[df.lid, df.gid] = df.rate
+                    #if sid == 4123:
+                    #    print(df)
         return self._map
 
     # used in risk calculations where there is a single site per getter

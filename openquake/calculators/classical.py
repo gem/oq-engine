@@ -77,8 +77,11 @@ def store_rates(rates, sites_per_task, mon):
         os.mkdir(calc_dir)
     chunks = rates['sid'] // sites_per_task
     for chunk in numpy.unique(chunks):
+        chunk_dir = os.path.join(calc_dir, str(chunk))
+        if not os.path.exists(chunk_dir):
+            os.mkdir(chunk_dir)
         rats = rates[chunks == chunk]
-        fname = os.path.join(calc_dir, f'_poes{chunk}.hdf5')
+        fname = os.path.join(calc_dir, f'{chunk}/{mon.task_no}.hdf5')
         with hdf5.File(fname, 'a') as h5:
             if '_rates' not in h5:
                 h5.create_df('_rates', [(n, rates_dt[n]) for n in rates_dt.names])
@@ -169,8 +172,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        result['pnemap'] = rates
-        result['monitor'] = monitor
+        store_rates(rates, cmaker.sites_per_task, monitor)
         yield result
 
 
@@ -310,8 +312,6 @@ class Hazard:
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
-        self.sites_per_task = int(numpy.ceil(
-            self.N / (oq.concurrent_tasks or 1)))
         self.acc = AccumDict(accum={})
         self.offset = 0
 
@@ -324,17 +324,6 @@ class Hazard:
         gids = self.gids[grp_id]
         rates = pmap.array @ self.weig[gids] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
-
-    def store_rates(self, pnemap, mon):
-        """
-        Store pnes inside the _rates dataset
-        """
-        if isinstance(pnemap, numpy.ndarray):  # already converted (tiling)
-            rates = pnemap
-        else:
-            rates = pnemap.to_array()
-        if len(rates['sid']):  # happens in case_60
-            store_rates(rates, self.sites_per_task, mon)
 
     def store_mean_rates_by_src(self, dic):
         """
@@ -605,10 +594,12 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
+        sites_per_task = int(numpy.ceil(self.N / (oq.concurrent_tasks or 1)))
         for cm in self.cmakers:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.sites_per_task = sites_per_task
             gid = self.gids[cm.grp_id][0]
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
@@ -621,11 +612,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
-        mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
-            with mon:
-                self.haz.store_rates(dic['pnemap'], dic['monitor'])
         return {}
 
     def store_info(self):
