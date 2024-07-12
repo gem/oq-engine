@@ -172,7 +172,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        store_rates(rates, cmaker.sites_per_task, monitor)
+        if tiling:
+            store_rates(rates, cmaker.sites_per_task, monitor)
+        else:
+            result['pnemap'] = rates
         yield result
 
 
@@ -488,6 +491,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         max_gb = float(config.memory.pmap_max_gb)
+        self.sites_per_task = int(numpy.ceil(self.N / (oq.concurrent_tasks or 1)))
         if (oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb
             or oq.tile_spec):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
@@ -531,6 +535,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.sites_per_task = self.sites_per_task
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
@@ -594,12 +599,11 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        sites_per_task = int(numpy.ceil(self.N / (oq.concurrent_tasks or 1)))
         for cm in self.cmakers:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.sites_per_task = sites_per_task
+            cm.sites_per_task = self.sites_per_task
             gid = self.gids[cm.grp_id][0]
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
