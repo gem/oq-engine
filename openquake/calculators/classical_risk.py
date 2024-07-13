@@ -92,7 +92,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if any(name.startswith('_rates') for name in self.datastore):
+        parent = self.datastore.parent
+        if any(name.startswith('_rates') for name in self.datastore) or \
+           any(name.startswith('_rates') for name in parent):
             full_lt = self.datastore['full_lt'].init()
             stats = list(oq.hazard_stats().items())
             oq._stats = stats

@@ -151,7 +151,7 @@ def get_pmaps_gb(dstore, full_lt=None):
     return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
 
 
-def map_getters(dstore, full_lt=None):
+def map_getters(dstore, full_lt=None, disagg=False):
     """
     :returns: a list of pairs (MapGetter, weights)
     """
@@ -159,7 +159,7 @@ def map_getters(dstore, full_lt=None):
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean:
+    if oq.fastmean and not disagg:
         weights = dstore['gweights'][:]
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
     else:

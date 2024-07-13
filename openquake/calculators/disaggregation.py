@@ -31,8 +31,7 @@ from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.commonlib import util
-from openquake.calculators import getters
-from openquake.calculators import base
+from openquake.calculators import base, getters, classical
 
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
@@ -178,18 +177,17 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        names = ['_rates%03d' % sid for sid in self.sitecol.sids]
-        self.pgetters = [getters.MapGetter(
-            dstore.filename, name, trt_rlzs, self.R, oq) for name in names]
+        assert self.N < classical.CHUNKS, (self.N, classical.CHUNKS)
+        self.mgetters = getters.map_getters(dstore, full_lt, disagg=True)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
             Z = oq.num_rlzs_disagg
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
-                for sid in self.sitecol.sids:
-                    hcurve = self.pgetters[sid].get_hcurve(sid)
+                for mgetter in self.mgetters:
+                    sid = int(mgetter.name[6:])  # strip _rates
+                    hcurve = mgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
                         hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
                         full_lt.wget)
