@@ -502,8 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
                 int(self.cfactor[1]), int(self.cfactor[0]),
                 self.cfactor[1] / self.cfactor[0]))
-        if any(name.startswith('_rates') for name in self.datastore):
-            self.build_curves_maps()
+        self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
         return True
@@ -718,7 +717,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        if '_rates000' in set(self.datastore):
+        if '_rates000' in set(self.datastore) or not self.datastore.parent:
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
@@ -727,6 +726,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.amplifier) for getter in getters.map_getters(
                         dstore, self.full_lt)]
         if not allargs:  # case_60
+            logging.warning('No rates were generated')
             return
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1

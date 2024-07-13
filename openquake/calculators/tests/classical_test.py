@@ -517,7 +517,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_60(self):
         # pointsource approx with CampbellBozorgnia2003NSHMP2007
-        # the hazard curve MUST be zero; it was not originally
+        # the hazard curve MUST be zero; it was not, originally,
         # due to a wrong dip angle of 0 instead of 90
         self.run_calc(case_60.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
