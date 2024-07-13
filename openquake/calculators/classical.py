@@ -593,18 +593,15 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             gid = self.gids[cm.grp_id][0]
             size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
-            if sg.atomic or sg.weight <= maxw:
-                allargs.append((gid, self.sitecol, cm, ds))
-            else:
-                ntiles = numpy.ceil(sg.weight / maxw)
-                if size_gb / ntiles > max_gb:
-                    ntiles = numpy.ceil(size_gb / max_gb)
-                tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-                logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
-                for tile in tiles:
-                    allargs.append((gid, tile, cm, ds))
-                    sizes.append(size_gb * len(tile) / self.N)
-                    self.ntiles.append(len(tiles))
+            ntiles = numpy.ceil(sg.weight / maxw)
+            if size_gb / ntiles > max_gb:
+                ntiles = numpy.ceil(size_gb / max_gb)
+            tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
+            for tile in tiles:
+                allargs.append((gid, tile, cm, ds))
+                sizes.append(size_gb * len(tile) / self.N)
+                self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles, maxsize=%.1f G',
                         max(self.ntiles), max(sizes))
         self.datastore.swmr_on()  # must come before the Starmap
