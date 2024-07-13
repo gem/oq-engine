@@ -18,6 +18,7 @@
 
 import sys
 import gzip
+import tempfile
 import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
@@ -171,7 +172,10 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
+        tmp = tempfile.gettempdir()
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
+             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}), \
              mock.patch.object(ClassicalCalculator,
                                'fix_maxw_tsize', lambda self, m, t: (m, t)):
             self.assert_curves_ok([
