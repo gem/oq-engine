@@ -290,7 +290,7 @@ class PointSource(ParametricSeismicSource):
             for mag, [planar] in planardict.items():
                 for pla in planar.reshape(-1, 3):
                     surface = PlanarSurface.from_(pla)
-                    strike, dip, rake = pla.sdr
+                    _strike, _dip, rake = pla.sdr
                     rate = pla.wlr[2]
                     yield ParametricProbabilisticRupture(
                         mag, rake, self.tectonic_region_type,
@@ -429,7 +429,8 @@ class CollapsedPointSource(PointSource):
         return sum(src.count_ruptures() for src in self.pointsources)
 
 
-def grid_point_sources(sources, ps_grid_spacing, msr, cnt=0, monitor=Monitor()):
+def grid_point_sources(
+        sources, ps_grid_spacing, msr, cnt=0, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
@@ -476,3 +477,21 @@ def grid_point_sources(sources, ps_grid_spacing, msr, cnt=0, monitor=Monitor()):
         else:  # there is a single source
             out.append(ps[idxs[0]])
     return {grp_id: out, 'cnt': cnt}
+
+
+def get_rup_maxlen(src):
+    """
+    :returns: the maximum rupture length for point sources and area sources
+    """
+    if hasattr(src, 'nodal_plane_distribution'):
+        maxmag, _rate = src.get_annual_occurrence_rates()[-1]
+        width = src.lower_seismogenic_depth - src.upper_seismogenic_depth
+        msr = src.magnitude_scaling_relationship
+        rar = src.rupture_aspect_ratio
+        lens = []
+        for _, np in src.nodal_plane_distribution.data:
+            area = msr.get_median_area(maxmag, np.rake)
+            dims = get_rupdims(numpy.array([area]), np.dip, width, rar)[0]
+            lens.append(dims[0])
+        return max(lens)
+    return 0.

@@ -32,7 +32,7 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_trts_around(rupdic, mosaic_dir):
+def get_trts_around(rupdic, exposure_hdf5):
     """
     :returns: list of TRTs for the mosaic model covering lon, lat
     """
@@ -43,8 +43,7 @@ def get_trts_around(rupdic, mosaic_dir):
     [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
     if mosaic_model == '???':
         raise ValueError(f'({lon}, {lat}) is not covered by the mosaic!')
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    with hdf5.File(smodel) as f:
+    with hdf5.File(exposure_hdf5) as f:
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
     logging.info('Considering %s[%s]: (%s, %s)',
@@ -101,19 +100,19 @@ def get_rupture_dict(dic):
 
 def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
-                            asset_hazard_distance, ses_seed, mosaic_dir):
+                            asset_hazard_distance, ses_seed,
+                            exposure_hdf5=None, station_data_file=None):
     """
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [expo],
-              'site_model': [smodel],
+    if exposure_hdf5 is None:
+        exposure_hdf5 = os.path.join(
+            config.directory.mosaic_dir, 'exposure.hdf5')
+    inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict)
-    rupture_file = rupdic.pop('rupture_file')
     if trt is None:
-        trts, _ = get_trts_around(rupdic, mosaic_dir)
+        trts, _ = get_trts_around(rupdic, exposure_hdf5)
         trt = trts[0]
     params = dict(
         calculation_mode='scenario_risk',
@@ -125,13 +124,18 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
+    rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
+    if station_data_file:
+        inputs['station_data'] = station_data_file
     oq = readinput.get_oqparam(params)
-    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
-    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
+    # NB: fake h5 to cache `get_site_model` and avoid multiple associations
+    _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
+        oq, h5={'performance_data': hdf5.FakeDataset()})
+    id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = get_tmap_keys(expo, countries)
+    tmap_keys = get_tmap_keys(exposure_hdf5, countries)
     logging.root.handlers = []  # avoid breaking the logs
     allparams = []
     for key in tmap_keys:
@@ -166,7 +170,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', mosaic_dir=config.directory.mosaic_dir):
+             ses_seed='42', exposure_hdf5=None, station_data_file=None):
     """
     This script is meant to be called from the command-line
     """
@@ -176,14 +180,13 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         allparams = get_aristotle_allparams(
             rupture_dict, maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, mosaic_dir)
+            ses_seed, exposure_hdf5, station_data_file)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, user, None)
+    jobctxs = engine.create_jobs(allparams, 'warn', None, user, None)
     for params, job in zip(allparams, jobctxs):
         try:
             engine.run_jobs([job])
@@ -203,6 +206,9 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.station_data_file = 'CSV file with the station data'
+main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
+                          'and vulnerability functions')
 
 if __name__ == '__main__':
     sap.run(main_cmd)

@@ -104,7 +104,7 @@ def PolygonPatch(polygon, **kwargs):
 def debug_plot(*polygons):
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     for polygon in polygons:
         pol = polygon._polygon2d
         x1, y1, x2, y2 = pol.bounds

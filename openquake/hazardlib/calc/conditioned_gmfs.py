@@ -111,7 +111,6 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
-from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
@@ -123,7 +122,6 @@ from openquake.hazardlib.contexts import ContextMaker
 
 U32 = numpy.uint32
 F32 = numpy.float32
-
 
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
@@ -189,6 +187,8 @@ class ConditionedGmfComputer(GmfComputer):
             observed_imt_strs, cmaker, spatial_correl=None,
             cross_correl_between=None, ground_motion_correlation_params=None,
             number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
+        assert len(station_data) == len(station_sitecol), (
+            len(station_data), len(station_sitecol))
         GmfComputer.__init__(
             self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
             correlation_model=spatial_correl,
@@ -201,6 +201,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
+        self.correlation_cutoff = cmaker.oq.correlation_cutoff
         self.rupture = rupture
         self.sitecol = sitecol
         self.station_sitecol = station_sitecol
@@ -240,7 +241,8 @@ class ConditionedGmfComputer(GmfComputer):
             with umon:
                 self.update(data, array, rlzs, [mea])
         with umon:
-            return self.strip_zeros(data)
+            df = self.strip_zeros(data)
+            return df
 
     def compute(self, gsim, rlzs, mea, tau, phi, rng):
         """
@@ -258,29 +260,24 @@ class ConditionedGmfComputer(GmfComputer):
             mu_Y_yD = mea[m]
             cov_WY_WY_wD = tau[m]
             cov_BY_BY_yD = phi[m]
-            try:
-                result[m] = self._compute(
-                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, E, rng)
-            except Exception as exc:
-                raise RuntimeError(
-                    "(%s, %s, source_id=%r) %s: %s"
-                    % (gsim, im, decode(self.source_id),
-                       exc.__class__.__name__, exc)
-                ).with_traceback(exc.__traceback__)
+            result[m] = self._compute(
+                mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, E, rng)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
         return result.transpose(1, 0, 2)
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
+        eps = self.correlation_cutoff
         if self.cmaker.truncation_level <= 1E-9:
             gmf = exp(mu_Y, imt != "MMI")
             gmf = gmf.repeat(num_events, axis=1)
         else:
-            cov_Y_Y = cov_WY_WY + cov_BY_BY
+            # add a cutoff to remove negative eigenvalues
+            cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
             arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=num_events,
-                check_valid="warn", tol=1e-5, method="eigh")
+                check_valid="raise", tol=1e-5, method="cholesky")
             gmf = exp(arr, imt != "MMI").T
         return gmf  # shapes (N, E)
 

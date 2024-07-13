@@ -16,8 +16,8 @@
 """
 Test cases 01–10 are based on the verification tests described in the
 USGS ShakeMap 4.1 Manual.
-Ref: Worden, C. B., E. M. Thompson, M. Hearne, and D. J. Wald (2020). 
-ShakeMap Manual Online: technical manual, user’s guide, and software guide, 
+Ref: Worden, C. B., E. M. Thompson, M. Hearne, and D. J. Wald (2020).
+ShakeMap Manual Online: technical manual, user’s guide, and software guide,
 U.S. Geological Survey. DOI: https://doi.org/10.5066/F7D21VPQ, see
 https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
@@ -58,7 +58,7 @@ class SetUSGSTestCase(unittest.TestCase):
         assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
-        
+
     def test_case_02(self):
         case_name = "test_case_02"
         rupture = test_data.RUP
@@ -326,7 +326,7 @@ class SetUSGSTestCase(unittest.TestCase):
 
 # Functions useful for debugging purposes. Recreates the plots on
 # https://usgs.github.io/shakemap/manual4_0/tg_verification.html
-# Original code is from the ShakeMap plotting modules 
+# Original code is from the ShakeMap plotting modules
 # XTestPlot, XTestPlotSpectra, and XTestPlotMulti:
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot.py
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_spectra.py
@@ -334,7 +334,7 @@ class SetUSGSTestCase(unittest.TestCase):
 def plot_test_results(lons, means, stds, target_imt, case_name):
     return  # remove the return to enable debug plotting
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
+    _fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
     ax[0].plot(lons, means, color="k", label="mean")
     ax[0].plot(
@@ -357,7 +357,7 @@ def plot_test_results(lons, means, stds, target_imt, case_name):
 def plot_test_results_spectra(periods, means, stds, case_name):
     return  # remove the return to show the plot
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
+    _fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
     ax[0].semilogx(periods, means, color="k", label="mean")
     ax[0].semilogx(
@@ -382,7 +382,7 @@ def plot_test_results_multi(lons, means_list, stds_list, std_addon, target_imt,
     return  # remove the return to show the plot
     import matplotlib.pyplot as plt
     colors = ["k", "b", "g", "r", "c", "m"]
-    fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
+    _fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
     for i in range(len(means_list)):
         means = means_list[i]

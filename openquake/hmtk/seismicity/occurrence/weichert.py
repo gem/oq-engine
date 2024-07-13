@@ -71,14 +71,14 @@ class Weichert(SeismicityOccurrence):
 
     def calculate(self, catalogue, config, completeness=None):
         """Calculates b value and rate for mag ref"""
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+        bval, sigma_b, rate, sigma_rate, _aval, _sigma_a = self._calculate(
             catalogue, config, completeness
         )
         return bval, sigma_b, rate, sigma_rate
 
     def calc(self, catalogue, config, completeness=None):
         """Calculates GR params"""
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+        bval, sigma_b, _rate, _sigma_rate, aval, sigma_a = self._calculate(
             catalogue, config, completeness
         )
         return bval, sigma_b, aval, sigma_a

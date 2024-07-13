@@ -139,6 +139,8 @@ def export_hcurves_by_imt_csv(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
     comment.update(imt=imt)
+    
+    
     return writers.write_csv(dest, hcurves, comment=comment,
                              header=[name for (name, dt) in lst])
 
@@ -185,18 +187,17 @@ def export_aelo_csv(key, dstore):
     comment = dstore.metadata
     comment.update(lon=lon, lat=lat, kind='mean',
                    investigation_time=oq.investigation_time)
-
     if key == 'hcurves':
         arr = dstore['hcurves-stats'][0, 0]  # shape (M, L1)
         M, L1 = arr.shape
         array = numpy.zeros(M*L1, [('imt', hdf5.vstr), ('iml', float),
                                    ('poe', float)])
         for m, imt in enumerate(oq.imtls):
-            for l, iml in enumerate(oq.imtls[imt]):
-                row = array[m*L1 + l]
+            for li, iml in enumerate(oq.imtls[imt]):
+                row = array[m*L1 + li]
                 row['imt'] = imt
                 row['iml'] = iml
-                row['poe'] = arr[m, l]
+                row['poe'] = arr[m, li]
         writers.write_csv(fname, array, comment=comment)
 
     elif key == 'uhs':
@@ -424,7 +425,9 @@ def export_relevant_gmfs(ekey, dstore):
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    if 'complete' in dstore.parent:
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']
+    elif 'complete' in dstore.parent:
         sitecol.complete = dstore.parent['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
         dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
@@ -532,14 +535,13 @@ def export_mean_disagg_by_src(ekey, dstore):
 
 @export.add(('disagg-rlzs', 'csv'),
             ('disagg-stats', 'csv'),
-            ('disagg-rlzs-traditional', 'csv'),
-            ('disagg-stats-traditional', 'csv'))
+            ('disagg-rlzs-traditional', 'csv'))
 def export_disagg_csv(ekey, dstore):
-    name, ext = ekey
+    name, _ext = ekey
     spec = name[7:]  # rlzs, stats, rlzs-traditional, stats-traditional
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs = dstore['full_lt'].get_realizations()
+    ws = dstore['weights'][:]
     best_rlzs = dstore['best_rlzs'][:]
     N = len(best_rlzs)
     P = len(oq.poes) or 1
@@ -567,7 +569,7 @@ def export_disagg_csv(ekey, dstore):
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
         if spec.startswith('rlzs') or oq.iml_disagg:
-            weights = numpy.array([rlzs[r].weight[-1] for r in best_rlzs[s]])
+            weights = ws[best_rlzs[s]]
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()
@@ -652,21 +654,30 @@ def export_rtgm(ekey, dstore):
     writer.save(df, fname, comment=comment)
     return [fname]
 
+@export.add(('mce', 'csv'))
+def export_mce(ekey, dstore):
+    df = dstore.read_df('mce')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('mce.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]
 
-# NB: this is exporting only the first site and it is okay
+
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
-    js = dstore[ekey[0]][0].decode('utf8')
-    sitecol = dstore['sitecol']
-    dic = json.loads(js)
-    writer = writers.CsvWriter(fmt='%.5f')
-    fname = dstore.export_path('%s.csv' % ekey[0])
-    comment = dstore.metadata.copy()
-    comment['lon'] = sitecol.lons[0]
-    comment['lat'] = sitecol.lats[0]
-    comment['vs30'] = sitecol.vs30[0]
-    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
-    writer.save(dic.items(), fname, header=['parameter', 'value'],
+    sitecol = dstore['sitecol']    
+    for s, site in enumerate(sitecol):
+        js = dstore[ekey[0]][s].decode('utf8')
+        dic = json.loads(js)
+        writer = writers.CsvWriter(fmt='%.5f')
+        fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
+        comment = dstore.metadata.copy()
+        comment['lon'] = sitecol.lons[s]
+        comment['lat'] = sitecol.lats[s]
+        comment['vs30'] = sitecol.vs30[s]
+        comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+        writer.save(dic.items(), fname, header=['parameter', 'value'],
                 comment=comment)
     return [fname]
 

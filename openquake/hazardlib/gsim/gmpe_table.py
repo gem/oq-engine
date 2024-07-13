@@ -92,7 +92,7 @@ def _return_tables(self, mag, imt, which):
         else:
             iml_table = self.stddev[imt.string][:]
 
-        n_d, n_s, n_m = iml_table.shape
+        n_d, _n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
         if which == "IMLs":

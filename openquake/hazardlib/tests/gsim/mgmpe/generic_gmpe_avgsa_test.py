@@ -16,9 +16,8 @@
 
 import unittest
 import numpy as np
-from openquake.hazardlib.imt import PGA, AvgSA
-from openquake.hazardlib.contexts import RuptureContext
-from openquake.hazardlib import gsim, imt, const
+from openquake.hazardlib.imt import AvgSA
+from openquake.hazardlib import gsim
 from openquake.hazardlib.gsim.mgmpe.generic_gmpe_avgsa import (
     GenericGmpeAvgSA, GmpeIndirectAvgSA)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase

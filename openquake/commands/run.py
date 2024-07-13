@@ -63,7 +63,6 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
-    print('See the output with silx view %s' % calc.datastore.filename)
     calc_path, _ = os.path.splitext(calc.datastore.filename)  # used below
     return calc
 
@@ -74,7 +73,7 @@ def main(job_ini,
          *,
          slowest: int = None,
          hc: int = None,
-         param='',
+         param=(),
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info'):
@@ -89,7 +88,10 @@ def main(job_ini,
     except Exception:  # gaierror
         host = None
     if param:
-        params = dict(p.split('=', 1) for p in param.split(','))
+        params = {}
+        for par in param:
+            k, v = par.split('=', 1)
+            params[k] = v
     else:
         params = {}
     if hc:
@@ -105,15 +107,16 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    if len(job_ini) == 1:
-        return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
-                    loglevel, exports, params, user_name, host)
-    jobs = create_jobs(job_ini, loglevel, hc_id=hc,
+    dics = [readinput.get_params(ini) for ini in job_ini]
+    for dic in dics:
+        dic.update(params)
+        dic['exports'] = ','.join(exports)
+        if concurrent_tasks:
+            dic['concurrent_tasks'] = str(concurrent_tasks)
+    jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
-    for job in jobs:
-        job.params.update(params)
-        job.params['exports'] = ','.join(exports)
     run_jobs(jobs)
+    return jobs[0].calc_id
 
 
 main.job_ini = dict(help='calculation configuration file '
@@ -122,7 +125,7 @@ main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
 main.reuse_input = dict(help='reuse source model and exposure')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
-main.param = dict(help='override parameter with the syntax NAME=VALUE,...')
+main.param = dict(help='override parameters with TOML syntax', nargs='*')
 main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',

@@ -15,32 +15,25 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
 import gzip
 import json
 import logging
+from urllib.parse import parse_qs
 import shapely
 import numpy
 import pandas
-from shapely.geometry import MultiPolygon
 from scipy.stats import linregress
-from openquake.commonlib import datastore
-from openquake.commonlib.readinput import read_countries_df
+from shapely.geometry import Polygon, LineString, mapping, shape
+from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.calculators.extract import Extractor, WebExtractor, clusterize
+from openquake.calculators.extract import (
+    Extractor, WebExtractor, clusterize)
+from openquake.calculators.postproc.plots import (
+    plot_avg_gmf, import_plt, add_borders)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
-from openquake.hmtk.plotting.patch import PolygonPatch
-
-
-def import_plt():
-    if os.environ.get('TEXT'):
-        import plotext as plt
-    else:
-        import matplotlib.pyplot as plt
-    return plt
 
 
 def make_figure_hcurves(extractors, what):
@@ -81,7 +74,7 @@ def make_figure_uhs_cluster(extractors, what):
     import matplotlib.cm as cm
     kstr = what.split('?')[1]
     k = int(kstr.split('=')[1])
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     [ex] = extractors
     trts = ex.get('full_lt').trts
     hmaps = ex.get('hmaps?kind=rlzs')
@@ -114,88 +107,13 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
-def add_borders(ax):
-    plt = import_plt()
-    polys = read_countries_df(buffer=0)['geom']
-    cm = plt.get_cmap('RdBu')
-    num_colours = len(polys)
-    for idx, poly in enumerate(polys):
-        colour = cm(1. * idx / num_colours)
-        if isinstance(poly, MultiPolygon):
-            for onepoly in poly.geoms:
-                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
-        else:
-            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
-    return ax
-
-
-def get_assetcol(calc_id):
-    assetcol = None
-    dstore = datastore.read(calc_id)
-    if 'assetcol' in dstore:
-        try:
-            assetcol = dstore['assetcol'][()]
-        except AttributeError:
-            assetcol = dstore['assetcol'].array
-    return assetcol
-
-
-def get_country_iso_codes(calc_id, assetcol):
-    dstore = datastore.read(calc_id)
-    try:
-        ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
-        ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
-    except KeyError:  # ID_0 might be missing
-        id_0_str = None
-    else:
-        id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
-    return id_0_str
-
-
-def plot_avg_gmf(calc_id, imt):
-    [ex] = [Extractor(calc_id)]
-    plt = import_plt()
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    ax.grid(True)
-    ax.set_xlabel('Lon')
-    ax.set_ylabel('Lat')
-
-    title = 'Avg GMF for %s' % imt
-    assetcol = get_assetcol(calc_id)
-    if assetcol is not None:
-        country_iso_codes = get_country_iso_codes(calc_id, assetcol)
-        if country_iso_codes is not None:
-            title += ' (Countries: %s)' % country_iso_codes
-    ax.set_title(title)
-
-    avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
-    gmf = avg_gmf[imt]
-    markersize = 5
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
-                      s=markersize)
-    plt.colorbar(coll)
-
-    ax = add_borders(ax)
-
-    minx = avg_gmf['lons'].min()
-    maxx = avg_gmf['lons'].max()
-    miny = avg_gmf['lats'].min()
-    maxy = avg_gmf['lats'].max()
-    w, h = maxx - minx, maxy - miny
-    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
-    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
-    return plt
-
-
 def make_figure_avg_gmf(extractors, what):
     """
     $ oq plot "avg_gmf?imt=PGA"
     """
     [ex] = extractors
     imt = what.split('=')[1]
-    calc_id = ex.calc_id
-    plt = plot_avg_gmf(calc_id, imt)
+    plt = plot_avg_gmf(ex, imt)
     return plt
 
 
@@ -440,7 +358,7 @@ def make_figure_task_info(extractors, what):
     [ex] = extractors
     dic = ex.get(what).to_dict()
     del dic['extra']
-    [(task_name, task_info)] = dic.items()
+    [(_task_name, task_info)] = dic.items()
     x = task_info['duration']
     if plt.__name__ == 'plotext':
         mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
@@ -470,7 +388,7 @@ def make_figure_source_data(extractors, what):
     $ oq plot "source_data?taskno=XX"
     """
     plt = import_plt()
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     [ex] = extractors
     aw = ex.get(what)
     x, y = aw.ctimes, aw.weight
@@ -492,7 +410,7 @@ def make_figure_memory(extractors, what):
     [ex] = extractors
     task_info = ex.get('task_info').to_dict()
     del task_info['extra']
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     ax.set_xlabel('tasks')
     ax.set_ylabel('GB')
@@ -517,7 +435,7 @@ def make_figure_sources(extractors, what):
     info = ex.get(what)
     wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
     srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
     pp = PolygonPlotter(ax)
@@ -559,7 +477,7 @@ def make_figure_gridded_sources(extractors, what):
     plt = import_plt()
     [ex] = extractors
     dic = json.loads(ex.get(what).json)  # id -> lonlats
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
     tot = 0
@@ -586,7 +504,7 @@ def make_figure_rupture_info(extractors, what):
     plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     n = 0
     tot = 0
@@ -679,7 +597,7 @@ def make_figure_dist_by_mag(extractors, what):
     [ex] = extractors
     effect = ex.get('effect')
     mags = ['%.2f' % mag for mag in effect.mags]
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     trti = 0
     for trt, dists in effect.dist_bins.items():
         dic = dict(zip(mags, effect[:, :, trti]))
@@ -721,7 +639,7 @@ def make_figure_effect_by_mag(extractors, what):
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)
         effect = numpy.array(list(ebm.values()))
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     trti = 0
     for trt in gsims_by_trt:
         ax.plot(mags, effect[:, -1, trti], label=trt)
@@ -771,7 +689,7 @@ def make_figure_csq_curves(extractors, what):
     got = {}  # (calc_id, limit_state) -> curve
     for i, ex in enumerate(extractors):
         aw = ex.get(what)
-        P, C = aw.shape
+        P, _C = aw.shape
         if P < 2:
             raise RuntimeError('Not enough return periods: %d' % P)
         for c, csq in enumerate(aw.consequences):
@@ -863,6 +781,122 @@ def make_figure_gmf_scenario(extractors, what):
     if info:
         plt.title(info)
     plt.grid(True)
+    return plt
+
+
+def df_to_geojson(df, geometry_col='geometry'):
+    features = []
+    for _, row in df.iterrows():
+        geom = row[geometry_col]
+        geom_geojson = mapping(geom)
+        properties = row.drop(geometry_col).to_dict()
+        feature = {
+            "type": "Feature",
+            "geometry": geom_geojson,
+            "properties": properties
+        }
+        features.append(feature)
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+    return geojson
+
+
+def plot_geojson(data, ax, color, label):
+    for feature in data['features']:
+        geom = shape(feature['geometry'])
+        if geom.geom_type == 'Polygon':
+            x, y = geom.exterior.xy
+            ax.plot(x, y, color=color, label=label)
+        elif geom.geom_type == 'MultiPolygon':
+            for polygon in geom:
+                x, y = polygon.exterior.xy
+                ax.plot(x, y, color=color, label=label)
+        elif geom.geom_type == 'LineString':
+            x, y = geom.xy
+            ax.plot(x, y, color=color, label=label)
+        else:
+            raise NotImplementedError(
+                f'Unable to plot geometry type {geom.geom_type}')
+
+
+def get_boundary_2d(smsh):
+    """ Returns a polygon """
+    coo = []
+    # Upper boundary + trace
+    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[0, :]))[0]
+    tmp = [(smsh.mesh.lons[0, i], smsh.mesh.lats[0, i]) for i in idx]
+    trace = LineString(tmp)
+    coo.extend(tmp)
+    # Right boundary
+    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, -1]))[0]
+    tmp = [(smsh.mesh.lons[i, -1], smsh.mesh.lats[i, -1]) for i in idx]
+    coo.extend(tmp)
+    # Lower boundary
+    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[-1, :]))[0]
+    tmp = [(smsh.mesh.lons[-1, i], smsh.mesh.lats[-1, i])
+           for i in numpy.flip(idx)]
+    coo.extend(tmp)
+    # Left boundary
+    idx = idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, 0]))[0]
+    tmp = [(smsh.mesh.lons[i, 0], smsh.mesh.lats[i, 0])
+           for i in numpy.flip(idx)]
+    coo.extend(tmp)
+    return trace, Polygon(coo)
+
+
+def make_figure_multi_fault(extractors, what):
+    """
+    $ oq plot "multi_fault?source_id=xxx"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    kwargs = what.split('?')[1]
+    if kwargs:
+        src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
+    else:
+        src_ids = []
+    csm = dstore['_csm']
+    mfs = [src for src in csm.get_sources() if src.code == b'F']
+    assert mfs, 'There are no multi fault sources to plot'
+    src = mfs[0]
+    sections = src.get_sections()
+    if src_ids:
+        secs = set()
+        for src in mfs:
+            if src.source_id in src_ids:
+                for rup in src.iter_ruptures():
+                    secs.update(
+                        sections[surf.idx] for surf in rup.surface.surfaces)
+    else:
+        secs = sections
+        print([mf.source_id for mf in mfs])
+    print('Found %d sections' % len(secs))
+    traces = []
+    polys = []
+    suids = []
+    for sec in secs:
+        trace, poly = get_boundary_2d(sec)
+        traces.append(trace)
+        polys.append(poly)
+        suids.append(sec.idx)
+    daf_polys = pandas.DataFrame({'suid': suids, 'geometry': polys})
+    daf_polys_geojson = df_to_geojson(daf_polys)
+    daf_traces = pandas.DataFrame({'suid': suids, 'geometry': traces})
+    daf_traces_geojson = df_to_geojson(daf_traces)
+
+    _fig, ax = plt.subplots()
+    plot_geojson(daf_polys_geojson, ax, color='blue', label='Sections')
+    plot_geojson(daf_traces_geojson, ax, color='red', label='Traces')
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    ax.set_aspect('equal')
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
     return plt
 
 

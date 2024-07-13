@@ -1516,7 +1516,7 @@ def losses_by_period(losses, return_periods, num_events, eff_time=None,
         losses = losses.to_numpy()
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses, sorting_idxs, eperiods = fix_losses(
+    losses, _sorting_idxs, eperiods = fix_losses(
         losses, num_events, eff_time, sorting)
     num_left = sum(1 for rp in return_periods if rp < eperiods[0])
     num_right = sum(1 for rp in return_periods if rp > eperiods[-1])

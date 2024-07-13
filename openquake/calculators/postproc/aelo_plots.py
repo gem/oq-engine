@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,29 +49,24 @@ def _find_fact_maxC(T, ASCE_version):
     # find the factor to convert to maximum component based on
     # ASCE7-16 and ASCE7-22
 
-    f1 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
-    f2 = interpolate.interp1d([1, 5], [1.3, 1.5])
-    f3 = interpolate.interp1d([0.2, 1], [1.2, 1.25])
-    f4 = interpolate.interp1d([1, 10], [1.25, 1.3])
-
     if ASCE_version == 'ASCE7-16':
         if T == 0:
             fact_maxC = 1.
         elif T <= 0.2:
             fact_maxC = 1.1
         elif T <= 1:
-            fact_maxC = f1(T)
+            fact_maxC = numpy.interp(T, [0.2, 1], [1.1, 1.3])
         elif T <= 5:
-            fact_maxC = f2(T)
+            fact_maxC = numpy.interp(T, [1, 5], [1.3, 1.5])
         else:
             fact_maxC = 1.5
     elif ASCE_version == 'ASCE7-22':
         if T <= 0.2:
             fact_maxC = 1.2
         elif T <= 1:
-            fact_maxC = f3(T)
+            fact_maxC = numpy.interp(T, [0.2, 1], [1.2, 1.25])
         elif T <= 10:
-            fact_maxC = f4(T)
+            fact_maxC = numpy.interp(T, [1, 10], [1.25, 1.3])
         else:
             fact_maxC = 1.5
     return numpy.round(fact_maxC, 3)
@@ -220,7 +215,7 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     :returns: image of governing MCE
     """
     plt = import_plt()
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
+    _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     # get imls and imts, make arrays
     mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
     det_mce = mce_df['DetMCE']

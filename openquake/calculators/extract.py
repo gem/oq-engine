@@ -229,13 +229,14 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
-    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
     full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
+    bplen = len(rlzs[0]['branch_path'])
+    dt = [('rlz_id', U32), ('branch_path', '<S%d' % bplen), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
@@ -846,7 +847,7 @@ def extract_aggregate(dstore, what):
     /extract/aggregate/avg_losses?
     kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
     """
-    name, qstring = what.split('?', 1)
+    _name, qstring = what.split('?', 1)
     info = get_info(dstore)
     qdic = parse(qstring, info)
     suffix = '-rlzs' if qdic['rlzs'] else '-stats'
@@ -1046,7 +1047,7 @@ def build_damage_array(data, damage_dt):
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, L, D = data.shape
+    A, _L, _D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for li, lt in enumerate(damage_dt.names):
@@ -1163,7 +1164,8 @@ def extract_disagg(dstore, what):
     else:
         poei = slice(None)
     if 'traditional' in spec:
-        spec = spec[:4]  # rlzs or stats
+        spec = spec.split('-')[0]
+        assert spec in {'rlzs', 'stats'}, spec
         traditional = True
     else:
         traditional = False
@@ -1208,8 +1210,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weight = dstore['full_lt'].init().rlzs['weight']
-        weights = weight[rlzs]
+        weights = dstore['weights'][:][rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
@@ -1255,7 +1256,7 @@ def extract_mean_rates_by_src(dstore, what):
     site_id = int(site_id)
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id]
-    L1, Ns = rates.shape
+    _L1, Ns = rates.shape
     arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
     arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
@@ -1375,7 +1376,10 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        if 'source_mags' not in dstore:  # ruptures import from CSV
+            mags = numpy.unique(dstore['ruptures']['mag'])
+        else:
+            mags = dstore[f'source_mags/{rgetter.trt}'][:]
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:

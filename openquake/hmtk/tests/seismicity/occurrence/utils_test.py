@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -162,7 +162,7 @@ class RecurrenceTableTestCase(unittest.TestCase):
         fake_completeness_table = 0.0
         catalogue = Catalogue.make_from_dict({"year": [1900]})
         config = {"reference_magnitude": 3.0}
-        cmag, ctime, ref_mag, dmag, _ = rec_utils.input_checks(
+        _cmag, _ctime, ref_mag, _dmag, _ = rec_utils.input_checks(
             catalogue, config, fake_completeness_table
         )
         self.assertEqual(3.0, ref_mag)
@@ -171,7 +171,7 @@ class RecurrenceTableTestCase(unittest.TestCase):
         fake_completeness_table = 0.0
         catalogue = Catalogue.make_from_dict({"year": [1900]})
         config = {"magnitude_interval": 0.1}
-        cmag, ctime, ref_mag, dmag, _ = rec_utils.input_checks(
+        _cmag, _ctime, _ref_mag, dmag, _ = rec_utils.input_checks(
             catalogue, config, fake_completeness_table
         )
         self.assertEqual(0.1, dmag)

@@ -1,4 +1,43 @@
+  [Kyle Smith]
+  * Added a new gsim file sandikkaya_akkar_2017.py to implement the
+    Arias Intensity and Cumulative Absoloute Velocity ground motion 
+    models from Sandikkaya and Akkar (2017).
+
   [Michele Simionato]
+  * Making sure that the tiles contains at least 100 sites in classical tiling
+    calculations
+  * Rewritten the SLURM algorithm to work around the submission limit
+  * Added uniqueness check for the station coordinates
+  * Internal: removed parameter [dbserver]listen in openquake.cfg
+  * Added command `oq submit n job_ini` for usage in supercomputers
+  * Reimplemented the sensitivity analysis in a supercomputer-friendly way
+  * Fixed export realizations which was truncating the branch_path
+  * Extended logic tree filtering via `smlt_branch`
+  * Worked on disaggregation by multifault source
+
+  [Michele Simionato, Christopher Brooks]
+  * Internal: added a function for filtering sites around a rupture
+
+  [Michele Simionato]
+  * Internal: added method GsimLogicTree.to_node
+  * Internal: added commands `oq compare oqparam` and `oq plot_sites csvfiles`
+  * Fixed exporting the ruptures when imported from a CSV
+  * Fixed the issue of small negative eigenvalues in conditioned GMFs
+    calculations by adding a correlation_cutoff
+  * Internal: extended `Starmap.apply` to split DataFrames
+  * Fixed the avg_gmf exporter in presence of a filtered site collection
+
+  [Lana Todorovic]
+  * Improved secondary perils documentation
+
+  [Michele Simionato]
+  * Fixed the ordering of the realizations to depend on the source model
+    branch path also in the case of full enumeration: this is crucial to
+    get consistent results with the two approaches
+  * Saved data transfer in the context makers in classical calculations
+  * Internal: added utility `oq info geohash:<lon>,<lat>`
+  * Changed the scenario calculators to discard the sites far away from
+    the rupture, with the effect of generating different GMFs
   * Cached `get_realizations` and optimized the memory occupation; now
     302_990_625 realizations (i.e. EUR) require only 90 GB
 
@@ -11,47 +50,19 @@
   * Changed the GMF-based calculators to always set a `custom_site_id`
   * Internal: added variable OQ_SITE_DEBUG
 
+python3-oq-engine (3.20.1-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Antonio Ettorre, Armando Scarpati]
+  * Improved installation documentation
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 07 Jun 2024 09:13:03 +0000
+
 python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene, Michele Simionato]
   * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
 
   [Michele Simionato]
-  * Internal: added a command `oq reducexp exposure_xml site_model_csv`
-
-  [Paul Henshaw, Antonio Ettorre, Michele Simionato]
-  * Updated the documentation about installing the engine
-
-  [Michele Simionato]
-  * Raised the default `max_potential_paths` to 1,000,000
-  * Optimized the calculation of mean hazard curves when `use_rates=true`;
-    now it is possible to compute exactly mean curves even with millions
-    of realizations
-
-  [Paolo Tormene, Michele Simionato]
-  * Added command `oq plot 'gmf_scenario?imt=PGA&kind=rlz-0'`
-
-  [Fatemeh Alishahiha]
-  * Added vertical component to `abrahamson_silva_1997` gsim library
-
-  [Michele Simionato]
-  * Internal: removed ProbabilityCurve and rename ProbabilityMap->MapArray
-  * Optimized building the CompositeSourceModel for complex logic trees
-  * Optimized "reading rates" in postclassical
-  * Extended the `delta_loss` warning to scenario_risk calculations
-    and documented it
-
-  [Michele Simionato, Marco Pagani]
-  * Fixed the multifault rupture indices and the MultiLine class so
-    that the New Zealand model can run
-
-  [Paolo Tormene, Michele Simionato]
-  * Added a new parameter `asce_version` for AELO calculations
-
-  [Michele Simionato]
-  * Saving memory and disk space in conditioned GMFs scenarios, improving
-    also the performance in many cases
-  * Fixed the passing of parameters to the underlying GMPE in NRCan15SiteTerm
   * Added another check for missing gsim in scenario calculations
   * Using custom `hcurves` and `uhs` exporters in AELO mode
 

@@ -144,3 +144,7 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     def test_case_master(self):
         self.check(case_master)
+
+        # checking custom_site_id in UHS curves
+        [mean] = export(('uhs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-mean.csv', mean, delta=1E-5)

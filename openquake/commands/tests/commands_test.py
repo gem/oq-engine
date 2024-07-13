@@ -24,6 +24,7 @@ import unittest.mock as mock
 from contextlib import redirect_stdout
 import shutil
 import zipfile
+import subprocess
 import tempfile
 import unittest
 import numpy
@@ -74,7 +75,7 @@ SIMPLE_FAULT_SRC_MODEL = os.path.join(
 
 
 def setup_module():
-    os.environ['OQ_DATABASE'] = 'local'
+    os.environ['OQ_DATABASE'] = '127.0.0.1'
 
 
 class Print(object):
@@ -266,12 +267,8 @@ class RunShowExportTestCase(unittest.TestCase):
         Build a datastore instance to show what it is inside
         """
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
-        with Print.patch() as cls.p:
-            calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
-        cls.calc_id = calc.datastore.calc_id
-
-    def test_run_calc(self):
-        self.assertIn('See the output with silx view', str(self.p))
+        with Print.patch():
+            cls.calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
 
     def test_show_calc(self):
         with Print.patch() as p:
@@ -322,8 +319,7 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(
             os.path.dirname(eb_case_1.__file__), 'job_ruptures.ini')
         with Print.patch():
-            calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
-        calc_id = calc.datastore.calc_id
+            calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
         tempdir = tempfile.mkdtemp()
         with Print.patch():
             sap.runline("openquake.commands extract ruptures "
@@ -536,11 +532,18 @@ class EngineRunJobTestCase(unittest.TestCase):
             run_jobs(create_jobs([job_ini]))
 
     def test_sensitivity(self):
+        if sys.platform == 'win32':
+            raise unittest.SkipTest('Not supported on windows')
+
         # test the sensitivity of the UHS from the area_source_discretization
         job_ini = os.path.join(os.path.dirname(case_56.__file__), 'job.ini')
-        sap.runline(f'openquake.commands engine --run {job_ini} -c 0')
         with Print.patch() as p:
-            sap.runline('openquake.commands compare uhs -1 -2')
+            sap.runline(f'openquake.commands sensitivity_analysis {job_ini} '
+                        'area_source_discretization=[39.9,40.0]')
+        print(p)
+        subprocess.run(['bash', '-c', str(p)])  # run the generated script
+        with Print.patch() as p:
+            sap.runline('openquake.commands compare uhs -2 -3')
         print(p)
         self.assertIn('rms-diff', str(p))
         # testing different sitecols
@@ -549,10 +552,18 @@ class EngineRunJobTestCase(unittest.TestCase):
             sitecol.array['vs30'] = 750.
             ds1['sitecol'] = sitecol
         with Print.patch() as p:
-            sap.runline('openquake.commands compare sitecol -1 -2')
+            sap.runline('openquake.commands compare sitecol -2 -3')
         print(p)
+        # test compare oqparam
+        with Print.patch() as p:
+            sap.runline("openquake.commands compare oqparam -2 -3")
+        self.assertIn('area_source_discretization: 40.0 != 39.9', str(p))
 
-
+        # test collect_jobs
+        with Print.patch() as p:
+            sap.runline("openquake.commands collect_jobs -2 -3")
+        self.assertIn('All jobs completed correctly', str(p))
+        
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
@@ -686,8 +697,7 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
         job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
-            calc = sap.runline(f'openquake.commands run {job_ini}')
-        calc_id = calc.datastore.calc_id
+            calc_id = sap.runline(f'openquake.commands run {job_ini}')
         with mock.patch('logging.info') as info:
             sap.runline(f'openquake.commands reduce_sm {calc_id}')
         self.assertIn('Removed %d/%d sources', info.call_args[0][0])

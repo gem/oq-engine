@@ -165,7 +165,7 @@ def get_lvl(hcurve, imls, poe):
     return numpy.searchsorted(imls, iml)
 
 
-############################## probability maps ###############################
+# ############################# probability maps ##############################
 
 # numbified below
 def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
@@ -251,7 +251,7 @@ class MapArray(object):
         """
         :yields: G MapArrays of shape (N, L, 1)
         """
-        N, L, G = self.array.shape
+        _N, L, G = self.array.shape
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
@@ -322,15 +322,18 @@ class MapArray(object):
         rates = -numpy.log(pnes).astype(F32)
         return self.new(rates / itime)
 
-    def to_dict(self, gid=0):
+    def to_array(self, gid=0):
         """
         Assuming self contains an array of rates,
-        returns a dictionary of arrays with keys sid, lid, gid, rate
+        returns a composite array with fields sid, lid, gid, rate
         """
         rates = self.array
         idxs, lids, gids = rates.nonzero()
-        out = dict(sid=U32(self.sids[idxs]), lid=U16(lids),
-                   gid=U16(gids + gid), rate=F32(rates[idxs, lids, gids]))
+        out = numpy.zeros(len(idxs), rates_dt)
+        out['sid'] = self.sids[idxs]
+        out['lid'] = lids
+        out['gid'] = gids + gid
+        out['rate'] = rates[idxs, lids, gids]
         return out
 
     def interp4D(self, imtls, poes):
@@ -340,7 +343,7 @@ class MapArray(object):
         :returns: an array of shape (N, M, P, Z)
         """
         poes3 = self.array
-        N, L, Z = poes3.shape
+        N, _L, Z = poes3.shape
         M = len(imtls)
         P = len(poes)
         L1 = len(imtls[next(iter(imtls))])
@@ -366,7 +369,8 @@ class MapArray(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        return pandas.DataFrame(self.to_rates().to_dict())
+        arr = self.to_rates().to_array()
+        return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """

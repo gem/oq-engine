@@ -29,7 +29,7 @@ from openquake.hazardlib.contexts import (
     Effect, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
-from openquake.hazardlib.source.multi_fault import save
+from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.rupture import \
     get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
@@ -405,7 +405,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        save_and_split([self.src], geom.sections, gettemp(suffix='.hdf5'))
         set_msparams(self.src, geom.sections)
 
         # Create site-collection
@@ -459,7 +459,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        save_and_split([self.src], geom.sections, gettemp(suffix='.hdf5'))
         set_msparams(self.src, geom.sections)
 
         # Create site-collection

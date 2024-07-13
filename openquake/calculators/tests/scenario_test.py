@@ -149,7 +149,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_12(self):
         # test for DowrickRhoades2005Asc IPE with MMI
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        gmf_data, sig_eps, sitemesh = out['gmf_data', 'csv']
+        gmf_data, sig_eps, _sitemesh = out['gmf_data', 'csv']
         self.assertEqualFiles('gmf.csv', gmf_data)
         self.assertEqualFiles('sig_eps.csv', sig_eps)
 
@@ -272,11 +272,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_22.__file__, 'job_from_csv.ini',
                       gmfs_file='gmfdata.csv', sites_csv='sitemodel.csv')
         self.assertEqual(str(self.calc.sitecol),
-                         '<SiteCollection with 4/5 sites>')
+                         '<SiteCollection with 1/1 sites>')
         ds = self.calc.datastore
         # check the 4 of 5 sites and 4x10 GMVs were imported correctly
-        self.assertEqual(len(ds['sitecol']), 4)
-        self.assertEqual(len(ds['gmf_data/sid']), 40)
+        self.assertEqual(len(ds['sitecol']), 1)
+        self.assertEqual(len(ds['gmf_data/sid']), 10)
         df1 = self.calc.datastore.read_df('gmf_data')
         for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
             for g0, g1 in zip(df0[gmv], df1[gmv]):

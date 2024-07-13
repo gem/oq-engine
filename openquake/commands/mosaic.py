@@ -86,7 +86,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     exclude subsets of sites from those specified in the CSV file:
 
     * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each
-      identified by the corresponding 3-charracters code) to be selected,
+      identified by the corresponding 3-characters code) to be selected,
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
@@ -300,45 +300,51 @@ def callback(job_id, params, exc=None):
     aristotle_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(mosaic_dir='', *,
-              rupfname: str = FAMOUS,
-              maximum_distance: int = 300,
-              number_of_ground_motion_fields: int = 10):
+def aristotle(exposure_hdf5=None, *,
+              rupfname: str=FAMOUS,
+              stations: str=None,
+              maximum_distance: float=300.,
+              asset_hazard_distance: float=15.,
+              number_of_ground_motion_fields: int=10):
     """
     Run Aristotle calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
     a directory containing two files site_model.hdf5 and exposure.hdf5
     with a well defined structure.
     """
-    if not mosaic_dir and not config.directory.mosaic_dir:
+    if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = None
     truncation_level = 3
-    asset_hazard_distance = 15
     ses_seed = 42
     t0 = time.time()
     if rupfname.endswith('.csv'):
         rupture_file = None
-        for i, row in pandas.read_csv(rupfname).iterrows():
+        df = pandas.read_csv(rupfname)
+        for i, row in df.iterrows():
             rupdic = row.to_dict()
             rupdic['rake'] = 0.
             rupdic['dip'] = 90.
             rupdic['strike'] = 0.
             rupdic['rupture_file'] = None
             usgs_id = rupdic['usgs_id']
-            main_cmd(usgs_id, rupture_file, rupdic, callback,
-                     maximum_distance=maximum_distance,
-                     trt=trt, truncation_level=truncation_level,
-                     number_of_ground_motion_fields=number_of_ground_motion_fields,
-                     asset_hazard_distance=asset_hazard_distance,
-                     ses_seed=ses_seed, mosaic_dir=mosaic_dir)
-    else: # assume .xml
-        main_cmd('FromFile', rupfname, None, callback,
+            print('###################### %s [%d/%d] #######################' %
+                  (usgs_id, i + 1, len(df)))
+            main_cmd(
+                usgs_id, rupture_file, rupdic, callback,
+                maximum_distance=maximum_distance,
+                trt=trt, truncation_level=truncation_level,
+                number_of_ground_motion_fields=number_of_ground_motion_fields,
+                asset_hazard_distance=asset_hazard_distance,
+                ses_seed=ses_seed, exposure_hdf5=exposure_hdf5)
+    else:  # assume .xml
+        main_cmd('WithRuptureFile', rupfname, None, callback,
                  maximum_distance=maximum_distance,
                  trt=trt, truncation_level=truncation_level,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
-                 ses_seed=ses_seed, mosaic_dir=mosaic_dir)
+                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
+                 station_data_file=stations)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
@@ -347,9 +353,10 @@ def aristotle(mosaic_dir='', *,
         sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
 
 
-aristotle.mosaic_dir = 'Directory containing site_model.hdf5 and exposure.hdf5'
+aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
 aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
+aristotle.stations = 'Path to a csv file with the station data'
 aristotle.maximum_distance = 'Maximum distance in km'
 aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
 

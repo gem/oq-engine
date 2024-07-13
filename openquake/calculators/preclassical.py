@@ -45,6 +45,10 @@ TWO32 = 2 ** 32
 
 
 def source_data(sources):
+    """
+    Set the source .id attribute to the index in the source_info table
+    :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
+    """
     data = AccumDict(accum=[])
     for src in sources:
         data['src_id'].append(src.source_id)
@@ -59,7 +63,7 @@ def check_maxmag(pointlike):
     """Check for pointlike sources with high magnitudes"""
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
-        if maxmag >= 8.:
+        if maxmag >= 9.:
             logging.info('%s %s has maximum magnitude %s',
                          src.__class__.__name__, src.source_id, maxmag)
 
@@ -195,15 +199,21 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, csm)
         trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
-        self.sitecol = sites = csm.sitecol if csm.sitecol else None
+        sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gt = len(self.full_lt.get_trt_rlzs(trt_smrs))
+        Gfull = self.full_lt.gfull(trt_smrs)
+        gweights = self.full_lt.g_weights(trt_smrs)
+        self.datastore['gweights'] = gweights
+
+        Gt = len(gweights)
+        extra = f'<{Gfull}' if Gt < Gfull else ''
         nbytes = 4 * len(self.sitecol) * L * Gt
-        logging.warning(f'The global pmap would require %s ({Gt=})',
-                        general.humansize(nbytes))
+        # Gt is known before starting the preclassical
+        logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+                        general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -217,7 +227,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
-                    multifaults.extend(split_source(src))
+                    multifaults.append(src)
                 if reqv and sg.trt in oq.inputs['reqv']:
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
@@ -229,14 +239,16 @@ class PreClassicalCalculator(base.HazardCalculator):
                 normal_sources.extend(sg)
         if multifaults:
             # this is ultra-fast
-            secparams = build_secparams(multifaults[0].get_sections())
+            sections = multifaults[0].get_sections()
+            secparams = build_secparams(sections)
             logging.warning(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))
         else:
             secparams = ()
         self._process(atomic_sources, normal_sources, sites, secparams)
-        self.store_source_info(source_data(csm.get_sources()))
+        allsources = csm.get_sources()
+        self.store_source_info(source_data(allsources))
 
     def _process(self, atomic_sources, normal_sources, sites, secparams):
         # run preclassical in parallel for non-atomic sources
@@ -249,16 +261,14 @@ class PreClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = self.cmakers[grp_id]
+            cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code == b'F':  # multi fault source
-                    for split in split_source(src):
-                        smap.submit(([split], sites, cmaker, secparams))
-                elif src.code in b'CN':  # other heavy sources
+                elif src.code in b'CFN':  # other heavy sources
                     smap.submit(([src], sites, cmaker, secparams))
                 else:
                     others.append(src)
@@ -342,6 +352,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Raise an error if the sources were all discarded
         """
+        self.datastore.create_dset(
+            'weights',
+            F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
         totsites = sum(row[source_reader.NUM_SITES]
                        for row in self.csm.source_info.values())
         if totsites == 0:
