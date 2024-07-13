@@ -478,7 +478,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw * .75)
+            self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -571,6 +571,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         self.ntiles = []
         if config.distribution.save_on_tmp:
+            logging.info('Storing the rates in %s', self._monitor.calc_dir)
             self.datastore.hdf5.attrs['scratch_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
