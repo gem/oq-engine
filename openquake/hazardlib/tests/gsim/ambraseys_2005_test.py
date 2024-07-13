@@ -26,18 +26,9 @@ class AmbraseysEtAl2005TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check('Am05/Am05_MEAN_ROCK_H.csv',
-                   max_discrep_percentage=0.1)
-        
-    def test_all(self):
-        self.check('Am05/Am05_MEAN_SOFT_H.csv',
-                   max_discrep_percentage=0.1)
-        
-    def test_all(self):
-        self.check('Am05/Am05_MEAN_STIF_H.csv',
-                   max_discrep_percentage=0.1)
-    
-    def test_all(self):
-        self.check('Am05/Am05_STD_TOT_STIF_H.csv',
+                   'Am05/Am05_MEAN_SOFT_H.csv',
+                   'Am05/Am05_MEAN_STIF_H.csv',
+                   'Am05/Am05_STD_TOT_STIF_H.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -48,8 +39,5 @@ class AmbraseysEtAl2005VerticalTestCase(BaseGSIMTestCase):
 
     def test_all(self):
         self.check('Am05/Am05_MEAN_STIF_V.csv',
-                   max_discrep_percentage=0.1)
-        
-    def test_all(self):
-        self.check('Am05/Am05_STD_TOT_STIF_V.csv',
+                   'Am05/Am05_STD_TOT_STIF_V.csv',
                    max_discrep_percentage=0.1)
