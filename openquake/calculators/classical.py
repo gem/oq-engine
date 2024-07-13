@@ -204,7 +204,8 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
         return {}
 
     if amplifier:
-        with hdf5.File(pgetter.filename, 'r') as f:
+        # amplification is meant for few sites, i.e. no tiling
+        with hdf5.File(pgetter.filenames[0], 'r') as f:
             ampcode = f['sitecol'].ampcode
         imtls = DictArray({imt: amplifier.amplevels
                            for imt in pgetter.imtls})
