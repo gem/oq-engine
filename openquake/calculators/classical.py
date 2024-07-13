@@ -58,7 +58,10 @@ def _store(rates, h5):
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
         name = '_rates%03d' % chunk
-        h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+        try:
+            h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+        except ValueError:  # already created
+            pass
         hdf5.extend(h5[f'{name}/sid'], ch_rates['sid'])
         hdf5.extend(h5[f'{name}/gid'], ch_rates['gid'])
         hdf5.extend(h5[f'{name}/lid'], ch_rates['lid'])
