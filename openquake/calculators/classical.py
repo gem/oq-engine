@@ -147,6 +147,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if config.distribution.save_on_tmp and tiling:
+            # tested in case_22
             try:
                 os.mkdir(monitor.calc_dir)
             except FileExistsError:  # somebody else wrote it
@@ -154,6 +155,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
             with hdf5.File(fname, 'a') as h5:
                 _store(rates, h5)
+            yield dict(cfactor=result['cfactor'])
+            return
         else:
             result['pnemap'] = rates
         yield result
@@ -553,8 +556,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def fix_maxw_tsize(self, maxw, tsize):
         if tsize < 100:  # less than 100 sites per tile
-            logging.info('concurrent_tasks=%d is too large, producing less tiles',
-                         self.oqparam.concurrent_tasks)
+            logging.info(
+                'concurrent_tasks=%d is too large, producing less tiles',
+                self.oqparam.concurrent_tasks)
             maxw = maxw * 100/ tsize
             tsize = get_tile_size(self.oqparam, self.N, self.csm, maxw)
         return maxw, tsize
