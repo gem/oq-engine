@@ -24,15 +24,15 @@ class ZaferaniEtAl2018TestCase(BaseGSIMTestCase):
 
     # Tables are created using an calculation excel file confirmed by the authors  
 
-    def test_all(self):
+    def test_mean_ss(self):
         self.check('Za18/Za18_MEAN_SS_H.csv',
                    max_discrep_percentage=0.1)
         
-    def test_all(self):
+    def test_mean_t(self):
         self.check('Za18/Za18_MEAN_T_H.csv',
                    max_discrep_percentage=0.1)
         
-    def test_all(self):
+    def test_std_tot(self):
         self.check('Za18/Za18_STD_TOT_T_H.csv',
                    max_discrep_percentage=0.1)
 
@@ -42,14 +42,14 @@ class AmbraseysEtAl2005VHratioTestCase(BaseGSIMTestCase):
 
     # Tables are created using an calculation excel file confirmed by the authors  
 
-    def test_all(self):
+    def test_mean_ss(self):
         self.check('Za18/Za18_MEAN_SS_V_H.csv',
                    max_discrep_percentage=0.1)
         
-    def test_all(self):
+    def test_mean_t(self):
         self.check('Za18/Za18_MEAN_T_V_H.csv',
                    max_discrep_percentage=0.1)
         
-    def test_all(self):
+    def test_std_tot(self):
         self.check('Za18/Za18_STD_TOT_SS_V_H.csv',
                    max_discrep_percentage=0.1)
