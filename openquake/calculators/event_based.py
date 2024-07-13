@@ -26,7 +26,7 @@ import numpy
 import pandas
 import fiona
 from shapely import geometry
-from openquake.baselib import config, hdf5, parallel, performance, python3compat
+from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
@@ -385,8 +385,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         if station_data is not None:
             if parallel.oq_distribute() == 'zmq':
-                logging.warning('Conditioned scenarios are not meant to be run'
-                                ' on a cluster')
+                logging.error('Conditioned scenarios are not meant to be run'
+                              ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore

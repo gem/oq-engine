@@ -683,8 +683,9 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
-        aac(rlzs['weight'], [.7, .3])
+        ae(rlzs['branch_path'], [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
+                                 b'AA~A', b'AA~A', b'B.~A', b'B.~A', b'B.~A'])
+        aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
         # check the hazard curves
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
@@ -705,13 +706,6 @@ hazard_uhs-std.csv
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
         ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-
-        # testing unique_paths mode
-        self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0',
-                      oversampling='reduce-rlzs')
-        self.assertEqual(len(self.calc.realizations), 5)
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurves.csv', fname)
 
     def test_case_73(self):
         # test LT

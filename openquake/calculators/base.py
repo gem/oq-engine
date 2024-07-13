@@ -1007,6 +1007,11 @@ class HazardCalculator(BaseCalculator):
                 oq.aggregate_by, oq.max_aggregations)
             self._plot_assets()
 
+        if 'post_loss_amplification' in oq.inputs:
+            df = pandas.read_csv(oq.inputs['post_loss_amplification']
+                                 ).sort_values('return_period')
+            self.datastore.create_df('post_loss_amplification', df)
+
     def store_rlz_info(self, rel_ruptures):
         """
         Save info about the composite source model inside the full_lt dataset
@@ -1015,7 +1020,7 @@ class HazardCalculator(BaseCalculator):
         """
         if hasattr(self, 'full_lt'):  # no scenario
             self.realizations = self.full_lt.get_realizations()
-            if not self.realizations:
+            if len(self.realizations) == 0:
                 raise RuntimeError('Empty logic tree: too much filtering?')
         else:  # scenario
             self.full_lt = self.datastore['full_lt']

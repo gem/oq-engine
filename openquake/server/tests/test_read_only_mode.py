@@ -23,9 +23,12 @@
 
 import os
 
+import django
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
+
+django.setup()
 
 
 class EngineServerReadOnlyModeTestCase(EngineServerTestCase):

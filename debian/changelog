@@ -1,3 +1,33 @@
+  [Michele Simionato]
+  * Cached `get_realizations` and optimized the memory occupation; now
+    302_990_625 realizations (i.e. EUR) require only 90 GB
+
+  [Anna Rood]
+  * Updates to the AELO workflow: added additional spectral periods ranging
+    from 0.02 to 10 s and added option to use ASCE7-22. NB: minor changes in
+    the results of year 1 are expected
+
+  [Michele Simionato]
+  * Changed the GMF-based calculators to always set a `custom_site_id`
+  * Internal: added variable OQ_SITE_DEBUG
+
+python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Michele Simionato]
+  * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
+
+  [Michele Simionato]
+  * Internal: added a command `oq reducexp exposure_xml site_model_csv`
+
+  [Paul Henshaw, Antonio Ettorre, Michele Simionato]
+  * Updated the documentation about installing the engine
+
+  [Michele Simionato]
+  * Raised the default `max_potential_paths` to 1,000,000
+  * Optimized the calculation of mean hazard curves when `use_rates=true`;
+    now it is possible to compute exactly mean curves even with millions
+    of realizations
+
   [Paolo Tormene, Michele Simionato]
   * Added command `oq plot 'gmf_scenario?imt=PGA&kind=rlz-0'`
 
@@ -5,7 +35,6 @@
   * Added vertical component to `abrahamson_silva_1997` gsim library
 
   [Michele Simionato]
-  * Optimized the calculation of mean hazard curves when `use_rates=true`
   * Internal: removed ProbabilityCurve and rename ProbabilityMap->MapArray
   * Optimized building the CompositeSourceModel for complex logic trees
   * Optimized "reading rates" in postclassical
