@@ -107,9 +107,8 @@ def get_tile_size(oq, N, csm, maxw=0):
     sizes = [maxw / sg.weight * N for sg in csm.src_groups]
     return int(min(sizes))
 
-    
-#  ########################### task functions ############################ #
 
+#  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
     """
