@@ -30,7 +30,7 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 
 F32 = np.float32
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
-           'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south']
+            'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south']
 MS_DT = [(p, np.float32) for p in MSPARAMS] + [('hypo', (F32, 3))]
 
 
@@ -86,11 +86,12 @@ def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
     # building msparams, slow due to the computation of u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
-            # building u_max
-            tors = [lines[idx] for idx in idxs if close_sec[idx]]
-            if not tors:  # all sections are far away
+            idxs = idxs[close_sec[idxs]]
+            if len(idxs) == 0:  # all sections are far away
                 continue
 
+            # building u_max
+            tors = [lines[idx] for idx in idxs]
             if ry0:
                 msparam['u_max'] = geo.MultiLine(tors).get_u_max()
 
@@ -185,7 +186,7 @@ class MultiSurface(BaseSurface):
         if msparam is None:
             # slow operation: happens only in hazardlib, NOT in the engine
             secparams = build_secparams(self.surfaces)
-            idxs = range(len(self.surfaces))
+            idxs = np.arange(len(self.surfaces))
             self.msparam = build_msparams([idxs], secparams)[0]
         else:
             self.msparam = msparam
@@ -321,7 +322,7 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        tut, uut = self.tor.get_tu(mesh.lons, mesh.lats)
+        tut, _uut = self.tor.get_tu(mesh.lons, mesh.lats)
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
@@ -332,7 +333,7 @@ class MultiSurface(BaseSurface):
             coordinates of the sites.
         """
         u_max = self.tor.get_u_max()
-        tut, uut = self.tor.get_tu(mesh.lons, mesh.lats)
+        _tut, uut = self.tor.get_tu(mesh.lons, mesh.lats)
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = np.abs(uut[uut < 0])
         condition = uut > u_max

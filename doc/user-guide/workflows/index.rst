@@ -12,6 +12,7 @@ analysis are currently supported:
 - :ref:`classical-psha-intro`: *Classical Probabilistic Seismic Hazard Analysis (PSHA)*, allowing calculation of hazard curves and hazard maps following the classical integration procedure ((Cornell 1968), McGuire (1976)) as formulated by (Field, Jordan, and Cornell 2003).
 - :ref:`event-based-psha-intro`: *Event-Based Probabilistic Seismic Hazard Analysis*, allowing calculation of ground-motion fields from stochastic event sets. Traditional results - such as hazard curves - can be obtained by post- processing the set of computed ground-motion fields.
 - :ref:`scenario-hazard-intro`: *Scenario Based Seismic Hazard Analysis*, allowing the calculation of ground motion fields from a single earthquake rupture scenario taking into account ground motion aleatory variability. The ground motion fields can be conditioned to observed data, when available.
+- :ref:`secondary-perils-intro`: *Secondary Perils Hazard Analysis*, allowing the calculation of probability of ground failure and induced displacements.
 
 Each workflow has a modular structure, so that intermediate results can be exported and analyzed. Each calculator can be 
 extended independently of the others so that additional calculation options and methodologies can be easily introduced, 
@@ -55,5 +56,7 @@ the following sections.
    refrofit-benefit-cost
    reinsurance
    infrastructure-risk
-   liquefaction
+   secondary-perils
+   
+   
 

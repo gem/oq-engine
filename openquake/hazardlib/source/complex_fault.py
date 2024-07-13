@@ -186,7 +186,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
-        cell_center, cell_length, cell_width, cell_area = (
+        _cell_center, cell_length, _cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
@@ -222,7 +222,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
-        cell_center, cell_length, cell_width, cell_area = (
+        _cell_center, cell_length, _cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
         self._nr = []
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():

@@ -24,12 +24,12 @@ import inspect
 import logging
 import functools
 import collections
-import multiprocessing
 import numpy
 import pandas
 import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import DictArray, AccumDict, cached_property
 from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
@@ -156,6 +156,12 @@ collect_rlzs:
   it is true for sampling and false for full enumeration.
   Example: *collect_rlzs=true*.
   Default: None
+
+correlation_cutoff:
+  Used in conditioned GMF calculation to avoid small negative eigenvalues
+  wreaking havoc with the numerics
+  Example: *correlation_cutoff = 1E-11*
+  Default: 1E-12
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -428,6 +434,11 @@ investigation_time:
   calculations.
   Example: *investigation_time = 50*.
   Default: no default
+
+job_id:
+   ID of a job in the database
+   Example: *job_id = 42*.
+   Default: 0 (meaning create a new job)
 
 limit_states:
    Limit states used in damage calculations.
@@ -702,11 +713,6 @@ secondary_perils:
 secondary_simulations:
   INTERNAL
 
-sensitivity_analysis:
-  Dictionary describing a sensitivity analysis.
-  Example: *sensitivity_analysis = {'maximum_distance': [200, 300]}*.
-  Default: empty dictionary
-
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
   event based calculations.
@@ -748,7 +754,7 @@ sites:
   Used to specify a list of sites.
   Example: *sites = 10.1 45, 10.2 45*.
 
-sites_slice:
+tile_spec:
   INTERNAL
 
 smlt_branch:
@@ -980,13 +986,13 @@ class OqParam(valid.ParamSet):
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
-    concurrent_tasks = valid.Param(
-        valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
+    concurrent_tasks = valid.Param(valid.positiveint, Starmap.CT)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
+    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     cachedir = valid.Param(valid.utf8, '')
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -1030,6 +1036,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
@@ -1092,7 +1099,6 @@ class OqParam(valid.ParamSet):
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
-    sensitivity_analysis = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -1102,7 +1108,7 @@ class OqParam(valid.ParamSet):
     site_effects = valid.Param(
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
-    sites_slice = valid.Param(valid.simple_slice, None)
+    tile_spec = valid.Param(valid.tile_spec, None)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
@@ -1554,6 +1560,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
+        #if 'scenario' in self.calculation_mode:  # disable min_iml
+        #    return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
@@ -1786,6 +1794,11 @@ class OqParam(valid.ParamSet):
         return cls()
 
     @property
+    def rupture_xml(self):
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
     def aristotle(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5
@@ -1866,6 +1879,12 @@ class OqParam(valid.ParamSet):
         if self.disagg_by_src:
             return self.ps_grid_spacing == 0
         return True
+
+    def is_valid_concurrent_tasks(self):
+        """
+        At most you can use 30_000 tasks
+        """
+        return self.concurrent_tasks <= 30_000
 
     def is_valid_shakemap(self):
         """
@@ -2172,6 +2191,17 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
+    # tested in geese; expected to work for the hazard mosaic
+    def to_ini(self):
+        """
+        Converts the parameters into a string in .ini format
+        """
+        dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        del dic['base_path']
+        del dic['req_site_params']
+        del dic['export_dir']
+        return '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
 
@@ -2197,3 +2227,49 @@ class OqParam(valid.ParamSet):
         if hasattr(self, 'maximum_distance') and not isinstance(
                 self.maximum_distance, Idist):
             self.maximum_distance = Idist(**self.maximum_distance)
+
+
+def _rel_fnames(obj, P):
+    # strip the first P characters and convert to relative paths
+    if isinstance(obj, str):
+        return obj[P:]
+    elif isinstance(obj, list):
+        return '\n  '.join(s[P:] for s in obj)
+    else:  # assume dict
+        dic = {k: v[P:] for k, v in obj.items()}
+        return str(dic)
+
+
+def to_ini(key, val):
+    """
+    Converts key, val into .ini format
+    """
+    if key == 'inputs':
+        fnames = []
+        for v in val.values():
+            if isinstance(v, str):
+                fnames.append(v)
+            elif isinstance(v, list):
+                fnames.extend(v)
+            elif isinstance(v, dict):
+                fnames.extend(v.values())
+        del val['job_ini']
+        P = len(os.path.commonprefix(fnames))
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
+                         for k, v in val.items()
+                         if not k.startswith('_'))
+    elif key == 'sites':
+        sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
+        return f"sites = {sites}"
+    elif key == 'region':
+        coords = val[9:-2].split(',')  # strip POLYGON((...))
+        return f'{key} = {", ".join(c for c in coords[:-1])}'
+    elif key == 'hazard_imtls':
+        return f"intensity_measure_types_and_levels = {val}"
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles',
+                 'source_id', 'source_nodes', 'soil_intensities'):
+        return f"{key} = {' '.join(map(str, val))}"
+    else:
+        if val is None:
+            val = ''
+        return f'{key} = {val}'

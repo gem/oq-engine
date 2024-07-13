@@ -156,7 +156,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
-        datadir, dskeys = actions.get_results(db, job_id)
+        datadir, _dskeys = actions.get_results(db, job_id)
         # try to export a non-existing output
         with self.assertRaises(core.DataStoreExportError) as ctx:
             core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')

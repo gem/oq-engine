@@ -120,7 +120,7 @@ class BozorgniaCampbell2016VH(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mean_, sig_, tau_, phi_ = contexts.get_mean_stds(
+        mean_, _sig, tau_, phi_ = contexts.get_mean_stds(
             [self.VGMPE, self.HGMPE], ctx, imts)
         for m, imt in enumerate(imts):
             # V/H model, Equation 1 and 12 (in natural log units)

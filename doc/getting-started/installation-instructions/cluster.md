@@ -121,9 +121,7 @@ oq_distribute = zmq
 
 [dbserver]
 file = /var/lib/openquake/oqdata/db.sqlite3
-# daemon bind address; must be a valid IP address
-listen = < IP address of master>
-# address of the dbserver; can be an hostname too
+# address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
 host = < IP address of master>

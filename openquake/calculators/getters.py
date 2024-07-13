@@ -15,8 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import os
 import operator
+import collections
 import numpy
 
 from openquake.baselib import general, hdf5
@@ -31,9 +32,11 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 TWO24 = 2 ** 24
+CHUNKS = 256
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
+slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 class NotFound(Exception):
@@ -132,16 +135,112 @@ class HcurvesGetter(object):
         return weights @ curves
 
 
+# NB: using 32 bit ratemaps
+def get_pmaps_gb(dstore, full_lt=None):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol'])
+    L = dstore['oqparam'].imtls.size
+    full_lt = full_lt or dstore['full_lt'].init()
+    if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+        trt_smrs = [[0]]
+    else:
+        trt_smrs = dstore['trt_smrs'][:]
+    trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
+    gids = full_lt.get_gids(trt_smrs)
+    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
+
+
+def map_getters(dstore, full_lt=None, disagg=False):
+    """
+    :returns: a list of pairs (MapGetter, weights)
+    """
+    oq = dstore['oqparam']
+    full_lt = full_lt or dstore['full_lt'].init()
+    R = full_lt.get_num_paths()
+    _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
+    if oq.fastmean and not disagg:
+        weights = dstore['gweights'][:]
+        trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
+    else:
+       weights = full_lt.weights
+    try:
+        scratch_dir = dstore.hdf5.attrs['scratch_dir']
+        fnames = [os.path.join(scratch_dir, f) for f in os.listdir(scratch_dir)
+                  if f.endswith('.hdf5')]
+        names = ['_rates%03d' % i for i in range(CHUNKS)]
+    except KeyError:  # no tiling
+        fnames = [dstore.filename]
+        names = [name for name in dstore if name.startswith('_rates')]
+    out = []
+    for name in names:
+        getter = MapGetter(fnames, name, trt_rlzs, R, oq)
+        getter.weights = weights
+        out.append(getter)
+    return out
+
+
+class ZeroGetter(object):
+    """
+    Return an array of zeros of shape (L, R)
+    """
+    def __init__(self, L, R):
+        self.L = L
+        self.R = R
+
+    def get_hazard(self):
+        return numpy.zeros((self.L, self.R))
+
+
+class CurveGetter(object):
+    """
+    Hazard curve builder used in classical_risk/classical_damage.
+
+    :param sid: site index
+    :param rates: array of shape (L, G) for the given site
+    """
+    @classmethod
+    def build(cls, dstore):
+        """
+        :returns: a dictionary sid -> CurveGetter
+        """
+        rates = {}
+        for mgetter in map_getters(dstore):
+            pmap = mgetter.init()
+            for sid in pmap:
+                rates[sid] = pmap[sid]  # shape (L, G)
+        dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
+        for sid in rates:
+            dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
+        return dic                
+
+    def __init__(self, sid, rates, trt_rlzs, R):
+        self.sid = sid
+        self.rates = rates
+        self.trt_rlzs = trt_rlzs
+        self.R = R
+
+    def get_hazard(self):
+        r0 = numpy.zeros((len(self.rates), self.R))
+        for g, t_rlzs in enumerate(self.trt_rlzs):
+            rlzs = t_rlzs % TWO24
+            rates = self.rates[:, g]
+            for rlz in rlzs:
+                r0[:, rlz] += rates
+        return to_probs(r0)
+
+    
 class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filename, trt_rlzs, R, slices, oq):
-        self.filename = filename
+    def __init__(self, filenames, name, trt_rlzs, R, oq):
+        self.filenames = filenames
+        self.name = name
         self.trt_rlzs = trt_rlzs
         self.R = R
-        self.slices = slices
         self.imtls = oq.imtls
         self.poes = oq.poes
         self.use_rates = oq.use_rates
@@ -150,7 +249,7 @@ class MapGetter(object):
 
     @property
     def sids(self):
-        #self.init()
+        self.init()
         return list(self._map)
 
     @property
@@ -178,12 +277,21 @@ class MapGetter(object):
         """
         Build the _map from the underlying dataframes
         """
-        if self._map or len(self.slices) == 0:
+        if self._map:
             return self._map
-        with hdf5.File(self.filename) as dstore:
-            for start, stop in self.slices:
-                # reading one slice at the time to save memory
-                rates_df = dstore.read_df('_rates', slc=slice(start, stop))
+        '''
+        if os.path.isdir(self.filename):
+            fnames = [os.path.join(self.filename, f)
+                      for f in os.listdir(self.filename)]
+        else:
+            fnames = [self.filename]
+        '''
+        for fname in self.filenames:
+            with hdf5.File(fname) as dstore:
+                try:
+                    rates_df = dstore.read_df(self.name)
+                except KeyError:
+                    continue
                 # not using groupby to save memory
                 for sid in rates_df.sid.unique():
                     df = rates_df[rates_df.sid == sid]
@@ -194,19 +302,6 @@ class MapGetter(object):
                         self._map[sid] = array
                     array[df.lid, df.gid] = df.rate
         return self._map
-
-    # used in risk calculations where there is a single site per getter
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: a probability curve of shape (L, R) for the given site
-        """
-        self.init()
-        if not self.sids:
-            # this happens when the poes are all zeros, as in
-            # classical_risk/case_3 for the first site
-            return numpy.zeros((self.L, self.R))
-        return self.get_hcurve(self.sids[0])
 
     def get_hcurve(self, sid):  # used in classical
         """
@@ -285,7 +380,7 @@ def multiline(array3RC):
     :param array3RC: array of shape (3, R, C)
     :returns: a MULTILINESTRING
     """
-    D, R, C = array3RC.shape
+    D, R, _C = array3RC.shape
     assert D == 3, D
     lines = 'MULTILINESTRING(%s)' % ', '.join(
         line(array3RC[:, r, :].T) for r in range(R))

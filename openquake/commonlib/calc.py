@@ -49,7 +49,6 @@ code2cls = rupture.BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
-
 # used only in the view global_hcurves
 def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     """

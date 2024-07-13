@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -94,7 +94,7 @@ class AkiMaximumLikelihoodTestCase(unittest.TestCase):
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
         """
-        bval, sigma_b = self.aki_ml._aki_ml(self.mval, self.numobs)
+        bval, _sigma_b = self.aki_ml._aki_ml(self.mval, self.numobs)
         self.assertAlmostEqual(self.bval, bval, 2)
 
     def test_aki_maximum_likelihood_B(self):
@@ -102,5 +102,5 @@ class AkiMaximumLikelihoodTestCase(unittest.TestCase):
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
         """
-        bval, sigma_b = self.aki_ml.calculate(self.catalogue)
+        bval, _sigma_b = self.aki_ml.calculate(self.catalogue)
         self.assertAlmostEqual(self.bval, bval, 2)

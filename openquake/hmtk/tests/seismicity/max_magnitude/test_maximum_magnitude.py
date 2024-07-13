@@ -5,19 +5,19 @@
 #
 # Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
-# it and/or modify it under the terms of the GNU Affero General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
+# redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is released as
-# a prototype implementation on behalf of scientists and engineers working
-# within the GEM Foundation (Global Earthquake Model).
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is
+# released as a prototype implementation on behalf of scientists and engineers
+# working within the GEM Foundation (Global Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the hope that
 # it will be useful to the scientific, engineering, disaster risk and software
@@ -34,9 +34,9 @@
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
 # The GEM Foundation, and the authors of the software, assume no liability for
@@ -191,7 +191,7 @@ class MmaxTestCase(unittest.TestCase):
     def _get_observed_mmax_error(self, test_catalogue, test_config):
         # Tests the get_observed_mmax exceptions are raised
         with self.assertRaises(ValueError) as ae:
-            mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+            _mmax, _mmax_sig = _get_observed_mmax(test_catalogue, self.config)
         self.assertEqual(
             str(ae.exception), "Input mmax uncertainty must be specified!"
         )
@@ -400,14 +400,16 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         self.assertAlmostEqual(sigma_mmax_1, 0.959759906)
 
         self.config["input_mmin"] = 3.0
-        mmax_2, sigma_mmax_2 = self.model.get_mmax(self.catalogue, self.config)
+        mmax_2, _sigma_mmax_2 = self.model.get_mmax(
+            self.catalogue, self.config)
         self.assertAlmostEqual(mmax_1, mmax_2)
 
         # Case where the maximum magnitude is overriden
         # self.config['input_mmax'] = 7.6
         # self.config['b-value'] = 1.0
         # self.config['input_mmax_uncertainty'] = 0.2
-        # mmax_1, sigma_mmax_1 = self.model.get_mmax(self.catalogue, self.config)
+        # mmax_1, sigma_mmax_1 = self.model.get_mmax(
+        #     self.catalogue, self.config)
         # self.assertAlmostEqual(mmax_1, 8.1380422)
         # self.assertAlmostEqual(sigma_mmax_1, 0.57401164)
 

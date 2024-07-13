@@ -50,8 +50,9 @@ from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.extract import Extractor
+from openquake.calculators.postproc.plots import plot_avg_gmf
 from openquake.engine import engine
-from openquake.commands.plot import plot_avg_gmf
 from PIL import Image
 
 U8 = numpy.uint8
@@ -171,28 +172,28 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
-    complete = srcfilter.sitecol.complete
     proxy.geom = rupgeoms[proxy['geom_id']]
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        assert stations.sum(), 'There are no stations??'
-        station_sids = sids[stations]
-        target_sids = sids[~stations]
-        return ConditionedGmfComputer(
-            ebr, complete.filtered(target_sids),
-            complete.filtered(station_sids),
-            station_data.loc[station_sids],
-            oq.observed_imts,
-            cmaker, oq.correl_model, oq.cross_correl,
-            oq.ground_motion_correlation_params,
-            oq.number_of_ground_motion_fields,
-            oq._amplifier, oq._sec_perils)
+        if stations.any():
+            station_sids = sids[stations]
+            return ConditionedGmfComputer(
+                ebr, srcfilter.sitecol.filtered(sids),
+                srcfilter.sitecol.filtered(station_sids),
+                station_data.loc[station_sids],
+                oq.observed_imts,
+                cmaker, oq.correl_model, oq.cross_correl,
+                oq.ground_motion_correlation_params,
+                oq.number_of_ground_motion_fields,
+                oq._amplifier, oq._sec_perils)
+        else:
+            logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, complete.filtered(sids), cmaker,
+        ebr, srcfilter.sitecol.filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
@@ -305,6 +306,8 @@ def filter_stations(station_df, complete, rup, maxdist):
     else:
         station_data = station_df[
             numpy.isin(station_df.index, station_sites.sids)]
+        assert len(station_data) == len(station_sites), (
+            len(station_data), len(station_sites))
         if len(station_data) < ns:
             logging.info('Discarded %d/%d stations more distant than %d km',
                          ns - len(station_data), ns, maxdist)
@@ -587,27 +590,30 @@ class EventBasedCalculator(base.HazardCalculator):
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
-        if oq.rupture_dict:
-            # the gsim_lt is read from the site_model.hdf5 file
+        if oq.aristotle:
+            # the gsim_lt is read from the exposure.hdf5 file
             mosaic_df = readinput.read_mosaic_df(buffer=1)
-            lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            if oq.rupture_dict:
+                lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+            elif oq.rupture_xml:
+                hypo = readinput.get_rupture(oq).hypocenter
+                lonlat = [[hypo.x, hypo.y]]
             [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
-            sitemodel = oq.inputs.get('site_model', [''])[0]
-            if sitemodel.endswith('.hdf5'):
-                if oq.mosaic_model == '???':
-                    raise ValueError(
-                        '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
-                        oq.rupture_dict)
-                if oq.gsim != '[FromFile]':
-                    raise ValueError(
-                        'In Aristotle mode the gsim can not be specified in'
-                        ' the job.ini: %s' % oq.gsim)
-                if oq.tectonic_region_type == '*':
-                    raise ValueError(
-                        'The tectonic_region_type parameter must be specified')
-                gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                    sitemodel, oq.mosaic_model,
-                    oq.tectonic_region_type.encode('utf8'))
+            [expo_hdf5] = oq.inputs['exposure']
+            if oq.mosaic_model == '???':
+                raise ValueError(
+                    '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                    oq.rupture_dict)
+            if oq.gsim != '[FromFile]':
+                raise ValueError(
+                    'In Aristotle mode the gsim can not be specified in'
+                    ' the job.ini: %s' % oq.gsim)
+            if oq.tectonic_region_type == '*':
+                raise ValueError(
+                    'The tectonic_region_type parameter must be specified')
+            gsim_lt = logictree.GsimLogicTree.from_hdf5(
+                expo_hdf5, oq.mosaic_model,
+                oq.tectonic_region_type.encode('utf8'))
         elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
@@ -615,9 +621,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
-        rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-               oq.inputs['rupture_model'].endswith('.xml'))
-        if rup:
+        if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
             if bsets > 1:
@@ -662,7 +666,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     rup.tectonic_region_type)(rup.mag))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
-        self.realizations = fake.get_realizations()
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
@@ -764,7 +767,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             imts = list(self.oqparam.imtls)
             for imt in imts:
-                plt = plot_avg_gmf(self.datastore.calc_id, imt)
+                plt = plot_avg_gmf(Extractor(self.datastore.calc_id), imt)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
                 fig_path = f'png/avg_gmf-{imt}.png'

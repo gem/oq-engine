@@ -375,7 +375,7 @@ def export_loss_maps_npz(ekey, dstore):
 
 def modal_damage_array(data, damage_dt):
     # determine the damage state with the highest probability
-    A, L, D = data.shape
+    A, _L, _D = data.shape
     dmgstate = damage_dt['structural'].names
     arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
                           for lt in damage_dt.names])
@@ -413,7 +413,7 @@ def export_damages_csv(ekey, dstore):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i] * rate
-            A, L, Dc = data.shape
+            A, _L, Dc = data.shape
             if Dc == D:  # no consequences, export nothing
                 return []
             csq_dt = build_csq_dt(dstore)
@@ -446,7 +446,7 @@ def indices(*sizes):
 
 def _to_loss_maps(array, loss_maps_dt):
     # convert a 4D array into a 2D array of dtype loss_maps_dt
-    A, R, C, LI = array.shape
+    A, R, _C, _LI = array.shape
     lm = numpy.zeros((A, R), loss_maps_dt)
     for li, name in enumerate(loss_maps_dt.names):
         for p, poe in enumerate(loss_maps_dt[name].names):
@@ -495,7 +495,7 @@ def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
     assets = get_assets(dstore)
     bcr_data = dstore[ekey[0]]
-    N, R = bcr_data.shape
+    _N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
     else:
@@ -516,7 +516,7 @@ def export_aggregate_by_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    token, what = ekey[0].split('/', 1)
+    _token, what = ekey[0].split('/', 1)
     aw = extract(dstore, 'aggregate/' + what)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)

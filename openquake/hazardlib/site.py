@@ -536,7 +536,7 @@ class SiteCollection(object):
         """
         return self.split(numpy.ceil(len(self) / max_sites))
 
-    def split(self, ntiles):
+    def split(self, ntiles, minsize=1):
         """
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
@@ -544,6 +544,8 @@ class SiteCollection(object):
         # if ntiles > nsites produce N tiles with a single site each
         ntiles = min(int(numpy.ceil(ntiles)), len(self))
         if ntiles <= 1:
+            return [self]
+        if len(self) < ntiles * minsize:  # do not split
             return [self]
         tiles = []
         for i in range(ntiles):
@@ -689,6 +691,27 @@ class SiteCollection(object):
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def extend(self, lons, lats):
+        """
+        Extend the site collection to additional (and different) points.
+        Used for station_data in conditioned GMFs.
+        """
+        assert len(lons) == len(lats), (len(lons), len(lats))
+        complete = self.complete
+        orig = set(zip(rnd5(complete.lons), rnd5(complete.lats)))
+        new = set(zip(rnd5(lons), rnd5(lats))) - orig
+        if not new:
+            return self
+        lons, lats = zip(*sorted(new))
+        N1 = len(complete)
+        N2 = len(new)
+        array = numpy.zeros(N1 + N2, self.array.dtype)
+        array[:N1] = complete.array
+        array[N1:]['sids'] = numpy.arange(N1, N1+N2)
+        array[N1:]['lon'] = lons
+        array[N1:]['lat'] = lats
+        complete.array = array
 
     def by_country(self):
         """

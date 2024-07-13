@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from django.apps import AppConfig
 from django.conf import settings
 from openquake.baselib import config
@@ -62,3 +63,10 @@ class ServerConfig(AppConfig):
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
+        if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
+            # NOTE: this might be needed also for ARISTOTLE
+            aelo_changelog_path = os.path.join(
+                config.directory.mosaic_dir, 'aelo_changelog.ini')
+            if not os.path.isfile(aelo_changelog_path):
+                raise FileNotFoundError(
+                    f'{aelo_changelog_path} was not found!')

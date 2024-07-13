@@ -27,7 +27,6 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from shapely.geometry import Polygon
 
-from openquake.hazardlib.geo import utils as geo_utils
 from openquake.baselib.node import Node
 from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo import geodetic
@@ -835,95 +834,37 @@ def _fix_right_hand(msh):
     #
     # :param msh:
     #   A :class:`numpy.ndarray` instance
+    #
 
-    chk = _does_mesh_comply_with_right_hand_rule(msh)
+    # Compute the average azimuth for the top edge of the surface
+    tmp = msh[0, :, 0]
+    idx = np.isfinite(tmp)
+    top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
+
+    # Compute the strike of the surface
+    coo = msh.reshape(-1, 3)
+    coo = coo[np.isfinite(coo[:, 0]), :]
+    pnts = [Point(c[0], c[1], c[2]) for c in coo]
+    grdd = GriddedSurface.from_points_list(pnts)
+    strike = grdd.get_strike()
 
     # Check if we need to flip the grid
-    # if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
-    if not chk:
+    if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
 
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.flip(msh, axis=1)
-        chk_flip = msh[0, 0, 0] == nmsh[0, -1, 0]
+
+        # Compute the average azimuth for the top edge of the surface
+        tmp = nmsh[0, :, 0]
+        idx = np.isfinite(tmp)
+        top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
 
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
-        chk1 = _does_mesh_comply_with_right_hand_rule(nmsh)
-        assert chk1, msg
+        assert np.abs(_angles_diff(strike, top.azimuth)) < 60, msg
         return nmsh
 
     return msh
-
-
-def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
-    # Given a mesh checks if it complies with the right hand rule
-    #
-    # :param msh:
-    #   A :class:`openquake.hazardlib.geo.mesh.Mesh` instance
-    # :param tolerance:
-    #   A float defining the maximum absolute difference between the azimuth of
-    #   the top edge of the selected cell and the strike of the plane passingg
-    #   through the cell.
-
-    ul = np.isfinite(msh[:-1, :-1, 0])
-    ur = np.isfinite(msh[:-1, 1:, 0])
-    ll = np.isfinite(msh[1:, :-1, 0])
-    lr = np.isfinite(msh[1:, 1:, 0])
-    ia = np.nonzero(ur & ul & ll & lr)
-
-    idx = np.nonzero(msh[:, :, 0])
-
-    # Coordinates of the cell with finite vertexes
-    lons = [msh[ia[0][0], ia[1][0], 0],
-            msh[ia[0][0], ia[1][0] + 1, 0],
-            msh[ia[0][0] + 1, ia[1][0] + 1, 0],
-            msh[ia[0][0] + 1, ia[1][0], 0]]
-    lats = [msh[ia[0][0], ia[1][0], 1],
-            msh[ia[0][0], ia[1][0] + 1, 1],
-            msh[ia[0][0] + 1, ia[1][0] + 1, 1],
-            msh[ia[0][0] + 1, ia[1][0], 1]]
-    deps = [msh[ia[0][0], ia[1][0], 2],
-            msh[ia[0][0], ia[1][0] + 1, 2],
-            msh[ia[0][0] + 1, ia[1][0] + 1, 2],
-            msh[ia[0][0] + 1, ia[1][0], 2]]
-    lons = np.array(lons)
-    lats = np.array(lats)
-    deps = np.array(deps)
-
-
-    # First we fit a plane through the four points and then we find the strike
-    # of the plane
-    _, vers = _get_plane(lons, lats, deps)
-    strike = geo_utils.get_strike_from_plane_normal(vers)
-
-    # Next we find the azimuth of the top segment of the cell
-    top = Line([Point(*msh[ia[0][0], ia[1][0], :]),
-                Point(*msh[ia[0][0], ia[1][0]+1, :])])
-
-    # Compute the difference between strike from the plane and cell top
-    # direction
-    abs_angle_dff = np.abs(_angles_diff(top.azimuth, strike))
-
-    return abs_angle_dff < tolerance
-
-
-def _get_plane(lons, lats, deps):
-
-    from openquake.hazardlib.geo import utils as geo_utils
-
-    # Create a projection centered in the center of the cloud of points
-    proj = geo_utils.OrthographicProjection(
-        *geo_utils.get_spherical_bounding_box(lons, lats)
-    )
-
-    # Find the plane passing through the points
-    coo = np.zeros((len(lons), 3))
-    tmp = np.transpose(proj(lons, lats))
-    coo[:, 0] = tmp[:, 0]
-    coo[:, 1] = tmp[:, 1]
-    coo[:, 2] = deps
-    coo[:, 2] *= -1
-    return  geo_utils.plane_fit(coo)
 
 
 def _angles_diff(ang_a, ang_b):

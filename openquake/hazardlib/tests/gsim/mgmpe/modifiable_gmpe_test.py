@@ -45,7 +45,7 @@ class ModifiableGMPETest(unittest.TestCase):
         ctx.occurrence_rate = .001
         ctx.vs30 = 760.
         ctx.rrup = np.array([1., 10., 30., 70.])
-        mea, sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
+        _mea, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
 
         # Expected results hand computed
         aae(phi[0], 0.41623333)
@@ -59,7 +59,7 @@ class ModifiableGMPETest(unittest.TestCase):
         cmaker.gsims[0] = ModifiableGMPE(
             gmpe={'Campbell2003': {}},
             add_between_within_stds={'with_betw_ratio': 0.6})
-        mea, sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
+        _mea, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
         aae(tau[0], 0.44075136)
         aae(phi[0], 0.26445082)
 
@@ -113,52 +113,52 @@ class ModifiableGMPETest(unittest.TestCase):
         ctx. vs30 = 760.
         ctx.rrup = np.array([1., 10., 30., 70.])
         ctx.rjb = np.array([1., 10., 30., 70.])
-        return cmaker.get_mean_stds([ctx])  
+        return cmaker.get_mean_stds([ctx])
 
     def test(self):
 
         # check the scaling of the median ground motion - IMT-independent
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_median_scalar={'scaling_factor': 1.2})
         aae(np.exp(mea[MODI]) / np.exp(mea[ORIG]), 1.2)
 
         # Check the scaling of the median ground motion - IMT-dependent
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_median_vector={
                 'scaling_factor': {"PGA": 0.9, "SA(0.2)": 1.1}})
         for m, s in enumerate([0.9, 1.1]):
             aae(np.exp(mea[MODI, m]) / np.exp(mea[ORIG, m]), s)
-        
+
         # Check the scaling of the total stddev - scalar
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_total_sigma_scalar={'scaling_factor': 1.2})
         aae(sig[MODI] / sig[ORIG], 1.2)
-        
+
         # Check the scaling of the total stddev - vector
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_total_sigma_vector={
                 'scaling_factor': {"PGA": 0.9, "SA(0.2)": 1.1}})
         for m, s in enumerate([0.9, 1.1]):
             aae(sig[MODI, m] / sig[ORIG, m], s)
-        
+
         # Check the assignment of total sigma to a fixed value
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_fixed_total_sigma={"total_sigma": {"PGA": 0.6,
                                                    "SA(0.2)": 0.75}})
         for m, s in enumerate([0.6, 0.75]):
             aae(sig[MODI, m], s)
 
         # Check adding/removing a delta std to the total std
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             add_delta_std_to_total_std={"delta": -0.20})
 
         aae(sig[ORIG, 0], 0.712105)
         aae(sig[MODI, 0], 0.68344277)
 
         # Check set total std as between plus phi SS
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_total_std_as_tau_plus_delta={"delta": 0.45})
-        
+
         aae(phi[ORIG, 0], 0.6201)
         aae(sig[MODI, 0], 0.5701491121)
 
@@ -188,7 +188,7 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
             gmpe = valid.gsim(gmpe_name)
             cmaker = simple_cmaker([gmm, gmpe], ['MMI'])
             ctx = self.get_ctx(cmaker)
-            mea, sig, tau, phi = cmaker.get_mean_stds([ctx])
+            mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
             exp_mean = mea[1] + np.array([-1.00, 1.50, 0, -1.99])
 
             # Check the computed mean + amplification
@@ -203,7 +203,7 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
             gmpe = valid.gsim(gmpe_name)
             cmaker = simple_cmaker([gmm, gmpe], ['SA(0.3)'])
             ctx = self.get_ctx(cmaker)
-            mea, sig, tau, phi = cmaker.get_mean_stds([ctx])
+            mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
             exp_mean = mea[1] + np.array([-0.2, 0.4, 0.6, 0])
             exp_stdev = np.sqrt(np.array([0.3, 0.4, 0.5, 0.2])**2 +
                                 np.array([0.2, 0.1, 0.3, 0.4])**2)

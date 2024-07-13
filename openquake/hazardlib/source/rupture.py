@@ -23,6 +23,7 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 import abc
 import numpy
 import math
+import logging
 import itertools
 import json
 from openquake.baselib import general, hdf5
@@ -936,6 +937,11 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     # with a fixed Magnitude-Scaling Relationship
     rdip = math.radians(dip)
     rup_width, rup_length = _width_length(mag, rake)
+    if rup_length > 1000.:
+        logging.error(f'{rup_length=} is wrong, the hand-coded MSR is wrong, '
+                      'using 1000 km instead')
+        rup_length = 1000.
+
     # calculate the height of the rupture being projected
     # on the vertical plane:
     rup_proj_height = rup_width * math.sin(rdip)

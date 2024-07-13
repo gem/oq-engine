@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+   <fragilityModel assetCategory="" id="FragilityModel" lossCategory="structural">
+      <description></description>
+      <limitStates>slight moderate extensive complete</limitStates>
+      <fragilityFunction format="continuous" id="CR/LFM+CDL+DUL/H3" shape="logncdf">
+         <imls imt="SA(1.0)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.1895" stddev="0.51621"/>
+         <params ls="moderate" mean="0.28918" stddev="0.51621"/>
+         <params ls="extensive" mean="0.38909" stddev="0.51621"/>
+         <params ls="complete" mean="0.48415" stddev="0.51621"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFM+CDL+DUM/H3" shape="logncdf">
+         <imls imt="SA(1.0)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.23314" stddev="0.51671"/>
+         <params ls="moderate" mean="0.38586" stddev="0.51671"/>
+         <params ls="extensive" mean="0.54109" stddev="0.51671"/>
+         <params ls="complete" mean="0.69034" stddev="0.51671"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFM+CDM+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.5576" stddev="0.51328"/>
+         <params ls="moderate" mean="0.84409" stddev="0.51328"/>
+         <params ls="extensive" mean="1.126" stddev="0.51328"/>
+         <params ls="complete" mean="1.3906" stddev="0.51328"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFM+CDM+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.67265" stddev="0.52605"/>
+         <params ls="moderate" mean="1.0868" stddev="0.52605"/>
+         <params ls="extensive" mean="1.4997" stddev="0.52605"/>
+         <params ls="complete" mean="1.8915" stddev="0.52605"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFM+CDH+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.64811" stddev="0.51952"/>
+         <params ls="moderate" mean="1.0813" stddev="0.51952"/>
+         <params ls="extensive" mean="1.5138" stddev="0.51952"/>
+         <params ls="complete" mean="1.9246" stddev="0.51952"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFM+CDH+DUH/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.72561" stddev="0.53045"/>
+         <params ls="moderate" mean="1.2272" stddev="0.53045"/>
+         <params ls="extensive" mean="1.7266" stddev="0.53045"/>
+         <params ls="complete" mean="2.2002" stddev="0.53045"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LDUAL+CDL+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.21" stddev="0.6"/>
+         <params ls="moderate" mean="0.43" stddev="0.6"/>
+         <params ls="extensive" mean="0.63" stddev="0.6"/>
+         <params ls="complete" mean="0.81" stddev="0.6"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LDUAL+CDL+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.26" stddev="0.59"/>
+         <params ls="moderate" mean="0.59" stddev="0.59"/>
+         <params ls="extensive" mean="0.89" stddev="0.59"/>
+         <params ls="complete" mean="1.16" stddev="0.59"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LDUAL+CDM+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.65" stddev="0.65"/>
+         <params ls="moderate" mean="1.31" stddev="0.65"/>
+         <params ls="extensive" mean="1.91" stddev="0.65"/>
+         <params ls="complete" mean="2.45" stddev="0.65"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LDUAL+CDM+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.85" stddev="0.59"/>
+         <params ls="moderate" mean="1.75" stddev="0.59"/>
+         <params ls="extensive" mean="2.55" stddev="0.59"/>
+         <params ls="complete" mean="3.27" stddev="0.59"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LDUAL+CDH+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="1.19" stddev="0.54"/>
+         <params ls="moderate" mean="2.22" stddev="0.54"/>
+         <params ls="extensive" mean="3.13" stddev="0.54"/>
+         <params ls="complete" mean="3.95" stddev="0.54"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LDUAL+CDH+DUH/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="1.36" stddev="0.55"/>
+         <params ls="moderate" mean="2.56" stddev="0.55"/>
+         <params ls="extensive" mean="3.64" stddev="0.55"/>
+         <params ls="complete" mean="4.59" stddev="0.55"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDL+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.15" stddev="0.54"/>
+         <params ls="moderate" mean="0.42" stddev="0.54"/>
+         <params ls="extensive" mean="0.65" stddev="0.54"/>
+         <params ls="complete" mean="0.86" stddev="0.54"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDL+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.19" stddev="0.56"/>
+         <params ls="moderate" mean="0.54" stddev="0.56"/>
+         <params ls="extensive" mean="0.84" stddev="0.56"/>
+         <params ls="complete" mean="1.12" stddev="0.56"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDM+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.21" stddev="0.58"/>
+         <params ls="moderate" mean="0.53" stddev="0.58"/>
+         <params ls="extensive" mean="0.81" stddev="0.58"/>
+         <params ls="complete" mean="1.06" stddev="0.58"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDM+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.24" stddev="0.61"/>
+         <params ls="moderate" mean="0.65" stddev="0.61"/>
+         <params ls="extensive" mean="1.02" stddev="0.61"/>
+         <params ls="complete" mean="1.34" stddev="0.61"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDH+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.29" stddev="0.64"/>
+         <params ls="moderate" mean="0.85" stddev="0.64"/>
+         <params ls="extensive" mean="1.37" stddev="0.64"/>
+         <params ls="complete" mean="1.84" stddev="0.64"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDH+DUH/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.32" stddev="0.65"/>
+         <params ls="moderate" mean="0.97" stddev="0.65"/>
+         <params ls="extensive" mean="1.59" stddev="0.65"/>
+         <params ls="complete" mean="2.16" stddev="0.65"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+DUL/H3/CCA" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.24" stddev="0.57"/>
+         <params ls="moderate" mean="0.64" stddev="0.57"/>
+         <params ls="extensive" mean="1" stddev="0.57"/>
+         <params ls="complete" mean="1.32" stddev="0.57"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+DUL/H3/SOS" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.19" stddev="0.53"/>
+         <params ls="moderate" mean="0.39" stddev="0.53"/>
+         <params ls="extensive" mean="0.58" stddev="0.53"/>
+         <params ls="complete" mean="0.75" stddev="0.53"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDN+DNO/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.14" stddev="0.53"/>
+         <params ls="moderate" mean="0.36" stddev="0.53"/>
+         <params ls="extensive" mean="0.57" stddev="0.53"/>
+         <params ls="complete" mean="0.76" stddev="0.53"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDM+DUH/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.24" stddev="0.61"/>
+         <params ls="moderate" mean="0.67" stddev="0.61"/>
+         <params ls="extensive" mean="1.05" stddev="0.61"/>
+         <params ls="complete" mean="1.39" stddev="0.61"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDH+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.28" stddev="0.63"/>
+         <params ls="moderate" mean="0.81" stddev="0.63"/>
+         <params ls="extensive" mean="1.31" stddev="0.63"/>
+         <params ls="complete" mean="1.76" stddev="0.63"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDL+DUH/H3" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.21" stddev="0.56"/>
+         <params ls="moderate" mean="0.56" stddev="0.56"/>
+         <params ls="extensive" mean="0.88" stddev="0.56"/>
+         <params ls="complete" mean="1.17" stddev="0.56"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDH+DUH/H3/NSCA" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.32" stddev="0.66"/>
+         <params ls="moderate" mean="0.98" stddev="0.66"/>
+         <params ls="extensive" mean="1.61" stddev="0.66"/>
+         <params ls="complete" mean="2.19" stddev="0.66"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LFINF+CDM+DUM/H3/NSCA" shape="logncdf">
+         <imls imt="SA(0.6)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.24" stddev="0.61"/>
+         <params ls="moderate" mean="0.65" stddev="0.61"/>
+         <params ls="extensive" mean="1.02" stddev="0.61"/>
+         <params ls="complete" mean="1.34" stddev="0.61"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LWAL+CDL+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.58476" stddev="0.62715"/>
+         <params ls="moderate" mean="1.1934" stddev="0.62715"/>
+         <params ls="extensive" mean="1.7412" stddev="0.62715"/>
+         <params ls="complete" mean="2.2317" stddev="0.62715"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LWAL+CDL+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.83789" stddev="0.57594"/>
+         <params ls="moderate" mean="1.7138" stddev="0.57594"/>
+         <params ls="extensive" mean="2.4769" stddev="0.57594"/>
+         <params ls="complete" mean="3.1483" stddev="0.57594"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LWAL+CDM+DUL/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="0.921" stddev="0.56089"/>
+         <params ls="moderate" mean="1.7372" stddev="0.56089"/>
+         <params ls="extensive" mean="2.4534" stddev="0.56089"/>
+         <params ls="complete" mean="3.0842" stddev="0.56089"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LWAL+CDM+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="1.2039" stddev="0.55522"/>
+         <params ls="moderate" mean="2.3808" stddev="0.55522"/>
+         <params ls="extensive" mean="3.4123" stddev="0.55522"/>
+         <params ls="complete" mean="4.3216" stddev="0.55522"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LWAL+CDH+DUM/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="1.5345" stddev="0.56664"/>
+         <params ls="moderate" mean="2.8017" stddev="0.56664"/>
+         <params ls="extensive" mean="3.9323" stddev="0.56664"/>
+         <params ls="complete" mean="4.9358" stddev="0.56664"/>
+      </fragilityFunction>
+      <fragilityFunction format="continuous" id="CR/LWAL+CDH+DUH/H3" shape="logncdf">
+         <imls imt="SA(0.3)" maxIML="5" minIML="0.01" noDamageLimit="0.05"/>
+         <params ls="slight" mean="1.7032" stddev="0.55404"/>
+         <params ls="moderate" mean="3.1605" stddev="0.55404"/>
+         <params ls="extensive" mean="4.4424" stddev="0.55404"/>
+         <params ls="complete" mean="5.572" stddev="0.55404"/>
+      </fragilityFunction>
+   </fragilityModel>
+</nrml>

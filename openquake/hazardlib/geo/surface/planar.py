@@ -210,7 +210,7 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
         planar_array['sdr'] = sdr  # strike, dip, rake
     if hypo is not None:
         planar_array['hypo'] = hypo
-    tl, tr, bl, br = xyz = spherical_to_cartesian(
+    tl, tr, bl, _br = xyz = spherical_to_cartesian(
         corners[..., 0], corners[..., 1], corners[..., 2])
     for i, corner in enumerate(corners):
         planar_array['corners'][..., i] = corner
@@ -413,10 +413,10 @@ def get_rjb(planar, points):  # numbified below
     :param points: an array of of shape (N, 3)
     :returns: (U, N) values
     """
-    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    lons, lats, _deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
-        strike, dip, rake = pla['sdr']
+        strike, _dip, _rake = pla['sdr']
         downdip = (strike + 90) % 360
         corners = pla.corners
         clons, clats = numpy.zeros(4), numpy.zeros(4)
@@ -486,7 +486,7 @@ def get_rx(planar, points):
     :param points: an array of of shape (N, 3)
     :returns: (U, N) distances
     """
-    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    lons, lats, _deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
         clon, clat, _ = pla.corners[:, 0]
@@ -502,7 +502,7 @@ def get_ry0(planar, points):
     :param points: an array of of shape (N, 3)
     :returns: (U, N) distances
     """
-    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    lons, lats, _deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
         llon, llat, _ = pla.corners[:, 0]  # top left
@@ -545,7 +545,7 @@ def get_repi(planar, points):
     :returns: (U, N) distances
     """
     out = numpy.zeros((len(planar), len(points)))
-    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    lons, lats, _deps = geo_utils.cartesian_to_spherical(points)
     hypo = planar.hypo
     for u, pla in enumerate(planar):
         out[u] = geodetic.distances(
@@ -562,7 +562,7 @@ def get_azimuth(planar, points):
     :returns: (U, N) distances
     """
     out = numpy.zeros((len(planar), len(points)))
-    lons, lats, deps = geo_utils.cartesian_to_spherical(points)
+    lons, lats, _deps = geo_utils.cartesian_to_spherical(points)
     hypo = planar.hypo
     for u, pla in enumerate(planar):
         azim = geodetic.fast_azimuth(hypo[u, 0], hypo[u, 1], lons, lats)

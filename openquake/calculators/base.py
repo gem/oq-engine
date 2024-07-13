@@ -32,10 +32,12 @@ import psutil
 import numpy
 import pandas
 from PIL import Image
+import configparser
+import collections
 
 from openquake.commands.plot_assets import main as plot_assets
-from openquake.baselib import general, hdf5, python3compat
-from openquake.baselib import performance, parallel
+from openquake.baselib import general, hdf5, python3compat, config
+from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -65,6 +67,31 @@ TWO32 = 2 ** 32
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
+
+
+def get_aelo_changelog():
+    dic = collections.defaultdict(list)
+    c = configparser.ConfigParser()
+    changelog_path = os.path.join(
+        config.directory.mosaic_dir, 'aelo_changelog.ini')
+    c.read(changelog_path)
+    for sec in c.sections():
+        dic['AELO_VERSION'].append(sec)
+        for k, v in c.items(sec):
+            dic[k].append(v)
+    df = pandas.DataFrame(dic)
+    df = df.drop(columns=['private'])
+    df = df.applymap(
+        lambda x: (x.replace('\n', '<br>').lstrip('<br>')
+                   if isinstance(x, str) else x))
+    df.columns = df.columns.str.upper()
+    return df
+
+
+def get_aelo_version():
+    aelo_changelog = get_aelo_changelog()
+    aelo_version = aelo_changelog['AELO_VERSION'][0]
+    return aelo_version
 
 
 def check_imtls(this, parent):
@@ -113,14 +140,6 @@ class InvalidCalculationID(Exception):
     """
 
 
-def build_weights(realizations):
-    """
-    :returns: an array with the realization weights of shape R
-    """
-    arr = numpy.array([rlz.weight[-1] for rlz in realizations])
-    return arr
-
-
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -151,12 +170,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
         self.engine_version = logs.dbcmd('engine_version')
+        if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+            self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
         # check in the workers
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore, version=self.engine_version
             if parallel.oq_distribute() == 'zmq' else None)
+        self._monitor.filename = self.datastore.filename
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
 
@@ -187,6 +209,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = self.engine_version
+        if hasattr(self, 'aelo_version'):
+            attrs['aelo_version'] = self.aelo_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['input_size'] = size = self.oqparam.get_input_size()
@@ -212,7 +236,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, remove=True,
+    def run(self, pre_execute=True, concurrent_tasks=None, remove=False,
             shutdown=False, **kw):
         """
         Run the calculation and return the exported outputs.
@@ -245,6 +269,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
+                if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+                    try:
+                        self._plot_assets()
+                    except Exception:
+                        logging.error('', exc_info=True)
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
@@ -514,14 +543,6 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
-        if 'station_data' in oq.inputs:
-            logging.info('Reading station data from %s',
-                         oq.inputs['station_data'])
-            self.station_data, self.observed_imts = \
-                readinput.get_station_data(oq, self.sitecol)
-            self.datastore.create_df('station_data', self.station_data)
-            oq.observed_imts = self.observed_imts
-
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
@@ -600,14 +621,13 @@ class HazardCalculator(BaseCalculator):
                 oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            mesh, pmap = readinput.get_pmap_from_csv(
+            _mesh, pmap = readinput.get_pmap_from_csv(
                 oq, oq.inputs['hazard_curves'])
             df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            self.datastore['full_lt'] = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
-            self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
@@ -688,13 +708,11 @@ class HazardCalculator(BaseCalculator):
                     self.datastore.parent['oqparam'].risk_imtls)
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-            self.realizations = self.csm.full_lt.get_realizations()
         elif 'full_lt' in self.datastore:
             # for instance in classical damage case_8a
-            self.realizations = self.datastore['full_lt'].get_realizations()
+            pass
         else:  # build a fake; used by risk-from-file calculators
-            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.realizations = fake.get_realizations()
+            self.datastore['full_lt'] = logictree.FullLogicTree.fake()
 
     @general.cached_property
     def R(self):
@@ -886,7 +904,7 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
                 self.datastore['sitecol'] = self.sitecol
-            else:
+            else:  # base case
                 self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
@@ -908,7 +926,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if oq.job_type == 'risk':
             # the decode below is used in aristotle calculations
-            taxonomies = python3compat.decode(self.assetcol.tagcol.taxonomy[1:])
+            taxonomies = python3compat.decode(
+                self.assetcol.tagcol.taxonomy[1:])
             uniq = numpy.unique(self.assetcol['taxonomy'])
             taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
                       if taxi in uniq}
@@ -948,8 +967,18 @@ class HazardCalculator(BaseCalculator):
 
     def _read_risk3(self):
         oq = self.oqparam
+        if 'station_data' in oq.inputs:
+            logging.info('Reading station data from %s',
+                         oq.inputs['station_data'])
+            # NB: get_station_data is extending the complete sitecol
+            # which then is associated to the site parameters below
+            self.station_data, self.observed_imts = \
+                readinput.get_station_data(oq, self.sitecol)
+            self.datastore.create_df('station_data', self.station_data)
+            oq.observed_imts = self.observed_imts
+
         if hasattr(self, 'sitecol') and self.sitecol:
-            if 'site_model' in oq.inputs:
+            if 'site_model' in oq.inputs or oq.aristotle:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
@@ -1005,7 +1034,6 @@ class HazardCalculator(BaseCalculator):
             save_agg_values(
                 self.datastore, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
-            self._plot_assets()
 
         if 'post_loss_amplification' in oq.inputs:
             df = pandas.read_csv(oq.inputs['post_loss_amplification']
@@ -1019,13 +1047,13 @@ class HazardCalculator(BaseCalculator):
         :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
         if hasattr(self, 'full_lt'):  # no scenario
-            self.realizations = self.full_lt.get_realizations()
-            if len(self.realizations) == 0:
+            if self.full_lt.get_num_paths() == 0:
                 raise RuntimeError('Empty logic tree: too much filtering?')
         else:  # scenario
             self.full_lt = self.datastore['full_lt']
-        self.datastore['weights'] = arr = build_weights(self.realizations)
-        self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+        if 'weights' not in self.datastore:
+            self.datastore['weights'] = F32(
+                [rlz.weight[-1] for rlz in self.full_lt.get_realizations()])
         if rel_ruptures:
             self.check_discardable(rel_ruptures)
 
@@ -1036,7 +1064,7 @@ class HazardCalculator(BaseCalculator):
         keep_trts = set()
         nrups = []
         for grp_id, trt_smrs in enumerate(self.csm.get_trt_smrs()):
-            trti, smrs = numpy.divmod(trt_smrs, 2**24)
+            trti, _smrs = numpy.divmod(trt_smrs, 2**24)
             trt = self.full_lt.trts[trti[0]]
             nr = rel_ruptures.get(grp_id, 0)
             nrups.append(nr)
@@ -1107,7 +1135,8 @@ class RiskCalculator(HazardCalculator):
         if not hasattr(self.crmodel, 'tmap'):
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxdic)
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam,
+                                                           taxdic)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
@@ -1123,17 +1152,10 @@ class RiskCalculator(HazardCalculator):
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = performance.get_slices(dstore['_rates/sid'][:])
-        full_lt = dstore['full_lt'].init()
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        getterdict = getters.CurveGetter.build(dstore)
         for sid, assets in asset_df.groupby(asset_df.index):
+            getter = getterdict[sid]
             # hcurves, shape (R, N)
-            getter = getters.MapGetter(
-                dstore.filename, trt_rlzs, self.R,
-                slices.get(sid, []), self.oqparam)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))
@@ -1389,7 +1411,7 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
-        N, E, M = gmfs.shape
+        N, E, _M = gmfs.shape
         events = numpy.zeros(E, rupture.events_dt)
         events['id'] = numpy.arange(E, dtype=U32)
         calc.datastore['events'] = events
