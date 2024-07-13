@@ -579,23 +579,26 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         sizes = []
+        max_gb = float(config.memory.pmap_max_gb)
         for cm in self.cmakers:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             gid = self.gids[cm.grp_id][0]
+            size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((gid, self.sitecol, cm, ds))
             else:
-                tiles = self.sitecol.split(
-                    numpy.ceil(sg.weight / maxw), minsize=oq.max_sites_disagg)
+                ntiles = numpy.ceil(sg.weight / maxw)
+                if size_gb / ntiles > max_gb:
+                    ntiles = numpy.ceil(size_gb / max_gb)
+                tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
                 logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
                 for tile in tiles:
                     allargs.append((gid, tile, cm, ds))
-                    sizes.append(len(cm.gsims) * oq.imtls.size * len(tile)
-                                 * 8 / 1024**2)
+                    sizes.append(size_gb * len(tile) / self.N)
                     self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles, maxsize=%.1f M',
+        logging.warning('Generated at most %d tiles, maxsize=%.1f G',
                         max(self.ntiles), max(sizes))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
