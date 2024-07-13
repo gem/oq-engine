@@ -220,7 +220,7 @@ class Monitor(object):
     @property
     def calc_dir(self):
         """Calculation directory custom_tmp/oqdata/calc_XXX"""
-        path = os.path.join(config.directory.custom_tmp,
+        path = os.path.join(self.config.directory.custom_tmp,
                             os.path.basename(self.filename))
         return path[:-5]  # strip .hdf5
 

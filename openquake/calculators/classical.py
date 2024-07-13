@@ -146,13 +146,14 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if config.distribution.save_on_tmp and tiling:
+        if monitor.config.distribution.save_on_tmp and tiling:
             # tested in case_22
             try:
                 os.mkdir(monitor.calc_dir)
             except FileExistsError:  # somebody else wrote it
                 pass
             fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
+            # print('Saving rates on %s' % fname)
             with hdf5.File(fname, 'a') as h5:
                 _store(rates, h5)
             yield dict(cfactor=result['cfactor'])
@@ -519,6 +520,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.save_on_tmp = config.distribution.save_on_tmp
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
@@ -576,6 +578,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         self.ntiles = []
         if config.distribution.save_on_tmp:
+            self._monitor.config = config
             logging.info('Storing the rates in %s', self._monitor.calc_dir)
             self.datastore.hdf5.attrs['scratch_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:
@@ -588,6 +591,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.save_on_tmp = config.distribution.save_on_tmp
             gid = self.gids[cm.grp_id][0]
             size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
             if sg.atomic or sg.weight <= maxw:
