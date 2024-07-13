@@ -32,6 +32,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 TWO24 = 2 ** 24
+CHUNKS = 256
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
@@ -165,14 +166,16 @@ def map_getters(dstore, full_lt=None, disagg=False):
     else:
        weights = full_lt.weights
     try:
-        tile_dir = dstore['tile_dir'][()]
-        fnames = [os.path.join(tile_dir, f) for f in os.listdir(tile_dir)]
-        names = filter(os.path.isdir, fnames)
+        scratch_dir = dstore.hdf5.attrs['scratch_dir']
+        fnames = [os.path.join(scratch_dir, f) for f in os.listdir(scratch_dir)
+                  if f.endswith('.hdf5')]
+        names = ['_rates%03d' % i for i in range(CHUNKS)]
     except KeyError:  # no tiling
+        fnames = [dstore.filename]
         names = [name for name in dstore if name.startswith('_rates')]
     out = []
     for name in names:
-        getter = MapGetter(dstore.filename, name, trt_rlzs, R, oq)
+        getter = MapGetter(fnames, name, trt_rlzs, R, oq)
         getter.weights = weights
         out.append(getter)
     return out
@@ -233,8 +236,8 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filename, name, trt_rlzs, R, oq):
-        self.filename = filename
+    def __init__(self, filenames, name, trt_rlzs, R, oq):
+        self.filenames = filenames
         self.name = name
         self.trt_rlzs = trt_rlzs
         self.R = R
@@ -246,7 +249,7 @@ class MapGetter(object):
 
     @property
     def sids(self):
-        #self.init()
+        self.init()
         return list(self._map)
 
     @property
@@ -283,17 +286,21 @@ class MapGetter(object):
         else:
             fnames = [self.filename]
         '''
-        with hdf5.File(self.filename) as dstore:
-            rates_df = dstore.read_df(self.name)
-            # not using groupby to save memory
-            for sid in rates_df.sid.unique():
-                df = rates_df[rates_df.sid == sid]
+        for fname in self.filenames:
+            with hdf5.File(fname) as dstore:
                 try:
-                    array = self._map[sid]
+                    rates_df = dstore.read_df(self.name)
                 except KeyError:
-                    array = numpy.zeros((self.L, self.G))
-                    self._map[sid] = array
-                array[df.lid, df.gid] = df.rate
+                    continue
+                # not using groupby to save memory
+                for sid in rates_df.sid.unique():
+                    df = rates_df[rates_df.sid == sid]
+                    try:
+                        array = self._map[sid]
+                    except KeyError:
+                        array = numpy.zeros((self.L, self.G))
+                        self._map[sid] = array
+                    array[df.lid, df.gid] = df.rate
         return self._map
 
     def get_hcurve(self, sid):  # used in classical

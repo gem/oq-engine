@@ -46,7 +46,6 @@ F64 = numpy.float64
 I64 = numpy.int64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-CHUNKS = 256
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
@@ -55,7 +54,7 @@ get_weight = operator.attrgetter('weight')
 
 
 def _store(rates, h5):
-    chunks = rates['sid'] % CHUNKS
+    chunks = rates['sid'] % getters.CHUNKS
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
         name = '_rates%03d' % chunk
@@ -64,27 +63,6 @@ def _store(rates, h5):
         hdf5.extend(h5[f'{name}/gid'], ch_rates['gid'])
         hdf5.extend(h5[f'{name}/lid'], ch_rates['lid'])
         hdf5.extend(h5[f'{name}/rate'], ch_rates['rate'])
-
-
-def store_rates(rates, mon):
-    """
-    Store the rates in the datastore if there is no tiling, otherwise
-    store in temporary files of the form `calc_dir/poesXXX.hdf5`
-    """
-    calc_dir = mon.calc_dir
-    if not os.path.exists(calc_dir):
-        os.mkdir(calc_dir)
-    chunks = rates['sid'] % CHUNKS
-    for chunk in numpy.unique(chunks):
-        ch_rates = rates[chunks == chunk]
-        chunk_dir = os.path.join(calc_dir, str(chunk))
-        try:
-            os.mkdir(chunk_dir)
-        except FileExistsError:  # somebody else wrote it
-            pass
-        fname = os.path.join(calc_dir, f'{chunk}/{mon.task_no}.hdf5')
-        with hdf5.File(fname, 'a') as h5:
-            _store(ch_rates, h5)
 
 
 class Set(set):
@@ -169,7 +147,13 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if config.distribution.save_on_tmp and tiling:
-            store_rates(rates, monitor)
+            try:
+                os.mkdir(monitor.calc_dir)
+            except FileExistsError:  # somebody else wrote it
+                pass
+            fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
+            with hdf5.File(fname, 'a') as h5:
+                _store(rates, h5)
         else:
             result['pnemap'] = rates
         yield result
@@ -185,7 +169,9 @@ def fast_mean(pgetter, monitor):
     """
     with monitor('reading rates', measuremem=True):
         pgetter.init()
-    
+    if not pgetter.sids:  # can happen with tiling
+        return {}
+
     with monitor('compute stats', measuremem=True):
         hcurves = pgetter.get_fast_mean(pgetter.weights)
 
@@ -214,6 +200,8 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     """
     with monitor('reading rates', measuremem=True):
         pgetter.init()
+    if not pgetter.sids:  # can happen with tiling
+        return {}
 
     if amplifier:
         with hdf5.File(pgetter.filename, 'r') as f:
@@ -256,7 +244,8 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
             if hstats:
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, pgetter.weights, wget, pgetter.use_rates)
+                        pc, imtls, stat, pgetter.weights, wget,
+                        pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -582,7 +571,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         self.ntiles = []
         if config.distribution.save_on_tmp:
-            self.datastore['tile_dir'] = self._monitor.calc_dir
+            self.datastore.hdf5.attrs['scratch_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -725,7 +714,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = [(getter, wget, hstats, individual, oq.max_sites_disagg,
                     self.amplifier) for getter in getters.map_getters(
                         dstore, self.full_lt)]
-        if not allargs:  # case_60
+        if not config.distribution.save_on_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
             return
         self.hazard = {}  # kind -> array
