@@ -1026,6 +1026,15 @@ rietbrock_edwards_2019
     :undoc-members:
     :show-inheritance:
 
+sandikkaya_akkar_2017
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sandikkaya_akkar_2017
+
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 sadigh_1997
 -------------------------------------------
 
