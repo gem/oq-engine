@@ -1,3 +1,6 @@
+  [Fatemeh Alishahiha]
+  * Added a new gsim library named `ambraseys_2005`.
+
   [Michele Simionato]
   * Cached `get_realizations` and optimized the memory occupation; now
     302_990_625 realizations (i.e. EUR) require only 90 GB
