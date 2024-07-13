@@ -1041,9 +1041,6 @@ class Starmap(object):
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
         self.unlink()
-        if dist == 'slurm':
-            for fname in os.listdir(self.monitor.calc_dir):
-                os.remove(os.path.join(self.monitor.calc_dir, fname))
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
             logging.info(
