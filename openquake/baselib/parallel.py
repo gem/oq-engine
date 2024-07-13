@@ -934,6 +934,9 @@ class Starmap(object):
                                for args in self.task_args]
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
+            if not config.directory.custom_tmp:
+                raise ValueError('[directory]custom_tmp is missing '
+                                 'in openquake.cfg')
             for func, args in self.task_queue:
                 self.submit(args, func=func)
             self.task_queue.clear()
@@ -1147,9 +1150,11 @@ def slurm_task(calc_dir: str, task_id: str, delta='1'):
     """
     t = int(task_id)
     for task in range(t, t + int(delta)):
-        with open(f'{calc_dir}/{task}.inp', 'rb') as f:
-            func, args, mon = pickle.load(f)
-        safely_call(func, args, task - 1, mon)
+        fname = f'{calc_dir}/{task}.inp'
+        if os.path.exists(fname):
+            with open(fname, 'rb') as f:
+                func, args, mon = pickle.load(f)
+            safely_call(func, args, task - 1, mon)
 
 
 def slurm_tasks(calc_dir, start, stop):
