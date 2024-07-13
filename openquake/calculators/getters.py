@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import operator
+import collections
 import numpy
 
 from openquake.baselib import general, hdf5
@@ -198,13 +199,18 @@ class CurveGetter(object):
     """
     @classmethod
     def build(cls, dstore):
+        """
+        :returns: a dictionary sid -> CurveGetter
+        """
         rates = {}
         for mgetter in map_getters(dstore):
             pmap = mgetter.init()
             for sid in pmap:
                 rates[sid] = pmap[sid]  # shape (L, G)
-        return {sid: cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
-                for sid in rates}, ZeroGetter(mgetter.L, mgetter.R)
+        dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
+        for sid in rates:
+            dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
+        return dic                
 
     def __init__(self, sid, rates, trt_rlzs, R):
         self.sid = sid

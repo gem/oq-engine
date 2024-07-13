@@ -92,16 +92,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if '_rates' not in self.datastore:  # when building short report
-            return
-        full_lt = self.datastore['full_lt'].init()
-        stats = list(oq.hazard_stats().items())
-        oq._stats = stats
-        oq._weights = full_lt.weights
-        self.riskinputs = self.build_riskinputs()
-        self.A = len(self.assetcol)
-        self.L = len(self.crmodel.loss_types)
-        self.S = len(oq.hazard_stats())
+        if any(name.startswith('_rates') for name in self.datastore):
+            full_lt = self.datastore['full_lt'].init()
+            stats = list(oq.hazard_stats().items())
+            oq._stats = stats
+            oq._weights = full_lt.weights
+            self.riskinputs = self.build_riskinputs()
+            self.A = len(self.assetcol)
+            self.L = len(self.crmodel.loss_types)
+            self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
         """
