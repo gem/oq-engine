@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters
+from openquake.calculators import base, getters, preclassical
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -402,10 +402,16 @@ class ClassicalCalculator(base.HazardCalculator):
         # which are a preclassical concept
 
     def init_poes(self):
+        oq = self.oqparam
         self.cmakers = read_cmakers(self.datastore, self.csm)
+        parent = self.datastore.parent
+        if parent and oq.concurrent_tasks != parent['oqparam'].concurrent_tasks:
+            # recompute max_weight, trt_rlzs, gids and num_tiles, tested in case_43
+            self.max_weight, self.trt_rlzs, self.gids = preclassical.store_num_tiles(
+                self.datastore, self.csm, self.sitecol, self.cmakers, oq)
+
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        oq = self.oqparam
         if oq.disagg_by_src:
             M = len(oq.imtls)
             L1 = oq.imtls.size // M
@@ -460,6 +466,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if any(name.startswith('_rates') for name in parent):
                 self.build_curves_maps()  # repeat post-processing
                 return {}
+
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
