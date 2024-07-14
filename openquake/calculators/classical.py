@@ -147,6 +147,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
+        if tiling:
+            del result['source_data']  # save a lot of data transfer
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if monitor.config.distribution.save_on_tmp and tiling:
             # tested in case_22
@@ -158,8 +160,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             # print('Saving rates on %s' % fname)
             with hdf5.File(fname, 'a') as h5:
                 _store(rates, h5)
-            yield dict(cfactor=result['cfactor'])
-            return
         else:
             result['pnemap'] = rates
         yield result
