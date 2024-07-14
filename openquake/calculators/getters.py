@@ -32,7 +32,6 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 TWO24 = 2 ** 24
-CHUNKS = 256
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
@@ -152,11 +151,25 @@ def get_pmaps_gb(dstore, full_lt=None):
     return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
 
 
+def get_num_chunks(dstore):
+    try:
+        chunks = max(dstore['num_tiles'][:].sum() // 2, 32)
+    except KeyError:
+        chunks = 32
+    return chunks
+
+    
 def map_getters(dstore, full_lt=None, disagg=False):
     """
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = dstore['oqparam']
+    # disaggregation is meant for few sites, i.e. no tiling
+    N = len(dstore['sitecol/sids'])
+    chunks = get_num_chunks(dstore)
+    if disagg and N > chunks:
+        raise ValueError('There are %d sites but only %d chunks' % (N, chunks))
+
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
@@ -169,7 +182,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
         fnames = [os.path.join(scratch_dir, f) for f in os.listdir(scratch_dir)
                   if f.endswith('.hdf5')]
-        names = ['_rates%03d' % i for i in range(CHUNKS)]
+        names = ['_rates%03d' % i for i in range(chunks)]
     except KeyError:  # no tiling
         fnames = [dstore.filename]
         names = [name for name in dstore

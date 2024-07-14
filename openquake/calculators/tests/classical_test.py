@@ -29,7 +29,6 @@ from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_12, case_18, case_22, case_23,

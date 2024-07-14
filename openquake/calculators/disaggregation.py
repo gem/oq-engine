@@ -177,8 +177,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        # disaggregation is meant for few sites, i.e. no tiling
-        assert self.N < getters.CHUNKS, (self.N, getters.CHUNKS)
         self.mgetters = getters.map_getters(dstore, full_lt, disagg=True)
 
         # build array rlzs (N, Z)

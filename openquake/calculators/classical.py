@@ -53,8 +53,8 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
-def _store(rates, h5):
-    chunks = rates['sid'] % getters.CHUNKS
+def _store(rates, num_chunks, h5):
+    chunks = rates['sid'] % num_chunks
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
         name = '_rates%03d' % chunk
@@ -151,7 +151,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates, h5)
+                    _store(rates, cmaker.chunks, h5)
         else:
             result['pnemap'] = rates
         yield result
@@ -418,8 +418,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
+        self.chunks = getters.get_num_chunks(self.datastore)
         if oq.calculation_mode == 'classical':
-            for i in range(getters.CHUNKS):
+            for i in range(self.chunks):
                 name = '_rates%03d' % i
                 self.datastore.create_df(
                     name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
@@ -453,15 +454,12 @@ class ClassicalCalculator(base.HazardCalculator):
             self.csm = parent['_csm']
             self.csm.init(self.full_lt)
             self.datastore['source_info'] = parent['source_info'][:]
-            maxw = self.csm.get_max_weight(oq)
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
             if any(name.startswith('_rates') for name in parent):
                 self.build_curves_maps()  # repeat post-processing
                 return {}
-        else:
-            maxw = self.max_weight
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
@@ -540,7 +538,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.datastore)
+            _store(self.pmap.to_array(), self.chunks, self.datastore)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -583,6 +581,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
+            cm.chunks = self.chunks
             gid = self.gids[cm.grp_id][0]
             tiles = self.sitecol.split(ntiles)
             logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
@@ -592,7 +591,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:
-                _store(dic['pnemap'], self.datastore)
+                _store(dic['pnemap'], self.chunks, self.datastore)
         return {}
 
     def store_info(self):
