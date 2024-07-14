@@ -148,7 +148,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         if tiling:
-            del result['source_data']  # save a lot of data transfer
+            del result['source_data']  # save a lot of data transfer in EUR
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if monitor.config.distribution.save_on_tmp and tiling:
             # tested in case_22
@@ -424,6 +424,12 @@ class ClassicalCalculator(base.HazardCalculator):
                        lvl=L1, src_id=numpy.array(sources))
             self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(
                 mean_rates_by_src, dic)
+
+        # create empty dataframes
+        if oq.calculation_mode == 'classical':
+            for i in range(getters.CHUNKS):
+                name = '_rates%03d' % i
+                self.datastore.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
 
     def check_memory(self, N, L, maxw):
         """

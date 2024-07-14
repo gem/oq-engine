@@ -172,7 +172,8 @@ def map_getters(dstore, full_lt=None, disagg=False):
         names = ['_rates%03d' % i for i in range(CHUNKS)]
     except KeyError:  # no tiling
         fnames = [dstore.filename]
-        names = [name for name in dstore if name.startswith('_rates')]
+        names = [name for name in dstore
+                 if name.startswith('_rates') and len(dstore[f'{name}/sid'])]
     out = []
     for name in names:
         getter = MapGetter(fnames, name, trt_rlzs, R, oq)

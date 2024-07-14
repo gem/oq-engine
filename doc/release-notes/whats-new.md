@@ -73,6 +73,8 @@ $ oq run EUR.zip --hc 10589 -c 3000
 
 # no gzip compression, save_on_custom_tmp=false
 
+The result queue goes up to 25.5G.
+I see up top 3.8G per core used.
 
 # engine-3.21
 
