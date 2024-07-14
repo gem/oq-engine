@@ -234,26 +234,30 @@ def sbatch(mon):
         slurm_task(mon.calc_dir, '1')
         return 'Single task in-core'
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
-    starts = numpy.arange(1, mon.task_no + 1, SLURM_CHUNK)
-    for no, start in enumerate(starts, 1):
-        stop = min(mon.task_no, start + SLURM_CHUNK - 1)
+    batches = int(numpy.ceil(mon.task_no / SLURM_CHUNK))
+    tasks = numpy.arange(1, mon.task_no + 1)
+    for no, batch in enumerate(numpy.array_split(tasks, batches), 1):
+        start, stop = batch[0], batch[-1]
         sh = SLURM_BATCH.format(python=config.distribution.python, mon=mon,
                                 start=start, stop=stop)
         path = os.path.join(mon.calc_dir, 'slurm.sh')
         with open(path, 'w') as f:
             f.write(sh)
         os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
-        cpus = '--cpus-per-task=%d' % min(Starmap.num_cores, stop - start + 1)
-        cmd = config.distribution.submit_cmd.split()[:-2] + [cpus, path]
-        logging.info(f'{no=} {cpus} {mon.calc_dir} {start} {stop}')
-        if no == len(starts) or not sbatch:
+        cpus = min(stop + 1 - start, Starmap.num_cores)
+        submit_cmd = config.distribution.submit_cmd.split()[:-2] + [
+            '--cpus-per-task=%d' % cpus, path]
+        logging.info(f'Batch #{no} {mon.calc_dir} {start} {stop} [{cpus=}]')
+        if no == 0 or not sbatch:
             # spawn a few tasks on the current node
-            for task_id in range(start, stop + 1, 2):
-                mp_context.Process(
-                    target=slurm_task, args=(mon.calc_dir, str(task_id), '2')
-                ).start()
+            proc = mp_context.Process(
+                target=slurm_tasks, args=(mon.calc_dir, str(start), str(stop)))
+            proc.start()
+            if not sbatch:
+                proc.join()
         else:
-            proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+            proc = subprocess.run(
+                submit_cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
             # logging a string like "Submitted batch job 5573363"
             logging.info(proc.stdout.decode('utf8').strip())
 
@@ -1151,6 +1155,7 @@ def slurm_task(calc_dir: str, task_id: str, delta='1'):
     t = int(task_id)
     for task in range(t, t + int(delta)):
         fname = f'{calc_dir}/{task}.inp'
+        print(fname)
         if os.path.exists(fname):
             with open(fname, 'rb') as f:
                 func, args, mon = pickle.load(f)
