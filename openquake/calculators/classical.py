@@ -590,9 +590,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.chunks = self.chunks
             gid = self.gids[cm.grp_id][0]
-            tiles = self.sitecol.split(ntiles)
-            logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
-            for tile in tiles:
+            for tile in self.sitecol.split(ntiles):
                 allargs.append((gid, tile, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):

@@ -194,8 +194,10 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
             tiles = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
             num_tiles.append(len(tiles))
         dstore.create_dset('num_tiles', U32(num_tiles))
-        logging.info('This will be a tiling calculation with %d tasks',
-                     sum(num_tiles))
+        ntasks = sum(num_tiles)
+        logging.info('This will be a tiling calculation with %d tasks', ntasks)
+        if ntasks >= 300:
+            logging.info('We suggest to set a custom_tmp and save_on_tmp=true')
     return max_weight, trt_rlzs, gids
 
 
