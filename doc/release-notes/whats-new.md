@@ -64,14 +64,38 @@ be resubmitted fasts enough and the queue of results goes up to
 
 There is gzip compression on the saved rates.
 
+| /home/michele/oqdata/calc_10587.hdf5 | 44.78 GB  |
+
 # master
 
 There is no compression of the zmq packets and no gzip compression.
 Also, source_data is not returned, so it is much faster
 
 $ oq run EUR.zip --hc 10589 -c 3000
-
+# "reading rates" is terribly bad!!
 # no gzip compression, save_on_custom_tmp=false
+| calc_10590, maxmem=303.5 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| total classical             | 446_776  | 126.9531  | 3_095      |
+| get_poes                    | 196_059  | 0.0       | 71_419_362 |
+| computing mean_std          | 157_309  | 0.0       | 2_925_140  |
+| composing pnes              | 70_421   | 0.0       | 71_419_362 |
+| total fast_mean             | 56_250   | 1_273     | 256        |
+| reading rates               | 56_083   | 1_273     | 256        |
+| planar contexts             | 14_789   | 0.0       | 74_033_936 |
+| ClassicalCalculator.run     | 4_686    | 5_455     | 1          |
+
+| operation-duration | counts | mean     | stddev | min      | max      | slowfac |
+|--------------------+--------+----------+--------+----------+----------+---------|
+| classical          | 3_095  | 144.3542 | 16%    | 1.1218   | 167.5341 | 1.1606  |
+| fast_mean          | 256    | 219.7    | 11%    | 159.5140 | 301.7    | 1.3730  |
+
+| task      | sent                                               | received  |
+|-----------+----------------------------------------------------+-----------+
+| classical | sitecol=50.01 GB cmaker=382.57 MB dstore=504.75 KB | 128.39 GB |
+| fast_mean | pgetter=4.71 MB                                    | 616.49 MB |
+
+| /home/michele/oqdata/calc_10590.hdf5 | 128.79 GB |
 
 The result queue goes up to 25.5G.
 I see up top 3.8G per core used.
