@@ -102,15 +102,6 @@ def to_rates(pnemap, gid, tiling, disagg_by_src):
     return rates.remove_zeros()
 
 
-def get_tile_size(oq, N, csm, maxw=0):
-    """
-    :returns: the number of sites in the smallest tile
-    """
-    maxw = maxw or csm.get_max_weight(oq)
-    sizes = [maxw / sg.weight * N for sg in csm.src_groups]
-    return int(min(sizes))
-
-
 #  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
@@ -156,10 +147,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 os.mkdir(monitor.calc_dir)
             except FileExistsError:  # somebody else wrote it
                 pass
-            fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
-            # print('Saving rates on %s' % fname)
-            with hdf5.File(fname, 'a') as h5:
-                _store(rates, h5)
+            if len(rates):
+                fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
+                # print('Saving rates on %s' % fname)
+                with hdf5.File(fname, 'a') as h5:
+                    _store(rates, h5)
         else:
             result['pnemap'] = rates
         yield result
@@ -473,8 +465,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
-            self.datastore, self.full_lt)
+        if not hasattr(self, 'trt_rlzs'):
+            _, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+                self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -486,13 +479,16 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        max_gb = float(config.memory.pmap_max_gb)
-        if (oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb
-            or oq.tile_spec):
-            self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
-            self.execute_reg(maxw)
+        try:
+            self.ntiles = self.datastore['num_tiles'][:]
+        except KeyError:
+            # regular calculator, no tiles
+            self.ntiles = numpy.zeros(0, U32)
+        if self.ntiles.any():
+            self.execute_big()
         else:
-            self.execute_big(maxw)
+            self.execute_reg()
+
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -510,10 +506,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def execute_reg(self, maxw):
+    def execute_reg(self):
         """
         Regular case
         """
+        maxw = self.csm.get_max_weight(self.oqparam)
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
@@ -565,27 +562,14 @@ class ClassicalCalculator(base.HazardCalculator):
             ok = got[m] < 10.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
-    def fix_maxw_tsize(self, maxw, tsize):
-        if tsize < 100:  # less than 100 sites per tile
-            logging.info(
-                'concurrent_tasks=%d is too large, producing less tiles',
-                self.oqparam.concurrent_tasks)
-            maxw = maxw * 100/ tsize
-            tsize = get_tile_size(self.oqparam, self.N, self.csm, maxw)
-        return maxw, tsize
-
-    def execute_big(self, maxw):
+    def execute_big(self):
         """
         Use parallel tiling
         """
         oq = self.oqparam
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        tsize = get_tile_size(oq, self.N, self.csm, maxw)
-        maxw, tsize = self.fix_maxw_tsize(maxw, tsize)
-        logging.info('min_tile_size = {:_d}'.format(tsize))
         allargs = []
-        self.ntiles = []
         if config.distribution.save_on_tmp:
             self._monitor.config = config
             logging.info('Storing the rates in %s', self._monitor.calc_dir)
@@ -594,26 +578,16 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        sizes = []
-        max_gb = float(config.memory.pmap_max_gb)
-        for cm in self.cmakers:
+        for cm, ntiles in zip(self.cmakers, self.ntiles):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
             gid = self.gids[cm.grp_id][0]
-            size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
-            ntiles = numpy.ceil(sg.weight / maxw)
-            if size_gb / ntiles > max_gb:
-                ntiles = numpy.ceil(size_gb / max_gb)
-            tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            tiles = self.sitecol.split(ntiles)
             logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
             for tile in tiles:
                 allargs.append((gid, tile, cm, ds))
-                sizes.append(size_gb * len(tile) / self.N)
-                self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles, maxsize=%.1f G',
-                        max(self.ntiles), max(sizes))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']

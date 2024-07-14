@@ -109,3 +109,9 @@ will not run out of memory
 Yes, because the packets will be smaller and zmq will be less likely to hang
 No, because the decompression on the master node will make everything slower;
 for EUR the penalty was significant: from 58m to 1h9m, 17% more.
+
+
+# Is it a good idea to compress the rates in the datastore?
+
+Yes, because "reading rates" will become a lot faster, a lot more than the
+writing penalty.

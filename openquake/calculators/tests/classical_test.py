@@ -175,9 +175,7 @@ class ClassicalTestCase(CalculatorTestCase):
         tmp = tempfile.gettempdir()
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}), \
-             mock.patch.object(ClassicalCalculator,
-                               'fix_maxw_tsize', lambda self, m, t: (m, t)):
+             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
