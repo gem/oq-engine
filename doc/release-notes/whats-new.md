@@ -113,5 +113,12 @@ for EUR the penalty was significant: from 58m to 1h9m, 17% more.
 
 # Is it a good idea to compress the rates in the datastore?
 
-Yes, because "reading rates" will become a lot faster, a lot more than the
-writing penalty.
+No, because "reading rates" will be much slower:
+
+| calc_10592, maxmem=308.4 GB | time_sec | memory_mb | counts     |
+|-----------------------------+----------+-----------+------------|
+| reading rates               | 57_596   | 1_268     | 256        |
+| reading rates               | 65_468   | 1_272     | 256        |
+
+The performance penalty will be terrible:
+ClassicalCalculator.run 4_784  -> 
