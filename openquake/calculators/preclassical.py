@@ -165,6 +165,40 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
                 yield dic
 
 
+def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
+    """
+    Store a `num_tiles` array if the calculation is large enough.
+    :returns: a triple (max_weight, trt_rlzs, gids)
+    """
+    N = len(sitecol)
+    max_weight = csm.get_max_weight(oq)
+    max_gb = float(config.memory.pmap_max_gb)
+    req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
+    regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
+               or oq.tile_spec)
+    if not regular:  # tiling
+        # increase max_weight if there are tiles smaller than 100 sites
+        minsize = min(max_weight / sg.weight * N for sg in csm.src_groups)
+        if minsize < 100:  # less than 100 sites per tile
+            logging.info(
+                'concurrent_tasks=%d is too large, producing less tiles',
+                oq.concurrent_tasks)
+            max_weight *= 100/ minsize
+        num_tiles = []
+        for cm in cmakers:
+            sg = csm.src_groups[cm.grp_id]
+            size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
+            ntiles = numpy.ceil(sg.weight / max_weight)
+            if size_gb / ntiles > max_gb:
+                ntiles = numpy.ceil(size_gb / max_gb)
+            tiles = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            num_tiles.append(len(tiles))
+        dstore.create_dset('num_tiles', U32(num_tiles))
+        logging.info('This will be a tiling calculation with %d tasks',
+                     sum(num_tiles))
+    return max_weight, trt_rlzs, gids
+
+
 @base.calculators.add('preclassical')
 class PreClassicalCalculator(base.HazardCalculator):
     """
@@ -345,14 +379,12 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 if cachepath:
                     os.symlink(self.datastore.filename, cachepath)
-        self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
         """
         Raise an error if the sources were all discarded
         """
-        oq = self.oqparam
         self.datastore.create_dset(
             'weights',
             F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
@@ -374,34 +406,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'ntiles' if the calculation is large
-        max_gb = float(config.memory.pmap_max_gb)
-        req_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
-            self.datastore, self.csm.full_lt)
-        regular = (oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb
-                   or oq.tile_spec)
-        if not regular:  # tiling
-            self._fix_max_weight()
-            num_tiles = []
-            for cm in self.cmakers:
-                sg = self.csm.src_groups[cm.grp_id]
-                size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
-                ntiles = numpy.ceil(sg.weight / self.max_weight)
-                if size_gb / ntiles > max_gb:
-                    ntiles = numpy.ceil(size_gb / max_gb)
-                tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-                num_tiles.append(len(tiles))
-            self.datastore.create_dset('num_tiles', U32(num_tiles))
-            logging.info('This will be a tiling calculation with %d tasks',
-                         sum(num_tiles))
-            
-    def _fix_max_weight(self):
-        # increase max_weight if there are tiles smaller than 100 sites
-        minsize = min(self.max_weight / sg.weight * self.N for sg in self.csm.src_groups)
-        if minsize < 100:  # less than 100 sites per tile
-            logging.info(
-                'concurrent_tasks=%d is too large, producing less tiles',
-                self.oqparam.concurrent_tasks)
-            self.max_weight *= 100/ minsize
+        self.max_weight, self.trt_rlzs, self.gids = store_num_tiles(
+            self.datastore, self.csm, self.sitecol, self.cmakers, self.oqparam)
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':
