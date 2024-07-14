@@ -248,9 +248,9 @@ def sbatch(mon):
         logging.info(f'{no=} {cpus} {mon.calc_dir} {start} {stop}')
         if no == len(starts) or not sbatch:
             # spawn a few tasks on the current node
-            for task_id in range(start, stop + 1):
+            for task_id in range(start, stop + 1, 2):
                 mp_context.Process(
-                    target=slurm_task, args=(mon.calc_dir, str(task_id))
+                    target=slurm_task, args=(mon.calc_dir, str(task_id), '2')
                 ).start()
         else:
             proc = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
@@ -934,6 +934,9 @@ class Starmap(object):
                                for args in self.task_args]
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
+            if not config.directory.custom_tmp:
+                raise ValueError('[directory]custom_tmp is missing '
+                                 'in openquake.cfg')
             for func, args in self.task_queue:
                 self.submit(args, func=func)
             self.task_queue.clear()
@@ -1111,6 +1114,10 @@ def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
     """
     Spawn processes with the given arguments
     """
+    if oq_distribute() == 'no':
+        for args in allargs:
+            func(*args)
+        return
     tot = len(allargs)
     allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {}  # sentinel -> process
@@ -1137,13 +1144,17 @@ def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
             n += 1
 
 
-def slurm_task(calc_dir: str, task_id: str):
+def slurm_task(calc_dir: str, task_id: str, delta='1'):
     """
     Task in a SLURM job array
     """
-    with open(calc_dir + '/' + task_id + '.inp', 'rb') as f:
-        func, args, mon = pickle.load(f)
-    safely_call(func, args, int(task_id) - 1, mon)
+    t = int(task_id)
+    for task in range(t, t + int(delta)):
+        fname = f'{calc_dir}/{task}.inp'
+        if os.path.exists(fname):
+            with open(fname, 'rb') as f:
+                func, args, mon = pickle.load(f)
+            safely_call(func, args, task - 1, mon)
 
 
 def slurm_tasks(calc_dir, start, stop):

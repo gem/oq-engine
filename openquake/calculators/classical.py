@@ -58,7 +58,10 @@ def _store(rates, h5):
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
         name = '_rates%03d' % chunk
-        h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+        try:
+            h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+        except ValueError:  # already created
+            pass
         hdf5.extend(h5[f'{name}/sid'], ch_rates['sid'])
         hdf5.extend(h5[f'{name}/gid'], ch_rates['gid'])
         hdf5.extend(h5[f'{name}/lid'], ch_rates['lid'])
@@ -107,9 +110,8 @@ def get_tile_size(oq, N, csm, maxw=0):
     sizes = [maxw / sg.weight * N for sg in csm.src_groups]
     return int(min(sizes))
 
-    
-#  ########################### task functions ############################ #
 
+#  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
     """
@@ -146,14 +148,18 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if config.distribution.save_on_tmp and tiling:
+        if monitor.config.distribution.save_on_tmp and tiling:
+            # tested in case_22
             try:
                 os.mkdir(monitor.calc_dir)
             except FileExistsError:  # somebody else wrote it
                 pass
             fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
+            # print('Saving rates on %s' % fname)
             with hdf5.File(fname, 'a') as h5:
                 _store(rates, h5)
+            yield dict(cfactor=result['cfactor'])
+            return
         else:
             result['pnemap'] = rates
         yield result
@@ -516,6 +522,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.save_on_tmp = config.distribution.save_on_tmp
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
@@ -553,8 +560,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def fix_maxw_tsize(self, maxw, tsize):
         if tsize < 100:  # less than 100 sites per tile
-            logging.info('concurrent_tasks=%d is too large, producing less tiles',
-                         self.oqparam.concurrent_tasks)
+            logging.info(
+                'concurrent_tasks=%d is too large, producing less tiles',
+                self.oqparam.concurrent_tasks)
             maxw = maxw * 100/ tsize
             tsize = get_tile_size(self.oqparam, self.N, self.csm, maxw)
         return maxw, tsize
@@ -572,6 +580,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         self.ntiles = []
         if config.distribution.save_on_tmp:
+            self._monitor.config = config
             logging.info('Storing the rates in %s', self._monitor.calc_dir)
             self.datastore.hdf5.attrs['scratch_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:
@@ -584,20 +593,18 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.save_on_tmp = config.distribution.save_on_tmp
             gid = self.gids[cm.grp_id][0]
             size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
-            if sg.atomic or sg.weight <= maxw:
-                allargs.append((gid, self.sitecol, cm, ds))
-            else:
-                ntiles = numpy.ceil(sg.weight / maxw)
-                if size_gb / ntiles > max_gb:
-                    ntiles = numpy.ceil(size_gb / max_gb)
-                tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-                logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
-                for tile in tiles:
-                    allargs.append((gid, tile, cm, ds))
-                    sizes.append(size_gb * len(tile) / self.N)
-                    self.ntiles.append(len(tiles))
+            ntiles = numpy.ceil(sg.weight / maxw)
+            if size_gb / ntiles > max_gb:
+                ntiles = numpy.ceil(size_gb / max_gb)
+            tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
+            for tile in tiles:
+                allargs.append((gid, tile, cm, ds))
+                sizes.append(size_gb * len(tile) / self.N)
+                self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles, maxsize=%.1f G',
                         max(self.ntiles), max(sizes))
         self.datastore.swmr_on()  # must come before the Starmap

@@ -64,8 +64,6 @@ KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
 azimuthcp rvolc clon_clat clon clat'''.split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
-# the MULTIPLIER is fundamental for the memory consumption in the contexts
-MULTIPLIER = 25  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 bymag = operator.attrgetter('mag')
@@ -210,7 +208,7 @@ def get_maxsize(M, G):
     """
     maxs = TWO20 // (2*M*G)
     assert maxs > 1, maxs
-    return maxs * MULTIPLIER
+    return maxs * 5
 
 
 def size(imtls):
@@ -1133,11 +1131,12 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-        for slc in split_in_slices(len(ctx), MULTIPLIER):
+            # print('MB', mean_stdt.nbytes // TWO20)
+        for slc in split_in_slices(len(ctx), L1):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
-                # this is allocating at most few MB of RAM
+                # this is allocating at most a few MB of RAM
                 poes = numpy.zeros((len(ctxt), M*L1, G))
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
@@ -1411,6 +1410,8 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         if hasattr(group, 'grp_probability'):
             self.grp_probability = group.grp_probability
+        M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
+        self.maxsize = get_maxsize(M, G)
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -1440,7 +1441,13 @@ class PmapMaker(object):
                     # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
-            yield ctx
+            n = ctx.nbytes // self.maxsize
+            if n > 1:
+                # split in chunks of maxsize each
+                for c in numpy.array_split(ctx, n):
+                    yield c  # for EUR c has ~500 elements
+            else:
+                yield ctx
 
     def _make_src_indep(self, pmap):
         # sources with the same ID

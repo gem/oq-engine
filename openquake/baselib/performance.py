@@ -39,7 +39,7 @@ except ImportError:
     numba = None
 
 from openquake.baselib.general import humansize, fast_agg
-from openquake.baselib import config, hdf5
+from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
 # them on-the-fly in SWMR mode will fail with an OSError:
@@ -220,7 +220,7 @@ class Monitor(object):
     @property
     def calc_dir(self):
         """Calculation directory custom_tmp/oqdata/calc_XXX"""
-        path = os.path.join(config.directory.custom_tmp,
+        path = os.path.join(self.config.directory.custom_tmp,
                             os.path.basename(self.filename))
         return path[:-5]  # strip .hdf5
 

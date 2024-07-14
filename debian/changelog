@@ -1,3 +1,7 @@
+
+  [Fatemeh Alishahiha]
+  * Added a new gsim library named `ambraseys_2005`.
+
   [Kyle Smith]
   * Added a new gsim file sandikkaya_akkar_2017.py to implement the
     Arias Intensity and Cumulative Absoloute Velocity ground motion 
