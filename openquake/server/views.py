@@ -43,7 +43,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.geo.utils import SiteAssociationError
@@ -176,9 +176,7 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    tmp = config.directory.custom_tmp or tempfile.mkdtemp()
-    calc_dir = os.path.join(tmp, 'calc_%d' % calc_id)
-    os.mkdir(calc_dir)
+    calc_dir = parallel.scratch_dir(calc_id)
     arch = request_files.get('archive')
     if arch is None:
         # move each file to calc_dir using the upload file names
