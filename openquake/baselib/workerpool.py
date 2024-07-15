@@ -179,7 +179,6 @@ class WorkerMaster(object):
         try:
             mon = performance.Monitor('zmq-debug')
             mon.inject = True
-            mon.config = config  # forget this and it will hang silently
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
