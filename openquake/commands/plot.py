@@ -466,6 +466,8 @@ def make_figure_sources(extractors, what):
     ax.plot(lons, lats, 'o')
     pp.set_lim(ss_lons, ss_lats)
     ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
+    ax.set_aspect('equal')
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     return plt
 
 
