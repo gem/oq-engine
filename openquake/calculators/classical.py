@@ -429,10 +429,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # create empty dataframes
         self.chunks = getters.get_num_chunks(self.datastore)
-        if oq.calculation_mode == 'classical':
-            self.datastore.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
-            self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
+        self.datastore.create_df(
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+        self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):
         """
@@ -466,7 +465,7 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if any(name.startswith('_rates') for name in parent):
+            if '_rates' in parent:
                 self.build_curves_maps()  # repeat post-processing
                 return {}
 
@@ -710,7 +709,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        if '_rates000' in set(self.datastore) or not self.datastore.parent:
+        if '_rates' in set(self.datastore) or not self.datastore.parent:
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
