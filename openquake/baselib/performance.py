@@ -219,13 +219,6 @@ class Monitor(object):
         self.task_no = -1  # overridden in parallel
 
     @property
-    def calc_dir(self):
-        """Calculation directory custom_tmp/oqdata/calc_XXX"""
-        path = os.path.join(self.config.directory.custom_tmp,
-                            os.path.basename(self.filename))
-        return path[:-5]  # strip .hdf5
-
-    @property
     def mem(self):
         """Mean memory allocation"""
         return self._mem / (self.counts or 1)

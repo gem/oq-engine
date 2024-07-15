@@ -144,12 +144,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if monitor.config.distribution.save_on_tmp and tiling:
             # tested in case_22
-            try:
-                os.mkdir(monitor.calc_dir)
-            except FileExistsError:  # somebody else wrote it
-                pass
+            scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rates):
-                fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
+                fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rates, cmaker.chunks, h5)
@@ -578,8 +575,9 @@ class ClassicalCalculator(base.HazardCalculator):
         assert self.N > self.oqparam.max_sites_disagg, self.N
         allargs = []
         if config.distribution.save_on_tmp:
-            logging.info('Storing the rates in %s', self._monitor.calc_dir)
-            self.datastore.hdf5.attrs['scratch_dir'] = self._monitor.calc_dir
+            scratch = parallel.scratch_dir(self.datastore.calc_id)
+            logging.info('Storing the rates in %s', scratch)
+            self.datastore.hdf5.attrs['scratch_dir'] = scratch
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
