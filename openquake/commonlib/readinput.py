@@ -103,7 +103,8 @@ def extract_from_zip(path, ext='.ini', targetdir=None):
     :param ext: file extension to search for
     :returns: filenames
     """
-    targetdir = targetdir or config.directory.custom_tmp or tempfile.mkdtemp()
+    targetdir = targetdir or tempfile.mkdtemp(
+        dir=config.directory.custom_tmp or None)
     with zipfile.ZipFile(path) as archive:
         archive.extractall(targetdir)
     return [f for f in collect_files(targetdir)

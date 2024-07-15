@@ -197,8 +197,9 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
         dstore.create_dset('num_tiles', U32(num_tiles))
         ntasks = sum(num_tiles)
         logging.info('This will be a tiling calculation with %d tasks', ntasks)
-        if req_gb >= 30:
-            logging.info('We suggest to set a custom_tmp and save_on_tmp=true')
+        if req_gb >= 30 and (not config.directory.custom_tmp or
+                             not config.distribution.save_on_tmp):
+            logging.info('We suggest to set custom_tmp and save_on_tmp')
     return req_gb, max_weight, trt_rlzs, gids
 
 

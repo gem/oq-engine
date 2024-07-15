@@ -208,7 +208,7 @@ def get_maxsize(M, G):
     """
     maxs = TWO20 // (2*M*G)
     assert maxs > 1, maxs
-    return maxs * 5
+    return maxs * 10
 
 
 def size(imtls):
