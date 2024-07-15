@@ -131,16 +131,29 @@ def main(job_ini,
 
 # ########################## SLURM support ############################## #
 
-
+SLURM_BATCH = '''\
+#!/bin/bash
+#SBATCH --job-name=workerpool
+#SBATCH --time=10:00:00
+#SBATCH --cpus-per-task={num_cores}
+srun {python} -m openquake.baselib.workerpool {num_cores} {job_id}
+'''
 def start_workers(nodes, job_id: str):
+    calc_dir = os.path.join(config.directory.custom_tmp, 'calc_' + job_id)
+    try:
+        os.mkdir(calc_dir)
+    except FileExistsError:
+        pass
+    slurm_sh = os.path.join(calc_dir, 'slurm.sh')
+    with open(slurm_sh, 'w') as f:
+        f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
+                                   num_cores=config.distribution.num_cores,
+                                   job_id=job_id))
+
     submit_cmd = config.distribution.submit_cmd.split()
-    if submit_cmd[0] == 'srun':
-        # for instance ['srun', '-p', 'rome', 'oq', 'run']
-        cmd = submit_cmd[:-2] + [
-            '--cpus-per-task', config.distribution.num_cores,
-            config.zworkers.remote_python, '-m',
-            'openquake.baselib.workerpool',
-            config.distribution.num_cores, job_id]
+    if submit_cmd[0] == 'sbatch':
+        # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
+        cmd = submit_cmd[:-2] + [slurm_sh]
         for n in range(nodes):
             subprocess.run(cmd)
     else:
@@ -150,8 +163,7 @@ def start_workers(nodes, job_id: str):
             subprocess.Popen(cmd) 
 
     # wait until the hostnames file is filled
-    fname = os.path.join(config.directory.custom_tmp,
-                         'calc_' + job_id, 'hostnames')
+    fname = os.path.join(calc_dir, 'hostnames')
     while True:
         if not os.path.exists(fname):
             time.sleep(1)
