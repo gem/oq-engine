@@ -191,7 +191,6 @@ import logging
 import operator
 import tempfile
 import traceback
-import subprocess
 import collections
 from unittest import mock
 import multiprocessing.dummy

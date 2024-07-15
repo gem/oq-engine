@@ -27,7 +27,7 @@ import getpass
 import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, config, zeromq as z
+from openquake.baselib import performance, general, parallel, config, zeromq as z
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
@@ -121,7 +121,14 @@ def main(job_ini,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
     if nodes:
-        start_workers(nodes, str(job_id))
+        dist = parallel.oq_distribute()
+        if dist != 'slurm':
+            raise ValueError('The --nodes option requires oq_distribute=slurm')
+        if nodes > 1:
+            start_workers(nodes - 1, str(job_id))
+        subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
+                          str(config.distribution.num_cores), str(job_id)])
+        wait_workers(nodes, job_id)
     try:
         run_jobs(jobs)
     finally:
@@ -138,12 +145,11 @@ SLURM_BATCH = '''\
 #SBATCH --cpus-per-task={num_cores}
 srun {python} -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
-def start_workers(nodes, job_id: str):
-    calc_dir = os.path.join(config.directory.custom_tmp, 'calc_' + job_id)
-    try:
-        os.mkdir(calc_dir)
-    except FileExistsError:
-        pass
+def start_workers(n, job_id: str):
+    """
+    Start n workerpools which will store their hostname on scratch_dir/hostnames)
+    """
+    calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     with open(slurm_sh, 'w') as f:
         f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
@@ -151,18 +157,18 @@ def start_workers(nodes, job_id: str):
                                    job_id=job_id))
 
     submit_cmd = config.distribution.submit_cmd.split()
-    if submit_cmd[0] == 'sbatch':
-        # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
-        cmd = submit_cmd[:-2] + [slurm_sh]
-        for n in range(nodes):
-            subprocess.run(cmd)
-    else:
-        cmd = [sys.executable, '-m', 'openquake.baselib.workerpool',
-               config.distribution.num_cores, job_id]
-        for n in range(nodes):
-            subprocess.Popen(cmd) 
+    assert submit_cmd[0] == 'sbatch', submit_cmd
+    # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
+    cmd = submit_cmd[:-2] + [slurm_sh]
+    for n in range(n):
+        subprocess.run(cmd)
 
-    # wait until the hostnames file is filled
+
+def wait_workers(n, job_id):
+    """
+    Wait until the hostnames file is filled with n names
+    """
+    calc_dir = parallel.scratch_dir(job_id)
     fname = os.path.join(calc_dir, 'hostnames')
     while True:
         if not os.path.exists(fname):
@@ -171,15 +177,17 @@ def start_workers(nodes, job_id: str):
             continue
         with open(fname) as f:
             hosts = f.readlines()
-        if len(hosts) == nodes:
+        if len(hosts) == n:
             break
         else:
             time.sleep(1)
 
 
 def stop_workers(job_id: str):
-    fname = os.path.join(config.directory.custom_tmp,
-                         'calc_' + job_id, 'hostnames')
+    """
+    Stop all the started workerpools (read from the file scratch_dir/hostnames)
+    """
+    fname = os.path.join(parallel.scratch_dir(job_id), 'hostnames')
     with open(fname) as f:
         hosts = f.read().split()
     for host in hosts:
