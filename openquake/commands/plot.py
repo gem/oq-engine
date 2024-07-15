@@ -952,7 +952,7 @@ def make_figure_non_parametric(extractors, what):
             min_y = min_y_ if min_y is None else min(min_y, min_y_)
             max_y = max_y_ if max_y is None else max(max_y, max_y_)
             x, y = poly.exterior.xy
-            ax.plot(x, y)
+            ax.fill(x, y)
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
     ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
     ax.set_title('Non-parametric sources')
