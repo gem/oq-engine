@@ -202,13 +202,14 @@ def concat(ctxs):
     return out
 
 
+# this is crucial to get a fast get_mean_stds
 def get_maxsize(M, G):
     """
-    :returns: an integer N such that arrays N*M*G fit in the CPU cache
+    :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = TWO20 // (2*M*G)
+    maxs = 10 * TWO20 // (M*G)
     assert maxs > 1, maxs
-    return maxs * 10
+    return maxs
 
 
 def size(imtls):
@@ -1456,7 +1457,6 @@ class PmapMaker(object):
         ctxlen = 0
         totlen = 0
         M, G = len(self.imtls), len(self.gsims)
-        maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
@@ -1467,7 +1467,7 @@ class PmapMaker(object):
                 src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
-                if ctxlen > maxsize:
+                if ctxlen > self.maxsize:
                     cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
                     allctxs.clear()
                     ctxlen = 0
