@@ -134,8 +134,8 @@ def main(job_ini,
 
 def start_workers(nodes, job_id: str):
     submit_cmd = config.distribution.submit_cmd.split()
-    if submit_cmd[0] == 'sbatch':
-        # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
+    if submit_cmd[0] == 'srun':
+        # for instance ['srun', '-p', 'rome', 'oq', 'run']
         cmd = submit_cmd[:-2] + [
             '--cpus-per-task', config.distribution.num_cores,
             config.zworkers.remote_python, '-m',
@@ -175,7 +175,6 @@ def stop_workers(job_id: str):
         print('Stopping %s' % host)
         with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
             sock.send('stop')
-    os.remove(fname)
 
 
 main.job_ini = dict(help='calculation configuration file '
