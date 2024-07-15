@@ -443,6 +443,7 @@ def make_figure_sources(extractors, what):
     tot = 0
     psources = []
     for rec, srcid, wkt in zip(info, srcs, wkts):
+        print(f'Source id: {srcid}')
         if not wkt:
             logging.warning('No geometries for source id %s', srcid)
             continue
@@ -942,6 +943,7 @@ def make_figure_non_parametric(extractors, what):
     ZOOM_MARGIN = 10
     for src in srcs:
         rups = list(src.iter_ruptures())
+        print(f'Plotting {len(rups)} ruptures')
         for rup in rups:
             surface = rup.surface
             poly = shapely.wkt.loads(
@@ -952,7 +954,7 @@ def make_figure_non_parametric(extractors, what):
             min_y = min_y_ if min_y is None else min(min_y, min_y_)
             max_y = max_y_ if max_y is None else max(max_y, max_y_)
             x, y = poly.exterior.xy
-            ax.fill(x, y)
+            ax.fill(x, y, alpha=0.5)
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
     ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
     ax.set_title('Non-parametric sources')
