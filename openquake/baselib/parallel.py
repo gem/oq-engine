@@ -248,7 +248,7 @@ def sbatch(mon):
         submit_cmd = config.distribution.submit_cmd.split()[:-2] + [
             '--cpus-per-task=%d' % cpus, path]
         logging.info(f'Batch #{no} {mon.calc_dir} {start} {stop} [{cpus=}]')
-        if no == 0 or not sbatch:
+        if no == 1 or not sbatch:
             # spawn a few tasks on the current node
             proc = mp_context.Process(
                 target=slurm_tasks, args=(mon.calc_dir, str(start), str(stop)))
