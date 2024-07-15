@@ -110,9 +110,6 @@ config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
             serialize_jobs=positiveint, strict=positiveint, code=exec)
 
-if config.distribution.oq_distribute == 'slurm' and not config.directory.custom_tmp:
-    raise ValueError('oq_distribute=slurm requires setting a custom_tmp')
-
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
     # NUMBA_CACHE_DIR is useless since numba is saving on .cache/numba anyway

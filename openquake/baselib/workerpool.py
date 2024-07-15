@@ -272,7 +272,7 @@ class WorkerPool(object):
                 pass
             fname = os.path.join(calc_dir, 'hostnames')
             with open(fname, 'a') as f:
-                f.write(f'{self.hostname}\n')
+                f.write(f'{self.hostname} {self.num_workers}\n')
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')

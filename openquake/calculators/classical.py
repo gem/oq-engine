@@ -142,7 +142,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         if tiling:
             del result['source_data']  # save a lot of data transfer in EUR
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if monitor.config.distribution.save_on_tmp and tiling:
+        if cmaker.save_on_tmp and tiling:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rates):

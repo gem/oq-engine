@@ -189,8 +189,9 @@ def stop_workers(job_id: str):
     """
     fname = os.path.join(parallel.scratch_dir(job_id), 'hostnames')
     with open(fname) as f:
-        hosts = f.read().split()
-    for host in hosts:
+        hostcores = f.readlines()
+    for line in hostcores:
+        host, _ = line.split()
         ctrl_url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
         print('Stopping %s' % host)
         with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
