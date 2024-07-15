@@ -593,10 +593,12 @@ class ClassicalCalculator(base.HazardCalculator):
             for tile in self.sitecol.split(ntiles):
                 allargs.append((gid, tile, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
+        mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:
-                _store(dic['pnemap'], self.chunks, self.datastore)
+                with mon:
+                    _store(dic['pnemap'], self.chunks, self.datastore)
         return {}
 
     def store_info(self):
