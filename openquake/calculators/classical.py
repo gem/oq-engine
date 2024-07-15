@@ -70,7 +70,10 @@ def _store(rates, num_chunks, h5, offset=0):
         hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
         hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
     iss = numpy.array(idx_start_stop, getters.slice_dt)
-    hdf5.extend(h5['_rates/slice_by_idx'], iss)
+    if '_rates/slice_by_idx' in h5:
+        hdf5.extend(h5['_rates/slice_by_idx'], iss)
+    else:  # writing small file
+        h5['_rates/slice_by_idx'] = iss
     return offset
 
 
