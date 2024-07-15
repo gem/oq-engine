@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 import h5py
-from openquake.baselib import general, parallel, hdf5
+from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.calculators import base
+from openquake.calculators import base, getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -163,6 +163,43 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
                 dic['before'] = len(block)
                 dic['after'] = len(dic[grp_id])
                 yield dic
+
+
+def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
+    """
+    Store a `num_tiles` array if the calculation is large enough.
+    :returns: a triple (max_weight, trt_rlzs, gids)
+    """
+    N = len(sitecol)
+    max_weight = csm.get_max_weight(oq)
+    max_gb = float(config.memory.pmap_max_gb)
+    req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
+    dstore['rates_max_gb'] = req_gb
+    regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
+               or oq.tile_spec)
+    if not regular:  # tiling
+        # increase max_weight if there are tiles smaller than 100 sites
+        minsize = min(max_weight / sg.weight * N for sg in csm.src_groups)
+        if minsize < 100:  # less than 100 sites per tile
+            logging.info(
+                'concurrent_tasks=%d is too large, producing less tiles',
+                oq.concurrent_tasks)
+            max_weight *= 100/ minsize
+        num_tiles = []
+        for cm in cmakers:
+            sg = csm.src_groups[cm.grp_id]
+            size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
+            ntiles = numpy.ceil(sg.weight / max_weight)
+            if size_gb / ntiles > max_gb:
+                ntiles = numpy.ceil(size_gb / max_gb)
+            tiles = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            num_tiles.append(len(tiles))
+        dstore.create_dset('num_tiles', U32(num_tiles))
+        ntasks = sum(num_tiles)
+        logging.info('This will be a tiling calculation with %d tasks', ntasks)
+        if req_gb >= 30:
+            logging.info('We suggest to set a custom_tmp and save_on_tmp=true')
+    return req_gb, max_weight, trt_rlzs, gids
 
 
 @base.calculators.add('preclassical')
@@ -345,7 +382,6 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 if cachepath:
                     os.symlink(self.datastore.filename, cachepath)
-        self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
@@ -371,6 +407,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                       for idx, row in enumerate(self.csm.source_info.values())}
             deltas = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
+
+        # save 'ntiles' if the calculation is large
+        self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+            store_num_tiles(self.datastore, self.csm, self.sitecol,
+                            self.cmakers, self.oqparam))
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':

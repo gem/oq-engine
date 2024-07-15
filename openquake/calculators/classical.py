@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters
+from openquake.calculators import base, getters, preclassical
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -53,13 +53,14 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
-def _store(rates, h5):
-    chunks = rates['sid'] % getters.CHUNKS
+def _store(rates, num_chunks, h5):
+    chunks = rates['sid'] % num_chunks
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
         name = '_rates%03d' % chunk
         try:
-            h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+            h5.create_df(
+                name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         except ValueError:  # already created
             pass
         hdf5.extend(h5[f'{name}/sid'], ch_rates['sid'])
@@ -102,15 +103,6 @@ def to_rates(pnemap, gid, tiling, disagg_by_src):
     return rates.remove_zeros()
 
 
-def get_tile_size(oq, N, csm, maxw=0):
-    """
-    :returns: the number of sites in the smallest tile
-    """
-    maxw = maxw or csm.get_max_weight(oq)
-    sizes = [maxw / sg.weight * N for sg in csm.src_groups]
-    return int(min(sizes))
-
-
 #  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
@@ -147,6 +139,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
+        if tiling:
+            del result['source_data']  # save a lot of data transfer in EUR
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if monitor.config.distribution.save_on_tmp and tiling:
             # tested in case_22
@@ -154,12 +148,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 os.mkdir(monitor.calc_dir)
             except FileExistsError:  # somebody else wrote it
                 pass
-            fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
-            # print('Saving rates on %s' % fname)
-            with hdf5.File(fname, 'a') as h5:
-                _store(rates, h5)
-            yield dict(cfactor=result['cfactor'])
-            return
+            if len(rates):
+                fname = f'{monitor.calc_dir}/{monitor.task_no}.hdf5'
+                # print('Saving rates on %s' % fname)
+                with hdf5.File(fname, 'a') as h5:
+                    _store(rates, cmaker.chunks, h5)
         else:
             result['pnemap'] = rates
         yield result
@@ -410,10 +403,17 @@ class ClassicalCalculator(base.HazardCalculator):
         # which are a preclassical concept
 
     def init_poes(self):
+        oq = self.oqparam
         self.cmakers = read_cmakers(self.datastore, self.csm)
+        parent = self.datastore.parent
+        if parent and oq.concurrent_tasks != parent['oqparam'].concurrent_tasks:
+            # tested in case_43
+            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+                preclassical.store_num_tiles(
+                    self.datastore, self.csm, self.sitecol, self.cmakers, oq))
+
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        oq = self.oqparam
         if oq.disagg_by_src:
             M = len(oq.imtls)
             L1 = oq.imtls.size // M
@@ -424,6 +424,14 @@ class ClassicalCalculator(base.HazardCalculator):
                        lvl=L1, src_id=numpy.array(sources))
             self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(
                 mean_rates_by_src, dic)
+
+        # create empty dataframes
+        self.chunks = getters.get_num_chunks(self.datastore)
+        if oq.calculation_mode == 'classical':
+            for i in range(self.chunks):
+                name = '_rates%03d' % i
+                self.datastore.create_df(
+                    name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
 
     def check_memory(self, N, L, maxw):
         """
@@ -454,20 +462,19 @@ class ClassicalCalculator(base.HazardCalculator):
             self.csm = parent['_csm']
             self.csm.init(self.full_lt)
             self.datastore['source_info'] = parent['source_info'][:]
-            maxw = self.csm.get_max_weight(oq)
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
             if any(name.startswith('_rates') for name in parent):
                 self.build_curves_maps()  # repeat post-processing
                 return {}
-        else:
-            maxw = self.max_weight
+
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        req_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
-            self.datastore, self.full_lt)
+        if not hasattr(self, 'trt_rlzs'):
+            _, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+                self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -479,13 +486,16 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        max_gb = float(config.memory.pmap_max_gb)
-        if (oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb
-            or oq.tile_spec):
-            self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
-            self.execute_reg(maxw)
+        try:
+            self.ntiles = self.datastore['num_tiles'][:]
+        except KeyError:
+            # regular calculator, no tiles
+            self.ntiles = numpy.zeros(0, U32)
+        if self.ntiles.any():
+            self.execute_big()
         else:
-            self.execute_big(maxw)
+            self.execute_reg()
+
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -503,10 +513,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def execute_reg(self, maxw):
+    def execute_reg(self):
         """
         Regular case
         """
+        maxw = self.csm.get_max_weight(self.oqparam)
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
@@ -536,7 +547,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.datastore)
+            _store(self.pmap.to_array(), self.chunks, self.datastore)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -558,27 +569,14 @@ class ClassicalCalculator(base.HazardCalculator):
             ok = got[m] < 10.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
-    def fix_maxw_tsize(self, maxw, tsize):
-        if tsize < 100:  # less than 100 sites per tile
-            logging.info(
-                'concurrent_tasks=%d is too large, producing less tiles',
-                self.oqparam.concurrent_tasks)
-            maxw = maxw * 100/ tsize
-            tsize = get_tile_size(self.oqparam, self.N, self.csm, maxw)
-        return maxw, tsize
-
-    def execute_big(self, maxw):
+    def execute_big(self):
         """
         Use parallel tiling
         """
         oq = self.oqparam
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        tsize = get_tile_size(oq, self.N, self.csm, maxw)
-        maxw, tsize = self.fix_maxw_tsize(maxw, tsize)
-        logging.info('min_tile_size = {:_d}'.format(tsize))
         allargs = []
-        self.ntiles = []
         if config.distribution.save_on_tmp:
             self._monitor.config = config
             logging.info('Storing the rates in %s', self._monitor.calc_dir)
@@ -587,31 +585,22 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        sizes = []
-        max_gb = float(config.memory.pmap_max_gb)
-        for cm in self.cmakers:
+        for cm, ntiles in zip(self.cmakers, self.ntiles):
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
+            cm.chunks = self.chunks
             gid = self.gids[cm.grp_id][0]
-            size_gb = len(cm.gsims) * oq.imtls.size * self.N * 8 / 1024**3
-            ntiles = numpy.ceil(sg.weight / maxw)
-            if size_gb / ntiles > max_gb:
-                ntiles = numpy.ceil(size_gb / max_gb)
-            tiles = self.sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-            logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
-            for tile in tiles:
+            for tile in self.sitecol.split(ntiles):
                 allargs.append((gid, tile, cm, ds))
-                sizes.append(size_gb * len(tile) / self.N)
-                self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles, maxsize=%.1f G',
-                        max(self.ntiles), max(sizes))
         self.datastore.swmr_on()  # must come before the Starmap
+        mon = self.monitor('storing rates')
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:
-                _store(dic['pnemap'], self.datastore)
+                with mon:
+                    _store(dic['pnemap'], self.chunks, self.datastore)
         return {}
 
     def store_info(self):
