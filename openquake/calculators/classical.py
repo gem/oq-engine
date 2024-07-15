@@ -53,20 +53,25 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
-def _store(rates, num_chunks, h5):
+def _store(rates, num_chunks, h5, offset=0):
     chunks = rates['sid'] % num_chunks
+    idx_start_stop = []
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
-        name = '_rates%03d' % chunk
+        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
+        offset += len(ch_rates)
         try:
             h5.create_df(
-                name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         except ValueError:  # already created
             pass
-        hdf5.extend(h5[f'{name}/sid'], ch_rates['sid'])
-        hdf5.extend(h5[f'{name}/gid'], ch_rates['gid'])
-        hdf5.extend(h5[f'{name}/lid'], ch_rates['lid'])
-        hdf5.extend(h5[f'{name}/rate'], ch_rates['rate'])
+        hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
+        hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
+        hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
+        hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
+    iss = numpy.array(idx_start_stop, getters.slice_dt)
+    hdf5.extend(h5['_rates/slice_by_idx'], iss)
+    return offset
 
 
 class Set(set):
@@ -425,10 +430,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # create empty dataframes
         self.chunks = getters.get_num_chunks(self.datastore)
         if oq.calculation_mode == 'classical':
-            for i in range(self.chunks):
-                name = '_rates%03d' % i
-                self.datastore.create_df(
-                    name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+            self.datastore.create_df(
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+            self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):
         """
@@ -593,11 +597,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((gid, tile, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
+        self.offset = 0
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:
                 with mon:
-                    _store(dic['pnemap'], self.chunks, self.datastore)
+                    self.offset = _store(
+                        dic['pnemap'], self.chunks, self.datastore, self.offset)
         return {}
 
     def store_info(self):
