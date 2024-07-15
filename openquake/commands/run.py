@@ -167,9 +167,10 @@ def stop_workers(job_id: str):
     fname = os.path.join(config.directory.custom_tmp,
                          'calc_' + job_id, 'hostnames')
     with open(fname) as f:
-        hosts = f.readlines()
+        hosts = f.read().split()
     for host in hosts:
-        ctrl_url = 'tcp://%s:%s' % (host.strip(), config.zworkers.ctrl_port)
+        ctrl_url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+        print('Stopping %s' % host)
         with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
             sock.send('stop')
 
