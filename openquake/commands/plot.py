@@ -912,6 +912,53 @@ def make_figure_multi_fault(extractors, what):
     return plt
 
 
+def make_figure_non_parametric(extractors, what):
+    """
+    $ oq plot "non_parametric?source_id=xxx"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    kwargs = what.split('?')[1]
+    if kwargs:
+        src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
+    else:
+        src_ids = []
+    csm = dstore['_csm']
+    np_srcs = [src for src in csm.get_sources() if src.code == b'N']
+    assert np_srcs, 'There are no non-parametric fault sources to plot'
+    _fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+    ax.grid(True)
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    if src_ids:
+        srcs = [src for src in np_srcs if src.source_id in src_ids]
+    else:
+        srcs = np_srcs
+        print([src.source_id for src in srcs])
+    print(f'Plotting {len(srcs)} sources')
+    min_x = max_x = min_y = max_y = None
+    ZOOM_MARGIN = 10
+    for src in srcs:
+        rups = list(src.iter_ruptures())
+        for rup in rups:
+            surface = rup.surface
+            poly = shapely.wkt.loads(
+                surface.mesh.get_convex_hull().wkt)
+            min_x_, min_y_, max_x_, max_y_ = poly.bounds
+            min_x = min_x_ if min_x is None else min(min_x, min_x_)
+            max_x = max_x_ if max_x is None else max(max_x, max_x_)
+            min_y = min_y_ if min_y is None else min(min_y, min_y_)
+            max_y = max_y_ if max_y is None else max(max_y, max_y_)
+            x, y = poly.exterior.xy
+            ax.plot(x, y)
+    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
+    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
+    ax.set_title('Non-parametric sources')
+    return plt
+
+
 def plot_wkt(wkt_string):
     """
     Plot a WKT string describing a polygon
