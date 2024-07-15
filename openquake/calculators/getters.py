@@ -187,14 +187,11 @@ def map_getters(dstore, full_lt=None, disagg=False):
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
         fnames = [os.path.join(scratch_dir, f) for f in os.listdir(scratch_dir)
                   if f.endswith('.hdf5')]
-        names = ['_rates%03d' % i for i in range(chunks)]
     except KeyError:  # no tiling
         fnames = [dstore.filename]
-        names = [name for name in dstore
-                 if name.startswith('_rates') and len(dstore[f'{name}/sid'])]
     out = []
-    for name in names:
-        getter = MapGetter(fnames, name, trt_rlzs, R, oq)
+    for chunk in range(chunks):
+        getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
         getter.weights = weights
         out.append(getter)
     return out
@@ -255,9 +252,9 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filenames, name, trt_rlzs, R, oq):
+    def __init__(self, filenames, idx, trt_rlzs, R, oq):
         self.filenames = filenames
-        self.name = name
+        self.idx = idx
         self.trt_rlzs = trt_rlzs
         self.R = R
         self.imtls = oq.imtls
@@ -298,28 +295,21 @@ class MapGetter(object):
         """
         if self._map:
             return self._map
-        '''
-        if os.path.isdir(self.filename):
-            fnames = [os.path.join(self.filename, f)
-                      for f in os.listdir(self.filename)]
-        else:
-            fnames = [self.filename]
-        '''
         for fname in self.filenames:
             with hdf5.File(fname) as dstore:
-                try:
-                    rates_df = dstore.read_df(self.name)
-                except KeyError:
-                    continue
-                # not using groupby to save memory
-                for sid in rates_df.sid.unique():
-                    df = rates_df[rates_df.sid == sid]
-                    try:
-                        array = self._map[sid]
-                    except KeyError:
-                        array = numpy.zeros((self.L, self.G))
-                        self._map[sid] = array
-                    array[df.lid, df.gid] = df.rate
+                slices = dstore['_rates/slice_by_idx'][:]
+                slices = slices[slices['idx'] == self.idx]
+                for start, stop in zip(slices['start'], slices['stop']):
+                    rates_df = dstore.read_df('_rates', slc=slice(start, stop))
+                    # not using groupby to save memory
+                    for sid in rates_df.sid.unique():
+                        df = rates_df[rates_df.sid == sid]
+                        try:
+                            array = self._map[sid]
+                        except KeyError:
+                            array = numpy.zeros((self.L, self.G))
+                            self._map[sid] = array
+                        array[df.lid, df.gid] = df.rate
         return self._map
 
     def get_hcurve(self, sid):  # used in classical

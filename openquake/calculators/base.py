@@ -625,6 +625,8 @@ class HazardCalculator(BaseCalculator):
                 oq, oq.inputs['hazard_curves'])
             df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
+            slices = numpy.array([(0, 0, len(df))], getters.slice_dt)
+            self.datastore['_rates/slice_by_idx'] = slices
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
