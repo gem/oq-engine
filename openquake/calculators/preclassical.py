@@ -174,6 +174,7 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
     max_weight = csm.get_max_weight(oq)
     max_gb = float(config.memory.pmap_max_gb)
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
+    dstore['rates_max_gb'] = req_gb
     regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
                or oq.tile_spec)
     if not regular:  # tiling
@@ -196,9 +197,9 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
         dstore.create_dset('num_tiles', U32(num_tiles))
         ntasks = sum(num_tiles)
         logging.info('This will be a tiling calculation with %d tasks', ntasks)
-        if ntasks >= 300:
+        if req_gb >= 30:
             logging.info('We suggest to set a custom_tmp and save_on_tmp=true')
-    return max_weight, trt_rlzs, gids
+    return req_gb, max_weight, trt_rlzs, gids
 
 
 @base.calculators.add('preclassical')
@@ -408,8 +409,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'ntiles' if the calculation is large
-        self.max_weight, self.trt_rlzs, self.gids = store_num_tiles(
-            self.datastore, self.csm, self.sitecol, self.cmakers, self.oqparam)
+        self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+            store_num_tiles(self.datastore, self.csm, self.sitecol,
+                            self.cmakers, self.oqparam))
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':

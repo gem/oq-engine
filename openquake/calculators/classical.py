@@ -407,9 +407,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         parent = self.datastore.parent
         if parent and oq.concurrent_tasks != parent['oqparam'].concurrent_tasks:
-            # recompute max_weight, trt_rlzs, gids and num_tiles, tested in case_43
-            self.max_weight, self.trt_rlzs, self.gids = preclassical.store_num_tiles(
-                self.datastore, self.csm, self.sitecol, self.cmakers, oq)
+            # tested in case_43
+            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+                preclassical.store_num_tiles(
+                    self.datastore, self.csm, self.sitecol, self.cmakers, oq))
 
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures

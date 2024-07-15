@@ -152,10 +152,15 @@ def get_pmaps_gb(dstore, full_lt=None):
 
 
 def get_num_chunks(dstore):
+    """
+    :returns: the number of postclassical tasks to generate.
+
+    It is 4 times the number of GB required to store the rates.
+    """
     try:
-        chunks = max(sum(dstore['num_tiles']) // 4, 32)
+        chunks = max(int(4 * dstore['rates_max_gb'][()]), 8)
     except KeyError:
-        chunks = 32
+        chunks = 8
     return chunks
 
     
