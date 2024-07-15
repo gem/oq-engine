@@ -153,7 +153,7 @@ def get_pmaps_gb(dstore, full_lt=None):
 
 def get_num_chunks(dstore):
     try:
-        chunks = max(sum(dstore['num_tiles']) // 2, 32)
+        chunks = max(sum(dstore['num_tiles']) // 4, 32)
     except KeyError:
         chunks = 32
     return chunks

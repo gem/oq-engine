@@ -59,7 +59,8 @@ def _store(rates, num_chunks, h5):
         ch_rates = rates[chunks == chunk]
         name = '_rates%03d' % chunk
         try:
-            h5.create_df(name, [(n, rates_dt[n]) for n in rates_dt.names])
+            h5.create_df(
+                name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         except ValueError:  # already created
             pass
         hdf5.extend(h5[f'{name}/sid'], ch_rates['sid'])
@@ -429,7 +430,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for i in range(self.chunks):
                 name = '_rates%03d' % i
                 self.datastore.create_df(
-                    name, [(n, rates_dt[n]) for n in rates_dt.names])
+                    name, [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
 
     def check_memory(self, N, L, maxw):
         """
