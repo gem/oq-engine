@@ -881,11 +881,18 @@ def make_figure_multi_fault(extractors, what):
     traces = []
     polys = []
     suids = []
+    min_x = max_x = min_y = max_y = None
+    ZOOM_MARGIN = 10
     for sec in secs:
         trace, poly = get_boundary_2d(sec)
         traces.append(trace)
         polys.append(poly)
         suids.append(sec.idx)
+        min_x_, min_y_, max_x_, max_y_ = poly.bounds
+        min_x = min_x_ if min_x is None else min(min_x, min_x_)
+        max_x = max_x_ if max_x is None else max(max_x, max_x_)
+        min_y = min_y_ if min_y is None else min(min_y, min_y_)
+        max_y = max_y_ if max_y is None else max(max_y, max_y_)
     daf_polys = pandas.DataFrame({'suid': suids, 'geometry': polys})
     daf_polys_geojson = df_to_geojson(daf_polys)
     daf_traces = pandas.DataFrame({'suid': suids, 'geometry': traces})
@@ -898,6 +905,9 @@ def make_figure_multi_fault(extractors, what):
     ax.set_aspect('equal')
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
+    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
+    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
+    ax.set_title('Multi-fault sources')
     ax.legend(by_label.values(), by_label.keys())
     return plt
 
