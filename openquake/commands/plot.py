@@ -827,24 +827,24 @@ def plot_geojson(data, ax, color, label):
 def get_boundary_2d(smsh):
     """ Returns a polygon """
     coo = []
+    lons = smsh.mesh.lons
+    lats = smsh.mesh.lats
     # Upper boundary + trace
-    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[0, :]))[0]
-    tmp = [(smsh.mesh.lons[0, i], smsh.mesh.lats[0, i]) for i in idx]
+    idx = numpy.where(numpy.isfinite(lons[0, :]))[0]
+    tmp = [(lons[0, i], lats[0, i]) for i in idx]
     trace = LineString(tmp)
     coo.extend(tmp)
     # Right boundary
-    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, -1]))[0]
-    tmp = [(smsh.mesh.lons[i, -1], smsh.mesh.lats[i, -1]) for i in idx]
+    idx = numpy.where(numpy.isfinite(lons[:, -1]))[0]
+    tmp = [(lons[i, -1], lats[i, -1]) for i in idx]
     coo.extend(tmp)
     # Lower boundary
-    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[-1, :]))[0]
-    tmp = [(smsh.mesh.lons[-1, i], smsh.mesh.lats[-1, i])
-           for i in numpy.flip(idx)]
+    idx = numpy.where(numpy.isfinite(lons[-1, :]))[0]
+    tmp = [(lons[-1, i], lats[-1, i]) for i in numpy.flip(idx)]
     coo.extend(tmp)
     # Left boundary
-    idx = idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, 0]))[0]
-    tmp = [(smsh.mesh.lons[i, 0], smsh.mesh.lats[i, 0])
-           for i in numpy.flip(idx)]
+    idx = idx = numpy.where(numpy.isfinite(lons[:, 0]))[0]
+    tmp = [(lons[i, 0], lats[i, 0]) for i in numpy.flip(idx)]
     coo.extend(tmp)
     return trace, Polygon(coo)
 
