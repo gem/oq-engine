@@ -16,15 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+import time
 import logging
 import os.path
 import socket
 import cProfile
 import warnings
 import getpass
+import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general
+from openquake.baselib import performance, general, config, zeromq as z
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
@@ -76,7 +79,8 @@ def main(job_ini,
          param=(),
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
-         loglevel='info'):
+         loglevel='info',
+         nodes: int = 0):
     """
     Run a calculation
     """
@@ -115,8 +119,59 @@ def main(job_ini,
             dic['concurrent_tasks'] = str(concurrent_tasks)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
-    run_jobs(jobs)
-    return jobs[0].calc_id
+    job_id = jobs[0].calc_id
+    if nodes:
+        start_workers(nodes, str(job_id))
+    try:
+        run_jobs(jobs)
+    finally:
+        if nodes:
+            stop_workers(str(job_id))
+    return job_id
+
+# ########################## SLURM support ############################## #
+
+
+def start_workers(nodes, job_id: str):
+    if config.distribution.submit_cmd.startswith('sbatch'):
+        cmd = ['sbatch', '-p', config.distribution.slurm_partition,
+               '--cpus-per-task', config.distribution.num_cores,
+               config.zworkers.remote_python, '-m',
+               'openquake.baselib.workerpool',
+               config.distribution.num_cores, job_id]
+        for n in range(nodes):
+            subprocess.run(cmd)
+    else:
+        cmd = [sys.executable, '-m', 'openquake.baselib.workerpool',
+               config.distribution.num_cores, job_id]
+        for n in range(nodes):
+            subprocess.Popen(cmd) 
+
+    # wait until the hostnames file is filled
+    fname = os.path.join(config.directory.custom_tmp,
+                         'calc_' + job_id, 'hostnames')
+    while True:
+        if not os.path.exists(fname):
+            time.sleep(1)
+            print(f'Waiting for {fname}')
+            continue
+        with open(fname) as f:
+            hosts = f.readlines()
+        if len(hosts) == nodes:
+            break
+        else:
+            time.sleep(1)
+
+
+def stop_workers(job_id: str):
+    fname = os.path.join(config.directory.custom_tmp,
+                         'calc_' + job_id, 'hostnames')
+    with open(fname) as f:
+        hosts = f.readlines()
+    for host in hosts:
+        ctrl_url = 'tcp://%s:%s' % (host.strip(), config.zworkers.ctrl_port)
+        with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+            sock.send('stop')
 
 
 main.job_ini = dict(help='calculation configuration file '
@@ -130,3 +185,4 @@ main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
+main.nodes=dict(help='number of worker nodes to start')

@@ -580,7 +580,6 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         self.ntiles = []
         if config.distribution.save_on_tmp:
-            self._monitor.config = config
             logging.info('Storing the rates in %s', self._monitor.calc_dir)
             self.datastore.hdf5.attrs['scratch_dir'] = self._monitor.calc_dir
         if '_csm' in self.datastore.parent:

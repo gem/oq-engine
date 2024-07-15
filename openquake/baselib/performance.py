@@ -39,7 +39,7 @@ except ImportError:
     numba = None
 
 from openquake.baselib.general import humansize, fast_agg
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, config
 
 # NB: one can use vstr fields in extensible datasets, but then reading
 # them on-the-fly in SWMR mode will fail with an OSError:
@@ -200,6 +200,7 @@ class Monitor(object):
     authkey = None
     calc_id = None
     inject = None
+    config = config
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None):
