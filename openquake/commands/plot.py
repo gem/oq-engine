@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import time
 import gzip
 import json
 import logging
@@ -877,6 +878,7 @@ def make_figure_non_parametric(extractors, what):
         src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
     else:
         src_ids = []
+    print('Reading sources...')
     csm = dstore['_csm']
     np_srcs = [src for src in csm.get_sources() if src.code == b'N']
     assert np_srcs, 'There are no non-parametric fault sources to plot'
@@ -892,20 +894,16 @@ def make_figure_non_parametric(extractors, what):
     print(f'Plotting {len(srcs)} sources')
     min_x = max_x = min_y = max_y = None
     ZOOM_MARGIN = 10
+    t0 = time.time()
     for src in srcs:
-        rups = list(src.iter_ruptures())
-        print(f'Plotting {len(rups)} ruptures')
-        for rup in rups:
-            surface = rup.surface
-            poly = shapely.wkt.loads(
-                surface.mesh.get_convex_hull().wkt)
-            min_x_, min_y_, max_x_, max_y_ = poly.bounds
-            min_x = min_x_ if min_x is None else min(min_x, min_x_)
-            max_x = max_x_ if max_x is None else max(max_x, max_x_)
-            min_y = min_y_ if min_y is None else min(min_y, min_y_)
-            max_y = max_y_ if max_y is None else max(max_y, max_y_)
-            x, y = poly.exterior.xy
-            ax.fill(x, y, alpha=0.5)
+        poly = src.polygon
+        min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
+        min_x = min_x_ if min_x is None else min(min_x, min_x_)
+        max_x = max_x_ if max_x is None else max(max_x, max_x_)
+        min_y = min_y_ if min_y is None else min(min_y, min_y_)
+        max_y = max_y_ if max_y is None else max(max_y, max_y_)
+        ax.fill(poly.lons, poly.lats, alpha=0.5)
+    print(f'Took {time.time() - t0} seconds')
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
     ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
     ax.set_title('Non-parametric sources')
