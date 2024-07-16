@@ -178,11 +178,11 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
     regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
                or oq.tile_spec)
     if not regular:  # tiling
-        # increase max_weight if there are tiles smaller than 100 sites
+        # increase max_weight if the tiles are too small
         minsize = min(max_weight / sg.weight * N for sg in csm.src_groups)
-        if minsize < 100:  # less than 100 sites per tile
-            logging.info('producing less tasks to avoid tiles < 100 sites')
-            max_weight *= 100/ minsize
+        if minsize < 50:
+            logging.info('Producing less tasks to avoid tiles < 50 sites')
+            max_weight *= 50 / minsize
         num_tiles = []
         for cm in cmakers:
             sg = csm.src_groups[cm.grp_id]
