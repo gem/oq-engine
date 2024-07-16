@@ -183,7 +183,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # check extract_sources
         extract_url = '/v1/calc/%s/extract/sources?' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'extra', 'array'])
+        self.assertEqual(list(got), ['src_gz', 'extra', 'array'])
         self.assertGreater(len(got['array']), 0)
 
         # check risk_stats
