@@ -783,23 +783,28 @@ def get_boundary_2d(smsh):
     return trace, Polygon(coo)
 
 
-def make_figure_multi_fault(extractors, what):
-    """
-    $ oq plot "multi_fault?source_id=xxx"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
-    [ex] = extractors
-    dstore = ex.dstore
-    kwargs = what.split('?')[1]
-    if kwargs:
-        src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
+def filter_sources(csm, src_ids, codes):
+    if src_ids:
+        if codes:
+            srcs = [src for src in csm.get_sources()
+                    if src.source_id in src_ids and src.code in codes]
+        else:
+            srcs = [src for src in csm.get_sources()
+                    if src.source_id in src_ids]
     else:
-        src_ids = []
-    print('Reading sources...')
-    csm = dstore['_csm']
-    mfs = [src for src in csm.get_sources() if src.code == b'F']
-    assert mfs, 'There are no multi fault sources to plot'
+        if codes:
+            srcs = [src for src in csm.get_sources()
+                    if src.code in codes]
+        else:
+            srcs = csm.get_sources()
+    if not src_ids or not codes:
+        print([(src.source_id, src.code) for src in srcs])
+    return srcs
+
+
+def plot_multi_fault_sources(mfs, src_ids, ax, min_x, max_x, min_y, max_y):
+    print('Plotting multi-fault sources...')
+    t0 = time.time()
     src = mfs[0]
     sections = src.get_sections()
     if src_ids:
@@ -812,10 +817,7 @@ def make_figure_multi_fault(extractors, what):
     else:
         secs = sections
         print([mf.source_id for mf in mfs])
-    print('Found %d sections' % len(secs))
-    _fig, ax = plt.subplots()
-    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
-    t0 = time.time()
+    print(f'Found {len(secs)} sections')
     for sec in secs:
         trace, poly = get_boundary_2d(sec)
         min_x_, min_y_, max_x_, max_y_ = poly.bounds
@@ -823,61 +825,77 @@ def make_figure_multi_fault(extractors, what):
         max_x = max(max_x, max_x_)
         min_y = min(min_y, min_y_)
         max_y = max(max_y, max_y_)
-        plot_geom(poly, ax, 'blue', 'Sections')
-        plot_geom(trace, ax, 'red', 'Traces')
-    print(f'Took {time.time() - t0} seconds')
-    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
-    ax.set_aspect('equal')
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
-    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
-    ax.set_title('Multi-fault sources')
-    ax.legend(by_label.values(), by_label.keys())
-    return plt
+        plot_geom(poly, ax, 'blue', 'Multi-fault sections')
+        plot_geom(trace, ax, 'red', 'Multi-fault traces')
+    print(f'...took {time.time() - t0} seconds')
+    return min_x, max_x, min_y, max_y
 
 
-def make_figure_non_parametric(extractors, what):
+def plot_non_parametric_sources(srcs, ax, min_x, max_x, min_y, max_y):
+    print('Plotting non-parametric sources...')
+    t0 = time.time()
+    for src in srcs:
+        poly = src.polygon
+        min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
+        ax.plot(poly.lons, poly.lats, alpha=0.5, color='green',
+                label='Non-parametric')
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
+    print(f'...took {time.time() - t0} seconds')
+    return min_x, max_x, min_y, max_y
+
+
+def make_figure_sources(extractors, what):
     """
-    $ oq plot "non_parametric?source_id=xxx"
+    $ oq plot "sources?source_id=xxx"
+    $ oq plot "sources?code=N&code=F"
     """
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
     dstore = ex.dstore
     kwargs = what.split('?')[1]
-    if kwargs:
+    if kwargs and 'source_id' in kwargs:
         src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
     else:
         src_ids = []
+    if kwargs and 'code' in kwargs:
+        codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']]
+    else:
+        codes = []
+    PLOTTABLE_CODES = (b'N', b'F')
     print('Reading sources...')
     csm = dstore['_csm']
-    np_srcs = [src for src in csm.get_sources() if src.code == b'N']
-    assert np_srcs, 'There are no non-parametric fault sources to plot'
+    srcs = filter_sources(csm, src_ids, codes)
+    assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
     ax.set_aspect('equal')
     ax.grid(True)
+    print('Plotting mosaic borders...')
     ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
-    if src_ids:
-        srcs = [src for src in np_srcs if src.source_id in src_ids]
-    else:
-        srcs = np_srcs
-        print([src.source_id for src in srcs])
-    print(f'Plotting {len(srcs)} sources')
+    print(f'Plotting {len(srcs)} sources...')
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
-    t0 = time.time()
-    for src in srcs:
-        poly = src.polygon
-        min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
-        min_x = min(min_x, min_x_)
-        max_x = max(max_x, max_x_)
-        min_y = min(min_y, min_y_)
-        max_y = max(max_y, max_y_)
-        ax.fill(poly.lons, poly.lats, alpha=0.5)
-    print(f'Took {time.time() - t0} seconds')
+    np_sources = [src for src in srcs if src.code == b'N']
+    if np_sources:
+        min_x, max_x, min_y, max_y = plot_non_parametric_sources(
+            np_sources, ax, min_x, max_x, min_y, max_y)
+    mf_sources = [src for src in srcs if src.code == b'F']
+    if mf_sources:
+        min_x, max_x, min_y, max_y = plot_multi_fault_sources(
+            mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
+    unplottable = [(src.source_id, src.code)
+                   for src in srcs if src.code not in PLOTTABLE_CODES]
+    if unplottable:
+        print(f'Plotting the following sources is not'
+              f'implemented yet: {unplottable}')
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
     ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
-    ax.set_title('Non-parametric sources')
+    ax.set_title('Sources')
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
     return plt
 
 
