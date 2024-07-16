@@ -24,7 +24,7 @@ import shapely
 import numpy
 import pandas
 from scipy.stats import linregress
-from shapely.geometry import Polygon, LineString, mapping, shape
+from shapely.geometry import Polygon, LineString, mapping
 from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
