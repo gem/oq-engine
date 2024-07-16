@@ -25,7 +25,7 @@ import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString, mapping, shape
 from openquake.commonlib import readinput
-from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
+from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import (
@@ -420,55 +420,6 @@ def make_figure_memory(extractors, what):
         ax.plot(range(start, start + len(mem)), mem, label=task_name)
         start += len(mem)
     ax.legend()
-    return plt
-
-
-def make_figure_sources(extractors, what):
-    """
-    $ oq plot "sources?limit=100"
-    $ oq plot "sources?source_id=1&source_id=2"
-    $ oq plot "sources?code=A&code=N"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
-    [ex] = extractors
-    info = ex.get(what)
-    wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
-    srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
-    _fig, ax = plt.subplots()
-    ax.grid(True)
-    sitecol = ex.get('sitecol')
-    pp = PolygonPlotter(ax)
-    n = 0
-    tot = 0
-    psources = []
-    for rec, srcid, wkt in zip(info, srcs, wkts):
-        print(f'Source id: {srcid}')
-        if not wkt:
-            logging.warning('No geometries for source id %s', srcid)
-            continue
-        color = 'green'
-        alpha = .3
-        n += 1
-        if wkt.startswith('POINT'):
-            psources.append(shapely.wkt.loads(wkt))
-        else:
-            pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
-        tot += 1
-    lons = [p.x for p in psources]
-    lats = [p.y for p in psources]
-    ss_lons = lons + list(sitecol['lon'])  # sites + sources longitudes
-    ss_lats = lats + list(sitecol['lat'])  # sites + sources latitudes
-    if len(ss_lons) > 1 and cross_idl(*ss_lons):
-        ss_lons = [lon % 360 for lon in ss_lons]
-        lons = [lon % 360 for lon in lons]
-        sitecol['lon'] = sitecol['lon'] % 360
-    ax.plot(sitecol['lon'], sitecol['lat'], '.')
-    ax.plot(lons, lats, 'o')
-    pp.set_lim(ss_lons, ss_lats)
-    ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
-    ax.set_aspect('equal')
-    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     return plt
 
 

@@ -37,7 +37,7 @@ import collections
 
 from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, python3compat, config
-from openquake.baselib import performance, parallel
+from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -178,6 +178,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore, version=self.engine_version
             if parallel.oq_distribute() == 'zmq' else None)
+        self._monitor.filename = self.datastore.filename
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
 
@@ -624,6 +625,8 @@ class HazardCalculator(BaseCalculator):
                 oq, oq.inputs['hazard_curves'])
             df = (~pmap).to_dframe()
             self.datastore.create_df('_rates', df)
+            slices = numpy.array([(0, 0, len(df))], getters.slice_dt)
+            self.datastore['_rates/slice_by_idx'] = slices
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
@@ -639,7 +642,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_weight '
-                'amplifier policy_df treaty_df full_lt exported'
+                'amplifier policy_df treaty_df full_lt exported trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -1151,17 +1154,10 @@ class RiskCalculator(HazardCalculator):
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = performance.get_slices(dstore['_rates/sid'][:])
-        full_lt = dstore['full_lt'].init()
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+        getterdict = getters.CurveGetter.build(dstore)
         for sid, assets in asset_df.groupby(asset_df.index):
+            getter = getterdict[sid]
             # hcurves, shape (R, N)
-            getter = getters.MapGetter(
-                dstore.filename, trt_rlzs, self.R,
-                slices.get(sid, []), self.oqparam)
             for slc in general.split_in_slices(
                     len(assets), self.oqparam.assets_per_site_limit):
                 out.append(riskinput.RiskInput(getter, assets[slc]))
