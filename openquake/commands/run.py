@@ -117,6 +117,9 @@ def main(job_ini,
         dic['exports'] = ','.join(exports)
         if concurrent_tasks:
             dic['concurrent_tasks'] = str(concurrent_tasks)
+        elif nodes:
+            ct = int(config.distribution.num_cores) * nodes
+            dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
