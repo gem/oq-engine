@@ -206,10 +206,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
     @property
     def polygon(self):
         """
-        The convex hull of a few subsurfaces; this is terribly slow
+        The convex hull of a few subsurfaces
         """
         lons, lats = [], []
         for mesh in self.iter_meshes():
+            mesh = mesh.reduce(10)
             lons.extend(mesh.lons.flat)
             lats.extend(mesh.lats.flat)
 
