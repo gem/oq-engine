@@ -34,6 +34,49 @@ from openquake.hazardlib.geo import utils as geo_utils
 F32 = numpy.float32
 
 
+def reduce1d(array, n):
+    """
+    Reduce a 1-dimensional array by `n` times (approximately). For instance
+
+    >>> arr = numpy.arange(0, 1, .1)
+    >>> reduce1d(arr, 2)
+    array([0. , 0.1, 0.3, 0.5, 0.7, 0.9])
+    >>> reduce1d(arr, 5)
+    array([0. , 0.1, 0.6, 0.9])
+    >>> reduce1d(arr, 9)
+    array([0. , 0.1, 0.9])
+    """
+    size, = array.shape
+    if size <= 3:
+        return array
+    reduced = array[1:-1:n]
+    res = numpy.empty(len(reduced) + 2, array.dtype)
+    res[0] = array[0]
+    res[1:-1] = reduced
+    res[-1] = array[-1]
+    return res
+
+
+def reduce2d(array, n):
+    """
+    Reduce a 2-dimensional array by `n^2` times (approximately). For instance
+
+    >>> arr = numpy.array([numpy.arange(0, 1, .1) for _ in range(5)])
+    >>> arr.shape
+    (5, 10)
+    >>> reduce2d(arr, 5)
+    array([[0. , 0.1, 0.6, 0.9],
+           [0. , 0.1, 0.6, 0.9],
+           [0. , 0.1, 0.6, 0.9]])
+    """
+    size0, _ = array.shape
+    rows = []
+    idxs = numpy.arange(size0, dtype=int)
+    for idx in reduce1d(idxs, n):
+        rows.append(reduce1d(array[idx], n))
+    return numpy.array(rows)
+
+
 def debug_plot(polygons):
     import matplotlib.pyplot as plt
     _fig, ax = plt.subplots()
@@ -587,6 +630,13 @@ class Mesh(object):
         from openquake.hazardlib.geo.polygon import Polygon
         return Polygon._from_2d(polygon2d, proj)
 
+    def reduce(self, n):
+        """
+        Reduce the mesh by `n` times
+        """
+        return Mesh(reduce1d(self.lons, n), reduce1d(self.lats, n),
+                    reduce1d(self.depths, n))
+
 
 class RectangularMesh(Mesh):
     """
@@ -831,3 +881,11 @@ class RectangularMesh(Mesh):
         # compute and return weighted mean
         return numpy.sum(widths * mean_cell_lengths) / \
             numpy.sum(mean_cell_lengths)
+
+    def reduce(self, n):
+        """
+        Reduce the mesh by `n^2` times
+        """
+        return RectangularMesh(reduce2d(self.lons, n),
+                               reduce2d(self.lats, n),
+                               reduce2d(self.depths, n))

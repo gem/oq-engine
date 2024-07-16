@@ -230,7 +230,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def iter_meshes(self, reduce=None):
+    def iter_meshes(self):
         """
         Yields the meshes underlying the ruptures
         """
