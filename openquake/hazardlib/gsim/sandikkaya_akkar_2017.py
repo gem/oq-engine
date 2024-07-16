@@ -105,11 +105,7 @@ class SandikkayaAkkar2017Rjb(GMPE):
 
     #: Required distance measures are
     REQUIRES_DISTANCES = {"rjb"}
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        [self.kind] = self.REQUIRES_DISTANCES
-
+    kind = "rjb"
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -151,8 +147,8 @@ class SandikkayaAkkar2017Repi(SandikkayaAkkar2017Rjb):
     """
     for repi distance of Table 2
     """
-
     REQUIRES_DISTANCES = {"repi"}
+    kind = "repi"
     COEFFS = CoeffsTable(
         table="""\
     IMT          a1         a2         a3         a4        a5  a6         a7         a8         a9      phi      tau    sigma
@@ -166,8 +162,8 @@ class SandikkayaAkkar2017Rhyp(SandikkayaAkkar2017Rjb):
     """
     for rhypo distance of Table 2
     """
-
     REQUIRES_DISTANCES = {"rhypo"}
+    kind = "rhypo"
     COEFFS = CoeffsTable(
         table="""\
     IMT          a1         a2         a3         a4        a5  a6         a7         a8         a9      phi      tau    sigma 
