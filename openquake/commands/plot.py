@@ -29,6 +29,7 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
+from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
@@ -847,6 +848,27 @@ def plot_non_parametric_sources(srcs, ax, min_x, max_x, min_y, max_y):
     return min_x, max_x, min_y, max_y
 
 
+def plot_point_sources(srcs, ax, min_x, max_x, min_y, max_y):
+    print('Plotting point sources...')
+    t0 = time.time()
+    for point in srcs:
+        min_x_, min_y_, max_x_, max_y_ = point.get_bounding_box(0)
+        if isinstance(point, CollapsedPointSource):
+            color = 'red'
+            label = 'Collapsed point'
+        elif isinstance(point, PointSource):
+            color = 'blue'
+            label = 'Point'
+        ax.plot(point.lon, point.lat, 'o', alpha=0.7, color=color,
+                markersize=1, label=label)
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
+    print(f'...took {time.time() - t0} seconds')
+    return min_x, max_x, min_y, max_y
+
+
 def make_figure_sources(extractors, what):
     """
     $ oq plot "sources?source_id=xxx"
@@ -865,7 +887,7 @@ def make_figure_sources(extractors, what):
         codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']]
     else:
         codes = []
-    PLOTTABLE_CODES = (b'N', b'F')
+    PLOTTABLE_CODES = (b'N', b'F', b'p')
     print('Reading sources...')
     csm = dstore['_csm']
     srcs = filter_sources(csm, src_ids, codes)
@@ -885,6 +907,10 @@ def make_figure_sources(extractors, what):
     if mf_sources:
         min_x, max_x, min_y, max_y = plot_multi_fault_sources(
             mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
+    p_sources = [src for src in srcs if src.code == b'p']
+    if p_sources:
+        min_x, max_x, min_y, max_y = plot_point_sources(
+            p_sources, ax, min_x, max_x, min_y, max_y)
     unplottable = [(src.source_id, src.code)
                    for src in srcs if src.code not in PLOTTABLE_CODES]
     if unplottable:
