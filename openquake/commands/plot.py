@@ -759,22 +759,20 @@ def df_to_geojson(df, geometry_col='geometry'):
     return geojson
 
 
-def plot_geojson(data, ax, color, label):
-    for feature in data['features']:
-        geom = shape(feature['geometry'])
-        if geom.geom_type == 'Polygon':
-            x, y = geom.exterior.xy
+def plot_geom(geom, ax, color, label):
+    if geom.geom_type == 'Polygon':
+        x, y = geom.exterior.xy
+        ax.plot(x, y, color=color, label=label)
+    elif geom.geom_type == 'MultiPolygon':
+        for polygon in geom:
+            x, y = polygon.exterior.xy
             ax.plot(x, y, color=color, label=label)
-        elif geom.geom_type == 'MultiPolygon':
-            for polygon in geom:
-                x, y = polygon.exterior.xy
-                ax.plot(x, y, color=color, label=label)
-        elif geom.geom_type == 'LineString':
-            x, y = geom.xy
-            ax.plot(x, y, color=color, label=label)
-        else:
-            raise NotImplementedError(
-                f'Unable to plot geometry type {geom.geom_type}')
+    elif geom.geom_type == 'LineString':
+        x, y = geom.xy
+        ax.plot(x, y, color=color, label=label)
+    else:
+        raise NotImplementedError(
+            f'Unable to plot geometry type {geom.geom_type}')
 
 
 def get_boundary_2d(smsh):
@@ -815,6 +813,7 @@ def make_figure_multi_fault(extractors, what):
         src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
     else:
         src_ids = []
+    print('Reading sources...')
     csm = dstore['_csm']
     mfs = [src for src in csm.get_sources() if src.code == b'F']
     assert mfs, 'There are no multi fault sources to plot'
@@ -831,29 +830,20 @@ def make_figure_multi_fault(extractors, what):
         secs = sections
         print([mf.source_id for mf in mfs])
     print('Found %d sections' % len(secs))
-    traces = []
-    polys = []
-    suids = []
+    _fig, ax = plt.subplots()
     min_x = max_x = min_y = max_y = None
     ZOOM_MARGIN = 10
+    t0 = time.time()
     for sec in secs:
         trace, poly = get_boundary_2d(sec)
-        traces.append(trace)
-        polys.append(poly)
-        suids.append(sec.idx)
         min_x_, min_y_, max_x_, max_y_ = poly.bounds
         min_x = min_x_ if min_x is None else min(min_x, min_x_)
         max_x = max_x_ if max_x is None else max(max_x, max_x_)
         min_y = min_y_ if min_y is None else min(min_y, min_y_)
         max_y = max_y_ if max_y is None else max(max_y, max_y_)
-    daf_polys = pandas.DataFrame({'suid': suids, 'geometry': polys})
-    daf_polys_geojson = df_to_geojson(daf_polys)
-    daf_traces = pandas.DataFrame({'suid': suids, 'geometry': traces})
-    daf_traces_geojson = df_to_geojson(daf_traces)
-
-    _fig, ax = plt.subplots()
-    plot_geojson(daf_polys_geojson, ax, color='blue', label='Sections')
-    plot_geojson(daf_traces_geojson, ax, color='red', label='Traces')
+        plot_geom(poly, ax, 'blue', 'Sections')
+        plot_geom(trace, ax, 'red', 'Traces')
+    print(f'Took {time.time() - t0} seconds')
     ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.set_aspect('equal')
     handles, labels = ax.get_legend_handles_labels()
