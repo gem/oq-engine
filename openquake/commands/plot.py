@@ -24,7 +24,7 @@ import shapely
 import numpy
 import pandas
 from scipy.stats import linregress
-from shapely.geometry import Polygon, LineString, mapping
+from shapely.geometry import Polygon, LineString
 from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
@@ -737,26 +737,6 @@ def make_figure_gmf_scenario(extractors, what):
         plt.title(info)
     plt.grid(True)
     return plt
-
-
-def df_to_geojson(df, geometry_col='geometry'):
-    features = []
-    for _, row in df.iterrows():
-        geom = row[geometry_col]
-        geom_geojson = mapping(geom)
-        properties = row.drop(geometry_col).to_dict()
-        feature = {
-            "type": "Feature",
-            "geometry": geom_geojson,
-            "properties": properties
-        }
-        features.append(feature)
-
-    geojson = {
-        "type": "FeatureCollection",
-        "features": features
-    }
-    return geojson
 
 
 def plot_geom(geom, ax, color, label):
