@@ -37,6 +37,9 @@ from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
 
 
+ZOOM_MARGIN = 8
+
+
 def make_figure_hcurves(extractors, what):
     """
     $ oq plot "hcurves?kind=mean&imt=PGA&site_id=0"
@@ -811,16 +814,15 @@ def make_figure_multi_fault(extractors, what):
         print([mf.source_id for mf in mfs])
     print('Found %d sections' % len(secs))
     _fig, ax = plt.subplots()
-    min_x = max_x = min_y = max_y = None
-    ZOOM_MARGIN = 10
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     t0 = time.time()
     for sec in secs:
         trace, poly = get_boundary_2d(sec)
         min_x_, min_y_, max_x_, max_y_ = poly.bounds
-        min_x = min_x_ if min_x is None else min(min_x, min_x_)
-        max_x = max_x_ if max_x is None else max(max_x, max_x_)
-        min_y = min_y_ if min_y is None else min(min_y, min_y_)
-        max_y = max_y_ if max_y is None else max(max_y, max_y_)
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
         plot_geom(poly, ax, 'blue', 'Sections')
         plot_geom(trace, ax, 'red', 'Traces')
     print(f'Took {time.time() - t0} seconds')
@@ -862,16 +864,15 @@ def make_figure_non_parametric(extractors, what):
         srcs = np_srcs
         print([src.source_id for src in srcs])
     print(f'Plotting {len(srcs)} sources')
-    min_x = max_x = min_y = max_y = None
-    ZOOM_MARGIN = 10
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     t0 = time.time()
     for src in srcs:
         poly = src.polygon
         min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
-        min_x = min_x_ if min_x is None else min(min_x, min_x_)
-        max_x = max_x_ if max_x is None else max(max_x, max_x_)
-        min_y = min_y_ if min_y is None else min(min_y, min_y_)
-        max_y = max_y_ if max_y is None else max(max_y, max_y_)
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
         ax.fill(poly.lons, poly.lats, alpha=0.5)
     print(f'Took {time.time() - t0} seconds')
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
