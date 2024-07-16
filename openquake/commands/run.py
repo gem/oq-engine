@@ -183,6 +183,7 @@ def wait_workers(n, job_id):
         if len(hosts) == n:
             break
         else:
+            print('%d/%d workerpools started' % (len(hosts), n))
             time.sleep(1)
 
 

@@ -207,7 +207,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = 10 * TWO20 // (M*G)
+    maxs = 20 * TWO20 // (M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -1133,7 +1133,9 @@ class ContextMaker(object):
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
             # print('MB', mean_stdt.nbytes // TWO20)
-        for slc in split_in_slices(len(ctx), L1):
+
+        # making plenty of slices so that the array `poes` is small
+        for slc in split_in_slices(len(ctx), 2*L1):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
