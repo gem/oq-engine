@@ -143,12 +143,13 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
             yield result
     else:
+        # use most memory here; limited by pmap_max_gb
         pmap = MapArray(
             sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(sources, sitecol, cmaker, pmap)
         if tiling:
-            del result['source_data']  # save a lot of data transfer in EUR
+            del result['source_data']  # save some data transfer
         rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if cmaker.save_on_tmp and tiling:
             # tested in case_22
@@ -602,7 +603,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.offset = 0
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
-            if 'pnemap' in dic:
+            if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
                     self.offset = _store(
                         dic['pnemap'], self.chunks, self.datastore, self.offset)
