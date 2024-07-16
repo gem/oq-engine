@@ -181,9 +181,7 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
         # increase max_weight if there are tiles smaller than 100 sites
         minsize = min(max_weight / sg.weight * N for sg in csm.src_groups)
         if minsize < 100:  # less than 100 sites per tile
-            logging.info(
-                'concurrent_tasks=%d is too large, producing less tiles',
-                oq.concurrent_tasks)
+            logging.info('producing less tasks to avoid tiles < 100 sites')
             max_weight *= 100/ minsize
         num_tiles = []
         for cm in cmakers:
