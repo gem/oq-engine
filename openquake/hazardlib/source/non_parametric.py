@@ -197,34 +197,21 @@ class NonParametricSeismicSource(BaseSeismicSource):
         return '<%s %s gridded=%s>' % (
             self.__class__.__name__, self.source_id, self.is_gridded())
 
-    @property
     def mesh_size(self):
         """
-        :returns: the number of points in the underlying meshes (reduced)
+        :returns: the number of points in the underlying meshes
         """
-        n = 0
-        for rup in self.iter_ruptures(step=50):  # reduced
-            if isinstance(rup.surface, MultiSurface):
-                for sfc in rup.surface.surfaces:
-                    n += len(sfc.mesh)
-            else:
-                n += len(rup.surface.mesh)
-        return n
+        return sum(len(rup.surface.mesh) for rup in self.iter_ruptures())
 
     @property
     def polygon(self):
         """
-        The convex hull of a few subsurfaces
+        The convex hull of a few subsurfaces; this is terribly slow
         """
         lons, lats = [], []
-        for rup in self.iter_ruptures(step=50):  # reduced
-            if isinstance(rup.surface, MultiSurface):
-                for sfc in rup.surface.surfaces:
-                    lons.extend(sfc.mesh.lons.flat)
-                    lats.extend(sfc.mesh.lats.flat)
-            else:
-                lons.extend(rup.surface.mesh.lons.flat)
-                lats.extend(rup.surface.mesh.lats.flat)
+        for rup in self.iter_ruptures():
+            lons.extend(rup.surface.mesh.lons.flat)
+            lats.extend(rup.surface.mesh.lats.flat)
 
         condition = numpy.isfinite(lons).astype(int)
         lons = numpy.extract(condition, lons)
