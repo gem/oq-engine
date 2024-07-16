@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -252,7 +252,7 @@ class TestmtkActiveFaultModelCollapse(unittest.TestCase):
         )
         mesh_spacing = 1.0
         reader = FaultYmltoSource(input_file)
-        fault_model, tectonic_region = reader.read_file(mesh_spacing)
+        fault_model, _tectonic_region = reader.read_file(mesh_spacing)
         fault_model.build_fault_model(
             collapse=True, bin_width=0.05, rendered_msr=WC1994()
         )

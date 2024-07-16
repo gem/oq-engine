@@ -57,7 +57,9 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
-
+BASE33489 = []  # built in 0.003 seconds
+for a, b in itertools.product(BASE183, BASE183):
+    BASE33489.append(a + b)
 mp = multiprocessing.get_context('spawn')
 
 
@@ -498,11 +500,12 @@ def extract_dependencies(lines):
     for line in lines:
         longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
         try:
-            pkg, version, *other = longname.split('-')
+            pkg, version, _other = longname.split('-', 2)
         except ValueError:  # for instance a comment
             continue
         if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam', 'django_cors_headers', 'django_cookie_consent'):
+                   'python_pam', 'django_cors_headers',
+                   'django_cookie_consent'):
             # not importable
             continue
         if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
@@ -600,7 +603,7 @@ def import_all(module_or_package):
             # the current working directory is not a subpackage
             continue
         for f in files:
-            if f.endswith('.py'):
+            if f.endswith('.py') and not f.startswith('__init__'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
@@ -1147,6 +1150,17 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     for name in dic:
         res[name] = dic[name]
     return res
+
+
+def idxs_by_tag(tags):
+    """
+    >>> idxs_by_tag([2, 1, 1, 2])
+    {2: array([0, 3], dtype=uint32), 1: array([1, 2], dtype=uint32)}
+    """
+    dic = AccumDict(accum=[])
+    for i, tag in enumerate(tags):
+        dic[tag].append(i)
+    return {tag: numpy.uint32(dic[tag]) for tag in dic}
 
 
 def count(groupiter):
@@ -1769,6 +1783,7 @@ def decompress(cbytes):
 # with monitor.shared['arr'] as arr:
 #      big_object = loada(arr)
 
+
 def dumpa(obj):
     """
     Dump a Python object as an array of uint8:
@@ -1788,4 +1803,3 @@ def loada(arr):
     23
     """
     return pickle.loads(bytes(arr))
-

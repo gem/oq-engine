@@ -27,7 +27,7 @@ from collections import namedtuple
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, assert_close, rmsdiff,
     deprecated, DeprecationWarning, cached_property,
-    compress, decompress, random_choice)
+    compress, decompress, random_choice, get_duplicates)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -226,3 +226,11 @@ class RandomChoiceTestCase(unittest.TestCase):
         ch_tot = numpy.concatenate([ch1, ch2, ch3])
         ch6 = random_choice(chars, 6_000_000, 0)
         numpy.testing.assert_equal(ch_tot, ch6)
+
+
+def test_get_duplicates():
+    dtlist = [('lon', float), ('lat', float), (('id', numpy.string_, 3))]
+    lst = [(2.1, 1.0, 's01'), (2.2, 1.0, 's02'), (2.1, 1.0, 's03')]
+    arr = numpy.array(lst, dtlist)
+    dic = get_duplicates(arr, 'lon', 'lat')
+    assert dic == {(2.1, 1.0): 2}, dic

@@ -44,7 +44,7 @@ class SplitSigmaGMPETest(unittest.TestCase):
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                       const.StdDev.INTRA_EVENT]
         # Compute results
-        mean, stds = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stds_types)
+        _mean, stds = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stds_types)
         return stds, stds_types
 
     def test_instantiation(self):

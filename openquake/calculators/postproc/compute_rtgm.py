@@ -82,9 +82,6 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
-# TODO: interpolate DLLs for vs30 != 760
-
-
 def get_DLLs(job_imts, vs30):
     
     if vs30 > 1524:
@@ -284,7 +281,7 @@ def get_zero_hazard_asce41():
     return asce41
 
 
-def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, low_haz=False):
+def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
     """
     :param job_imts: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT
@@ -325,27 +322,31 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, low_haz=False):
                'MCE': mce.values(),
                'sid': [sid]*len(job_imts)}
     mce_df = pd.DataFrame(dic_mce)
-    if mce['SA(0.2)'] < 0.25:
-        Ss_seismicity = "Low"
-    elif mce['SA(0.2)'] < 0.5:
-        Ss_seismicity = "Moderate"
-    elif mce['SA(0.2)'] < 1:
-        Ss_seismicity = "Moderately High"
-    elif mce['SA(0.2)'] < 1.5:
-        Ss_seismicity = "High"
-    else:
-        Ss_seismicity = "Very High"
+    if vs30 == 760:
+        if mce['SA(0.2)'] < 0.25:
+            Ss_seismicity = "Low"
+        elif mce['SA(0.2)'] < 0.5:
+            Ss_seismicity = "Moderate"
+        elif mce['SA(0.2)'] < 1:
+            Ss_seismicity = "Moderately High"
+        elif mce['SA(0.2)'] < 1.5:
+            Ss_seismicity = "High"
+        else:
+            Ss_seismicity = "Very High"
 
-    if mce['SA(1.0)'] < 0.1:
-        S1_seismicity = "Low"
-    elif mce['SA(1.0)'] < 0.2:
-        S1_seismicity = "Moderate"
-    elif mce['SA(1.0)'] < 0.4:
-        S1_seismicity = "Moderately High"
-    elif mce['SA(1.0)'] < 0.6:
-        S1_seismicity = "High"
+        if mce['SA(1.0)'] < 0.1:
+            S1_seismicity = "Low"
+        elif mce['SA(1.0)'] < 0.2:
+            S1_seismicity = "Moderate"
+        elif mce['SA(1.0)'] < 0.4:
+            S1_seismicity = "Moderately High"
+        elif mce['SA(1.0)'] < 0.6:
+            S1_seismicity = "High"
+        else:
+            S1_seismicity = "Very High"
     else:
-        S1_seismicity = "Very High"
+        Ss_seismicity = "n.a."
+        S1_seismicity = "n.a."
 
     asce07 = {
              'PGA': mce['PGA'],
@@ -492,12 +493,13 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         lon = sitecol.lons[sid]
         lat = sitecol.lats[sid]
+        vs30 = sitecol.vs30[sid]
         rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
-        prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            job_imts, det_imt, DLLs[sid], rtgm_df, sid)
+        _prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
+            job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
@@ -537,6 +539,7 @@ def main(dstore, csm):
     for site, rtgm_df, warning in process_sites(dstore, csm, DLLs,
                                                 ASCE_version):
         sid = site.id
+        vs30 = site.vs30
         loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             dic_mce = {'IMT': job_imts,
@@ -551,8 +554,8 @@ def main(dstore, csm):
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
-            prob_mce_out, mce, det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, low_haz=True)
+            _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
+                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)

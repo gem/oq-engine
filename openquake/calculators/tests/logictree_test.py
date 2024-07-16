@@ -596,18 +596,18 @@ hazard_uhs-std.csv
 
         # First calculation
         self.run_calc(case_58.__file__, 'job.ini')
-        f01, f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
-        f03, f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
+        f01, _f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
+        f03, _f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
 
         # Second calculation. Same LT structure for case 1 but with only one
         # branch for each branch set
         self.run_calc(case_58.__file__, 'job_case01.ini')
-        f11, f12 = export(('hcurves/', 'csv'), self.calc.datastore)
+        f11, _f12 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # Third calculation. In this case we use a source model containing one
         # source with the geometry of branch b22 and slip rate of branch b32
         self.run_calc(case_58.__file__, 'job_case02.ini')
-        f21, f22 = export(('hcurves/', 'csv'), self.calc.datastore)
+        f21, _f22 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # First test
         self.assertEqualFiles(f01, f11)
@@ -664,8 +664,9 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
-                                 b'AA~A', b'AA~A', b'B.~A', b'B.~A', b'B.~A'])
+        exp = [b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A',
+               b'AAA~A', b'AB.~A', b'AB.~A', b'AB.~A']
+        ae(rlzs['branch_path'], exp)
         aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
         # check the hazard curves

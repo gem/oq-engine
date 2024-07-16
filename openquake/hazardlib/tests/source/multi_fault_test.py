@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, python3compat, general, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
-    MultiFaultSource, save, load)
+    MultiFaultSource, save_and_split, load)
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
@@ -94,11 +94,11 @@ class MultiFaultTestCase(unittest.TestCase):
                                           src_interdep='mutex')])
         fd, tmp = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
-            sm_xml, gm_hdf5, gm_xml = write_source_model(tmp, smodel)
+            _sm_xml, gm_hdf5, _gm_xml = write_source_model(tmp, smodel)
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
-        save([src], self.sections, fname)
+        save_and_split([src], self.sections, fname)
         [got] = load(fname)
         for name in 'mags rakes probs_occur'.split():
             numpy.testing.assert_almost_equal(
@@ -144,7 +144,8 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # compare with the expected distances
         tol = 1e-4
-        aac(ctx.rrup, [27.51933, 0., 27.51933, 55.03832,  0., 0., 0.], atol=tol)
+        aac(ctx.rrup, [27.51933, 0., 27.51933, 55.03832,  0., 0., 0.],
+            atol=tol)
         aac(ctx.rjb, [27.51907, 0., 27.51907, 55.03832,  0., 0., 0.], atol=tol)
         aac(ctx.rx, [1.653083e-01, 0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
                      1.643886e-05, 3.3298e-05], atol=tol)
@@ -152,14 +153,14 @@ class MultiFaultTestCase(unittest.TestCase):
             atol=tol)
         aac(ctx.clon, [10.35, 10., 10.35, 10.7, 10., 10., 10.])
         aac(ctx.clat, 45.)
-            
+
     def test_ko(self):
         # test invalid section IDs
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust",
                                rup_idxs, self.pmfs, self.mags, self.rakes)
         with self.assertRaises(IndexError) as ctx:
-            save([mfs], self.sections, 'dummy.hdf5')
+            save_and_split([mfs], self.sections, 'dummy.hdf5')
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 
@@ -225,7 +226,7 @@ def main100sites():
         for surf in rup.surface.surfaces:
             lines.append(surf.tor)
             data.append(surf.tor.coo.tobytes())
-    uni, inv = numpy.unique(data, return_inverse=True)
+    uni, _inv = numpy.unique(data, return_inverse=True)
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
 

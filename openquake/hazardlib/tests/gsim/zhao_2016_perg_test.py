@@ -47,7 +47,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
 
     ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites))
     ctxs_perg = ctxs_perg[0]
-    mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds(
+    mean_perg, _std_perg, _tau_perg, _phi_perg = ctxm_perg.get_mean_stds(
         [ctxs_perg])
 
     # Get non-perg version ground-motions
@@ -56,7 +56,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     ctxs = ctxs[0]
 
     ctxs.occurrence_rate = 0.0
-    mean, std, tau, phi = ctxm.get_mean_stds([ctxs])
+    mean, _std, _tau, _phi = ctxm.get_mean_stds([ctxs])
 
     # Plot perg vs non-perg predicted gm vs rjb
     dist_x = ctxs.rrup
@@ -64,7 +64,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     mean = mean[0][0]
 
     if PLOTTING:
-        fig, axs = plt.subplots(1, 1)
+        _fig, _axs = plt.subplots(1, 1)
         plt.plot(dist_x, np.exp(mean_perg), 'r', label='PErg')
         plt.plot(dist_x, np.exp(mean), 'b', label='Non-PErg')
         plt.ylabel('%s (g)' % (imt))
@@ -139,8 +139,8 @@ class TestZhao2016PErg(unittest.TestCase):
                                            self.step, self.site_params)
 
         # Get non-ergodic and ergodic results
-        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
-                                           self.gmm, azimuth)
+        _mean_perg, _mean = get_gms_from_ctx(
+            imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)
 
     def test02(self):
         """
@@ -156,8 +156,8 @@ class TestZhao2016PErg(unittest.TestCase):
                                            self.step, self.site_params)
 
         # Get non-ergodic and ergodic results
-        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
-                                           self.gmm, azimuth)
+        _mean_perg, _mean = get_gms_from_ctx(
+            imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)
 
     def test03(self):
         """
@@ -172,8 +172,8 @@ class TestZhao2016PErg(unittest.TestCase):
                                            self.direction, self.hdist,
                                            self.step, self.site_params)
         # Get non-ergodic and ergodic results
-        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
-                                           self.gmm, azimuth)
+        _mean_perg, _mean = get_gms_from_ctx(
+            imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)
 
     def test04(self):
         """

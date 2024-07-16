@@ -40,7 +40,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
-    cached_property, groupby, group_array, AccumDict, BASE183)
+    cached_property, groupby, group_array, AccumDict, BASE183, BASE33489)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
@@ -181,7 +181,7 @@ def get_eff_rlzs(sm_rlzs, gsim_rlzs):
     ordinal = 0
     effective = []
     for rows in groupby(triples, operator.itemgetter(0)).values():
-        pid, sm_rlz, gsim_rlz = rows[0]
+        _pid, sm_rlz, gsim_rlz = rows[0]
         weight = numpy.array([len(rows) / len(triples)])
         effective.append(
             LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
@@ -238,7 +238,7 @@ def reduce_fnames(fnames, source_id):
     the filenames containing the source, otherwise return all the filenames
     """
     try:
-        srcid, fname = source_id.split('!')
+        _srcid, fname = source_id.split('!')
     except ValueError:
         return fnames
     return [f for f in fnames if fname in f]
@@ -261,20 +261,30 @@ def read_source_groups(fname):
     return src_groups
 
 
-def shorten(path_tuple, shortener):
+def shorten(path_tuple, shortener, kind):
     """
-    :path:  sequence of strings
-    :shortener: dictionary longstring -> shortstring
+    :param path: sequence of strings
+    :param shortener: dictionary longstring -> shortstring
+    :param kind: 'smlt' or 'gslt'
     :returns: shortened version of the path
     """
+    # NB: path_tuple can have the form ('EDF_areas',
+    # 'Mmax:10-br#0', 'Mmax:11-br#0', ..., 'ab:4014-br#23')
+    # with shortener['EDF_areas'] = 'A0',
+    # shortener['ab:4014-br#23'] = 'X138'
     if len(shortener) == 1:
         return 'A'
     chars = []
-    for key in path_tuple:
+    for bsno, key in enumerate(path_tuple):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            chars.append(shortener[key][0])
+            if kind == 'smlt' and bsno == 0:
+                # shortener[key] has the form 2-letters+number
+                chars.append(shortener[key][:2])
+            else:
+                # shortener[key] has the form letter+number
+                chars.append(shortener[key][0])
     return ''.join(chars)
 
 
@@ -450,6 +460,7 @@ class SourceModelLogicTree(object):
         """
         :returns: a new logic tree reduced to a single source
         """
+        # NB: source_id can contain "@" in the case of a split multi fault source
         num_samples = self.num_samples if num_samples is None else num_samples
         new = self.__class__(self.filename, self.seed, num_samples,
                              self.sampling_method, self.test_mode,
@@ -561,12 +572,24 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        if len(branches) > len(BASE183):
+        # NB: because the engine lacks the ability to apply correlated
+        # uncertainties to all the sources in a source model, people build
+        # spurious source models in preprocessing; for instance EDF/CEA have 4
+        # real source models which are extended to 400 source models; this is
+        # bad, since the required disk space is 100x larger, the read time is
+        # 100x larger copying the files is an issue, etc.
+        # To stop people to commit such abuses there is a limit of 183
+        # branches; however, you can actually raise the limit to 33489 branches
+        # by commenting/uncommenting the two lines below, if you really need
+        maxlen = 183
+        # maxlen = 183 if bsno else 33489  # the sourceModel branchset
+        #                                    can be longer
+        if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
                    'oq-engine/advanced/latest/logic_trees.html')
             raise InvalidFile(
-                msg % (self.filename, bs_id, len(branches), len(BASE183)))
+                msg % (self.filename, bs_id, len(branches), maxlen))
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -587,10 +610,11 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.branchID and branchnode['branchID'] != self.branchID:
+                if self.branchID and self.branchID not in branchnode['branchID']:
                     value = ''  # reduce all branches except branchID
                 elif self.source_id:  # only the files containing source_id
-                    value = ' '.join(reduce_fnames(vals, self.source_id))
+                    srcid = self.source_id.split('@')[0]
+                    value = ' '.join(reduce_fnames(vals, srcid))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
@@ -605,7 +629,9 @@ class SourceModelLogicTree(object):
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            self.shortener[branch_id] = keyno(branch_id, bsno, brno)
+            # use two-letter abbrev for the first branchset (sourceModel)
+            base = BASE183 if bsno else BASE33489
+            self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
@@ -823,7 +849,8 @@ class SourceModelLogicTree(object):
         :returns: the number of sources in the source model portion
         """
         with self._get_source_model(fname) as sm:
-            trt_by_src = get_trt_by_src(sm, self.source_id.split('!')[0])
+            src = self.source_id.split('!')[0].split('@')[0]
+            trt_by_src = get_trt_by_src(sm, src)
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
@@ -951,7 +978,9 @@ class SourceModelLogicTree(object):
                     uvalue = row['uvalue']  # not really deserializable :-(
                 br = Branch(bsid, row['branch'], row['weight'], uvalue)
                 self.branches[br.branch_id] = br
-                self.shortener[br.branch_id] = keyno(br.branch_id, ordinal, no)
+                base = BASE33489 if utype == 'sourceModel' else BASE183
+                self.shortener[br.branch_id] = keyno(
+                    br.branch_id, ordinal, no, base)
                 bset.branches.append(br)
             bsets.append(bset)
         CompositeLogicTree(bsets)  # perform attach_to_branches
@@ -1222,6 +1251,7 @@ class FullLogicTree(object):
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
             if smr is None:  # called by .reduce_groups
+                srcid = srcid.split('@')[0]
                 try:
                     # check if ambiguous source ID
                     srcid, fname = srcid.rsplit('!')
@@ -1318,8 +1348,8 @@ class FullLogicTree(object):
             if self.source_model_lt.filename == 'fake.xml':  # scenario
                 smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
                               for i, sm_rlz in enumerate(self.sm_rlzs)}
-                smidx = numpy.zeros(self.get_num_paths(), int)		
-                for rlz in rlzs:		
+                smidx = numpy.zeros(self.get_num_paths(), int)
+                for rlz in rlzs:
                     smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
                 self._rlzs_by = _ddic(trtis, smrs,
                                       lambda smr: rlzs[smidx == smr])
@@ -1396,8 +1426,8 @@ class FullLogicTree(object):
         sh2 = self.gsim_lt.shortener
         tups = []
         for r in self.get_realizations():
-            path = '%s~%s' % (shorten(r.sm_lt_path, sh1),
-                              shorten(r.gsim_rlz.lt_path, sh2))
+            path = '%s~%s' % (shorten(r.sm_lt_path, sh1, 'smlt'),
+                              shorten(r.gsim_rlz.lt_path, sh2, 'gslt'))
             tups.append((r.ordinal, path, r.weight[-1]))
         return numpy.array(tups, rlz_dt)
 

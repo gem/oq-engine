@@ -49,7 +49,8 @@ def main(exposure_xml, sites_csv):
                                   calculation_mode='custom',
                                   asset_hazard_distance='15',
                                   maximum_distance='300')
-        sitecol, assetcol, discarded, expo = readinput.get_sitecol_assetcol(oq)
+        _sitecol, _assetcol, _discarded, expo = readinput.get_sitecol_assetcol(
+            oq)
     okassets = numpy.array([a.decode('utf-8') for a in expo.assets['id']])
     reduce_files(expo.datafiles, okassets)
     print(mon)

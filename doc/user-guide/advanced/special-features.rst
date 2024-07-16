@@ -12,25 +12,42 @@ Sensitivity analysis
 Running a sensitivity analysis study means to run multiple calculations by changing a parameter and to study how the 
 results change. For instance, it is interesting to study the random seed dependency when running a calculation using 
 sampling of the logic tree, or it is interesting to study the impact of the truncation level on the PoEs. The engine 
-offers a special syntax to run a sensitivity analysis with respect to one (or even more than one) parameter; you can 
-find examples in the demos, see for instance the MultiPointClassicalPSHA demo or the EventBasedDamage demo. It is enough 
-to write in the job.ini a dictionary of lists like the following::
+offers a special command to run a sensitivity analysis with respect to one (or even more than one) parameter.
+Consider for instance the MultiPointClassicalPSHA demo; suppose you are interesting in studying what happens
+when changing the `truncation_level` parameter; then you can run a sensitivity analysis as follows:
 
-	sensitivity_analysis = {"random_seed": [100, 200, 300]}
-	sensitivity_analysis = {'truncation_level': [2, 3]}
+	$ oq sensitivity_analysis job.ini truncation_level=[2,3] | bash
 
-The first example with run 3 calculations, the second 2 calculations. The calculations will be sequential unless you 
-specify the ``--many`` flag in ``oq engine --run --many job.ini``. The descriptions of the spawned calculation will be 
-extended to include the parameter, so you could have descriptions as follows::
+The engine will spawn two calculations with descriptions as follows::
 
-	Multipoint demo {'truncation_level': 2}
-	Multipoint demo {'truncation_level': 3}
+	Multipoint demo [truncation_level=2]
+	Multipoint demo [truncation_level=3]
 
-NB: from version 3.17 the engine is also able to run sensitivity analysis on file parameters. For instance if you want 
+The engine is also able to run sensitivity analysis on file parameters. For instance if you want 
 to run a ``classical_risk`` calculation starting from three different hazard inputs you can write::
 
-	sensitivity_analysis = {
-	  "hazard_curves_file": ["hazard1.csv", "hazard2.csv", "hazard3.csv"]}
+	$ oq sensitivity_analysis job.ini hazard_curves_file=["hazard1.csv","hazard2.csv","hazard3.csv"] | bash
+
+Notice that the current approach (since engine 3.21) works by
+generating bash code instead of directly running calculations on the
+local machine, as in previous versions of the engine. It means that if
+you are using a supercomputer, by configuring correctly the
+`submit_cmd` and other parameters in `openquake.cfg`, it is possible
+to use multiple nodes of your infrastructure. To see the generated code,
+just remove the "| bash" pipe at the end of the command.
+
+Here is an example changing two parameters at the same time::
+
+  $ oq sensitivity_analysis job.ini truncation_level=[2,3] area_source_discretization=[10,20] 
+  #!/bin/bash
+  job_id=(`oq create_jobs 4`)
+  oq run job.ini -p truncation_level=2 area_source_discretization=10 job_id=${job_id[0]}
+  oq run job.ini -p truncation_level=2 area_source_discretization=20 job_id=${job_id[1]}
+  oq run job.ini -p truncation_level=3 area_source_discretization=10 job_id=${job_id[2]}
+  oq run job.ini -p truncation_level=3 area_source_discretization=20 job_id=${job_id[3]}
+  oq collect_jobs ${job_id[@]}
+
+The exact details of the script may change across versions of the engine.
 
 Ruptures in CSV format
 ----------------------

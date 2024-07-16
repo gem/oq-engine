@@ -75,7 +75,7 @@ def main(calc_id: int = -1, site_model=False,
                       label='discarded', s=markersize_discarded)
     if oq.rupture_xml or oq.rupture_dict:
         rec = dstore['ruptures'][0]
-        lon, lat, dep = rec['hypo']
+        lon, lat, _dep = rec['hypo']
         xlon, xlat = [lon], [lat]
         dist = sitecol.get_cdist(rec)
         print('rupture(%s, %s), dist=%s' % (lon, lat, dist))

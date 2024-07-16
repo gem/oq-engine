@@ -52,8 +52,9 @@ CONSTANTS = {
 
 def _sigmoid1d(x, start, finish, centre, slope):
     """
-    Returns 1D sigmoid function allowing a smooth transition from `start` to `finish`.
-    The transition is centred at `centre` and changes at a rate linked to `slope`
+    Returns 1D sigmoid function allowing a smooth transition from `start` to
+    `finish`. The transition is centred at `centre` and changes at a rate
+    linked to `slope`
     """
     amplitude = finish - start
     y = start + amplitude / (1.0 + np.exp(-(x - centre) / slope))
@@ -101,7 +102,8 @@ def _anelastic_correction(T):
 
 def _anelastic_sigma(T):
     """
-    Standard deviation of the anelastic attenuation coefficient -- a function of period `T`
+    Standard deviation of the anelastic attenuation coefficient -- a function
+    of period `T`
     """
     return _sigmoid1d(np.log(T), 0.00054, 0.0004, np.log(0.9), 0.2)
 
@@ -143,7 +145,8 @@ def _neff_model(T):
     """
         neff_model(T)
 
-    Model for the effective number of observations in NZ data, function of period `T`
+    Model for the effective number of observations in NZ data, function of
+    period `T`
     """
     β0 = 190.34
     β1 = 221.16
@@ -159,9 +162,10 @@ def _neff_model(T):
 def get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     ρEhEx = 0.4
     epistemic_scale_factor = 0.893
-    # The scale factor of 0.9 is applied based upon the discussion that it accounts for the reduction in epistemic
-    # uncertainty when no perfect correlation is assumed between rupture scenarios. See the note of Peter and
-    # Brendon on slack.
+    # The scale factor of 0.9 is applied based upon the discussion that it
+    # accounts for the reduction in epistemic uncertainty when no perfect
+    # correlation is assumed between rupture scenarios. See the note of Peter
+    # and Brendon on slack.
     MEAN_ADJUSTMENT_TERMS_IF = {
         "Lower": {
             "delta_c1": (
@@ -428,7 +432,7 @@ def get_mean_stddevs(
     # Get linear amplification term
     f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term
-    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+    f_nl, _f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
@@ -509,9 +513,8 @@ class Stafford2022(GMPE):
         """
         for m, imt in enumerate(imts):
             if repr(imt) == "PGV":
-                print(
-                    "Invalid IMT provided. The model does not predict ground motions for PGV."
-                )
+                print("Invalid IMT provided. The model does not predict"
+                      " ground motions for PGV.")
                 sig[m], tau[m], phi[m] = None, None, None
             elif repr(imt) == "PGA":
                 pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
@@ -525,7 +528,8 @@ class Stafford2022(GMPE):
                     self.COEFFS[SA(0.01)],
                     ctx,
                 )
-                # Peter has used T = 0.01 as the period for PGA because the coefficients (for 0.01s and PGA) are identical.
+                # Peter has used T = 0.01 as the period for PGA because the
+                # coefficients (for 0.01s and PGA) are identical.
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:

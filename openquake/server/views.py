@@ -43,7 +43,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.geo.utils import SiteAssociationError
@@ -176,9 +176,7 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    tmp = config.directory.custom_tmp or tempfile.mkdtemp()
-    calc_dir = os.path.join(tmp, 'calc_%d' % calc_id)
-    os.mkdir(calc_dir)
+    calc_dir = parallel.scratch_dir(calc_id)
     arch = request_files.get('archive')
     if arch is None:
         # move each file to calc_dir using the upload file names
@@ -1007,15 +1005,10 @@ def submit_job(request_files, ini, username, hc_id):
         job_ini = store(request_files, ini, job.calc_id)
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
-        if oq.sensitivity_analysis:
-            logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
-            jobs = engine.create_jobs([job_ini], config.distribution.log_level,
-                                      None, username, hc_id, True)
-        else:
-            dic = dict(calculation_mode=oq.calculation_mode,
-                       description=oq.description, hazard_calculation_id=hc_id)
-            logs.dbcmd('update_job', job.calc_id, dic)
-            jobs = [job]
+        dic = dict(calculation_mode=oq.calculation_mode,
+                   description=oq.description, hazard_calculation_id=hc_id)
+        logs.dbcmd('update_job', job.calc_id, dic)
+        jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
@@ -1142,7 +1135,7 @@ def calc_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
+        job_id, _job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
         if not utils.user_has_permission(request, job_user):
             return HttpResponseForbidden()

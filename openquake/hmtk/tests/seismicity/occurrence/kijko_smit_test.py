@@ -106,7 +106,7 @@ class KijkoSmitTest(unittest.TestCase):
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
         """
-        bval, sigma_b, aval, sigma_a = self.ks_ml.calculate(
+        bval, sigma_b, _aval, _sigma_a = self.ks_ml.calculate(
             self.catalogue, self.config, self.compl
         )
         print(bval, sigma_b)

@@ -160,7 +160,7 @@ def event_based_damage(df, oq, dstore, monitor):
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
-    A, R, L, Dc = dmgcsq.shape
+    _A, R, L, Dc = dmgcsq.shape
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     else:
@@ -275,7 +275,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-        A, R, L, Dc = self.dmgcsq.shape
+        _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
