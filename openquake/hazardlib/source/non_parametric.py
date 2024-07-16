@@ -201,7 +201,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         :returns: the number of points in the underlying meshes
         """
-        return sum(len(rup.surface.mesh) for rup in self.iter_ruptures())
+        return sum(mesh.lons.size for mesh in self.iter_meshes())
 
     @property
     def polygon(self):
@@ -209,9 +209,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
         The convex hull of a few subsurfaces; this is terribly slow
         """
         lons, lats = [], []
-        for rup in self.iter_ruptures():
-            lons.extend(rup.surface.mesh.lons.flat)
-            lats.extend(rup.surface.mesh.lats.flat)
+        for mesh in self.iter_meshes():
+            lons.extend(mesh.lons.flat)
+            lats.extend(mesh.lats.flat)
 
         condition = numpy.isfinite(lons).astype(int)
         lons = numpy.extract(condition, lons)

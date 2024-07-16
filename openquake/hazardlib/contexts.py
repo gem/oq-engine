@@ -1456,7 +1456,6 @@ class PmapMaker(object):
         allctxs = []
         ctxlen = 0
         totlen = 0
-        M, G = len(self.imtls), len(self.gsims)
         t0 = time.time()
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
