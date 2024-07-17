@@ -833,10 +833,16 @@ def plot_multi_fault_sources(mfs, src_ids, ax, min_x, max_x, min_y, max_y):
 
 def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
     print(f'Plotting {kind} sources...')
-    if kind == 'non-parametric':
+    if kind == 'Non-parametric':
         color = 'orange'
-    elif kind == 'multi-point':
+    elif kind == 'Multi-point':
         color = 'purple'
+    elif kind == 'Characteristic fault':
+        color = 'olive'
+    elif kind == 'Simple fault':
+        color = 'magenta'
+    elif kind == 'Complex fault':
+        color = 'pink'
     else:
         color = 'yellow'
     t0 = time.time()
@@ -912,26 +918,52 @@ def make_figure_sources(extractors, what):
     np_sources = [src for src in srcs if src.code == b'N']
     if np_sources:
         min_x, max_x, min_y, max_y = plot_polygon_sources(
-            np_sources, ax, min_x, max_x, min_y, max_y, 'non-parametric')
-        any_sources_were_plotted = True
-    # MultiFaultSource
-    mf_sources = [src for src in srcs if src.code == b'F']
-    if mf_sources:
-        min_x, max_x, min_y, max_y = plot_multi_fault_sources(
-            mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
-        any_sources_were_plotted = True
-    # PointSource or CollapsedPointSource
-    p_sources = [src for src in srcs if src.code in (b'p', b'P')]
-    if p_sources:
-        min_x, max_x, min_y, max_y = plot_point_sources(
-            p_sources, ax, min_x, max_x, min_y, max_y)
+            np_sources, ax, min_x, max_x, min_y, max_y, 'Non-parametric')
         any_sources_were_plotted = True
     # MultiPointSource
     mp_sources = [src for src in srcs if src.code == b'M']
     if mp_sources:
         # FIXME: the output looks strange
         min_x, max_x, min_y, max_y = plot_polygon_sources(
-            mp_sources, ax, min_x, max_x, min_y, max_y, 'multi-point')
+            mp_sources, ax, min_x, max_x, min_y, max_y, 'Multi-point')
+        any_sources_were_plotted = True
+    # CharacteristicFaultSource
+    ch_sources = [src for src in srcs if src.code == b'X']
+    if ch_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            ch_sources, ax, min_x, max_x, min_y, max_y, 'Characteristic fault')
+        any_sources_were_plotted = True
+    # SimpleFaultSource
+    s_sources = [src for src in srcs if src.code == b'S']
+    if s_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            s_sources, ax, min_x, max_x, min_y, max_y, 'Simple fault')
+        any_sources_were_plotted = True
+    # ComplexFaultSource
+    comp_sources = [src for src in srcs if src.code == b'C']
+    if comp_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            comp_sources, ax, min_x, max_x, min_y, max_y, 'Complex fault')
+        any_sources_were_plotted = True
+
+    # # KiteFaultSource
+    # k_sources = [src for src in srcs if src.code == b'K']
+    # if k_sources:
+    #     min_x, max_x, min_y, max_y = plot_polygon_sources(
+    #         k_sources, ax, min_x, max_x, min_y, max_y, 'kite fault')
+    #     any_sources_were_plotted = True
+
+    # PointSource or CollapsedPointSource
+    p_sources = [src for src in srcs if src.code in (b'p', b'P')]
+    if p_sources:
+        min_x, max_x, min_y, max_y = plot_point_sources(
+            p_sources, ax, min_x, max_x, min_y, max_y)
+        any_sources_were_plotted = True
+    # MultiFaultSource
+    mf_sources = [src for src in srcs if src.code == b'F']
+    if mf_sources:
+        min_x, max_x, min_y, max_y = plot_multi_fault_sources(
+            mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
         any_sources_were_plotted = True
     unplottable = [(src.source_id, src.code)
                    for src in srcs if src.code not in PLOTTABLE_CODES]
