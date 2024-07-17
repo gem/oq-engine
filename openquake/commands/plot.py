@@ -29,7 +29,6 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
@@ -832,14 +831,19 @@ def plot_multi_fault_sources(mfs, src_ids, ax, min_x, max_x, min_y, max_y):
     return min_x, max_x, min_y, max_y
 
 
-def plot_non_parametric_sources(srcs, ax, min_x, max_x, min_y, max_y):
-    print('Plotting non-parametric sources...')
+def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
+    print(f'Plotting {kind} sources...')
+    if kind == 'non-parametric':
+        color = 'orange'
+    elif kind == 'multi-point':
+        color = 'purple'
+    else:
+        color = 'yellow'
     t0 = time.time()
     for src in srcs:
         poly = src.polygon
         min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
-        ax.plot(poly.lons, poly.lats, alpha=0.5, color='green',
-                label='Non-parametric')
+        ax.plot(poly.lons, poly.lats, alpha=0.5, color=color, label=kind)
         min_x = min(min_x, min_x_)
         max_x = max(max_x, max_x_)
         min_y = min(min_y, min_y_)
@@ -854,7 +858,7 @@ def plot_point_sources(srcs, ax, min_x, max_x, min_y, max_y):
     for point in srcs:
         min_x_, min_y_, max_x_, max_y_ = point.get_bounding_box(0)
         if point.code == b'p':  # CollapsedPointSource
-            color = 'green'
+            color = 'brown'
             label = 'Collapsed point'
             lon = point.lon
             lat = point.lat
@@ -901,27 +905,42 @@ def make_figure_sources(extractors, what):
     _fig, ax = plt.subplots()
     ax.set_aspect('equal')
     ax.grid(True)
-    print('Plotting mosaic borders...')
-    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     print(f'Plotting {len(srcs)} sources...')
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
+    any_sources_were_plotted = False
+    # NonParametricSource
     np_sources = [src for src in srcs if src.code == b'N']
     if np_sources:
-        min_x, max_x, min_y, max_y = plot_non_parametric_sources(
-            np_sources, ax, min_x, max_x, min_y, max_y)
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            np_sources, ax, min_x, max_x, min_y, max_y, 'non-parametric')
+        any_sources_were_plotted = True
+    # MultiFaultSource
     mf_sources = [src for src in srcs if src.code == b'F']
     if mf_sources:
         min_x, max_x, min_y, max_y = plot_multi_fault_sources(
             mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
+        any_sources_were_plotted = True
+    # PointSource or CollapsedPointSource
     p_sources = [src for src in srcs if src.code in (b'p', b'P')]
     if p_sources:
         min_x, max_x, min_y, max_y = plot_point_sources(
             p_sources, ax, min_x, max_x, min_y, max_y)
+        any_sources_were_plotted = True
+    # MultiPointSource
+    mp_sources = [src for src in srcs if src.code == b'M']
+    if mp_sources:
+        # FIXME: the output looks strange
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            mp_sources, ax, min_x, max_x, min_y, max_y, 'multi-point')
+        any_sources_were_plotted = True
     unplottable = [(src.source_id, src.code)
                    for src in srcs if src.code not in PLOTTABLE_CODES]
     if unplottable:
         print(f'Plotting the following sources is not'
               f'implemented yet: {unplottable}')
+    assert any_sources_were_plotted, 'No sources were plotted'
+    print('Plotting mosaic borders...')
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
     ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
     ax.set_title('Sources')
