@@ -113,11 +113,20 @@ def to_rates(pnemap, gid, tiling, disagg_by_src):
 
 #  ########################### task functions ############################ #
 
+def disagg_by_src(sources, sitecol, cmaker, dstore, monitor):
+    for srcs in groupby(sources, valid.basename).values():
+        pmap = MapArray(
+            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+                cmaker.rup_indep)
+        result = hazclassical(srcs, sitecol, cmaker, pmap)
+        result['pnemap'] = to_rates(~pmap, 0, False, cmaker.disagg_by_src)
+        yield result
+
+        
 def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     tiling = not hasattr(sources, '__iter__')  # passed gid
     disagg_by_src = cmaker.disagg_by_src
@@ -130,38 +139,25 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         else:  # regular calculator
             gid = 0
             sitecol = dstore['sitecol']  # super-fast
-
-    if disagg_by_src and not getattr(sources, 'atomic', False):
-        # in case_27 (Japan) we do NOT enter here;
-        # disagg_by_src still works since the atomic group contains a single
-        # source 'case' (mutex combination of case:01, case:02)
-        for srcs in groupby(sources, valid.basename).values():
-            pmap = MapArray(
-                sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-            result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
-            yield result
+    # use most memory here; limited by pmap_max_gb
+    pmap = MapArray(
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+            cmaker.rup_indep)
+    result = hazclassical(sources, sitecol, cmaker, pmap)
+    if tiling:
+        del result['source_data']  # save some data transfer
+    rates = to_rates(~pmap, gid, tiling, disagg_by_src)
+    if cmaker.save_on_tmp and tiling:
+        # tested in case_22
+        scratch = parallel.scratch_dir(monitor.calc_id)
+        if len(rates):
+            fname = f'{scratch}/{monitor.task_no}.hdf5'
+            # print('Saving rates on %s' % fname)
+            with hdf5.File(fname, 'a') as h5:
+                _store(rates, cmaker.chunks, h5)
     else:
-        # use most memory here; limited by pmap_max_gb
-        pmap = MapArray(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-        result = hazclassical(sources, sitecol, cmaker, pmap)
-        if tiling:
-            del result['source_data']  # save some data transfer
-        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if cmaker.save_on_tmp and tiling:
-            # tested in case_22
-            scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rates):
-                fname = f'{scratch}/{monitor.task_no}.hdf5'
-                # print('Saving rates on %s' % fname)
-                with hdf5.File(fname, 'a') as h5:
-                    _store(rates, cmaker.chunks, h5)
-        else:
-            result['pnemap'] = rates
-        yield result
+        result['pnemap'] = rates
+    return result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -533,6 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
+        dbs_args = []
         for cm in self.cmakers:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
@@ -545,9 +542,18 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                allargs.append((block, None, cm, ds))
+                if disagg_by_src and not sg.atomic:
+                    # in case_27 (Japan) we do NOT enter here;
+                    # disagg_by_src still works since the atomic group contains a single
+                    # source 'case' (mutex combination of case:01, case:02)
+                    dbs_args.append((block, self.sitecol, cm, ds))
+                else:
+                    allargs.append((block, None, cm, ds))
 
         self.datastore.swmr_on()  # must come before the Starmap
+        if dbs_args:
+            acc = parallel.Starmap(disagg_by_src, dbs_args, h5=self.datastore.hdf5
+                                   ).reduce(self.agg_dicts, acc)
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
