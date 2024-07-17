@@ -541,11 +541,9 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
-        # if ntiles > nsites produce N tiles with a single site each
-        ntiles = min(int(numpy.ceil(ntiles)), len(self))
+        maxtiles = len(self) // minsize + 1
+        ntiles = min(ntiles, maxtiles)
         if ntiles <= 1:
-            return [self]
-        if len(self) < ntiles * minsize:  # do not split
             return [self]
         tiles = []
         for i in range(ntiles):
