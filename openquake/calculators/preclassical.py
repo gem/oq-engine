@@ -183,7 +183,7 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
         if minsize < oq.max_sites_disagg:
             logging.info('Producing less tasks to avoid tiles < %d sites',
                          oq.max_sites_disagg)
-            max_weight *= oq.max_weight / minsize
+            max_weight *= oq.max_sites_disagg / minsize
         num_tiles = []
         for cm in cmakers:
             sg = csm.src_groups[cm.grp_id]
