@@ -190,7 +190,7 @@ def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
 
 if numba:
     t = numba.types
-    sig = t.void(t.float64[:, :],                        # pmap
+    sig = t.void(t.float32[:, :],                        # pmap
                  t.float64[:, :],                        # poes
                  t.uint32[:],                            # invs
                  t.float64[:],                           # rates
@@ -199,7 +199,7 @@ if numba:
                  t.float64)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :],                        # pmap
+    sig = t.void(t.float32[:, :],                        # pmap
                  t.float64[:, :],                        # poes
                  t.uint32[:],                            # invs
                  t.float64[:],                           # rates
@@ -255,7 +255,7 @@ class MapArray(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def fill(self, value, dt=F64):
+    def fill(self, value, dt=F32):
         """
         :param value: a scalar probability
 
