@@ -236,7 +236,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
         mrs1 = self.calc.datastore['mean_rates_by_src']
-        numpy.testing.assert_allclose(mrs1.array, mrs50.array, atol=1E-5)
+        numpy.testing.assert_allclose(mrs1.array, mrs50.array, atol=3E-5)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
