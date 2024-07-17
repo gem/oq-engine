@@ -849,7 +849,7 @@ def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
     for src in srcs:
         poly = src.polygon
         min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
-        ax.plot(poly.lons, poly.lats, alpha=0.5, color=color, label=kind)
+        ax.fill(poly.lons, poly.lats, alpha=0.5, color=color, label=kind)
         min_x = min(min_x, min_x_)
         max_x = max(max_x, max_x_)
         min_y = min(min_y, min_y_)
