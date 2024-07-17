@@ -783,20 +783,23 @@ def get_boundary_2d(smsh):
     return trace, Polygon(coo)
 
 
-def filter_sources(csm, src_ids, codes):
+def filter_sources(csm, src_ids, codes, excluded_codes):
     if src_ids:
         if codes:
             srcs = [src for src in csm.get_sources()
-                    if src.source_id in src_ids and src.code in codes]
+                    if src.source_id in src_ids and src.code in codes
+                    and src.code not in excluded_codes]
         else:
             srcs = [src for src in csm.get_sources()
-                    if src.source_id in src_ids]
+                    if src.source_id in src_ids
+                    and src.code not in excluded_codes]
     else:
         if codes:
             srcs = [src for src in csm.get_sources()
-                    if src.code in codes]
+                    if src.code in codes and src.code not in excluded_codes]
         else:
-            srcs = csm.get_sources()
+            srcs = [src for src in csm.get_sources()
+                    if src.code not in excluded_codes]
     if not src_ids or not codes:
         print([(src.source_id, src.code) for src in srcs])
     return srcs
@@ -843,13 +846,15 @@ def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
         color = 'magenta'
     elif kind == 'Complex fault':
         color = 'pink'
-    else:
+    elif kind == 'Area':
         color = 'yellow'
+    else:
+        color = 'teal'
     t0 = time.time()
     for src in srcs:
         poly = src.polygon
         min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
-        ax.fill(poly.lons, poly.lats, alpha=0.5, color=color, label=kind)
+        ax.fill(poly.lons, poly.lats, alpha=0.3, color=color, label=kind)
         min_x = min(min_x, min_x_)
         max_x = max(max_x, max_x_)
         min_y = min(min_y, min_y_)
@@ -889,24 +894,33 @@ def make_figure_sources(extractors, what):
     """
     $ oq plot "sources?source_id=xxx"
     $ oq plot "sources?code=N&code=F"
+    $ oq plot "sources?exclude=A"
     """
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
     dstore = ex.dstore
     kwargs = what.split('?')[1]
+    if kwargs and 'exclude' in kwargs:
+        excluded_codes = [code.encode('utf8')
+                          for code in parse_qs(kwargs)['exclude']]
+    else:
+        excluded_codes = []
     if kwargs and 'source_id' in kwargs:
-        src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
+        src_ids = list(parse_qs(kwargs)['source_id'])
     else:
         src_ids = []
     if kwargs and 'code' in kwargs:
-        codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']]
+        codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']
+                 if code.encode('utf8') not in excluded_codes]
     else:
         codes = []
-    PLOTTABLE_CODES = (b'N', b'F', b'p')
+    PLOTTABLE_CODES = (
+        b'N', b'M', b'X', b'S', b'C', b'P', b'p', b'P', b'F', b'A')
+    # TODO: b'K'
     print('Reading sources...')
     csm = dstore['_csm']
-    srcs = filter_sources(csm, src_ids, codes)
+    srcs = filter_sources(csm, src_ids, codes, excluded_codes)
     assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
     ax.set_aspect('equal')
@@ -923,7 +937,7 @@ def make_figure_sources(extractors, what):
     # MultiPointSource
     mp_sources = [src for src in srcs if src.code == b'M']
     if mp_sources:
-        # FIXME: the output looks strange
+        # FIXME: we may want to plot the single points?
         min_x, max_x, min_y, max_y = plot_polygon_sources(
             mp_sources, ax, min_x, max_x, min_y, max_y, 'Multi-point')
         any_sources_were_plotted = True
@@ -945,12 +959,18 @@ def make_figure_sources(extractors, what):
         min_x, max_x, min_y, max_y = plot_polygon_sources(
             comp_sources, ax, min_x, max_x, min_y, max_y, 'Complex fault')
         any_sources_were_plotted = True
+    # AreaSource
+    a_sources = [src for src in srcs if src.code == b'A']
+    if a_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            a_sources, ax, min_x, max_x, min_y, max_y, 'Area')
+        any_sources_were_plotted = True
 
     # # KiteFaultSource
     # k_sources = [src for src in srcs if src.code == b'K']
     # if k_sources:
     #     min_x, max_x, min_y, max_y = plot_polygon_sources(
-    #         k_sources, ax, min_x, max_x, min_y, max_y, 'kite fault')
+    #         k_sources, ax, min_x, max_x, min_y, max_y, 'Kite fault')
     #     any_sources_were_plotted = True
 
     # PointSource or CollapsedPointSource
