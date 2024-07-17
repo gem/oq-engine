@@ -800,7 +800,8 @@ def filter_sources(csm, src_ids, codes, excluded_codes):
         else:
             srcs = [src for src in csm.get_sources()
                     if src.code not in excluded_codes]
-    if not src_ids or not codes:
+    if not src_ids:
+        print('The following sources will be plotted:')
         print([(src.source_id, src.code) for src in srcs])
     return srcs
 
