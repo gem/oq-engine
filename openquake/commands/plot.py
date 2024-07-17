@@ -848,6 +848,8 @@ def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
         color = 'pink'
     elif kind == 'Area':
         color = 'yellow'
+    elif kind == 'Kite fault':
+        color = 'navy'
     else:
         color = 'teal'
     t0 = time.time()
@@ -916,8 +918,7 @@ def make_figure_sources(extractors, what):
     else:
         codes = []
     PLOTTABLE_CODES = (
-        b'N', b'M', b'X', b'S', b'C', b'P', b'p', b'P', b'F', b'A')
-    # TODO: b'K'
+        b'N', b'M', b'X', b'S', b'C', b'P', b'p', b'P', b'F', b'A', b'K')
     print('Reading sources...')
     csm = dstore['_csm']
     srcs = filter_sources(csm, src_ids, codes, excluded_codes)
@@ -965,14 +966,12 @@ def make_figure_sources(extractors, what):
         min_x, max_x, min_y, max_y = plot_polygon_sources(
             a_sources, ax, min_x, max_x, min_y, max_y, 'Area')
         any_sources_were_plotted = True
-
-    # # KiteFaultSource
-    # k_sources = [src for src in srcs if src.code == b'K']
-    # if k_sources:
-    #     min_x, max_x, min_y, max_y = plot_polygon_sources(
-    #         k_sources, ax, min_x, max_x, min_y, max_y, 'Kite fault')
-    #     any_sources_were_plotted = True
-
+    # KiteFaultSource
+    k_sources = [src for src in srcs if src.code == b'K']
+    if k_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            k_sources, ax, min_x, max_x, min_y, max_y, 'Kite fault')
+        any_sources_were_plotted = True
     # PointSource or CollapsedPointSource
     p_sources = [src for src in srcs if src.code in (b'p', b'P')]
     if p_sources:
