@@ -937,7 +937,7 @@ def make_figure_sources(extractors, what):
     # MultiPointSource
     mp_sources = [src for src in srcs if src.code == b'M']
     if mp_sources:
-        # FIXME: we may want to plot the single points?
+        # NOTE: perhaps plotting the polygon gives not enough detail?
         min_x, max_x, min_y, max_y = plot_polygon_sources(
             mp_sources, ax, min_x, max_x, min_y, max_y, 'Multi-point')
         any_sources_were_plotted = True
