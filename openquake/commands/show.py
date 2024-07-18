@@ -48,8 +48,10 @@ def print_(aw):
         if aw.array.dtype.name == 'object':  # array of objects
             for el in aw.array:
                 print(el.decode('utf-8') if isinstance(el, bytes) else el)
-        else:  # structured array
+        elif aw.array.dtype.names:  # structured array
             print(text_table(aw.array, ext='org'))
+        else:  # regular array
+            print(aw.array)
     elif isinstance(aw, numpy.ndarray):
         print(text_table(aw, ext='org'))
     else:

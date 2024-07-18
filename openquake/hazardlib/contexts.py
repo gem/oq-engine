@@ -202,13 +202,14 @@ def concat(ctxs):
     return out
 
 
+# this is crucial to get a fast get_mean_stds
 def get_maxsize(M, G):
     """
-    :returns: an integer N such that arrays N*M*G fit in the CPU cache
+    :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = TWO20 // (2*M*G)
+    maxs = 20 * TWO20 // (M*G)
     assert maxs > 1, maxs
-    return maxs * 5
+    return maxs
 
 
 def size(imtls):
@@ -1132,7 +1133,9 @@ class ContextMaker(object):
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
             # print('MB', mean_stdt.nbytes // TWO20)
-        for slc in split_in_slices(len(ctx), L1):
+
+        # making plenty of slices so that the array `poes` is small
+        for slc in split_in_slices(len(ctx), 2*L1):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
@@ -1455,8 +1458,6 @@ class PmapMaker(object):
         allctxs = []
         ctxlen = 0
         totlen = 0
-        M, G = len(self.imtls), len(self.gsims)
-        maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
@@ -1467,7 +1468,7 @@ class PmapMaker(object):
                 src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
-                if ctxlen > maxsize:
+                if ctxlen > self.maxsize:
                     cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
                     allctxs.clear()
                     ctxlen = 0

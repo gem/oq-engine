@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import time
 import gzip
 import json
 import logging
@@ -23,9 +24,9 @@ import shapely
 import numpy
 import pandas
 from scipy.stats import linregress
-from shapely.geometry import Polygon, LineString, mapping, shape
+from shapely.geometry import Polygon, LineString, mapping
 from openquake.commonlib import readinput
-from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
+from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import (
@@ -423,52 +424,6 @@ def make_figure_memory(extractors, what):
     return plt
 
 
-def make_figure_sources(extractors, what):
-    """
-    $ oq plot "sources?limit=100"
-    $ oq plot "sources?source_id=1&source_id=2"
-    $ oq plot "sources?code=A&code=N"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
-    [ex] = extractors
-    info = ex.get(what)
-    wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
-    srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
-    _fig, ax = plt.subplots()
-    ax.grid(True)
-    sitecol = ex.get('sitecol')
-    pp = PolygonPlotter(ax)
-    n = 0
-    tot = 0
-    psources = []
-    for rec, srcid, wkt in zip(info, srcs, wkts):
-        if not wkt:
-            logging.warning('No geometries for source id %s', srcid)
-            continue
-        color = 'green'
-        alpha = .3
-        n += 1
-        if wkt.startswith('POINT'):
-            psources.append(shapely.wkt.loads(wkt))
-        else:
-            pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
-        tot += 1
-    lons = [p.x for p in psources]
-    lats = [p.y for p in psources]
-    ss_lons = lons + list(sitecol['lon'])  # sites + sources longitudes
-    ss_lats = lats + list(sitecol['lat'])  # sites + sources latitudes
-    if len(ss_lons) > 1 and cross_idl(*ss_lons):
-        ss_lons = [lon % 360 for lon in ss_lons]
-        lons = [lon % 360 for lon in lons]
-        sitecol['lon'] = sitecol['lon'] % 360
-    ax.plot(sitecol['lon'], sitecol['lat'], '.')
-    ax.plot(lons, lats, 'o')
-    pp.set_lim(ss_lons, ss_lats)
-    ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
-    return plt
-
-
 def make_figure_gridded_sources(extractors, what):
     """
     $ oq plot "gridded_sources?task_no=0"
@@ -804,45 +759,43 @@ def df_to_geojson(df, geometry_col='geometry'):
     return geojson
 
 
-def plot_geojson(data, ax, color, label):
-    for feature in data['features']:
-        geom = shape(feature['geometry'])
-        if geom.geom_type == 'Polygon':
-            x, y = geom.exterior.xy
+def plot_geom(geom, ax, color, label):
+    if geom.geom_type == 'Polygon':
+        x, y = geom.exterior.xy
+        ax.plot(x, y, color=color, label=label)
+    elif geom.geom_type == 'MultiPolygon':
+        for polygon in geom:
+            x, y = polygon.exterior.xy
             ax.plot(x, y, color=color, label=label)
-        elif geom.geom_type == 'MultiPolygon':
-            for polygon in geom:
-                x, y = polygon.exterior.xy
-                ax.plot(x, y, color=color, label=label)
-        elif geom.geom_type == 'LineString':
-            x, y = geom.xy
-            ax.plot(x, y, color=color, label=label)
-        else:
-            raise NotImplementedError(
-                f'Unable to plot geometry type {geom.geom_type}')
+    elif geom.geom_type == 'LineString':
+        x, y = geom.xy
+        ax.plot(x, y, color=color, label=label)
+    else:
+        raise NotImplementedError(
+            f'Unable to plot geometry type {geom.geom_type}')
 
 
 def get_boundary_2d(smsh):
     """ Returns a polygon """
     coo = []
+    lons = smsh.mesh.lons
+    lats = smsh.mesh.lats
     # Upper boundary + trace
-    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[0, :]))[0]
-    tmp = [(smsh.mesh.lons[0, i], smsh.mesh.lats[0, i]) for i in idx]
+    idx = numpy.where(numpy.isfinite(lons[0, :]))[0]
+    tmp = [(lons[0, i], lats[0, i]) for i in idx]
     trace = LineString(tmp)
     coo.extend(tmp)
     # Right boundary
-    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, -1]))[0]
-    tmp = [(smsh.mesh.lons[i, -1], smsh.mesh.lats[i, -1]) for i in idx]
+    idx = numpy.where(numpy.isfinite(lons[:, -1]))[0]
+    tmp = [(lons[i, -1], lats[i, -1]) for i in idx]
     coo.extend(tmp)
     # Lower boundary
-    idx = numpy.where(numpy.isfinite(smsh.mesh.lons[-1, :]))[0]
-    tmp = [(smsh.mesh.lons[-1, i], smsh.mesh.lats[-1, i])
-           for i in numpy.flip(idx)]
+    idx = numpy.where(numpy.isfinite(lons[-1, :]))[0]
+    tmp = [(lons[-1, i], lats[-1, i]) for i in numpy.flip(idx)]
     coo.extend(tmp)
     # Left boundary
-    idx = idx = numpy.where(numpy.isfinite(smsh.mesh.lons[:, 0]))[0]
-    tmp = [(smsh.mesh.lons[i, 0], smsh.mesh.lats[i, 0])
-           for i in numpy.flip(idx)]
+    idx = idx = numpy.where(numpy.isfinite(lons[:, 0]))[0]
+    tmp = [(lons[i, 0], lats[i, 0]) for i in numpy.flip(idx)]
     coo.extend(tmp)
     return trace, Polygon(coo)
 
@@ -860,6 +813,7 @@ def make_figure_multi_fault(extractors, what):
         src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
     else:
         src_ids = []
+    print('Reading sources...')
     csm = dstore['_csm']
     mfs = [src for src in csm.get_sources() if src.code == b'F']
     assert mfs, 'There are no multi fault sources to plot'
@@ -876,27 +830,73 @@ def make_figure_multi_fault(extractors, what):
         secs = sections
         print([mf.source_id for mf in mfs])
     print('Found %d sections' % len(secs))
-    traces = []
-    polys = []
-    suids = []
+    _fig, ax = plt.subplots()
+    min_x = max_x = min_y = max_y = None
+    ZOOM_MARGIN = 10
+    t0 = time.time()
     for sec in secs:
         trace, poly = get_boundary_2d(sec)
-        traces.append(trace)
-        polys.append(poly)
-        suids.append(sec.idx)
-    daf_polys = pandas.DataFrame({'suid': suids, 'geometry': polys})
-    daf_polys_geojson = df_to_geojson(daf_polys)
-    daf_traces = pandas.DataFrame({'suid': suids, 'geometry': traces})
-    daf_traces_geojson = df_to_geojson(daf_traces)
-
-    _fig, ax = plt.subplots()
-    plot_geojson(daf_polys_geojson, ax, color='blue', label='Sections')
-    plot_geojson(daf_traces_geojson, ax, color='red', label='Traces')
+        min_x_, min_y_, max_x_, max_y_ = poly.bounds
+        min_x = min_x_ if min_x is None else min(min_x, min_x_)
+        max_x = max_x_ if max_x is None else max(max_x, max_x_)
+        min_y = min_y_ if min_y is None else min(min_y, min_y_)
+        max_y = max_y_ if max_y is None else max(max_y, max_y_)
+        plot_geom(poly, ax, 'blue', 'Sections')
+        plot_geom(trace, ax, 'red', 'Traces')
+    print(f'Took {time.time() - t0} seconds')
     ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.set_aspect('equal')
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
+    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
+    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
+    ax.set_title('Multi-fault sources')
     ax.legend(by_label.values(), by_label.keys())
+    return plt
+
+
+def make_figure_non_parametric(extractors, what):
+    """
+    $ oq plot "non_parametric?source_id=xxx"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    kwargs = what.split('?')[1]
+    if kwargs:
+        src_ids = [src_id for src_id in parse_qs(kwargs)['source_id']]
+    else:
+        src_ids = []
+    print('Reading sources...')
+    csm = dstore['_csm']
+    np_srcs = [src for src in csm.get_sources() if src.code == b'N']
+    assert np_srcs, 'There are no non-parametric fault sources to plot'
+    _fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+    ax.grid(True)
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    if src_ids:
+        srcs = [src for src in np_srcs if src.source_id in src_ids]
+    else:
+        srcs = np_srcs
+        print([src.source_id for src in srcs])
+    print(f'Plotting {len(srcs)} sources')
+    min_x = max_x = min_y = max_y = None
+    ZOOM_MARGIN = 10
+    t0 = time.time()
+    for src in srcs:
+        poly = src.polygon
+        min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
+        min_x = min_x_ if min_x is None else min(min_x, min_x_)
+        max_x = max_x_ if max_x is None else max(max_x, max_x_)
+        min_y = min_y_ if min_y is None else min(min_y, min_y_)
+        max_y = max_y_ if max_y is None else max(max_y, max_y_)
+        ax.fill(poly.lons, poly.lats, alpha=0.5)
+    print(f'Took {time.time() - t0} seconds')
+    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
+    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
+    ax.set_title('Non-parametric sources')
     return plt
 
 

@@ -51,7 +51,6 @@ def main(files_csv):
         #for model, id, lon, lat in zip(models, df.ID, df.lon, df.lat):
         #    ax.annotate(model + str(id), (lon, lat))
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
-    #add_borders(ax, readinput.read_mosaic_df, buffer=.9)
     p.show()
     return p
 

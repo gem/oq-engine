@@ -178,13 +178,6 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
     regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
                or oq.tile_spec)
     if not regular:  # tiling
-        # increase max_weight if there are tiles smaller than 100 sites
-        minsize = min(max_weight / sg.weight * N for sg in csm.src_groups)
-        if minsize < 100:  # less than 100 sites per tile
-            logging.info(
-                'concurrent_tasks=%d is too large, producing less tiles',
-                oq.concurrent_tasks)
-            max_weight *= 100/ minsize
         num_tiles = []
         for cm in cmakers:
             sg = csm.src_groups[cm.grp_id]
@@ -197,8 +190,9 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
         dstore.create_dset('num_tiles', U32(num_tiles))
         ntasks = sum(num_tiles)
         logging.info('This will be a tiling calculation with %d tasks', ntasks)
-        if req_gb >= 30:
-            logging.info('We suggest to set a custom_tmp and save_on_tmp=true')
+        if req_gb >= 30 and (not config.directory.custom_tmp or
+                             not config.distribution.save_on_tmp):
+            logging.info('We suggest to set custom_tmp and save_on_tmp')
     return req_gb, max_weight, trt_rlzs, gids
 
 

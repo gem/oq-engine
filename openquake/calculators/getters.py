@@ -157,10 +157,11 @@ def get_num_chunks(dstore):
 
     It is 4 times the number of GB required to store the rates.
     """
+    msd = dstore['oqparam'].max_sites_disagg
     try:
-        chunks = max(int(4 * dstore['rates_max_gb'][()]), 8)
+        chunks = max(int(4 * dstore['rates_max_gb'][()]), msd)
     except KeyError:
-        chunks = 8
+        chunks = msd
     return chunks
 
     
