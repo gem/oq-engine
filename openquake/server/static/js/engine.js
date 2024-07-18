@@ -577,6 +577,7 @@
             });
             $('#clearStationDataFile').click(function() {
                 $('#station_data_file_input').val('');
+                $('#maximum_distance_stations').val('');
                 $('#maximum_distance_stations').prop('disabled', true);
             });
             $("#aristotle_run_form > input").click(function() {
