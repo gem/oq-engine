@@ -1,3 +1,8 @@
+  [Savvinos Aristeidou]
+  * Added new GMM in the gsim library, named `aristeidou_2023`
+  * Added new IM, that is the inelastic spectral displacement, SDi,
+    which takes as input one additional parameter (i.e., strength ratio, R)
+
   [Michele Simionato]
   * Extended the `delta_loss` warning to scenario_risk calculations
     and documented it
