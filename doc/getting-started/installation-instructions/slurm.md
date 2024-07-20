@@ -1,6 +1,6 @@
 (slurm)=
 
-# Running the OpenQuake Engine on a SLURM cluster
+# Running on a SLURM cluster
 
 Most HPC clusters support a scheduler called SLURM (
 Simple Linux Utility for Resource Management). The OpenQuake engine
@@ -10,7 +10,7 @@ of the cluster.
 ## Running OpenQuake calculations with SLURM
 
 Let's consider a user with ssh access to a SLURM cluster. The only
-thing she has to do after logging in is to load the openquake
+thing the user has to do after logging in is to load the openquake
 libraries with the command
 ```
 $ load module openquake
@@ -87,7 +87,7 @@ This will create different modules for different releases
 # python3.10 -m venv /apps/openquake/3.18
 # source /apps/openquake/3.18/bin/activate
 # pip install -U pip
-# pip install -r https://raw.githubusercontent.com/gem/oq-engine/engine-3.18/requirements-py310-linux64.txt
+# pip install -r https://github.com/gem/oq-engine/raw/engine-3.18/requirements-py310-linux64.txt
 # pip install openquake.engine==3.18
 ```
 Then you have to define the module file. In our cluster it is located in

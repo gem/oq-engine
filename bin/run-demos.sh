@@ -39,7 +39,6 @@ MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1&spec=rlzs' 14
 MPLBACKEND=Agg oq plot 'task_info?kind=classical' 9
 MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
-MPLBACKEND=Agg oq plot sources? 9
 
 # run multi_risk test
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini

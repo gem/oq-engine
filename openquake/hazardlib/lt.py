@@ -21,7 +21,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE183
+from openquake.baselib.general import CallableDict, BASE183, BASE33489
 from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -425,8 +425,8 @@ def _cdf(weighted_objects):
         w = obj.weight
         if isinstance(obj.weight, (float, int)):
             weights.append(w)
-        else:
-            weights.append(w['weight'])
+        else:  # assume array
+            weights.append(w[-1])
     return numpy.cumsum(weights)
 
 
@@ -770,6 +770,8 @@ class Realization(object):
     Generic Realization object with attributes value, weight, ordinal, lt_path,
     samples.
     """
+    __slots__ = ['value', 'weight', 'ordinal', 'lt_path', 'samples']
+
     def __init__(self, value, weight, ordinal, lt_path, samples=1):
         self.value = value
         self.weight = weight
@@ -789,8 +791,9 @@ class Realization(object):
 
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
+    base = BASE33489 if bset.uncertainty_type == 'sourceModel' else BASE183
     for br in bset.branches:
-        br.short_id = BASE183[brno]
+        br.short_id = base[brno]
         path = ['*'] * tot
         path[bsno] = br.id
         paths.append(''.join(path))

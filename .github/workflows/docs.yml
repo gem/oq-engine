@@ -380,18 +380,42 @@ jobs:
           # PAY ATTENTION: engine folder is 'doc', not 'docs'
           # cd doc && make html && make latexpdf
           cd doc && make html 2>&1 | tee full.log
+
+          warn_found=n
+          err_found=n
           # NOTE: without '|| true' the action would fail if there are no warnings
           grep WARNING < full.log > warnings.log || true
-          echo
-          echo "=== WARNINGS ==="
-          echo
-          cat warnings.log
-          echo
-          echo
-          echo "=== WARNINGS SUMMARY ==="
-          cat warnings.log |  sed 's/.*WARNING/WARNING/g' | sed "s/WARNING: 'myst' cross-reference target not found.*/WARNING: 'myst' cross-reference target not found/g" | sed 's/WARNING: undefined label.*/WARNING: undefined label/g' | sed 's/WARNING: duplicate label.*/WARNING: duplicate label/g' | sed 's/WARNING: Duplicate explicit target name.*/WARNING: Duplicate explicit target name/g' | sort | uniq -c
+          grep ERROR < full.log > errors.log || true
 
+          if [ $(wc -c < warnings.log) -gt 0 ]; then
+              echo
+              echo "=== WARNINGS FOUND ==="
+              echo
+              cat warnings.log
+              echo
+              echo
+              echo "=== WARNINGS SUMMARY ==="
+              cat warnings.log |  sed 's/.*WARNING/WARNING/g' | sed "s/WARNING: 'myst' cross-reference target not found.*/WARNING: 'myst' cross-reference target not found/g" | sed 's/WARNING: undefined label.*/WARNING: undefined label/g' | sed 's/WARNING: duplicate label.*/WARNING: duplicate label/g' | sed 's/WARNING: Duplicate explicit target name.*/WARNING: Duplicate explicit target name/g' | sort | uniq -c
+              warn_found=y
+          else
+              echo "=== NO WARNINGS FOUND ==="
+          fi
 
+          if [ $(wc -c < errors.log) -gt 0 ]; then
+              echo
+              echo "=== ERRORS FOUND ==="
+              echo
+              cat errors.log
+              echo
+              err_found=y
+          else
+              echo "=== NO ERRORS FOUND ==="
+          fi
+
+          if [ "$warn_found" = "y" -o "$err_found" = "y" ]; then
+              echo "fix all warnings and errors to complete this workflow"
+              exit 1
+          fi
 
           # if [ "$DOCS_SSH" ]; then
           #     echo "Uploading OpenQuake Manual (PDF)"

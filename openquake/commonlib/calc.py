@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import probability_map
+from openquake.hazardlib import map_array
 from openquake.hazardlib.source.rupture import get_events
 from openquake.commonlib import util
 
@@ -48,7 +48,6 @@ F64 = numpy.float64
 code2cls = rupture.BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
-
 
 # used only in the view global_hcurves
 def convert_to_array(pmap, nsites, imtls, inner_idx=0):
@@ -136,9 +135,9 @@ def make_hmaps(pmaps, imtls, poes):
     M, P = len(imtls), len(poes)
     hmaps = []
     for pmap in pmaps:
-        hmap = probability_map.ProbabilityMap(pmaps[0].sids, M, P).fill(0)
+        hmap = map_array.MapArray(pmaps[0].sids, M, P).fill(0)
         for m, imt in enumerate(imtls):
-            data = probability_map.compute_hazard_maps(
+            data = map_array.compute_hazard_maps(
                 pmap.array[:, m], imtls[imt], poes)  # (N, P)
             for idx, imls in enumerate(data):
                 for p, iml in enumerate(imls):

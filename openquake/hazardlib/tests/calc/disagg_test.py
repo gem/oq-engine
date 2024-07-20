@@ -55,10 +55,10 @@ class BuildDisaggDataTestCase(unittest.TestCase):
         dist_bin_width = 100.
         coord_bin_width = 100.
         # Compute the disaggregation matrix
-        edges, mtx = disagg.disaggregation(sources, site, imt, iml,
-                                           gsim_by_trt, truncation_level,
-                                           n_epsilons, mag_bin_width,
-                                           dist_bin_width, coord_bin_width)
+        _edges, mtx = disagg.disaggregation(sources, site, imt, iml,
+                                            gsim_by_trt, truncation_level,
+                                            n_epsilons, mag_bin_width,
+                                            dist_bin_width, coord_bin_width)
         by_mag = valid.mag_pmf(mtx[:, :, :, :, :, 0])
         self.assertEqual(by_mag.shape, (31,))
 
@@ -162,7 +162,7 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae = numpy.testing.assert_array_almost_equal
         aaae(matrix.sum(), 6.14179818e-11)
 
-        
+
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -275,7 +275,7 @@ def test_single_source(job_ini):
     oq = inp.oq
     [site] = inp.sitecol
     edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    sid, srcid, std4D, rates4D, rates2D = disagg.disagg_source(
+    _sid, srcid, _std4D, rates4D, rates2D = disagg.disagg_source(
         inp.groups, site, inp.full_lt, edges_shapedic, oq, {'PGA': .1})
     # rates4D has shape (Ma, D, E, M), rates2D shape (M, L1)
     print(srcid)

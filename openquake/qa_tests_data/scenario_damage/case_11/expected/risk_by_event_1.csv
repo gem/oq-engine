@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.12.0-gita523c63801', start_date='2021-05-14T10:21:50', checksum=3590982611"
+#,,,"generated_by='OpenQuake engine 3.20.0-gitcf2c231c33', start_date='2024-05-29T12:05:56', checksum=2299180553"
 event_id,moderate,complete,loss_type
 0,2.29066E+01,3.52064E+01,structural
 1,1.50149E+01,4.37461E+00,structural

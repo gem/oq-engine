@@ -43,7 +43,7 @@ from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
@@ -64,8 +64,6 @@ KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
 azimuthcp rvolc clon_clat clon clat'''.split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
-# the MULTIPLIER is fundamental for the memory consumption in the contexts
-MULTIPLIER = 50  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
 bymag = operator.attrgetter('mag')
@@ -126,7 +124,7 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
                 ctx.ry0[neg] = numpy.abs(uut[neg])
                 big = uut > u_max
                 ctx.ry0[big] = uut[big] - u_max
-        elif param == 'rjb' :
+        elif param == 'rjb':
             rjbs = _get(rup.surface.surfaces, 'rjb', dparam, mask)
             ctx['rjb'] = numpy.min(rjbs, axis=0)
             '''
@@ -204,13 +202,14 @@ def concat(ctxs):
     return out
 
 
+# this is crucial to get a fast get_mean_stds
 def get_maxsize(M, G):
     """
-    :returns: an integer N such that arrays N*M*G fit in the CPU cache
+    :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = TWO20 // (2*M*G)
+    maxs = 20 * TWO20 // (M*G)
     assert maxs > 1, maxs
-    return maxs * MULTIPLIER
+    return maxs
 
 
 def size(imtls):
@@ -423,7 +422,7 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
     if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
         closest = project_back(planar, xx, yy)  # (3, U, N)
     # set distances
-    zeroctx['rrup'] = rrup 
+    zeroctx['rrup'] = rrup
     for par in cmaker.REQUIRES_DISTANCES - {'rrup'}:
         zeroctx[par] = get_distances_planar(planar, sites, par)
     for par in cmaker.REQUIRES_DISTANCES:
@@ -497,7 +496,7 @@ def genctxs_Pp(src, sitecol, cmaker):
 
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
-                       if par in dd]
+                         if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     with cmaker.ir_mon:
@@ -773,7 +772,7 @@ class ContextMaker(object):
             if not self.conv[gsim]:
                 continue
             for m, imt in enumerate(self.imts):
-                me, si, ta, ph = mean_stds[:, g, m]
+                me, si, _ta, _ph = mean_stds[:, g, m]
                 conv_median, conv_sigma, rstd = self.conv[gsim][imt]
                 me[:] = numpy.log(numpy.exp(me) / conv_median)
                 si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
@@ -1133,11 +1132,14 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-        for slc in split_in_slices(len(ctx), MULTIPLIER):
+            # print('MB', mean_stdt.nbytes // TWO20)
+
+        # making plenty of slices so that the array `poes` is small
+        for slc in split_in_slices(len(ctx), 2*L1):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
-                # this is allocating at most few MB of RAM
+                # this is allocating at most a few MB of RAM
                 poes = numpy.zeros((len(ctxt), M*L1, G))
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
@@ -1174,11 +1176,11 @@ class ContextMaker(object):
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
         :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
-        :returns: a ProbabilityMap
+        :returns: a MapArray
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
-        pmap = ProbabilityMap(sids, size(self.imtls), len(self.gsims))
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims))
         pmap.fill(rup_indep)
         self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
                     rup_mutex)
@@ -1411,6 +1413,8 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         if hasattr(group, 'grp_probability'):
             self.grp_probability = group.grp_probability
+        M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
+        self.maxsize = get_maxsize(M, G)
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -1440,7 +1444,13 @@ class PmapMaker(object):
                     # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
-            yield ctx
+            n = ctx.nbytes // self.maxsize
+            if n > 1:
+                # split in chunks of maxsize each
+                for c in numpy.array_split(ctx, n):
+                    yield c  # for EUR c has ~500 elements
+            else:
+                yield ctx
 
     def _make_src_indep(self, pmap):
         # sources with the same ID
@@ -1448,8 +1458,6 @@ class PmapMaker(object):
         allctxs = []
         ctxlen = 0
         totlen = 0
-        M, G = len(self.imtls), len(self.gsims)
-        maxsize = get_maxsize(M, G)
         t0 = time.time()
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
@@ -1460,7 +1468,7 @@ class PmapMaker(object):
                 src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
-                if ctxlen > maxsize:
+                if ctxlen > self.maxsize:
                     cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
                     allctxs.clear()
                     ctxlen = 0
@@ -1494,7 +1502,7 @@ class PmapMaker(object):
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
-            pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
+            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)

@@ -91,7 +91,7 @@ def _get_mechanism(ctx, C):
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    SS, NF, TF = utils.get_fault_type_dummy_variables(ctx)
+    SS, _NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
 
 

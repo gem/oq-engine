@@ -229,13 +229,14 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
-    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
     full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
+    bplen = len(rlzs[0]['branch_path'])
+    dt = [('rlz_id', U32), ('branch_path', '<S%d' % bplen), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
@@ -257,7 +258,7 @@ def extract_weights(dstore, what):
     Extract the realization weights
     """
     rlzs = dstore['full_lt'].get_realizations()
-    return numpy.array([rlz.weight['weight'] for rlz in rlzs])
+    return numpy.array([rlz.weight[-1] for rlz in rlzs])
 
 
 @extract.add('gsims_by_trt')
@@ -590,7 +591,6 @@ def extract_sources(dstore, what):
         codes = [code.encode('utf8') for code in codes]
     fields = 'source_id code num_sites num_ruptures'
     info = dstore['source_info'][()][fields.split()]
-    wkt = decode(dstore['source_wkt'][()])
     arrays = []
     if source_ids is not None:
         logging.info('Extracting sources with ids: %s', source_ids)
@@ -612,14 +612,13 @@ def extract_sources(dstore, what):
     if not arrays:
         raise ValueError('There  no sources')
     info = numpy.concatenate(arrays)
-    wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(decode(info['source_id'])).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
                if name != 'source_id']
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
-    return ArrayWrapper(arr, {'wkt_gz': wkt_gz, 'src_gz': src_gz})
+    return ArrayWrapper(arr, {'src_gz': src_gz})
 
 
 @extract.add('gridded_sources')
@@ -846,7 +845,7 @@ def extract_aggregate(dstore, what):
     /extract/aggregate/avg_losses?
     kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
     """
-    name, qstring = what.split('?', 1)
+    _name, qstring = what.split('?', 1)
     info = get_info(dstore)
     qdic = parse(qstring, info)
     suffix = '-rlzs' if qdic['rlzs'] else '-stats'
@@ -905,6 +904,34 @@ def _gmf(df, num_sites, imts):
     return gmfa
 
 
+# tested in oq-risk-tests, conditioned_gmfs
+@extract.add('gmf_scenario')
+def extract_gmf_scenario(dstore, what):
+    oq = dstore['oqparam']
+    assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
+    info = get_info(dstore)
+    qdict = parse(what, info)  # example {'imt': 'PGA', 'k': 1}
+    [imt] = qdict['imt']
+    [rlz_id] = qdict['k']
+    eids = dstore['gmf_data/eid'][:]
+    rlzs = dstore['events']['rlz_id']
+    ok = rlzs[eids] == rlz_id
+    m = list(oq.imtls).index(imt)
+    eids = eids[ok]
+    gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
+    sids = dstore['gmf_data/sid'][ok]
+    try:
+        N = len(dstore['complete'])
+    except KeyError:
+        N = len(dstore['sitecol'])
+    E = len(rlzs) // info['num_rlzs']
+    arr = numpy.zeros((E, N))
+    for e, eid in enumerate(numpy.unique(eids)):
+        event = eids == eid
+        arr[e, sids[event]] = gmvs[event]
+    return arr
+
+
 # used by the QGIS plugin for a single eid
 @extract.add('gmf_data')
 def extract_gmf_npz(dstore, what):
@@ -954,20 +981,23 @@ def extract_avg_gmf(dstore, what):
     [imt] = qdict['imt']
     imti = info['imt'][imt]
     try:
-        sitecol = dstore['complete']
+        complete = dstore['complete']
     except KeyError:
-        sitecol = dstore['sitecol']
+        if dstore.parent:
+            complete = dstore.parent['sitecol'].complete
+        else:
+            complete = dstore['sitecol'].complete
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
         stations = dstore['station_data/site_id'][:]
-        ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
+        ok = (avg_gmf > 0) & ~numpy.isin(complete.sids, stations)
     else:
         ok = avg_gmf > 0
-    yield imt, avg_gmf[sitecol.sids[ok]]
-    yield 'sids', sitecol.sids[ok]
-    yield 'lons', sitecol.lons[ok]
-    yield 'lats', sitecol.lats[ok]
+    yield imt, avg_gmf[complete.sids[ok]]
+    yield 'sids', complete.sids[ok]
+    yield 'lons', complete.lons[ok]
+    yield 'lats', complete.lats[ok]
 
 
 @extract.add('num_events')
@@ -1015,7 +1045,7 @@ def build_damage_array(data, damage_dt):
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, L, D = data.shape
+    A, _L, _D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for li, lt in enumerate(damage_dt.names):
@@ -1132,7 +1162,8 @@ def extract_disagg(dstore, what):
     else:
         poei = slice(None)
     if 'traditional' in spec:
-        spec = spec[:4]  # rlzs or stats
+        spec = spec.split('-')[0]
+        assert spec in {'rlzs', 'stats'}, spec
         traditional = True
     else:
         traditional = False
@@ -1177,8 +1208,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weight = dstore['full_lt'].init().rlzs['weight']
-        weights = weight[rlzs]
+        weights = dstore['weights'][:][rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
@@ -1224,7 +1254,7 @@ def extract_mean_rates_by_src(dstore, what):
     site_id = int(site_id)
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id]
-    L1, Ns = rates.shape
+    _L1, Ns = rates.shape
     arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
     arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
@@ -1250,9 +1280,10 @@ def extract_disagg_layer(dstore, what):
         kinds = oq.disagg_outputs
     sitecol = dstore['sitecol']
     poes_disagg = oq.poes_disagg or (None,)
-    realizations = numpy.array(dstore['full_lt'].get_realizations())
+    full_lt = dstore['full_lt'].init()
     oq.mags_by_trt = dstore['source_mags']
-    edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
+    edges, shapedic = disagg.get_edges_shapedic(
+        oq, sitecol, len(full_lt.weights))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
     hmap3 = dstore['hmap3'][:]  # shape (N, M, P)
@@ -1260,14 +1291,14 @@ def extract_disagg_layer(dstore, what):
     arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
-        rlzs = realizations[best_rlzs[sid]]
+        weights = full_lt.weights[best_rlzs[sid]]
         rec['site_id'] = sid
         rec['lon'] = lon
         rec['lat'] = lat
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
         for m, imt in enumerate(oq.imtls):
-            ws = numpy.array([rlz.weight[imt] for rlz in rlzs])
+            ws = full_lt.wget(weights, imt)
             ws /= ws.sum()  # normalize to 1
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
@@ -1343,7 +1374,10 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        if 'source_mags' not in dstore:  # ruptures import from CSV
+            mags = numpy.unique(dstore['ruptures']['mag'])
+        else:
+            mags = dstore[f'source_mags/{rgetter.trt}'][:]
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:

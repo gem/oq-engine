@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import gzip
+import tempfile
 import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
@@ -160,10 +162,19 @@ class ClassicalTestCase(CalculatorTestCase):
         hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
+        # test gsim_lt is writeable as XML
+        gnode = self.calc.datastore['full_lt'].gsim_lt.to_node()
+        tmp = general.gettemp(suffix='.xml')
+        with open(tmp, 'wb') as f:
+            nrml.write([gnode], f)
+
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}):
+        tmp = tempfile.gettempdir()
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
+             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -309,7 +320,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # checking fullreport can be exported, see https://
         # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ
-        [fname] = export(('fullreport', 'rst'), self.calc.datastore)
+        export(('fullreport', 'rst'), self.calc.datastore)
 
     def test_case_41(self):
         # SERA Site Amplification Models including EC8 Site Classes and Geology
@@ -507,7 +518,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_60(self):
         # pointsource approx with CampbellBozorgnia2003NSHMP2007
-        # the hazard curve MUST be zero; it was not originally
+        # the hazard curve MUST be zero; it was not, originally,
         # due to a wrong dip angle of 0 instead of 90
         self.run_calc(case_60.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
@@ -583,11 +594,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/disagg_by_mag_false.org', fname)
 
     def test_case_66(self):
-        # sites_slice
-        self.run_calc(case_66.__file__, 'job.ini')  # sites_slice=50:100
+        # tile_spec
+        self.run_calc(case_66.__file__, 'job.ini')  # tile_spec=[2,2]
+        export(('hcurves', 'csv'), self.calc.datastore)
+        export(('uhs', 'csv'), self.calc.datastore)
         [fname1] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap1.csv', fname1, delta=1E-4)
-        self.run_calc(case_66.__file__, 'job.ini', sites_slice='0:50')
+        self.run_calc(case_66.__file__, 'job.ini', tile_spec='[1,2]')
         [fname2] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hmap2.csv', fname2, delta=1E-4)
 
@@ -634,7 +647,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
         # test contexts
-        ctx = view('rup:ufc3mean_0', self.calc.datastore)
+        ctx = view('rup:ufc3mean_0@0', self.calc.datastore)
         fname = general.gettemp(text_table(ctx, ext='org'))
         self.assertEqualFiles('expected/context.org', fname)
 
@@ -659,7 +672,8 @@ class ClassicalTestCase(CalculatorTestCase):
             if 'submodel' in gsim._toml:
                 gs += '_' + gsim.kwargs['submodel']
             got = general.gettemp(text_table(curve, ext='org'))
-            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
+            delta = .0003 if sys.platform == 'darwin' else 1E-5
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM

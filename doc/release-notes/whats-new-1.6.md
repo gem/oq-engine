@@ -182,9 +182,9 @@ and committed suicide if the configuration parameter
 `terminate_job_when_celery_is_down` was true. We removed such parameter
 and such feature because it was too dangerous: sometimes celery was
 up and running but incorrectly reported down because too slow to
-respond, due to an heavy load. Now if celery appears to not respond
-a warning is printed and that user has to see if celery is really dead
-and in that case she can kill the computation manually.
+respond, due to an heavy load. Now if Celery appears to be unresponsive, 
+a warning is printed, and the user must check if Celery has indeed stopped 
+functioning. If so, the user can terminate the computation manually.
 
 6. We removed the epsilon sampling feature from the scenario_risk calculator:
 it was a performance hack introducing a gratuitous seed dependency, now

@@ -87,9 +87,7 @@ class WorkerMaster(object):
             if general.socket_ready((host, self.ctrl_port)):
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-            ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
-            args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
-                     '-n', cores]
+            args += ['-m', 'openquake.baselib.workerpool', cores]
             if host != '127.0.0.1':
                 print('%s: if it hangs, check the ssh keys' % ' '.join(args))
             self.popens.append(subprocess.Popen(args))
@@ -181,7 +179,6 @@ class WorkerMaster(object):
         try:
             mon = performance.Monitor('zmq-debug')
             mon.inject = True
-            mon.config = config  # forget this and it will hang silently
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
@@ -247,8 +244,9 @@ class WorkerPool(object):
     :param ctrl_url: zmq address of the control socket
     :param num_workers: the number of workers (or -1)
     """
-    def __init__(self, ctrl_url, num_workers=-1):
-        self.ctrl_url = ctrl_url
+    def __init__(self, ctrl_port=1909, num_workers=-1, job_id=0):
+        self.job_id = job_id
+        self.ctrl_port = ctrl_port
         if num_workers == -1:
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
@@ -263,13 +261,26 @@ class WorkerPool(object):
         """
         Start worker processes and a control loop
         """
-        title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
-        print('Starting ' + title, file=sys.stderr)
-        setproctitle(title)
+        self.hostname = socket.gethostname()
+        if self.job_id:
+            # save the hostname in calc_XXX/hostnames
+            calc_dir = os.path.join(
+                config.directory.custom_tmp, 'calc_%s' % self.job_id)
+            try:
+                os.mkdir(calc_dir)
+            except FileExistsError:  # somebody else created it
+                pass
+            fname = os.path.join(calc_dir, 'hostnames')
+            with open(fname, 'a') as f:
+                f.write(f'{self.hostname} {self.num_workers}\n')
+
+        print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
+        setproctitle('oq-zworkerpool')
         self.pool = general.mp.Pool(self.num_workers, init_workers)
-        # start control loop accepting the commands stop and kill
+        # start control loop accepting the commands stop
         try:
-            with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+            ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
+            with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
                 for cmd in ctrlsock:
                     if cmd == 'stop':
                         ctrlsock.send(self.stop())
@@ -286,10 +297,11 @@ class WorkerPool(object):
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
                     elif isinstance(cmd, tuple):
-                        func, args, taskno, mon = cmd
+                        _func, _args, taskno, mon = cmd
                         self.pool.apply_async(
                             call, cmd + (self.executing,),
-                            error_callback=functools.partial(errback, mon.calc_id, taskno))
+                            error_callback=functools.partial(
+                                errback, mon.calc_id, taskno))
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')
@@ -303,24 +315,23 @@ class WorkerPool(object):
         self.pool.close()
         self.pool.terminate()
         self.pool.join()
-        return 'WorkerPool %s stopped' % self.ctrl_url
+        return 'WorkerPool on %s stopped' % self.hostname
 
 
-def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
+def workerpool(num_workers: int=-1, job_id: int=0):
     """
-    Start a workerpool on the given URL with the given number of workers.
+    Start a workerpool with the given number of workers.
     """
     # NB: unexpected errors will appear in the DbServer log
-    wpool = WorkerPool(worker_url, num_workers)
+    wpool = WorkerPool(int(config.zworkers.ctrl_port), num_workers, job_id)
     try:
         wpool.start()
     finally:
         wpool.stop()
 
-
-workerpool.worker_url = dict(
-    help='ZMQ address (tcp:///w.x.y.z:port) of the worker')
 workerpool.num_workers = dict(help='number of cores to use')
+workerpool.job_id = dict(help='associated job')
+
 
 if __name__ == '__main__':
     sap.run(workerpool)

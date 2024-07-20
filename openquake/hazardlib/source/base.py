@@ -230,6 +230,17 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
+    def iter_meshes(self):
+        """
+        Yields the meshes underlying the ruptures
+        """
+        for rup in self.iter_ruptures():
+            if isinstance(rup.surface, MultiSurface):
+                for surf in rup.surface.surfaces:
+                    yield surf.mesh
+            else:
+                yield rup.surface.mesh
+
     def sample_ruptures(self, eff_num_ses, ses_seed):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples

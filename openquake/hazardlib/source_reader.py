@@ -24,8 +24,8 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
-from openquake.hazardlib.source.multi_fault import save
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
+from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 
@@ -114,10 +114,9 @@ def build_rup_mutex(src_groups):
 
 def create_source_info(csm, h5):
     """
-    Creates source_info, source_wkt, trt_smrs, toms
+    Creates source_info, trt_smrs, toms
     """
     data = {}  # src_id -> row
-    wkts = []
     lens = []
     for srcid, srcs in general.groupby(
             csm.get_sources(), basename).items():
@@ -132,7 +131,6 @@ def create_source_info(csm, h5):
         lens.append(len(src.trt_smrs))
         row = [srcid, src.grp_id, code, 0, 0, num_ruptures,
                src.weight, mutex, trti]
-        wkts.append(getattr(src, '_wkt', ''))
         data[srcid] = row
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
@@ -143,7 +141,6 @@ def create_source_info(csm, h5):
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
     h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
     h5['rup_mutex'] = build_rup_mutex(csm.src_groups)
-    h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
 
 
 def trt_smrs(src):
@@ -223,7 +220,7 @@ def check_duplicates(smdict, strict):
     if found:
         logging.warning('Found different sources with same ID %s',
                         general.shortlist(found))
-    
+
 
 def get_csm(oq, full_lt, dstore=None):
     """
@@ -272,14 +269,7 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    if oq.sites and len(oq.sites) == 1:
-        # disable wkt in single-site calculations to avoid excessive slowdown
-        set_wkt = False
-    else:
-        set_wkt = True
-        logging.info('Setting src._wkt')
-
-    csm = _get_csm(full_lt, groups, is_event_based, set_wkt)
+    csm = _get_csm(full_lt, groups, is_event_based)
     out = []
     probs = []
     for sg in csm.src_groups:
@@ -288,7 +278,7 @@ def get_csm(oq, full_lt, dstore=None):
             for src in sg:
                 segments.append(int(src.source_id.split(':')[1]))
                 t = (src.source_id, src.grp_id,
-                     src.count_ruptures(),src.mutex_weight)
+                     src.count_ruptures(), src.mutex_weight)
                 out.append(t)
             probs.append((src.grp_id, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
@@ -355,6 +345,20 @@ def find_false_duplicates(smdict):
     return found
 
 
+def replace(lst, splitdic, key):
+    """
+    Replace a list of named elements with the split elements in splitdic
+    """
+    new = []
+    for el in lst:
+        tag = getattr(el, key)
+        if tag in splitdic:
+            new.extend(splitdic[tag])
+        else:
+            new.append(el)
+    lst[:] = new
+
+
 def fix_geometry_sections(smdict, csm, dstore):
     """
     If there are MultiFaultSources, fix the sections according to the
@@ -379,12 +383,20 @@ def fix_geometry_sections(smdict, csm, dstore):
         # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
+        oq = dstore['oqparam']
         mfsources = []
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
                     mfsources.append(src)
-        save(mfsources, sections, dstore.tempname)
+        if oq.sites and len(oq.sites) == 1 and oq.use_rates:
+            lon, lat, _dep = oq.sites[0]
+            site1 = site.SiteCollection.from_points([lon], [lat])
+        else:
+            site1 = None
+        split_dic = save_and_split(mfsources, sections, dstore.tempname, site1)
+        for sg in csm.src_groups:
+            replace(sg.sources, split_dic, 'source_id')
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
@@ -408,7 +420,7 @@ def _build_groups(full_lt, smdict):
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
         while (bset_values and
                bset_values[0][0].uncertainty_type == 'extendModel'):
-            (bset, value), *bset_values = bset_values
+            (_bset, value), *bset_values = bset_values
             extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
             common = source_ids & extra_ids
             if common:
@@ -459,7 +471,7 @@ def reduce_sources(sources_with_same_id, full_lt):
     return out
 
 
-def _get_csm(full_lt, groups, event_based, set_wkt):
+def _get_csm(full_lt, groups, event_based):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
     # 3. reorder the sources by source_id
@@ -480,23 +492,7 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            if set_wkt:
-                # set ._wkt attribute (for later storage in the source_wkt
-                # dataset); this is slow
-                msg = ('src "{}" has {:_d} underlying meshes with a total '
-                       'of {:_d} points!')
-                for src in [s for s in sources if s.code == b'N']:
-                    # check on NonParametricSources
-                    mesh_size = getattr(src, 'mesh_size', 0)
-                    if mesh_size > 1E6:
-                        logging.warning(msg.format(
-                            src.source_id, src.count_ruptures(), mesh_size))
-                    src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
-    if set_wkt:
-        for ag in atomic:
-            for src in ag:
-                src._wkt = src.wkt()
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 

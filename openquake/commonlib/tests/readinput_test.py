@@ -482,9 +482,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_02.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        found, _total = readinput.reduce_source_model(smlt, [], remove=False)
         self.assertEqual(found, 0)
-        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        found, _total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
 
     def test_wrong_trts(self):
@@ -528,14 +528,14 @@ class SitecolAssetcolTestCase(unittest.TestCase):
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.region_grid_spacing = 15
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
     def test_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
@@ -558,8 +558,8 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
-                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        expected = ['AA.CA', 'AA.CB', 'AA.DA', 'AA.DB', 'ABACA', 'ABACB',
+                    'ABADA', 'ABADB', 'ABBCA', 'ABBCB', 'ABBDA', 'ABBDB']
         self.assertEqual(paths, expected)
 
 
@@ -585,3 +585,13 @@ class ReadGeometryTestCase(unittest.TestCase):
         t1 = time.time()
         self.assertEqual(len(sites_df), 55)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
+
+
+class ReadRiskTestCase(unittest.TestCase):
+    def test_read_station_data(self):
+        oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
+        sitecol = readinput.get_site_collection(oq)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_station_data(oq, sitecol)
+        self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
+                      str(ctx.exception))

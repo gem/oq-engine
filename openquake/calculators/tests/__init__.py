@@ -123,7 +123,7 @@ class CalculatorTestCase(unittest.TestCase):
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
-        os.environ['OQ_DATABASE'] = 'local'
+        os.environ['OQ_DATABASE'] = '127.0.0.1'
         parallel.Starmap.maxtasksperchild = None
 
     def get_calc(self, testfile, job_ini, **kw):

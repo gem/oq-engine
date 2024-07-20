@@ -39,6 +39,18 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
+class SmltTestCase(unittest.TestCase):
+    def test_400_source_models(self):
+        # test that too many branches is not raised
+        fname = os.path.join(DATADIR, 'drouet_smtlt.xml')
+        with self.assertRaises(
+                (lt.LogicTreeError, logictree.InvalidFile)) as ctx:
+            logictree.SourceModelLogicTree(fname)
+        msg = str(ctx.exception)
+        assert ('No such file or directory:' in msg
+                or 'too many branches' in msg)
+
+
 class CompositeLtTestCase(unittest.TestCase):
     def test(self):
         # logic tree for Canada 2015
@@ -1179,7 +1191,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                ))
              ]
             )
-        sb1, sb2, sb3 = lt.root_branchset.branches
+        sb1, _sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.bset is sb3.bset)
         self.assertEqual(
             str(lt), '<_TestableSourceModelLogicTree<sourceModel(3)>>')
@@ -1550,7 +1562,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_tectonic_region_type(self):
-        def test(trt, source): 
+        def test(trt, source):
             return logictree.BranchSet(
                 None, filters={'applyToTectonicRegionType': trt}
             ).filter_source(source)
@@ -1865,7 +1877,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         probs = lt.random(1, self.seed, 'early_weights')
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
-        self.assertEqual(rlz.weight['default'], 0.5)
+        self.assertEqual(rlz.weight[-1], 0.5)
         self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
 
@@ -1898,7 +1910,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def mean(self, rlzs):
         R = len(rlzs)
         paths = ['_'.join(rlz.sm_lt_path) for rlz in rlzs]
-        return sum(self.value[path] * rlz.weight['weight']
+        return sum(self.value[path] * rlz.weight[-1]
                    for rlz, path in zip(rlzs, paths)) / R
 
     def test_full_path(self):
@@ -1931,7 +1943,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.1]       # b3_.
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
 
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.13375)
 
@@ -1950,7 +1962,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         # the weights are all equal
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
 
     def test_sampling_late_weights(self):
@@ -1969,7 +1981,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.18919751558, 0.09459875780, 0.094598757,
                    0.09459875779]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
 
     def test_smlt_bad(self):

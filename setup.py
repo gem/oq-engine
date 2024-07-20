@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -58,6 +58,7 @@ install_requires = [
     'setuptools',
     'h5py >=2.10',
     'numpy >=1.20',
+    'numba >=0.58',
     'scipy >=1.3',
     'pandas >=0.25',
     'pyzmq >=19.0',

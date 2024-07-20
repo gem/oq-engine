@@ -194,6 +194,8 @@ def event_based_risk(df, oqparam, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
+    if os.environ.get('OQ_DEBUG_SITE'):
+        print(df)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
         ideduc = monitor.read('assets/ideductible')

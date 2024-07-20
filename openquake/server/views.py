@@ -43,7 +43,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.geo.utils import SiteAssociationError
@@ -128,6 +128,8 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance',
     'ses_seed': 'SES seed',
+    'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': 'Maximum distance of stations',
 }
 
 # NOTE: currently placeholders are equal to labels. We might re-define
@@ -175,9 +177,7 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    tmp = config.directory.custom_tmp or tempfile.mkdtemp()
-    calc_dir = os.path.join(tmp, 'calc_%d' % calc_id)
-    os.mkdir(calc_dir)
+    calc_dir = parallel.scratch_dir(calc_id)
     arch = request_files.get('archive')
     if arch is None:
         # move each file to calc_dir using the upload file names
@@ -649,6 +649,8 @@ def aristotle_callback(
     # number_of_ground_motion_fields: 100
     # asset_hazard_distance: 15.0
     # ses_seed: 42
+    # station_data_file: None
+    # maximum_distance_stations: None
     # countries: TUR
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
@@ -694,7 +696,7 @@ def aristotle_get_rupture_data(request):
     [rupdic] = res
     try:
         trts, mosaic_model = get_trts_around(
-            rupdic, config.directory.mosaic_dir)
+            rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
     except Exception as exc:
         usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
@@ -716,22 +718,36 @@ def aristotle_get_rupture_data(request):
                         status=200)
 
 
+def copy_to_temp_dir_with_unique_name(source_file_path):
+    temp_dir = tempfile.gettempdir()
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+    temp_file_path = temp_file.name
+    # Close the NamedTemporaryFile to prevent conflicts on Windows
+    temp_file.close()
+    shutil.copy(source_file_path, temp_file_path)
+    return temp_file_path
+
+
+def get_uploaded_file_path(request, filename):
+    file = request.FILES.get(filename)
+    if not file:
+        return None
+    # NOTE: we could not find a reliable way to avoid the deletion of the
+    # uploaded file right after the request is consumed, therefore we need to
+    # store a copy of it
+    file_path = copy_to_temp_dir_with_unique_name(
+        file.temporary_file_path())
+    return file_path
+
+
 def aristotle_validate(request):
     # this is called by aristotle_get_rupture_data and aristotle_run.
     # In the first case the form contains only usgs_id and rupture_file and
     # returns rupdic only.
     # In the second case the form contains all fields and it returns rupdic
     # plus the calculation parameters (like maximum_ditance, etc.)
-    rupture_file = request.FILES.get('rupture_file')
-    if rupture_file:
-        rupture_path = rupture_file.temporary_file_path()
-        # NOTE: by default, Django deletes all the uploaded temporary files
-        # (tracked in request._files) when the request is destroyed. We need to
-        # prevent this from happening, because the engine has to read the
-        # rupture_file from the process that runs the calculation
-        del request._files['rupture_file']
-    else:
-        rupture_path = None
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -749,6 +765,7 @@ def aristotle_validate(request):
         'number_of_ground_motion_fields': valid.positiveint,
         'asset_hazard_distance': valid.positivefloat,
         'ses_seed': valid.positiveint,
+        'maximum_distance_stations': valid.positivefloat,
     }
     params = {}
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
@@ -759,6 +776,12 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
+            if (fieldname == 'maximum_distance_stations' and
+                    request.POST.get('maximum_distance_stations') == ''):
+                # NOTE: valid.positivefloat raises an error if the value is
+                # blank or None
+                params['maximum_distance_stations'] = None
+                continue
             validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
             continue
@@ -766,6 +789,11 @@ def aristotle_validate(request):
             dic[fieldname] = value
         else:
             params[fieldname] = value
+
+    # FIXME: validate station_data_file
+    if 'lon' in request.POST:
+        # NOTE: if the request contains all form parameters
+        params['station_data_file'] = station_data_path
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -791,23 +819,27 @@ def aristotle_run(request):
 
     :param request:
         a `django.http.HttpRequest` object containing
+        usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed
+        asset_hazard_distance, ses_seed, station_data_file,
+        maximum_distance_stations
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed) = res
+     asset_hazard_distance, ses_seed, maximum_distance_stations,
+     station_data_file) = res
     try:
         allparams = get_aristotle_allparams(
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
-            config.directory.mosaic_dir)
+            station_data_file=station_data_file,
+            maximum_distance_stations=maximum_distance_stations)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
@@ -818,6 +850,7 @@ def aristotle_run(request):
         allparams, config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
+    response_data = dict()
     for jobctx in jobctxs:
         job_id = jobctx.calc_id
         outputs_uri_web = request.build_absolute_uri(
@@ -828,11 +861,11 @@ def aristotle_run(request):
             reverse('log', args=[job_id, '0', '']))
         traceback_uri = request.build_absolute_uri(
             reverse('traceback', args=[job_id]))
-        response_data = dict(
+        response_data[job_id] = dict(
             status='created', job_id=job_id, outputs_uri=outputs_uri_api,
             log_uri=log_uri, traceback_uri=traceback_uri)
         if not job_owner_email:
-            response_data['WARNING'] = (
+            response_data[job_id]['WARNING'] = (
                 'No email address is speficied for your user account,'
                 ' therefore email notifications will be disabled. As soon as'
                 ' the job completes, you can access its outputs at the'
@@ -984,15 +1017,10 @@ def submit_job(request_files, ini, username, hc_id):
         job_ini = store(request_files, ini, job.calc_id)
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
-        if oq.sensitivity_analysis:
-            logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
-            jobs = engine.create_jobs([job_ini], config.distribution.log_level,
-                                      None, username, hc_id, True)
-        else:
-            dic = dict(calculation_mode=oq.calculation_mode,
-                       description=oq.description, hazard_calculation_id=hc_id)
-            logs.dbcmd('update_job', job.calc_id, dic)
-            jobs = [job]
+        dic = dict(calculation_mode=oq.calculation_mode,
+                   description=oq.description, hazard_calculation_id=hc_id)
+        logs.dbcmd('update_job', job.calc_id, dic)
+        jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
@@ -1119,7 +1147,7 @@ def calc_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
+        job_id, _job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
         if not utils.user_has_permission(request, job_user):
             return HttpResponseForbidden()
@@ -1234,7 +1262,8 @@ def calc_datastore(request, job_id):
 
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
-    params = {'application_mode': application_mode}
+    # NOTE: application_mode is already added by the context processor
+    params = {}
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
@@ -1282,8 +1311,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
-                       application_mode=application_mode))
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
+                  )
 
 
 def is_model_preliminary(ds):
@@ -1357,6 +1386,15 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
@@ -1367,6 +1405,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       calc_aelo_version=calc_aelo_version,
+                       asce_version=asce_version,
                        warnings=warnings))
 
 
@@ -1458,3 +1498,12 @@ def on_same_fs(request):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
+
+
+@require_http_methods(['GET'])
+def aelo_changelog(request, **kwargs):
+    aelo_changelog = base.get_aelo_changelog()
+    aelo_changelog_html = aelo_changelog.to_html(
+        index=False, escape=False, classes='changelog', border=0)
+    return render(request, "engine/aelo_changelog.html",
+                  dict(aelo_changelog=aelo_changelog_html))

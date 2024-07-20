@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -88,6 +88,22 @@ AUTHENTICATION_BACKENDS = ()
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
 TIME_ZONE = 'UTC'
+
+# USE_TZ = True is the default for Django >= 5.0. From Django documentation:
+# "
+# When support for time zones is enabled, Django stores datetime information
+# in UTC in the database, uses time-zone-aware datetime objects internally,
+# and translates them to the end user’s time zone in templates and forms.
+# This is handy if your users live in more than one time zone and you want
+# to display datetime information according to each user’s wall clock.
+# Even if your website is available in only one time zone, it’s still good
+# practice to store data in UTC in your database. The main reason is daylight
+# saving time (DST). Many countries have a system of DST, where clocks are
+# moved forward in spring and backward in autumn. If you’re working in local
+# time, you’re likely to encounter errors twice a year, when the transitions
+# happen.
+# "
+USE_TZ = True
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -194,17 +210,27 @@ WEBUI = True
 
 MAX_AELO_SITE_NAME_LEN = 256
 
+GOOGLE_ANALYTICS_TOKEN = None
+
+CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
-        'openquakeplatform',
+        'openquakeplatform', 'corsheaders',
     )
 
     INSTALLED_APPS += STANDALONE_APPS
 
+    # cors-headers configuration
+    corsheader_middleware = 'corsheaders.middleware.CorsMiddleware'
+    if corsheader_middleware not in MIDDLEWARE:
+        MIDDLEWARE += (corsheader_middleware,)
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_URLS_REGEX = r'^/taxtweb/explanation/.*$'
+
     FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
-    CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
     CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
 
@@ -226,28 +252,17 @@ except ImportError:
 # NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
-if not os.environ.get('OQ_APPLICATION_MODE'):
-    os.environ['OQ_APPLICATION_MODE'] = APPLICATION_MODE
 
-if os.environ['OQ_APPLICATION_MODE'] not in APPLICATION_MODES:
-    raise ValueError(
-        f'Invalid application mode: "{APPLICATION_MODE}". It must be'
-        f' one of {APPLICATION_MODES}')
-
-if APPLICATION_MODE in ('TOOLS_ONLY',):
-    # add installed_apps for cookie-consent and corsheader
+if APPLICATION_MODE not in ('PUBLIC',):
+    # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent', 'corsheaders',):
+                'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
-    # add middleware for corsheader
-    for app_cors in ('corsheaders.middleware.CorsMiddleware',):
-        if app_cors not in MIDDLEWARE:
-            MIDDLEWARE += (app_cors,)
-
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
-        CONTEXT_PROCESSORS.append('django.template.context_processors.request')
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.template.context_processors.request')
     COOKIE_CONSENT_NAME = "cookie_consent"
     COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
     COOKIE_CONSENT_LOG_ENABLED = False
@@ -264,31 +279,6 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
 
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
-
-if LOCKDOWN and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    # check essential constants are defined
-    try:
-        EMAIL_BACKEND  # noqa
-    except NameError:
-        raise NameError(
-            f'If APPLICATION_MODE is {APPLICATION_MODE} an email'
-            f' backend must be defined')
-    if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
-        try:
-            EMAIL_HOST           # noqa
-            EMAIL_PORT           # noqa
-            EMAIL_USE_TLS        # noqa
-            EMAIL_HOST_USER      # noqa
-            EMAIL_HOST_PASSWORD  # noqa
-        except NameError:
-            raise NameError(
-                f'If APPLICATION_MODE is {APPLICATION_MODE}'
-                f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
-                f' must all be defined')
-    if not config.directory.mosaic_dir:
-        raise NameError(
-            f'If APPLICATION_MODE is {APPLICATION_MODE}, '
-            f'mosaic_dir must be specified in openquake.cfg')
 
 if LOCKDOWN:
     # do not log to file unless running through the webui
@@ -330,14 +320,14 @@ if LOCKDOWN:
         'openquake.server.middleware.LoginRequiredMiddleware',
     )
 
-    INSTALLED_APPS += (
-        'django.contrib.auth',
-        'django.contrib.contenttypes',
-        'django.contrib.messages',
-        'django.contrib.sessions',
-        'django.contrib.admin',
-        'openquake.server.announcements',
-        )
+    for app in ('django.contrib.auth',
+                'django.contrib.contenttypes',
+                'django.contrib.messages',
+                'django.contrib.sessions',
+                'django.contrib.admin',
+                'openquake.server.announcements',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
 
     # Official documentation suggests to override the entire TEMPLATES
     TEMPLATES = [
@@ -364,7 +354,7 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
     LOGIN_EXEMPT_URLS = (
         '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
-        'reset_password', 'reset/',
+        'reset_password', 'reset/', 'cookies/',
     )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 

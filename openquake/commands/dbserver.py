@@ -47,8 +47,9 @@ def main(cmd,
         dbapi.db.close()
         return
 
-    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
-        print('Doing nothing since OQ_DATABASE=local')
+    if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
+        and getpass.getuser() != 'openquake'):
+        print('Doing nothing since the DB is local')
         return
 
     status = dbserver.get_status()
