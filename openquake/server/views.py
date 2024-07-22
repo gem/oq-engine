@@ -113,7 +113,7 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 ARISTOTLE_FORM_LABELS = {
-    'usgs_id': 'Rupture identifier (USGS ID or custom)',
+    'usgs_id': 'Rupture identifier',
     'rupture_file': 'Rupture model XML',
     'lon': 'Longitude',
     'lat': 'Latitude',
@@ -132,9 +132,25 @@ ARISTOTLE_FORM_LABELS = {
     'maximum_distance_stations': 'Maximum distance of stations',
 }
 
-# NOTE: currently placeholders are equal to labels. We might re-define
-# placeholders like for AELO, e.g. to give a hint on the required format
-ARISTOTLE_FORM_PLACEHOLDERS = ARISTOTLE_FORM_LABELS.copy()
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'usgs_id': 'USGS ID or custom',
+    'rupture_file': 'Rupture model XML',
+    'lon': 'max. 5 decimals',
+    'lat': 'max. 5 decimals',
+    'dep': '>= 0.0',
+    'mag': '>= 0.0',
+    'rake': '>= 0.0',
+    'dip': '>= 0.0',
+    'strike': '>= 0.0',
+    'maximum_distance': '>= 0.0',
+    'trt': 'Tectonic region type',
+    'truncation_level': '>= 0.0',
+    'number_of_ground_motion_fields': '>= 0',
+    'asset_hazard_distance': '>= 0.0',
+    'ses_seed': '>= 0',
+    'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': '>= 0.0',
+}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
