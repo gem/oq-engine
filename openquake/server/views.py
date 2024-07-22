@@ -113,28 +113,44 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 ARISTOTLE_FORM_LABELS = {
-    'usgs_id': 'Rupture identifier (USGS ID or custom)',
+    'usgs_id': 'Rupture identifier',
     'rupture_file': 'Rupture model XML',
-    'lon': 'Longitude',
-    'lat': 'Latitude',
-    'dep': 'Depth',
-    'mag': 'Magnitude',
-    'rake': 'Rake',
-    'dip': 'Dip',
-    'strike': 'Strike',
-    'maximum_distance': 'Maximum distance',
+    'lon': 'Longitude (degrees)',
+    'lat': 'Latitude (degrees)',
+    'dep': 'Depth (km)',
+    'mag': 'Magnitude (Mw)',
+    'rake': 'Rake (degrees)',
+    'dip': 'Dip (degrees)',
+    'strike': 'Strike (degrees)',
+    'maximum_distance': 'Maximum source-to-site distance (km)',
     'trt': 'Tectonic region type',
-    'truncation_level': 'Truncation level',
+    'truncation_level': 'Level of truncation',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
-    'asset_hazard_distance': 'Asset hazard distance',
+    'asset_hazard_distance': 'Asset hazard distance (km)',
     'ses_seed': 'SES seed',
     'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'Maximum distance of stations',
+    'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
 
-# NOTE: currently placeholders are equal to labels. We might re-define
-# placeholders like for AELO, e.g. to give a hint on the required format
-ARISTOTLE_FORM_PLACEHOLDERS = ARISTOTLE_FORM_LABELS.copy()
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'usgs_id': 'USGS ID or custom',
+    'rupture_file': 'Rupture model XML',
+    'lon': '-180 ≤ float ≤ 180',
+    'lat': '-90 ≤ float ≤ 90',
+    'dep': 'float ≥ 0',
+    'mag': 'float ≥ 0',
+    'rake': '-180 ≤ float ≤ 180',
+    'dip': '0 ≤ float ≤ 90',
+    'strike': '0 ≤ float ≤ 360',
+    'maximum_distance': 'float ≥ 0',
+    'trt': 'Tectonic region type',
+    'truncation_level': 'float ≥ 0',
+    'number_of_ground_motion_fields': 'float ≥ 1',
+    'asset_hazard_distance': 'float ≥ 0',
+    'ses_seed': 'int ≥ 0',
+    'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': 'float ≥ 0',
+}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -756,9 +772,9 @@ def aristotle_validate(request):
         'lat': valid.latitude,
         'dep': valid.positivefloat,
         'mag': valid.positivefloat,
-        'rake': valid.positivefloat,
-        'dip': valid.positivefloat,
-        'strike': valid.positivefloat,
+        'rake': valid.rake_range,
+        'dip': valid.dip_range,
+        'strike': valid.strike_range,
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
