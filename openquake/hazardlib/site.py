@@ -541,11 +541,9 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
-        # if ntiles > nsites produce N tiles with a single site each
-        ntiles = min(int(numpy.ceil(ntiles)), len(self))
+        maxtiles = int(numpy.ceil(len(self) / minsize))
+        ntiles = min(int(numpy.ceil(ntiles)), maxtiles)
         if ntiles <= 1:
-            return [self]
-        if len(self) < ntiles * minsize:  # do not split
             return [self]
         tiles = []
         for i in range(ntiles):
@@ -553,7 +551,8 @@ class SiteCollection(object):
             # smart trick to split in "homogenous" tiles
             sc.array = self.array[self.sids % ntiles == i]
             sc.complete = self
-            tiles.append(sc)
+            if len(sc):
+                tiles.append(sc)
         return tiles
 
     def split_in_tiles(self, hint):

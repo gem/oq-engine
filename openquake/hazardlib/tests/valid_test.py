@@ -109,10 +109,12 @@ class ValidationTestCase(unittest.TestCase):
             valid.probability('-0.1')
 
     def test_IMTstr(self):
-        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5))
-        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5))
-        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5))
-        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5))
+        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5, None))
+        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5, None))
+        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5, None))
+        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5, None))
+        self.assertEqual(imt.from_string('SDi(1.,2.)'),
+                         ('SDi(1.0,2.0)', 1, 5, 2))
         with self.assertRaises(KeyError):
             imt.from_string('S(1)')
 

@@ -304,6 +304,7 @@ def aristotle(exposure_hdf5=None, *,
               rupfname: str=FAMOUS,
               stations: str=None,
               maximum_distance: float=300.,
+              maximum_distance_stations: float=None,
               asset_hazard_distance: float=15.,
               number_of_ground_motion_fields: int=10):
     """
@@ -344,7 +345,8 @@ def aristotle(exposure_hdf5=None, *,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
                  ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
-                 station_data_file=stations)
+                 station_data_file=stations,
+                 maximum_distance_stations=maximum_distance_stations)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
@@ -358,6 +360,7 @@ aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
 aristotle.stations = 'Path to a csv file with the station data'
 aristotle.maximum_distance = 'Maximum distance in km'
+aristotle.maximum_distance_stations = "Maximum distance from stations in km"
 aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
 
 # ################################## main ################################## #

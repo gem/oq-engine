@@ -129,6 +129,7 @@ ARISTOTLE_FORM_LABELS = {
     'asset_hazard_distance': 'Asset hazard distance',
     'ses_seed': 'SES seed',
     'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': 'Maximum distance of stations',
 }
 
 # NOTE: currently placeholders are equal to labels. We might re-define
@@ -649,6 +650,7 @@ def aristotle_callback(
     # asset_hazard_distance: 15.0
     # ses_seed: 42
     # station_data_file: None
+    # maximum_distance_stations: None
     # countries: TUR
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
@@ -763,6 +765,7 @@ def aristotle_validate(request):
         'number_of_ground_motion_fields': valid.positiveint,
         'asset_hazard_distance': valid.positivefloat,
         'ses_seed': valid.positiveint,
+        'maximum_distance_stations': valid.positivefloat,
     }
     params = {}
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
@@ -773,6 +776,12 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
+            if (fieldname == 'maximum_distance_stations' and
+                    request.POST.get('maximum_distance_stations') == ''):
+                # NOTE: valid.positivefloat raises an error if the value is
+                # blank or None
+                params['maximum_distance_stations'] = None
+                continue
             validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
             continue
@@ -813,21 +822,24 @@ def aristotle_run(request):
         usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, station_data_file
+        asset_hazard_distance, ses_seed, station_data_file,
+        maximum_distance_stations
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed, station_data_file) = res
+     asset_hazard_distance, ses_seed, maximum_distance_stations,
+     station_data_file) = res
     try:
         allparams = get_aristotle_allparams(
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
-            station_data_file=station_data_file)
+            station_data_file=station_data_file,
+            maximum_distance_stations=maximum_distance_stations)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
