@@ -826,7 +826,9 @@ def aristotle_validate(request):
         rupdic = get_rupture_dict(dic)
     except Exception as exc:
         msg = f'Unable to retrieve rupture data: {exc}'
-        response_data = {"status": "failed", "error_msg": msg}
+        response_data = {"status": "failed", "error_msg": msg,
+                         "error_cls": type(exc).__name__}
+        logging.error('', exc_info=True)
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=500)
     return rupdic, *params.values()
