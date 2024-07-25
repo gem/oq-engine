@@ -574,6 +574,12 @@
             });
             $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
+                $('#dip').prop('disabled', false);
+                $('#strike').prop('disabled', false);
+            });
+            $('#rupture_file_input').on('change', function() {
+                $('#dip').prop('disabled', $(this).val() != '');
+                $('#strike').prop('disabled', $(this).val() != '');
             });
             $('#clearStationDataFile').click(function() {
                 $('#station_data_file_input').val('');
