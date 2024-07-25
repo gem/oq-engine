@@ -551,6 +551,12 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
+                    if ('dip' in data) {
+                        $('#dip').val(data.dip);
+                    }
+                    if ('strike' in data) {
+                        $('#strike').val(data.strike);
+                    }
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
@@ -576,6 +582,8 @@
                 $('#rupture_file_input').val('');
                 $('#dip').prop('disabled', false);
                 $('#strike').prop('disabled', false);
+                $('#dip').val('90');
+                $('#strike').val('0');
             });
             $('#rupture_file_input').on('change', function() {
                 $('#dip').prop('disabled', $(this).val() != '');
