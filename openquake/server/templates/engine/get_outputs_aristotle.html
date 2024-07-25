@@ -71,7 +71,7 @@
                   {% if forloop.counter == 2 %}
                   {{ item|floatformat:"6" }}
                   {% else %}
-                  {{ item|floatformat:"2g" }}
+                  {{ item|humanize_number }}
                   {% endif %}
                 {% else %}
                   {{ item|stringformat:"s"|linebreaksbr }}
