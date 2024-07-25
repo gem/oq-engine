@@ -822,7 +822,13 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    rupdic = get_rupture_dict(dic)
+    try:
+        rupdic = get_rupture_dict(dic)
+    except Exception as exc:
+        msg = f'Unable to retrieve rupture data: {exc}'
+        response_data = {"status": "failed", "error_msg": msg}
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=500)
     return rupdic, *params.values()
 
 
