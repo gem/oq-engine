@@ -554,6 +554,9 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
+    # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
+    # in particular disaggregation/case_15 is sensitive to num_cores
+    # with very different values between 2 and 16 cores(!)
     def check_mean_rates(self, mean_rates_by_src):
         """
         The sum of the mean_rates_by_src must correspond to the mean_rates
@@ -566,7 +569,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for m in range(len(got)):
             # skipping large rates which can be wrong due to numerics
             # (it happens in logictree/case_05 and in Japan)
-            ok = got[m] < 10.
+            ok = got[m] < 2.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
     def execute_big(self):
