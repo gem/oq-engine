@@ -185,8 +185,8 @@ def store_tiles(dstore, csm, sitecol, cmakers, oq):
             tiles.append((0, size_gb))
         else:
             ntiles = numpy.ceil(sg.weight / max_weight)
-            if size_gb / ntiles > .5 * max_gb:
-                ntiles = numpy.ceil(2*size_gb / max_gb)
+            if size_gb / ntiles > max_gb:
+                ntiles = numpy.ceil(size_gb / max_gb)
             split = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
             tiles.append((len(split), size_gb))
     tiles = numpy.array(tiles, [('num_tiles', int), ('size_gb', float)])
