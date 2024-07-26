@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Using half the memory in postclassical
+  * Using half the memory in postclassical by using 32 bit arrays
+  * Using half the memory on Windows by using half the threads by default
   * Fixed a bug in conditional spectrum calculations with a non-contributing TRT
 
   [Savvinos Aristeidou]
