@@ -165,9 +165,9 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
                 yield dic
 
 
-def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
+def store_tiles(dstore, csm, sitecol, cmakers, oq):
     """
-    Store a `num_tiles` array if the calculation is large enough.
+    Store a `tiles` array if the calculation is large enough.
     :returns: a triple (max_weight, trt_rlzs, gids)
     """
     N = len(sitecol)
@@ -177,18 +177,22 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
     dstore['rates_max_gb'] = req_gb
     regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
                or oq.tile_spec)
-    if not regular:  # tiling
-        num_tiles = []
-        for cm in cmakers:
-            sg = csm.src_groups[cm.grp_id]
-            size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
+    tiles = []
+    for cm in cmakers:
+        sg = csm.src_groups[cm.grp_id]
+        size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
+        if regular:
+            tiles.append((0, size_gb))
+        else:
             ntiles = numpy.ceil(sg.weight / max_weight)
             if size_gb / ntiles > max_gb:
                 ntiles = numpy.ceil(size_gb / max_gb)
-            tiles = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-            num_tiles.append(len(tiles))
-        dstore.create_dset('num_tiles', U32(num_tiles))
-        ntasks = sum(num_tiles)
+            split = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            tiles.append((len(split), size_gb))
+    tiles = numpy.array(tiles, [('num_tiles', int), ('size_gb', float)])
+    dstore['tiles'] = tiles
+    if not regular:
+        ntasks = sum(tiles['num_tiles'])
         logging.info('This will be a tiling calculation with %d tasks', ntasks)
         if req_gb >= 30 and (not config.directory.custom_tmp or
                              not config.distribution.save_on_tmp):
@@ -404,7 +408,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # save 'ntiles' if the calculation is large
         self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-            store_num_tiles(self.datastore, self.csm, self.sitecol,
+            store_tiles(self.datastore, self.csm, self.sitecol,
                             self.cmakers, self.oqparam))
 
     def post_process(self):
