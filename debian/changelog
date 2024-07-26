@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Fixed a small bug in conditional spectrum calculations (KeyError
-    for zero-valued components)
+  * Fixed a bug in conditional spectrum calculations with a non-contributing TRT
 
   [Savvinos Aristeidou]
   * Added new GMM in the gsim library, named `aristeidou_2023`
