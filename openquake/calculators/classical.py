@@ -412,7 +412,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.cmakers = read_cmakers(self.datastore, self.csm)
         parent = self.datastore.parent
-        if parent and oq.concurrent_tasks != parent['oqparam'].concurrent_tasks:
+        if parent:
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
                 preclassical.store_tiles(
@@ -517,7 +517,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        maxw = self.csm.get_max_weight(self.oqparam)
+        maxw = self.max_weight
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
