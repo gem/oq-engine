@@ -683,13 +683,17 @@ class SharedArray(object):
         self.sm.close()
         self.sm.unlink()
 
-
-# use only the "visible" cores, not the total system cores
-# if the underlying OS supports it (macOS does not)
-try:
+# determine the number of cores to use
+cpu_count = psutil.cpu_count()
+if sys.platform == 'win32':
+    # assume hyperthreading is on; use half the threads to save memory
+    tot_cores = cpu_count // 2 or 1
+elif sys.platform == 'linux':
+    # use only the "visible" cores, not the total system cores
+    # if the underlying OS supports it (macOS does not)
     tot_cores = len(psutil.Process().cpu_affinity())
-except AttributeError:
-    tot_cores = psutil.cpu_count()
+else:
+    tot_cores = cpu_count
 
 
 class Starmap(object):
@@ -697,7 +701,7 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
-    CT = num_cores * 2
+    CT = num_cores * 3 if num_cores < cpu_count else num_cores * 2
 
     @classmethod
     def init(cls, distribute=None):
