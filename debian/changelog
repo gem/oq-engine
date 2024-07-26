@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a small bug in conditional spectrum calculations (KeyError
+    for zero-valued components)
+
   [Savvinos Aristeidou]
   * Added new GMM in the gsim library, named `aristeidou_2023`
   * Added new IM, that is the inelastic spectral displacement, SDi,
@@ -8,7 +12,7 @@
 
   [Kyle Smith]
   * Added a new gsim file sandikkaya_akkar_2017.py to implement the
-    Arias Intensity and Cumulative Absoloute Velocity ground motion 
+    Arias Intensity and Cumulative Absoloute Velocity ground motion
     models from Sandikkaya and Akkar (2017).
 
   [Michele Simionato]
