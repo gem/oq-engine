@@ -77,6 +77,9 @@ def from_string(imt, _damping=5.0):
         elif m.group(1) == 'AvgSA':
             im = AvgSA(float(m.group(2)))
         return im
+    elif re.match(r'^SDi\((\d+\.?\d*),(\d+\.?\d*)\)$', imt):
+        m = re.match(r'^SDi\((\d+\.?\d*),(\d+\.?\d*)\)$', imt)
+        return SDi(float(m.group(1)), float(m.group(2)))
     elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
     return IMT(*imt2tup(imt))
@@ -96,12 +99,15 @@ def sort_by_imt(imtls):
 
 def repr(self):
     if self.period and self.damping != 5.0:
+        if self.string.startswith('SDi'):
+            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
+                                        self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
 
-IMT = collections.namedtuple('IMT', 'string period damping')
-IMT.__new__.__defaults__ = (0., 5.0)
+IMT = collections.namedtuple('IMT', 'string period damping strength_ratio')
+IMT.__new__.__defaults__ = (0., 5.0, None)
 IMT.__lt__ = lambda self, other: self[1] < other[1]
 IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
@@ -164,6 +170,18 @@ def SA(period, damping=5.0):
     """
     period = float(period)
     return IMT('SA(%s)' % period, period, damping)
+
+
+def SDi(period, strength_ratio, damping=5.0):
+    """
+    Inelastic spectral displacement, defined as the maximum displacement
+    of a damped, single-degree-of-freedom inelastic oscillator. Units
+    are ``cm``.
+    """
+    period = float(period)
+    strength_ratio = float(strength_ratio)
+    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping,
+               strength_ratio)
 
 
 def AvgSA(period=None, damping=5.0):
@@ -272,11 +290,13 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+
 def LiqOccur():
     """
     Liquefaction occurrence class
     """
     return IMT('LiqOccur')
+
 
 def LSE():
     """
@@ -291,12 +311,13 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
-    
+
 def LSD():
     """
-    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    Liquefaction-induced lateral spread displacements measured in units of
+    ``m``.
     """
-    return IMT('LSD')   
+    return IMT('LSD')
 
 
 def PGDGeomMean(vert_settlement, lat_spread):
