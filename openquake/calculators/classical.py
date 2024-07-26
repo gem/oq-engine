@@ -415,7 +415,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if parent and oq.concurrent_tasks != parent['oqparam'].concurrent_tasks:
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                preclassical.store_num_tiles(
+                preclassical.store_tiles(
                     self.datastore, self.csm, self.sitecol, self.cmakers, oq))
 
         self.cfactor = numpy.zeros(3)
@@ -490,11 +490,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        try:
-            self.ntiles = self.datastore['num_tiles'][:]
-        except KeyError:
-            # regular calculator, no tiles
-            self.ntiles = numpy.zeros(0, U32)
+        self.ntiles = self.datastore['tiles']['num_tiles']
         if self.ntiles.any():
             self.execute_big()
         else:
