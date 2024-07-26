@@ -72,7 +72,7 @@ def trivial_callback(
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
-def get_rupture_dict(dic):
+def get_rupture_dict(dic, ignore_shakemap=False):
     """
     :param dic: a dictionary with keys usgs_id and rupture_file
     :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
@@ -94,7 +94,7 @@ def get_rupture_dict(dic):
     elif dic.get('lon') is not None:  # when called from `oq mosaic aristotle`
         rupdic = dic
     else:
-        rupdic = download_rupture_dict(usgs_id)
+        rupdic = download_rupture_dict(usgs_id, ignore_shakemap)
     return rupdic
 
 
@@ -102,7 +102,8 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
                             asset_hazard_distance, ses_seed,
                             exposure_hdf5=None, station_data_file=None,
-                            maximum_distance_stations=None):
+                            maximum_distance_stations=None,
+                            ignore_shakemap=False):
     """
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
@@ -111,7 +112,7 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
             config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
-    rupdic = get_rupture_dict(rupture_dict)
+    rupdic = get_rupture_dict(rupture_dict, ignore_shakemap)
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
@@ -174,7 +175,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', exposure_hdf5=None, station_data_file=None,
-             maximum_distance_stations=None):
+             maximum_distance_stations=None, ignore_shakemap=False):
     """
     This script is meant to be called from the command-line
     """
@@ -185,7 +186,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
             rupture_dict, maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, exposure_hdf5, station_data_file,
-            maximum_distance_stations)
+            maximum_distance_stations, ignore_shakemap)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
@@ -212,9 +213,11 @@ main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
 main_cmd.station_data_file = 'CSV file with the station data'
-main_cmd.maximum_ditance_stations = 'Maximum distance from stations in km'
+main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
+main_cmd.ignore_shakemap = (
+    'Used to test retrieving rupture data from finite-fault info')
 
 if __name__ == '__main__':
     sap.run(main_cmd)

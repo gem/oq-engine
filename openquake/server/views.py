@@ -822,8 +822,11 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    ignore_shakemap = request.POST.get('ignore_shakemap', False)
+    if ignore_shakemap == 'True':
+        ignore_shakemap = True
     try:
-        rupdic = get_rupture_dict(dic)
+        rupdic = get_rupture_dict(dic, ignore_shakemap)
     except Exception as exc:
         msg = f'Unable to retrieve rupture data: {exc}'
         response_data = {"status": "failed", "error_msg": msg,
