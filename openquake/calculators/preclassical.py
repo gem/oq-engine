@@ -177,7 +177,7 @@ def store_tiles(dstore, csm, sitecol, cmakers, oq):
     dstore['rates_max_gb'] = req_gb
     sizes = [len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
              for cm in cmakers]
-    ok = req_gb < max_gb or max(sizes) < max_gb
+    ok = req_gb < max_gb and max(sizes) < max_gb
     regular = ok or oq.disagg_by_src or N < oq.max_sites_disagg or oq.tile_spec
     tiles = []
     for cm, size_gb in zip(cmakers, sizes):
