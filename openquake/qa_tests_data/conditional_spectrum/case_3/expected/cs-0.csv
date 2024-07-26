@@ -1,0 +1,5 @@
+#,,,,"generated_by='OpenQuake engine 3.21.0-git2ecec2e57a', start_date='2024-07-26T09:01:29', checksum=3548457434, site_id=0, lon=0.0, lat=0.1"
+poe,stat,period,mea,std
+2.00000E-02,mean,0.00000E+00,5.06260E-01,2.67950E-01
+2.00000E-02,mean,1.00000E-01,1.03518E+00,3.87262E-01
+2.00000E-02,mean,2.00000E-01,1.38210E+00,1.02245E-02
