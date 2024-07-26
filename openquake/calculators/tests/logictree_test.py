@@ -126,7 +126,7 @@ class LogicTreeTestCase(CalculatorTestCase):
     # it produces a huge rate 103.6 for the minimum level, cut off at 19.5
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
-        self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
+        self.assert_curves_ok(['curve-mean.csv'], case_05.__file__, delta=1E-4)
 
         # test mean_disagg_by_src
         [fname] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)

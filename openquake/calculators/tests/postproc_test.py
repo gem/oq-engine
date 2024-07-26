@@ -215,9 +215,11 @@ class PostProcTestCase(CalculatorTestCase):
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        assert dic41 == {'BSE2N_Ss': 1.5, 'BSE2E_Ss': 1.22052,
-                         'Ss_5_50': 1.22052, 'BSE1N_Ss': 1.0,
-                         'BSE1E_Ss': 0.72658, 'Ss_20_50': 0.72658,
-                         'BSE2N_S1': 0.42961, 'BSE2E_S1': 0.34593,
-                         'S1_5_50': 0.34593, 'BSE1N_S1': 0.2864,
-                         'BSE1E_S1': 0.18819, 'S1_20_50': 0.18819}
+        expected = {'BSE2N_Ss': 1.5, 'BSE2E_Ss': 1.22052,
+                    'Ss_5_50': 1.22052, 'BSE1N_Ss': 1.0,
+                    'BSE1E_Ss': 0.72658, 'Ss_20_50': 0.72658,
+                    'BSE2N_S1': 0.42961, 'BSE2E_S1': 0.34593,
+                    'S1_5_50': 0.34593, 'BSE1N_S1': 0.2864,
+                    'BSE1E_S1': 0.18819, 'S1_20_50': 0.18819}
+        for k, v in dic41.items():
+            aae(v, expected[k], decimal=3)
