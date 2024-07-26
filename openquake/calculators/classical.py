@@ -588,7 +588,9 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        for cm, ntiles in zip(self.cmakers, self.ntiles):
+        pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
+        # first the tasks with few tiles, then the ones with many tiles
+        for cm, ntiles in pairs:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
