@@ -172,7 +172,7 @@ def store_tiles(dstore, csm, sitecol, cmakers, oq):
     """
     N = len(sitecol)
     max_weight = csm.get_max_weight(oq)
-    max_gb = float(config.memory.pmap_max_gb)
+    max_gb = float(config.memory.pmap_max_gb) / 2
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     dstore['rates_max_gb'] = req_gb
     regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
@@ -180,13 +180,13 @@ def store_tiles(dstore, csm, sitecol, cmakers, oq):
     tiles = []
     for cm in cmakers:
         sg = csm.src_groups[cm.grp_id]
-        size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
+        size_gb = len(cm.gsims) * oq.imtls.size * N * 4 / 1024**3
         if regular:
             tiles.append((0, size_gb))
         else:
             ntiles = numpy.ceil(sg.weight / max_weight)
-            if size_gb / ntiles > .5 * max_gb:
-                ntiles = numpy.ceil(2*size_gb / max_gb)
+            if size_gb / ntiles > max_gb:
+                ntiles = numpy.ceil(size_gb / max_gb)
             split = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
             tiles.append((len(split), size_gb))
     tiles = numpy.array(tiles, [('num_tiles', int), ('size_gb', float)])
