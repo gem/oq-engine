@@ -238,8 +238,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
         mrs1 = self.calc.datastore['mean_rates_by_src']
-        small1 = mrs1.array[mrs1.array < 1.]  # large rates are different!
-        small50 = mrs50.array[mrs50.array < 1.]
+        small1 = mrs1.array[mrs1.array < 2.]  # large rates are different!
+        small50 = mrs50.array[mrs50.array < 2.]
         numpy.testing.assert_allclose(small1, small50, atol=1E-4)
 
     def test_case_master(self):
