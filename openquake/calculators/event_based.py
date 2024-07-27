@@ -266,7 +266,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                         [computer.ctx], split_by_mag=False)
                     # avoid numba type error
                     computer.ctx.flags.writeable = True
-
                 df = computer.compute_all(mean_stds, max_iml, cmon, umon)
             sig_eps.append(computer.build_sig_eps(se_dt))
             dt = time.time() - t0
@@ -717,7 +716,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # event_based in parallel
         eb = (event_based if ('station_data' in oq.inputs or
-                              parallel.oq_distribute() == 'slurm')
+                              parallel.oq_distribute() == 'slurm'
+                              or self.N > 500_000)
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
