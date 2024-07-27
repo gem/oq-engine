@@ -227,7 +227,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     se_dt = sig_eps_dt(oq.imtls)
     sig_eps = []
     times = []  # rup_id, nsites, dt
-    fmon = monitor('instantiating GmfComputer', measuremem=False)
+    fmon = monitor('instantiating GmfComputer', measuremem=True)
     mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
