@@ -250,12 +250,13 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     oq = cmaker.oq
     se_dt = sig_eps_dt(oq.imtls)
-    fmon = monitor('instantiating GmfComputer', measuremem=True)
+    rmon = monitor('reading sites and ruptures', measuremem=True)
+    fmon = monitor('instantiating GmfComputer', measuremem=False)
     mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
-    with dstore:
+    with dstore, rmon:
         if dstore.parent:
             sitecol = dstore['sitecol']
             if 'complete' in dstore.parent:
