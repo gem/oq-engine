@@ -248,7 +248,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    shr = monitor.shared
     oq = cmaker.oq
     se_dt = sig_eps_dt(oq.imtls)
     fmon = monitor('instantiating GmfComputer', measuremem=True)
@@ -268,8 +267,9 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
-    return _event_based(proxies, cmaker, stations, rupgeoms, srcfilter, shr,
-                 se_dt, fmon, cmon, umon, mmon)
+    for block in block_splitter(proxies, 10_000, rup_weight):
+        yield _event_based(block, cmaker, stations, rupgeoms, srcfilter,
+                           monitor.shared, se_dt, fmon, cmon, umon, mmon)
 
 
 def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
@@ -280,7 +280,7 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, 10_000, rup_weight):
         n += len(proxies)
-        yield event_based(proxies, cmaker, stations, dstore, monitor)
+        yield from event_based(proxies, cmaker, stations, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
