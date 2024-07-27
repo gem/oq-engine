@@ -15,7 +15,7 @@
 
   [Kyle Smith]
   * Added a new gsim file sandikkaya_akkar_2017.py to implement the
-    Arias Intensity and Cumulative Absoloute Velocity ground motion
+    Arias Intensity and Cumulative Absolute Velocity ground motion
     models from Sandikkaya and Akkar (2017).
 
   [Michele Simionato]
