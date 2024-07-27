@@ -198,6 +198,80 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
         oq._amplifier, oq._sec_perils)
 
 
+def _event_based(proxies, cmaker, stations, rupgeoms, srcfilter, shr,
+                 se_dt, fmon, cmon, umon, mmon):
+    alldata = []
+    sig_eps = []
+    times = []
+    max_iml = cmaker.oq.get_max_iml()
+    for proxy in proxies:
+        t0 = time.time()
+        with fmon:
+            if proxy['mag'] < cmaker.min_mag:
+                continue
+            try:
+                computer = get_computer(
+                    cmaker, proxy, rupgeoms, srcfilter, *stations)
+            except FarAwayRupture:
+                # skip this rupture
+                continue
+        if hasattr(computer, 'station_data'):  # conditioned GMFs
+            assert cmaker.scenario
+            with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
+                df = computer.compute_all([mea, tau, phi], cmon, umon)
+        else:  # regular GMFs
+            with mmon:
+                mean_stds = cmaker.get_mean_stds(
+                    [computer.ctx], split_by_mag=False)
+                # avoid numba type error
+                computer.ctx.flags.writeable = True
+            df = computer.compute_all(mean_stds, max_iml, cmon, umon)
+        sig_eps.append(computer.build_sig_eps(se_dt))
+        dt = time.time() - t0
+        times.append((proxy['id'], computer.ctx.rrup.min(), dt))
+        alldata.append(df)
+    if sum(len(df) for df in alldata):
+        gmfdata = pandas.concat(alldata)
+    else:
+        gmfdata = {}
+    times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
+    times.sort(order='rup_id')
+    if not cmaker.oq.ground_motion_fields:
+        gmfdata = {}
+    if len(gmfdata) == 0:
+        return dict(gmfdata={}, times=times, sig_eps=())
+    return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
+
+
+def event_based(proxies, cmaker, stations, dstore, monitor):
+    """
+    Compute GMFs and optionally hazard curves
+    """
+    shr = monitor.shared
+    oq = cmaker.oq
+    se_dt = sig_eps_dt(oq.imtls)
+    fmon = monitor('instantiating GmfComputer', measuremem=True)
+    mmon = monitor('computing mean_stds', measuremem=False)
+    cmon = monitor('computing gmfs', measuremem=False)
+    umon = monitor('updating gmfs', measuremem=False)
+    cmaker.scenario = 'scenario' in oq.calculation_mode
+    with dstore:
+        if dstore.parent:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore.parent:
+                sitecol.complete = dstore.parent['complete']
+        else:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore:
+                sitecol.complete = dstore['complete']
+        maxdist = oq.maximum_distance(cmaker.trt)
+        srcfilter = SourceFilter(sitecol.complete, maxdist)
+        rupgeoms = dstore['rupgeoms']
+    return _event_based(proxies, cmaker, stations, rupgeoms, srcfilter, shr,
+                 se_dt, fmon, cmon, umon, mmon)
+
+
 def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     """
     Launcher of event_based tasks
@@ -215,74 +289,6 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
             yield gen_event_based, rem[:half], cmaker, stations, dstore
             yield gen_event_based, rem[half:], cmaker, stations, dstore
             return
-
-
-def event_based(proxies, cmaker, stations, dstore, monitor):
-    """
-    Compute GMFs and optionally hazard curves
-    """
-    shr = monitor.shared
-    oq = cmaker.oq
-    alldata = []
-    se_dt = sig_eps_dt(oq.imtls)
-    sig_eps = []
-    times = []  # rup_id, nsites, dt
-    fmon = monitor('instantiating GmfComputer', measuremem=True)
-    mmon = monitor('computing mean_stds', measuremem=False)
-    cmon = monitor('computing gmfs', measuremem=False)
-    umon = monitor('updating gmfs', measuremem=False)
-    max_iml = oq.get_max_iml()
-    cmaker.scenario = 'scenario' in oq.calculation_mode
-    with dstore:
-        if dstore.parent:
-            sitecol = dstore['sitecol']
-            if 'complete' in dstore.parent:
-                sitecol.complete = dstore.parent['complete']
-        else:
-            sitecol = dstore['sitecol']
-            if 'complete' in dstore:
-                sitecol.complete = dstore['complete']
-        maxdist = oq.maximum_distance(cmaker.trt)
-        srcfilter = SourceFilter(sitecol.complete, maxdist)
-        rupgeoms = dstore['rupgeoms']
-        for proxy in proxies:
-            t0 = time.time()
-            with fmon:
-                if proxy['mag'] < cmaker.min_mag:
-                    continue
-                try:
-                    computer = get_computer(
-                        cmaker, proxy, rupgeoms, srcfilter, *stations)
-                except FarAwayRupture:
-                    # skip this rupture
-                    continue
-            if hasattr(computer, 'station_data'):  # conditioned GMFs
-                assert cmaker.scenario
-                with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                    df = computer.compute_all([mea, tau, phi], cmon, umon)
-            else:  # regular GMFs
-                with mmon:
-                    mean_stds = cmaker.get_mean_stds(
-                        [computer.ctx], split_by_mag=False)
-                    # avoid numba type error
-                    computer.ctx.flags.writeable = True
-                df = computer.compute_all(mean_stds, max_iml, cmon, umon)
-            sig_eps.append(computer.build_sig_eps(se_dt))
-            dt = time.time() - t0
-            times.append((proxy['id'], computer.ctx.rrup.min(), dt))
-            alldata.append(df)
-    if sum(len(df) for df in alldata):
-        gmfdata = pandas.concat(alldata)
-    else:
-        gmfdata = {}
-    times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
-    times.sort(order='rup_id')
-    if not oq.ground_motion_fields:
-        gmfdata = {}
-    if len(gmfdata) == 0:
-        return dict(gmfdata={}, times=times, sig_eps=())
-    return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
-                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
 
 
 def filter_stations(station_df, complete, rup, maxdist):
