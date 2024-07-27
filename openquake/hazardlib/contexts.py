@@ -207,7 +207,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = 10 * TWO20 // (M*G)
+    maxs = 8 * TWO20 // (M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -1132,7 +1132,8 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-            # print('MB', mean_stdt.nbytes / TWO20)
+            # ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * M * G / (2*TWO20)
+            # print('mean_stds=%.1fM, poes=%.1fM' % (ms, poes))
 
         # making plenty of slices so that the array `poes` is small
         for slc in split_in_slices(len(ctx), 2*L1):
@@ -1141,7 +1142,6 @@ class ContextMaker(object):
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
                 poes = numpy.zeros((len(ctxt), M*L1, G))
-                # print('MB', poes.nbytes / TWO20)
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
