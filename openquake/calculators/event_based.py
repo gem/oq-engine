@@ -276,16 +276,18 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     """
     Launcher of event_based tasks
     """
+    # split it two large tasks, i.e. tasks that are estimated to take
+    # more than time_per_task, except in case of stations
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, 10_000, rup_weight):
-        # print('---', sum(rup_weight(r) for r in proxies), len(proxies))
+    for proxies in block_splitter(allproxies, 50_000, rup_weight):
         n += len(proxies)
         yield from event_based(proxies, cmaker, stations, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
+        print('---', sum(rup_weight(r) for r in proxies), len(proxies), dt)
         if dt > cmaker.oq.time_per_task and sum(
-                rup_weight(r) for r in rem) > 12_000:
+                rup_weight(r) for r in rem) > 60_000:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, stations, dstore
             yield gen_event_based, rem[half:], cmaker, stations, dstore
@@ -721,9 +723,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = (event_based if ('station_data' in oq.inputs or
-                              parallel.oq_distribute() == 'slurm'
-                              or self.N > 500_000)
+        eb = (event_based if ('station_data' in oq.inputs or self.N > 500_000)
               else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
