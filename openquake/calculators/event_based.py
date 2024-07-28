@@ -196,12 +196,13 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
         oq._amplifier, oq._sec_perils)
 
 
-def _event_based(proxies, cmaker, stations, srcfilter, shr, se_dt,
+def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
     alldata = []
     sig_eps = []
     times = []
     max_iml = cmaker.oq.get_max_iml()
+    se_dt = sig_eps_dt(cmaker.oq.imtls)
     for proxy in proxies:
         t0 = time.time()
         with fmon:
@@ -229,6 +230,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr, se_dt,
         alldata.append(df)
     if sum(len(df) for df in alldata):
         gmfdata = pandas.concat(alldata)
+        print(gmfdata.memory_usage().sum() / 1024**2)
     else:
         gmfdata = {}
     times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
@@ -246,7 +248,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = cmaker.oq
-    se_dt = sig_eps_dt(oq.imtls)
     rmon = monitor('reading sites and ruptures', measuremem=True)
     fmon = monitor('instantiating GmfComputer', measuremem=False)
     mmon = monitor('computing mean_stds', measuremem=False)
@@ -268,7 +269,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             proxy.geom = dset[proxy['geom_id']]
     for block in block_splitter(proxies, 10_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
-                           monitor.shared, se_dt, fmon, cmon, umon, mmon)
+                           monitor.shared, fmon, cmon, umon, mmon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
