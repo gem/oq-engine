@@ -219,6 +219,8 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
                 df = computer.compute_all([mea, tau, phi], cmon, umon)
         else:  # regular GMFs
             with mmon:
+                # shape (4, G, M, N) for 1M sites, 10 IMTs and 10 GSIMs
+                # gives 3 GB of RAM
                 mean_stds = cmaker.get_mean_stds(
                     [computer.ctx], split_by_mag=False)
                 # avoid numba type error
