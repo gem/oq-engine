@@ -212,7 +212,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr, se_dt,
             except FarAwayRupture:
                 # skip this rupture
                 continue
-        if stations:  # conditioned GMFs
+        if stations and stations[0]:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                 df = computer.compute_all([mea, tau, phi], cmon, umon)
