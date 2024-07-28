@@ -267,7 +267,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 sitecol.complete = dstore['complete']
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
-        rupgeoms = dstore['rupgeoms'][:]
+        dset = dstore['rupgeoms']
+        rupgeoms = {}
+        for proxy in proxies:
+            geom_id = proxy['geom_id']
+            rupgeoms[geom_id] = dset[geom_id]
     for block in block_splitter(proxies, 10_000, rup_weight):
         yield _event_based(block, cmaker, stations, rupgeoms, srcfilter,
                            monitor.shared, se_dt, fmon, cmon, umon, mmon)
