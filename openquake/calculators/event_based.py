@@ -279,7 +279,9 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     # split it two large tasks, i.e. tasks that are estimated to take
     # more than time_per_task, except in case of stations
     t0 = time.time()
+    oq = cmaker.oq
     n = 0
+    time_per_task = 10 * oq.time_per_task if oq.correl_model else oq.time_per_task
     for proxies in block_splitter(allproxies, 50_000, rup_weight):
         n += len(proxies)
         yield from event_based(proxies, cmaker, stations, dstore, monitor)
@@ -287,7 +289,7 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
         rem_weight = sum(rup_weight(r) for r in rem)
         dt = time.time() - t0
         print(f'{monitor.task_no=} {rem_weight=}, {len(proxies)=}, {dt=}')
-        if dt > cmaker.oq.time_per_task and rem_weight > 60_000:
+        if dt > time_per_task and rem_weight > 60_000:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, stations, dstore
             yield gen_event_based, rem[half:], cmaker, stations, dstore
