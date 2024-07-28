@@ -229,8 +229,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         times.append((proxy['id'], computer.ctx.rrup.min(), dt))
         alldata.append(df)
     if sum(len(df) for df in alldata):
-        gmfdata = pandas.concat(alldata)
-        print(gmfdata.memory_usage().sum() / 1024**2)
+        gmfdata = pandas.concat(alldata)  # ~40 MB
     else:
         gmfdata = {}
     times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
