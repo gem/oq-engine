@@ -280,16 +280,14 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     # more than time_per_task, except in case of stations
     t0 = time.time()
     n = 0
-    blocks = list(block_splitter(allproxies, 50_000, rup_weight))
-    time_per_block = cmaker.oq.time_per_task / len(blocks)
-    for proxies in blocks:
+    for proxies in block_splitter(allproxies, 50_000, rup_weight):
         n += len(proxies)
         yield from event_based(proxies, cmaker, stations, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         rem_weight = sum(rup_weight(r) for r in rem)
         dt = time.time() - t0
         print(f'{monitor.task_no=} {rem_weight=}, {len(proxies)=}, {dt=}')
-        if dt > time_per_block and rem_weight > 60_000:
+        if dt > cmaker.oq.time_per_task and rem_weight > 60_000:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, stations, dstore
             yield gen_event_based, rem[half:], cmaker, stations, dstore
