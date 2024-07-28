@@ -262,38 +262,13 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             sitecol = dstore['sitecol']
             if 'complete' in dstore:
                 sitecol.complete = dstore['complete']
-        maxdist = oq.maximum_distance(cmaker.trt)
-        srcfilter = SourceFilter(sitecol.complete, maxdist)
+        srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance(cmaker.trt))
         dset = dstore['rupgeoms']
         for proxy in proxies:
             proxy.geom = dset[proxy['geom_id']]
     for block in block_splitter(proxies, 10_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, se_dt, fmon, cmon, umon, mmon)
-
-
-def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
-    """
-    Launcher of event_based tasks
-    """
-    # split it two large tasks, i.e. tasks that are estimated to take
-    # more than time_per_task, except in case of stations
-    t0 = time.time()
-    oq = cmaker.oq
-    n = 0
-    time_per_task = 10 * oq.time_per_task if oq.correl_model else oq.time_per_task
-    for proxies in block_splitter(allproxies, 50_000, rup_weight):
-        n += len(proxies)
-        yield from event_based(proxies, cmaker, stations, dstore, monitor)
-        rem = allproxies[n:]  # remaining ruptures
-        rem_weight = sum(rup_weight(r) for r in rem)
-        dt = time.time() - t0
-        print(f'{monitor.task_no=} {rem_weight=}, {len(proxies)=}, {dt=}')
-        if dt > time_per_task and rem_weight > 60_000:
-            half = len(rem) // 2
-            yield gen_event_based, rem[:half], cmaker, stations, dstore
-            yield gen_event_based, rem[half:], cmaker, stations, dstore
-            return
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -725,8 +700,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = event_based if 'station_data' in oq.inputs else gen_event_based
-        smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
+        smap = starmap_from_rups(event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc
