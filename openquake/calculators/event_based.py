@@ -228,16 +228,12 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         dt = time.time() - t0
         times.append((proxy['id'], computer.ctx.rrup.min(), dt))
         alldata.append(df)
-    if sum(len(df) for df in alldata):
-        gmfdata = pandas.concat(alldata)  # ~40 MB
-    else:
-        gmfdata = {}
     times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
-    if not cmaker.oq.ground_motion_fields:
-        gmfdata = {}
-    if len(gmfdata) == 0:
+    if sum(len(df) for df in alldata) == 0:
         return dict(gmfdata={}, times=times, sig_eps=())
+
+    gmfdata = pandas.concat(alldata)  # ~40 MB
     return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
                 times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
 
