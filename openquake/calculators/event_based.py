@@ -212,7 +212,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr, se_dt,
             except FarAwayRupture:
                 # skip this rupture
                 continue
-        if hasattr(computer, 'station_data'):  # conditioned GMFs
+        if stations:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                 df = computer.compute_all([mea, tau, phi], cmon, umon)
@@ -370,7 +370,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         if station_data is not None:
-            if parallel.oq_distribute() == 'zmq':
+            if parallel.oq_distribute() in ('zmq', 'slurm'):
                 logging.error('Conditioned scenarios are not meant to be run'
                               ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
