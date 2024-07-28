@@ -279,6 +279,7 @@ def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     t0 = time.time()
     n = 0
     for proxies in block_splitter(allproxies, 10_000, rup_weight):
+        # print('---', sum(rup_weight(r) for r in proxies), len(proxies))
         n += len(proxies)
         yield from event_based(proxies, cmaker, stations, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
