@@ -163,8 +163,7 @@ def count_ruptures(src):
     return {src.source_id: src.count_ruptures()}
 
 
-def get_computer(cmaker, proxy, rupgeoms, srcfilter,
-                 station_data, station_sitecol):
+def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
@@ -172,7 +171,6 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
-    proxy.geom = rupgeoms[proxy['geom_id']]
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
@@ -198,8 +196,8 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
         oq._amplifier, oq._sec_perils)
 
 
-def _event_based(proxies, cmaker, stations, rupgeoms, srcfilter, shr,
-                 se_dt, fmon, cmon, umon, mmon):
+def _event_based(proxies, cmaker, stations, srcfilter, shr, se_dt,
+                 fmon, cmon, umon, mmon):
     alldata = []
     sig_eps = []
     times = []
@@ -210,8 +208,7 @@ def _event_based(proxies, cmaker, stations, rupgeoms, srcfilter, shr,
             if proxy['mag'] < cmaker.min_mag:
                 continue
             try:
-                computer = get_computer(
-                    cmaker, proxy, rupgeoms, srcfilter, *stations)
+                computer = get_computer(cmaker, proxy, srcfilter, *stations)
             except FarAwayRupture:
                 # skip this rupture
                 continue
@@ -268,12 +265,10 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         dset = dstore['rupgeoms']
-        rupgeoms = {}
         for proxy in proxies:
-            geom_id = proxy['geom_id']
-            rupgeoms[geom_id] = dset[geom_id]
+            proxy.geom = dset[proxy['geom_id']]
     for block in block_splitter(proxies, 10_000, rup_weight):
-        yield _event_based(block, cmaker, stations, rupgeoms, srcfilter,
+        yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, se_dt, fmon, cmon, umon, mmon)
 
 
@@ -343,10 +338,9 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
-        rupgeoms = dstore['rupgeoms'][:]
         trt = full_lt.trts[0]
         proxy = allproxies[0]
-        proxy.geom = rupgeoms[proxy['geom_id']]
+        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rup = proxy.to_ebr(trt).rupture
         station_df = dstore.read_df('station_data', 'site_id')
         maxdist = (oq.maximum_distance_stations or
@@ -368,8 +362,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         computer = get_computer(
-            cmaker, proxy, rupgeoms, srcfilter,
-            station_data, station_sites)
+            cmaker, proxy, srcfilter, station_data, station_sites)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
