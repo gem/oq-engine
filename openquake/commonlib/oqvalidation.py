@@ -1373,6 +1373,14 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
+            eff_time = ((self.investigation_time or 1) * self.ses_per_logic_tree_path *
+                        (self.number_of_logic_tree_samples or 1))
+            if eff_time > 5000:
+                if len(self.min_iml) == 0:
+                    raise ValueError('minimum_intensity must be set in event_based')
+                if self.minimum_magnitude == {'default': 0}:
+                    raise ValueError('minimum_magnitude must be set in event_based')
+
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
                 self.calculation_mode in ['classical', 'classical_risk',
