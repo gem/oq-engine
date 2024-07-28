@@ -351,9 +351,9 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         station_data, station_sites = None, None
 
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
-    totw = sum(rup_weight(p) for p in allproxies) / (
+    maxw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
-    logging.info('totw = {:_d}'.format(round(totw)))
+    logging.info('maxw = {:_d}'.format(round(maxw)))
     if station_data is not None:
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
@@ -394,7 +394,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                 logging.error('Conditioned scenarios are not meant to be run'
                               ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
-        for block in block_splitter(proxies, totw, rup_weight):
+        # producing slightly less than concurrent_tasks thanks to the 1.02
+        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
     return smap
