@@ -486,7 +486,7 @@ def compare_asce(key: str, file_org: str, calc_id: int=-1):
         ok = compare_column_values(arr[col], strip(df[col].to_numpy()),
                                    col, rtol=1E-3)
         equal.append(ok)
-    return all(equal)
+    sys.exit(not all(equal))
 
 
 main = dict(rups=compare_rups,
