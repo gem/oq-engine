@@ -18,6 +18,7 @@
 import sys
 import collections
 import numpy
+import pandas
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -354,14 +355,14 @@ def delta(a, b):
     return res
 
 
-def compare_column_values(array0, array1, what):
+def compare_column_values(array0, array1, what, rtol=1E-5):
     if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
-        diff_idxs = numpy.where(delta(array0, array1) > 1E-5)[0]
+        diff_idxs = numpy.where(delta(array0, array1) > rtol)[0]
     else:
         diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
         print(f'The column {what} is okay')
-        return
+        return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
     print(array0[diff_idxs], array1[diff_idxs])
@@ -462,6 +463,32 @@ def compare_oqparam(calc_ids: int):
             print('%s: %s != %s' % (key, dic0[key], dic1[key]))
 
 
+def strip(values):
+    if isinstance(values[0], str):
+        return numpy.array([s.strip() for s in values])
+    return values
+
+
+def compare_asce(key: str, file_org: str, calc_id: int=-1):
+    """
+    For instance compare_asce('07', 'asce_07.org') may return True
+    if all values are equal within the tolerance or False.
+    """
+    dstore = datastore.read(calc_id)
+    arr = views.view('asce:' + key, dstore)
+    names = list(arr.dtype.names)
+    df = pandas.read_csv(file_org, delimiter='|', header=0,
+                         names=['start'] + names + ['stop'],
+                         skiprows=lambda r: r == 1)
+    df = df[df.columns[1:-1]]
+    equal = []
+    for col in df.columns:
+        ok = compare_column_values(arr[col], strip(df[col].to_numpy()),
+                                   col, rtol=1E-3)
+        equal.append(ok)
+    return all(equal)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -475,7 +502,8 @@ main = dict(rups=compare_rups,
             events=compare_events,
             assetcol=compare_assetcol,
             sitecol=compare_sitecol,
-            oqparam=compare_oqparam)
+            oqparam=compare_oqparam,
+            asce=compare_asce)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,

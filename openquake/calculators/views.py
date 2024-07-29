@@ -19,6 +19,7 @@
 import io
 import ast
 import html
+import json
 import os.path
 import numbers
 import operator
@@ -1627,6 +1628,37 @@ def view_relevant_sources(token, dstore):
     return aw.array[rates > .1 * rates[0]]
 
 
+def asce_fix(asce, siteid):
+    dic = json.loads(asce.decode('ascii'))
+    dic = {k: v if isinstance(v, str) else v for k, v in dic.items()}
+    dic['siteid'] = siteid
+    return dic
+
+
+@view.add('asce')
+def view_asce(token, dstore):
+    """
+    Returns asce:41 and asce:07 arrays
+    """
+    key = token.replace(':', '')
+    sitecol = dstore['sitecol']
+    model = dstore['oqparam'].description[9:12]
+    dics = [asce_fix(a, model + str(sid))
+            for sid, a in zip(sitecol.sids, dstore[key])]
+    header = dics[0]
+    dtlist = []
+    for k in header:
+        if isinstance(header[k], str):
+            dtlist.append((k, object))
+        else:
+            dtlist.append((k, float))
+    res = numpy.zeros(len(dics), dtlist)
+    for i, dic in enumerate(dics):
+        for k in header:
+            res[i][k] = dic[k]
+    return res
+
+
 def shorten(lst):
     """
     Shorten a list of strings
@@ -1797,13 +1829,3 @@ def view_long_ruptures(token, dstore):
                             ('maxmag', float), ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
-
-
-@view.add('slurm_error')
-def view_slurm_error(token, dstore):
-    calc_dir = dstore.filename[:-5]  # strip .hdf5
-    fname = os.path.join(calc_dir, '1.err')
-    if os.path.exists(fname):
-        with open(fname) as f:
-            return fname + '\n' + f.read()
-    return 'No error file'
