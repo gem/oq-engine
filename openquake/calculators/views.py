@@ -1630,7 +1630,9 @@ def view_relevant_sources(token, dstore):
 
 def asce_fix(asce, siteid):
     dic = json.loads(asce.decode('ascii'))
-    dic = {k: v if isinstance(v, str) else v for k, v in dic.items()}
+    for k, v in dic.items():
+        if v == 'n.a.':
+            dic[k] = numpy.nan
     dic['siteid'] = siteid
     return dic
 
