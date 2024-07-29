@@ -11,6 +11,24 @@ def get_imt(string):
     return string.split('-')[1].rstrip('.png')
 
 
+@register.filter
+def humanize_number(value):
+    """
+    Converts a large number into a human-readable format, e.g., 1000 -> 1K
+    """
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        return str(value)
+    if value < 1000:
+        return f'{value:.2f}'
+    if 1000 <= value < 1000000:
+        return f'{value/1000:.2f}K'
+    if 1000000 <= value < 1000000000:
+        return f'{value/1000000:.2f}M'
+    return f'{value/1000000000:.2f}B'
+
+
 @register.simple_tag()
 def no_optional_cookie_groups_except_hide_cookie_bar_exist(request):
     from cookie_consent.models import CookieGroup

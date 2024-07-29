@@ -1740,7 +1740,7 @@ def view_aggrisk(token, dstore):
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):
-        arr[r]['gsim'] = repr(repr(rlz.value[0]))
+        arr[r]['gsim'] = repr(rlz.value[0])
         arr[r]['weight'] = rlz.weight[-1]
     for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
         rlz = rlzs[r]
