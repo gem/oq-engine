@@ -469,21 +469,24 @@ def strip(values):
     return values
 
 
-def compare_asce(key: str, file_org: str, calc_id: int=-1):
+def read_org_df(fname):
+    df = pandas.read_csv(fname, delimiter='|',
+                          skiprows=lambda r: r == 1)
+    df = df[df.columns[1:-1]]
+    return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
+
+
+def compare_asce(file1_org: str, file2_org: str):
     """
-    For instance compare_asce('07', 'asce_07.org') may return True
+    For instance compare_asce('07', 'asce07.org', 'asce07_expected.org') may return True
     if all values are equal within the tolerance or False.
     """
-    dstore = datastore.read(calc_id)
-    arr = views.view('asce:' + key, dstore)
-    names = list(arr.dtype.names)
-    df = pandas.read_csv(file_org, delimiter='|', header=0,
-                         names=['start'] + names + ['stop'],
-                         skiprows=lambda r: r == 1)
-    df = df[df.columns[1:-1]]
+    df1 = read_org_df(file1_org)
+    df2 = read_org_df(file2_org)
     equal = []
-    for col in df.columns:
-        ok = compare_column_values(arr[col], strip(df[col].to_numpy()),
+    for col in df1.columns:
+        ok = compare_column_values(strip(df1[col].to_numpy()),
+                                   strip(df2[col].to_numpy()),
                                    col, rtol=1E-3)
         equal.append(ok)
     sys.exit(not all(equal))
