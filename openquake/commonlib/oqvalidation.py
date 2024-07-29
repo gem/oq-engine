@@ -1199,11 +1199,11 @@ class OqParam(valid.ParamSet):
             self.inputs['job_ini'] = '<in-memory>'
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
-            raise InvalidFile('Missing calculation_mode in %s' % job_ini)
+            self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:
             if 'region' in names_vals:
-                raise InvalidFile('You cannot have both region and '
-                                  'region_constraint in %s' % job_ini)
+                self.raise_invalid('You cannot have both region and '
+                                   'region_constraint')
             logging.warning(
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
@@ -1218,10 +1218,10 @@ class OqParam(valid.ParamSet):
                                for imt, iml in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
-                raise InvalidFile(
+                self.raise_invalid(
                     'Please remove the intensity_measure_types_and_levels '
-                    'from %s: they will be inferred from the iml_disagg '
-                    'dictionary' % job_ini)
+                    ': they will be inferred from the iml_disagg '
+                    'dictionary')
         elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
@@ -1260,13 +1260,19 @@ class OqParam(valid.ParamSet):
         self.check_gsim_lt(job_ini)
         self.check_risk(job_ini)
 
+    def raise_invalid(self, msg):
+        """
+        Raise an InvalidFile error
+        """
+        raise InvalidFile('%s: %s' % (self.inputs['job_ini'], msg))
+
     def check_gsim_lt(self, job_ini):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
-                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
-                                  ' must be no `gsim` key' % job_ini)
+                self.raise_invalid('if `gsim_logic_tree_file` is set, there'
+                                   ' must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = GsimLogicTree(path, ['*'])
@@ -1280,8 +1286,7 @@ class OqParam(valid.ParamSet):
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
-            raise InvalidFile('%s: Missing gsim or gsim_logic_tree_file'
-                              % job_ini)
+            self.raise_invalid('Missing gsim or gsim_logic_tree_file')
         if 'amplification' in self.inputs:
             self.req_site_params.add('ampcode')
         self.req_site_params = sorted(self.req_site_params)
@@ -1295,14 +1300,12 @@ class OqParam(valid.ParamSet):
             if 'damage' in self.calculation_mode and not hc:
                 ok = any('fragility' in key for key in self._risk_files)
                 if not ok:
-                    raise InvalidFile('Missing fragility files in %s' %
-                                      self.inputs['job_ini'])
+                    self.raise_invalid('Missing fragility files')
             elif ('risk' in self.calculation_mode and
                   self.calculation_mode != 'multi_risk' and not hc):
                 ok = any('vulnerability' in key for key in self._risk_files)
                 if not ok:
-                    raise InvalidFile('Missing vulnerability files in %s' %
-                                      self.inputs['job_ini'])
+                    self.raise_invalid('missing vulnerability files')
 
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
@@ -1317,8 +1320,7 @@ class OqParam(valid.ParamSet):
                 and self.calculation_mode != 'scenario'
                 and not self.hazard_calculation_id):
             if not hasattr(self, 'truncation_level'):
-                raise InvalidFile("Missing truncation_level in %s" %
-                                  self.inputs['job_ini'])
+                self.raise_invalid("Missing truncation_level")
 
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
@@ -1343,21 +1345,19 @@ class OqParam(valid.ParamSet):
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
             if self.conditional_loss_poes:
-                raise InvalidFile(
-                    '%s: conditional_loss_poes are not defined '
-                    'for classical_damage calculations' % job_ini)
+                self.raise_invalid(
+                    'conditional_loss_poes are not defined '
+                    'for classical_damage calculations')
             if not self.investigation_time and not self.hazard_calculation_id:
-                raise InvalidFile('%s: missing investigation_time' % job_ini)
+                self.raise_invalid('missing investigation_time')
 
     def check_hazard(self, job_ini):
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
-            raise InvalidFile('%s: You forgot to specify a site_model'
-                              % job_ini)
+            self.raise_invalid('You forgot to specify a site_model')
         elif self.inputs.get('gmfs', '').endswith('.xml'):
-            raise InvalidFile('%s: GMFs in XML are not supported anymore'
-                              % job_ini)
+            self.raise_invalid('GMFs in XML are not supported anymore')
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
@@ -1366,11 +1366,11 @@ class OqParam(valid.ParamSet):
                                 'calculations')
 
             if self.ses_per_logic_tree_path >= TWO32:
-                raise ValueError('ses_per_logic_tree_path too big: %d' %
-                                 self.ses_per_logic_tree_path)
+                self.raise_invalid('ses_per_logic_tree_path too big: %d' %
+                                   self.ses_per_logic_tree_path)
             if self.number_of_logic_tree_samples >= TWO16:
-                raise ValueError('number_of_logic_tree_samples too big: %d' %
-                                 self.number_of_logic_tree_samples)
+                self.raise_invalid('number_of_logic_tree_samples too big: %d' %
+                                   self.number_of_logic_tree_samples)
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
@@ -1385,34 +1385,30 @@ class OqParam(valid.ParamSet):
             elif not self.poes and self.poes_disagg:
                 self.poes = self.poes_disagg
             elif self.poes != self.poes_disagg:
-                raise InvalidFile(
-                    'poes_disagg != poes: %s!=%s in %s' %
-                    (self.poes_disagg, self.poes, self.inputs['job_ini']))
+                self.raise_invalid(
+                    'poes_disagg != poes: %s!=%s' % (self.poes_disagg, self.poes))
             if not self.poes_disagg and not self.iml_disagg:
-                raise InvalidFile('poes_disagg or iml_disagg must be set '
-                                  'in %(job_ini)s' % self.inputs)
+                self.raise_invalid('poes_disagg or iml_disagg must be set')
             elif self.poes_disagg and self.iml_disagg:
-                raise InvalidFile(
-                    '%s: iml_disagg and poes_disagg cannot be set '
-                    'at the same time' % job_ini)
+                self.raise_invalid(
+                    'iml_disagg and poes_disagg cannot be set at the same time')
             if not self.disagg_bin_edges:
                 for k in ('mag_bin_width', 'distance_bin_width',
                           'coordinate_bin_width', 'num_epsilon_bins'):
                     if k not in vars(self):
-                        raise InvalidFile(
-                            '%s must be set in %s' % (k, job_ini))
+                        self.raise_invalid('%s must be set' % k)
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
-                raise InvalidFile('%s: you cannot set rlzs_index and '
-                                  'num_rlzs_disagg at the same time' % job_ini)
+                self.raise_invalid('you cannot set rlzs_index and '
+                                  'num_rlzs_disagg at the same time')
         
         # check compute_rtgm will run
         if 'rtgm' in self.postproc_func:
             if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
-                raise InvalidFile('%s: the IMTs PGA, SA(0.2), and SA(1.0)'
-                                  ' are required to use compute_rtgm' % job_ini)
+                self.raise_invalid('the IMTs PGA, SA(0.2), and SA(1.0)'
+                                   ' are required to use compute_rtgm')
 
 
     def validate(self):
@@ -1447,9 +1443,8 @@ class OqParam(valid.ParamSet):
             df = pandas.read_csv(self.inputs['post_loss_amplification'])
             check_increasing(df, 'return_period', 'pla_factor')
             if self.avg_losses:
-                raise InvalidFile(
-                    "%s: you must set avg_losses=false with "
-                    "post_loss_amplification" % self.inputs['job_ini'])
+                self.raise_invalid(
+                    "you must set avg_losses=false with post_loss_amplification")
 
     def check_gsims(self, gsims):
         """
@@ -1621,10 +1616,9 @@ class OqParam(valid.ParamSet):
         if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
-                raise InvalidFile('%s: %s' % (
-                    self.inputs['job_ini'], 'You must provide the '
-                    'intensity measure levels explicitly. Suggestion:' +
-                    '\n  '.join(suggested)))
+                self.raise_invalid('You must provide the '
+                                   'intensity measure levels explicitly. Suggestion:' +
+                                   '\n  '.join(suggested))
         if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
                 'gmfs' not in self.inputs and not self.hazard_calculation_id
                 and self.ground_motion_fields):
@@ -2078,12 +2072,11 @@ class OqParam(valid.ParamSet):
 
         # there are more checks for risk calculations
         if self.collect_rlzs and self.individual_rlzs:
-            raise InvalidFile("%s: you cannot have individual_rlzs=true with "
-                              "collect_rlzs=true" % self.inputs['job_ini'])
+            self.raise_invalid("you cannot have individual_rlzs=true with "
+                               "collect_rlzs=true")
         if self.calculation_mode == 'event_based_damage':
-            ini = self.inputs['job_ini']
             if not self.investigation_time:
-                raise InvalidFile('Missing investigation_time in %s' % ini)
+                self.raise_invalid('Missing investigation_time')
             return True
         elif self.collect_rlzs is False:
             return True
@@ -2094,8 +2087,7 @@ class OqParam(valid.ParamSet):
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
         if hstats and hstats != ['mean']:
-            msg = '%s: quantiles are not supported with collect_rlzs=true'
-            raise InvalidFile(msg % self.inputs['job_ini'])
+            self.raise_invalid('quantiles are not supported with collect_rlzs=true')
         if self.number_of_logic_tree_samples == 0:
             raise ValueError('collect_rlzs=true is inconsistent with '
                              'full enumeration')
@@ -2110,13 +2102,12 @@ class OqParam(valid.ParamSet):
                 'aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                err_msg = ('The field `aggregate_by = policy` in the %s file'
-                           ' is required for reinsurance calculations.'
-                           % self.inputs['job_ini'])
+                err_msg = ('The field `aggregate_by = policy`'
+                           ' is required for reinsurance calculations.')
                 if self.aggregate_by:
                     err_msg += (' Got `aggregate_by = %s` instead.'
                                 % self.aggregate_by)
-                raise InvalidFile(err_msg)
+                self.raise_invalid(err_msg)
         return True
 
     def check_reinsurance(self):
@@ -2125,14 +2116,11 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            raise InvalidFile('%s: too many loss types in reinsurance %s'
-                              % (self.inputs['job_ini'], list(dic)))
+            self.raise_invalid('too many loss types in reinsurance %s' % list(dic))
         if lt not in scientific.LOSSID:
-            raise InvalidFile('%s: unknown loss type %s in reinsurance'
-                              % (self.inputs['job_ini'], lt))
+            self.raise_invalid('%s: unknown loss type %s in reinsurance' % lt)
         if '+' in lt and not self.total_losses:
-            raise InvalidFile('%s: you forgot to set total_losses=%s'
-                              % (self.inputs['job_ini'], lt))
+            self.raise_invalid('you forgot to set total_losses=%s' % lt)
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
@@ -2165,10 +2153,9 @@ class OqParam(valid.ParamSet):
         """
         assert action in ('debug', 'info', 'warn', 'error'), action
         if self.inputs.get(param):
-            msg = '%s_file in %s is ignored in %s' % (
-                param, self.inputs['job_ini'], self.calculation_mode)
+            msg = '%s_file is ignored in %s' % (param, self.calculation_mode)
             if action == 'error':
-                raise InvalidFile(msg)
+                self.raise_invalid(msg)
             else:
                 getattr(logging, action)(msg)
 

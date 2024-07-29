@@ -351,7 +351,7 @@ class OqParamTestCase(unittest.TestCase):
                 iml_disagg="{'PGV': 0.1}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')
-        self.assertIn("poes_disagg != poes: [0.1]!=[0.2] in job.ini",
+        self.assertIn("poes_disagg != poes: [0.1]!=[0.2]",
                       str(ctx.exception))
 
 

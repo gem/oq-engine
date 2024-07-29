@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based calculations
   * Reduced the memory consumption in event_based calculations: now even calculations
     with 5 million sites can be run using ~4 GB per core
   * Reduced the memory occupation in `gen_poes`
