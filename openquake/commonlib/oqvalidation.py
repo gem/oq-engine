@@ -1286,7 +1286,7 @@ class OqParam(valid.ParamSet):
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
-            self.raise_invalid('missing gsim or gsim_logic_tree_file')
+            self.raise_invalid('Missing gsim or gsim_logic_tree_file')
         if 'amplification' in self.inputs:
             self.req_site_params.add('ampcode')
         self.req_site_params = sorted(self.req_site_params)
@@ -1371,14 +1371,6 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 self.raise_invalid('number_of_logic_tree_samples too big: %d' %
                                    self.number_of_logic_tree_samples)
-
-            eff_time = ((self.investigation_time or 1) * self.ses_per_logic_tree_path *
-                        (self.number_of_logic_tree_samples or 1))
-            if eff_time > 5000:
-                if len(self.min_iml) == 0:
-                    self.raise_invalid('minimum_intensity must be set in event_based')
-                if self.minimum_magnitude == {'default': 0}:
-                    self.raise_invalid('minimum_magnitude must be set in event_based')
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
