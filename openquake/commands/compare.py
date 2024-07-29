@@ -469,15 +469,15 @@ def strip(values):
     return values
 
 
-def compare_asce(key: str, csv: str, calc_id: int=-1):
+def compare_asce(key: str, file_org: str, calc_id: int=-1):
     """
-    For instance compare_asce('07', 'asce_07.csv') may return True
+    For instance compare_asce('07', 'asce_07.org') may return True
     if all values are equal within the tolerance or False.
     """
     dstore = datastore.read(calc_id)
     arr = views.view('asce:' + key, dstore)
     names = list(arr.dtype.names)
-    df = pandas.read_csv(csv, delimiter='|', header=0,
+    df = pandas.read_csv(file_org, delimiter='|', header=0,
                          names=['start'] + names + ['stop'],
                          skiprows=lambda r: r == 1)
     df = df[df.columns[1:-1]]
