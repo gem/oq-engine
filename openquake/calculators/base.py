@@ -63,6 +63,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
+EBDOC = ('https://docs.openquake.org/oq-engine/master/manual/user-guide/'
+         'advanced/advanced-calculations.html#understanding-the-hazard')
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
@@ -914,9 +916,9 @@ class HazardCalculator(BaseCalculator):
                              len(self.sitecol), oq.imtls.size)
         if oq.calculation_mode.startswith(('event_based', 'ebrisk')) and self.N > 1000:
             if oq.minimum_magnitude == {'default': 0}:
-                oq.raise_invalid('minimum_magnitude must be set in event_based')
+                oq.raise_invalid(f'minimum_magnitude must be set, see {EBDOC}')
             if len(oq.min_iml) == 0:
-                oq.raise_invalid('minimum_intensity must be set in event_based')
+                oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
 
         if oq_hazard:
             parent = self.datastore.parent

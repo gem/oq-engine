@@ -454,6 +454,8 @@ will be even larger, i.e. you can easily gain two orders of magnitude
 in the size of the generated GMFs. It is not only that: setting those
 parameters can make the difference between being able to run the
 calculation and running out of memory.
+This is why, starting from engine v1.21, such parameters are mandatory except
+in toy calculations.
 
 *******************
 region_grid_spacing
