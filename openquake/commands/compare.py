@@ -478,8 +478,8 @@ def read_org_df(fname):
 
 def compare_asce(file1_org: str, file2_org: str):
     """
-    For instance compare_asce('07', 'asce07.org', 'asce07_expected.org') may return True
-    if all values are equal within the tolerance or False.
+    compare_asce('asce07.org', 'asce07_expected.org') exits with 0
+    if all values are equal within the tolerance, otherwise with 1.
     """
     df1 = read_org_df(file1_org)
     df2 = read_org_df(file2_org)
