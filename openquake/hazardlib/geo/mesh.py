@@ -396,7 +396,7 @@ class Mesh(object):
         # mesh.xyz has shape (N, 3); we split in slices to avoid running out of memory
         # in the large array of shape len(self)*N
         dists = []
-        for slc in gen_slices(0, len(mesh), 100_000):
+        for slc in gen_slices(0, len(mesh), 10_000):
             dists.append(cdist(self.xyz, mesh.xyz[slc]).min(axis=0))
         return numpy.concatenate(dists)
 
