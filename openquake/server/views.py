@@ -735,7 +735,7 @@ def aristotle_get_rupture_data(request):
 
 
 def copy_to_temp_dir_with_unique_name(source_file_path):
-    temp_dir = tempfile.gettempdir()
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     temp_file_path = temp_file.name
     # Close the NamedTemporaryFile to prevent conflicts on Windows
