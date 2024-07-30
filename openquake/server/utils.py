@@ -125,8 +125,7 @@ def oq_server_context_processor(request):
     context['oq_engine_version'] = oqversion
     context['disable_version_warning'] = settings.DISABLE_VERSION_WARNING
     context['server_name'] = settings.SERVER_NAME
-    # NOTE: tools_only can be deleted if it is not used by other apps
-    context['tools_only'] = settings.APPLICATION_MODE == 'TOOLS_ONLY'
+    context['external_tools'] = settings.EXTERNAL_TOOLS
     context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
     if settings.GOOGLE_ANALYTICS_TOKEN is not None:

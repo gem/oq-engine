@@ -196,6 +196,11 @@ APPLICATION_MODES = [
 
 APPLICATION_MODE = 'PUBLIC'
 
+try:
+    EXTERNAL_TOOLS = True if os.environ['EXTERNAL_TOOLS'] == 'True' else False
+except KeyError:
+    EXTERNAL_TOOLS = False
+
 # If False, a warning is displayed in case a newer version of the engine has
 # been released
 DISABLE_VERSION_WARNING = False
