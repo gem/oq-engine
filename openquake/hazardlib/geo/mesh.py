@@ -393,7 +393,13 @@ class Mesh(object):
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
-        return cdist(self.xyz, mesh.xyz).min(axis=0)
+        # mesh.xyz has shape (N, 3)
+        if len(mesh) <= 1000: # few sites, use faster approach
+            mindist = cdist(self.xyz, mesh.xyz).min(axis=0)
+        else:  # save memory avoiding calculating a matrix of shape len(self)*N
+            mindist = numpy.array([cdist(self.xyz, xyz.reshape(1, 3)).min()
+                                   for xyz in mesh.xyz])
+        return mindist
 
     def get_closest_points(self, mesh):
         """

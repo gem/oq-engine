@@ -28,7 +28,7 @@ import fiona
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
-    AccumDict, humansize, groupby, block_splitter)
+    AccumDict, humansize, groupby, block_splitter, getsizeof)
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -236,6 +236,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         return dict(gmfdata={}, times=times, sig_eps=())
 
     gmfdata = pandas.concat(alldata)  # ~40 MB
+    # print(getsizeof(gmfdata)/1024**2)
     return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
                 times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
 
