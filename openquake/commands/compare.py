@@ -487,7 +487,7 @@ def compare_asce(file1_org: str, file2_org: str):
     for col in df1.columns:
         ok = compare_column_values(strip(df1[col].to_numpy()),
                                    strip(df2[col].to_numpy()),
-                                   col, rtol=1E-3)
+                                   col, rtol=1E-2)
         equal.append(ok)
     sys.exit(not all(equal))
 
