@@ -735,6 +735,8 @@ def aristotle_get_rupture_data(request):
 
 
 def copy_to_temp_dir_with_unique_name(source_file_path):
+    # NOTE: for some reason, in some cases the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     temp_file_path = temp_file.name
@@ -1184,7 +1186,10 @@ def calc_result(request, result_id):
     etype = request.GET.get('export_type')
     export_type = etype or DEFAULT_EXPORT_TYPE
 
-    tmpdir = tempfile.mkdtemp()
+    # NOTE: for some reason, in some cases the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
         exported = core.export_from_db(
             (ds_key, export_type), job_id, datadir, tmpdir)
@@ -1236,8 +1241,12 @@ def extract(request, calc_id, what):
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            # NOTE: for some reason, in some cases the environment
+            # variable TMPDIR is ignored, so we need to use
+            # config.directory.custom_tmp if defined
+            temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
             fd, fname = tempfile.mkstemp(
-                prefix=what.replace('/', '-'), suffix='.npz')
+                prefix=what.replace('/', '-'), suffix='.npz', dir=temp_dir)
             os.close(fd)
             obj = _extract(ds, what + query_string)
             hdf5.save_npz(obj, fname)
