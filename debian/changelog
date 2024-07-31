@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed an encoding error when exporting the realizations
   * Fixed a bug with multifault sources raising a cryptic error
     "object has no attribute msparams"
   * Fixed a critical memory bug causing over 80 GB per core to be needed for
