@@ -936,6 +936,9 @@ class HazardCalculator(BaseCalculator):
     def _read_risk2(self):
         oq = self.oqparam
         if oq.job_type == 'risk':
+            if not hasattr(self, 'assetcol'):
+                oq.raise_invalid('missing exposure')
+
             # the decode below is used in aristotle calculations
             taxonomies = python3compat.decode(
                 self.assetcol.tagcol.taxonomy[1:])
