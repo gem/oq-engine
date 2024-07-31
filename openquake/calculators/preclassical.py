@@ -123,8 +123,6 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-            if (src.msparams['area'] == 0).all():
-                continue # all ruptures are far away
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -394,7 +392,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                        for row in self.csm.source_info.values())
         if totsites == 0:
             if self.N == 1:
-                logging.warning('There are no sources close to the site!')
+                logging.error('There are no sources close to the site!')
             else:
                 raise RuntimeError(
                     'There are no sources close to the site(s)! '
