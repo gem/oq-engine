@@ -51,7 +51,7 @@
                     <td><input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
                     <td>
                         <select class="aelo-select" name="asce_version" id="asce_version">
-                        {% for asce_version in asce_versions %}
+                '.        {% for asce_version in asce_versions %}
                         {% if asce_version == default_asce_version %}
                         <option value="{{ asce_version }}" selected>{{ asce_version }}</option>
                         {% else %}
@@ -113,6 +113,7 @@
                 <label for"rake">{{ aristotle_form_labels.rake }}</label>
                 <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}" disabled />
               </div>
+              <input class="aristotle-input" type="hidden" id="is_point_rup" name="is_point_rup"/>
               <div class="aristotle_form_row">
                 <label for="trt">{{ aristotle_form_labels.trt }}</label>
                 <select name="trt" id="trt" class="aristotle-select">

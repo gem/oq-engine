@@ -242,14 +242,18 @@ def download_rupture_dict(id, ignore_shakemap=False):
         p = ff['properties']
         rupdic = {'lon': float(p['longitude']), 'lat': float(p['latitude']),
                   'dep': float(p['depth']),
-                  'mag': mag, 'rake': 0., 'usgs_id': id, 'rupture_file': None}
+                  'mag': mag, 'rake': 0.,
+                  'is_point_rup': False, 'usgs_id': id, 'rupture_file': None}
         return rupdic
     url = contents.get('download/rupture.json')['url']
     print('Downloading rupture.json')
-    md = json.loads(urlopen(url).read())['metadata']
+    rup_data = json.loads(urlopen(url).read())
+    feats = rup_data['features']
+    is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
+    md = rup_data['metadata']
     return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id,
-            'rupture_file': None}
+            'mag': md['mag'], 'rake': md['rake'], 'is_point_rup': is_point_rup,
+            'usgs_id': id, 'rupture_file': None}
 
 
 def get_array_usgs_id(kind, id):

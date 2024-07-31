@@ -557,6 +557,16 @@
                     if ('strike' in data) {
                         $('#strike').val(data.strike);
                     }
+                    $('#is_point_rup').val(data.is_point_rup);
+                    if ($('#rupture_file_input')[0].files.length == 0 && !data.is_point_rup) {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                        $('#dip').val('');
+                        $('#strike').val('');
+                    } else {
+                        $('#dip').val('90');
+                        $('#strike').val('0');
+                    }
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
@@ -610,6 +620,7 @@
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
+                formData.append('is_point_rup', $("#is_point_rup").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());

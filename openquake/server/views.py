@@ -794,11 +794,16 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
-            if (fieldname == 'maximum_distance_stations' and
-                    request.POST.get('maximum_distance_stations') == ''):
-                # NOTE: valid.positivefloat raises an error if the value is
-                # blank or None
-                params['maximum_distance_stations'] = None
+            blankable_fields = ['maximum_distance_stations', 'dip', 'strike']
+            # NOTE: valid.positivefloat, valid_dip_range and
+            #       valid_strike_range raise errors if their
+            #       value is blank or None
+            if (fieldname in blankable_fields and
+                    request.POST.get(fieldname) == ''):
+                if fieldname in dic:
+                    dic[fieldname] = None
+                else:
+                    params[fieldname] = None
                 continue
             validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
@@ -807,6 +812,9 @@ def aristotle_validate(request):
             dic[fieldname] = value
         else:
             params[fieldname] = value
+
+    if 'is_point_rup' in request.POST:
+        dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
 
     # FIXME: validate station_data_file
     if 'lon' in request.POST:
