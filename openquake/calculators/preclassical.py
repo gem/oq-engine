@@ -123,8 +123,6 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-            if (src.msparams['area'] == 0).all():
-                continue # all ruptures are far away
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -277,7 +275,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             # this is ultra-fast
             sections = multifaults[0].get_sections()
             secparams = build_secparams(sections)
-            logging.warning(
+            logging.error(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))
         else:

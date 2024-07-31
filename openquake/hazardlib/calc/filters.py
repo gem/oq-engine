@@ -30,6 +30,7 @@ from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
+class FilteredAway(Exception): pass
 U32 = numpy.uint32
 MINMAG = 2.5
 MAXMAG = 10.2  # to avoid breaking PAC
@@ -423,6 +424,8 @@ class SourceFilter(object):
             trt = src_or_rec.tectonic_region_type
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
+            except FilteredAway:
+                return U32([])
             except BBoxError:  # do not filter
                 return self.sitecol.sids
             return self.sitecol.within_bbox(bbox)
