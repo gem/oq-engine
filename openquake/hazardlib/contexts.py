@@ -855,7 +855,7 @@ class ContextMaker(object):
             params.add(dparam + '_')
         return params
 
-    def from_planar(self, rup, hdist, step, point='TC', toward_azimuth=90,
+    def from_planar(self, rup, hdist, step, point='TC', toward_azimuth=90.,
                     direction='positive'):
         """
         :param rup:
@@ -864,8 +864,8 @@ class ContextMaker(object):
         :returns: a context array for the sites around the rupture
         """
         sitecol = SiteCollection.from_planar(
-            rup, point='TC', toward_azimuth=90,
-            direction='positive', hdist=hdist, step=5.,
+            rup, point='TC', toward_azimuth=toward_azimuth,
+            direction=direction, hdist=hdist, step=step,
             req_site_params=self.REQUIRES_SITES_PARAMETERS)
         ctxs = list(self.genctxs([rup], sitecol, src_id=0))
         return self.recarray(ctxs)
