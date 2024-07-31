@@ -51,7 +51,7 @@
                     <td><input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
                     <td>
                         <select class="aelo-select" name="asce_version" id="asce_version">
-                '.        {% for asce_version in asce_versions %}
+                        {% for asce_version in asce_versions %}
                         {% if asce_version == default_asce_version %}
                         <option value="{{ asce_version }}" selected>{{ asce_version }}</option>
                         {% else %}
