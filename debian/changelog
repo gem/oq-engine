@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug with multifault sources raising a cryptic error
+    "object has no attribute msparams"
   * Fixed a critical memory bug causing over 80 GB per core to be needed for
     event based calculations with ~6 million sites
   * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based
