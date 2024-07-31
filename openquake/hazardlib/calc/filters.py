@@ -30,12 +30,14 @@ from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
-class FilteredAway(Exception): pass
 U32 = numpy.uint32
 MINMAG = 2.5
 MAXMAG = 10.2  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
+
+class FilteredAway(Exception):
+    pass
 
 
 def magstr(mag):
