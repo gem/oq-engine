@@ -1,3 +1,6 @@
+  [Chris di Caprio]
+  * Allowed extrapolation in the Kuehn (2020) GMPEs to solve numeric issues
+
   [Michele Simionato]
   * Fixed an encoding error when exporting the realizations
   * Fixed a bug with multifault sources raising a cryptic error
