@@ -419,7 +419,7 @@ def get_ln_y_ref(clsname, C, ctx, conf):
         delta_g = _get_delta_g(conf['delta_gamma_tab'], ctx, imt)
 
     # Compute median ground motion:
-    # - The `get_magnitude_scaling` function when `delta_cm` ? 0 applies a
+    # - The `get_magnitude_scaling` function when `delta_cm` ≠ 0 applies a
     #   correction to ground motion that accounts for the differences in the
     #   stress parameter between the host and target region as described in
     #   Boore at al. (2022)
@@ -629,29 +629,17 @@ class ChiouYoungs2014(GMPE):
 
     #: Required rupture parameters are magnitude, rake,
     #: dip and ztor.
-    # REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
-    # Barbara added:
-    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor','hypo_depth','hypo_lat', 'hypo_lon'}
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
 
     #: Required distance measures are RRup, Rjb and Rx.
-    # REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
-    # Barbara added:
-    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx','azimuth'}
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
         
-    
-    # Barbara: takole je bilo v prej�nji verziji:
-    # def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
-    #     super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
-    
-    
-    # Barbara: tu je treba dodati opcijske parametre sim, mi, sg, mix
     def __init__(self, sigma_mu_epsilon=0.0, use_hw=True, add_delta_c1=False,
                  alpha_nm=1.0, stress_par_host=None, stress_par_target=None,
-                 delta_gamma_tab=None, 
-                 sim=None, mi=None, sg=None, mix=None):
+                 delta_gamma_tab=None):
         
         # Add sigma_mu_epsilon 
         self.sigma_mu_epsilon = sigma_mu_epsilon
@@ -664,13 +652,6 @@ class ChiouYoungs2014(GMPE):
         self.conf['stress_par_host'] = stress_par_host
         self.conf['stress_par_target'] = stress_par_target
         
-        # Barbara doda:
-        self.conf['sim'] = sim         
-        self.conf['mi'] = mi         
-        self.conf['sg'] = sg         
-        self.conf['mix'] = mix         
-        
-        
         # The file with the `source function table` has a structure similar to
         # a traditional coefficient table. The columns in the `source function
         # table` are:
@@ -679,7 +660,7 @@ class ChiouYoungs2014(GMPE):
         # - S1RS            param
         # - S2FS            param
         # - S2RS            param
-        # - chi             i.e. ?FS2RS in equation 6
+        # - chi             i.e. χFS2RS in equation 6
         if stress_par_target is not None:
             cwd = pathlib.Path(__file__).parent.resolve()
             fname = os.path.join('chiou_youngs_2014',
@@ -725,7 +706,7 @@ class ChiouYoungs2014(GMPE):
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     name, self.COEFFS[imt], ctx, imt, self.conf)
                 # Reference to page 1144
-                # Predicted PSA value at T ? 0.3s should be set equal to the
+                # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
