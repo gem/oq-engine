@@ -225,14 +225,14 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
-            MapArray(sids, M, L1).fill(0) for r in range(R)]
+            MapArray(sids, M, L1).fill(0, F32) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
-            MapArray(sids, M, L1).fill(0) for r in range(S)]
+            MapArray(sids, M, L1).fill(0, F32) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = MapArray(sids, 1, 1).fill(0).sidx
+    sidx = MapArray(sids, 1, 1).fill(0, F32).sidx
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
@@ -412,10 +412,10 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.cmakers = read_cmakers(self.datastore, self.csm)
         parent = self.datastore.parent
-        if parent and oq.concurrent_tasks != parent['oqparam'].concurrent_tasks:
+        if parent:
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                preclassical.store_num_tiles(
+                preclassical.store_tiles(
                     self.datastore, self.csm, self.sitecol, self.cmakers, oq))
 
         self.cfactor = numpy.zeros(3)
@@ -490,11 +490,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        try:
-            self.ntiles = self.datastore['num_tiles'][:]
-        except KeyError:
-            # regular calculator, no tiles
-            self.ntiles = numpy.zeros(0, U32)
+        self.ntiles = self.datastore['tiles']['num_tiles']
         if self.ntiles.any():
             self.execute_big()
         else:
@@ -503,8 +499,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
-                logging.warning('The site is far from all seismic sources'
-                                ' included in the hazard model')
+                logging.error('The site is far from all seismic sources'
+                              ' included in the hazard model')
             else:
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
@@ -521,7 +517,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        maxw = self.csm.get_max_weight(self.oqparam)
+        maxw = self.max_weight
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
@@ -558,6 +554,9 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
+    # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
+    # in particular disaggregation/case_15 is sensitive to num_cores
+    # with very different values between 2 and 16 cores(!)
     def check_mean_rates(self, mean_rates_by_src):
         """
         The sum of the mean_rates_by_src must correspond to the mean_rates
@@ -570,7 +569,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for m in range(len(got)):
             # skipping large rates which can be wrong due to numerics
             # (it happens in logictree/case_05 and in Japan)
-            ok = got[m] < 10.
+            ok = got[m] < 2.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
     def execute_big(self):
@@ -589,7 +588,9 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        for cm, ntiles in zip(self.cmakers, self.ntiles):
+        pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
+        # first the tasks with few tiles, then the ones with many tiles
+        for cm, ntiles in pairs:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
@@ -783,6 +784,6 @@ class ClassicalCalculator(base.HazardCalculator):
                            calc_id=self.datastore.calc_id,
                            array=hmaps[:, 0, m, p])
                 allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
-        smap = parallel.Starmap(make_hmap_png, allargs)
+        smap = parallel.Starmap(make_hmap_png, allargs, h5=self.datastore)
         for dic in smap:
             self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']

@@ -289,10 +289,10 @@ def ebrisk(proxies, cmaker, stations, dstore, monitor):
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        dic = event_based.event_based(block, cmaker, stations, dstore, monitor)
-        if len(dic['gmfdata']):
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
-            yield event_based_risk(gmf_df, cmaker.oq, monitor)
+        for dic in event_based.event_based(block, cmaker, stations, dstore, monitor):
+            if len(dic['gmfdata']):
+                gmf_df = pandas.DataFrame(dic['gmfdata'])
+                yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')

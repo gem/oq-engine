@@ -551,6 +551,12 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
+                    if ('dip' in data) {
+                        $('#dip').val(data.dip);
+                    }
+                    if ('strike' in data) {
+                        $('#strike').val(data.strike);
+                    }
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
@@ -574,9 +580,19 @@
             });
             $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
+                $('#dip').prop('disabled', false);
+                $('#strike').prop('disabled', false);
+                $('#dip').val('90');
+                $('#strike').val('0');
+            });
+            $('#rupture_file_input').on('change', function() {
+                $('#dip').prop('disabled', $(this).val() != '');
+                $('#strike').prop('disabled', $(this).val() != '');
             });
             $('#clearStationDataFile').click(function() {
                 $('#station_data_file_input').val('');
+                $('#maximum_distance_stations').val('');
+                $('#maximum_distance_stations').prop('disabled', true);
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
@@ -602,6 +618,7 @@
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
+                formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",
@@ -629,6 +646,13 @@
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
+            });
+            $('#station_data_file_input').on('change', function() {
+                if ($(this).get(0).files.length > 0) {
+                    $('#maximum_distance_stations').prop('disabled', false);
+                } else {
+                    $('#maximum_distance_stations').prop('disabled', true);
+                }
             });
         });
 })($, Backbone, _, gem_oq_server_url);

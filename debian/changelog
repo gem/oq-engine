@@ -1,12 +1,35 @@
   [Enrico Abcede, Francis Bernales]
   * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014  
-  
+
+  [Chris di Caprio]
+  * Allowed extrapolation in the Kuehn (2020) GMPEs to solve numeric issues
+
+  [Michele Simionato]
+  * Fixed an encoding error when exporting the realizations
+  * Fixed a bug with multifault sources raising a cryptic error
+    "object has no attribute msparams"
+  * Fixed a critical memory bug causing over 80 GB per core to be needed for
+    event based calculations with ~6 million sites
+  * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based
+    calculations
+  * Reduced the memory consumption in event_based calculations: now even calculations
+    with 5 million sites can be run using ~4 GB per core
+  * Reduced the memory occupation in `gen_poes`
+  * Using half the memory in postclassical by using 32 bit arrays
+  * Using half the memory on Windows by using half the threads by default
+  * Fixed a bug in conditional spectrum calculations with a non-contributing TRT
+
+  [Savvinos Aristeidou]
+  * Added new GMM in the gsim library, named `aristeidou_2023`
+  * Added new IM, that is the inelastic spectral displacement, SDi,
+    which takes as input one additional parameter (i.e., strength ratio, R)
+
   [Fatemeh Alishahiha]
   * Added a new gsim library named `ambraseys_2005`.
 
   [Kyle Smith]
   * Added a new gsim file sandikkaya_akkar_2017.py to implement the
-    Arias Intensity and Cumulative Absoloute Velocity ground motion 
+    Arias Intensity and Cumulative Absolute Velocity ground motion
     models from Sandikkaya and Akkar (2017).
 
   [Michele Simionato]

@@ -670,7 +670,7 @@ class CompositeSourceModel:
         if not heavy:
             maxsrc = max(srcs, key=lambda s: s.weight)
             logging.info('Heaviest: %s', maxsrc)
-        return max_weight
+        return max_weight * 1.02  # increased a bit to produce a bit less tasks
 
     def __toh5__(self):
         G = len(self.src_groups)

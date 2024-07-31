@@ -35,6 +35,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface, build_msparams
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.filters import FilteredAway
 
 U16 = np.uint16
 U32 = np.uint32
@@ -123,7 +124,8 @@ class MultiFaultSource(BaseSeismicSource):
         """
         self.sections = sections
         dic = {i: sec for i, sec in enumerate(sections)}
-        save_and_split([self], dic, f'{self.source_id}.hdf5', del_rupture_idxs=False)
+        save_and_split([self], dic, f'{self.source_id}.hdf5',
+                       del_rupture_idxs=False)
 
     def set_msparams(self, secparams, close_sec=None, ry0=False,
                      mon1=performance.Monitor(),
@@ -251,6 +253,8 @@ class MultiFaultSource(BaseSeismicSource):
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
         p = self.msparams[self.msparams['area'] > 0]  # non-discarded
+        if len(p) == 0:
+            raise FilteredAway
         lons = np.concatenate([p['west'], p['east']])
         lats = np.concatenate([p['north'], p['south']])
         west, east, north, south = get_spherical_bounding_box(lons, lats)
@@ -271,7 +275,8 @@ def _set_tags(mfsources, allsections, sitecol1, s2i):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path and possibly .tags
-def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idxs=True):
+def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
+                   del_rupture_idxs=True):
     """
     Serialize MultiFaultSources
     """

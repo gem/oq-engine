@@ -207,7 +207,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = 20 * TWO20 // (M*G)
+    maxs = 8 * TWO20 // (M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -759,6 +759,17 @@ class ContextMaker(object):
                 logging.info(f'Conversion from {imc.name} not applicable to'
                              f' {gsim.__class__.__name__}')
 
+    def split_by_imt(self):
+        """
+        Split in multiple cmakers, each with a single IMT
+        """
+        out = []
+        for imt in self.imts:
+            cmaker = copy.copy(self)
+            cmaker.imts = [imt]
+            out.append(cmaker)
+        return out
+
     def horiz_comp_to_geom_mean(self, mean_stds):
         """
         This function converts ground-motion obtained for a given description
@@ -1132,7 +1143,8 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-            # print('MB', mean_stdt.nbytes // TWO20)
+            #ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
+            #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
 
         # making plenty of slices so that the array `poes` is small
         for slc in split_in_slices(len(ctx), 2*L1):

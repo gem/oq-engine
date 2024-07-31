@@ -19,10 +19,10 @@
 import os
 import sys
 import time
-import json
 import logging
 import getpass
 import cProfile
+import numpy
 import pandas
 import collections
 from openquake.baselib import config, performance
@@ -46,28 +46,6 @@ def engine_profile(jobctx, nrows):
     data = performance.get_pstats(pstat, nrows)
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
-
-
-def fix(asce, siteid):
-    dic = json.loads(asce.decode('ascii'))
-    dic = {k: v if isinstance(v, str) else round(v, 3)
-           for k, v in dic.items()}
-    dic['siteid'] = siteid
-    return dic
-
-
-def get_from(calc_id, key, ids):
-    """
-    :param calc_id: calculation ID
-    :param key: "asce41" or "asce07"
-    :param ids: site IDs
-    :returns: a list of dictionaries, one per site
-    """
-    dstore = datastore.read(calc_id)
-    model = dstore['oqparam'].description[9:12]
-    return [fix(a, model + str(id))
-            for id, a in zip(ids[model], dstore[key])]
-
 
 # ########################## run_site ############################## #
 
@@ -133,34 +111,33 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
-    a07dics, a41dics = [], []
+    a07s, a41s = [], []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
             count_errors += 1
+        dstore = datastore.read(logctx.calc_id)
         try:
-            a07dics.extend(get_from(logctx.calc_id, 'asce07', ids))
-            a41dics.extend(get_from(logctx.calc_id, 'asce41', ids))
+            a07s.append(views.view('asce:07', dstore))
+            a41s.append(views.view('asce:41', dstore))
         except KeyError:
             # AELO results could not be computed due to some error
             continue
 
     # printing/saving results
-    header = ['job_id', 'description', 'error']
-    print(views.text_table(out, header, ext='org'))
+    print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
-    if not a07dics or not a41dics:
+    if not a07s or not a41s:
         # serious problem to debug
         breakpoint()
-    for name, dics in zip(['asce07', 'asce41'], [a07dics, a41dics]):
-        header = sorted(dics[0])
-        rows = [[dic[k] for k in header] for dic in dics]
-        fname = os.path.abspath(name + '.csv')
+    for name, arrays in zip(['asce07', 'asce41'], [a07s, a41s]):
+        arr = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+        fname = os.path.abspath(name + '.org')
         with open(fname, 'w') as f:
-            print(views.text_table(rows, header, ext='csv'), file=f)
+            print(views.text_table(arr, ext='org'), file=f)
         print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
@@ -304,6 +281,7 @@ def aristotle(exposure_hdf5=None, *,
               rupfname: str=FAMOUS,
               stations: str=None,
               maximum_distance: float=300.,
+              maximum_distance_stations: float=None,
               asset_hazard_distance: float=15.,
               number_of_ground_motion_fields: int=10):
     """
@@ -344,7 +322,8 @@ def aristotle(exposure_hdf5=None, *,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
                  ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
-                 station_data_file=stations)
+                 station_data_file=stations,
+                 maximum_distance_stations=maximum_distance_stations)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
@@ -358,6 +337,7 @@ aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
 aristotle.stations = 'Path to a csv file with the station data'
 aristotle.maximum_distance = 'Maximum distance in km'
+aristotle.maximum_distance_stations = "Maximum distance from stations in km"
 aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
 
 # ################################## main ################################## #

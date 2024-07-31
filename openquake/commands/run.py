@@ -123,10 +123,12 @@ def main(job_ini,
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
+    dist = parallel.oq_distribute()
+    if dist == 'slurm':
+        assert nodes, 'oq_distribute=slurm requires the --nodes option'
+    else:
+        assert not nodes, 'The --nodes option requires oq_distribute=slurm'
     if nodes:
-        dist = parallel.oq_distribute()
-        if dist != 'slurm':
-            raise ValueError('The --nodes option requires oq_distribute=slurm')
         if nodes > 1:
             start_workers(nodes - 1, str(job_id))
         subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',

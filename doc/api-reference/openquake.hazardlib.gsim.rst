@@ -142,6 +142,14 @@ ameri_2017
     :undoc-members:
     :show-inheritance:
 
+aristeidou_2023
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.aristeidou_2023
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 armenia_2016
 ---------------------------------------------------
 

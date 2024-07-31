@@ -113,27 +113,44 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 ARISTOTLE_FORM_LABELS = {
-    'usgs_id': 'Rupture identifier (USGS ID or custom)',
+    'usgs_id': 'Rupture identifier',
     'rupture_file': 'Rupture model XML',
-    'lon': 'Longitude',
-    'lat': 'Latitude',
-    'dep': 'Depth',
-    'mag': 'Magnitude',
-    'rake': 'Rake',
-    'dip': 'Dip',
-    'strike': 'Strike',
-    'maximum_distance': 'Maximum distance',
+    'lon': 'Longitude (degrees)',
+    'lat': 'Latitude (degrees)',
+    'dep': 'Depth (km)',
+    'mag': 'Magnitude (Mw)',
+    'rake': 'Rake (degrees)',
+    'dip': 'Dip (degrees)',
+    'strike': 'Strike (degrees)',
+    'maximum_distance': 'Maximum source-to-site distance (km)',
     'trt': 'Tectonic region type',
-    'truncation_level': 'Truncation level',
+    'truncation_level': 'Level of truncation',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
-    'asset_hazard_distance': 'Asset hazard distance',
-    'ses_seed': 'SES seed',
+    'asset_hazard_distance': 'Asset hazard distance (km)',
+    'ses_seed': 'Random seed',
     'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
 
-# NOTE: currently placeholders are equal to labels. We might re-define
-# placeholders like for AELO, e.g. to give a hint on the required format
-ARISTOTLE_FORM_PLACEHOLDERS = ARISTOTLE_FORM_LABELS.copy()
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'usgs_id': 'USGS ID or custom',
+    'rupture_file': 'Rupture model XML',
+    'lon': '-180 ≤ float ≤ 180',
+    'lat': '-90 ≤ float ≤ 90',
+    'dep': 'float ≥ 0',
+    'mag': 'float ≥ 0',
+    'rake': '-180 ≤ float ≤ 180',
+    'dip': '0 ≤ float ≤ 90',
+    'strike': '0 ≤ float ≤ 360',
+    'maximum_distance': 'float ≥ 0',
+    'trt': 'Tectonic region type',
+    'truncation_level': 'float ≥ 0',
+    'number_of_ground_motion_fields': 'float ≥ 1',
+    'asset_hazard_distance': 'float ≥ 0',
+    'ses_seed': 'int ≥ 0',
+    'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': 'float ≥ 0',
+}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -649,6 +666,7 @@ def aristotle_callback(
     # asset_hazard_distance: 15.0
     # ses_seed: 42
     # station_data_file: None
+    # maximum_distance_stations: None
     # countries: TUR
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
@@ -717,7 +735,9 @@ def aristotle_get_rupture_data(request):
 
 
 def copy_to_temp_dir_with_unique_name(source_file_path):
-    temp_dir = tempfile.gettempdir()
+    # NOTE: for some reason, in some cases the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     temp_file_path = temp_file.name
     # Close the NamedTemporaryFile to prevent conflicts on Windows
@@ -754,15 +774,16 @@ def aristotle_validate(request):
         'lat': valid.latitude,
         'dep': valid.positivefloat,
         'mag': valid.positivefloat,
-        'rake': valid.positivefloat,
-        'dip': valid.positivefloat,
-        'strike': valid.positivefloat,
+        'rake': valid.rake_range,
+        'dip': valid.dip_range,
+        'strike': valid.strike_range,
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
         'number_of_ground_motion_fields': valid.positiveint,
         'asset_hazard_distance': valid.positivefloat,
         'ses_seed': valid.positiveint,
+        'maximum_distance_stations': valid.positivefloat,
     }
     params = {}
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
@@ -773,6 +794,12 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
+            if (fieldname == 'maximum_distance_stations' and
+                    request.POST.get('maximum_distance_stations') == ''):
+                # NOTE: valid.positivefloat raises an error if the value is
+                # blank or None
+                params['maximum_distance_stations'] = None
+                continue
             validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
             continue
@@ -797,7 +824,18 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    rupdic = get_rupture_dict(dic)
+    ignore_shakemap = request.POST.get('ignore_shakemap', False)
+    if ignore_shakemap == 'True':
+        ignore_shakemap = True
+    try:
+        rupdic = get_rupture_dict(dic, ignore_shakemap)
+    except Exception as exc:
+        msg = f'Unable to retrieve rupture data: {exc}'
+        response_data = {"status": "failed", "error_msg": msg,
+                         "error_cls": type(exc).__name__}
+        logging.error('', exc_info=True)
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=500)
     return rupdic, *params.values()
 
 
@@ -813,21 +851,24 @@ def aristotle_run(request):
         usgs_id, rupture_file,
         lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, station_data_file
+        asset_hazard_distance, ses_seed, station_data_file,
+        maximum_distance_stations
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
     (rupdic, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed, station_data_file) = res
+     asset_hazard_distance, ses_seed, maximum_distance_stations,
+     station_data_file) = res
     try:
         allparams = get_aristotle_allparams(
             rupdic,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
-            station_data_file=station_data_file)
+            station_data_file=station_data_file,
+            maximum_distance_stations=maximum_distance_stations)
     except SiteAssociationError as exc:
         response_data = {"status": "failed", "error_msg": str(exc)}
         return HttpResponse(content=json.dumps(response_data),
@@ -1145,7 +1186,10 @@ def calc_result(request, result_id):
     etype = request.GET.get('export_type')
     export_type = etype or DEFAULT_EXPORT_TYPE
 
-    tmpdir = tempfile.mkdtemp()
+    # NOTE: for some reason, in some cases the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
         exported = core.export_from_db(
             (ds_key, export_type), job_id, datadir, tmpdir)
@@ -1197,8 +1241,12 @@ def extract(request, calc_id, what):
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            # NOTE: for some reason, in some cases the environment
+            # variable TMPDIR is ignored, so we need to use
+            # config.directory.custom_tmp if defined
+            temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
             fd, fname = tempfile.mkstemp(
-                prefix=what.replace('/', '-'), suffix='.npz')
+                prefix=what.replace('/', '-'), suffix='.npz', dir=temp_dir)
             os.close(fd)
             obj = _extract(ds, what + query_string)
             hdf5.save_npz(obj, fname)

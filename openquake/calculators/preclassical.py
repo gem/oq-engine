@@ -123,8 +123,6 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-            if (src.msparams['area'] == 0).all():
-                continue # all ruptures are far away
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -165,9 +163,9 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
                 yield dic
 
 
-def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
+def store_tiles(dstore, csm, sitecol, cmakers, oq):
     """
-    Store a `num_tiles` array if the calculation is large enough.
+    Store a `tiles` array if the calculation is large enough.
     :returns: a triple (max_weight, trt_rlzs, gids)
     """
     N = len(sitecol)
@@ -175,26 +173,25 @@ def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
     max_gb = float(config.memory.pmap_max_gb)
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     dstore['rates_max_gb'] = req_gb
-    regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
-               or oq.tile_spec)
-    if not regular:  # tiling
-        # increase max_weight if the tiles are too small
-        minsize = min(max_weight / sg.weight * N for sg in csm.src_groups)
-        if minsize < oq.max_sites_disagg:
-            logging.info('Producing less tasks to avoid tiles < %d sites',
-                         oq.max_sites_disagg)
-            max_weight *= oq.max_weight / minsize
-        num_tiles = []
-        for cm in cmakers:
-            sg = csm.src_groups[cm.grp_id]
-            size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
-            ntiles = numpy.ceil(sg.weight / max_weight)
+    sizes = [len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
+             for cm in cmakers]
+    ok = req_gb < max_gb and max(sizes) < max_gb
+    regular = ok or oq.disagg_by_src or N < oq.max_sites_disagg or oq.tile_spec
+    tiles = []
+    for cm, size_gb in zip(cmakers, sizes):
+        if regular:
+            tiles.append((0, size_gb))
+        else:
+            grp = csm.src_groups[cm.grp_id]
+            ntiles = numpy.ceil(grp.weight / max_weight)
             if size_gb / ntiles > max_gb:
                 ntiles = numpy.ceil(size_gb / max_gb)
-            tiles = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-            num_tiles.append(len(tiles))
-        dstore.create_dset('num_tiles', U32(num_tiles))
-        ntasks = sum(num_tiles)
+            split = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
+            tiles.append((len(split), size_gb))
+    tiles = numpy.array(tiles, [('num_tiles', int), ('size_gb', float)])
+    dstore['tiles'] = tiles
+    if not regular:
+        ntasks = sum(tiles['num_tiles'])
         logging.info('This will be a tiling calculation with %d tasks', ntasks)
         if req_gb >= 30 and (not config.directory.custom_tmp or
                              not config.distribution.save_on_tmp):
@@ -395,7 +392,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                        for row in self.csm.source_info.values())
         if totsites == 0:
             if self.N == 1:
-                logging.warning('There are no sources close to the site!')
+                logging.error('There are no sources close to the site!')
             else:
                 raise RuntimeError(
                     'There are no sources close to the site(s)! '
@@ -410,7 +407,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # save 'ntiles' if the calculation is large
         self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-            store_num_tiles(self.datastore, self.csm, self.sitecol,
+            store_tiles(self.datastore, self.csm, self.sitecol,
                             self.cmakers, self.oqparam))
 
     def post_process(self):

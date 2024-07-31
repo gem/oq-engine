@@ -270,9 +270,10 @@ class WorkerPool(object):
                 os.mkdir(calc_dir)
             except FileExistsError:  # somebody else created it
                 pass
-            fname = os.path.join(calc_dir, 'hostnames')
-            with open(fname, 'a') as f:
-                f.write(f'{self.hostname} {self.num_workers}\n')
+            if parallel.oq_distribute() == 'slurm':
+                fname = os.path.join(calc_dir, 'hostnames')
+                with open(fname, 'a') as f:
+                    f.write(f'{self.hostname} {self.num_workers}\n')
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')

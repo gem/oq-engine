@@ -1,7 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
-                {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
+                {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -128,7 +128,7 @@
               </div>
               <div class="aristotle_form_row">
                 <label for"maximum_distance">{{ aristotle_form_labels.maximum_distance }}</label>
-                <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="300"/>
+                <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="100"/>
               </div>
               <div class="aristotle_form_row">
                 <label for"truncation_level">{{ aristotle_form_labels.truncation_level }}</label>
@@ -150,6 +150,10 @@
                 <label for"station_data_file">{{ aristotle_form_labels.station_data_file }}</label>
                 <input class="aristotle-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ aristotle_form_placeholders.station_data_file }}" >
                 <button type="button" id="clearStationDataFile">Clear File</button>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"maximum_distance_stations">{{ aristotle_form_labels.maximum_distance_stations }}</label>
+                <input class="aristotle-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ aristotle_form_placeholders.maximum_distance_stations }}" value="" disabled/>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>

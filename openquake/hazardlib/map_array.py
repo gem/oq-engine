@@ -282,7 +282,7 @@ class MapArray(object):
         N, L, Gt = self.array.shape
         assert Gt == len(trt_rlzs), (Gt, len(trt_rlzs))
         R = full_lt.get_num_paths()
-        out = MapArray(range(N), L, R).fill(0.)
+        out = MapArray(range(N), L, R).fill(0., F32)
         for g, trs in enumerate(trt_rlzs):
             for sid in range(N):
                 for rlz in trs % TWO24:

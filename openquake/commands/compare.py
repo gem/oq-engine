@@ -18,11 +18,13 @@
 import sys
 import collections
 import numpy
+import pandas
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
 aac = numpy.testing.assert_allclose
+F64 = numpy.float64
 
 
 def get_diff_idxs(array, rtol, atol):
@@ -354,14 +356,18 @@ def delta(a, b):
     return res
 
 
-def compare_column_values(array0, array1, what):
-    if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
-        diff_idxs = numpy.where(delta(array0, array1) > 1E-5)[0]
-    else:
+def compare_column_values(array0, array1, what, atol=0, rtol=1E-5):
+    try:
+        array0 = F64(array0)
+        array1 = F64(array1)
+    except ValueError:
         diff_idxs = numpy.where(array0 != array1)[0]
+    else:
+        diff = numpy.abs(array0 - array1)
+        diff_idxs = numpy.where(diff > atol + (array0+array1)/2 * rtol)[0]
     if len(diff_idxs) == 0:
         print(f'The column {what} is okay')
-        return
+        return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
     print(array0[diff_idxs], array1[diff_idxs])
@@ -462,6 +468,35 @@ def compare_oqparam(calc_ids: int):
             print('%s: %s != %s' % (key, dic0[key], dic1[key]))
 
 
+def strip(values):
+    if isinstance(values[0], str):
+        return numpy.array([s.strip() for s in values])
+    return values
+
+
+def read_org_df(fname):
+    df = pandas.read_csv(fname, delimiter='|',
+                          skiprows=lambda r: r == 1)
+    df = df[df.columns[1:-1]]
+    return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
+
+
+def compare_asce(file1_org: str, file2_org: str, atol=1E-3, rtol=1E-3):
+    """
+    compare_asce('asce07.org', 'asce07_expected.org') exits with 0
+    if all values are equal within the tolerance, otherwise with 1.
+    """
+    df1 = read_org_df(file1_org)
+    df2 = read_org_df(file2_org)
+    equal = []
+    for col in df1.columns:
+        ok = compare_column_values(strip(df1[col].to_numpy()),
+                                   strip(df2[col].to_numpy()),
+                                   col, atol, rtol)
+        equal.append(ok)
+    sys.exit(not all(equal))
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -475,7 +510,8 @@ main = dict(rups=compare_rups,
             events=compare_events,
             assetcol=compare_assetcol,
             sitecol=compare_sitecol,
-            oqparam=compare_oqparam)
+            oqparam=compare_oqparam,
+            asce=compare_asce)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,
