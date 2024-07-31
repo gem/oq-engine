@@ -275,7 +275,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             # this is ultra-fast
             sections = multifaults[0].get_sections()
             secparams = build_secparams(sections)
-            logging.error(
+            logging.warning(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))
         else:
@@ -392,7 +392,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                        for row in self.csm.source_info.values())
         if totsites == 0:
             if self.N == 1:
-                logging.warning('There are no sources close to the site!')
+                logging.error('There are no sources close to the site!')
             else:
                 raise RuntimeError(
                     'There are no sources close to the site(s)! '
