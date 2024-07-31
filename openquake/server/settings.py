@@ -185,6 +185,7 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 
 # A server name can be specified to customize the WebUI in case of
 # multiple installations of the Engine are available. This helps avoiding
