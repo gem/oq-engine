@@ -869,6 +869,9 @@ def aristotle_run(request):
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
+    for key in ['dip', 'strike']:
+        if key in rupdic and rupdic[key] is None:
+            del rupdic[key]
     try:
         allparams = get_aristotle_allparams(
             rupdic,
