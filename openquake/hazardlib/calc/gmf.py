@@ -354,7 +354,8 @@ class GmfComputer(object):
                     self.amplifier.amplify_gmfs(
                         self.ctx.ampcode, result, self.imts, self.seed)
             with umon:
-                self.update(data, result.transpose(1, 0, 2), rlzs, ms[0], max_iml)
+                result = result.transpose(1, 0, 2)
+                self.update(data, result, rlzs, ms[0], max_iml)
         with umon:
             return self.strip_zeros(data)
 
@@ -468,9 +469,12 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     ebr = EBRupture(
         rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
     ebr.seed = seed
+    N, E = len(sites), realizations
     gc = GmfComputer(ebr, sites, cmaker, correlation_model)
-    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]  # shape (4, M, N)
-    gc.init_eid_rlz_sig_eps()
-    res = gc.compute(gsim, U32([0]), mean_stds,
-                     numpy.random.default_rng(seed))
-    return {imt: res[:, m] for m, imt in enumerate(gc.imts)}
+    df = gc.compute_all()
+    res = {}
+    for m, imt in enumerate(gc.imts):
+        res[imt] = arr = numpy.zeros((N, E), F32)
+        for sid, eid, gmv in zip(df.sid, df.eid, df[f'gmv_{m}']):
+            arr[sid, eid] = gmv
+    return res
