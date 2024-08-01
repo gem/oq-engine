@@ -223,8 +223,6 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
                 # gives 3 GB of RAM
                 mean_stds = cmaker.get_mean_stds(
                     [computer.ctx], split_by_mag=False)
-                # avoid numba type error
-                computer.ctx.flags.writeable = True
             df = computer.compute_all(mean_stds, max_iml, cmon, umon)
         sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
