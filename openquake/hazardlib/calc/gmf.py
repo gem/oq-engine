@@ -267,8 +267,7 @@ class GmfComputer(object):
             if imt == 'MMI':
                 mmi_index = m
         if max_iml is None:
-            M = len(self.cmaker.imts)
-            max_iml = numpy.full(M, numpy.inf, float)
+            max_iml = numpy.full(self.M, numpy.inf, float)
 
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
         data['gmv'].append(array)
@@ -315,6 +314,7 @@ class GmfComputer(object):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
+        conditioned = mean_stds is not None
         self.init_eid_rlz_sig_eps()
         rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
@@ -329,42 +329,37 @@ class GmfComputer(object):
             else:
                 ms = mean_stds[:, g]
             with cmon:
-                array = self.compute(gs, idxs, ms, rng)  # NME
+                E = len(idxs)
+                result = numpy.zeros(
+                    (len(self.imts), len(self.ctx.sids), E), F32)
+                ccdist = self.cross_correl.distribution
+                if conditioned:
+                    intra_eps = [None] * self.M
+                    ms = [mean_stds[0][g],  # mea
+                          mean_stds[1][g],  # tau
+                          mean_stds[2][g]]  # phi
+                else:
+                    # arrays of random numbers of shape (M, N, E) and (M, E)
+                    intra_eps = [ccdist.rvs((self.N, E), rng)
+                                 for _ in range(self.M)]
+                    self.eps[idxs] = self.cross_correl.get_inter_eps(
+                        self.imts, E, rng).T
+                for m, imt in enumerate(self.imts):
+                    try:
+                        result[m] = self._compute(
+                            ms[:, m], m, imt, gs, intra_eps[m], idxs)
+                    except Exception as exc:
+                        raise RuntimeError(
+                            '(%s, %s, %s): %s' %
+                            (gs, imt, exc.__class__.__name__, exc)
+                        ).with_traceback(exc.__traceback__)
+                if self.amplifier:
+                    self.amplifier.amplify_gmfs(
+                        self.ctx.ampcode, result, self.imts, self.seed)
             with umon:
-                self.update(data, array, rlzs, ms, max_iml)
+                self.update(data, result.transpose(1, 0, 2), rlzs, ms, max_iml)
         with umon:
             return self.strip_zeros(data)
-
-    def compute(self, gsim, idxs, mtp, rng):
-        """
-        :param gsim: GSIM used to compute mean_stds
-        :param idxs: affected indices
-        :param mtp: array of shape (3, M, N)
-        :param rng: random number generator for the rupture
-        :returns: a 32 bit array of shape (N, M, E)
-        """
-        # sets self.eps
-        M = len(self.imts)
-        E = len(idxs)
-        result = numpy.zeros(
-            (len(self.imts), len(self.ctx.sids), E), F32)
-        ccdist = self.cross_correl.distribution
-        # build arrays of random numbers of shape (M, N, E) and (M, E)
-        intra_eps = [ccdist.rvs((self.N, E), rng) for _ in range(M)]
-        self.eps[idxs] = self.cross_correl.get_inter_eps(self.imts, E, rng).T
-        for m, imt in enumerate(self.imts):
-            try:
-                result[m] = self._compute(
-                    mtp[:, m], m, imt, gsim, intra_eps[m], idxs)
-            except Exception as exc:
-                raise RuntimeError(
-                    '(%s, %s, %s): %s' %
-                    (gsim, imt, exc.__class__.__name__, exc)
-                ).with_traceback(exc.__traceback__)
-        if self.amplifier:
-            self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, self.imts, self.seed)
-        return result.transpose(1, 0, 2)
 
     def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs):
         # sets self.sig, returns gmf
