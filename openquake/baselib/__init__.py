@@ -123,7 +123,10 @@ if sys.platform in 'win32 darwin':
     config.multi_user = False
 else:  # linux
     import pwd
-    install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
+    try:
+        install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
+    except KeyError:  # on the IUSS cluster
+        install_user = None
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by the universal installer
