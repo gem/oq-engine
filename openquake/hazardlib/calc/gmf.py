@@ -252,14 +252,13 @@ class GmfComputer(object):
             sig_eps[f'eps_inter_{imt}'] = self.eps[:, m]
         return sig_eps
 
-    def update(self, data, array, rlzs, mean_stds, max_iml=None):
+    def update(self, data, array, rlzs, mean, max_iml=None):
         """
         Updates the data dictionary with the values coming from the array
         of GMVs. Also indirectly updates the arrays .sig and .eps.
         """
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
-        mean = mean_stds[0]
         if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
             mean = mean[:, :, 0]
         mmi_index = -1
@@ -326,8 +325,8 @@ class GmfComputer(object):
             if mean_stds is None:
                 with mmon:
                     ms = self.cmaker.get_4MN([self.ctx], gs)
-            else:
-                ms = mean_stds[:, g]
+            else:  # conditioned
+                ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
             with cmon:
                 E = len(idxs)
                 result = numpy.zeros(
@@ -335,9 +334,6 @@ class GmfComputer(object):
                 ccdist = self.cross_correl.distribution
                 if conditioned:
                     intra_eps = [None] * self.M
-                    ms = [mean_stds[0][g],  # mea
-                          mean_stds[1][g],  # tau
-                          mean_stds[2][g]]  # phi
                 else:
                     # arrays of random numbers of shape (M, N, E) and (M, E)
                     intra_eps = [ccdist.rvs((self.N, E), rng)
@@ -347,7 +343,8 @@ class GmfComputer(object):
                 for m, imt in enumerate(self.imts):
                     try:
                         result[m] = self._compute(
-                            ms[:, m], m, imt, gs, intra_eps[m], idxs)
+                            [arr[m] for arr in ms], m, imt, gs, intra_eps[m],
+                            idxs, rng)
                     except Exception as exc:
                         raise RuntimeError(
                             '(%s, %s, %s): %s' %
@@ -357,11 +354,11 @@ class GmfComputer(object):
                     self.amplifier.amplify_gmfs(
                         self.ctx.ampcode, result, self.imts, self.seed)
             with umon:
-                self.update(data, result.transpose(1, 0, 2), rlzs, ms, max_iml)
+                self.update(data, result.transpose(1, 0, 2), rlzs, ms[0], max_iml)
         with umon:
             return self.strip_zeros(data)
 
-    def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs):
+    def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs, rng=None):
         # sets self.sig, returns gmf
         im = imt.string
         mean, sig, tau, phi = mean_stds
