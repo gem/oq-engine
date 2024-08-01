@@ -759,17 +759,6 @@ class ContextMaker(object):
                 logging.info(f'Conversion from {imc.name} not applicable to'
                              f' {gsim.__class__.__name__}')
 
-    def split_by_imt(self):
-        """
-        Split in multiple cmakers, each with a single IMT
-        """
-        out = []
-        for imt in self.imts:
-            cmaker = copy.copy(self)
-            cmaker.imts = [imt]
-            out.append(cmaker)
-        return out
-
     def horiz_comp_to_geom_mean(self, mean_stds):
         """
         This function converts ground-motion obtained for a given description
@@ -1267,6 +1256,31 @@ class ContextMaker(object):
             if self.truncation_level not in (0, 1E-9, 99.) and (
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out)
+        return out
+
+    def get_mea_tau_phi(self, recarrays, g):
+        """
+        Called by the GmfComputer
+        """
+        N = sum(len(ctx) for ctx in recarrays)
+        M = len(self.imts)
+        gsim = self.gsims[g]
+        out = numpy.zeros((3, M, N))
+        self.adj = {self.gsims[0]: []}  # NSHM2014P adjustments
+        compute = gsim.__class__.compute
+        start = 0
+        for ctx in recarrays:
+            slc = slice(start, start + len(ctx))
+            # make the context immutable
+            ctx.flags.writeable = False
+            adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
+            if adj is not None:
+                self.adj[gsim].append(adj)
+            start = slc.stop
+        if self.adj[gsim]:
+            self.adj[gsim] = numpy.concatenate(self.adj[gsim])
         if self.conv:  # apply horizontal component conversion
             self.horiz_comp_to_geom_mean(out)
         return out
