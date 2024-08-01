@@ -363,7 +363,7 @@ class GmfComputer(object):
             # mea, tau, phi with shapes (N,1), (N,N), (N,N)
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
-            eps = self.correlation_cutoff
+            eps = self.cmaker.oq.correlation_cutoff
             if self.cmaker.truncation_level <= 1E-9:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)

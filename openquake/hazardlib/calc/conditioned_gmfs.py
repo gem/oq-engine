@@ -199,7 +199,6 @@ class ConditionedGmfComputer(GmfComputer):
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
-        self.correlation_cutoff = cmaker.oq.correlation_cutoff
         self.rupture = rupture
         self.sitecol = sitecol
         self.station_sitecol = station_sitecol
