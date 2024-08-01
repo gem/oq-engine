@@ -354,7 +354,7 @@ class GmfComputer(object):
                     self.amplifier.amplify_gmfs(
                         self.ctx.ampcode, result, self.imts, self.seed)
             with umon:
-                result = result.transpose(1, 0, 2)
+                result = result.transpose(1, 0, 2)  # shape (N, M, E)
                 self.update(data, result, rlzs, ms[0], max_iml)
         with umon:
             return self.strip_zeros(data)
