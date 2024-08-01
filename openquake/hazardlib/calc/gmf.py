@@ -226,6 +226,10 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
         self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
+        self.mmi_index = -1
+        for m, imt in enumerate(cmaker.imtls):
+            if imt == 'MMI':
+                self.mmi_index = m
 
     def init_eid_rlz_sig_eps(self):
         """
@@ -261,14 +265,10 @@ class GmfComputer(object):
         mag = self.ebrupture.rupture.mag
         if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
             mean = mean[:, :, 0]
-        mmi_index = -1
-        for m, imt in enumerate(self.cmaker.imtls):
-            if imt == 'MMI':
-                mmi_index = m
         if max_iml is None:
             max_iml = numpy.full(self.M, numpy.inf, float)
 
-        set_max_min(array, mean, max_iml, min_iml, mmi_index)
+        set_max_min(array, mean, max_iml, min_iml, self.mmi_index)
         data['gmv'].append(array)
 
         if self.sec_perils:
