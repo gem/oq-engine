@@ -880,11 +880,13 @@ def aristotle_run(request):
             asset_hazard_distance, ses_seed,
             station_data_file=station_data_file,
             maximum_distance_stations=maximum_distance_stations)
-    except SiteAssociationError as exc:
-        response_data = {"status": "failed", "error_msg": str(exc)}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=406)
+    except Exception as exc:
 
+        response_data = {"status": "failed", "error_msg": str(exc),
+                         "error_cls": type(exc).__name__}
+        logging.error('', exc_info=True)
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=500)
     user = utils.get_user(request)
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None, user, None)

@@ -140,6 +140,8 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(exposure_hdf5, countries)
+    if not tmap_keys:
+        raise LookupError(f'No taxonomy mapping was found for {countries}')
     logging.root.handlers = []  # avoid breaking the logs
     allparams = []
     for key in tmap_keys:
