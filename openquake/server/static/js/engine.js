@@ -551,21 +551,23 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
-                    if ('dip' in data) {
-                        $('#dip').val(data.dip);
-                    }
-                    if ('strike' in data) {
-                        $('#strike').val(data.strike);
-                    }
+                    $('#dip').val('dip' in data ? data.dip : '90');
+                    $('#strike').val('strike' in data ? data.strike : '0');
                     $('#is_point_rup').val(data.is_point_rup);
-                    if ($('#rupture_file_input')[0].files.length == 0 && !data.is_point_rup) {
+                    if ($('#rupture_file_input')[0].files.length == 1) {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                    }
+                    else if (data.is_point_rup) {
+                        $('#dip').prop('disabled', false);
+                        $('#strike').prop('disabled', false);
+                        $('#dip').val('90');
+                        $('#strike').val('0');
+                    } else {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);
                         $('#dip').val('');
                         $('#strike').val('');
-                    } else {
-                        $('#dip').val('90');
-                        $('#strike').val('0');
                     }
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
