@@ -225,23 +225,6 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance, sigma=False)
 
-    def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs, rng=None):
-        # mea, tau, phi with shapes (N,1), (N,N), (N,N)
-        mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
-        E = len(idxs)
-        eps = self.correlation_cutoff
-        if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt != "MMI")
-            gmf = gmf.repeat(E, axis=1)
-        else:
-            # add a cutoff to remove negative eigenvalues
-            cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
-            arr = rng.multivariate_normal(
-                mu_Y.flatten(), cov_Y_Y, size=E,
-                check_valid="raise", tol=1e-5, method="cholesky")
-            gmf = exp(arr, imt != "MMI").T
-        return gmf  # shapes (N, E)
-
 
 @dataclass
 class TempResult:
