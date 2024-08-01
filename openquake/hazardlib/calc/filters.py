@@ -110,7 +110,6 @@ def get_distances(rupture, sites, param):
         dist = numpy.zeros_like(sites.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
-    dist.flags.writeable = False
     return dist
 
 

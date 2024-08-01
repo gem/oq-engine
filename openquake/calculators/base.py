@@ -914,11 +914,9 @@ class HazardCalculator(BaseCalculator):
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
-        if oq.calculation_mode.startswith(('event_based', 'ebrisk')) and self.N > 1000:
-            if oq.minimum_magnitude == {'default': 0}:
-                oq.raise_invalid(f'minimum_magnitude must be set, see {EBDOC}')
-            if len(oq.min_iml) == 0:
-                oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
+        if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
+                self.N > 1000 and len(oq.min_iml) == 0):
+            oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
 
         if oq_hazard:
             parent = self.datastore.parent

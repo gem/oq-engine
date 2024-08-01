@@ -111,11 +111,9 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
-from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.gmf import GmfComputer, exp
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.contexts import ContextMaker
@@ -201,7 +199,6 @@ class ConditionedGmfComputer(GmfComputer):
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
-        self.correlation_cutoff = cmaker.oq.correlation_cutoff
         self.rupture = rupture
         self.sitecol = sitecol
         self.station_sitecol = station_sitecol
@@ -224,62 +221,6 @@ class ConditionedGmfComputer(GmfComputer):
             self.spatial_correl,
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance, sigma=False)
-
-    def compute_all(self, mea_tau_phi, cmon=Monitor(), umon=Monitor()):
-        """
-        :returns: (dict with fields eid, sid, gmv_X, ...), dt
-        """
-        self.init_eid_rlz_sig_eps()
-        data = AccumDict(accum=[])
-        rng = numpy.random.default_rng(self.seed)
-        for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
-            mea = mea_tau_phi[0][g]
-            tau = mea_tau_phi[1][g]
-            phi = mea_tau_phi[2][g]
-            with cmon:
-                array = self.compute(gsim, rlzs, mea, tau, phi, rng)
-            with umon:
-                self.update(data, array, rlzs, [mea])
-        with umon:
-            df = self.strip_zeros(data)
-            return df
-
-    def compute(self, gsim, rlzs, mea, tau, phi, rng):
-        """
-        :param gsim: GSIM used to compute mean_stds
-        :param rlzs: realizations associated to the gsim
-        :param mea: array of shape (M, N, 1)
-        :param tau: array of shape (M, N, N)
-        :param phi: array of shape (M, N, N)
-        :returns: a 32 bit array of shape (N, M, E)
-        """
-        M, N, _ = mea.shape
-        E = numpy.isin(self.rlz, rlzs).sum()
-        result = numpy.zeros((M, N, E), F32)
-        for m, im in enumerate(self.cmaker.imtls):
-            mu_Y_yD = mea[m]
-            cov_WY_WY_wD = tau[m]
-            cov_BY_BY_yD = phi[m]
-            result[m] = self._compute(
-                mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, E, rng)
-        if self.amplifier:
-            self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, self.imts, self.seed)
-        return result.transpose(1, 0, 2)
-
-    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
-        eps = self.correlation_cutoff
-        if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt != "MMI")
-            gmf = gmf.repeat(num_events, axis=1)
-        else:
-            # add a cutoff to remove negative eigenvalues
-            cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
-            arr = rng.multivariate_normal(
-                mu_Y.flatten(), cov_Y_Y, size=num_events,
-                check_valid="raise", tol=1e-5, method="cholesky")
-            gmf = exp(arr, imt != "MMI").T
-        return gmf  # shapes (N, E)
 
 
 @dataclass

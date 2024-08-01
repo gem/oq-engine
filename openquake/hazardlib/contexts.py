@@ -759,18 +759,7 @@ class ContextMaker(object):
                 logging.info(f'Conversion from {imc.name} not applicable to'
                              f' {gsim.__class__.__name__}')
 
-    def split_by_imt(self):
-        """
-        Split in multiple cmakers, each with a single IMT
-        """
-        out = []
-        for imt in self.imts:
-            cmaker = copy.copy(self)
-            cmaker.imts = [imt]
-            out.append(cmaker)
-        return out
-
-    def horiz_comp_to_geom_mean(self, mean_stds):
+    def horiz_comp_to_geom_mean(self, mean_stds, gsim):
         """
         This function converts ground-motion obtained for a given description
         of horizontal component into ground-motion values for geometric_mean.
@@ -779,14 +768,13 @@ class ContextMaker(object):
             - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
             - Boore and Kishida (2017): for RotD50
         """
-        for g, gsim in enumerate(self.gsims):
-            if not self.conv[gsim]:
-                continue
-            for m, imt in enumerate(self.imts):
-                me, si, _ta, _ph = mean_stds[:, g, m]
-                conv_median, conv_sigma, rstd = self.conv[gsim][imt]
-                me[:] = numpy.log(numpy.exp(me) / conv_median)
-                si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
+        if not self.conv[gsim]:
+            return
+        for m, imt in enumerate(self.imts):
+            me, si, _ta, _ph = mean_stds[:, m]
+            conv_median, conv_sigma, rstd = self.conv[gsim][imt]
+            me[:] = numpy.log(numpy.exp(me) / conv_median)
+            si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
 
     @property
     def Z(self):
@@ -827,7 +815,6 @@ class ContextMaker(object):
                     if small_distances.any():
                         array = numpy.array(array)  # make a copy first
                         array[small_distances] = self.minimum_distance
-                        array.flags.writeable = False
                         ctx[name] = array
             slc = slice(start, start + len(ctx))
             for par in dd:
@@ -1169,7 +1156,6 @@ class ContextMaker(object):
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
-        ctx.flags.writeable = True
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
@@ -1227,7 +1213,6 @@ class ContextMaker(object):
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
                 with self.pne_mon:
-                    ctxt.flags.writeable = True  # avoid numba type error
                     pmap.update(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
@@ -1256,8 +1241,6 @@ class ContextMaker(object):
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
-                # make the context immutable
-                ctx.flags.writeable = False
                 adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 if adj is not None:
                     self.adj[gsim].append(adj)
@@ -1268,7 +1251,30 @@ class ContextMaker(object):
                     out[1, g] == 0.).any():
                 raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:  # apply horizontal component conversion
-            self.horiz_comp_to_geom_mean(out)
+            for g, gsim in enumerate(self.gsims):
+                self.horiz_comp_to_geom_mean(out[:, g], gsim)
+        return out
+
+    def get_4MN(self, recarrays, gsim):
+        """
+        Called by the GmfComputer
+        """
+        N = sum(len(ctx) for ctx in recarrays)
+        M = len(self.imts)
+        out = numpy.zeros((4, M, N))
+        self.adj = {gsim: []}  # NSHM2014P adjustments
+        compute = gsim.__class__.compute
+        start = 0
+        for ctx in recarrays:
+            slc = slice(start, start + len(ctx))
+            adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
+            if adj is not None:
+                self.adj[gsim].append(adj)
+            start = slc.stop
+        if self.adj[gsim]:
+            self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+        if self.conv:  # apply horizontal component conversion
+            self.horiz_comp_to_geom_mean(out, gsim)
         return out
 
     # not used right now
