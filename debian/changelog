@@ -7,8 +7,7 @@
     "object has no attribute msparams"
   * Fixed a critical memory bug causing over 80 GB per core to be needed for
     event based calculations with ~6 million sites
-  * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based
-    calculations
+  * Made `minimum_intensity` mandatory in event based calculations
   * Reduced the memory consumption in event_based calculations: now even calculations
     with 5 million sites can be run with ~2 GB per core
   * Reduced the memory occupation in `gen_poes`
