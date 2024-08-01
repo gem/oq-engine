@@ -111,11 +111,9 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
-from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.gmf import GmfComputer, exp
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.contexts import ContextMaker
