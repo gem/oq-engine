@@ -10,7 +10,7 @@
   * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based
     calculations
   * Reduced the memory consumption in event_based calculations: now even calculations
-    with 5 million sites can be run using ~3 GB per core
+    with 5 million sites can be run with ~2 GB per core
   * Reduced the memory occupation in `gen_poes`
   * Using half the memory in postclassical by using 32 bit arrays
   * Using half the memory on Windows by using half the threads by default
