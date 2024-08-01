@@ -225,7 +225,8 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance, sigma=False)
 
-    def compute_all(self, mea_tau_phi, cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mea_tau_phi,
+                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """

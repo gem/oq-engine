@@ -310,8 +310,8 @@ class GmfComputer(object):
         # remove the rows with all zero values
         return df[ok]
 
-    def compute_all(self, mean_stds, max_iml=None,
-                    cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mean_stds=None, max_iml=None,
+                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -323,18 +323,23 @@ class GmfComputer(object):
             E = len(idxs)
             if E == 0:  # crucial for performance
                 continue
+            if mean_stds is None:
+                with mmon:
+                    ms = self.cmaker.get_4MN([self.ctx], gs)
+            else:
+                ms = mean_stds[:, g]
             with cmon:
-                array = self.compute(gs, idxs, mean_stds[:, g], rng)  # NME
+                array = self.compute(gs, idxs, ms, rng)  # NME
             with umon:
-                self.update(data, array, rlzs, mean_stds[:, g], max_iml)
+                self.update(data, array, rlzs, ms, max_iml)
         with umon:
             return self.strip_zeros(data)
 
-    def compute(self, gsim, idxs, mean_stds, rng):
+    def compute(self, gsim, idxs, mtp, rng):
         """
         :param gsim: GSIM used to compute mean_stds
         :param idxs: affected indices
-        :param mean_stds: array of shape (4, M, N)
+        :param mtp: array of shape (3, M, N)
         :param rng: random number generator for the rupture
         :returns: a 32 bit array of shape (N, M, E)
         """
@@ -350,7 +355,7 @@ class GmfComputer(object):
         for m, imt in enumerate(self.imts):
             try:
                 result[m] = self._compute(
-                    mean_stds[:, m], m, imt, gsim, intra_eps[m], idxs)
+                    mtp[:, m], m, imt, gsim, intra_eps[m], idxs)
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, %s): %s' %
