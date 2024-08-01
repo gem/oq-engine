@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Optimized the calculation of mean and stdevs in event based calculations, with
+    a speedup of 13x for the EUR model
+
   [Chris di Caprio]
   * Allowed extrapolation in the Kuehn (2020) GMPEs to solve numeric issues
 
