@@ -148,33 +148,32 @@ SLURM_BATCH = '''\
 #SBATCH --job-name=workerpool
 #SBATCH --time=10:00:00
 #SBATCH --cpus-per-task={num_cores}
+#SBATCH --nodes={nodes}
 srun {python} -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
 def start_workers(n, job_id: str):
     """
-    Start n workerpools which will store their hostname on scratch_dir/hostnames)
+    Start n workerpools which will write on scratch_dir/hostcores)
     """
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     with open(slurm_sh, 'w') as f:
         f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
                                    num_cores=config.distribution.num_cores,
-                                   job_id=job_id))
+                                   job_id=job_id), nodes=n)
 
     submit_cmd = config.distribution.submit_cmd.split()
     assert submit_cmd[0] == 'sbatch', submit_cmd
-    # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
-    cmd = submit_cmd[:-2] + [slurm_sh]
-    for n in range(n):
-        subprocess.run(cmd)
+    # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
+    subprocess.run(submit_cmd[:-2] + [slurm_sh])        
 
 
 def wait_workers(n, job_id):
     """
-    Wait until the hostnames file is filled with n names
+    Wait until the hostcores file is filled with n names
     """
     calc_dir = parallel.scratch_dir(job_id)
-    fname = os.path.join(calc_dir, 'hostnames')
+    fname = os.path.join(calc_dir, 'hostcores')
     while True:
         if not os.path.exists(fname):
             time.sleep(1)
@@ -191,9 +190,9 @@ def wait_workers(n, job_id):
 
 def stop_workers(job_id: str):
     """
-    Stop all the started workerpools (read from the file scratch_dir/hostnames)
+    Stop all the started workerpools (read from the file scratch_dir/hostcores)
     """
-    fname = os.path.join(parallel.scratch_dir(job_id), 'hostnames')
+    fname = os.path.join(parallel.scratch_dir(job_id), 'hostcores')
     with open(fname) as f:
         hostcores = f.readlines()
     for line in hostcores:
