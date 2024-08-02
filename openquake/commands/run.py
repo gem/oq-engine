@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import stat
 import time
 import logging
@@ -118,7 +119,7 @@ def main(job_ini,
         if concurrent_tasks:
             dic['concurrent_tasks'] = str(concurrent_tasks)
         elif nodes and 'concurrent_tasks' not in dic:
-            ct = int(config.distribution.num_cores) * nodes
+            ct = 2 * int(config.distribution.num_cores) * nodes
             dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
@@ -126,14 +127,12 @@ def main(job_ini,
     dist = parallel.oq_distribute()
     if dist == 'slurm':
         assert nodes, 'oq_distribute=slurm requires the --nodes option'
+        start_workers(nodes, str(job_id))
     else:
         assert not nodes, 'The --nodes option requires oq_distribute=slurm'
-    if nodes:
-        #if nodes > 1:
-        start_workers(nodes, str(job_id))
-        #subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
-        #                  str(config.distribution.num_cores), str(job_id)])
-        wait_workers(nodes, job_id)
+        subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
+                          str(config.distribution.num_cores), str(job_id)])
+    wait_workers(nodes or 1, job_id)
     try:
         run_jobs(jobs)
     finally:
