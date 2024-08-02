@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
+import stat
 import time
 import logging
 import os.path
@@ -157,9 +157,11 @@ def start_workers(n, job_id: str):
     """
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
+    code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
+                              job_id=job_id, nodes=n)
     with open(slurm_sh, 'w') as f:
-        f.write(SLURM_BATCH.format(num_cores=config.distribution.num_cores,
-                                   job_id=job_id, nodes=n))
+        f.write(code)
+    os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)
 
     submit_cmd = config.distribution.submit_cmd.split()
     assert submit_cmd[0] == 'sbatch', submit_cmd
