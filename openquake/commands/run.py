@@ -149,7 +149,7 @@ SLURM_BATCH = '''\
 #SBATCH --time=10:00:00
 #SBATCH --cpus-per-task={num_cores}
 #SBATCH --nodes={nodes}
-srun {python} -m openquake.baselib.workerpool {num_cores} {job_id}
+srun python -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
 def start_workers(n, job_id: str):
     """
@@ -158,8 +158,7 @@ def start_workers(n, job_id: str):
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     with open(slurm_sh, 'w') as f:
-        f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
-                                   num_cores=config.distribution.num_cores,
+        f.write(SLURM_BATCH.format(num_cores=config.distribution.num_cores,
                                    job_id=job_id, nodes=n))
 
     submit_cmd = config.distribution.submit_cmd.split()
