@@ -177,6 +177,7 @@ Group=openquake
 Environment=
 WorkingDirectory={OQDATA}
 ExecStart=/opt/openquake/venv/bin/oq {command}
+Type=exec
 Restart=always
 RestartSec=30
 KillMode=control-group
