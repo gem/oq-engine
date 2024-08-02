@@ -130,9 +130,8 @@ def main(job_ini,
         start_workers(nodes, str(job_id))
     else:
         assert not nodes, 'The --nodes option requires oq_distribute=slurm'
-        subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
-                          str(config.distribution.num_cores), str(job_id)])
-    wait_workers(nodes or 1, job_id)
+    if nodes:
+        wait_workers(nodes, job_id)
     try:
         run_jobs(jobs)
     finally:
