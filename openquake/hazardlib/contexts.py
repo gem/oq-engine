@@ -31,8 +31,8 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import config
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    AccumDict, DictArray, RecordBuilder, sqrscale,
+    gen_slices, split_in_slices, block_splitter)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -1814,7 +1814,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-def get_cmakers(src_groups, full_lt, oq):
+def get_cmakers(src_groups, full_lt, oq, N=1):
     """
     :params src_groups: a list of SourceGroups
     :param full_lt: a FullLogicTree instance
@@ -1838,9 +1838,22 @@ def get_cmakers(src_groups, full_lt, oq):
         cmaker.grp_id = grp_id
         cmakers.append(cmaker)
     gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
-    for cm in cmakers:
-        cm.gid = gids[cm.grp_id]
-    return cmakers
+    out = []
+    for cmaker in cmakers:
+        gsims = list(cmaker.gsims)
+        gid = gids[cmaker.grp_id]
+        assert len(gid) == len(gsims)
+        if 'classical' in oq.calculation_mode and N > 10_000 and len(gsims) > 3:
+            # split in blocks of at least 2 gsims
+            for slc in gen_slices(0, len(gid), 2):
+                cm = copy.copy(cmaker)
+                cm.gid = gid[slc]
+                cm.gsims = gsims[slc]
+                out.append(cm)
+        else:
+            cmaker.gid = gid
+            out.append(cmaker)
+    return out
 
 
 def read_cmakers(dstore, csm=None):
@@ -1851,6 +1864,7 @@ def read_cmakers(dstore, csm=None):
     """
     from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
+    N = len(dstore['sitecol/sids'])
     oq.mags_by_trt = {
         k: decode(v[:]) for k, v in dstore['source_mags'].items()}
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
@@ -1861,7 +1875,7 @@ def read_cmakers(dstore, csm=None):
     if csm is None:
         csm = dstore['_csm']
         csm.full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
+    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq, N)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
