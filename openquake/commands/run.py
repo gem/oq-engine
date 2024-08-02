@@ -160,12 +160,12 @@ def start_workers(n, job_id: str):
     with open(slurm_sh, 'w') as f:
         f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
                                    num_cores=config.distribution.num_cores,
-                                   job_id=job_id), nodes=n)
+                                   job_id=job_id, nodes=n))
 
     submit_cmd = config.distribution.submit_cmd.split()
     assert submit_cmd[0] == 'sbatch', submit_cmd
     # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
-    subprocess.run(submit_cmd[:-2] + [slurm_sh])        
+    subprocess.run(submit_cmd[:-2] + [slurm_sh])
 
 
 def wait_workers(n, job_id):
