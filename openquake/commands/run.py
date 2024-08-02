@@ -176,7 +176,7 @@ def wait_workers(n, job_id):
     fname = os.path.join(calc_dir, 'hostcores')
     while True:
         if not os.path.exists(fname):
-            time.sleep(1)
+            time.sleep(5)
             print(f'Waiting for {fname}')
             continue
         with open(fname) as f:
