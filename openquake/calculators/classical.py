@@ -490,7 +490,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        if self.datastore['size_gb'].attrs['tiling']:
+        if self.datastore['GN_splits'].attrs['tiling']:
             self.execute_big()
         else:
             self.execute_reg()
