@@ -689,7 +689,7 @@ class CompositeSourceModel:
                     yield cmaker, sites
             else:  # split in gsims first, then in tiles
                 for cm in self._split(cmaker, nsplits):
-                    splits = nsplits * len(cm.gsims) / len(cmaker.gsims)
+                    splits = general.ceil(nsplits * len(cm.gsims) / len(cmaker.gsims))
                     print(cm.grp_id, len(cm.gsims), splits)
                     for sites in sitecol.split(splits, minsize=oq.max_sites_disagg):
                         yield cm, sites
