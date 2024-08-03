@@ -139,7 +139,7 @@ def get_pmaps_gb(dstore, full_lt=None):
     """
     :returns: memory required on the master node to keep the pmaps
     """
-    N = len(dstore['sitecol'])
+    N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
     if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
@@ -148,7 +148,8 @@ def get_pmaps_gb(dstore, full_lt=None):
         trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     gids = full_lt.get_gids(trt_smrs)
-    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
+    max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
+    return max_gb, trt_rlzs, gids
 
 
 def get_num_chunks(dstore):

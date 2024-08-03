@@ -123,7 +123,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     disagg_by_src = cmaker.disagg_by_src
     with dstore:
         if tiling:  # tiling calculator, read the sources from the datastore
-            gid = sources
+            gid = cmaker.gid[0]
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
@@ -416,7 +416,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers, oq))
+                    self.datastore, self.csm, self.sitecol, self.cmakers))
 
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -477,7 +477,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            _, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
@@ -490,8 +490,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        self.ntiles = self.datastore['tiles']['num_tiles']
-        if self.ntiles.any():
+        if self.datastore['size_gb'].attrs['tiling']:
             self.execute_big()
         else:
             self.execute_reg()
@@ -588,17 +587,15 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
+        # pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
         # first the tasks with few tiles, then the ones with many tiles
-        for cm, ntiles in pairs:
-            cm.gsims = list(cm.gsims)  # save data transfer
+        for cm, sites in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight, self.gids):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.chunks = self.chunks
-            gid = self.gids[cm.grp_id][0]
-            for tile in self.sitecol.split(ntiles):
-                allargs.append((gid, tile, cm, ds))
+            allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         self.offset = 0

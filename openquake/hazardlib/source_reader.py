@@ -16,14 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import copy
+import zlib
 import os.path
 import pickle
 import operator
 import logging
-import zlib
 import numpy
 
-from openquake.baselib import parallel, general, hdf5, python3compat
+from openquake.baselib import parallel, general, hdf5, python3compat, config
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.valid import basename, fragmentno
@@ -671,6 +672,31 @@ class CompositeSourceModel:
             maxsrc = max(srcs, key=lambda s: s.weight)
             logging.info('Heaviest: %s', maxsrc)
         return max_weight * 1.02  # increased a bit to produce a bit less tasks
+
+    def split(self, cmakers, sitecol, max_weight, gids):
+        N = len(sitecol)
+        oq = cmakers[0].oq
+        max_gb = float(config.memory.pmap_max_gb)
+        for cmaker in cmakers:
+            size_gb = len(cmaker.gsims) * oq.imtls.size * N * 8 / 1024**3
+            grp = self.src_groups[cmaker.grp_id]
+            cmaker.gid = gids[cmaker.grp_id]
+            nsplits = general.ceil(grp.weight / max_weight)
+            if size_gb / nsplits > max_gb:
+                nsplits = general.ceil(size_gb / max_gb)
+            for cm in self._split(cmaker, nsplits):
+                splits = nsplits * len(cm.gsims) / len(cmaker.gsims)
+                for sites in sitecol.split(splits, minsize=oq.max_sites_disagg):
+                    yield cm, sites
+
+    def _split(self, cmaker, nsplits):
+        gsims = list(cmaker.gsims)
+        G = len(gsims)
+        for slc in general.gen_slices(0, G, G // nsplits + 1):
+            cm = copy.copy(cmaker)
+            cm.gid = cmaker.gid[slc]
+            cm.gsims = gsims[slc]
+            yield cm
 
     def __toh5__(self):
         G = len(self.src_groups)

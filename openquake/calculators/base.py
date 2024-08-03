@@ -644,7 +644,7 @@ class HazardCalculator(BaseCalculator):
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
-                'csm param sitecol assetcol crmodel realizations max_weight '
+                'csm param sitecol assetcol crmodel realizations max_gb max_weight '
                 'amplifier policy_df treaty_df full_lt exported trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
