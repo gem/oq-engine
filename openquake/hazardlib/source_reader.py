@@ -684,16 +684,20 @@ class CompositeSourceModel:
             nsplits = general.ceil(grp.weight / max_weight)
             if size_gb / nsplits > max_gb:
                 nsplits = general.ceil(size_gb / max_gb)
-            for cm in self._split(cmaker, nsplits):
-                splits = nsplits * len(cm.gsims) / len(cmaker.gsims)
-                for sites in sitecol.split(splits, minsize=oq.max_sites_disagg):
-                    # print(cm.grp_id, len(cm.gsims), len(sites))
-                    yield cm, sites
+            if nsplits <= 10:  # split in tiles only
+                for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
+                    yield cmaker, sites
+            else:  # split in gsims first, then in tiles
+                for cm in self._split(cmaker, nsplits):
+                    splits = nsplits * len(cm.gsims) / len(cmaker.gsims)
+                    for sites in sitecol.split(splits, minsize=oq.max_sites_disagg):
+                        print(cm.grp_id, len(cm.gsims), len(sites))
+                        yield cm, sites
 
     def _split(self, cmaker, nsplits):
         gsims = list(cmaker.gsims)
         G = len(gsims)
-        for slc in general.gen_slices(0, G, G // nsplits + 1):
+        for slc in general.gen_slices(0, G, general.ceil(G / nsplits)):
             cm = copy.copy(cmaker)
             cm.gid = cmaker.gid[slc]
             cm.gsims = gsims[slc]
