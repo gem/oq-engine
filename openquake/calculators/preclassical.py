@@ -179,7 +179,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     dstore.create_dset('size_gb', numpy.array(sizes),
                        attrs=dict(req_gb=req_gb, tiling=not regular))
     if not regular:
-        nsites = [len(tile) for cm, tile in csm.split(cmakers, sitecol, max_weight, gids)]
+        nsites = [len(tile) for cm, tile in csm.split(cmakers, sitecol, max_weight)]
         logging.info('This will be a tiling calculation with %d tasks, min_sites=%d',
                      len(nsites), min(nsites))
         if req_gb >= 30 and (not config.directory.custom_tmp or
