@@ -377,8 +377,8 @@ class ClassicalCalculator(base.HazardCalculator):
         G = pnemap.array.shape[2]
         rates = self.pmap.array
         sidx = self.pmap.sidx[pnemap.sids]
-        for i, gid in enumerate(self.gids[grp_id]):
-            rates[sidx, :, gid] += pnemap.array[:, :, i % G]
+        for i, g in enumerate(self.cmakers[grp_id].gid):
+            rates[sidx, :, g] += pnemap.array[:, :, i % G]
         return acc
 
     def create_rup(self):
