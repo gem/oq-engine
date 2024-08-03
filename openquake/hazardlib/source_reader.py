@@ -687,6 +687,7 @@ class CompositeSourceModel:
             for cm in self._split(cmaker, nsplits):
                 splits = nsplits * len(cm.gsims) / len(cmaker.gsims)
                 for sites in sitecol.split(splits, minsize=oq.max_sites_disagg):
+                    # print(cm.grp_id, len(cm.gsims), len(sites))
                     yield cm, sites
 
     def _split(self, cmaker, nsplits):
