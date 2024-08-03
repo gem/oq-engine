@@ -683,7 +683,7 @@ class CompositeSourceModel:
             nsplits = general.ceil(grp.weight / max_weight)
             if size_gb / nsplits > max_gb:
                 nsplits = general.ceil(size_gb / max_gb)
-            if nsplits <= 10:  # split in tiles only
+            if nsplits < 5:  # split in tiles only
                 for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
                     yield cmaker, sites
             else:  # split in gsims first, then in tiles
