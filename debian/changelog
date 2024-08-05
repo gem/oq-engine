@@ -1,7 +1,19 @@
   [Michele Simionato]
-  * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based calculations
+  * Optimized the calculation of mean and stdevs in event based calculations, with
+    a speedup of 13x for the EUR model
+
+  [Chris di Caprio]
+  * Allowed extrapolation in the Kuehn (2020) GMPEs to solve numeric issues
+
+  [Michele Simionato]
+  * Fixed an encoding error when exporting the realizations
+  * Fixed a bug with multifault sources raising a cryptic error
+    "object has no attribute msparams"
+  * Fixed a critical memory bug causing over 80 GB per core to be needed for
+    event based calculations with ~6 million sites
+  * Made `minimum_intensity` mandatory in event based calculations
   * Reduced the memory consumption in event_based calculations: now even calculations
-    with 5 million sites can be run using ~4 GB per core
+    with 5 million sites can be run with ~2 GB per core
   * Reduced the memory occupation in `gen_poes`
   * Using half the memory in postclassical by using 32 bit arrays
   * Using half the memory on Windows by using half the threads by default

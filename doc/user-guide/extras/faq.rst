@@ -21,22 +21,23 @@ and :ref:`FAQ related to cluster deployments <faq-cluster>`.
 Help! Should I disable hyperthreading on my laptop/desktop?
 ***********************************************************
 
-Disabling hyperthreading - when possible - is recommended since it
-will save memory. Suppose for instance that you have a laptop with a
-i9 processor with 20 threads and 16 GB of RAM. It seems a lot at the
-time of this writing (early 2022). In reality it is not. The operating
-system will consume some memory, the browser will consume a lot of
-memory, you may have other applications open and you may end up with
-less than 10 GB of available memory. If hyperthreading is enabled the
-engine will see 10x2 = 20 cores; running parallel computations may
-easily consume 0.5 GB per core, i.e. 10 GB, so you will run out of
-memory. With hyperthreading disabled you will still have 5 GB of
-available RAM.
-
-**Note**: on a linux machine you can try disable hyperthreading temporarily with the command ``sudo echo off >
-/sys/devices/system/cpu/smt/control``: however, this setting will not survive a reboot. Also, on some systems this
-command will not work. If you cannot disable hyperthreading just make sure that if you have enough memory: we
-recommend at least 2 GB per thread.
+While in old versions of the engine we recommended to disable hyperthreading
+- which was often difficult for our users and sometimes impossible -
+since version 3.21 the engine on Windows, by default, will only use half of
+your threads, which is a simple and efficient way to save
+memory. Consider for instance a laptop with an i7
+processor with 8 cores, 16 threads and 16 GB of RAM. It seems a lot:
+in reality it is not. The operating system will consume some memory,
+the browser will consume a lot of memory, you may have other
+applications open and you may end up with less than 8 GB of available
+memory. Running even small computations may easily consume 0.5 GB per
+thread, i.e. 8 GB, so you will run out of memory. However, since
+engine v3.21, the engine by default will only use 8 threads, thus each one
+will have 1 GB of RAM available. This is still not much (we recommend
+2 GB) but enough to run most calculations. If you want more control, by setting
+the parameter ``num_cores`` in the file `openquake.cfg` (as explained
+below) it is possible to specify precisely the number of threads to
+use and this will work on every operating system.
 
 *******************************************************
 Help! My windows server with 32/64 or more cores hangs!

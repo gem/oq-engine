@@ -54,8 +54,7 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
             cmaker.scenario = True
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
-            mean_stds = cmaker.get_mean_stds([gc.ctx])
-            gmfdata = pandas.DataFrame(gc.compute_all(mean_stds))
+            gmfdata = pandas.DataFrame(gc.compute_all())
             del gmfdata['rlz']  # the info is encoded in the eid
             fname = 'NBCC2015_AA13_%s.csv' % cmaker.trt.replace(' ', '')
             path = os.path.join(CWD, 'data', 'CAN15', fname)

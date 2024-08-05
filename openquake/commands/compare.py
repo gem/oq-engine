@@ -24,6 +24,7 @@ from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
 aac = numpy.testing.assert_allclose
+F64 = numpy.float64
 
 
 def get_diff_idxs(array, rtol, atol):
@@ -356,11 +357,14 @@ def delta(a, b):
 
 
 def compare_column_values(array0, array1, what, atol=0, rtol=1E-5):
-    if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
+    try:
+        array0 = F64(array0)
+        array1 = F64(array1)
+    except ValueError:
+        diff_idxs = numpy.where(array0 != array1)[0]
+    else:
         diff = numpy.abs(array0 - array1)
         diff_idxs = numpy.where(diff > atol + (array0+array1)/2 * rtol)[0]
-    else:
-        diff_idxs = numpy.where(array0 != array1)[0]
     if len(diff_idxs) == 0:
         print(f'The column {what} is okay')
         return True
