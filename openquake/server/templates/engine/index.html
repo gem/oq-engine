@@ -128,6 +128,14 @@
                 <input class="aristotle-input" type="text" id="strike" name="strike" placeholder="{{ aristotle_form_placeholders.strike }}" value="0"/>
               </div>
               <div class="aristotle_form_row">
+                <label for"local_timestamp">{{ aristotle_form_labels.local_timestamp }}</label>
+                <input class="aristotle-input" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ aristotle_form_placeholders.local_timestamp }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"time_event">{{ aristotle_form_labels.time_event }}</label>
+                <input class="aristotle-input" type="text" id="time_event" name="time_event" placeholder="{{ aristotle_form_placeholders.time_event }}" value='avg'/>
+              </div>
+              <div class="aristotle_form_row">
                 <label for"maximum_distance">{{ aristotle_form_labels.maximum_distance }}</label>
                 <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="100"/>
               </div>

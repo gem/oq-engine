@@ -1119,7 +1119,8 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     tectonic_region_type = valid.Param(valid.utf8, '*')
-    time_event = valid.Param(str, 'avg')
+    time_event = valid.Param(
+        valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
