@@ -25,6 +25,7 @@ from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 
+import sys
 import io
 import os
 import pathlib
@@ -33,7 +34,13 @@ import json
 import zipfile
 from shapely.geometry import Polygon
 import numpy
-from openquake.baselib.node import node_from_xml
+from openquake.baselib.node import (
+    node_from_xml, node_to_xml, Node, floatformat)
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.tom import PoissonTOM
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -200,6 +207,142 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
+def make_surface_from_pt_set(rup_coords):
+    corner_pts = [Point(*cc) for cc in rup_coords]
+    surf = PlanarSurface.from_corner_points(*corner_pts)
+    return surf
+
+
+def convert_to_oq_rupture(rup_json):
+    __import__('pdb').set_trace()
+    ftype = rup_json['features'][0]['geometry']['type']
+    # FIXME: the notebook overrides the rake found in metadata. Why?
+    # # Set rake to a reference value
+    # rup_json['metadata']['rake'] = rake
+    if ftype == 'Point':
+        raise ValueError('Point geometries are not supported in this context.')
+    if ftype == 'MultiPolygon':
+        coords = numpy.array(
+           rup_json['features'][0]['geometry']['coordinates'][0])
+        # Define rupture type and coordinates
+        if len(coords) == 1:
+            num_points = len(coords[0]) - (len(coords[0]) % 2)
+            # Single plane
+            if num_points == 4:
+                mode = "PlanarSurface"
+                rup_coordinates = coords[0][:num_points]
+            else:
+                mode = "ComplexSurface"
+                raise ValueError(
+                    'Ruptures with complex geometries are not supported yet')
+        else:
+            mode = "MultiSurface"
+            rup_coordinates = numpy.array(
+                rup_json['features'][0]['geometry']['coordinates'][0])
+    # print(f'Coordinates: {rup_coordinates}')
+    hyp_lon = rup_json['metadata']['lon']
+    hyp_lat = rup_json['metadata']['lat']
+    hyp_depth = rup_json['metadata']['depth']
+    hypocenter = Point(hyp_lon, hyp_lat, hyp_depth)
+
+    # FIXME: handle ARISTOTLE form accordingly?
+    trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
+
+    Mw = rup_json['metadata']['mag']
+
+    # Create surface
+    if mode == "PlanarSurface":
+        rake = rup_json['metadata']['rake']  # NOTE: if not passed to the func
+        surf = make_surface_from_pt_set(rup_coordinates)
+        rupture = ParametricProbabilisticRupture(
+            Mw, rake, trt, hypocenter, surf, 1.0, PoissonTOM(1.0))
+    elif mode == "MultiSurface":
+        surfaces = {}
+        for i, pt_set in enumerate(rup_coordinates):
+            assert len(pt_set) == 5, f"""Multi planar with complex planes.
+            More than 4 points in set: {pt_set}"""
+            surfaces[i] = make_surface_from_pt_set(pt_set[:4])
+        rup_idxs = [list(surfaces.keys())]
+        sections = list(surfaces.values())
+        pmfs = [[0.0, 1.0]]
+        source = MultiFaultSource("01", "Multi-Fault rupture",
+                                  trt, rup_idxs, pmfs, [Mw], [rake])
+        source.set_sections(sections)
+        for rupture in source.iter_ruptures():
+            # FIXME: is this supposed to get the last rupture?
+            rupture = rupture
+    else:
+        raise AttributeError(f'{mode} not supported')
+    return rupture
+
+
+# Namespace
+F64 = numpy.float64
+NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
+NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
+GML_NAMESPACE = 'http://www.opengis.net/gml'
+SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
+PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
+
+
+# Write node
+def nwrite(nodes, output=sys.stdout, fmt='%.5f', gml=True, xmlns=None):
+    """
+    Convert nodes into a NRML file. output must be a file
+    object open in write mode. If you want to perform a
+    consistency check, open it in read-write mode, then it will
+    be read after creation and validated.
+    :params nodes: an iterable over Node objects
+    :params output: a file-like object in write or read-write mode
+    :param fmt: format used for writing the floats (default '%.7E')
+    :param gml: add the http://www.opengis.net/gml namespace
+    :param xmlns: NRML namespace like http://openquake.org/xmlns/nrml/0.4
+    """
+    root = Node('nrml', nodes=nodes)
+    namespaces = {xmlns or NRML05: ''}
+    if gml:
+        namespaces[GML_NAMESPACE] = 'gml:'
+    with floatformat(fmt):
+        node_to_xml(root, output, namespaces)
+    # if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
+    #     output.seek(0)
+    #     read(output)  # validate the written file
+
+
+# Convert rupture to file
+def rup_to_file(rup, outfile, commentstr):
+    # Determine geometry
+    geom = rup.surface.surface_nodes[0].tag
+    name = ""
+    if len(rup.surface.surface_nodes) > 1:
+        name = 'multiPlanesRupture'
+    elif geom == 'planarSurface':
+        name = 'singlePlaneRupture'
+    elif geom == 'simpleFaultGeometry':
+        name = 'simpleFaultRupture'
+    elif geom == 'complexFaultGeometry':
+        name = 'complexFaultRupture'
+    elif geom == 'griddedSurface':
+        name = 'griddedRupture'
+    elif geom == 'kiteSurface':
+        name = 'kiteSurface'
+    # Arrange node
+    h = rup.hypocenter
+    hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
+    geom_nodes = [Node('magnitude', {}, rup.mag),
+                  Node('rake', {}, rup.rake),
+                  Node('hypocenter', hp_dict)]
+    geom_nodes.extend(rup.surface.surface_nodes)
+    rupt_nodes = [Node(name, nodes=geom_nodes)]
+    node = Node('nrml', nodes=rupt_nodes)
+    # Write file
+    with open(outfile, 'w') as ff:
+        bs = io.BytesIO()
+        nwrite(node, output=bs)
+        ff.write(bs.getvalue().decode("utf-8"))
+        ff.write(commentstr)
+
+
 def download_rupture_dict(id, ignore_shakemap=False):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
@@ -251,9 +394,17 @@ def download_rupture_dict(id, ignore_shakemap=False):
     feats = rup_data['features']
     is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
+    if is_point_rup:
+        return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
+                'mag': md['mag'], 'rake': md['rake'],
+                'is_point_rup': is_point_rup,
+                'usgs_id': id, 'rupture_file': None}
+    oq_rup = convert_to_oq_rupture(rup_data)
+    rupture_file = rup_to_file(oq_rup)
     return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake'], 'is_point_rup': is_point_rup,
-            'usgs_id': id, 'rupture_file': None}
+            'mag': md['mag'], 'rake': md['rake'],
+            'is_point_rup': is_point_rup,
+            'usgs_id': id, 'rupture_file': rupture_file}
 
 
 def get_array_usgs_id(kind, id):
