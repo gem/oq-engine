@@ -36,6 +36,9 @@ MAXMAG = 10.2  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
+class FilteredAway(Exception):
+    pass
+
 
 def magstr(mag):
     """
@@ -107,7 +110,6 @@ def get_distances(rupture, sites, param):
         dist = numpy.zeros_like(sites.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
-    dist.flags.writeable = False
     return dist
 
 
@@ -364,7 +366,7 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
-            raise exc.__class__('source %s: %s' % (src.source_id, exc))
+            raise exc.__class__('source %r: %s' % (src.source_id, exc))
         return bbox
 
     def get_rectangle(self, src):
@@ -423,6 +425,8 @@ class SourceFilter(object):
             trt = src_or_rec.tectonic_region_type
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
+            except FilteredAway:
+                return U32([])
             except BBoxError:  # do not filter
                 return self.sitecol.sids
             return self.sitecol.within_bbox(bbox)

@@ -216,16 +216,9 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], cmon, umon)
+                df = computer.compute_all([mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
-            with mmon:
-                # shape (4, G, M, N) for 1M sites, 10 IMTs and 10 GSIMs
-                # gives 3 GB of RAM
-                mean_stds = cmaker.get_mean_stds(
-                    [computer.ctx], split_by_mag=False)
-                # avoid numba type error
-                computer.ctx.flags.writeable = True
-            df = computer.compute_all(mean_stds, max_iml, cmon, umon)
+            df = computer.compute_all(None, max_iml, mmon, cmon, umon)
         sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
         times.append((proxy['id'], computer.ctx.rrup.min(), dt))
@@ -264,7 +257,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
         dset = dstore['rupgeoms']
         for proxy in proxies:
             proxy.geom = dset[proxy['geom_id']]
-    for block in block_splitter(proxies, 10_000, rup_weight):
+    for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 

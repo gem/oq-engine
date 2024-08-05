@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
+import stat
 import time
 import logging
 import os.path
@@ -118,7 +118,7 @@ def main(job_ini,
         if concurrent_tasks:
             dic['concurrent_tasks'] = str(concurrent_tasks)
         elif nodes and 'concurrent_tasks' not in dic:
-            ct = int(config.distribution.num_cores) * nodes
+            ct = 2 * int(config.distribution.num_cores) * nodes
             dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
@@ -126,13 +126,10 @@ def main(job_ini,
     dist = parallel.oq_distribute()
     if dist == 'slurm':
         assert nodes, 'oq_distribute=slurm requires the --nodes option'
+        start_workers(nodes, str(job_id))
     else:
         assert not nodes, 'The --nodes option requires oq_distribute=slurm'
     if nodes:
-        if nodes > 1:
-            start_workers(nodes - 1, str(job_id))
-        subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
-                          str(config.distribution.num_cores), str(job_id)])
         wait_workers(nodes, job_id)
     try:
         run_jobs(jobs)
@@ -148,36 +145,36 @@ SLURM_BATCH = '''\
 #SBATCH --job-name=workerpool
 #SBATCH --time=10:00:00
 #SBATCH --cpus-per-task={num_cores}
-srun {python} -m openquake.baselib.workerpool {num_cores} {job_id}
+#SBATCH --nodes={nodes}
+srun python -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
 def start_workers(n, job_id: str):
     """
-    Start n workerpools which will store their hostname on scratch_dir/hostnames)
+    Start n workerpools which will write on scratch_dir/hostcores)
     """
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
+    code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
+                              job_id=job_id, nodes=n)
     with open(slurm_sh, 'w') as f:
-        f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
-                                   num_cores=config.distribution.num_cores,
-                                   job_id=job_id))
+        f.write(code)
+    os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)
 
     submit_cmd = config.distribution.submit_cmd.split()
     assert submit_cmd[0] == 'sbatch', submit_cmd
-    # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
-    cmd = submit_cmd[:-2] + [slurm_sh]
-    for n in range(n):
-        subprocess.run(cmd)
+    # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
+    subprocess.run(submit_cmd[:-2] + [slurm_sh])
 
 
 def wait_workers(n, job_id):
     """
-    Wait until the hostnames file is filled with n names
+    Wait until the hostcores file is filled with n names
     """
     calc_dir = parallel.scratch_dir(job_id)
-    fname = os.path.join(calc_dir, 'hostnames')
+    fname = os.path.join(calc_dir, 'hostcores')
     while True:
         if not os.path.exists(fname):
-            time.sleep(1)
+            time.sleep(5)
             print(f'Waiting for {fname}')
             continue
         with open(fname) as f:
@@ -191,9 +188,9 @@ def wait_workers(n, job_id):
 
 def stop_workers(job_id: str):
     """
-    Stop all the started workerpools (read from the file scratch_dir/hostnames)
+    Stop all the started workerpools (read from the file scratch_dir/hostcores)
     """
-    fname = os.path.join(parallel.scratch_dir(job_id), 'hostnames')
+    fname = os.path.join(parallel.scratch_dir(job_id), 'hostcores')
     with open(fname) as f:
         hostcores = f.readlines()
     for line in hostcores:
