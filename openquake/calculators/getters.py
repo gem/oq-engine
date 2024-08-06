@@ -160,7 +160,7 @@ def get_num_chunks(dstore):
     """
     msd = dstore['oqparam'].max_sites_disagg
     try:
-        req_gb = dstore['GN_splits'].attrs['req_gb']
+        req_gb = dstore['tiles'].attrs['req_gb']
     except KeyError:
         return msd
     chunks = max(int(4 * req_gb), msd)

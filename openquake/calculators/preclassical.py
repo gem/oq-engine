@@ -176,14 +176,14 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     sizes = [len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3 for cm in cmakers]
     ok = req_gb < max_gb and max(sizes) < max_gb
     regular = ok or oq.disagg_by_src or N < oq.max_sites_disagg or oq.tile_spec
-    GN_splits = numpy.array([(cm.grp_id, len(cm.gsims), len(tile))
+    tiles = numpy.array([(cm.grp_id, len(cm.gsims), len(tile))
                              for cm, tile in csm.split(cmakers, sitecol, max_weight)],
                             [('grp_id', U16), ('G', U16), ('N', U32)])
-    dstore.create_dset('GN_splits', GN_splits, fillvalue=None,
+    dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, tiling=not regular))
     if not regular:
         logging.info('This will be a tiling calculation with %d tasks, min_sites=%d',
-                     len(GN_splits), min(GN_splits['N']))
+                     len(tiles), min(tiles['N']))
         if req_gb >= 30 and (not config.directory.custom_tmp or
                              not config.distribution.save_on_tmp):
             logging.info('We suggest to set custom_tmp and save_on_tmp')
