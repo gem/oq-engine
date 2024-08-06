@@ -158,7 +158,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates, cmaker.chunks, h5)
+                    _store(rates, cmaker.num_chunks, h5)
         else:
             result['pnemap'] = rates
         yield result
@@ -432,7 +432,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
-        self.chunks = getters.get_num_chunks(self.datastore)
+        self.num_chunks = getters.get_num_chunks(self.datastore)
+        # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
@@ -546,7 +547,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.chunks, self.datastore)
+            _store(self.pmap.to_array(), self.num_chunks, self.datastore)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -587,13 +588,13 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        # pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
-        # first the tasks with few tiles, then the ones with many tiles
-        for cm, sites in self.csm.split(self.cmakers, self.sitecol, self.max_weight):
+        pairs = self.csm.split(self.cmakers, self.sitecol, self.max_weight)
+        # send first the tasks with big tiles
+        for cm, sites in sorted(pairs, key=lambda cs: len(cs[1])):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.chunks = self.chunks
+            cm.num_chunks = self.num_chunks
             allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
@@ -603,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
                     self.offset = _store(
-                        dic['pnemap'], self.chunks, self.datastore, self.offset)
+                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
         return {}
 
     def store_info(self):
