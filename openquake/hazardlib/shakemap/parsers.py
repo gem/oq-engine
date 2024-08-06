@@ -224,8 +224,11 @@ def utc_to_local_time(utc_timestamp, lon, lat):
 
 
 def local_time_to_time_event(local_time):
-    # FIXME: return either avg|day|night|transit
-    return "avg"
+    if 9 <= local_time.hour < 17:
+        return 'day'
+    if local_time.hour >= 21 or local_time.hour < 5:
+        return 'night'
+    return 'transit'
 
 
 def download_rupture_dict(id, ignore_shakemap=False):
