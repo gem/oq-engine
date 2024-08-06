@@ -133,7 +133,11 @@
               </div>
               <div class="aristotle_form_row">
                 <label for"time_event">{{ aristotle_form_labels.time_event }}</label>
-                <input class="aristotle-input" type="text" id="time_event" name="time_event" placeholder="{{ aristotle_form_placeholders.time_event }}" value='avg'/>
+                <select id="time_event" name="time_event" class="aristotle-select">
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                    <option value="transit">Transit</option>
+                </select>
               </div>
               <div class="aristotle_form_row">
                 <label for"maximum_distance">{{ aristotle_form_labels.maximum_distance }}</label>
