@@ -319,6 +319,18 @@ class SourceGroup(collections.abc.Sequence):
         dic = {tom.__class__.__name__: vars(tom)}
         return toml.dumps(dic)
 
+    def get_kind(self):
+        """
+        :returns: poisson | nopoisson | mixed
+        """
+        toms = [getattr(src, 'temporal_occurrence_model', None) for src in self.sources]
+        if all(tom.__class__.__name__ == 'PoissonTOM' for tom in toms):
+            return 'poisson'
+        elif all(tom.__class__.__name__ != 'PoissonTOM' for tom in toms):
+            return 'nopoisson'
+        else:
+            return 'mixed'
+
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
             self.__class__.__name__, self.trt, len(self.sources), self.weight)
