@@ -780,7 +780,8 @@ def aristotle_validate(request):
         'rake': valid.rake_range,
         'dip': valid.dip_range,
         'strike': valid.strike_range,
-        'time_event': valid.Choice('avg', 'day', 'night', 'transit'),
+        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
+        'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
