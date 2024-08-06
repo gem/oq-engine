@@ -807,7 +807,7 @@ tectonic_region_type:
 
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
-  Valid choices are "day", "night", "transit".
+  Valid choices are "avg", "day", "night", "transit".
   Example: *time_event = day*.
   Default: "avg"
 
