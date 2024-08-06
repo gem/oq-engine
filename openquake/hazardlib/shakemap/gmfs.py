@@ -204,7 +204,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
     # mu has unit (pctg), L has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu)) / PCTG
+    return numpy.exp(L @ Z + numpy.log(mu) - (stddev ** 2 / 2.)) / PCTG
 
 
 @calculate_gmfs.add('basic')
@@ -220,7 +220,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     sig = numpy.array([shakemap['std'][str(im)] for im in imts]).flatten()
     # mu has unit (pctg), sig has unit ln(pctg)
     # multiply Z and sig column-wise and add mean
-    return numpy.exp((Z.T * sig).T + numpy.log(mu)) / PCTG
+    return numpy.exp((Z.T * sig).T + numpy.log(mu) - (sig ** 2 / 2.)) / PCTG
 
 
 @ calculate_gmfs.add('mmi')
