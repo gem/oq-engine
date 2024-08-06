@@ -99,18 +99,6 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid, tiling, disagg_by_src):
-    """
-    :returns: dictionary if tiling is True, else MapArray with rates
-    """
-    rates = pnemap.to_rates()
-    if tiling:
-        return rates.to_array(gid)
-    if disagg_by_src:
-        return rates
-    return rates.remove_zeros()
-
-
 #  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
@@ -140,7 +128,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+            rates = (~pmap).to_rates()
+            result['pnemap'] = rates.to_array(gid) if tiling else rates
             yield result
     else:
         # use most memory here; limited by pmap_max_gb
@@ -150,8 +139,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
+        rates = (~pmap).to_rates()
         if cmaker.save_on_tmp and tiling:
+            rates = rates.to_array(gid)
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rates):
@@ -160,7 +150,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 with hdf5.File(fname, 'a') as h5:
                     _store(rates, cmaker.chunks, h5)
         else:
-            result['pnemap'] = rates
+            result['pnemap'] = rates.remove_zeros()
         yield result
 
 
