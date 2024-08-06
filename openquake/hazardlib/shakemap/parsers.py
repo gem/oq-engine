@@ -204,6 +204,7 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 def utc_to_local_time(utc_timestamp, lon, lat):
     try:
+        # NOTE: optional dependency needed for ARISTOTLE
         from timezonefinder import TimezoneFinder
     except ImportError:
         logging.warning(
