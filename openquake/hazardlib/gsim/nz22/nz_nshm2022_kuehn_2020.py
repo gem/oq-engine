@@ -349,6 +349,8 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
 
+"""
+
 # For the aliases use the verbose form of the region name
 REGION_ALIASES = {
     "GLO": "",
@@ -368,3 +370,5 @@ for region in SUPPORTED_REGIONS[1:]:
         KuehnEtAl2020SInter,
         region=region,
     )
+
+"""
