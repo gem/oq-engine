@@ -29,7 +29,6 @@ import numpy as np
 
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
