@@ -20,8 +20,9 @@ import copy
 import warnings
 import numpy
 import pandas
+import numba
 from openquake.baselib.general import cached_property
-from openquake.baselib.performance import numba, compile
+from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
@@ -34,7 +35,7 @@ rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
                         ('rate', F32)])
 
 
-@compile("void(float64[:, :], float64[:], uint32[:])")
+@compile("(float64[:, :], float64[:], uint32[:])")
 def combine_probs(array, other, rlzs):
     for li in range(len(array)):
         for ri in rlzs:
@@ -162,46 +163,44 @@ def get_lvl(hcurve, imls, poe):
 
 # ############################# probability maps ##############################
 
-# numbified below
-def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
+t = numba.types
+sig1 = t.void(t.float64[:, :],                        # pmap
+              t.float64[:, :],                        # poes
+              t.uint32[:],                            # invs
+              t.float64[:],                           # rates
+              t.float64[:, :],                        # probs_occur
+              t.uint32[:],                            # sids
+              t.float64)                              # itime
+
+sig2 = t.void(t.float64[:, :],                        # pmap
+              t.float64[:, :],                        # poes
+              t.uint32[:],                            # invs
+              t.float64[:],                           # rates
+              t.float64[:, :],                        # probs_occur
+              t.float64[:],                           # weights
+              t.uint32[:],                            # sids
+              t.float64)                              # itime
+
+
+@compile(sig1)
+def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
     levels = range(arr.shape[1])
-    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+    for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
         if itime == 0:  # FatedTOM
-            arr[idx] *= 1. - poes[i]
+            arr[sidx] *= 1. - poes[i]
         elif len(probs) == 0:
             # looping is faster than building arrays
             for lvl in levels:
-                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
+                arr[sidx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
         else:
-            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+            arr[sidx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
-# numbified below
-def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
-    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
+@compile(sig2)
+def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
+    for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
         pne = get_pnes(rate, probs, poes[i], itime)  # shape L
-        arr[idx] += (1. - pne) * w
-
-
-t = numba.types
-sig = t.void(t.float64[:, :],                        # pmap
-             t.float64[:, :],                        # poes
-             t.uint32[:],                            # invs
-             t.float64[:],                           # rates
-             t.float64[:, :],                        # probs_occur
-             t.uint32[:],                            # sids
-             t.float64)                              # itime
-update_pmap_i = compile(sig)(update_pmap_i)
-
-sig = t.void(t.float64[:, :],                        # pmap
-             t.float64[:, :],                        # poes
-             t.uint32[:],                            # invs
-             t.float64[:],                           # rates
-             t.float64[:, :],                        # probs_occur
-             t.float64[:],                           # weights
-             t.uint32[:],                            # sids
-             t.float64)                              # itime
-update_pmap_m = compile(sig)(update_pmap_m)
+        arr[sidx] += (1. - pne) * w
 
 
 def fix_probs_occur(probs_occur):

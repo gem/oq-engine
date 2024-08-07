@@ -23,8 +23,9 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 import math
 import logging
 import numpy
+import numba
 from openquake.baselib.node import Node
-from openquake.baselib.performance import numba, compile
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import (
     point_at, spherical_to_cartesian, fast_spherical_to_cartesian)
 from openquake.hazardlib.geo import Point, Line

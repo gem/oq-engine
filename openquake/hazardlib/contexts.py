@@ -1150,10 +1150,8 @@ class ContextMaker(object):
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
-        pmap = MapArray(sids, size(self.imtls), len(self.gsims))
-        pmap.fill(rup_indep)
-        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
-                    rup_mutex)
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time), rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
