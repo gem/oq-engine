@@ -34,18 +34,13 @@ rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
                         ('rate', F32)])
 
 
-if numba:
-    @compile("void(float64[:, :], float64[:], uint32[:])")
-    def combine_probs(array, other, rlzs):
-        for li in range(len(array)):
-            for ri in rlzs:
-                if other[li] != 0.:
-                    array[li, ri] = (
-                        1. - (1. - array[li, ri]) * (1. - other[li]))
-else:
-    def combine_probs(array, other, rlzs):
-        for r in rlzs:
-            array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
+@compile("void(float64[:, :], float64[:], uint32[:])")
+def combine_probs(array, other, rlzs):
+    for li in range(len(array)):
+        for ri in rlzs:
+            if other[li] != 0.:
+                array[li, ri] = (
+                    1. - (1. - array[li, ri]) * (1. - other[li]))
 
 
 def get_mean_curve(dstore, imt, site_id=0):
@@ -188,26 +183,25 @@ def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
         arr[idx] += (1. - pne) * w
 
 
-if numba:
-    t = numba.types
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.float64[:, :],                        # poes
-                 t.uint32[:],                            # invs
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_i = compile(sig)(update_pmap_i)
+t = numba.types
+sig = t.void(t.float64[:, :],                        # pmap
+             t.float64[:, :],                        # poes
+             t.uint32[:],                            # invs
+             t.float64[:],                           # rates
+             t.float64[:, :],                        # probs_occur
+             t.uint32[:],                            # sids
+             t.float64)                              # itime
+update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.float64[:, :],                        # poes
-                 t.uint32[:],                            # invs
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.float64[:],                           # weights
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_m = compile(sig)(update_pmap_m)
+sig = t.void(t.float64[:, :],                        # pmap
+             t.float64[:, :],                        # poes
+             t.uint32[:],                            # invs
+             t.float64[:],                           # rates
+             t.float64[:, :],                        # probs_occur
+             t.float64[:],                           # weights
+             t.uint32[:],                            # sids
+             t.float64)                              # itime
+update_pmap_m = compile(sig)(update_pmap_m)
 
 
 def fix_probs_occur(probs_occur):

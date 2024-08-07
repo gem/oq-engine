@@ -33,10 +33,7 @@ from decorator import decorator
 import psutil
 import numpy
 import pandas
-try:
-    import numba
-except ImportError:
-    numba = None
+import numba
 
 from openquake.baselib.general import humansize, fast_agg
 from openquake.baselib import hdf5
@@ -420,31 +417,19 @@ def vectorize_arg(idx):
 
 
 # numba helpers
-if numba:
-    # NB: without cache=True the tests would take hours!!
+# NB: without cache=True the tests would take hours!!
 
-    def jittable(func):
-        """Calls numba.njit with a cache"""
-        jitfunc = numba.njit(func, error_model='numpy', cache=True)
-        jitfunc.jittable = True
-        return jitfunc
+def jittable(func):
+    """Calls numba.njit with a cache"""
+    jitfunc = numba.njit(func, error_model='numpy', cache=True)
+    jitfunc.jittable = True
+    return jitfunc
 
-    def compile(sigstr):
-        """
-        Compile a function Ahead-Of-Time using the given signature string
-        """
-        return numba.njit(sigstr, error_model='numpy', cache=True)
-
-else:
-
-    def jittable(func):
-        """Do nothing decorator, used if numba is missing"""
-        func.jittable = True
-        return func
-
-    def compile(sigstr):
-        """Do nothing decorator, used if numba is missing"""
-        return lambda func: func
+def compile(sigstr):
+    """
+    Compile a function Ahead-Of-Time using the given signature string
+    """
+    return numba.njit(sigstr, error_model='numpy', cache=True)
 
 
 # used when reading _rates/sid
