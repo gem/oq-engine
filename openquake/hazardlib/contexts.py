@@ -1517,11 +1517,11 @@ class PmapMaker(object):
         self.source_data['taskno'].append(cm.task_no)
 
     def make(self):
-        sitecol = self.srcfilter.sitecol
+        sids = self.srcfilter.sitecol.sids
         indep = self.rup_indep and not self.src_mutex
         # using most memory here; limited by pmap_max_gb
         pmap = MapArray(
-            sitecol.sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(indep)
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(indep)
         dic = {'pmap': pmap}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
@@ -1529,7 +1529,7 @@ class PmapMaker(object):
         if self.src_mutex or not self.rup_indep:
             self._make_src_mutex(pmap)
             if self.src_mutex:
-                pmap.array = self.grp_probability * pmap.array
+                pmap.array *= self.grp_probability
         else:
             self._make_src_indep(pmap)
         dic['cfactor'] = self.cmaker.collapser.cfactor
