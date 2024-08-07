@@ -22,7 +22,7 @@ from django.contrib.auth.forms import AuthenticationForm
 
 class CustomAuthenticationForm(AuthenticationForm):
     """
-    Customizing the invalid_login message to include a warning about the
+    Overriding the invalid_login message to include a warning about the
     possibility to be banned after some failed login attempts
     """
     error_messages = {
