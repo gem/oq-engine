@@ -100,6 +100,7 @@ def classical(group, sitecol, cmaker):
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
 
+    # using most memory here; limited by pmap_max_gb
     pmap = MapArray(
         sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     dic = PmapMaker(cmaker, src_filter, group).make(pmap)

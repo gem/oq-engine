@@ -127,7 +127,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = (~result.pop('pmap')).to_rates()
             yield result
     else:
-        # use most memory here; limited by pmap_max_gb
         result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
