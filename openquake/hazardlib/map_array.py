@@ -372,23 +372,28 @@ class MapArray(object):
         arr = self.to_rates().to_array()
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update(self, poes, invs, ctxt, itime, mutex_weight):
+    def update_indep(self, poes, invs, ctxt, itime):
+        """
+        Update probabilities
+        """
+        rates = ctxt.occurrence_rate
+        sidxs = self.sidx[ctxt.sids]
+        for i in range(self.shape[-1]):  # G indices
+            update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
+                          ctxt.probs_occur, sidxs, itime)
+
+    def update_mutex(self, poes, invs, ctxt, itime, mutex_weight):
         """
         Update probabilities
         """
         rates = ctxt.occurrence_rate
         probs_occur = fix_probs_occur(ctxt.probs_occur)
         sidxs = self.sidx[ctxt.sids]
+        weights = numpy.array([mutex_weight[src_id, rup_id]
+                               for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)])
         for i in range(self.shape[-1]):  # G indices
-            if len(mutex_weight) == 0:  # indep
-                update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
-                              probs_occur, sidxs, itime)
-            else:  # mutex
-                weights = [mutex_weight[src_id, rup_id]
-                           for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
-                update_pmap_m(self.array[:, :, i], poes[:, :, i],
-                              invs, rates, probs_occur,
-                              numpy.array(weights), sidxs, itime)
+            update_pmap_m(self.array[:, :, i], poes[:, :, i],
+                          invs, rates, probs_occur, weights, sidxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

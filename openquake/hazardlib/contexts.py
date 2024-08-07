@@ -1177,7 +1177,7 @@ class ContextMaker(object):
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx, rup_indep=True):
                 with self.pne_mon:
-                    pmap.update(poes, invs, ctxt, itime, {})
+                    pmap.update_indep(poes, invs, ctxt, itime)
 
     def update_mutex(self, pmap, ctxs, tom, rup_mutex):
         """
@@ -1188,7 +1188,10 @@ class ContextMaker(object):
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx, rup_indep=False):
                 with self.pne_mon:
-                    pmap.update(poes, invs, ctxt, tom.time_span, rup_mutex)
+                    if rup_mutex:
+                        pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
+                    else:
+                        pmap.update_indep(poes, invs, ctxt, tom.time_span)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
