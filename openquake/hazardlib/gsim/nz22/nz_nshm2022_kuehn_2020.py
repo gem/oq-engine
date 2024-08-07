@@ -44,7 +44,6 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     CONSTS,
     REGION_TERMS_IF,
     REGION_TERMS_SLAB,
-    SUPPORTED_REGIONS,
     Z_MODEL,
 )
 from openquake.hazardlib.gsim.nz22.const import (
