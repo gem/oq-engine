@@ -128,8 +128,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
             result = hazclassical(srcs, sitecol, cmaker, pmap)
-            rates = (~pmap).to_rates()
-            result['pnemap'] = rates.to_array(gid) if tiling else rates
+            result['pnemap'] = (~pmap).to_rates()
             yield result
     else:
         # use most memory here; limited by pmap_max_gb
