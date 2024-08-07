@@ -58,7 +58,7 @@ LITHOLOGY_TABLE={
     b"sc": -0.95,
     b"sm": -1.36,
     b"ss": -1.92,
-    b"su": -3.22,
+    b"su": -1.36,
     b"va": -1.54,
     b"vb": -1.50,
     b"pi": -0.81,
@@ -71,11 +71,10 @@ LITHOLOGY_TABLE={
     "sc": -0.95,
     "sm": -1.36,
     "ss": -1.92,
-    "su": -3.22,
+    "su": -1.36,
     "va": -1.54,
     "vb": -1.50,
     "pi": -0.81
-
 }
 
 
@@ -92,8 +91,8 @@ def areal_coverage(a: float, b: float, c: float, d: float, p: float):
 def nowicki_jessee_2018(
     pgv: Union[float, np.ndarray],
     slope: Union[float, np.ndarray],
-    lithology: Union[str, bytes, np.ndarray],
-    landcover: Union[str, bytes, np.ndarray],
+    lithology: str,
+    landcover: str,
     cti: Union[float, np.ndarray],
     intercept: float = -6.30,
     pgv_coeff: float = 1.65,
@@ -103,16 +102,48 @@ def nowicki_jessee_2018(
     cti_coeff: float = 0.03,
     interaction_term: float = 0.01
 ) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of landsliding using the logistic
+    regression of Nowicki Jessee et al. (2018). As per USGS recommendation,
+    the values of pgv and cti are capped to 211 cm/s and 19, respectively.
+    Furthermore, the model computes the areal coverage, which unbiases the
+    calculated probabilities.
+
+    Reference: Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., 
+    Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018). 
+    A global empirical model for near-real-time assessment of seismically 
+    induced landslides. 
+    Journal of Geophysical Research: Earth Surface, 123, 1835–1859. 
+    https://doi.org/10.1029/2017JF004494
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param slope:
+        Topographic slope expressed in degrees
+    :param lithology:
+        Rock lithology, a "measure" of rock strength
+    :param landcover:
+        Land cover, procxy for vegetation cover
+    :param cti:
+        Compound Topographic Index, a proxy for soil wetness.
+
+    :returns:
+        prob_ls: Probability of landslide.
+        coverage: Landslide areal coverage.
+    """
 
     if isinstance(lithology, (str, bytes)):
-        lithology_coeff = coeff_table_lith.get(lithology, 0)
+        lithology_coeff = coeff_table_lith.get(lithology, -0.66)
     else:
-        lithology_coeff = np.array([coeff_table_lith.get(l, 0) for l in lithology])
+        lithology_coeff = np.array([coeff_table_lith.get(l, -0.66) for l in lithology])
 
     if isinstance(landcover, (str, bytes)):
-        landcover_coeff = coeff_table_cov.get(landcover, 0)
+        landcover_coeff = coeff_table_cov.get(landcover, -1.08)
     else:
-        landcover_coeff = np.array([coeff_table_cov.get(l, 0) for l in landcover])
+        landcover_coeff = np.array([coeff_table_cov.get(l, -1.08) for l in landcover])
+
+    cti = np.clip(np.where(cti > 19, 19, cti), 0, None)
+    pgv = np.clip(np.where(pgv > 211, 211, pgv), 1e-5, None)
 
     Xg = (
         pgv_coeff * np.log(pgv) +
