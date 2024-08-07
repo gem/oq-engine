@@ -1399,8 +1399,7 @@ class PmapMaker(object):
                 for i, (rup, _) in enumerate(src.data):
                     self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
-        if hasattr(group, 'grp_probability'):
-            self.grp_probability = group.grp_probability
+        self.grp_probability = getattr(group, 'grp_probability', 1.)
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
         self.maxsize = get_maxsize(M, G)
 
@@ -1506,6 +1505,7 @@ class PmapMaker(object):
             else:
                 pmap.array = 1. - (1-pmap.array) * (1-pm.array)
             weight += src.weight
+        pmap.array *= self.grp_probability
         dt = time.time() - t0
         self.source_data['src_id'].append(valid.basename(src))
         self.source_data['grp_id'].append(src.grp_id)
@@ -1525,18 +1525,15 @@ class PmapMaker(object):
         dic = {'pmap': pmap}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        grp_id = self.sources[0].grp_id
-        if self.src_mutex or not self.rup_indep:
-            self._make_src_mutex(pmap)
-            if self.src_mutex:
-                pmap.array *= self.grp_probability
-        else:
+        if indep:
             self._make_src_indep(pmap)
+        else:
+            self._make_src_mutex(pmap)
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['grp_id'] = grp_id
+        dic['grp_id'] = self.sources[0].grp_id
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py
