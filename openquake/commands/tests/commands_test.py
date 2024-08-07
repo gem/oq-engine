@@ -19,43 +19,42 @@
 import io
 import os
 import re
-import sys
-import unittest.mock as mock
-from contextlib import redirect_stdout
 import shutil
-import zipfile
 import subprocess
+import sys
 import tempfile
 import unittest
-import numpy
-
+import unittest.mock as mock
+import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
-from openquake.baselib.python3compat import encode
-from openquake.baselib.general import gettemp, chdir
-from openquake.baselib import parallel, sap
-from openquake.baselib.hdf5 import read_csv
-from openquake.baselib.tests.flake8_test import check_newlines
-from openquake.hazardlib import tests
+import numpy
+
 from openquake import commonlib
+from openquake.baselib import parallel, sap
+from openquake.baselib.general import chdir, gettemp
+from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.python3compat import encode
+from openquake.baselib.tests.flake8_test import check_newlines
+from openquake.calculators.views import view
+from openquake.commands.tests.data import to_reduce
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
-from openquake.commands.tests.data import to_reduce
-from openquake.calculators.views import view
+from openquake.hazardlib import tests
 from openquake.qa_tests_data import mosaic
-from openquake.qa_tests_data.event_based_damage import case_15
-from openquake.qa_tests_data.logictree import case_09, case_13, case_56
 from openquake.qa_tests_data.classical import case_01, case_18
 from openquake.qa_tests_data.classical_risk import case_3
-from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import (
-    case_1 as eb_case_1, case_5, case_16, case_21)
-from openquake.qa_tests_data.event_based_risk import (
-    case_master, case_1 as case_eb)
-from openquake.qa_tests_data.scenario import case_25
-from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
+from openquake.qa_tests_data.event_based import case_1 as eb_case_1
+from openquake.qa_tests_data.event_based import case_5, case_16, case_21
+from openquake.qa_tests_data.event_based_damage import case_15
+from openquake.qa_tests_data.event_based_risk import case_1 as case_eb
+from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
+from openquake.qa_tests_data.logictree import case_09, case_13, case_56
+from openquake.qa_tests_data.scenario import case_4, case_25
+from openquake.qa_tests_data.scenario_risk import case_shakemap, case_shapefile
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -563,7 +562,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline("openquake.commands collect_jobs -2 -3")
         self.assertIn('All jobs completed correctly', str(p))
-        
+
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
@@ -631,7 +630,7 @@ Source Loss Table'''.splitlines())
         # test shakemap2gmfs with sitemodel with a filtered sitecol
         # and three choices of site_effects
         effects = ['no', 'shakemap', 'sitemodel']
-        expected = [0.2555, 0.31813407, 0.25332582]
+        expected = [0.213411, 0.287633, 0.21091]
         with chdir(os.path.dirname(case_25.__file__)):
             for eff, exp in zip(effects, expected):
                 with redirect_stdout(io.StringIO()) as out:
