@@ -1463,6 +1463,7 @@ class PmapMaker(object):
             # assume all sources have the same tom
             cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
             allctxs.clear()
+        pmap.array[:] = 1. - pmap.array
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
@@ -1545,8 +1546,6 @@ class PmapMaker(object):
             # (mps-0!b1;0, mps-0!b1;1, ...); you can simply use the first,
             # since in `store_mean_rates_by_src` we use corename
             dic['basename'] = valid.basename(self.sources[0])
-        if indep:
-            pmap.array[:] = 1. - pmap.array
         return dic
 
 
