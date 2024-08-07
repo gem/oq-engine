@@ -325,3 +325,17 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
+
+
+def LsProb():
+    """
+    Probability of landsliding.
+    """
+    return IMT('LsProb')
+
+
+def LP():
+    """
+    Landslide areal coverage.
+    """
+    return IMT('LP')
