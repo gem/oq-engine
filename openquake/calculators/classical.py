@@ -99,6 +99,18 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
+def to_rates(pnemap, gid, tiling, disagg_by_src):
+    """
+    :returns: dictionary if tiling is True, else MapArray with rates
+    """
+    rates = pnemap.to_rates()
+    if tiling:
+        return rates.to_array(gid)
+    if disagg_by_src:
+        return rates
+    return rates.remove_zeros()
+
+
 #  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
@@ -138,9 +150,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = (~pmap).to_rates()
+        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
         if cmaker.save_on_tmp and tiling:
-            rates = rates.to_array(gid)
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rates):
@@ -149,7 +160,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 with hdf5.File(fname, 'a') as h5:
                     _store(rates, cmaker.num_chunks, h5)
         else:
-            result['pnemap'] = rates.remove_zeros()
+            result['pnemap'] = rates
         yield result
 
 
@@ -577,9 +588,9 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        pairs = self.csm.split(self.cmakers, self.sitecol, self.max_weight)
-        # send first the tasks with big tiles
-        for cm, sites in sorted(pairs, key=lambda cs: len(cs[1])):
+        # pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
+        # first the tasks with few tiles, then the ones with many tiles
+        for cm, sites in self.csm.split(self.cmakers, self.sitecol, self.max_weight):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
@@ -592,7 +603,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    rates = dic['pnemap'].to_array()
+                    rates = dic['pnemap']
                     self.offset = _store(
                         rates, self.num_chunks, self.datastore, self.offset)
         return {}
