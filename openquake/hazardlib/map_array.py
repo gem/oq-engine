@@ -378,17 +378,17 @@ class MapArray(object):
         """
         rates = ctxt.occurrence_rate
         probs_occur = fix_probs_occur(ctxt.probs_occur)
-        idxs = self.sidx[ctxt.sids]
+        sidxs = self.sidx[ctxt.sids]
         for i in range(self.shape[-1]):  # G indices
             if len(mutex_weight) == 0:  # indep
                 update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
-                              probs_occur, idxs, itime)
+                              probs_occur, sidxs, itime)
             else:  # mutex
                 weights = [mutex_weight[src_id, rup_id]
                            for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
                 update_pmap_m(self.array[:, :, i], poes[:, :, i],
                               invs, rates, probs_occur,
-                              numpy.array(weights), idxs, itime)
+                              numpy.array(weights), sidxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)
