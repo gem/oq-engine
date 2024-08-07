@@ -85,14 +85,9 @@ def classical(group, sitecol, cmaker):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    indep = rup_indep and getattr(group, 'src_interdep', None) != 'mutex'
-    # using most memory here; limited by pmap_max_gb
-    pmap = MapArray(
-        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(indep)
-    dic = PmapMaker(cmaker, src_filter, group).make(pmap)
-    if indep:
-        pmap.array[:] = 1. - pmap.array
+    dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
+        pmap = dic['pmap']
         tom = group.temporal_occurrence_model
         for nocc in range(0, 50):
             prob_n_occ = tom.get_probability_n_occurrences(tom.occurrence_rate, nocc)
@@ -101,7 +96,6 @@ def classical(group, sitecol, cmaker):
             else:
                 pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
         pmap.array[:] = (~pmapclu).array
-    dic['pmap'] = pmap
     return dic
 
 

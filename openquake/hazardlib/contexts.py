@@ -1516,8 +1516,13 @@ class PmapMaker(object):
         self.source_data['ctimes'].append(dt)
         self.source_data['taskno'].append(cm.task_no)
 
-    def make(self, pmap):
-        dic = {}
+    def make(self):
+        sitecol = self.srcfilter.sitecol
+        indep = self.rup_indep and not self.src_mutex
+        # using most memory here; limited by pmap_max_gb
+        pmap = MapArray(
+            sitecol.sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(indep)
+        dic = {'pmap': pmap}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
@@ -1543,6 +1548,8 @@ class PmapMaker(object):
             # (mps-0!b1;0, mps-0!b1;1, ...); you can simply use the first,
             # since in `store_mean_rates_by_src` we use corename
             dic['basename'] = valid.basename(self.sources[0])
+        if indep:
+            pmap.array[:] = 1. - pmap.array
         return dic
 
 
