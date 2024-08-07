@@ -1122,7 +1122,7 @@ class ContextMaker(object):
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])
             yield poes
 
-    def gen_poes(self, ctx, rup_indep=True):
+    def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
@@ -1131,7 +1131,7 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep)
+            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
             if invs is None:  # no collapse
                 for poes in self._gen_poes(ctxt):
                     invs = numpy.arange(len(poes), dtype=U32)
@@ -1175,7 +1175,7 @@ class ContextMaker(object):
         else:
             itime = tom.time_span
         for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep=True):
+            for poes, ctxt, invs in self.gen_poes(ctx):
                 with self.pne_mon:
                     pmap.update_indep(poes, invs, ctxt, itime)
 
@@ -1186,7 +1186,7 @@ class ContextMaker(object):
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
         for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep=False):
+            for poes, ctxt, invs in self.gen_poes(ctx):
                 with self.pne_mon:
                     if rup_mutex:
                         pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
