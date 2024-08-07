@@ -110,13 +110,12 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     tiling = not hasattr(sources, '__iter__')  # passed gid
     disagg_by_src = cmaker.disagg_by_src
     with dstore:
+        gid = cmaker.gid[0]
         if tiling:  # tiling calculator, read the sources from the datastore
-            gid = cmaker.gid[0]
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        else:  # regular calculator
-            gid = 0
+        else:  # regular calculator, read the sites from the datastore
             sitecol = dstore['sitecol']  # super-fast
 
     if disagg_by_src and not getattr(sources, 'atomic', False):
@@ -139,16 +138,18 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         if tiling:
             del result['source_data']  # save some data transfer
         rates = (~pmap).to_rates()
-        if cmaker.save_on_tmp and tiling:
+        if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rates):
+            if len(rates.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rates.to_array(gid), cmaker.num_chunks, h5)
+        elif tiling:
+            result['pnemap'] = rates.to_array(gid)
         else:
-            result['pnemap'] = rates.to_array(gid) if tiling else rates
+            result['pnemap'] = rates
         yield result
 
 
