@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,6 +69,11 @@ from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
+    from django.contrib.auth.views import LoginView
+    from .forms import CustomAuthenticationForm
+
+    class CustomLoginView(LoginView):
+        authentication_form = CustomAuthenticationForm
 
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -102,8 +102,9 @@ else:
     if settings.LOCKDOWN:
         from django.contrib import admin
         from django.contrib.auth.views import (
-            LoginView, LogoutView, PasswordResetView, PasswordResetDoneView,
+            LogoutView, PasswordResetView, PasswordResetDoneView,
             PasswordResetConfirmView, PasswordResetCompleteView)
+        from .views import CustomLoginView
 
         admin.autodiscover()
         admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
@@ -126,7 +127,7 @@ else:
         urlpatterns += [
             re_path(r'^admin/', admin.site.urls),
             re_path(r'accounts/login/$',
-                    LoginView.as_view(
+                    CustomLoginView.as_view(
                         template_name='account/login.html',
                         extra_context={'application_mode': application_mode},
                     ),
