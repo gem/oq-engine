@@ -54,20 +54,6 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 
-def _cluster(sids, imtls, tom, gsims, pmap):
-    """
-    Computes the probability map in case of a cluster group
-    """
-    for nocc in range(0, 50):
-        ocr = tom.occurrence_rate
-        prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-        if nocc == 0:
-            pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
-        else:
-            pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
-    return ~pmapclu
-
-
 def classical(group, sitecol, cmaker):
     """
     Compute the hazard curves for a set of sources belonging to the same
@@ -107,9 +93,14 @@ def classical(group, sitecol, cmaker):
     if indep:
         pmap.array[:] = 1. - pmap.array
     if cluster:
-        pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,
-                                 group.temporal_occurrence_model,
-                                 cmaker.gsims, pmap).array
+        tom = group.temporal_occurrence_model
+        for nocc in range(0, 50):
+            prob_n_occ = tom.get_probability_n_occurrences(tom.occurrence_rate, nocc)
+            if nocc == 0:
+                pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
+            else:
+                pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
+        pmap.array[:] = (~pmapclu).array
     dic['pmap'] = pmap
     return dic
 
