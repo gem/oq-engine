@@ -99,18 +99,6 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid, tiling, disagg_by_src):
-    """
-    :returns: dictionary if tiling is True, else MapArray with rates
-    """
-    rates = pnemap.to_rates()
-    if tiling:
-        return rates.to_array(gid)
-    if disagg_by_src:
-        return rates
-    return rates.remove_zeros()
-
-
 #  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
@@ -150,7 +138,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker, pmap)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
+        rates = (~pmap).to_rates()
         if cmaker.save_on_tmp and tiling:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
@@ -158,9 +146,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates, cmaker.num_chunks, h5)
+                    _store(rates.to_array(gid), cmaker.num_chunks, h5)
         else:
-            result['pnemap'] = rates
+            result['pnemap'] = rates.to_array(gid) if tiling else rates
         yield result
 
 
@@ -603,9 +591,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    rates = dic['pnemap']
                     self.offset = _store(
-                        rates, self.num_chunks, self.datastore, self.offset)
+                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
         return {}
 
     def store_info(self):
