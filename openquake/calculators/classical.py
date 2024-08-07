@@ -593,8 +593,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
+                    rates = dic['pnemap'].to_array()
                     self.offset = _store(
-                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
+                        rates, self.num_chunks, self.datastore, self.offset)
         return {}
 
     def store_info(self):

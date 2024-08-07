@@ -516,7 +516,6 @@ def _get_csm(full_lt, groups, event_based):
             for src in sg:
                 srcs.extend(calc.filters.split_source(src))
             sg.sources = general.random_filter(srcs, float(ss)) or [srcs[0]]
-        assert sg.get_kind() != 'mixed', sg.sources
     return CompositeSourceModel(full_lt, src_groups)
 
 

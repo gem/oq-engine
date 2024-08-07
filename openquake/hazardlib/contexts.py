@@ -178,6 +178,8 @@ def concat(ctxs):
     Concatenate context arrays.
     :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
     """
+    if not ctxs:
+        return []
     out, poisson, nonpoisson, nonparam = [], [], [], []
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate).all():
@@ -191,7 +193,7 @@ def concat(ctxs):
     if poisson:
         out.append(numpy.concatenate(poisson).view(numpy.recarray))
     if nonpoisson:
-        # Ctxs with the same shape of prob_occur are concatenated
+        # ctxs with the same shape of prob_occur are concatenated
         # and different shape sets are appended separately
         for shp in set(ctx.probs_occur.shape[1] for ctx in nonpoisson):
             p_array = [p for p in nonpoisson
@@ -199,6 +201,7 @@ def concat(ctxs):
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
     if nonparam:
         out.append(numpy.concatenate(nonparam).view(numpy.recarray))
+    assert len(out) == 1, out
     return out
 
 

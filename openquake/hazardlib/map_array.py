@@ -312,10 +312,10 @@ class MapArray(object):
 
     def to_rates(self, itime=1.):
         """
-        Convert into rates unless the map already contains rates
+        Convert into a map containing rates unless the map already contains rates
         """
         if self.rates:
-            return self.array / itime
+            return self
 
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an

@@ -319,17 +319,12 @@ class SourceGroup(collections.abc.Sequence):
         dic = {tom.__class__.__name__: vars(tom)}
         return toml.dumps(dic)
 
-    def get_kind(self):
+    def is_poissonian(self):
         """
-        :returns: poisson | nopoisson | mixed
+        :returns: True if all the sources in the group are poissonian
         """
-        toms = [getattr(src, 'temporal_occurrence_model', None) for src in self.sources]
-        if all(tom.__class__.__name__ == 'PoissonTOM' for tom in toms):
-            return 'poisson'
-        elif all(tom.__class__.__name__ != 'PoissonTOM' for tom in toms):
-            return 'nopoisson'
-        else:
-            return 'mixed'
+        tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
+        return tom.__class__.__name__ == 'PoissonTOM'
 
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
