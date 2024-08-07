@@ -111,7 +111,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     disagg_by_src = cmaker.disagg_by_src
     with dstore:
         if tiling:  # tiling calculator, read the sources from the datastore
-            gid = sources
+            gid = cmaker.gid[0]
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
@@ -148,7 +148,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates, cmaker.chunks, h5)
+                    _store(rates, cmaker.num_chunks, h5)
         else:
             result['pnemap'] = rates.remove_zeros()
         yield result
@@ -367,8 +367,8 @@ class ClassicalCalculator(base.HazardCalculator):
         G = pnemap.array.shape[2]
         rates = self.pmap.array
         sidx = self.pmap.sidx[pnemap.sids]
-        for i, gid in enumerate(self.gids[grp_id]):
-            rates[sidx, :, gid] += pnemap.array[:, :, i % G]
+        for i, g in enumerate(self.cmakers[grp_id].gid):
+            rates[sidx, :, g] += pnemap.array[:, :, i % G]
         return acc
 
     def create_rup(self):
@@ -406,7 +406,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers, oq))
+                    self.datastore, self.csm, self.sitecol, self.cmakers))
 
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -422,7 +422,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
-        self.chunks = getters.get_num_chunks(self.datastore)
+        self.num_chunks = getters.get_num_chunks(self.datastore)
+        # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
@@ -467,7 +468,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            _, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
@@ -480,8 +481,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        self.ntiles = self.datastore['tiles']['num_tiles']
-        if self.ntiles.any():
+        if self.datastore['tiles'].attrs['tiling']:
             self.execute_big()
         else:
             self.execute_reg()
@@ -537,7 +537,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.chunks, self.datastore)
+            _store(self.pmap.to_array(), self.num_chunks, self.datastore)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -578,17 +578,14 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
-        # first the tasks with few tiles, then the ones with many tiles
-        for cm, ntiles in pairs:
-            cm.gsims = list(cm.gsims)  # save data transfer
+        pairs = self.csm.split(self.cmakers, self.sitecol, self.max_weight)
+        # send first the tasks with big tiles
+        for cm, sites in sorted(pairs, key=lambda cs: len(cs[1])):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.chunks = self.chunks
-            gid = self.gids[cm.grp_id][0]
-            for tile in self.sitecol.split(ntiles):
-                allargs.append((gid, tile, cm, ds))
+            cm.num_chunks = self.num_chunks
+            allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         self.offset = 0
@@ -597,7 +594,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
                     self.offset = _store(
-                        dic['pnemap'], self.chunks, self.datastore, self.offset)
+                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
         return {}
 
     def store_info(self):
