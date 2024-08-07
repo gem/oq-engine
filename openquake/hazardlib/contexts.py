@@ -157,32 +157,20 @@ def is_modifiable(gsim):
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
+    :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
     """
     if not ctxs:
         return []
-    out, poisson, nonpoisson, nonparam = [], [], [], []
-    for ctx in ctxs:
-        if numpy.isnan(ctx.occurrence_rate).all():
-            nonparam.append(ctx)
-
-        # If ctx has probs_occur and occur_rate is parametric non-poisson
-        elif hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
-            nonpoisson.append(ctx)
-        else:
-            poisson.append(ctx)
-    if poisson:
-        out.append(numpy.concatenate(poisson).view(numpy.recarray))
-    if nonpoisson:
-        # ctxs with the same shape of prob_occur are concatenated
-        # and different shape sets are appended separately
-        for shp in set(ctx.probs_occur.shape[1] for ctx in nonpoisson):
-            p_array = [p for p in nonpoisson
-                       if p.probs_occur.shape[1] == shp]
+    ctx = ctxs[0]
+    out = []
+    # if ctx has probs_occur, it is assumed to be non-poissonian
+    if hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
+        # case 27, 29, 62, 65, 75, 78, 80
+        for shp in set(ctx.probs_occur.shape[1] for ctx in ctxs):
+            p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
-    if nonparam:
-        out.append(numpy.concatenate(nonparam).view(numpy.recarray))
-    assert len(out) == 1, out
+    else:
+        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
     return out
 
 
