@@ -203,9 +203,10 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
-    # mu has unit (pctg), L has unit ln(pctg)
+    sig = numpy.array(stddev).flatten()[:, numpy.newaxis]  # (M,N) -> (M*N, 1)
+    # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
     return numpy.exp(L @ Z + numpy.log(mu) -
-                     (numpy.array(stddev) ** 2 / 2).T) / PCTG
+                     (sig ** 2 / 2)) / PCTG
 
 
 @calculate_gmfs.add('basic')
