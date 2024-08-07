@@ -154,25 +154,6 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
-def split_by_occur(ctx):
-    """
-    :returns: [poissonian] or [poissonian, nonpoissonian,...]
-    """
-    nan = numpy.isnan(ctx.occurrence_rate)
-    out = []
-    if 0 < nan.sum() < len(ctx):
-        out.append(ctx[~nan])
-        nonpoisson = ctx[nan]
-        for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
-            # ctxs with the same shape of prob_occur are concatenated
-            p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
-            arr = numpy.concatenate(p_array, p_array[0].dtype)
-            out.append(arr.view(numpy.recarray))
-    else:
-        out.append(ctx)
-    return out
-
-
 def concat(ctxs):
     """
     Concatenate context arrays.
