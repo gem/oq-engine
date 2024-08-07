@@ -16,14 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import copy
+import zlib
 import os.path
 import pickle
 import operator
 import logging
-import zlib
 import numpy
 
-from openquake.baselib import parallel, general, hdf5, python3compat
+from openquake.baselib import parallel, general, hdf5, python3compat, config
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.valid import basename, fragmentno
@@ -471,6 +472,15 @@ def reduce_sources(sources_with_same_id, full_lt):
     return out
 
 
+def split_by_tom(sources):
+    """
+    Groups together sources with the same TOM
+    """
+    def key(src):
+        return getattr(src, 'temporal_occurrence_model', None).__class__.__name__
+    return general.groupby(sources, key).values()
+
+
 def _get_csm(full_lt, groups, event_based):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
@@ -492,7 +502,8 @@ def _get_csm(full_lt, groups, event_based):
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            src_groups.append(sourceconverter.SourceGroup(trt, sources))
+            for grp in split_by_tom(sources):
+                src_groups.append(sourceconverter.SourceGroup(trt, grp))
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
@@ -671,6 +682,34 @@ class CompositeSourceModel:
             maxsrc = max(srcs, key=lambda s: s.weight)
             logging.info('Heaviest: %s', maxsrc)
         return max_weight * 1.02  # increased a bit to produce a bit less tasks
+
+    def split(self, cmakers, sitecol, max_weight):
+        N = len(sitecol)
+        oq = cmakers[0].oq
+        max_gb = float(config.memory.pmap_max_gb)
+        for cmaker in cmakers:
+            size_gb = len(cmaker.gsims) * oq.imtls.size * N * 8 / 1024**3
+            grp = self.src_groups[cmaker.grp_id]
+            nsplits = general.ceil(grp.weight / max_weight)
+            if size_gb / nsplits > max_gb:
+                nsplits = general.ceil(size_gb / max_gb)
+            if oq.split_by_gsim:
+                # disabled since slower
+                for cm in self._split(cmaker, nsplits):
+                    yield cm, sitecol
+            else:
+                # normal case
+                for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
+                    yield cmaker, sites
+
+    def _split(self, cmaker, nsplits):
+        gsims = list(cmaker.gsims)
+        G = len(gsims)
+        for slc in general.gen_slices(0, G, general.ceil(G / nsplits)):
+            cm = copy.copy(cmaker)
+            cm.gid = cmaker.gid[slc]
+            cm.gsims = gsims[slc]
+            yield cm
 
     def __toh5__(self):
         G = len(self.src_groups)
