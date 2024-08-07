@@ -66,7 +66,6 @@ def classical(group, sitecol, cmaker):
     """
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
-    rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
     trts = set()
     for src in group:
         if not src.num_ruptures:

@@ -1491,7 +1491,6 @@ class PmapMaker(object):
         esites = 0
         nctxs = 0
         sids = self.srcfilter.sitecol.sids
-        # using most memory here; limited by pmap_max_gb
         pmap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
