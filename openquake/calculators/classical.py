@@ -123,21 +123,15 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
-            pmap = MapArray(
-                sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-            result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = (~pmap).to_rates()
+            result = hazclassical(srcs, sitecol, cmaker)
+            result['pnemap'] = (~result.pop('pmap')).to_rates()
             yield result
     else:
         # use most memory here; limited by pmap_max_gb
-        pmap = MapArray(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-        result = hazclassical(sources, sitecol, cmaker, pmap)
+        result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = (~pmap).to_rates()
+        rates = (~result.pop('pmap')).to_rates()
         if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)

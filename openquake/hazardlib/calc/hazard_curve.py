@@ -68,7 +68,7 @@ def _cluster(sids, imtls, tom, gsims, pmap):
     return ~pmapclu
 
 
-def classical(group, sitecol, cmaker, pmap=None):
+def classical(group, sitecol, cmaker):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -78,7 +78,6 @@ def classical(group, sitecol, cmaker, pmap=None):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    not_passed_pmap = pmap is None
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
     rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
@@ -100,11 +99,9 @@ def classical(group, sitecol, cmaker, pmap=None):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    if not_passed_pmap:
-        pmap = MapArray(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-        pmap.fill(rup_indep)
 
+    pmap = MapArray(
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
     dic = PmapMaker(cmaker, src_filter, group).make(pmap)
     if getattr(group, 'src_interdep', None) != 'mutex' and rup_indep:
         pmap.array[:] = 1. - pmap.array
@@ -112,8 +109,7 @@ def classical(group, sitecol, cmaker, pmap=None):
         pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,
                                  group.temporal_occurrence_model,
                                  cmaker.gsims, pmap).array
-    if not_passed_pmap:
-        dic['pmap'] = pmap
+    dic['pmap'] = pmap
     return dic
 
 
