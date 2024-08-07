@@ -99,12 +99,12 @@ def classical(group, sitecol, cmaker):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-
+    indep  = rup_indep and getattr(group, 'src_interdep', None) != 'mutex'
     # using most memory here; limited by pmap_max_gb
     pmap = MapArray(
-        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
+        sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(indep)
     dic = PmapMaker(cmaker, src_filter, group).make(pmap)
-    if getattr(group, 'src_interdep', None) != 'mutex' and rup_indep:
+    if indep:
         pmap.array[:] = 1. - pmap.array
     if cluster:
         pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,

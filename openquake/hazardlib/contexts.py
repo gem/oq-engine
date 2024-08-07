@@ -1555,7 +1555,6 @@ class PmapMaker(object):
         self.source_data = AccumDict(accum=[])
         grp_id = self.sources[0].grp_id
         if self.src_mutex or not self.rup_indep:
-            pmap.fill(0)
             self._make_src_mutex(pmap)
             if self.src_mutex:
                 pmap.array = self.grp_probability * pmap.array
