@@ -472,6 +472,15 @@ def reduce_sources(sources_with_same_id, full_lt):
     return out
 
 
+def split_by_tom(sources):
+    """
+    Groups together sources with the same TOM
+    """
+    def key(src):
+        return getattr(src, 'temporal_occurrence_model', None).__class__.__name__
+    return general.groupby(sources, key).values()
+
+
 def _get_csm(full_lt, groups, event_based):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
@@ -493,7 +502,8 @@ def _get_csm(full_lt, groups, event_based):
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            src_groups.append(sourceconverter.SourceGroup(trt, sources))
+            for grp in split_by_tom(sources):
+                src_groups.append(sourceconverter.SourceGroup(trt, grp))
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
@@ -506,6 +516,7 @@ def _get_csm(full_lt, groups, event_based):
             for src in sg:
                 srcs.extend(calc.filters.split_source(src))
             sg.sources = general.random_filter(srcs, float(ss)) or [srcs[0]]
+        assert sg.get_kind() != 'mixed', sg.sources
     return CompositeSourceModel(full_lt, src_groups)
 
 

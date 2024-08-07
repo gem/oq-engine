@@ -173,7 +173,7 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
     for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
         if itime == 0:  # FatedTOM
             arr[idx] *= 1. - poes[i]
-        elif len(probs) == 0 and numba is not None:
+        elif len(probs) == 0:
             # looping is faster than building arrays
             for lvl in levels:
                 arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
@@ -228,9 +228,10 @@ class MapArray(object):
     """
     Thin wrapper over a 3D-array of probabilities.
     """
-    def __init__(self, sids, shape_y, shape_z):
+    def __init__(self, sids, shape_y, shape_z, rates=False):
         self.sids = sids
         self.shape = (len(sids), shape_y, shape_z)
+        self.rates = rates
 
     @cached_property
     def sidx(self):
@@ -310,6 +311,12 @@ class MapArray(object):
         return curves
 
     def to_rates(self, itime=1.):
+        """
+        Convert into rates unless the map already contains rates
+        """
+        if self.rates:
+            return self.array / itime
+
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -319,8 +326,8 @@ class MapArray(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes).astype(F32)
-        return self.new(rates / itime)
+        rates = -numpy.log(pnes).astype(F32) / itime
+        return self.new(rates)
 
     def to_array(self, gid=0):
         """
