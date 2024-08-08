@@ -51,7 +51,7 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.tom import PoissonTOM, FatedTOM
+from openquake.hazardlib.tom import PoissonTOM
 
 
 def classical(group, sitecol, cmaker):
@@ -71,9 +71,6 @@ def classical(group, sitecol, cmaker):
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
-        # set the proper TOM in case of a cluster
-        if cluster:
-            src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
@@ -82,8 +79,6 @@ def classical(group, sitecol, cmaker):
     if cmaker.tom is None:
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
-    if cluster:
-        cmaker.tom = FatedTOM(time_span=1)
     dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
         pnemap = dic['pnemap']

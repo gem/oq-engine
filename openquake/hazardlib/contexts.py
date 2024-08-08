@@ -1407,6 +1407,12 @@ class PmapMaker(object):
                     self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.grp_probability = getattr(group, 'grp_probability', 1.)
+        self.cluster = getattr(group, 'cluster', None)
+        if self.cluster:
+            # set the proper TOM in case of a cluster
+            for src in self.sources:
+                src.temporal_occurrence_model = FatedTOM(time_span=1)
+
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
         self.maxsize = get_maxsize(M, G)
 
