@@ -164,16 +164,16 @@ def get_lvl(hcurve, imls, poe):
 # ############################# probability maps ##############################
 
 t = numba.types
-sig1 = t.void(t.float64[:, :],                        # pmap
-              t.float64[:, :],                        # poes
+sig1 = t.void(t.float64[:, :, :],                     # pmap
+              t.float64[:, :, :],                     # poes
               t.uint32[:],                            # invs
               t.float64[:],                           # rates
               t.float64[:, :],                        # probs_occur
               t.uint32[:],                            # sids
               t.float64)                              # itime
 
-sig2 = t.void(t.float64[:, :],                        # pmap
-              t.float64[:, :],                        # poes
+sig2 = t.void(t.float64[:, :, :],                     # pmap
+              t.float64[:, :, :],                     # poes
               t.uint32[:],                            # invs
               t.float64[:],                           # rates
               t.float64[:, :],                        # probs_occur
@@ -184,23 +184,23 @@ sig2 = t.void(t.float64[:, :],                        # pmap
 
 @compile(sig1)
 def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
-    levels = range(arr.shape[1])
-    for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
-        if itime == 0:  # FatedTOM
-            arr[sidx] *= 1. - poes[i]
-        elif len(probs) == 0:
-            # looping is faster than building arrays
-            for lvl in levels:
-                arr[sidx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
-        else:
-            arr[sidx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+    N, L, G = arr.shape
+    for g in range(G):
+        for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
+            if len(probs) == 0:  # poissonian rupture
+                for lvl in range(L):
+                    arr[sidx, lvl, g] *= math.exp(-rate * poes[i, lvl, g] * itime)
+            else:  # nonparametric rupture
+                arr[sidx, :, g] *= get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
 
 
 @compile(sig2)
 def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
-    for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
-        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
-        arr[sidx] += (1. - pne) * w
+    N, L, G = arr.shape
+    for g in range(G):
+        for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
+            pne = get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
+            arr[sidx, :, g] += (1. - pne) * w
 
 
 def fix_probs_occur(probs_occur):
@@ -378,9 +378,7 @@ class MapArray(object):
         """
         rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
-        for i in range(self.shape[-1]):  # G indices
-            update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
-                          ctxt.probs_occur, sidxs, itime)
+        update_pmap_i(self.array, poes, invs, rates, ctxt.probs_occur, sidxs, itime)
 
     def update_mutex(self, poes, invs, ctxt, itime, mutex_weight):
         """
@@ -391,9 +389,7 @@ class MapArray(object):
         sidxs = self.sidx[ctxt.sids]
         weights = numpy.array([mutex_weight[src_id, rup_id]
                                for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)])
-        for i in range(self.shape[-1]):  # G indices
-            update_pmap_m(self.array[:, :, i], poes[:, :, i],
-                          invs, rates, probs_occur, weights, sidxs, itime)
+        update_pmap_m(self.array, poes, invs, rates, probs_occur, weights, sidxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

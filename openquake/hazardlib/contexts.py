@@ -1173,14 +1173,14 @@ class ContextMaker(object):
         :param pmap: probability map to update
         :param ctxs: a list of context arrays with 0 or 1 element
         """
-        if isinstance(tom, FatedTOM):
-            itime = 0.
-        else:
-            itime = tom.time_span
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx):
                 with self.pne_mon:
-                    pmap.update_indep(poes, invs, ctxt, itime)
+                    if isinstance(tom, FatedTOM):
+                        for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
+                            pmap.array[sidx] *= 1. - poes[inv]
+                    else:
+                        pmap.update_indep(poes, invs, ctxt, tom.time_span)
 
     def update_mutex(self, pmap, ctxs, tom, rup_mutex):
         """
