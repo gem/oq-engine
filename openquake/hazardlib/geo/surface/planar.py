@@ -42,7 +42,6 @@ from openquake.hazardlib.geo import utils as geo_utils
 # as a fraction of the surface's area.
 IMPERFECT_RECTANGLE_TOLERANCE = 0.002
 
-F8 = numba.float64
 planar_array_dt = numpy.dtype([
     ('corners', (float, 4)),
     ('xyz', (float, 4)),
@@ -52,8 +51,8 @@ planar_array_dt = numpy.dtype([
     ('wlr', float),
     ('sdr', float),
     ('hypo', float)])
-planar_nt = numba.from_dtype(planar_array_dt)
-comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
+
+
 planin_dt = numpy.dtype([
     ('mag', float),
     ('strike', float),
@@ -138,18 +137,7 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
     corners[5, 2] = cdep
 
 
-@compile(F8[:, :, :, :, :](
-    F8,              # usd
-    F8,              # lsd
-    F8[:, :],        # mag
-    F8[:, :, :],     # dims
-    F8[:, :],        # strike
-    F8[:, :],        # dip
-    F8[:, :],        # rake
-    F8[:, :],        # hdd
-    F8,              # lon
-    F8,              # lat
-))
+# numbified below, ultrafast
 def build_corners(usd, lsd, mag, dims, strike, dip, rake, hdd, lon, lat):
     M, N = mag.shape
     D = len(hdd)
@@ -164,6 +152,21 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, hdd, lon, lat):
                         mag[m, n], dims[m, n], strike[m, n],
                         dip[m, n], rake[m, n], lon, lat, hdd[d, 1])
     return corners
+
+
+F8 = numba.float64
+build_corners = compile(F8[:, :, :, :, :](
+    F8,              # usd
+    F8,              # lsd
+    F8[:, :],        # mag
+    F8[:, :, :],     # dims
+    F8[:, :],        # strike
+    F8[:, :],        # dip
+    F8[:, :],        # rake
+    F8[:, :],        # hdd
+    F8,              # lon
+    F8,              # lat
+))(build_corners)
 
 
 # not numbified but fast anyway
@@ -256,9 +259,7 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
     return planar_array
 
 
-@compile(numba.float64[:, :, :](
-    planar_nt[:, :], numba.float64[:, :]
-))
+# numbified below
 def project(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -352,11 +353,7 @@ def project(planar, points):
     return out
 
 
-@compile(numba.float64[:, :, :](
-    planar_nt[:, :],
-    numba.float64[:, :],
-    numba.float64[:, :]
-))
+# numbified below
 def project_back(planar, xx, yy):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -482,7 +479,7 @@ def get_rjb(planar, points):  # numbified below
     return out
 
 
-@comp
+# numbified below
 def get_rx(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -498,7 +495,7 @@ def get_rx(planar, points):
     return out
 
 
-@comp
+# numbified below
 def get_ry0(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -521,7 +518,7 @@ def get_ry0(planar, points):
     return out
 
 
-@comp
+# numbified below
 def get_rhypo(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -540,7 +537,7 @@ def get_rhypo(planar, points):
     return out
 
 
-@comp
+# numbified below
 def get_repi(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -557,7 +554,7 @@ def get_repi(planar, points):
     return out
 
 
-@comp
+# numbified below
 def get_azimuth(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -574,7 +571,7 @@ def get_azimuth(planar, points):
     return out
 
 
-@comp
+# TODO: fix this
 def get_rvolc(planar, points):
     """
     :param planar: a planar recarray of shape (U, 3)
@@ -582,6 +579,26 @@ def get_rvolc(planar, points):
     :returns: (U, N) distances
     """
     return numpy.zeros((len(planar), len(points)))
+
+
+planar_nt = numba.from_dtype(planar_array_dt)
+project = compile(numba.float64[:, :, :](
+    planar_nt[:, :],
+    numba.float64[:, :]
+))(project)
+project_back = compile(numba.float64[:, :, :](
+    planar_nt[:, :],
+    numba.float64[:, :],
+    numba.float64[:, :]
+))(project_back)
+comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
+get_rjb = comp(get_rjb)
+get_rx = comp(get_rx)
+get_ry0 = comp(get_ry0)
+get_rhypo = comp(get_rhypo)
+get_repi = comp(get_repi)
+get_azimuth = comp(get_azimuth)
+get_rvolc = comp(get_rvolc)
 
 
 def get_distances_planar(planar, sites, dist_type):
