@@ -65,7 +65,6 @@ def classical(group, sitecol, cmaker):
         a dictionary with keys pmap, source_data, rup_data, extra
     """
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
-    cluster = getattr(group, 'cluster', None)
     trts = set()
     for src in group:
         if not src.num_ruptures:
@@ -80,16 +79,6 @@ def classical(group, sitecol, cmaker):
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     dic = PmapMaker(cmaker, src_filter, group).make()
-    if cluster:
-        pnemap = dic['pnemap']
-        tom = group.temporal_occurrence_model
-        for nocc in range(0, 50):
-            prob_n_occ = tom.get_probability_n_occurrences(tom.occurrence_rate, nocc)
-            if nocc == 0:
-                pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
-            else:
-                pmapclu.array += pnemap.array**nocc * prob_n_occ
-        dic['pnemap'].array[:] = pmapclu.array
     return dic
 
 

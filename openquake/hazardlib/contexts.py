@@ -1409,6 +1409,7 @@ class PmapMaker(object):
         self.grp_probability = getattr(group, 'grp_probability', 1.)
         self.cluster = getattr(group, 'cluster', None)
         if self.cluster:
+            self.tom = group.temporal_occurrence_model
             # set the proper TOM in case of a cluster
             for src in self.sources:
                 src.temporal_occurrence_model = FatedTOM(time_span=1)
@@ -1482,6 +1483,7 @@ class PmapMaker(object):
             for ctx in concat(allctxs):
                 cm.update_indep(pnemap, ctx, tom)
             allctxs.clear()
+
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
@@ -1549,9 +1551,20 @@ class PmapMaker(object):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if indep:
-            dic['pnemap'] = self._make_src_indep()
+            pnemap = self._make_src_indep()
         else:
-            dic['pnemap'] = self._make_src_mutex()
+            pnemap = self._make_src_mutex()
+        if self.cluster:
+            for nocc in range(0, 50):
+                prob_n_occ = self.tom.get_probability_n_occurrences(
+                    self.tom.occurrence_rate, nocc)
+                if nocc == 0:
+                    pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
+                else:
+                    pmapclu.array += pnemap.array**nocc * prob_n_occ
+            pnemap.array[:] = pmapclu.array
+
+        dic['pnemap'] = pnemap
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
