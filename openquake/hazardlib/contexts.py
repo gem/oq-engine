@@ -1464,7 +1464,7 @@ class PmapMaker(object):
         # using most memory here; limited by pmap_max_gb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster)
+            not self.cluster).fill(self.cluster, F64 if self.cluster else F32)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
