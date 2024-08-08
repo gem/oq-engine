@@ -1453,7 +1453,7 @@ class PmapMaker(object):
         t0 = time.time()
         sids = self.srcfilter.sitecol.sids
         # using most memory here; limited by pmap_max_gb
-        pmap = MapArray(
+        pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(1)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
@@ -1465,14 +1465,13 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    cm.update_indep(pmap, concat(allctxs), tom)
+                    cm.update_indep(pnemap, concat(allctxs), tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
-            cm.update_indep(pmap, concat(allctxs), tom)
+            cm.update_indep(pnemap, concat(allctxs), tom)
             allctxs.clear()
-        pmap.array[:] = 1. - pmap.array
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
@@ -1485,7 +1484,7 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        return pmap
+        return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
@@ -1531,7 +1530,7 @@ class PmapMaker(object):
         self.source_data['weight'].append(weight)
         self.source_data['ctimes'].append(dt)
         self.source_data['taskno'].append(cm.task_no)
-        return pmap
+        return ~pmap
 
     def make(self):
         indep = self.rup_indep and not self.src_mutex
@@ -1539,9 +1538,9 @@ class PmapMaker(object):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if indep:
-            dic['pmap'] = self._make_src_indep()
+            dic['pnemap'] = self._make_src_indep()
         else:
-            dic['pmap'] = self._make_src_mutex()
+            dic['pnemap'] = self._make_src_mutex()
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data

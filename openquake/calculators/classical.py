@@ -124,13 +124,13 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
-            result['pnemap'] = (~result.pop('pmap')).to_rates()
+            result['pnemap'] = result['pnemap'].to_rates()
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = (~result.pop('pmap')).to_rates()
+        rates = result.pop('pnemap').to_rates()
         if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)

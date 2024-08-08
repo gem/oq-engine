@@ -86,15 +86,15 @@ def classical(group, sitecol, cmaker):
         cmaker.tom = FatedTOM(time_span=1)
     dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
-        pmap = dic['pmap']
+        pnemap = dic['pnemap']
         tom = group.temporal_occurrence_model
         for nocc in range(0, 50):
             prob_n_occ = tom.get_probability_n_occurrences(tom.occurrence_rate, nocc)
             if nocc == 0:
-                pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
+                pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
             else:
-                pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
-        pmap.array[:] = (~pmapclu).array
+                pmapclu.array += pnemap.array**nocc * prob_n_occ
+        dic['pnemap'].array[:] = pmapclu.array
     return dic
 
 
@@ -172,7 +172,7 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pmap.array[:] = 1. - (1.-pmap.array) * (1. - dic['pmap'].array)
+            pmap.array[:] = 1. - (1.-pmap.array) * dic['pnemap'].array
     return pmap.convert(imtls, len(sitecol.complete))
 
 
@@ -191,7 +191,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = PmapMaker(cmaker, srcfilter, [src]).make()['pmap']
+    pmap = ~PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
     if not pmap:  # filtered away
         return numpy.zeros((oqparam.imtls.size, len(gsims)))
     return pmap.array[0]
