@@ -178,7 +178,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ~PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
-    if not pmap:  # filtered away
-        return numpy.zeros((oqparam.imtls.size, len(gsims)))
-    return pmap.array[0]
+    pnemap = PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
+    if pnemap.rates:
+        pnemap.array[:] = numpy.exp(-pnemap.array)
+    return 1. - pnemap.array[0]
