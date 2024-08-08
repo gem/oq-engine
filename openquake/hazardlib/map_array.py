@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import math
+
 import copy
 import warnings
 import numpy
@@ -164,43 +164,54 @@ def get_lvl(hcurve, imls, poe):
 # ############################# probability maps ##############################
 
 t = numba.types
-sig1 = t.void(t.float64[:, :],                        # pmap
-              t.float64[:, :],                        # poes
-              t.uint32[:],                            # invs
-              t.float64[:],                           # rates
-              t.float64[:, :],                        # probs_occur
-              t.uint32[:],                            # sids
-              t.float64)                              # itime
+sig_i = t.void(t.float64[:, :, :],                     # pmap
+               t.float64[:, :, :],                     # poes
+               t.uint32[:],                            # invs
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
 
-sig2 = t.void(t.float64[:, :],                        # pmap
-              t.float64[:, :],                        # poes
-              t.uint32[:],                            # invs
-              t.float64[:],                           # rates
-              t.float64[:, :],                        # probs_occur
-              t.float64[:],                           # weights
-              t.uint32[:],                            # sids
-              t.float64)                              # itime
+sig_m = t.void(t.float64[:, :, :],                     # pmap
+               t.float64[:, :, :],                     # poes
+               t.uint32[:],                            # invs
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.float64[:],                           # weights
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
 
 
-@compile(sig1)
+@compile(sig_i)
 def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
-    levels = range(arr.shape[1])
+    G = arr.shape[2]
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
-        if itime == 0:  # FatedTOM
-            arr[sidx] *= 1. - poes[i]
-        elif len(probs) == 0:
-            # looping is faster than building arrays
-            for lvl in levels:
-                arr[sidx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
-        else:
-            arr[sidx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+        no_probs = len(probs) == 0
+        for g in range(G):
+            if no_probs:
+                arr[sidx, :, g] *= numpy.exp(-rate * poes[i, :, g] * itime)
+            else:  # nonparametric rupture
+                arr[sidx, :, g] *= get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
 
 
-@compile(sig2)
+@compile(sig_i)
+def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
+    G = arr.shape[2]
+    for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
+        no_probs = len(probs) == 0
+        for g in range(G):
+            if no_probs:
+                arr[sidx, :, g] += rate * poes[i, :, g] * itime
+            else:  # nonparametric rupture
+                arr[sidx, :, g] += -numpy.log(get_pnes(rate, probs, poes[i, :, g], itime))
+
+
+@compile(sig_m)
 def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
+    G = arr.shape[2]
     for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
-        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
-        arr[sidx] += (1. - pne) * w
+        for g in range(G):
+            arr[sidx, :, g] += (1. - get_pnes(rate, probs, poes[i, :, g], itime)) * w
 
 
 def fix_probs_occur(probs_occur):
@@ -374,26 +385,25 @@ class MapArray(object):
 
     def update_indep(self, poes, invs, ctxt, itime):
         """
-        Update probabilities
+        Update probabilities for independent ruptures
         """
         rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
-        for i in range(self.shape[-1]):  # G indices
-            update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
-                          ctxt.probs_occur, sidxs, itime)
+        if self.rates:
+            update_pmap_r(self.array, poes, invs, rates, ctxt.probs_occur, sidxs, itime)
+        else:
+            update_pmap_i(self.array, poes, invs, rates, ctxt.probs_occur, sidxs, itime)
 
     def update_mutex(self, poes, invs, ctxt, itime, mutex_weight):
         """
-        Update probabilities
+        Update probabilities for mutex ruptures
         """
         rates = ctxt.occurrence_rate
         probs_occur = fix_probs_occur(ctxt.probs_occur)
         sidxs = self.sidx[ctxt.sids]
         weights = numpy.array([mutex_weight[src_id, rup_id]
                                for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)])
-        for i in range(self.shape[-1]):  # G indices
-            update_pmap_m(self.array[:, :, i], poes[:, :, i],
-                          invs, rates, probs_occur, weights, sidxs, itime)
+        update_pmap_m(self.array, poes, invs, rates, probs_occur, weights, sidxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

@@ -51,7 +51,7 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.tom import PoissonTOM, FatedTOM
+from openquake.hazardlib.tom import PoissonTOM
 
 
 def classical(group, sitecol, cmaker):
@@ -65,15 +65,11 @@ def classical(group, sitecol, cmaker):
         a dictionary with keys pmap, source_data, rup_data, extra
     """
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
-    cluster = getattr(group, 'cluster', None)
     trts = set()
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
-        # set the proper TOM in case of a cluster
-        if cluster:
-            src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
@@ -82,19 +78,7 @@ def classical(group, sitecol, cmaker):
     if cmaker.tom is None:
         time_span = cmaker.investigation_time  # None for nonparametric
         cmaker.tom = PoissonTOM(time_span) if time_span else None
-    if cluster:
-        cmaker.tom = FatedTOM(time_span=1)
     dic = PmapMaker(cmaker, src_filter, group).make()
-    if cluster:
-        pnemap = dic['pnemap']
-        tom = group.temporal_occurrence_model
-        for nocc in range(0, 50):
-            prob_n_occ = tom.get_probability_n_occurrences(tom.occurrence_rate, nocc)
-            if nocc == 0:
-                pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
-            else:
-                pmapclu.array += pnemap.array**nocc * prob_n_occ
-        dic['pnemap'].array[:] = pmapclu.array
     return dic
 
 
@@ -172,7 +156,10 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pmap.array[:] = 1. - (1.-pmap.array) * dic['pnemap'].array
+            pnemap = dic['pnemap']
+            if pnemap.rates:
+                pnemap.array[:] = numpy.exp(-pnemap.array)
+            pmap.array[:] = 1. - (1.-pmap.array) * pnemap.array
     return pmap.convert(imtls, len(sitecol.complete))
 
 
@@ -191,7 +178,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ~PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
-    if not pmap:  # filtered away
-        return numpy.zeros((oqparam.imtls.size, len(gsims)))
-    return pmap.array[0]
+    pnemap = PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
+    if pnemap.rates:
+        pnemap.array[:] = numpy.exp(-pnemap.array)
+    return 1. - pnemap.array[0]
