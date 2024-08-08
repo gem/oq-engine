@@ -1151,10 +1151,11 @@ class ContextMaker(object):
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
-        if rup_mutex:
-            self.update_mutex(pmap, ctxs, tom or PoissonTOM(self.investigation_time), rup_mutex)
-        else:
-            self.update_indep(pmap, ctxs, tom or PoissonTOM(self.investigation_time))
+        for ctx in ctxs:
+            if rup_mutex:
+                self.update_mutex(pmap, ctx, tom or PoissonTOM(self.investigation_time), rup_mutex)
+            else:
+                self.update_indep(pmap, ctx, tom or PoissonTOM(self.investigation_time))
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1168,30 +1169,28 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
-    def update_indep(self, pmap, ctxs, tom):
+    def update_indep(self, pmap, ctx, tom):
         """
         :param pmap: probability map to update
         :param ctxs: a list of context arrays with 0 or 1 element
         """
-        for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx):
-                with self.pne_mon:
-                    if isinstance(tom, FatedTOM):
-                        for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
-                            pmap.array[sidx] *= 1. - poes[inv]
-                    else:
-                        pmap.update_indep(poes, invs, ctxt, tom.time_span)
+        for poes, ctxt, invs in self.gen_poes(ctx):
+            with self.pne_mon:
+                if isinstance(tom, FatedTOM):
+                    for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
+                        pmap.array[sidx] *= 1. - poes[inv]
+                else:
+                    pmap.update_indep(poes, invs, ctxt, tom.time_span)
 
-    def update_mutex(self, pmap, ctxs, tom, rup_mutex):
+    def update_mutex(self, pmap, ctx, tom, rup_mutex):
         """
         :param pmap: probability map to update
         :param ctxs: a list of context arrays
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
-        for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx):
-                with self.pne_mon:
-                    pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
+        for poes, ctxt, invs in self.gen_poes(ctx):
+            with self.pne_mon:
+                pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1468,12 +1467,14 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    cm.update_indep(pnemap, concat(allctxs), tom)
+                    for ctx in concat(allctxs):
+                        cm.update_indep(pnemap, ctx, tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
-            cm.update_indep(pnemap, concat(allctxs), tom)
+            for ctx in concat(allctxs):
+                cm.update_indep(pnemap, ctx, tom)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1513,10 +1514,11 @@ class PmapMaker(object):
             nctxs += len(ctxs)
             nsites += n
             esites += src.esites
-            if self.rup_mutex:
-                cm.update_mutex(pm, ctxs, tom, self.rup_mutex)
-            else:
-                cm.update_indep(pm, ctxs, tom)
+            for ctx in ctxs:
+                if self.rup_mutex:
+                    cm.update_mutex(pm, ctx, tom, self.rup_mutex)
+                else:
+                    cm.update_indep(pm, ctx, tom)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
