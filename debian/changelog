@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed aliases for Kuehn2020 GMPEs (signalled by Eric Thompson)
+
   [Michele Simionato]
   * Internal: splitting in groups with homogeneous temporal occurrence model
   * Optimized the calculation of mean and stdevs in event based calculations, with
