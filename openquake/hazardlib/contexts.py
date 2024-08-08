@@ -154,54 +154,23 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
-def split_by_occur(ctx):
-    """
-    :returns: [poissonian] or [poissonian, nonpoissonian,...]
-    """
-    nan = numpy.isnan(ctx.occurrence_rate)
-    out = []
-    if 0 < nan.sum() < len(ctx):
-        out.append(ctx[~nan])
-        nonpoisson = ctx[nan]
-        for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
-            # ctxs with the same shape of prob_occur are concatenated
-            p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
-            arr = numpy.concatenate(p_array, p_array[0].dtype)
-            out.append(arr.view(numpy.recarray))
-    else:
-        out.append(ctx)
-    return out
-
-
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
+    :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
     """
     if not ctxs:
         return []
-    out, poisson, nonpoisson, nonparam = [], [], [], []
-    for ctx in ctxs:
-        if numpy.isnan(ctx.occurrence_rate).all():
-            nonparam.append(ctx)
-
-        # If ctx has probs_occur and occur_rate is parametric non-poisson
-        elif hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
-            nonpoisson.append(ctx)
-        else:
-            poisson.append(ctx)
-    if poisson:
-        out.append(numpy.concatenate(poisson).view(numpy.recarray))
-    if nonpoisson:
-        # ctxs with the same shape of prob_occur are concatenated
-        # and different shape sets are appended separately
-        for shp in set(ctx.probs_occur.shape[1] for ctx in nonpoisson):
-            p_array = [p for p in nonpoisson
-                       if p.probs_occur.shape[1] == shp]
+    ctx = ctxs[0]
+    out = []
+    # if ctx has probs_occur, it is assumed to be non-poissonian
+    if hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
+        # case 27, 29, 62, 65, 75, 78, 80
+        for shp in set(ctx.probs_occur.shape[1] for ctx in ctxs):
+            p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
-    if nonparam:
-        out.append(numpy.concatenate(nonparam).view(numpy.recarray))
-    assert len(out) == 1, out
+    else:
+        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
     return out
 
 
@@ -1153,7 +1122,7 @@ class ContextMaker(object):
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])
             yield poes
 
-    def gen_poes(self, ctx, rup_indep=True):
+    def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
@@ -1162,7 +1131,7 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep)
+            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
             if invs is None:  # no collapse
                 for poes in self._gen_poes(ctxt):
                     invs = numpy.arange(len(poes), dtype=U32)
@@ -1181,10 +1150,11 @@ class ContextMaker(object):
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
-        pmap = MapArray(sids, size(self.imtls), len(self.gsims))
-        pmap.fill(rup_indep)
-        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
-                    rup_mutex)
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        if rup_mutex:
+            self.update_mutex(pmap, ctxs, tom or PoissonTOM(self.investigation_time), rup_mutex)
+        else:
+            self.update_indep(pmap, ctxs, tom or PoissonTOM(self.investigation_time))
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1198,25 +1168,30 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
-    def update(self, pmap, ctxs, tom, rup_mutex={}):
+    def update_indep(self, pmap, ctxs, tom):
         """
         :param pmap: probability map to update
-        :param ctxs: a list of context arrays (only one for parametric ctxs)
-        :param rup_mutex: dictionary (src_id, rup_id) -> weight
-
-        The rup_mutex dictionary is read-only and normally empty
+        :param ctxs: a list of context arrays with 0 or 1 element
         """
-        rup_indep = len(rup_mutex) == 0
-        if tom is None:
-            itime = -1.  # test_hazard_curve_X
-        elif isinstance(tom, FatedTOM):
+        if isinstance(tom, FatedTOM):
             itime = 0.
         else:
             itime = tom.time_span
         for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
+            for poes, ctxt, invs in self.gen_poes(ctx):
                 with self.pne_mon:
-                    pmap.update(poes, invs, ctxt, itime, rup_mutex)
+                    pmap.update_indep(poes, invs, ctxt, itime)
+
+    def update_mutex(self, pmap, ctxs, tom, rup_mutex):
+        """
+        :param pmap: probability map to update
+        :param ctxs: a list of context arrays
+        :param rup_mutex: dictionary (src_id, rup_id) -> weight
+        """
+        for ctx in ctxs:
+            for poes, ctxt, invs in self.gen_poes(ctx):
+                with self.pne_mon:
+                    pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1432,8 +1407,7 @@ class PmapMaker(object):
                 for i, (rup, _) in enumerate(src.data):
                     self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
-        if hasattr(group, 'grp_probability'):
-            self.grp_probability = group.grp_probability
+        self.grp_probability = getattr(group, 'grp_probability', 1.)
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
         self.maxsize = get_maxsize(M, G)
 
@@ -1473,13 +1447,17 @@ class PmapMaker(object):
             else:
                 yield ctx
 
-    def _make_src_indep(self, pmap):
+    def _make_src_indep(self):
         # sources with the same ID
         cm = self.cmaker
         allctxs = []
         ctxlen = 0
         totlen = 0
         t0 = time.time()
+        sids = self.srcfilter.sitecol.sids
+        # using most memory here; limited by pmap_max_gb
+        pnemap = MapArray(
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(1)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
@@ -1490,12 +1468,12 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
+                    cm.update_indep(pnemap, concat(allctxs), tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
-            # assume all sources have the same tom
-            cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
+            # all sources have the same tom by construction
+            cm.update_indep(pnemap, concat(allctxs), tom)
             allctxs.clear()
         dt = time.time() - t0
         nsrcs = len(self.sources)
@@ -1509,9 +1487,9 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        return pmap
+        return pnemap
 
-    def _make_src_mutex(self, pmap):
+    def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
@@ -1519,6 +1497,9 @@ class PmapMaker(object):
         nsites = 0
         esites = 0
         nctxs = 0
+        sids = self.srcfilter.sitecol.sids
+        pmap = MapArray(
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
@@ -1532,13 +1513,17 @@ class PmapMaker(object):
             nctxs += len(ctxs)
             nsites += n
             esites += src.esites
-            cm.update(pm, ctxs, tom, self.rup_mutex)
+            if self.rup_mutex:
+                cm.update_mutex(pm, ctxs, tom, self.rup_mutex)
+            else:
+                cm.update_indep(pm, ctxs, tom)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
             else:
                 pmap.array = 1. - (1-pmap.array) * (1-pm.array)
             weight += src.weight
+        pmap.array *= self.grp_probability
         dt = time.time() - t0
         self.source_data['src_id'].append(valid.basename(src))
         self.source_data['grp_id'].append(src.grp_id)
@@ -1548,24 +1533,22 @@ class PmapMaker(object):
         self.source_data['weight'].append(weight)
         self.source_data['ctimes'].append(dt)
         self.source_data['taskno'].append(cm.task_no)
+        return ~pmap
 
-    def make(self, pmap):
+    def make(self):
+        indep = self.rup_indep and not self.src_mutex
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        grp_id = self.sources[0].grp_id
-        if self.src_mutex or not self.rup_indep:
-            pmap.fill(0)
-            self._make_src_mutex(pmap)
-            if self.src_mutex:
-                pmap.array = self.grp_probability * pmap.array
+        if indep:
+            dic['pnemap'] = self._make_src_indep()
         else:
-            self._make_src_indep(pmap)
+            dic['pnemap'] = self._make_src_mutex()
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['grp_id'] = grp_id
+        dic['grp_id'] = self.sources[0].grp_id
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py

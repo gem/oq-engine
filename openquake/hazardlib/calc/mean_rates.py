@@ -72,7 +72,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
-        rates = to_rates(dic['pmap'].array)
+        rates = to_rates(1. - dic['pnemap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
         for i, gid in enumerate(gids[cmaker.grp_id]):
             # += tested in logictree/case_05

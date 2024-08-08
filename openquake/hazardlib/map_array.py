@@ -20,8 +20,9 @@ import copy
 import warnings
 import numpy
 import pandas
+import numba
 from openquake.baselib.general import cached_property
-from openquake.baselib.performance import numba, compile
+from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
@@ -34,18 +35,13 @@ rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
                         ('rate', F32)])
 
 
-if numba:
-    @compile("void(float64[:, :], float64[:], uint32[:])")
-    def combine_probs(array, other, rlzs):
-        for li in range(len(array)):
-            for ri in rlzs:
-                if other[li] != 0.:
-                    array[li, ri] = (
-                        1. - (1. - array[li, ri]) * (1. - other[li]))
-else:
-    def combine_probs(array, other, rlzs):
-        for r in rlzs:
-            array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
+@compile("(float64[:, :], float64[:], uint32[:])")
+def combine_probs(array, other, rlzs):
+    for li in range(len(array)):
+        for ri in rlzs:
+            if other[li] != 0.:
+                array[li, ri] = (
+                    1. - (1. - array[li, ri]) * (1. - other[li]))
 
 
 def get_mean_curve(dstore, imt, site_id=0):
@@ -167,47 +163,44 @@ def get_lvl(hcurve, imls, poe):
 
 # ############################# probability maps ##############################
 
-# numbified below
-def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
+t = numba.types
+sig1 = t.void(t.float64[:, :],                        # pmap
+              t.float64[:, :],                        # poes
+              t.uint32[:],                            # invs
+              t.float64[:],                           # rates
+              t.float64[:, :],                        # probs_occur
+              t.uint32[:],                            # sids
+              t.float64)                              # itime
+
+sig2 = t.void(t.float64[:, :],                        # pmap
+              t.float64[:, :],                        # poes
+              t.uint32[:],                            # invs
+              t.float64[:],                           # rates
+              t.float64[:, :],                        # probs_occur
+              t.float64[:],                           # weights
+              t.uint32[:],                            # sids
+              t.float64)                              # itime
+
+
+@compile(sig1)
+def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
     levels = range(arr.shape[1])
-    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+    for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
         if itime == 0:  # FatedTOM
-            arr[idx] *= 1. - poes[i]
+            arr[sidx] *= 1. - poes[i]
         elif len(probs) == 0:
             # looping is faster than building arrays
             for lvl in levels:
-                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
+                arr[sidx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
         else:
-            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+            arr[sidx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
-# numbified below
-def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
-    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
+@compile(sig2)
+def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
+    for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
         pne = get_pnes(rate, probs, poes[i], itime)  # shape L
-        arr[idx] += (1. - pne) * w
-
-
-if numba:
-    t = numba.types
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.float64[:, :],                        # poes
-                 t.uint32[:],                            # invs
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_i = compile(sig)(update_pmap_i)
-
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.float64[:, :],                        # poes
-                 t.uint32[:],                            # invs
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.float64[:],                           # weights
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_m = compile(sig)(update_pmap_m)
+        arr[sidx] += (1. - pne) * w
 
 
 def fix_probs_occur(probs_occur):
@@ -379,23 +372,28 @@ class MapArray(object):
         arr = self.to_rates().to_array()
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update(self, poes, invs, ctxt, itime, mutex_weight):
+    def update_indep(self, poes, invs, ctxt, itime):
+        """
+        Update probabilities
+        """
+        rates = ctxt.occurrence_rate
+        sidxs = self.sidx[ctxt.sids]
+        for i in range(self.shape[-1]):  # G indices
+            update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
+                          ctxt.probs_occur, sidxs, itime)
+
+    def update_mutex(self, poes, invs, ctxt, itime, mutex_weight):
         """
         Update probabilities
         """
         rates = ctxt.occurrence_rate
         probs_occur = fix_probs_occur(ctxt.probs_occur)
-        idxs = self.sidx[ctxt.sids]
+        sidxs = self.sidx[ctxt.sids]
+        weights = numpy.array([mutex_weight[src_id, rup_id]
+                               for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)])
         for i in range(self.shape[-1]):  # G indices
-            if len(mutex_weight) == 0:  # indep
-                update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
-                              probs_occur, idxs, itime)
-            else:  # mutex
-                weights = [mutex_weight[src_id, rup_id]
-                           for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
-                update_pmap_m(self.array[:, :, i], poes[:, :, i],
-                              invs, rates, probs_occur,
-                              numpy.array(weights), idxs, itime)
+            update_pmap_m(self.array[:, :, i], poes[:, :, i],
+                          invs, rates, probs_occur, weights, sidxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

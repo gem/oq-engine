@@ -54,21 +54,7 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 
-def _cluster(sids, imtls, tom, gsims, pmap):
-    """
-    Computes the probability map in case of a cluster group
-    """
-    for nocc in range(0, 50):
-        ocr = tom.occurrence_rate
-        prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-        if nocc == 0:
-            pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
-        else:
-            pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
-    return ~pmapclu
-
-
-def classical(group, sitecol, cmaker, pmap=None):
+def classical(group, sitecol, cmaker):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -78,10 +64,8 @@ def classical(group, sitecol, cmaker, pmap=None):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    not_passed_pmap = pmap is None
     src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     cluster = getattr(group, 'cluster', None)
-    rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
     trts = set()
     for src in group:
         if not src.num_ruptures:
@@ -100,20 +84,17 @@ def classical(group, sitecol, cmaker, pmap=None):
         cmaker.tom = PoissonTOM(time_span) if time_span else None
     if cluster:
         cmaker.tom = FatedTOM(time_span=1)
-    if not_passed_pmap:
-        pmap = MapArray(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-        pmap.fill(rup_indep)
-
-    dic = PmapMaker(cmaker, src_filter, group).make(pmap)
-    if getattr(group, 'src_interdep', None) != 'mutex' and rup_indep:
-        pmap.array[:] = 1. - pmap.array
+    dic = PmapMaker(cmaker, src_filter, group).make()
     if cluster:
-        pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,
-                                 group.temporal_occurrence_model,
-                                 cmaker.gsims, pmap).array
-    if not_passed_pmap:
-        dic['pmap'] = pmap
+        pnemap = dic['pnemap']
+        tom = group.temporal_occurrence_model
+        for nocc in range(0, 50):
+            prob_n_occ = tom.get_probability_n_occurrences(tom.occurrence_rate, nocc)
+            if nocc == 0:
+                pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
+            else:
+                pmapclu.array += pnemap.array**nocc * prob_n_occ
+        dic['pnemap'].array[:] = pmapclu.array
     return dic
 
 
@@ -191,7 +172,7 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pmap.array[:] = 1. - (1.-pmap.array) * (1. - dic['pmap'].array)
+            pmap.array[:] = 1. - (1.-pmap.array) * dic['pnemap'].array
     return pmap.convert(imtls, len(sitecol.complete))
 
 
@@ -210,9 +191,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = MapArray(site1.sids, oqparam.imtls.size, 1).fill(1)
-    PmapMaker(cmaker, srcfilter, [src]).make(pmap)
-    pmap.array[:] = 1. - pmap.array
+    pmap = ~PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
     if not pmap:  # filtered away
         return numpy.zeros((oqparam.imtls.size, len(gsims)))
     return pmap.array[0]
