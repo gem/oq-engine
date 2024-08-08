@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import math
+
 import copy
 import warnings
 import numpy
@@ -164,38 +164,37 @@ def get_lvl(hcurve, imls, poe):
 # ############################# probability maps ##############################
 
 t = numba.types
-sig1 = t.void(t.float64[:, :, :],                     # pmap
-              t.float64[:, :, :],                     # poes
-              t.uint32[:],                            # invs
-              t.float64[:],                           # rates
-              t.float64[:, :],                        # probs_occur
-              t.uint32[:],                            # sids
-              t.float64)                              # itime
+sig_i = t.void(t.float64[:, :, :],                     # pmap
+               t.float64[:, :, :],                     # poes
+               t.uint32[:],                            # invs
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
 
-sig2 = t.void(t.float64[:, :, :],                     # pmap
-              t.float64[:, :, :],                     # poes
-              t.uint32[:],                            # invs
-              t.float64[:],                           # rates
-              t.float64[:, :],                        # probs_occur
-              t.float64[:],                           # weights
-              t.uint32[:],                            # sids
-              t.float64)                              # itime
+sig_m = t.void(t.float64[:, :, :],                     # pmap
+               t.float64[:, :, :],                     # poes
+               t.uint32[:],                            # invs
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.float64[:],                           # weights
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
 
 
-@compile(sig1)
+@compile(sig_i)
 def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
     N, L, G = arr.shape
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
         no_probs = len(probs) == 0
         for g in range(G):
             if no_probs:
-                for lvl in range(L):
-                    arr[sidx, lvl, g] *= math.exp(-rate * poes[i, lvl, g] * itime)
+                arr[sidx, :, g] *= numpy.exp(-rate * poes[i, :, g] * itime)
             else:  # nonparametric rupture
                 arr[sidx, :, g] *= get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
 
 
-@compile(sig2)
+@compile(sig_m)
 def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
     N, L, G = arr.shape
     for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
