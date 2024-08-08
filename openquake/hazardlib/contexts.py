@@ -1513,8 +1513,7 @@ class PmapMaker(object):
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
-            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims))
-            pm.fill(self.rup_indep)
+            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
@@ -1546,11 +1545,10 @@ class PmapMaker(object):
         return ~pmap
 
     def make(self):
-        indep = self.rup_indep and not self.src_mutex
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        if indep:
+        if self.rup_indep and not self.src_mutex:
             pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
