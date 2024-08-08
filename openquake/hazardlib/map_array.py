@@ -194,6 +194,18 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
                 arr[sidx, :, g] *= get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
 
 
+@compile(sig_i)
+def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
+    N, L, G = arr.shape
+    for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
+        no_probs = len(probs) == 0
+        for g in range(G):
+            if no_probs:
+                arr[sidx, :, g] += rate * poes[i, :, g] * itime
+            else:  # nonparametric rupture
+                arr[sidx, :, g] += -numpy.log(get_pnes(rate, probs, poes[i, :, g], itime))
+
+
 @compile(sig_m)
 def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
     N, L, G = arr.shape
@@ -377,7 +389,10 @@ class MapArray(object):
         """
         rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
-        update_pmap_i(self.array, poes, invs, rates, ctxt.probs_occur, sidxs, itime)
+        if self.rates:
+            update_pmap_r(self.array, poes, invs, rates, ctxt.probs_occur, sidxs, itime)
+        else:
+            update_pmap_i(self.array, poes, invs, rates, ctxt.probs_occur, sidxs, itime)
 
     def update_mutex(self, poes, invs, ctxt, itime, mutex_weight):
         """
