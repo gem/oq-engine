@@ -29,7 +29,6 @@ import numpy as np
 
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
@@ -45,7 +44,6 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     CONSTS,
     REGION_TERMS_IF,
     REGION_TERMS_SLAB,
-    SUPPORTED_REGIONS,
     Z_MODEL,
 )
 from openquake.hazardlib.gsim.nz22.const import (
@@ -211,16 +209,21 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
 
 
 def get_backarc_term(trt, imt, ctx):
-    """The backarc correction factors to be applied with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab events.
-    It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra.
-    The correction is applied only for backarc sites as function of distance."""
+    """
+    The backarc correction factors to be applied with the ground motion prediction.
+    In the NZ context, it is applied to only subduction intraslab events.
+    It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al.
+    (2016) Earthquake Spectra.
+    The correction is applied only for backarc sites as function of distance.
+    """
     period = imt.period
 
     w_epi_factor = 1.008
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0
+    # for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
@@ -347,24 +350,3 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
 
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-
-# For the aliases use the verbose form of the region name
-REGION_ALIASES = {
-    "GLO": "",
-    "USA-AK": "Alaska",
-    "CAS": "Cascadia",
-    "CAM": "CentralAmericaMexico",
-    "JPN": "Japan",
-    "NZL": "NewZealand",
-    "SAM": "SouthAmerica",
-    "TWN": "Taiwan",
-}
-
-
-for region in SUPPORTED_REGIONS[1:]:
-    add_alias(
-        "KuehnEtAl2021SInter" + REGION_ALIASES[region],
-        KuehnEtAl2020SInter,
-        region=region,
-    )
