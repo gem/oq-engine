@@ -184,7 +184,7 @@ sig_m = t.void(t.float64[:, :, :],                     # pmap
 
 @compile(sig_i)
 def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
-    N, L, G = arr.shape
+    G = arr.shape[2]
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
         no_probs = len(probs) == 0
         for g in range(G):
@@ -196,7 +196,7 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
 
 @compile(sig_i)
 def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
-    N, L, G = arr.shape
+    G = arr.shape[2]
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
         no_probs = len(probs) == 0
         for g in range(G):
@@ -208,7 +208,7 @@ def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
 
 @compile(sig_m)
 def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
-    N, L, G = arr.shape
+    G = arr.shape[2]
     for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
         for g in range(G):
             arr[sidx, :, g] += (1. - get_pnes(rate, probs, poes[i, :, g], itime)) * w
