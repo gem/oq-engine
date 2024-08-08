@@ -1,3 +1,6 @@
+  [Nicolas Schmid]
+  * Fixed a regression in the ShakeMap to_gmfs code, a forgotten sigma^2/2 term
+
   [Marco Pagani]
   * Fixed aliases for Kuehn2020 GMPEs (signalled by Eric Thompson)
 
