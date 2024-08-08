@@ -688,7 +688,7 @@ class CompositeSourceModel:
         oq = cmakers[0].oq
         max_gb = float(config.memory.pmap_max_gb)
         for cmaker in cmakers:
-            size_gb = len(cmaker.gsims) * oq.imtls.size * N * 8 / 1024**3
+            size_gb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**3
             grp = self.src_groups[cmaker.grp_id]
             nsplits = general.ceil(grp.weight / max_weight)
             if size_gb / nsplits > max_gb:
