@@ -156,7 +156,10 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pmap.array[:] = 1. - (1.-pmap.array) * dic['pnemap'].array
+            pnemap = dic['pnemap']
+            if pnemap.rates:
+                pnemap.array[:] = numpy.exp(-pnemap.array)
+            pmap.array[:] = 1. - (1.-pmap.array) * pnemap.array
     return pmap.convert(imtls, len(sitecol.complete))
 
 
