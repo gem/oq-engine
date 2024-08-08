@@ -185,9 +185,10 @@ sig2 = t.void(t.float64[:, :, :],                     # pmap
 @compile(sig1)
 def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
     N, L, G = arr.shape
-    for g in range(G):
-        for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
-            if len(probs) == 0:  # poissonian rupture
+    for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
+        no_probs = len(probs) == 0
+        for g in range(G):
+            if no_probs:
                 for lvl in range(L):
                     arr[sidx, lvl, g] *= math.exp(-rate * poes[i, lvl, g] * itime)
             else:  # nonparametric rupture
@@ -197,10 +198,9 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
 @compile(sig2)
 def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, sidxs, itime):
     N, L, G = arr.shape
-    for g in range(G):
-        for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
-            pne = get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
-            arr[sidx, :, g] += (1. - pne) * w
+    for i, rate, probs, w, sidx in zip(inv, rates, probs_occur, weights, sidxs):
+        for g in range(G):
+            arr[sidx, :, g] += (1. - get_pnes(rate, probs, poes[i, :, g], itime)) * w
 
 
 def fix_probs_occur(probs_occur):
