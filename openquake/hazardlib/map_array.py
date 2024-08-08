@@ -373,7 +373,7 @@ class MapArray(object):
 
     def update_indep(self, poes, invs, ctxt, itime):
         """
-        Update probabilities
+        Update probabilities for independent ruptures
         """
         rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
@@ -381,7 +381,7 @@ class MapArray(object):
 
     def update_mutex(self, poes, invs, ctxt, itime, mutex_weight):
         """
-        Update probabilities
+        Update probabilities for mutex ruptures
         """
         rates = ctxt.occurrence_rate
         probs_occur = fix_probs_occur(ctxt.probs_occur)
