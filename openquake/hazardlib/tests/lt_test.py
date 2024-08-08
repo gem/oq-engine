@@ -125,7 +125,7 @@ class CollapseTestCase(unittest.TestCase):
         # compute the fully collapsed curve
         self.bs0.collapsed = True
         self.bs1.collapsed = True
-        coll2, srcs, effctxs, weights = self.full_enum()
+        _coll2, srcs, effctxs, weights = self.full_enum()
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
