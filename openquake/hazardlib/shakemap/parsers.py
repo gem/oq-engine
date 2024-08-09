@@ -396,12 +396,16 @@ def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
                 logging.warning(str(exc))
             else:
                 df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
-                with tempfile.NamedTemporaryFile(
-                        delete=False, mode='w+', newline='',
-                        suffix='.csv') as temp_file:
-                    station_data_file = temp_file.name
-                    df.to_csv(station_data_file, encoding='utf8', index=False)
-                    logging.info(f'Wrote stations to {station_data_file}')
+                if len(df) < 1:
+                    logging.warning('No seismic stations found')
+                else:
+                    with tempfile.NamedTemporaryFile(
+                            delete=False, mode='w+', newline='',
+                            suffix='.csv') as temp_file:
+                        station_data_file = temp_file.name
+                        df.to_csv(station_data_file, encoding='utf8',
+                                  index=False)
+                        logging.info(f'Wrote stations to {station_data_file}')
         if 'download/rupture.json' in contents:
             break
     else:  # missing rupture.json
