@@ -45,7 +45,8 @@ from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.getters import get_ebrupture, MapGetter, get_pmaps_gb
+from openquake.calculators.getters import (
+    get_ebrupture, MapGetter, get_pmaps_gb)
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24

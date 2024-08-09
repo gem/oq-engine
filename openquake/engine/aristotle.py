@@ -25,7 +25,8 @@ import logging
 import numpy
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
+from openquake.hazardlib.shakemap.parsers import (
+    download_rupture_dict, download_station_data_file)
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
@@ -80,6 +81,8 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     usgs_id = dic['usgs_id']
     rupture_file = dic['rupture_file']
     if rupture_file:
+        # FIXME: we may want to download the station data even if we upload a
+        # rupture model xml
         [rup_node] = nrml.read(rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         rup = conv.convert_node(rup_node)
@@ -113,6 +116,9 @@ def get_aristotle_allparams(rupture_dict, time_event, maximum_distance, trt,
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict, ignore_shakemap)
+    if station_data_file is None:
+        # NOTE: giving precedence to the station_data_file uploaded via form
+        station_data_file = download_station_data_file(rupture_dict['usgs_id'])
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file

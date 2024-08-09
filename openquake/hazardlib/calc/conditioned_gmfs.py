@@ -278,8 +278,8 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
         if num_null_values:
             raise ValueError(
                 f"The station data contains {num_null_values}"
-                f"null values for {target_imt.string}."
-                "Please fill or discard these rows.")
+                f" null values for {target_imt.string}."
+                " Please fill or discard these rows.")
     t = TempResult(conditioning_imts=conditioning_imts,
                    bracketed_imts=bracketed_imts,
                    native_data_available=native_data_available)
