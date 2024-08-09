@@ -25,6 +25,7 @@ from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 
+import tempfile
 import io
 import os
 import pathlib
@@ -32,6 +33,7 @@ import logging
 import json
 import zipfile
 import pytz
+import pandas as pd
 from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
@@ -232,7 +234,129 @@ def local_time_to_time_event(local_time):
     return 'transit'
 
 
-def download_rupture_dict(id, ignore_shakemap=False):
+def read_usgs_stations_json(stations_json_str):
+    sj = json.loads(stations_json_str)
+    stations = pd.json_normalize(sj, 'features')
+    stations['eventid'] = sj['metadata']['eventid']
+    # Rename columns
+    stations.columns = [
+        col.replace('properties.', '') for col in stations.columns]
+    # Extract lon and lat
+    stations[['lon', 'lat']] = pd.DataFrame(
+        stations['geometry.coordinates'].to_list())
+    # Get values for available IMTs (PGA and SA)
+    # ==========================================
+    # The "channels/amplitudes" dictionary contains the values recorded at
+    # the seismic stations. The values could report the 3 components, in such
+    # cases, take the componet with maximum PGA (and in absence of PGA, the
+    # first IM reported).
+    channels = pd.DataFrame(stations.channels.to_list())
+    vals = pd.Series([], dtype='object')
+    for row, rec_station in channels.iterrows():
+        rec_station.dropna(inplace=True)
+        # Iterate over different columns. Each colum can be a component
+        data = []
+        pgas = []
+        for _, chan in rec_station.items():
+            if chan["name"].endswith("Z") or chan["name"].endswith("U"):
+                continue
+            # print(chan["name"])
+            df = pd.DataFrame(chan["amplitudes"])
+            if 'pga' in df.name.unique():
+                pga = df.loc[df['name'] == 'pga', 'value'].values[0]
+            else:
+                pga = df['value'][0]
+            if pga is None or pga == "null":
+                continue
+            if isinstance(pga, str):
+                pga = float(pga)
+            pgas.append(pga)
+            data.append(chan["amplitudes"])
+        # get values for maximum component
+        if pgas:
+            max_componet = pgas.index(max(pgas))
+            vals[row] = data[max_componet]
+        else:
+            vals[row] = None
+    # The "pgm_from_mmi" dictionary contains the values estimated from MMI.
+    # Combine both dictionaries to extract the values.
+    # They are generally mutually exclusive (if mixed, the priority is given
+    # to the station recorded data).
+    try:
+        # Some events might not have macroseismic data, then skip them
+        vals = vals.combine_first(stations['pgm_from_mmi']).apply(pd.Series)
+    except Exception as e:
+        print(e, 'not available in json')
+        vals = vals.apply(pd.Series)
+    # Arrange columns since the data can include mixed positions for the IMTs
+    values = pd.DataFrame()
+    for col in vals.columns:
+        df = vals[col].apply(pd.Series)
+        df.set_index(['name'], append=True, inplace=True)
+        df.drop(columns=['flag', 'units'], inplace=True)
+        if 0 in df.columns:
+            df.drop(columns=[0], inplace=True)
+        df = df.unstack('name')
+        df.dropna(axis=1, how='all', inplace=True)
+        df.columns = [col[1]+'_'+col[0] for col in df.columns.values]
+        for col in df.columns:
+            if col in values:
+                # Colum already exist. Combine values in unique column
+                values[col] = values[col].combine_first(df[col])
+            else:
+                values = pd.concat([values, df[col]], axis=1)
+    values.sort_index(axis=1, inplace=True)
+    # Add recording to main DataFrame
+    stations = pd.concat([stations, values], axis=1)
+    return stations
+
+
+def usgs_to_ecd_format(stations, exclude_imts=()):
+    '''
+    Adjust USGS format to match the ECD (Earthquake Consequence Database)
+    format
+    '''
+    # Adjust column names to match format
+    stations.columns = stations.columns.str.upper()
+    stations.rename(columns={
+        'CODE': 'STATION_ID',
+        'NAME': 'STATION_NAME',
+        'LON': 'LONGITUDE',
+        'LAT': 'LATITUDE',
+        'INTENSITY': 'MMI_VALUE',
+        'INTENSITY_STDDEV': 'MMI_STDDEV',
+        }, inplace=True)
+    # Identify columns for IMTs:
+    imts = []
+    for col in stations.columns:
+        if 'DISTANCE_STDDEV' == col:
+            continue
+        if '_VALUE' in col or '_LN_SIGMA' in col or '_STDDEV' in col:
+            for imt in exclude_imts:
+                if imt in col:
+                    break
+            else:
+                imts.append(col)
+    # Identify relevant columns
+    cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
+            'STATION_TYPE', 'VS30'] + imts
+    df = stations[cols].copy()
+    # Add missing columns
+    df.loc[:, 'VS30_TYPE'] = 'inferred'
+    df.loc[:, 'REFERENCES'] = 'Stations_USGS'
+    # Adjust PGA and SA untis to [g]. USGS uses [% g]
+    adj_cols = [item for item in imts
+                if '_VALUE' in item and
+                'PGV' not in item and
+                'MMI' not in item]
+    df.loc[:, adj_cols] = round(df.loc[:, adj_cols].
+                                apply(pd.to_numeric, errors='coerce') / 100, 6)
+    return df
+
+
+def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
+    # FIXME: we may want to use a separate function to download station data.
+    #        But we have to avoid downloading the same things twice.
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
@@ -256,8 +380,21 @@ def download_rupture_dict(id, ignore_shakemap=False):
             raise MissingLink('There is no finite-fault info for %s' % id)
         else:
             shakemap = []
+    station_data_file = None
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
+        if 'download/stationlist.json' in contents:
+            stationlist_url = contents.get('download/stationlist.json')['url']
+            print('Downloading stationlist.json')
+            stations_json_str = urlopen(stationlist_url).read()
+            stations = read_usgs_stations_json(stations_json_str)
+            df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+            with tempfile.NamedTemporaryFile(
+                    delete=False, mode='w+', newline='',
+                    suffix='.csv') as temp_file:
+                station_data_file = temp_file.name
+                df.to_csv(station_data_file, encoding='utf8', index=False)
+                logging.info(f'Wrote stations to {station_data_file}')
         if 'download/rupture.json' in contents:
             break
     else:  # missing rupture.json
@@ -281,7 +418,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
                   'mag': mag, 'rake': 0.,
                   'local_timestamp': str(local_time), 'time_event': time_event,
                   'is_point_rup': False, 'usgs_id': id, 'rupture_file': None}
-        return rupdic
+        return rupdic, station_data_file
     url = contents.get('download/rupture.json')['url']
     print('Downloading rupture.json')
     rup_data = json.loads(urlopen(url).read())
@@ -297,7 +434,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
             'is_point_rup': is_point_rup,
-            'usgs_id': id, 'rupture_file': None}
+            'usgs_id': id, 'rupture_file': None}, station_data_file
 
 
 def get_array_usgs_id(kind, id):
