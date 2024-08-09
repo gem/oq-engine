@@ -30,12 +30,10 @@ import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
-from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, full_context, simple_cmaker)
+    KNOWN_DISTANCES, full_context, simple_cmaker, set_poes)
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -81,26 +79,11 @@ class AdaptedWarning(UserWarning):
     """
 
 
-# this is the critical function for the performance of the classical calculator
-# the performance is dominated by the CPU cache, i.e. large arrays are slow
-# the only way to speedup is to reduce the maximum_distance, then the array
-# will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
-def _set_poes(mean_std, loglevels, phi_b, out):
-    L1 = loglevels.size // len(loglevels)
-    for m, levels in enumerate(loglevels):
-        mL1 = m * L1
-        mea, std = mean_std[:, m]  # shape N
-        for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
-
-
 def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
     out = numpy.zeros((loglevels.size, N))  # shape (L, N)
-    _set_poes(mean_std, loglevels, phi_b, out)
+    set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 
 
@@ -505,7 +488,7 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi[1] *= f  # multiply stddev by factor
                 out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
         else:  # regular case
-            _set_poes(mean_std, loglevels, phi_b, out.T)
+            set_poes(mean_std, loglevels, phi_b, out.T)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for m, imt in enumerate(cmaker.imtls):
             mL1 = m * L1

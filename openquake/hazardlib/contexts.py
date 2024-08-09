@@ -33,12 +33,12 @@ from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
-from openquake.baselib.performance import Monitor, split_array, kround0
+from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
-from openquake.hazardlib.stats import ndtr
+from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
@@ -525,6 +525,20 @@ def _build_dparam(src, sitecol, cmaker):
     # print(getsizeof(out))
     return out
 
+
+# this is the critical function for the performance of the classical calculator
+# the performance is dominated by the CPU cache, i.e. large arrays are slow
+# the only way to speedup is to reduce the maximum_distance, then the array
+# will become shorter in the N dimension (number of affected sites), or to
+# collapse the ruptures, then truncnorm_sf will be called less times
+@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
+def set_poes(mean_std, loglevels, phi_b, out):
+    L1 = loglevels.size // len(loglevels)
+    for m, levels in enumerate(loglevels):
+        mL1 = m * L1
+        mea, std = mean_std[:, m]  # shape N
+        for lvl, iml in enumerate(levels):
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
 
 # ############################ ContextMaker ############################### #
 
