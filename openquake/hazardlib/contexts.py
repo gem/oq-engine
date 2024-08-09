@@ -32,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    ceil, sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -154,7 +154,7 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
-def concat(ctxs):
+def chunkify(ctxs, maxsize):
     """
     Concatenate context arrays.
     :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
@@ -170,7 +170,13 @@ def concat(ctxs):
             p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
     else:
-        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
+        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+        n = ctx.nbytes / maxsize
+        if n > 1.5:
+            # split in chunks of maxsize each; try oq-risk-test/tiling
+            out.extend(numpy.array_split(ctx, ceil(n)))
+        else:
+            out.append(ctx)
     return out
 
 
@@ -179,7 +185,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = 8 * TWO20 // (M*G)
+    maxs = 80 * TWO20 // (M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -843,7 +849,7 @@ class ContextMaker(object):
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 ctxs.extend(self.get_ctx_iter(src, sites))
-        return concat(ctxs)
+        return chunkify(ctxs, self.maxsize)
 
     def get_rparams(self, rup):
         """
@@ -1442,13 +1448,7 @@ class PmapMaker(object):
                     # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
-            n = ctx.nbytes // self.maxsize
-            if n > 1:
-                # split in chunks of maxsize each
-                for c in numpy.array_split(ctx, n):
-                    yield c  # for EUR c has ~500 elements
-            else:
-                yield ctx
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
@@ -1472,14 +1472,14 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    for ctx in concat(allctxs):
-                        cm.update_indep(pnemap, ctx, tom)
+                    for c in chunkify(allctxs, self.maxsize):
+                        cm.update_indep(pnemap, c, tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
-            for ctx in concat(allctxs):
-                cm.update_indep(pnemap, ctx, tom)
+            for c in chunkify(allctxs, self.maxsize):
+                cm.update_indep(pnemap, c, tom)
             allctxs.clear()
 
         dt = time.time() - t0
@@ -1562,7 +1562,7 @@ class PmapMaker(object):
 
         dic['pnemap'] = pnemap
         dic['cfactor'] = self.cmaker.collapser.cfactor
-        dic['rup_data'] = concat(self.rupdata)
+        dic['rup_data'] = chunkify(self.rupdata, self.maxsize)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['grp_id'] = self.sources[0].grp_id
