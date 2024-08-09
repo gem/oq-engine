@@ -681,7 +681,6 @@ class ContextMaker(object):
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
@@ -1175,12 +1174,11 @@ class ContextMaker(object):
         :param ctxs: a list of context arrays with 0 or 1 element
         """
         for poes, ctxt, invs in self.gen_poes(ctx):
-            with self.pne_mon:
-                if isinstance(tom, FatedTOM):
-                    for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
-                        pmap.array[sidx] *= 1. - poes[inv]
-                else:
-                    pmap.update_indep(poes, invs, ctxt, tom.time_span)
+            if isinstance(tom, FatedTOM):
+                for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
+                    pmap.array[sidx] *= 1. - poes[inv]
+            else:
+                pmap.update_indep(poes, invs, ctxt, tom.time_span)
 
     def update_mutex(self, pmap, ctx, tom, rup_mutex):
         """
@@ -1189,8 +1187,7 @@ class ContextMaker(object):
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
         for poes, ctxt, invs in self.gen_poes(ctx):
-            with self.pne_mon:
-                pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
+            pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1464,7 +1461,7 @@ class PmapMaker(object):
         # using most memory here; limited by pmap_max_gb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster)
+            not self.cluster).fill(self.cluster, F64 if self.cluster else F32)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))

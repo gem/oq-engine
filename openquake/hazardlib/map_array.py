@@ -172,6 +172,14 @@ sig_i = t.void(t.float64[:, :, :],                     # pmap
                t.uint32[:],                            # sids
                t.float64)                              # itime
 
+sig_r = t.void(t.float32[:, :, :],                     # pmap
+               t.float64[:, :, :],                     # poes
+               t.uint32[:],                            # invs
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
+
 sig_m = t.void(t.float64[:, :, :],                     # pmap
                t.float64[:, :, :],                     # poes
                t.uint32[:],                            # invs
@@ -194,7 +202,7 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
                 arr[sidx, :, g] *= get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
 
 
-@compile(sig_i)
+@compile(sig_r)
 def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
     G = arr.shape[2]
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
