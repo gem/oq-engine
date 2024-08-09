@@ -45,7 +45,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         ctx.vs30 = 760.
         ctx.mag = 5.5
         ctx.ampcode = b'A'
-        meastd = cmaker.get_mean_stds([ctx])[:2, 0]  # shape (M, N)
+        meastd = cmaker.get_mean_stds([ctx])[:2]  # shape (1, M, N)
 
         imls_soil = numpy.log([0.012, 0.052, 0.12, 0.22, 0.52])
         imls_soil = numpy.log(numpy.logspace(-2, 0, num=20))
@@ -56,8 +56,8 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number
         # intensity measure levels times 2 and 2 GMMs
-        tmp = _get_poes(meastd, ll.array, tl)
-        res = get_poes_site(meastd, cmaker, ctx)
+        tmp = _get_poes(meastd[:, 0], ll.array, tl)
+        res = get_poes_site(meastd, cmaker, ctx)[:, :, 0]
 
         if False:
             import matplotlib.pyplot as plt

@@ -1123,15 +1123,14 @@ class ContextMaker(object):
             ctxt = ctx[slc]
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
-                # this is allocating at most a few MB of RAM
-                poes = numpy.zeros((len(ctxt), M*L1, G))
                 # NB: using .empty would break the MixtureModelGMPETestCase
-                for g, gsim in enumerate(self.gsims):
-                    ms = mean_stdt[:2, g, :, slc]
-                    # builds poes of shape (n, L, G)
-                    if self.oq.af:  # amplification method
-                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
-                    else:  # regular case
+                if self.oq.af:  # amplification method
+                    poes = get_poes_site(mean_stdt[:2, :, :, slc], self, ctxt)
+                else:
+                    # this is allocating at most a few MB of RAM
+                    poes = numpy.zeros((len(ctxt), M*L1, G))
+                    for g, gsim in enumerate(self.gsims):
+                        ms = mean_stdt[:2, g, :, slc]
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])
             yield poes
 
