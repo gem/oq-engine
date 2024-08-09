@@ -170,7 +170,7 @@ def chunkify(ctxs, maxsize):
             p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
     else:
-        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+        ctx = numpy.concatenate(ctxs, dtype=ctxs[0].dtype).view(numpy.recarray)
         n = ctx.nbytes / maxsize
         if n > 1.5:
             # split in chunks of maxsize each; try oq-risk-test/tiling
@@ -185,7 +185,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = 80 * TWO20 // (M*G)
+    maxs = 40 * TWO20 // (M*G)
     assert maxs > 1, maxs
     return maxs
 
@@ -1471,7 +1471,7 @@ class PmapMaker(object):
                 src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
-                if ctxlen > self.maxsize:
+                if ctxlen > 10_000:
                     for c in chunkify(allctxs, self.maxsize):
                         cm.update_indep(pnemap, c, tom)
                     allctxs.clear()
