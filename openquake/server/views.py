@@ -46,7 +46,6 @@ import numpy
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -120,6 +119,8 @@ ARISTOTLE_FORM_LABELS = {
     'dep': 'Depth (km)',
     'mag': 'Magnitude (Mw)',
     'rake': 'Rake (degrees)',
+    'local_timestamp': 'Local timestamp of the event',
+    'time_event': 'Time of the event',
     'dip': 'Dip (degrees)',
     'strike': 'Strike (degrees)',
     'maximum_distance': 'Maximum source-to-site distance (km)',
@@ -140,6 +141,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'dep': 'float ≥ 0',
     'mag': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
+    'local_timestamp': '',
+    'time_event': 'avg|day|night|transit',
     'dip': '0 ≤ float ≤ 90',
     'strike': '0 ≤ float ≤ 360',
     'maximum_distance': 'float ≥ 0',
@@ -777,6 +780,8 @@ def aristotle_validate(request):
         'rake': valid.rake_range,
         'dip': valid.dip_range,
         'strike': valid.strike_range,
+        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
+        'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
@@ -794,11 +799,16 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
-            if (fieldname == 'maximum_distance_stations' and
-                    request.POST.get('maximum_distance_stations') == ''):
-                # NOTE: valid.positivefloat raises an error if the value is
-                # blank or None
-                params['maximum_distance_stations'] = None
+            blankable_fields = ['maximum_distance_stations', 'dip', 'strike']
+            # NOTE: valid.positivefloat, valid_dip_range and
+            #       valid_strike_range raise errors if their
+            #       value is blank or None
+            if (fieldname in blankable_fields and
+                    request.POST.get(fieldname) == ''):
+                if fieldname in dic:
+                    dic[fieldname] = None
+                else:
+                    params[fieldname] = None
                 continue
             validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
@@ -807,6 +817,9 @@ def aristotle_validate(request):
             dic[fieldname] = value
         else:
             params[fieldname] = value
+
+    if 'is_point_rup' in request.POST:
+        dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
 
     # FIXME: validate station_data_file
     if 'lon' in request.POST:
@@ -849,7 +862,8 @@ def aristotle_run(request):
     :param request:
         a `django.http.HttpRequest` object containing
         usgs_id, rupture_file,
-        lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+        lon, lat, dep, mag, rake, dip, strike, time_event,
+        maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed, station_data_file,
         maximum_distance_stations
@@ -857,23 +871,29 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupdic, maximum_distance, trt,
+    (rupdic, time_event, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
+    for key in ['dip', 'strike']:
+        if key in rupdic and rupdic[key] is None:
+            del rupdic[key]
     try:
         allparams = get_aristotle_allparams(
             rupdic,
+            time_event,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
             station_data_file=station_data_file,
             maximum_distance_stations=maximum_distance_stations)
-    except SiteAssociationError as exc:
-        response_data = {"status": "failed", "error_msg": str(exc)}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=406)
+    except Exception as exc:
 
+        response_data = {"status": "failed", "error_msg": str(exc),
+                         "error_cls": type(exc).__name__}
+        logging.error('', exc_info=True)
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=500)
     user = utils.get_user(request)
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None, user, None)

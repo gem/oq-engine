@@ -810,7 +810,7 @@ tectonic_region_type:
 
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
-  Valid choices are "day", "night", "transit".
+  Valid choices are "avg", "day", "night", "transit".
   Example: *time_event = day*.
   Default: "avg"
 
@@ -1123,7 +1123,8 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     tectonic_region_type = valid.Param(valid.utf8, '*')
-    time_event = valid.Param(str, 'avg')
+    time_event = valid.Param(
+        valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
