@@ -345,13 +345,14 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     df.loc[:, 'VS30_TYPE'] = 'inferred'
     df.loc[:, 'REFERENCES'] = 'Stations_USGS'
     # Adjust PGA and SA untis to [g]. USGS uses [% g]
-    adj_cols = [item for item in imts
-                if '_VALUE' in item and
-                'PGV' not in item and
-                'MMI' not in item]
+    adj_cols = [imt for imt in imts
+                if '_VALUE' in imt and
+                'PGV' not in imt and
+                'MMI' not in imt]
     df.loc[:, adj_cols] = round(df.loc[:, adj_cols].
                                 apply(pd.to_numeric, errors='coerce') / 100, 6)
-    return df
+    df_seismic = df[df['STATION_TYPE'] == 'seismic']
+    return df_seismic
 
 
 def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
