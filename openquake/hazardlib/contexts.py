@@ -1149,7 +1149,7 @@ class ContextMaker(object):
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
-        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep, F32)
         for ctx in ctxs:
             if rup_mutex:
                 self.update_mutex(pmap, ctx, tom or PoissonTOM(self.investigation_time), rup_mutex)
@@ -1506,12 +1506,12 @@ class PmapMaker(object):
         nctxs = 0
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(
-            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0, F32)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
-            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
+            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep, F32)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:

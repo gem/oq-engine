@@ -49,6 +49,7 @@ from openquake.hazardlib.calc.mean_rates import (
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
+F32 = numpy.float32
 TWO24 = 2 ** 24
 
 
@@ -216,8 +217,8 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar, gp,
         # M - Number of IMTs
         # P - Number of PoEs
         # G - Number of gsims
-        poes = numpy.zeros((U, E, M, P))
-        pnes = numpy.ones((U, E, M, P))
+        poes = numpy.zeros((U, E, M, P), F32)
+        pnes = numpy.ones((U, E, M, P), F32)
 
         # disaggregate by epsilon
         for (m, p), iml in numpy.ndenumerate(iml2):
