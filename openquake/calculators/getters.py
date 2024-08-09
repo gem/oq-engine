@@ -156,14 +156,14 @@ def get_num_chunks(dstore):
     """
     :returns: the number of postclassical tasks to generate.
 
-    It is 4 times the number of GB required to store the rates.
+    It is 5 times the number of GB required to store the rates.
     """
     msd = dstore['oqparam'].max_sites_disagg
     try:
         req_gb = dstore['tiles'].attrs['req_gb']
     except KeyError:
         return msd
-    chunks = max(int(4 * req_gb), msd)
+    chunks = max(int(5 * req_gb), msd)
     return chunks
 
     
