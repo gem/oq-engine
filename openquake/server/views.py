@@ -57,9 +57,9 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
+from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
-    get_trts_around, get_aristotle_allparams,
-    get_rupture_dict_and_station_data_file)
+    get_trts_around, get_aristotle_allparams, get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings
@@ -840,8 +840,7 @@ def aristotle_validate(request):
     if ignore_shakemap == 'True':
         ignore_shakemap = True
     try:
-        rupdic, station_data_file = get_rupture_dict_and_station_data_file(
-            dic, ignore_shakemap)
+        rupdic = get_rupture_dict(dic, ignore_shakemap)
     except Exception as exc:
         msg = f'Unable to retrieve rupture data: {exc}'
         response_data = {"status": "failed", "error_msg": msg,
@@ -856,6 +855,7 @@ def aristotle_validate(request):
         params['station_data_file'] = request.POST.get(
             'station_data_file_from_usgs')
     else:
+        station_data_file = download_station_data_file(dic['usgs_id'])
         params['station_data_file'] = station_data_file
     return rupdic, *params.values()
 

@@ -37,8 +37,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
-from openquake.hazardlib.shakemap.parsers import (
-    download_rupture_dict_and_station_data_file)
+from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, ContextMaker, Collapser)
 from openquake.commonlib import util
@@ -46,7 +45,8 @@ from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.getters import get_ebrupture, MapGetter, get_pmaps_gb
+from openquake.calculators.getters import (
+    get_ebrupture, MapGetter, get_pmaps_gb)
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -1576,9 +1576,7 @@ def view_usgs_rupture(token, dstore):
         usgs_id = token.split(':', 1)[1]
     except IndexError:
         return 'Example: oq show usgs_rupture:us70006sj8'
-    rupture_dict, _station_data_file = \
-        download_rupture_dict_and_station_data_file(usgs_id)
-    return rupture_dict
+    return download_rupture_dict(usgs_id)
 
 
 @view.add('collapsible')

@@ -357,9 +357,51 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic
 
 
-def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
-    # FIXME: we may want to use a separate function to download station data.
-    #        But we have to avoid downloading the same things twice.
+def download_station_data_file(usgs_id):
+    """
+    Download station data from the USGS site given a ShakeMap ID.
+
+    :param usgs_id: ShakeMap ID
+    :returns: the path of a csv file with station data converted to a format
+        compatible with OQ
+    """
+    # NOTE: downloading twice from USGS, but with a clearer workflow
+    url = SHAKEMAP_URL.format(usgs_id)
+    print('Downloading %s' % url)
+    js = json.loads(urlopen(url).read())
+    products = js['properties']['products']
+    station_data_file = None
+    try:
+        shakemap = products['shakemap']
+    except KeyError:
+        logging.warning('No shakemap was found')
+        return None
+    for shakemap in reversed(shakemap):
+        contents = shakemap['contents']
+        if 'download/stationlist.json' in contents:
+            stationlist_url = contents.get('download/stationlist.json')['url']
+            print('Downloading stationlist.json')
+            stations_json_str = urlopen(stationlist_url).read()
+            try:
+                stations = read_usgs_stations_json(stations_json_str)
+            except LookupError as exc:
+                logging.warning(str(exc))
+            else:
+                df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+                if len(df) < 1:
+                    logging.warning('No seismic stations found')
+                else:
+                    with tempfile.NamedTemporaryFile(
+                            delete=False, mode='w+', newline='',
+                            suffix='.csv') as temp_file:
+                        station_data_file = temp_file.name
+                        df.to_csv(station_data_file, encoding='utf8',
+                                  index=False)
+                        logging.info(f'Wrote stations to {station_data_file}')
+                        return station_data_file
+
+
+def download_rupture_dict(id, ignore_shakemap=False):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
@@ -384,29 +426,8 @@ def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
                 'There is no shakemap nor finite-fault info for %s' % id)
         else:
             shakemap = []
-    station_data_file = None
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
-        if 'download/stationlist.json' in contents:
-            stationlist_url = contents.get('download/stationlist.json')['url']
-            print('Downloading stationlist.json')
-            stations_json_str = urlopen(stationlist_url).read()
-            try:
-                stations = read_usgs_stations_json(stations_json_str)
-            except LookupError as exc:
-                logging.warning(str(exc))
-            else:
-                df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
-                if len(df) < 1:
-                    logging.warning('No seismic stations found')
-                else:
-                    with tempfile.NamedTemporaryFile(
-                            delete=False, mode='w+', newline='',
-                            suffix='.csv') as temp_file:
-                        station_data_file = temp_file.name
-                        df.to_csv(station_data_file, encoding='utf8',
-                                  index=False)
-                        logging.info(f'Wrote stations to {station_data_file}')
         if 'download/rupture.json' in contents:
             break
     else:  # missing rupture.json
@@ -430,7 +451,7 @@ def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
                   'mag': mag, 'rake': 0.,
                   'local_timestamp': str(local_time), 'time_event': time_event,
                   'is_point_rup': False, 'usgs_id': id, 'rupture_file': None}
-        return rupdic, station_data_file
+        return rupdic
     url = contents.get('download/rupture.json')['url']
     print('Downloading rupture.json')
     rup_data = json.loads(urlopen(url).read())
@@ -446,7 +467,7 @@ def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
             'is_point_rup': is_point_rup,
-            'usgs_id': id, 'rupture_file': None}, station_data_file
+            'usgs_id': id, 'rupture_file': None}
 
 
 def get_array_usgs_id(kind, id):
