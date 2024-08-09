@@ -86,7 +86,7 @@ class AdaptedWarning(UserWarning):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
+@compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):

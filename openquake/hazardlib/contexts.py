@@ -1110,7 +1110,7 @@ class ContextMaker(object):
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
-                poes = numpy.zeros((len(ctxt), M*L1, G))
+                poes = numpy.zeros((len(ctxt), M*L1, G), F32)
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
@@ -1461,7 +1461,7 @@ class PmapMaker(object):
         # using most memory here; limited by pmap_max_gb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster, F64 if self.cluster else F32)
+            not self.cluster).fill(self.cluster, F32)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
