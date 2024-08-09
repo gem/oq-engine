@@ -243,17 +243,32 @@ class NowickiJessee2018Landslides(SecondaryPeril):
 
     def compute(self, imt_gmf, sites):
         out = []
+        pga = None
+        pgv = None
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                prob_ls, coverage = nowicki_jessee_2018(
-                    pgv=gmf,
-                    slope=sites.slope,
-                    lithology=sites.lithology,
-                    landcover=sites.landcover,
-                    cti=sites.cti,
-                )
-            out.append(prob_ls)
-            out.append(coverage)
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute liquefaction "
+                "probability using the AllstadtEtAl2022Liquefaction model"
+            )
+        
+        prob_ls, coverage = nowicki_jessee_2018(
+            pga = pga,
+            pgv = pgv,
+            slope=sites.slope,
+            lithology=sites.lithology,
+            landcover=sites.landcover,
+            cti=sites.cti,
+        )
+        out.append(prob_ls)
+        out.append(coverage)
             
         return out
 

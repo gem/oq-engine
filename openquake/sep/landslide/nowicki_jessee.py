@@ -89,10 +89,11 @@ def areal_coverage(a: float, b: float, c: float, d: float, p: float):
 
     
 def nowicki_jessee_2018(
+    pga: Union[float, np.ndarray],
     pgv: Union[float, np.ndarray],
     slope: Union[float, np.ndarray],
     lithology: str,
-    landcover: str,
+    landcover: Union[int, np.ndarray],
     cti: Union[float, np.ndarray],
     intercept: float = -6.30,
     pgv_coeff: float = 1.65,
@@ -132,15 +133,16 @@ def nowicki_jessee_2018(
         coverage: Landslide areal coverage.
     """
 
-    if isinstance(lithology, (str, bytes)):
+    if isinstance(lithology, (str)):
         lithology_coeff = coeff_table_lith.get(lithology, -0.66)
     else:
         lithology_coeff = np.array([coeff_table_lith.get(l, -0.66) for l in lithology])
 
-    if isinstance(landcover, (str, bytes)):
+    if isinstance(landcover, (int)):   
+        landcover = str(landcover)
         landcover_coeff = coeff_table_cov.get(landcover, -1.08)
     else:
-        landcover_coeff = np.array([coeff_table_cov.get(l, -1.08) for l in landcover])
+        landcover_coeff = np.array([coeff_table_cov.get(str(l), -1.08) for l in landcover])
 
     cti = np.clip(np.where(cti > 19, 19, cti), 0, None)
     pgv = np.clip(np.where(pgv > 211, 211, pgv), 1e-5, None)
@@ -154,8 +156,9 @@ def nowicki_jessee_2018(
         interaction_term * np.log(pgv) * slope +
         intercept
     )
-    prob_ls = sigmoid(Xg)
 
+    prob_ls = sigmoid(Xg)
     coverage = areal_coverage(-7.592, 5.237, -3.042, 4.035, prob_ls)
+    coverage = np.where((slope < 2) | (pga < 0.02), 0, coverage)
 
     return prob_ls, coverage
