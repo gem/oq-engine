@@ -171,10 +171,11 @@ def chunkify(ctxs, maxsize):
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
     else:
         ctx = numpy.concatenate(ctxs, dtype=ctxs[0].dtype).view(numpy.recarray)
-        n = ctx.nbytes / maxsize
-        if n > 1.5:
+        n = len(ctx) / maxsize
+        if n > 2:
+            print(n)
             # split in chunks of maxsize each; try oq-risk-test/tiling
-            out.extend(numpy.array_split(ctx, ceil(n)))
+            out.extend(numpy.array_split(ctx, int(n)))
         else:
             out.append(ctx)
     return out
@@ -185,8 +186,7 @@ def get_maxsize(M, G):
     """
     :returns: an integer N such that arrays N*M*G fits in the CPU cache
     """
-    maxs = 40 * TWO20 // (M*G)
-    assert maxs > 1, maxs
+    maxs = 8 * TWO20 // (M*G)
     return maxs
 
 
@@ -1467,11 +1467,12 @@ class PmapMaker(object):
                           PoissonTOM(self.cmaker.investigation_time))
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
-                ctxlen += len(ctx)
-                src.nsites += len(ctx)
-                totlen += len(ctx)
+                n = len(ctx)
+                ctxlen += n
+                src.nsites += n
+                totlen += n
                 allctxs.append(ctx)
-                if ctxlen > 10_000:
+                if ctxlen > self.maxsize:
                     for c in chunkify(allctxs, self.maxsize):
                         cm.update_indep(pnemap, c, tom)
                     allctxs.clear()
