@@ -236,6 +236,8 @@ def local_time_to_time_event(local_time):
 
 def read_usgs_stations_json(stations_json_str):
     sj = json.loads(stations_json_str)
+    if 'features' not in sj or not sj['features']:
+        raise LookupError('Station data is not available yet.')
     stations = pd.json_normalize(sj, 'features')
     stations['eventid'] = sj['metadata']['eventid']
     # Rename columns
@@ -388,14 +390,18 @@ def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
             stationlist_url = contents.get('download/stationlist.json')['url']
             print('Downloading stationlist.json')
             stations_json_str = urlopen(stationlist_url).read()
-            stations = read_usgs_stations_json(stations_json_str)
-            df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
-            with tempfile.NamedTemporaryFile(
-                    delete=False, mode='w+', newline='',
-                    suffix='.csv') as temp_file:
-                station_data_file = temp_file.name
-                df.to_csv(station_data_file, encoding='utf8', index=False)
-                logging.info(f'Wrote stations to {station_data_file}')
+            try:
+                stations = read_usgs_stations_json(stations_json_str)
+            except LookupError as exc:
+                logging.warning(str(exc))
+            else:
+                df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+                with tempfile.NamedTemporaryFile(
+                        delete=False, mode='w+', newline='',
+                        suffix='.csv') as temp_file:
+                    station_data_file = temp_file.name
+                    df.to_csv(station_data_file, encoding='utf8', index=False)
+                    logging.info(f'Wrote stations to {station_data_file}')
         if 'download/rupture.json' in contents:
             break
     else:  # missing rupture.json
