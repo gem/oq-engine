@@ -380,7 +380,8 @@ def download_rupture_dict_and_station_data_file(id, ignore_shakemap=False):
         try:
             products['finite-fault']
         except KeyError:
-            raise MissingLink('There is no finite-fault info for %s' % id)
+            raise MissingLink(
+                'There is no shakemap nor finite-fault info for %s' % id)
         else:
             shakemap = []
     station_data_file = None
