@@ -139,7 +139,7 @@ def calc_hazard_curves(
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo,
-                 investigation_time=span)
+                 investigation_time=span, af=None)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)

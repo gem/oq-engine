@@ -1115,7 +1115,7 @@ class ContextMaker(object):
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
                     # builds poes of shape (n, L, G)
-                    if getattr(self.oq, 'af', None):  # amplification method
+                    if self.oq.af:  # amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctxt)
                     else:  # regular case
                         gsim.set_poes(ms, self, ctxt, poes[:, :, g])

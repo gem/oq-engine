@@ -156,6 +156,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
             grp_probability=1.0)
         param = dict(imtls=self.imtls,
                      investigation_time=1.,
+                     af=None,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)

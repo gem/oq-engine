@@ -289,7 +289,8 @@ class NewApiTestCase(unittest.TestCase):
         oq = unittest.mock.Mock(
             imtls=DictArray(imtls),
             investigation_time=1.0,
-            maximum_distance=IntegrationDistance.new('300'))
+            maximum_distance=IntegrationDistance.new('300'),
+            af=None)
         mon = Monitor()
         hcurve = calc_hazard_curve(
             sitecol, asource, [ExampleA2021()], oq, mon)
