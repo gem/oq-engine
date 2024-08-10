@@ -1115,8 +1115,8 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-            #ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
-            #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
+            # ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
+            # print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
 
         # making plenty of slices so that the array `poes` is small
         for slc in split_in_slices(len(ctx), 2*L1):
