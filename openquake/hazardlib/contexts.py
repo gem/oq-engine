@@ -1257,6 +1257,8 @@ class ContextMaker(object):
             if adj is not None:
                 self.adj[gsim].append(adj)
             start = slc.stop
+        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
+            raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.adj[gsim]:
             self.adj[gsim] = numpy.concatenate(self.adj[gsim])
         if self.conv:  # apply horizontal component conversion
