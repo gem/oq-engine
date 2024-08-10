@@ -449,7 +449,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    def set_poes(self, mean_std, cmaker, ctx, out):
+    def set_poes(self, mean_std, cmaker, ctx, out, slc):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -461,9 +461,11 @@ class GMPE(GroundShakingIntensityModel):
         :param cmaker:
             A ContextMaker instance, used only in nhsm_2014
         :param ctx:
-            A recarray used only in  avg_poe_gmpe
+            A context array used only in avg_poe_gmpe
         :param out:
             An array of PoEs of shape (N, L) to be filled
+        :param slc:
+            A slice object used only in avg_poe_gmpe
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
             float number, and if ``imts`` dictionary contain wrong or
@@ -473,7 +475,7 @@ class GMPE(GroundShakingIntensityModel):
         phi_b = cmaker.phi_b
         _M, L1 = loglevels.shape
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
-            adj = cmaker.adj[self][cmaker.slc]
+            adj = cmaker.adj[self][slc]
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:

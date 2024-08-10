@@ -1120,20 +1120,18 @@ class ContextMaker(object):
 
         # making plenty of slices so that the array `poes` is small
         for slc in split_in_slices(len(ctx), 2*L1):
-            ctxt = ctx[slc]
-            self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
-                poes = numpy.zeros((len(ctxt), M*L1, G), F32)
+                poes = numpy.zeros((slc.stop-slc.start, M*L1, G), F32)
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
                     # builds poes of shape (n, L, G)
                     if self.oq.af:  # amplification method
-                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
+                        poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
                     else:  # regular case
-                        gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-            yield poes
+                        gsim.set_poes(ms, self, ctx, poes[:, :, g], slc)
+            yield poes, slc
 
     def gen_poes(self, ctx):
         """
@@ -1146,11 +1144,11 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
             if invs is None:  # no collapse
-                for poes in self._gen_poes(ctxt):
+                for poes, slc in self._gen_poes(ctxt):
                     invs = numpy.arange(len(poes), dtype=U32)
-                    yield poes, ctxt[self.slc], invs
+                    yield poes, ctxt[slc], invs
             else:  # collapse
-                poes = numpy.concatenate(list(self._gen_poes(kctx)))
+                poes = numpy.concatenate([p for p, s in self._gen_poes(kctx)])
                 yield poes, ctxt, invs
 
     # used in source_disagg
