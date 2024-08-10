@@ -1222,23 +1222,7 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         for g, gsim in enumerate(self.gsims):
-            gsim.adj = []  # NSHM2014P adjustments
-            compute = gsim.__class__.compute
-            start = 0
-            for ctx in recarrays:
-                slc = slice(start, start + len(ctx))
-                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
-                if adj is not None:
-                    gsim.adj.append(adj)
-                start = slc.stop
-            if gsim.adj:
-                gsim.adj = numpy.concatenate(gsim.adj)
-            if self.truncation_level not in (0, 1E-9, 99.) and (
-                    out[1, g] == 0.).any():
-                raise ValueError('Total StdDev is zero for %s' % gsim)
-        if self.conv:  # apply horizontal component conversion
-            for g, gsim in enumerate(self.gsims):
-                self.horiz_comp_to_geom_mean(out[:, g], gsim)
+            out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
     def get_4MN(self, recarrays, gsim):
