@@ -207,14 +207,14 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
-            MapArray(sids, M, L1).fill(0, F32) for r in range(R)]
+            MapArray(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
-            MapArray(sids, M, L1).fill(0, F32) for r in range(S)]
+            MapArray(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = MapArray(sids, 1, 1).fill(0, F32).sidx
+    sidx = MapArray(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
@@ -505,7 +505,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0, F32)
+        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent

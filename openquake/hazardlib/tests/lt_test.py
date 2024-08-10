@@ -96,7 +96,7 @@ class CollapseTestCase(unittest.TestCase):
         idist = calc.filters.IntegrationDistance.new('200')
         params = dict(imtls=self.imtls, truncation_level2=2,
                       collapse_level=1, investigation_time=time_span,
-                      maximum_distance=idist('default'))
+                      maximum_distance=idist('default'), af=None)
         cmaker = contexts.ContextMaker(
             srcs[0].tectonic_region_type, self.gsims, params)
         res = classical(srcs, self.sitecol, cmaker)

@@ -164,24 +164,16 @@ def get_lvl(hcurve, imls, poe):
 # ############################# probability maps ##############################
 
 t = numba.types
-sig_i = t.void(t.float64[:, :, :],                     # pmap
-               t.float64[:, :, :],                     # poes
+sig_i = t.void(t.float32[:, :, :],                     # pmap
+               t.float32[:, :, :],                     # poes
                t.uint32[:],                            # invs
                t.float64[:],                           # rates
                t.float64[:, :],                        # probs_occur
                t.uint32[:],                            # sids
                t.float64)                              # itime
 
-sig_r = t.void(t.float32[:, :, :],                     # pmap
-               t.float64[:, :, :],                     # poes
-               t.uint32[:],                            # invs
-               t.float64[:],                           # rates
-               t.float64[:, :],                        # probs_occur
-               t.uint32[:],                            # sids
-               t.float64)                              # itime
-
-sig_m = t.void(t.float64[:, :, :],                     # pmap
-               t.float64[:, :, :],                     # poes
+sig_m = t.void(t.float32[:, :, :],                     # pmap
+               t.float32[:, :, :],                     # poes
                t.uint32[:],                            # invs
                t.float64[:],                           # rates
                t.float64[:, :],                        # probs_occur
@@ -202,15 +194,15 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
                 arr[sidx, :, g] *= get_pnes(rate, probs, poes[i, :, g], itime)  # shape L
 
 
-@compile(sig_r)
+@compile(sig_i)
 def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
     G = arr.shape[2]
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
-        no_probs = len(probs) == 0
-        for g in range(G):
-            if no_probs:
+        if len(probs) == 0:
+            for g in range(G):
                 arr[sidx, :, g] += rate * poes[i, :, g] * itime
-            else:  # nonparametric rupture
+        else:  # nonparametric rupture
+            for g in range(G):
                 arr[sidx, :, g] += -numpy.log(get_pnes(rate, probs, poes[i, :, g], itime))
 
 
@@ -268,7 +260,7 @@ class MapArray(object):
         for g in range(G):
             yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
 
-    def fill(self, value, dt=F64):
+    def fill(self, value):
         """
         :param value: a scalar probability
 
@@ -276,7 +268,7 @@ class MapArray(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty(self.shape, dt)
+        self.array = numpy.empty(self.shape, F32)
         self.array.fill(value)
         return self
 
