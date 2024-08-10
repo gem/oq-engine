@@ -23,12 +23,14 @@ different kinds of :class:`ground shaking intensity models
 """
 import sys
 import abc
+import copy
 import inspect
 import warnings
 import functools
 import toml
 import numpy
 
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
@@ -490,6 +492,15 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi = mean_std.copy()
                 mean_stdi[1] *= f  # multiply stddev by factor
                 out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
+        elif hasattr(self, 'weights'):  # avg_poe_gmpe
+            cm = copy.copy(cmaker)
+            cm.poe_mon = Monitor()  # avoid double counts
+            cm.gsims = self.gsims
+            avgs = []
+            for poes, ctxt, invs in cm.gen_poes(ctx[slc]):
+                # poes has shape N, L, G
+                avgs.append(poes @ self.weights)
+            out[:] = numpy.concatenate(avgs)
         else:  # regular case
             set_poes(mean_std, loglevels, phi_b, out.T)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
