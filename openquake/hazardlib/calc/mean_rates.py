@@ -65,7 +65,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     Gt = sum(len(cm.gsims) for cm in cmakers)
     logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
                  len(sitecol), oq.imtls.size, Gt)
-    rmap = MapArray(sitecol.sids, L, Gt).fill(0, F32)
+    rmap = MapArray(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)

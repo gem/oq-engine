@@ -337,7 +337,7 @@ class MapGetter(object):
         """
         M = self.M
         L1 = self.L // M
-        means = MapArray(U32(self.sids), M, L1).fill(0, F32)
+        means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)

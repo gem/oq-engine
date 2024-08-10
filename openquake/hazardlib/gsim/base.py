@@ -46,6 +46,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
+F32 = numpy.float32
 F64 = numpy.float64
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
@@ -82,7 +83,7 @@ class AdaptedWarning(UserWarning):
 def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
+    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
     set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 

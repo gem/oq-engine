@@ -531,7 +531,7 @@ def _build_dparam(src, sitecol, cmaker):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
+@compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
 def set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
@@ -1124,7 +1124,7 @@ class ContextMaker(object):
             self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
-                poes = numpy.zeros((len(ctxt), M*L1, G))
+                poes = numpy.zeros((len(ctxt), M*L1, G), F32)
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
@@ -1475,7 +1475,7 @@ class PmapMaker(object):
         # using most memory here; limited by pmap_max_gb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster, F64 if self.cluster else F32)
+            not self.cluster).fill(self.cluster)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
