@@ -1248,19 +1248,19 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in recarrays)
         M = len(self.imts)
         out = numpy.zeros((4, M, N))
-        self.adj = {gsim: []}  # NSHM2014P adjustments
+        gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
         for ctx in recarrays:
             slc = slice(start, start + len(ctx))
             adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
             if adj is not None:
-                self.adj[gsim].append(adj)
+                gsim.adj.append(adj)
             start = slc.stop
         if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
             raise ValueError('Total StdDev is zero for %s' % gsim)
-        if self.adj[gsim]:
-            self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+        if gsim.adj:
+            gsim.adj = numpy.concatenate(gsim.adj)
         if self.conv:  # apply horizontal component conversion
             self.horiz_comp_to_geom_mean(out, gsim)
         return out
