@@ -23,19 +23,17 @@ different kinds of :class:`ground shaking intensity models
 """
 import sys
 import abc
-import copy
 import inspect
 import warnings
 import functools
 import toml
 import numpy
 
-from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, full_context, simple_cmaker, set_poes)
+    KNOWN_DISTANCES, full_context, simple_cmaker)
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -80,14 +78,6 @@ class AdaptedWarning(UserWarning):
     Raised for GMPEs that are intended for experimental use or maybe subject
     to changes in future version.
     """
-
-
-def _get_poes(mean_std, loglevels, phi_b):
-    # returns a matrix of shape (N, L)
-    N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
-    set_poes(mean_std, loglevels, phi_b, out)
-    return out.T
 
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
@@ -450,63 +440,3 @@ class GMPE(GroundShakingIntensityModel):
         arrays and returning None.
         """
         raise NotImplementedError
-
-    def set_poes(self, mean_std, cmaker, ctx, out, slc):
-        """
-        Calculate and return probabilities of exceedance (PoEs) of one or more
-        intensity measure levels (IMLs) of one intensity measure type (IMT)
-        for one or more pairs "site -- rupture".
-
-        :param mean_std:
-            An array of shape (2, M, N) with mean and standard deviations
-            for the sites and intensity measure types
-        :param cmaker:
-            A ContextMaker instance, used only in nhsm_2014
-        :param ctx:
-            A context array used only in avg_poe_gmpe
-        :param out:
-            An array of PoEs of shape (N, L) to be filled
-        :param slc:
-            A slice object used only in avg_poe_gmpe
-        :raises ValueError:
-            If truncation level is not ``None`` and neither non-negative
-            float number, and if ``imts`` dictionary contain wrong or
-            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-        """
-        loglevels = cmaker.loglevels.array
-        phi_b = cmaker.phi_b
-        _M, L1 = loglevels.shape
-        if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
-            adj = cmaker.adj[self][slc]
-            outs = []
-            weights, signs = zip(*self.weights_signs)
-            for s in signs:
-                ms = numpy.array(mean_std)  # make a copy
-                for m in range(len(loglevels)):
-                    ms[0, m] += s * adj
-                outs.append(_get_poes(ms, loglevels, phi_b))
-            out[:] = numpy.average(outs, weights=weights, axis=0)
-        elif hasattr(self, "mixture_model"):
-            for f, w in zip(self.mixture_model["factors"],
-                            self.mixture_model["weights"]):
-                mean_stdi = mean_std.copy()
-                mean_stdi[1] *= f  # multiply stddev by factor
-                out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
-        elif hasattr(self, 'weights'):  # avg_poe_gmpe
-            cm = copy.copy(cmaker)
-            cm.poe_mon = Monitor()  # avoid double counts
-            cm.gsims = self.gsims
-            avgs = []
-            for poes, ctxt, invs in cm.gen_poes(ctx[slc]):
-                # poes has shape N, L, G
-                avgs.append(poes @ self.weights)
-            out[:] = numpy.concatenate(avgs)
-        else:  # regular case
-            set_poes(mean_std, loglevels, phi_b, out.T)
-        imtweight = getattr(self, 'weight', None)  # ImtWeight or None
-        for m, imt in enumerate(cmaker.imtls):
-            mL1 = m * L1
-            if imtweight and imtweight.dic.get(imt) == 0:
-                # set by the engine when parsing the gsim logictree
-                # when 0 ignore the contribution: see _build_branches
-                out[:, mL1:mL1 + L1] = 0

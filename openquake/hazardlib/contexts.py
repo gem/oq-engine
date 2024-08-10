@@ -532,7 +532,7 @@ def _build_dparam(src, sitecol, cmaker):
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
 @compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
-def set_poes(mean_std, loglevels, phi_b, out):
+def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
@@ -1130,7 +1130,7 @@ class ContextMaker(object):
                     if self.oq.af:  # amplification method
                         poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
                     else:  # regular case
-                        gsim.set_poes(ms, self, ctx, poes[:, :, g], slc)
+                        set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
             yield poes, slc
 
     def gen_poes(self, ctx):
@@ -1390,6 +1390,77 @@ def print_finite_size(rups):
             c['%.2f' % rup.mag] += 1
     print(c)
     print('total finite size ruptures = ', sum(c.values()))
+
+
+def _get_poes(mean_std, loglevels, phi_b):
+    # returns a matrix of shape (N, L)
+    N = mean_std.shape[2]  # shape (2, M, N)
+    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
+    _set_poes(mean_std, loglevels, phi_b, out)
+    return out.T
+
+
+def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
+    """
+    Calculate and return probabilities of exceedance (PoEs) of one or more
+    intensity measure levels (IMLs) of one intensity measure type (IMT)
+    for one or more pairs "site -- rupture".
+
+    :param gsim:
+        A GMPE instance
+    :param mean_std:
+        An array of shape (2, M, N) with mean and standard deviations
+        for the sites and intensity measure types
+    :param cmaker:
+        A ContextMaker instance, used only in nhsm_2014
+    :param ctx:
+        A context array used only in avg_poe_gmpe
+    :param out:
+        An array of PoEs of shape (N, L) to be filled
+    :param slc:
+        A slice object used only in avg_poe_gmpe
+    :raises ValueError:
+        If truncation level is not ``None`` and neither non-negative
+        float number, and if ``imts`` dictionary contain wrong or
+        unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+    """
+    loglevels = cmaker.loglevels.array
+    phi_b = cmaker.phi_b
+    _M, L1 = loglevels.shape
+    if hasattr(gsim, 'weights_signs'):  # for nshmp_2014, case_72
+        adj = cmaker.adj[gsim][slc]
+        outs = []
+        weights, signs = zip(*gsim.weights_signs)
+        for s in signs:
+            ms = numpy.array(mean_std)  # make a copy
+            for m in range(len(loglevels)):
+                ms[0, m] += s * adj
+            outs.append(_get_poes(ms, loglevels, phi_b))
+        out[:] = numpy.average(outs, weights=weights, axis=0)
+    elif hasattr(gsim, 'mixture_model'):
+        for f, w in zip(gsim.mixture_model["factors"],
+                        gsim.mixture_model["weights"]):
+            mean_stdi = mean_std.copy()
+            mean_stdi[1] *= f  # multiply stddev by factor
+            out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
+    elif hasattr(gsim, 'weights'):  # avg_poe_gmpe
+        cm = copy.copy(cmaker)
+        cm.poe_mon = Monitor()  # avoid double counts
+        cm.gsims = gsim.gsims
+        avgs = []
+        for poes, ctxt, invs in cm.gen_poes(ctx[slc]):
+            # poes has shape N, L, G
+            avgs.append(poes @ gsim.weights)
+        out[:] = numpy.concatenate(avgs)
+    else:  # regular case
+        _set_poes(mean_std, loglevels, phi_b, out.T)
+    imtweight = getattr(gsim, 'weight', None)  # ImtWeight or None
+    for m, imt in enumerate(cmaker.imtls):
+        mL1 = m * L1
+        if imtweight and imtweight.dic.get(imt) == 0:
+            # set by the engine when parsing the gsim logictree
+            # when 0 ignore the contribution: see _build_branches
+            out[:, mL1:mL1 + L1] = 0
 
 
 class PmapMaker(object):
