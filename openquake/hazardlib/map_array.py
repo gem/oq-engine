@@ -196,13 +196,14 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
 
 @compile(sig_i)
 def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
-    G = arr.shape[2]
+    _, L, G = arr.shape
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
-        no_probs = len(probs) == 0
-        for g in range(G):
-            if no_probs:
-                arr[sidx, :, g] += rate * poes[i, :, g] * itime
-            else:  # nonparametric rupture
+        if len(probs) == 0:
+            for g in range(G):
+                for l in range(L):
+                    arr[sidx, l, g] += rate * poes[i, l, g] * itime
+        else:  # nonparametric rupture
+            for g in range(G):
                 arr[sidx, :, g] += -numpy.log(get_pnes(rate, probs, poes[i, :, g], itime))
 
 
