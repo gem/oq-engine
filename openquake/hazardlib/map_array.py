@@ -196,7 +196,7 @@ def update_pmap_i(arr, poes, inv, rates, probs_occur, sidxs, itime):
 
 @compile(sig_i)
 def update_pmap_r(arr, poes, inv, rates, probs_occur, sidxs, itime):
-    _, L, G = arr.shape
+    G = arr.shape[2]
     for i, rate, probs, sidx in zip(inv, rates, probs_occur, sidxs):
         if len(probs) == 0:
             for g in range(G):
