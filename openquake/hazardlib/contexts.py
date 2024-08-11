@@ -1107,49 +1107,50 @@ class ContextMaker(object):
         with patch.object(self.collapser, 'collapse_level', collapse_level):
             return self.get_pmap(ctxs, tom, rup_mutex).array
 
-    def _gen_poes(self, ctx):
+    def _gen_poes(self, ctx, gsim, split):
         from openquake.hazardlib.site_amplification import get_poes_site
-        (M, L1), G = self.loglevels.array.shape, len(self.gsims)
+        M, L1 = self.loglevels.array.shape
 
         # split large context arrays to avoid filling the CPU cache
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
-            mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
+            mean_stdt = self.get_4MN([ctx], gsim)
             # ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
             # print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
 
-        # making plenty of slices so that the array `poes` is small
-        for slc in split_in_slices(len(ctx), 2*L1):
-            with self.poe_mon:
+        with self.poe_mon:
+            poes = numpy.zeros((len(ctx), M*L1), F32)
+            # making plenty of slices so that the array `poes` is small
+            for slc in split_in_slices(len(ctx), split):
                 # this is allocating at most a few MB of RAM
-                poes = numpy.zeros((slc.stop-slc.start, M*L1, G), F32)
                 # NB: using .empty would break the MixtureModelGMPETestCase
-                for g, gsim in enumerate(self.gsims):
-                    ms = mean_stdt[:2, g, :, slc]
-                    # builds poes of shape (n, L, G)
-                    if self.oq.af:  # amplification method
-                        poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
-                    else:  # regular case
-                        set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
-            yield poes, slc
+                ms = mean_stdt[:2, :, slc]
+                # builds poes of shape (n, L, G)
+                if self.oq.af:  # amplification method
+                    poes[slc] = get_poes_site(ms, self, ctx[slc])
+                else:  # regular case
+                    set_poes(gsim, ms, self, ctx, poes[slc], slc)
+        yield poes
 
-    def gen_poes(self, ctx):
+    def gen_poes(self, ctx, split=None):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :param rup_indep: rupture flag (false for mutex ruptures)
+        :param split: split the poes (by default in 2*L1 chunks)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
+        split = split or 2 * self.loglevels.array.shape[1]
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
-            if invs is None:  # no collapse
-                for poes, slc in self._gen_poes(ctxt):
-                    invs = numpy.arange(len(poes), dtype=U32)
-                    yield poes, ctxt[slc], invs
-            else:  # collapse
-                poes = numpy.concatenate([p for p, s in self._gen_poes(kctx)])
-                yield poes, ctxt, invs
+            for g, gsim in enumerate(self.gsims):
+                if invs is None:  # no collapse
+                    for poes in self._gen_poes(ctxt, gsim, split):
+                        invs = numpy.arange(len(poes), dtype=U32)
+                        yield poes, ctxt, invs, g
+                else:  # collapse
+                    poes = numpy.concatenate([p for p in self._gen_poes(kctx, gsim, split)])
+                    yield poes, ctxt, invs, g
 
     # used in source_disagg
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1185,12 +1186,12 @@ class ContextMaker(object):
         :param pmap: probability map to update
         :param ctxs: a list of context arrays with 0 or 1 element
         """
-        for poes, ctxt, invs in self.gen_poes(ctx):
+        for poes, ctxt, invs, g in self.gen_poes(ctx):
             if isinstance(tom, FatedTOM):
                 for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
-                    pmap.array[sidx] *= 1. - poes[inv]
+                    pmap.array[sidx, :, g] *= 1. - poes[inv]
             else:
-                pmap.update_indep(poes, invs, ctxt, tom.time_span)
+                pmap.update_indep(poes, invs, ctxt, tom.time_span, g)
 
     def update_mutex(self, pmap, ctx, tom, rup_mutex):
         """
@@ -1198,8 +1199,8 @@ class ContextMaker(object):
         :param ctxs: a list of context arrays
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
-        for poes, ctxt, invs in self.gen_poes(ctx):
-            pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
+        for poes, ctxt, invs, g in self.gen_poes(ctx):
+            pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex, g)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1225,17 +1226,17 @@ class ContextMaker(object):
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
-    def get_4MN(self, recarrays, gsim):
+    def get_4MN(self, ctxs, gsim):
         """
         Called by the GmfComputer
         """
-        N = sum(len(ctx) for ctx in recarrays)
+        N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         out = numpy.zeros((4, M, N))
         gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
-        for ctx in recarrays:
+        for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
             if adj is not None:
@@ -1434,10 +1435,10 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         cm.poe_mon = Monitor()  # avoid double counts
         cm.gsims = gsim.gsims
         avgs = []
-        for poes, ctxt, invs in cm.gen_poes(ctx[slc]):
+        for poes, ctxt, invs, g in cm.gen_poes(ctx[slc], split=1):
             # poes has shape N, L, G
-            avgs.append(poes @ gsim.weights)
-        out[:] = numpy.concatenate(avgs)
+            avgs.append(poes * gsim.weights[g])
+        out[:] = numpy.sum(avgs, axis=0)
     else:  # regular case
         _set_poes(mean_std, loglevels, phi_b, out.T)
     imtweight = getattr(gsim, 'weight', None)  # ImtWeight or None
