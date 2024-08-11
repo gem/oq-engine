@@ -521,7 +521,7 @@ def _build_dparam(src, sitecol, cmaker):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
+@compile("(float32[:,:,:], float64[:,:], float64, float32[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
@@ -1192,7 +1192,7 @@ class ContextMaker(object):
             pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, split_by_mag=True, outputs=4):
+    def get_mean_stds(self, ctxs, split_by_mag=True):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :param split_by_mag: where to split by magnitude
@@ -1201,7 +1201,7 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         G = len(self.gsims)
-        out = numpy.zeros((outputs, G, M, N))
+        out = numpy.zeros((4, G, M, N), F32)
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
