@@ -35,8 +35,7 @@ except ImportError:
     from scipy.special import ndtr
 
 
-@compile(["float64[:,:](float64, float32[:,:])",
-          "float64[:](float64, float32[:])"])
+@compile(["(float32, float32[:,:])", "(float32, float32[:])"])
 def truncnorm_sf(phi_b, values):
     """
     Fast survival function for truncated normal distribution.

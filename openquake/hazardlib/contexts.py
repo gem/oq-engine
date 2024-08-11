@@ -521,7 +521,7 @@ def _build_dparam(src, sitecol, cmaker):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float32[:,:,:], float64[:,:], float64, float32[:,:])")
+@compile("(float32[:,:,:], float64[:,:], float32, float32[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
@@ -615,7 +615,7 @@ class ContextMaker(object):
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
-        self.phi_b = ndtr(self.truncation_level)
+        self.phi_b = F32(ndtr(self.truncation_level))
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
