@@ -174,16 +174,6 @@ def concat(ctxs):
     return out
 
 
-# this is crucial to get a fast get_mean_stds
-def get_maxsize(M, G):
-    """
-    :returns: an integer N such that arrays N*M*G fits in the CPU cache
-    """
-    maxs = 8 * TWO20 // (M*G)
-    assert maxs > 1, maxs
-    return maxs
-
-
 def size(imtls):
     """
     :returns: size of the dictionary of arrays imtls
@@ -1115,8 +1105,6 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-            # ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
-            # print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
 
         # making plenty of slices so that the array `poes` is small
         for slc in split_in_slices(len(ctx), 2*L1):
@@ -1132,6 +1120,8 @@ class ContextMaker(object):
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
             yield poes, slc
+        #ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
+        #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, ps))
 
     def gen_poes(self, ctx):
         """
@@ -1225,17 +1215,17 @@ class ContextMaker(object):
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
-    def get_4MN(self, recarrays, gsim):
+    def get_4MN(self, ctxs, gsim):
         """
         Called by the GmfComputer
         """
-        N = sum(len(ctx) for ctx in recarrays)
+        N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         out = numpy.zeros((4, M, N))
         gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
-        for ctx in recarrays:
+        for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
             if adj is not None:
@@ -1481,7 +1471,7 @@ class PmapMaker(object):
                 src.temporal_occurrence_model = FatedTOM(time_span=1)
 
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
-        self.maxsize = get_maxsize(M, G)
+        self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -1511,13 +1501,7 @@ class PmapMaker(object):
                     # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
-            n = ctx.nbytes // self.maxsize
-            if n > 1:
-                # split in chunks of maxsize each
-                for c in numpy.array_split(ctx, n):
-                    yield c  # for EUR c has ~500 elements
-            else:
-                yield ctx
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
