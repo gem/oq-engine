@@ -1192,7 +1192,7 @@ class ContextMaker(object):
             pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
-    def get_mean_stds(self, ctxs, split_by_mag=True):
+    def get_mean_stds(self, ctxs, split_by_mag=True, outputs=4):
         """
         :param ctxs: a list of contexts with N=sum(len(ctx) for ctx in ctxs)
         :param split_by_mag: where to split by magnitude
@@ -1201,7 +1201,7 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         G = len(self.gsims)
-        out = numpy.zeros((4, G, M, N))
+        out = numpy.zeros((outputs, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
@@ -1212,16 +1212,13 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         for g, gsim in enumerate(self.gsims):
-            out[:, g] = self.get_4MN(recarrays, gsim)
+            self.set_MN(recarrays, gsim, out[:, g])
         return out
 
-    def get_4MN(self, ctxs, gsim):
+    def set_MN(self, ctxs, gsim, out):
         """
         Called by the GmfComputer
         """
-        N = sum(len(ctx) for ctx in ctxs)
-        M = len(self.imts)
-        out = numpy.zeros((4, M, N))
         gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
@@ -1237,7 +1234,6 @@ class ContextMaker(object):
             gsim.adj = numpy.concatenate(gsim.adj)
         if self.conv:  # apply horizontal component conversion
             self.horiz_comp_to_geom_mean(out, gsim)
-        return out
 
     # not used right now
     def get_att_curves(self, site, msr, mag, aratio=1., strike=0.,

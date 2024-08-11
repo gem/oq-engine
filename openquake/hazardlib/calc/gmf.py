@@ -316,6 +316,7 @@ class GmfComputer(object):
         conditioned = mean_stds is not None
         self.init_eid_rlz_sig_eps()
         rng = numpy.random.default_rng(self.seed)
+        M = len(self.imts)
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             idxs, = numpy.where(numpy.isin(self.rlz, rlzs))
@@ -324,7 +325,8 @@ class GmfComputer(object):
                 continue
             if mean_stds is None:
                 with mmon:
-                    ms = self.cmaker.get_4MN([self.ctx], gs)
+                    ms = numpy.zeros((4, M, self.N))
+                    self.cmaker.set_MN([self.ctx], gs, ms)
             else:  # conditioned
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
             with cmon:
