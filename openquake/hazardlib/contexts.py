@@ -1108,8 +1108,8 @@ class ContextMaker(object):
 
         with self.poe_mon:
             poes = numpy.zeros((len(ctx), M*L1), F32)
-            ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
-            print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, ps))
+            #ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
+            #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, ps))
             # making plenty of slices so that the array `poes` is small
             for slc in split_in_slices(len(ctx), split):
                 # this is allocating at most a few MB of RAM
@@ -1502,14 +1502,7 @@ class PmapMaker(object):
                     # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
-            n = ctx.nbytes // self.maxsize
-            if n > 1:
-                print(f'{n=}')
-                # split in chunks of maxsize each
-                for c in numpy.array_split(ctx, n):
-                    yield c  # for EUR c has ~500 elements
-            else:
-                yield ctx
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
