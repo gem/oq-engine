@@ -32,7 +32,7 @@ from openquake.baselib import (
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, get_maxsize
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt
@@ -44,6 +44,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
+TWO20 = 2 ** 20
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
@@ -426,10 +427,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assuming all sites are affected (upper limit)
         """
         num_gs = [len(cm.gsims) for cm in self.cmakers]
-        max_gs = max(num_gs)
-        maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
-        logging.info('Considering {:_d} contexts at once'.format(maxsize))
-        size = max_gs * N * L * 4
+        size = max(num_gs) * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(

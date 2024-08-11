@@ -174,16 +174,6 @@ def concat(ctxs):
     return out
 
 
-# this is crucial to get a fast get_mean_stds
-def get_maxsize(M, G):
-    """
-    :returns: an integer N such that arrays N*M*G fits in the CPU cache
-    """
-    maxs = 8 * TWO20 // (M*G)
-    assert maxs > 1, maxs
-    return maxs
-
-
 def size(imtls):
     """
     :returns: size of the dictionary of arrays imtls
@@ -1115,11 +1105,11 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_4MN([ctx], gsim)
-            # ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
-            # print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
 
         with self.poe_mon:
             poes = numpy.zeros((len(ctx), M*L1), F32)
+            ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
+            print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, ps))
             # making plenty of slices so that the array `poes` is small
             for slc in split_in_slices(len(ctx), split):
                 # this is allocating at most a few MB of RAM
@@ -1135,10 +1125,10 @@ class ContextMaker(object):
     def gen_poes(self, ctx, split=None):
         """
         :param ctx: a vectorized context (recarray) of size N
-        :param split: split the poes (by default in 2*L1 chunks)
+        :param split: split the poes (by default in L1 chunks)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
-        split = split or 2 * self.loglevels.array.shape[1]
+        split = split or self.loglevels.array.shape[1]
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
@@ -1149,7 +1139,7 @@ class ContextMaker(object):
                         invs = numpy.arange(len(poes), dtype=U32)
                         yield poes, ctxt, invs, g
                 else:  # collapse
-                    poes = numpy.concatenate([p for p in self._gen_poes(kctx, gsim, split)])
+                    poes = numpy.concatenate(list(self._gen_poes(kctx, gsim, split)))
                     yield poes, ctxt, invs, g
 
     # used in source_disagg
@@ -1481,8 +1471,8 @@ class PmapMaker(object):
             for src in self.sources:
                 src.temporal_occurrence_model = FatedTOM(time_span=1)
 
-        M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
-        self.maxsize = get_maxsize(M, G)
+        M = len(self.cmaker.imtls)
+        self.maxsize = 2 * TWO20 // M  # crucial to get a fast get_mean_stds
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -1514,6 +1504,7 @@ class PmapMaker(object):
                 self.rupdata.append(ctx)
             n = ctx.nbytes // self.maxsize
             if n > 1:
+                print(f'{n=}')
                 # split in chunks of maxsize each
                 for c in numpy.array_split(ctx, n):
                     yield c  # for EUR c has ~500 elements
