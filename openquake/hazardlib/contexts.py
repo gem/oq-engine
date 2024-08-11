@@ -528,7 +528,7 @@ def _set_poes(mean_std, loglevels, phi_b, out):
         mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (F32(iml) - mea) / std)
 
 # ############################ ContextMaker ############################### #
 
@@ -1404,7 +1404,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         outs = []
         weights, signs = zip(*gsim.weights_signs)
         for s in signs:
-            ms = numpy.array(mean_std)  # make a copy
+            ms = mean_std.copy()
             for m in range(len(loglevels)):
                 ms[0, m] += s * adj
             outs.append(_get_poes(ms, loglevels, phi_b))
@@ -1467,7 +1467,7 @@ class PmapMaker(object):
                 src.temporal_occurrence_model = FatedTOM(time_span=1)
 
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
-        self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
+        self.maxsize = 6 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
