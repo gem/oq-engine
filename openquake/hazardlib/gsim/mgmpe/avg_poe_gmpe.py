@@ -36,9 +36,7 @@ This syntax is exactly the same as for an `AvgGMPE`; the difference is
 in the semantic, since the `AvgGMPE` performs averages on the log(intensities)
 while `AvgPoeGMPE` performs averages on the PoEs.
 """
-import copy
 import numpy as np
-from openquake.baselib import performance
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 
