@@ -625,8 +625,7 @@
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
                 formData.append('is_point_rup', $("#is_point_rup").val());
-                // NOTE: we display the local timestamp but we use only the time_event in the calculation
-                // formData.append('local_timestamp', $("#local_timestamp").val());
+                formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('trt', $('#trt').val());

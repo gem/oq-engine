@@ -31,7 +31,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -781,6 +781,7 @@ def aristotle_validate(request):
         'dip': valid.dip_range,
         'strike': valid.strike_range,
         # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
+        'local_timestamp': valid.local_timestamp,
         'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
@@ -862,7 +863,8 @@ def aristotle_run(request):
     :param request:
         a `django.http.HttpRequest` object containing
         usgs_id, rupture_file,
-        lon, lat, dep, mag, rake, dip, strike, time_event,
+        lon, lat, dep, mag, rake, dip, strike,
+        local_timestamp, time_event,
         maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed, station_data_file,
@@ -871,7 +873,7 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupdic, time_event, maximum_distance, trt,
+    (rupdic, local_timestamp, time_event, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
@@ -881,7 +883,7 @@ def aristotle_run(request):
     try:
         allparams = get_aristotle_allparams(
             rupdic,
-            time_event,
+            local_timestamp, time_event,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
@@ -1466,6 +1468,17 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        warnings=warnings))
 
 
+def format_time_delta(td):
+    days = td.days
+    seconds = td.seconds
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    # Format without microseconds
+    formatted_time = f'{days} days, {hours:02}:{minutes:02}:{seconds:02}'
+    return formatted_time
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aristotle(request, calc_id):
@@ -1473,6 +1486,11 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     if job is None:
         return HttpResponseNotFound()
     description = job.description
+    job_start_time = job.start_time
+    job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+    local_timestamp_str = None
+    time_job_after_event = None
+    time_job_after_event_str = None
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses = views.view('aggrisk', ds)
@@ -1484,6 +1502,11 @@ def web_engine_get_outputs_aristotle(request, calc_id):
         else:
             assets = False
             avg_gmf = []
+        oqparam = ds['oqparam']
+        if hasattr(oqparam, 'local_timestamp'):
+            local_timestamp_str = (
+                oqparam.local_timestamp if oqparam.local_timestamp != 'None'
+                else None)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     if 'warnings' in ds:
         ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
@@ -1491,8 +1514,17 @@ def web_engine_get_outputs_aristotle(request, calc_id):
             warnings = ds_warnings
         else:
             warnings += '\n' + ds_warnings
+    if local_timestamp_str is not None:
+        local_timestamp = datetime.strptime(
+            local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
+        time_job_after_event = (
+            job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
+        time_job_after_event_str = format_time_delta(time_job_after_event)
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, description=description,
+                       local_timestamp=local_timestamp_str,
+                       job_start_time=job_start_time_str,
+                       time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        avg_gmf=avg_gmf, assets=assets, warnings=warnings))

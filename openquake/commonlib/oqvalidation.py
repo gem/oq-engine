@@ -1041,6 +1041,7 @@ class OqParam(valid.ParamSet):
     investigation_time = valid.Param(valid.positivefloat, None)
     job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
+    local_timestamp = valid.Param(valid.local_timestamp, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)

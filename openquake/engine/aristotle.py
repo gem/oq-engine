@@ -98,7 +98,8 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     return rupdic
 
 
-def get_aristotle_allparams(rupture_dict, time_event, maximum_distance, trt,
+def get_aristotle_allparams(rupture_dict, local_timestamp, time_event,
+                            maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
                             asset_hazard_distance, ses_seed,
                             exposure_hdf5=None, station_data_file=None,
@@ -124,6 +125,7 @@ def get_aristotle_allparams(rupture_dict, time_event, maximum_distance, trt,
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
+        local_timestamp=local_timestamp,
         time_event=time_event,
         maximum_distance=str(maximum_distance),
         tectonic_region_type=trt,
@@ -175,7 +177,7 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
-             time_event='avg',
+             local_timestamp=None, time_event='day',
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', exposure_hdf5=None, station_data_file=None,
@@ -187,7 +189,8 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
         allparams = get_aristotle_allparams(
-            rupture_dict, time_event, maximum_distance, trt, truncation_level,
+            rupture_dict, local_timestamp, time_event, maximum_distance, trt,
+            truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, exposure_hdf5, station_data_file,
             maximum_distance_stations, ignore_shakemap)
@@ -210,6 +213,7 @@ main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
 main_cmd.callback = ''
+main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
 main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.trt = 'Tectonic region type'
