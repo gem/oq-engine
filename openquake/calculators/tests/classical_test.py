@@ -183,7 +183,8 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertGreater(max(self.calc.ntiles), 2)
+        splits = self.calc.datastore['tiles'][:]
+        self.assertEqual(len(splits), 10)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

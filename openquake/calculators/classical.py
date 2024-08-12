@@ -32,7 +32,7 @@ from openquake.baselib import (
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, get_maxsize
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt
@@ -99,18 +99,6 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
-def to_rates(pnemap, gid, tiling, disagg_by_src):
-    """
-    :returns: dictionary if tiling is True, else MapArray with rates
-    """
-    rates = pnemap.to_rates()
-    if tiling:
-        return rates.to_array(gid)
-    if disagg_by_src:
-        return rates
-    return rates.remove_zeros()
-
-
 #  ########################### task functions ############################ #
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
@@ -122,13 +110,12 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     tiling = not hasattr(sources, '__iter__')  # passed gid
     disagg_by_src = cmaker.disagg_by_src
     with dstore:
+        gid = cmaker.gid[0]
         if tiling:  # tiling calculator, read the sources from the datastore
-            gid = sources
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        else:  # regular calculator
-            gid = 0
+        else:  # regular calculator, read the sites from the datastore
             sitecol = dstore['sitecol']  # super-fast
 
     if disagg_by_src and not getattr(sources, 'atomic', False):
@@ -136,29 +123,24 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
-            pmap = MapArray(
-                sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-            result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = to_rates(~pmap, gid, tiling, disagg_by_src)
+            result = hazclassical(srcs, sitecol, cmaker)
+            result['pnemap'] = result['pnemap'].to_rates()
             yield result
     else:
-        # use most memory here; limited by pmap_max_gb
-        pmap = MapArray(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-        result = hazclassical(sources, sitecol, cmaker, pmap)
+        result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = to_rates(~pmap, gid, tiling, disagg_by_src)
-        if cmaker.save_on_tmp and tiling:
+        rates = result.pop('pnemap').to_rates()
+        if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rates):
+            if len(rates.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates, cmaker.chunks, h5)
+                    _store(rates.to_array(gid), cmaker.num_chunks, h5)
+        elif tiling:
+            result['pnemap'] = rates.to_array(gid)
         else:
             result['pnemap'] = rates
         yield result
@@ -225,14 +207,14 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
-            MapArray(sids, M, L1).fill(0, F32) for r in range(R)]
+            MapArray(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
-            MapArray(sids, M, L1).fill(0, F32) for r in range(S)]
+            MapArray(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = MapArray(sids, 1, 1).fill(0, F32).sidx
+    sidx = MapArray(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
@@ -377,8 +359,8 @@ class ClassicalCalculator(base.HazardCalculator):
         G = pnemap.array.shape[2]
         rates = self.pmap.array
         sidx = self.pmap.sidx[pnemap.sids]
-        for i, gid in enumerate(self.gids[grp_id]):
-            rates[sidx, :, gid] += pnemap.array[:, :, i % G]
+        for i, g in enumerate(self.cmakers[grp_id].gid):
+            rates[sidx, :, g] += pnemap.array[:, :, i % G]
         return acc
 
     def create_rup(self):
@@ -416,7 +398,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers, oq))
+                    self.datastore, self.csm, self.sitecol, self.cmakers))
 
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -432,7 +414,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
-        self.chunks = getters.get_num_chunks(self.datastore)
+        self.num_chunks = getters.get_num_chunks(self.datastore)
+        # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
@@ -443,10 +426,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assuming all sites are affected (upper limit)
         """
         num_gs = [len(cm.gsims) for cm in self.cmakers]
-        max_gs = max(num_gs)
-        maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
-        logging.info('Considering {:_d} contexts at once'.format(maxsize))
-        size = max_gs * N * L * 4
+        size = max(num_gs) * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -477,7 +457,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            _, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, srcidx, self.gids)
@@ -490,8 +470,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        self.ntiles = self.datastore['tiles']['num_tiles']
-        if self.ntiles.any():
+        if self.datastore['tiles'].attrs['tiling']:
             self.execute_big()
         else:
             self.execute_reg()
@@ -523,7 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0, F32)
+        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -547,7 +526,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.chunks, self.datastore)
+            _store(self.pmap.to_array(), self.num_chunks, self.datastore)
         del self.pmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -588,17 +567,14 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
+        # pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
         # first the tasks with few tiles, then the ones with many tiles
-        for cm, ntiles in pairs:
-            cm.gsims = list(cm.gsims)  # save data transfer
+        for cm, sites in self.csm.split(self.cmakers, self.sitecol, self.max_weight):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.chunks = self.chunks
-            gid = self.gids[cm.grp_id][0]
-            for tile in self.sitecol.split(ntiles):
-                allargs.append((gid, tile, cm, ds))
+            cm.num_chunks = self.num_chunks
+            allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
         self.offset = 0
@@ -607,7 +583,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
                     self.offset = _store(
-                        dic['pnemap'], self.chunks, self.datastore, self.offset)
+                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
         return {}
 
     def store_info(self):

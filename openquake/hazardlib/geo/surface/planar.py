@@ -23,8 +23,9 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 import math
 import logging
 import numpy
+import numba
 from openquake.baselib.node import Node
-from openquake.baselib.performance import numba, compile
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import (
     point_at, spherical_to_cartesian, fast_spherical_to_cartesian)
 from openquake.hazardlib.geo import Point, Line
@@ -153,20 +154,19 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, hdd, lon, lat):
     return corners
 
 
-if numba:
-    F8 = numba.float64
-    build_corners = compile(F8[:, :, :, :, :](
-        F8,              # usd
-        F8,              # lsd
-        F8[:, :],        # mag
-        F8[:, :, :],     # dims
-        F8[:, :],        # strike
-        F8[:, :],        # dip
-        F8[:, :],        # rake
-        F8[:, :],        # hdd
-        F8,              # lon
-        F8,              # lat
-    ))(build_corners)
+F8 = numba.float64
+build_corners = compile(F8[:, :, :, :, :](
+    F8,              # usd
+    F8,              # lsd
+    F8[:, :],        # mag
+    F8[:, :, :],     # dims
+    F8[:, :],        # strike
+    F8[:, :],        # dip
+    F8[:, :],        # rake
+    F8[:, :],        # hdd
+    F8,              # lon
+    F8,              # lat
+))(build_corners)
 
 
 # not numbified but fast anyway
@@ -581,25 +581,24 @@ def get_rvolc(planar, points):
     return numpy.zeros((len(planar), len(points)))
 
 
-if numba:
-    planar_nt = numba.from_dtype(planar_array_dt)
-    project = compile(numba.float64[:, :, :](
-        planar_nt[:, :],
-        numba.float64[:, :]
-    ))(project)
-    project_back = compile(numba.float64[:, :, :](
-        planar_nt[:, :],
-        numba.float64[:, :],
-        numba.float64[:, :]
-    ))(project_back)
-    comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
-    get_rjb = comp(get_rjb)
-    get_rx = comp(get_rx)
-    get_ry0 = comp(get_ry0)
-    get_rhypo = comp(get_rhypo)
-    get_repi = comp(get_repi)
-    get_azimuth = comp(get_azimuth)
-    get_rvolc = comp(get_rvolc)
+planar_nt = numba.from_dtype(planar_array_dt)
+project = compile(numba.float64[:, :, :](
+    planar_nt[:, :],
+    numba.float64[:, :]
+))(project)
+project_back = compile(numba.float64[:, :, :](
+    planar_nt[:, :],
+    numba.float64[:, :],
+    numba.float64[:, :]
+))(project_back)
+comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
+get_rjb = comp(get_rjb)
+get_rx = comp(get_rx)
+get_ry0 = comp(get_ry0)
+get_rhypo = comp(get_rhypo)
+get_repi = comp(get_repi)
+get_azimuth = comp(get_azimuth)
+get_rvolc = comp(get_rvolc)
 
 
 def get_distances_planar(planar, sites, dist_type):

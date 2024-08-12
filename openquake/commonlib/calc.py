@@ -135,7 +135,7 @@ def make_hmaps(pmaps, imtls, poes):
     M, P = len(imtls), len(poes)
     hmaps = []
     for pmap in pmaps:
-        hmap = map_array.MapArray(pmaps[0].sids, M, P).fill(0, F32)
+        hmap = map_array.MapArray(pmaps[0].sids, M, P).fill(0)
         for m, imt in enumerate(imtls):
             data = map_array.compute_hazard_maps(
                 pmap.array[:, m], imtls[imt], poes)  # (N, P)

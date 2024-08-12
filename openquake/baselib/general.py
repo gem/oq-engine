@@ -236,19 +236,11 @@ def distinct(keys):
     return outlist
 
 
-def ceil(a, b):
+def ceil(x):
     """
-    Divide a / b and return the biggest integer close to the quotient.
-
-    :param a:
-        a number
-    :param b:
-        a positive number
-    :returns:
-        the biggest integer close to the quotient
+    Converts the result of math.ceil into an integer
     """
-    assert b > 0, b
-    return int(math.ceil(float(a) / b))
+    return int(math.ceil(x))
 
 
 def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
