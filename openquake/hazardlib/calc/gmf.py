@@ -49,9 +49,8 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
-@compile(["float64[:,:](float64[:,:], boolean)",
-          "float64[:](float64[:], boolean)",
-          "float64(float64, boolean)"])
+@compile(["(float32[:,:], boolean)", "(float32[:], boolean)", "(float32, boolean)",
+          "(float64[:,:], boolean)", "(float64[:], boolean)", "(float64, boolean)"])
 def exp(vals, notMMI):
     """
     Exponentiate the values unless the IMT is MMI
