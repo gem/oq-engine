@@ -553,6 +553,8 @@
                     $('#rake').val(data.rake);
                     $('#dip').val('dip' in data ? data.dip : '90');
                     $('#strike').val('strike' in data ? data.strike : '0');
+                    $('#local_timestamp').val(data.local_timestamp);
+                    $('#time_event').val(data.time_event);
                     $('#is_point_rup').val(data.is_point_rup);
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
@@ -623,6 +625,9 @@
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
                 formData.append('is_point_rup', $("#is_point_rup").val());
+                // NOTE: we display the local timestamp but we use only the time_event in the calculation
+                // formData.append('local_timestamp', $("#local_timestamp").val());
+                formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());

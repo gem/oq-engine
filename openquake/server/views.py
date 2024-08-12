@@ -119,6 +119,8 @@ ARISTOTLE_FORM_LABELS = {
     'dep': 'Depth (km)',
     'mag': 'Magnitude (Mw)',
     'rake': 'Rake (degrees)',
+    'local_timestamp': 'Local timestamp of the event',
+    'time_event': 'Time of the event',
     'dip': 'Dip (degrees)',
     'strike': 'Strike (degrees)',
     'maximum_distance': 'Maximum source-to-site distance (km)',
@@ -139,6 +141,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'dep': 'float ≥ 0',
     'mag': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
+    'local_timestamp': '',
+    'time_event': 'avg|day|night|transit',
     'dip': '0 ≤ float ≤ 90',
     'strike': '0 ≤ float ≤ 360',
     'maximum_distance': 'float ≥ 0',
@@ -776,6 +780,8 @@ def aristotle_validate(request):
         'rake': valid.rake_range,
         'dip': valid.dip_range,
         'strike': valid.strike_range,
+        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
+        'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
@@ -856,7 +862,8 @@ def aristotle_run(request):
     :param request:
         a `django.http.HttpRequest` object containing
         usgs_id, rupture_file,
-        lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+        lon, lat, dep, mag, rake, dip, strike, time_event,
+        maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
         asset_hazard_distance, ses_seed, station_data_file,
         maximum_distance_stations
@@ -864,7 +871,7 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupdic, maximum_distance, trt,
+    (rupdic, time_event, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
@@ -874,6 +881,7 @@ def aristotle_run(request):
     try:
         allparams = get_aristotle_allparams(
             rupdic,
+            time_event,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
