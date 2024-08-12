@@ -326,7 +326,7 @@ class GmfComputer(object):
             if mean_stds is None:
                 with mmon:
                     ms = numpy.zeros((4, M, self.N))
-                    self.cmaker.set_MN([self.ctx], gs, ms)
+                    self.cmaker.set_ms([self.ctx], gs, ms)
             else:  # conditioned
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
             with cmon:

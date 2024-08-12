@@ -1212,10 +1212,10 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         for g, gsim in enumerate(self.gsims):
-            self.set_MN(recarrays, gsim, out[:, g])
+            self.set_ms(recarrays, gsim, out[:, g])
         return out
 
-    def set_MN(self, ctxs, gsim, out):
+    def set_ms(self, ctxs, gsim, out):
         """
         Called by the GmfComputer
         """
