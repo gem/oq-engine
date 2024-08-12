@@ -521,14 +521,14 @@ def _build_dparam(src, sitecol, cmaker):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float32[:,:,:], float64[:,:], float32, float32[:,:])")
+@compile("(float32[:,:,:], float32[:,:], float32, float32[:,:])")
 def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (F32(iml) - mea) / std)
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
 
 # ############################ ContextMaker ############################### #
 
@@ -1396,7 +1396,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         float number, and if ``imts`` dictionary contain wrong or
         unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
     """
-    loglevels = cmaker.loglevels.array
+    loglevels = F32(cmaker.loglevels.array)
     phi_b = cmaker.phi_b
     _M, L1 = loglevels.shape
     if hasattr(gsim, 'weights_signs'):  # for nshmp_2014, case_72
