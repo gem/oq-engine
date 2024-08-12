@@ -319,6 +319,13 @@ class SourceGroup(collections.abc.Sequence):
         dic = {tom.__class__.__name__: vars(tom)}
         return toml.dumps(dic)
 
+    def is_poissonian(self):
+        """
+        :returns: True if all the sources in the group are poissonian
+        """
+        tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
+        return tom.__class__.__name__ == 'PoissonTOM'
+
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
             self.__class__.__name__, self.trt, len(self.sources), self.weight)
