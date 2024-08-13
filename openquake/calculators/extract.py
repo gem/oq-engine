@@ -1521,8 +1521,20 @@ def extract_med_gmv(dstore, what):
     """
     return extract_(dstore, 'med_gmv/' + what)
 
-# #####################  extraction from the WebAPI ###################### #
 
+@extract.add('high_sites')
+def extract_high_sites(dstore, what):
+    """
+    Returns an array of boolean with the high hazard sites (poe > max_poe)
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/high_sites
+    """
+    max_poe = max(dstore['oqparam'].poes)
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    return (max_hazard > max_poe).all(axis=1)  # shape N
+
+
+# #####################  extraction from the WebAPI ###################### #
 
 class WebAPIError(RuntimeError):
     """

@@ -233,6 +233,17 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             lines.append(sepline)
     return '\n'.join(lines)
 
+@view.add('high_hazard')
+def view_high_hazard(token, dstore):
+    """
+    Returns the sites with hazard curve below max(poes)
+    """
+    oq = dstore['oqparam']
+    max_poe= max(oq.poes)
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    high = (max_hazard > max_poe).all(axis=1)
+    return max_hazard[high]
+
 
 @view.add('worst_sources')
 def view_worst_sources(token, dstore):

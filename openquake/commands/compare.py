@@ -105,14 +105,18 @@ class Comparator(object):
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
         arrays = [get_mean(extractor, what, sids, oq0.imtls, p)]
+        high_sites = [extractor.get('high_sites').array]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             aac(oq.imtls.array, oq0.imtls.array, rtol, atol)
             aac(oq.poes, oq0.poes, rtol, atol)
+            high_sites.append(extractor.get('high_sites').array)
             arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
-        return numpy.array(arrays)  # shape (C, N, M*P)
+        hsites = numpy.logical_and(*high_sites)
+        sids, = numpy.where(hsites)
+        return numpy.array([a[hsites] for a in arrays]), sids  # shape (C, N, M*P)
 
     def getgmf(self, what, imt, sids):
         extractor = self.extractors[0]
@@ -133,7 +137,7 @@ class Comparator(object):
     def compare(self, what, imt, files, samplesites, rtol, atol):
         sids = self.getsids(samplesites)
         if what == 'uhs':  # imt is -1, the last poe
-            arrays = self.getuhs(what, imt, sids, rtol, atol)
+            arrays, sids = self.getuhs(what, imt, sids, rtol, atol)
         elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
         else:
@@ -152,7 +156,7 @@ class Comparator(object):
         if len(diff_idxs) == 0:
             print('There are no differences within the tolerances '
                   'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
-            return arrays
+            sys.exit(0)
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
             # each array has shape (C, L)
@@ -170,6 +174,8 @@ class Comparator(object):
                 print('Generated %s' % f.name)
         else:
             print(views.text_table(rows['all'], header, ext='org'))
+        if what == 'uhs':
+            return arrays, sids
         return arrays
 
 
@@ -216,13 +222,13 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = -1,
     Compare the uniform hazard spectra of two or more calculations.
     """
     c = Comparator(calc_ids)
-    arrays = c.compare('uhs', poe_id, files, samplesites, rtol, atol)
+    arrays, sids = c.compare('uhs', poe_id, files, samplesites, rtol, atol)
     if len(arrays) and len(calc_ids) == 2:
         # each array has shape (N, M)
         rms = numpy.sqrt(numpy.mean((arrays[0] - arrays[1])**2))
         delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
         amax = delta.argmax()
-        row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
+        row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], sids[amax])
         print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site'],
                                ext='org'))
 
