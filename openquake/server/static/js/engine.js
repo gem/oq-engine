@@ -631,8 +631,6 @@
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
                 formData.append('is_point_rup', $("#is_point_rup").val());
-                // NOTE: we display the local timestamp but we use only the time_event in the calculation
-                // formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('trt', $('#trt').val());
@@ -642,6 +640,7 @@
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
                 formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
+                formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 $.ajax({

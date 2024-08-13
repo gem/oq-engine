@@ -324,6 +324,11 @@ name = Regex(r'^[a-zA-Z_]\w*$')
 
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
+# e.g. 2023-02-06 04:17:34+03:00
+# +03:00 indicates the time zone offset from Coordinated Universal Time (UTC)
+local_timestamp = Regex(
+    r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})$")
+
 
 class SimpleId(object):
     """
