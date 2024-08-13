@@ -445,6 +445,11 @@ limit_states:
    Example: *limit_states = moderate, complete*
    Default: no default
 
+local_timestamp:
+  Timestamp that includes both the date, time and the time zone information
+  Example: 2023-02-06 04:17:34+03:00
+  Default: None
+
 lrem_steps_per_interval:
   Used in the vulnerability functions.
   Example: *lrem_steps_per_interval  = 1*.
@@ -1041,6 +1046,7 @@ class OqParam(valid.ParamSet):
     investigation_time = valid.Param(valid.positivefloat, None)
     job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
+    local_timestamp = valid.Param(valid.local_timestamp, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)

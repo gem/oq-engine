@@ -98,9 +98,11 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     return rupdic
 
 
-def get_aristotle_allparams(rupture_dict, time_event, maximum_distance, trt,
+def get_aristotle_allparams(rupture_dict, time_event,
+                            maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
                             asset_hazard_distance, ses_seed,
+                            local_timestamp=None,
                             exposure_hdf5=None, station_data_file=None,
                             maximum_distance_stations=None,
                             ignore_shakemap=False):
@@ -132,6 +134,8 @@ def get_aristotle_allparams(rupture_dict, time_event, maximum_distance, trt,
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
+    if local_timestamp is not None:
+        params['local_timestamp'] = local_timestamp
     if maximum_distance_stations is not None:
         params['maximum_distance_stations'] = str(maximum_distance_stations)
     oq = readinput.get_oqparam(params)
@@ -175,10 +179,11 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
-             time_event='avg',
+             time_event='day',
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', exposure_hdf5=None, station_data_file=None,
+             ses_seed='42',
+             local_timestamp=None, exposure_hdf5=None, station_data_file=None,
              maximum_distance_stations=None, ignore_shakemap=False):
     """
     This script is meant to be called from the command-line
@@ -187,9 +192,10 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
         allparams = get_aristotle_allparams(
-            rupture_dict, time_event, maximum_distance, trt, truncation_level,
+            rupture_dict, time_event, maximum_distance, trt,
+            truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, exposure_hdf5, station_data_file,
+            ses_seed, local_timestamp, exposure_hdf5, station_data_file,
             maximum_distance_stations, ignore_shakemap)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
@@ -217,6 +223,7 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
