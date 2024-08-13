@@ -113,6 +113,7 @@ AELO_FORM_PLACEHOLDERS = {
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
+    'rupture_file_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
@@ -135,6 +136,7 @@ ARISTOTLE_FORM_LABELS = {
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
     'usgs_id': 'USGS ID or custom',
+    'rupture_file_from_usgs': '',
     'rupture_file': 'Rupture model XML',
     'lon': '-180 ≤ float ≤ 180',
     'lat': '-90 ≤ float ≤ 90',
@@ -732,6 +734,7 @@ def aristotle_get_rupture_data(request):
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
     rupdic['mosaic_model'] = mosaic_model
+    rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -780,8 +783,8 @@ def aristotle_validate(request):
         'rake': valid.rake_range,
         'dip': valid.dip_range,
         'strike': valid.strike_range,
-        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
         'local_timestamp': valid.local_timestamp,
+        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
         'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
@@ -792,6 +795,9 @@ def aristotle_validate(request):
         'maximum_distance_stations': valid.positivefloat,
     }
     params = {}
+    if rupture_path is None and request.POST.get('rupture_file_from_usgs'):
+        # giving precedence to the user-uploaded rupture file
+        rupture_path = request.POST.get('rupture_file_from_usgs')
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
                dep=None, mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():

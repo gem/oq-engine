@@ -33,6 +33,7 @@ import logging
 import json
 import zipfile
 import pytz
+import tempfile
 from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
@@ -216,7 +217,6 @@ def make_surface_from_pt_set(rup_coords):
 
 
 def convert_to_oq_rupture(rup_json):
-    __import__('pdb').set_trace()
     ftype = rup_json['features'][0]['geometry']['type']
     # FIXME: the notebook overrides the rake found in metadata. Why?
     # # Set rake to a reference value
@@ -343,6 +343,7 @@ def rup_to_file(rup, outfile, commentstr):
         nwrite(node, output=bs)
         ff.write(bs.getvalue().decode("utf-8"))
         ff.write(commentstr)
+    return outfile
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
@@ -443,7 +444,11 @@ def download_rupture_dict(id, ignore_shakemap=False):
                 'is_point_rup': is_point_rup,
                 'usgs_id': id, 'rupture_file': None}
     oq_rup = convert_to_oq_rupture(rup_data)
-    rupture_file = rup_to_file(oq_rup)
+    comment_str = (
+        f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
+        f" Reference: {md['reference']}.-->\n")
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    rupture_file = rup_to_file(oq_rup, temp_file.name, comment_str)
     return {'lon': lon, 'lat': lat, 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,

@@ -556,6 +556,12 @@
                     $('#local_timestamp').val(data.local_timestamp);
                     $('#time_event').val(data.time_event);
                     $('#is_point_rup').val(data.is_point_rup);
+                    // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
+                    //       set a specific file in an HTML file input element using JavaScript or jQuery,
+                    //       therefore we can not pre-populate the rupture_file_input with the rupture_file
+                    //       obtained converting the USGS rupture.json, and we use a separate field referencing it
+                    $('#rupture_file_from_usgs').val(data.rupture_file_from_usgs);
+                    $('#rupture_file_from_usgs_loaded').val(data.rupture_file_from_usgs ? 'Loaded' : 'N.A.');
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);
@@ -615,6 +621,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = new FormData();
+                formData.append('rupture_file_from_usgs', $('#rupture_file_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
                 formData.append('lon', $("#lon").val());
