@@ -213,3 +213,34 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
 
             # Check the computed intra-event stdev
             aae(phi[0], [exp_stdev])
+
+
+class ModifiableGMPEBasinTerm(unittest.TestCase):
+
+    def get_ctx(self, cmaker):
+        ctx = cmaker.new_ctx(4)
+        ctx.mag = 6.0
+        ctx.hypo_depth = 10.
+        ctx.rhypo = ctx.rrup = ctx.repi = np.array([1., 10., 30., 70.])
+        ctx.z2pt5 = np.array([1.0, 2.0, 6.0, 7.0])
+        ctx.vs30 = np.array([760, 760, 760, 760])
+        return ctx
+
+    def test_basin(self):
+
+        # Create the Modifiable GMPE and original GMM
+        gmm_name = 'ParkerEtAl2020SInter'
+        gmm = ModifiableGMPE(gmpe={gmm_name: {}},
+                             m9_basin_term={})
+        gmpe = valid.gsim(gmm_name)
+
+        # Context maker
+        cmaker = simple_cmaker([gmm, gmpe], ['SA(2.0)'])
+        ctx = self.get_ctx(cmaker)
+
+        # Compute ground motion
+        mea, _, _, _ = cmaker.get_mean_stds([ctx])
+
+        # Check the computed mean
+        aae(mea[0, 0, 0:3], mea[1, 0, 0:3])
+        aae(mea[0, 0, 3:], mea[1, 0, 3:] + 0.6931471806)
