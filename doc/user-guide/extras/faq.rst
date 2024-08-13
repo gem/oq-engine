@@ -303,6 +303,32 @@ model on a computer with an i7 processor you will see something like this::
 The estimate is rather rough, so do not take it at the letter. The runtime can be reduced by orders of magnitude by
 tuning parameters like the ``pointsource_distance`` and ``ps_grid_spacing``, discussed at length in the advanced manual.
 
+****************************************************
+Are hazard maps and uniform hazard spectra reliable?
+****************************************************
+
+There is a situation were hazard maps and uhs are TOTALLY UNRELIABLE
+and there is nothing you can do about it. This happens for *low hazard sites*,
+i.e. sites where the hazard curve is all below the reference `poe` used
+to compute the hazard map. By definition, in this case the hazard map
+is zero and the UHS contains at least a point of zero value. This
+situation is very instable numerically: it is enough to slightly
+increase the `maximum_distance` and a rupture that before was
+discarded can give a small contribution, produce a hazard curve over
+the reference `poe` and therefore a nonzero hazard map value.  The
+same will happen if you change the geometry discretization step or the
+magnitude step. Low hazard curves, in the region of small intensities,
+are very sensitive to small changes in the parameters and therefore
+cannot be reliably computed. This is unavoidable, low intensities are
+affected by far away ruptures and low magnitude ruptures, and
+therefore very sensitive to the way the engine (or the hazard modeler)
+cuts such ruptures. Luckily, this has no practical effect on the risk,
+since the assets on sites of low hazard are not subjected to
+damages. Still, the hazard scientist must be aware that hazard maps
+and uniform hazard spectra cannot be trusted when the corresponding
+hazard curves are below or close the reference `poe` in the low intensity
+region.
+
 *************************************************
 How should I interpret the "Realizations" output?
 *************************************************
