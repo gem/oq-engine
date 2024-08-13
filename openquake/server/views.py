@@ -800,7 +800,8 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
-            blankable_fields = ['maximum_distance_stations', 'dip', 'strike']
+            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
+                                'local_timestamp']
             # NOTE: valid.positivefloat, valid_dip_range and
             #       valid_strike_range raise errors if their
             #       value is blank or None
@@ -867,8 +868,8 @@ def aristotle_run(request):
         local_timestamp, time_event,
         maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, station_data_file,
-        maximum_distance_stations
+        asset_hazard_distance, ses_seed,
+        maximum_distance_stations, station_data_file
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
@@ -883,10 +884,11 @@ def aristotle_run(request):
     try:
         allparams = get_aristotle_allparams(
             rupdic,
-            local_timestamp, time_event,
+            time_event,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
+            local_timestamp,
             station_data_file=station_data_file,
             maximum_distance_stations=maximum_distance_stations)
     except Exception as exc:
