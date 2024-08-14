@@ -1531,7 +1531,7 @@ def extract_high_sites(dstore, what):
     """
     max_poe = max(dstore['oqparam'].poes)
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
-    return (max_hazard > max_poe).all(axis=1)  # shape N
+    return (max_hazard > max_poe * 1.02).all(axis=1)  # shape N
 
 
 # #####################  extraction from the WebAPI ###################### #
