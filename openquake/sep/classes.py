@@ -225,8 +225,8 @@ class NowickiJessee2018Landslides(SecondaryPeril):
         intercept: float = -6.30,
         pgv_coeff: float = 1.65,
         slope_coeff: float = 0.06,
-        coeff_table_lith=LITHOLOGY_TABLE,
-        coeff_table_cov=LANDCOVER_TABLE,
+        coeff_table_lith = LITHOLOGY_TABLE,
+        coeff_table_cov = LANDCOVER_TABLE,
         cti_coeff: float = 0.03,
         interaction_term: float = 0.01,
     ):
@@ -241,7 +241,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, imt_gmf, sites):
+    def compute(self, mag, imt_gmf, sites):
         out = []
         pga = None
         pgv = None
