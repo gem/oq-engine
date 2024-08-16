@@ -563,7 +563,6 @@ class EngineRunJobTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline("openquake.commands collect_jobs -2 -3")
         self.assertIn('All jobs completed correctly', str(p))
-        
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
@@ -631,7 +630,7 @@ Source Loss Table'''.splitlines())
         # test shakemap2gmfs with sitemodel with a filtered sitecol
         # and three choices of site_effects
         effects = ['no', 'shakemap', 'sitemodel']
-        expected = [0.2555, 0.31813407, 0.25332582]
+        expected = [0.213411, 0.287633, 0.21091]
         with chdir(os.path.dirname(case_25.__file__)):
             for eff, exp in zip(effects, expected):
                 with redirect_stdout(io.StringIO()) as out:

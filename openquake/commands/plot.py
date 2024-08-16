@@ -40,6 +40,24 @@ from openquake.calculators.postproc.aelo_plots import (
 ZOOM_MARGIN = 8
 
 
+def make_figure_magdist(extractors, what):
+    plt = import_plt()
+    _fig, ax = plt.subplots()
+    [ex] = extractors
+    grp = ex.dstore['source_mags']
+    ax.set_xlabel('magnitude')
+    ax.set_ylabel('distance')
+    for trt in grp:
+        magdist = ex.oqparam.maximum_distance(trt)
+        mags = numpy.float64(grp[trt][:])
+        dsts = magdist(mags)
+        ax.plot(mags, dsts, '-', label=trt)
+        ax.grid(True)
+        ax.legend()
+    ax.set_xlim(mags.min() - .1, mags.max() + .1)
+    ax.set_ylim(0, dsts.max() + 10)
+    return plt
+
 def make_figure_hcurves(extractors, what):
     """
     $ oq plot "hcurves?kind=mean&imt=PGA&site_id=0"

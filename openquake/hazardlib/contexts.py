@@ -33,12 +33,12 @@ from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
-from openquake.baselib.performance import Monitor, split_array, kround0
+from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
-from openquake.hazardlib.stats import ndtr
+from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
@@ -154,65 +154,24 @@ def is_modifiable(gsim):
     return hasattr(gsim, 'gmpe') and hasattr(gsim, 'params')
 
 
-def split_by_occur(ctx):
-    """
-    :returns: [poissonian] or [poissonian, nonpoissonian,...]
-    """
-    nan = numpy.isnan(ctx.occurrence_rate)
-    out = []
-    if 0 < nan.sum() < len(ctx):
-        out.append(ctx[~nan])
-        nonpoisson = ctx[nan]
-        for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
-            # ctxs with the same shape of prob_occur are concatenated
-            p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
-            arr = numpy.concatenate(p_array, p_array[0].dtype)
-            out.append(arr.view(numpy.recarray))
-    else:
-        out.append(ctx)
-    return out
-
-
 def concat(ctxs):
     """
     Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [poisson_ctx, nonpoisson_ctx, ...]
+    :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
     """
     if not ctxs:
         return []
-    out, poisson, nonpoisson, nonparam = [], [], [], []
-    for ctx in ctxs:
-        if numpy.isnan(ctx.occurrence_rate).all():
-            nonparam.append(ctx)
-
-        # If ctx has probs_occur and occur_rate is parametric non-poisson
-        elif hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
-            nonpoisson.append(ctx)
-        else:
-            poisson.append(ctx)
-    if poisson:
-        out.append(numpy.concatenate(poisson).view(numpy.recarray))
-    if nonpoisson:
-        # ctxs with the same shape of prob_occur are concatenated
-        # and different shape sets are appended separately
-        for shp in set(ctx.probs_occur.shape[1] for ctx in nonpoisson):
-            p_array = [p for p in nonpoisson
-                       if p.probs_occur.shape[1] == shp]
+    ctx = ctxs[0]
+    out = []
+    # if ctx has probs_occur, it is assumed to be non-poissonian
+    if hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
+        # case 27, 29, 62, 65, 75, 78, 80
+        for shp in set(ctx.probs_occur.shape[1] for ctx in ctxs):
+            p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
             out.append(numpy.concatenate(p_array).view(numpy.recarray))
-    if nonparam:
-        out.append(numpy.concatenate(nonparam).view(numpy.recarray))
-    assert len(out) == 1, out
+    else:
+        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
     return out
-
-
-# this is crucial to get a fast get_mean_stds
-def get_maxsize(M, G):
-    """
-    :returns: an integer N such that arrays N*M*G fits in the CPU cache
-    """
-    maxs = 8 * TWO20 // (M*G)
-    assert maxs > 1, maxs
-    return maxs
 
 
 def size(imtls):
@@ -557,6 +516,20 @@ def _build_dparam(src, sitecol, cmaker):
     return out
 
 
+# this is the critical function for the performance of the classical calculator
+# the performance is dominated by the CPU cache, i.e. large arrays are slow
+# the only way to speedup is to reduce the maximum_distance, then the array
+# will become shorter in the N dimension (number of affected sites), or to
+# collapse the ruptures, then truncnorm_sf will be called less times
+@compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
+def _set_poes(mean_std, loglevels, phi_b, out):
+    L1 = loglevels.size // len(loglevels)
+    for m, levels in enumerate(loglevels):
+        mL1 = m * L1
+        mea, std = mean_std[:, m]  # shape N
+        for lvl, iml in enumerate(levels):
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
+
 # ############################ ContextMaker ############################### #
 
 class ContextMaker(object):
@@ -712,7 +685,6 @@ class ContextMaker(object):
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
@@ -1133,27 +1105,25 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
-            #ms, poes = mean_stdt.nbytes / TWO20, len(ctx) * 4 * M * G / TWO20
-            #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, poes))
 
         # making plenty of slices so that the array `poes` is small
         for slc in split_in_slices(len(ctx), 2*L1):
-            ctxt = ctx[slc]
-            self.slc = slc  # used in gsim/base.py
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
-                poes = numpy.zeros((len(ctxt), M*L1, G))
+                poes = numpy.zeros((slc.stop-slc.start, M*L1, G), F32)
                 # NB: using .empty would break the MixtureModelGMPETestCase
                 for g, gsim in enumerate(self.gsims):
                     ms = mean_stdt[:2, g, :, slc]
                     # builds poes of shape (n, L, G)
-                    if getattr(self.oq, 'af', None):  # amplification method
-                        poes[:, :, g] = get_poes_site(ms, self, ctxt)
+                    if self.oq.af:  # amplification method
+                        poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
                     else:  # regular case
-                        gsim.set_poes(ms, self, ctxt, poes[:, :, g])
-            yield poes
+                        set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
+            yield poes, slc
+        #ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
+        #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, ps))
 
-    def gen_poes(self, ctx, rup_indep=True):
+    def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
@@ -1162,13 +1132,13 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep)
+            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
             if invs is None:  # no collapse
-                for poes in self._gen_poes(ctxt):
+                for poes, slc in self._gen_poes(ctxt):
                     invs = numpy.arange(len(poes), dtype=U32)
-                    yield poes, ctxt[self.slc], invs
+                    yield poes, ctxt[slc], invs
             else:  # collapse
-                poes = numpy.concatenate(list(self._gen_poes(kctx)))
+                poes = numpy.concatenate([p for p, s in self._gen_poes(kctx)])
                 yield poes, ctxt, invs
 
     # used in source_disagg
@@ -1181,10 +1151,12 @@ class ContextMaker(object):
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
-        pmap = MapArray(sids, size(self.imtls), len(self.gsims))
-        pmap.fill(rup_indep)
-        self.update(pmap, ctxs, tom or PoissonTOM(self.investigation_time),
-                    rup_mutex)
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        for ctx in ctxs:
+            if rup_mutex:
+                self.update_mutex(pmap, ctx, tom or PoissonTOM(self.investigation_time), rup_mutex)
+            else:
+                self.update_indep(pmap, ctx, tom or PoissonTOM(self.investigation_time))
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1198,25 +1170,26 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
-    def update(self, pmap, ctxs, tom, rup_mutex={}):
+    def update_indep(self, pmap, ctx, tom):
         """
         :param pmap: probability map to update
-        :param ctxs: a list of context arrays (only one for parametric ctxs)
-        :param rup_mutex: dictionary (src_id, rup_id) -> weight
-
-        The rup_mutex dictionary is read-only and normally empty
+        :param ctxs: a list of context arrays with 0 or 1 element
         """
-        rup_indep = len(rup_mutex) == 0
-        if tom is None:
-            itime = -1.  # test_hazard_curve_X
-        elif isinstance(tom, FatedTOM):
-            itime = 0.
-        else:
-            itime = tom.time_span
-        for ctx in ctxs:
-            for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
-                with self.pne_mon:
-                    pmap.update(poes, invs, ctxt, itime, rup_mutex)
+        for poes, ctxt, invs in self.gen_poes(ctx):
+            if isinstance(tom, FatedTOM):
+                for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
+                    pmap.array[sidx] *= 1. - poes[inv]
+            else:
+                pmap.update_indep(poes, invs, ctxt, tom.time_span)
+
+    def update_mutex(self, pmap, ctx, tom, rup_mutex):
+        """
+        :param pmap: probability map to update
+        :param ctxs: a list of context arrays
+        :param rup_mutex: dictionary (src_id, rup_id) -> weight
+        """
+        for poes, ctxt, invs in self.gen_poes(ctx):
+            pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1238,44 +1211,30 @@ class ContextMaker(object):
             recarr = numpy.concatenate(
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
-        self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
-            compute = gsim.__class__.compute
-            start = 0
-            for ctx in recarrays:
-                slc = slice(start, start + len(ctx))
-                adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
-                if adj is not None:
-                    self.adj[gsim].append(adj)
-                start = slc.stop
-            if self.adj[gsim]:
-                self.adj[gsim] = numpy.concatenate(self.adj[gsim])
-            if self.truncation_level not in (0, 1E-9, 99.) and (
-                    out[1, g] == 0.).any():
-                raise ValueError('Total StdDev is zero for %s' % gsim)
-        if self.conv:  # apply horizontal component conversion
-            for g, gsim in enumerate(self.gsims):
-                self.horiz_comp_to_geom_mean(out[:, g], gsim)
+            out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
-    def get_4MN(self, recarrays, gsim):
+    def get_4MN(self, ctxs, gsim):
         """
         Called by the GmfComputer
         """
-        N = sum(len(ctx) for ctx in recarrays)
+        N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         out = numpy.zeros((4, M, N))
-        self.adj = {gsim: []}  # NSHM2014P adjustments
+        gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
-        for ctx in recarrays:
+        for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
             if adj is not None:
-                self.adj[gsim].append(adj)
+                gsim.adj.append(adj)
             start = slc.stop
-        if self.adj[gsim]:
-            self.adj[gsim] = numpy.concatenate(self.adj[gsim])
+        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
+            raise ValueError('Total StdDev is zero for %s' % gsim)
+        if gsim.adj:
+            gsim.adj = numpy.concatenate(gsim.adj)
         if self.conv:  # apply horizontal component conversion
             self.horiz_comp_to_geom_mean(out, gsim)
         return out
@@ -1409,6 +1368,77 @@ def print_finite_size(rups):
     print('total finite size ruptures = ', sum(c.values()))
 
 
+def _get_poes(mean_std, loglevels, phi_b):
+    # returns a matrix of shape (N, L)
+    N = mean_std.shape[2]  # shape (2, M, N)
+    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
+    _set_poes(mean_std, loglevels, phi_b, out)
+    return out.T
+
+
+def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
+    """
+    Calculate and return probabilities of exceedance (PoEs) of one or more
+    intensity measure levels (IMLs) of one intensity measure type (IMT)
+    for one or more pairs "site -- rupture".
+
+    :param gsim:
+        A GMPE instance
+    :param mean_std:
+        An array of shape (2, M, N) with mean and standard deviations
+        for the sites and intensity measure types
+    :param cmaker:
+        A ContextMaker instance, used only in nhsm_2014
+    :param ctx:
+        A context array used only in avg_poe_gmpe
+    :param out:
+        An array of PoEs of shape (N, L) to be filled
+    :param slc:
+        A slice object used only in avg_poe_gmpe
+    :raises ValueError:
+        If truncation level is not ``None`` and neither non-negative
+        float number, and if ``imts`` dictionary contain wrong or
+        unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+    """
+    loglevels = cmaker.loglevels.array
+    phi_b = cmaker.phi_b
+    _M, L1 = loglevels.shape
+    if hasattr(gsim, 'weights_signs'):  # for nshmp_2014, case_72
+        adj = gsim.adj[slc]
+        outs = []
+        weights, signs = zip(*gsim.weights_signs)
+        for s in signs:
+            ms = numpy.array(mean_std)  # make a copy
+            for m in range(len(loglevels)):
+                ms[0, m] += s * adj
+            outs.append(_get_poes(ms, loglevels, phi_b))
+        out[:] = numpy.average(outs, weights=weights, axis=0)
+    elif hasattr(gsim, 'mixture_model'):
+        for f, w in zip(gsim.mixture_model["factors"],
+                        gsim.mixture_model["weights"]):
+            mean_stdi = mean_std.copy()
+            mean_stdi[1] *= f  # multiply stddev by factor
+            out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
+    elif hasattr(gsim, 'weights'):  # avg_poe_gmpe
+        cm = copy.copy(cmaker)
+        cm.poe_mon = Monitor()  # avoid double counts
+        cm.gsims = gsim.gsims
+        avgs = []
+        for poes, ctxt, invs in cm.gen_poes(ctx[slc]):
+            # poes has shape N, L, G
+            avgs.append(poes @ gsim.weights)
+        out[:] = numpy.concatenate(avgs)
+    else:  # regular case
+        _set_poes(mean_std, loglevels, phi_b, out.T)
+    imtweight = getattr(gsim, 'weight', None)  # ImtWeight or None
+    for m, imt in enumerate(cmaker.imtls):
+        mL1 = m * L1
+        if imtweight and imtweight.dic.get(imt) == 0:
+            # set by the engine when parsing the gsim logictree
+            # when 0 ignore the contribution: see _build_branches
+            out[:, mL1:mL1 + L1] = 0
+
+
 class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
@@ -1432,10 +1462,16 @@ class PmapMaker(object):
                 for i, (rup, _) in enumerate(src.data):
                     self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
-        if hasattr(group, 'grp_probability'):
-            self.grp_probability = group.grp_probability
+        self.grp_probability = getattr(group, 'grp_probability', 1.)
+        self.cluster = getattr(group, 'cluster', 0)
+        if self.cluster:
+            self.tom = group.temporal_occurrence_model
+            # set the proper TOM in case of a cluster
+            for src in self.sources:
+                src.temporal_occurrence_model = FatedTOM(time_span=1)
+
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
-        self.maxsize = get_maxsize(M, G)
+        self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
 
     def count_bytes(self, ctxs):
         # # usuful for debugging memory issues
@@ -1465,21 +1501,20 @@ class PmapMaker(object):
                     # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
-            n = ctx.nbytes // self.maxsize
-            if n > 1:
-                # split in chunks of maxsize each
-                for c in numpy.array_split(ctx, n):
-                    yield c  # for EUR c has ~500 elements
-            else:
-                yield ctx
+            yield ctx
 
-    def _make_src_indep(self, pmap):
+    def _make_src_indep(self):
         # sources with the same ID
         cm = self.cmaker
         allctxs = []
         ctxlen = 0
         totlen = 0
         t0 = time.time()
+        sids = self.srcfilter.sitecol.sids
+        # using most memory here; limited by pmap_max_gb
+        pnemap = MapArray(
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
+            not self.cluster).fill(self.cluster)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
@@ -1490,13 +1525,16 @@ class PmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
+                    for ctx in concat(allctxs):
+                        cm.update_indep(pnemap, ctx, tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
-            # assume all sources have the same tom
-            cm.update(pmap, concat(allctxs), tom, self.rup_mutex)
+            # all sources have the same tom by construction
+            for ctx in concat(allctxs):
+                cm.update_indep(pnemap, ctx, tom)
             allctxs.clear()
+
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
@@ -1509,9 +1547,9 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(
                 dt * src.nsites / totlen if totlen else dt / nsrcs)
             self.source_data['taskno'].append(cm.task_no)
-        return pmap
+        return pnemap
 
-    def _make_src_mutex(self, pmap):
+    def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
@@ -1519,12 +1557,14 @@ class PmapMaker(object):
         nsites = 0
         esites = 0
         nctxs = 0
+        sids = self.srcfilter.sitecol.sids
+        pmap = MapArray(
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
-            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims))
-            pm.fill(self.rup_indep)
+            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
@@ -1532,13 +1572,18 @@ class PmapMaker(object):
             nctxs += len(ctxs)
             nsites += n
             esites += src.esites
-            cm.update(pm, ctxs, tom, self.rup_mutex)
+            for ctx in ctxs:
+                if self.rup_mutex:
+                    cm.update_mutex(pm, ctx, tom, self.rup_mutex)
+                else:
+                    cm.update_indep(pm, ctx, tom)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
             else:
                 pmap.array = 1. - (1-pmap.array) * (1-pm.array)
             weight += src.weight
+        pmap.array *= self.grp_probability
         dt = time.time() - t0
         self.source_data['src_id'].append(valid.basename(src))
         self.source_data['grp_id'].append(src.grp_id)
@@ -1548,24 +1593,32 @@ class PmapMaker(object):
         self.source_data['weight'].append(weight)
         self.source_data['ctimes'].append(dt)
         self.source_data['taskno'].append(cm.task_no)
+        return ~pmap
 
-    def make(self, pmap):
+    def make(self):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        grp_id = self.sources[0].grp_id
-        if self.src_mutex or not self.rup_indep:
-            pmap.fill(0)
-            self._make_src_mutex(pmap)
-            if self.src_mutex:
-                pmap.array = self.grp_probability * pmap.array
+        if self.rup_indep and not self.src_mutex:
+            pnemap = self._make_src_indep()
         else:
-            self._make_src_indep(pmap)
+            pnemap = self._make_src_mutex()
+        if self.cluster:
+            for nocc in range(0, 50):
+                prob_n_occ = self.tom.get_probability_n_occurrences(
+                    self.tom.occurrence_rate, nocc)
+                if nocc == 0:
+                    pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
+                else:
+                    pmapclu.array += pnemap.array**nocc * prob_n_occ
+            pnemap.array[:] = pmapclu.array
+
+        dic['pnemap'] = pnemap
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['grp_id'] = grp_id
+        dic['grp_id'] = self.sources[0].grp_id
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py

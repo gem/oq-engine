@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Optimized "computing pnes" in classical calculations (3x in the common case)
+    and fully switched to 32 bit rates, thus saving memory and improving performance
+
+  [Nicolas Schmid]
+  * Fixed a regression in the ShakeMap to_gmfs code, a forgotten sigma^2/2 term
+
+  [Marco Pagani]
+  * Fixed aliases for Kuehn2020 GMPEs (signalled by Eric Thompson)
+
+  [Michele Simionato]
   * Internal: splitting in groups with homogeneous temporal occurrence model
   * Optimized the calculation of mean and stdevs in event based calculations, with
     a speedup of 13x for the EUR model

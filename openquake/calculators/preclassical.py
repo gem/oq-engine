@@ -173,7 +173,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     max_weight = csm.get_max_weight(oq)
     max_gb = float(config.memory.pmap_max_gb)
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
-    fac = oq.imtls.size * N * 8 / 1024**3
+    fac = oq.imtls.size * N * 4 / 1024**3
     sizes = [len(cm.gsims) * fac for cm in cmakers]
     ok = req_gb < max_gb and max(sizes) < max_gb
     regular = ok or oq.disagg_by_src or N < oq.max_sites_disagg or oq.tile_spec

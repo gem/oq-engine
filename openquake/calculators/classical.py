@@ -32,7 +32,7 @@ from openquake.baselib import (
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, get_maxsize
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt
@@ -123,21 +123,14 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
-            pmap = MapArray(
-                sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-            result = hazclassical(srcs, sitecol, cmaker, pmap)
-            result['pnemap'] = (~pmap).to_rates()
+            result = hazclassical(srcs, sitecol, cmaker)
+            result['pnemap'] = result['pnemap'].to_rates()
             yield result
     else:
-        # use most memory here; limited by pmap_max_gb
-        pmap = MapArray(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
-                cmaker.rup_indep)
-        result = hazclassical(sources, sitecol, cmaker, pmap)
+        result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = (~pmap).to_rates()
+        rates = result.pop('pnemap').to_rates()
         if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
@@ -214,14 +207,14 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     pmap_by_kind = {}
     if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
-            MapArray(sids, M, L1).fill(0, F32) for r in range(R)]
+            MapArray(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
-            MapArray(sids, M, L1).fill(0, F32) for r in range(S)]
+            MapArray(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = MapArray(sids, 1, 1).fill(0, F32).sidx
+    sidx = MapArray(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
@@ -433,10 +426,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assuming all sites are affected (upper limit)
         """
         num_gs = [len(cm.gsims) for cm in self.cmakers]
-        max_gs = max(num_gs)
-        maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
-        logging.info('Considering {:_d} contexts at once'.format(maxsize))
-        size = max_gs * N * L * 4
+        size = max(num_gs) * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -512,7 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0, F32)
+        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
