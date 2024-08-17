@@ -136,13 +136,13 @@ def nowicki_jessee_2018(
     if isinstance(lithology, (str)):
         lithology_coeff = coeff_table_lith.get(lithology, -0.66)
     else:
-        lithology_coeff = np.array([coeff_table_lith.get(l, -0.66) for l in lithology])
+        lithology_coeff = np.array([coeff_table_lith.get(lith, -0.66) for lith in lithology])
 
     if isinstance(landcover, (int)):   
         landcover = str(landcover)
         landcover_coeff = coeff_table_cov.get(landcover, -1.08)
     else:
-        landcover_coeff = np.array([coeff_table_cov.get(str(l), -1.08) for l in landcover])
+        landcover_coeff = np.array([coeff_table_cov.get(str(lc), -1.08) for lc in landcover])
 
     cti = np.clip(np.where(cti > 19, 19, cti), 0, None)
     pgv = np.clip(np.where(pgv > 211, 211, pgv), 1e-5, None)
