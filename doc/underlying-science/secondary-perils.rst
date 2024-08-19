@@ -495,7 +495,7 @@ Nowicki Jessee et al. (2018)
 A geospatial model used to predict probability of landsliding using globally available geospatial variables was proposed by 
 `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_. The level of shaking is 
 characterised by Peak Ground Velocity , :math:`PGV`. Slope steepness affects slope stability, and here, the topographic 
-slope, :math:`slope`, has been dervide from the median elevation value from the 7.5 arc sec Global Multi-resolution Terrain 
+slope, :math:`slope`, has been derived from the median elevation value from the 7.5 arc sec Global Multi-resolution Terrain 
 Elevation Data (`Danielson and Gesch, 2011 <https://pubs.usgs.gov/of/2011/1073/>`_). The model uses lithology, as a proxy for 
 the strength of the shaken material. The global lithology map is available in `Hartman and Moosdort, 2012 <https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2012GC004370>`_. 
 Slope stability is further controlled by the composite strength of the soil-vegetation root matrix. The Globcover 2009 data, 
@@ -530,7 +530,7 @@ These probabilities are converted to areal percentages to unbias the precitions.
 Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
 and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
 the combination of other predictor variables, areas with slopes less than :math:`2^\circ` are excluded.  Zero probability is 
-heuristically assigned if :math:`PGA = 0.02 \, \text{g}`. Finally, we addopted the USGS recommendation for modifying the 
+heuristically assigned if :math:`PGA = 0.02 \, \text{g}`. Finally, we adopted the USGS recommendation for modifying the 
 regression coefficient for unconsolidated sediments. The new proposed value is set to :math:`-1.36`. 
 
 
