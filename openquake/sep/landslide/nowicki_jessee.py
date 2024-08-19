@@ -2,27 +2,7 @@ from typing import Union
 import numpy as np
 
 
-LANDCOVER_TABLE={
-    b"14": 0.91,
-    b"20": 0.88,
-    b"30": 0.78,
-    b"40": 0.68,
-    b"50": 0.30,
-    b"60": 1.77,
-    b"70": 1.71,
-    b"90": -1.26,
-    b"100": 1.50,
-    b"110": 0.68,
-    b"120": 1.13,
-    b"130": 0.79,
-    b"140": 1.03,
-    b"150": 0.54,
-    b"160": 2.34,
-    b"180": 1.19,
-    b"190": 0.30,
-    b"200": -0.06,
-    b"220": -0.18,
-    b"230": -1.08,
+landcover_values={
     "14": 0.91,
     "20": 0.88,
     "30": 0.78,
@@ -46,20 +26,7 @@ LANDCOVER_TABLE={
 }
 
 
-LITHOLOGY_TABLE={
-    b"mt": -1.87,
-    b"nd": -0.66,
-    b"pa": -0.78,
-    b"pb": -1.88,
-    b"vi": -1.61,
-    b"py": -1.05,
-    b"sc": -0.95,
-    b"sm": -1.36,
-    b"ss": -1.92,
-    b"su": -1.36,
-    b"va": -1.54,
-    b"vb": -1.50,
-    b"pi": -0.81,
+lithology_values={
     "mt": -1.87,
     "nd": -0.66,
     "pa": -0.78,
@@ -74,6 +41,10 @@ LITHOLOGY_TABLE={
     "vb": -1.50,
     "pi": -0.81
 }
+
+
+LANDCOVER_TABLE = {**landcover_values, **{bytes(k, 'utf-8'): v for k, v in landcover_values.items()}}
+LITHOLOGY_TABLE = {**lithology_values, **{bytes(k, 'utf-8'): v for k, v in lithology_values.items()}}
 
 
 def sigmoid(x):
@@ -142,8 +113,8 @@ def nowicki_jessee_2018(
     else:
         landcover_coeff = np.array([coeff_table_cov.get(str(lc), -1.08) for lc in landcover])
 
-    cti = np.clip(np.where(cti > 19, 19, cti), 0, None)
-    pgv = np.clip(np.where(pgv > 211, 211, pgv), 1e-5, None)
+    cti = np.clip(cti, 0, 19)
+    pgv = np.clip(pgv, 1e-5, 211)
 
     Xg = (
         pgv_coeff * np.log(pgv) +
