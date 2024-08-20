@@ -1,3 +1,7 @@
+    [Lana Todorovic]
+  * Implemented Nowicki Jessee et al. (2018) landslide geospatial model that
+    computes the areal coverage by landslide occurrence.
+  
   [Michele Simionato]
   * Optimized "computing pnes" in classical calculations (3x in the common case)
     and fully switched to 32 bit rates, thus saving memory and improving performance
