@@ -304,32 +304,62 @@ The estimate is rather rough, so do not take it at the letter. The runtime can b
 tuning parameters like the ``pointsource_distance`` and ``ps_grid_spacing``, discussed at length in the advanced manual.
 
 ****************************************************
-Are hazard maps and uniform hazard spectra reliable?
+Is the hazard reliable for all sites?
 ****************************************************
 
-Users should be aware that there is a situation were hazard maps and
-uhs are TOTALLY UNRELIABLE and there is nothing you can do about
-it. This happens for *low hazard sites*, i.e. sites where the hazard
-curve is all below the reference `poe` used to compute the hazard
-map. By definition, in this case the hazard map is zero and the UHS
-contains at least a point of zero value. This situation is very
+Users should be aware that there is a situation were hazard curves
+are necessarily **unreliable**, i.e. very sensitive to small variations
+in parameters such as the maximum distance and the minimum magnitude.
+
+This happens when the low intensity part of the hazard curves is
+well below 1. In an ideal world, for extremely small intensities
+the probability of exceedence should tend to one; in the real
+world, however, there is minimum magnitude and there is a
+finite maximum distance, so ruptures are discarded from the
+calculation. If enough ruptures are discarded, the probability of
+exceedence will stay under 1, no matter how small the intensity is.
+The hazard curve is given by the formula
+
+.. math::
+
+  poe(iml) = 1 - e^{-(Σ r_i p_i(iml)) t}
+
+where the sum is over the ruptures, :math:`r_i` is the occurrence rate,
+:math:`p_i(iml)` is the probability of exceeding the intensity level
+:math:`iml` and :math:`t` is the investigation time. For low
+intensities the probabilities :math:`p_i(iml)` are at most 1
+and the maximum poe can be approximated with
+
+.. math::
+
+  poe_{max} ~ (Σ r_i) t
+
+which can be much smaller than 1 if the occurrence rate times the
+investigation time is small and there are not many ruptures.  In this
+situation a small change in the maximum distance or the minimum
+magnitude can cause a large variation in the number of ruptures and
+therefore a large change in :math:`poe_{max}`.  The worst case is when
+:math:`poe_{max}` is below the reference `poe` used to compute the
+hazard map. By definition, in this case the hazard map is zero and the
+UHS contains at least a point of zero value. This situation is very
 instable numerically: it is enough to slightly increase the
 `maximum_distance` and a rupture that before was discarded can give a
 small contribution, produce a hazard curve over the reference `poe`
 and therefore a nonzero hazard map value.  The same will happen if you
 change the geometry discretization step or the magnitude step. It is
-even worse than that. Low hazard curves, in the region of small intensities,
-tend to be flat, so even if the curve is slightly over the reference poe,
-a small change to the curve will correspond to a huge
-change in the intensity and therefore the hazard maps cannot be reliably
-computed. This is unavoidable, low intensities are affected by far
-away ruptures and low magnitude ruptures, and therefore very sensitive
-to the way the engine (or the hazard modeler) cuts such
+even worse than that. Low hazard curves, in the region of small
+intensities, tend to be flat, so even if the curve is slightly over
+the reference poe, a small change to the curve will correspond to a
+huge change in the intensity and therefore the hazard maps cannot be
+reliably computed. This is unavoidable, low intensities are affected
+by far away ruptures and low magnitude ruptures, and therefore very
+sensitive to the way the engine (or the hazard modeler) cuts such
 ruptures. Luckily, this has no practical effect on the risk, since the
-assets on sites of low hazard are subjected to very low damages. Still, the
-hazard scientist must be aware that hazard maps and uniform hazard
-spectra cannot be trusted when the corresponding hazard curves are
-below or close to the reference `poe` in the low intensity region.
+assets on sites of low hazard are subjected to very low
+damages. Still, the hazard scientist must be aware that hazard maps
+and uniform hazard spectra cannot be trusted when the corresponding
+hazard curves are below or close to the reference `poe` in the low
+intensity region.
 
 *************************************************
 How should I interpret the "Realizations" output?
