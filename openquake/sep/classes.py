@@ -255,8 +255,8 @@ class NowickiJessee2018Landslides(SecondaryPeril):
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
             raise ValueError(
-                "Both PGA and PGV are required to compute liquefaction "
-                "probability using the AllstadtEtAl2022Liquefaction model"
+                "Both PGA and PGV are required to compute landslide "
+                "probability using the NowickiJessee2018Landslides model"
             )
         
         prob_ls, lse = nowicki_jessee_2018(

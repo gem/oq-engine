@@ -51,7 +51,7 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def _landslide_spatial_extent(a: float, b: float, c: float, d: float, p: float):
+def _landslide_spatial_extent(p: float):
     """Calculates the landslide spatial extent (LSE) as per formulae 9
     from the Reference. LSE after an earthquake can be interpreted as the
     portion of each cell that is expected to have landslide occurrence.
@@ -63,6 +63,10 @@ def _landslide_spatial_extent(a: float, b: float, c: float, d: float, p: float):
     Journal of Geophysical Research: Earth Surface, 123, 1835–1859. 
     https://doi.org/10.1029/2017JF004494
     """
+    a = -7.592
+    b = 5.237
+    c = -3.042
+    d = 4.035
     LSE = np.exp(a + b * p + c * p**2 + d * p**3)
     return LSE
 
@@ -112,12 +116,12 @@ def nowicki_jessee_2018(
         coverage: Landslide areal coverage.
     """
 
-    if isinstance(lithology, (str)):
+    if isinstance(lithology, str):
         lithology_coeff = coeff_table_lith.get(lithology, -0.66)
     else:
         lithology_coeff = np.array([coeff_table_lith.get(lith, -0.66) for lith in lithology])
 
-    if isinstance(landcover, (int)):   
+    if isinstance(landcover, int):   
         landcover = str(landcover)
         landcover_coeff = coeff_table_cov.get(landcover, -1.08)
     else:
@@ -137,7 +141,7 @@ def nowicki_jessee_2018(
     )
 
     prob_ls = sigmoid(Xg)
-    LSE = _landslide_spatial_extent(-7.592, 5.237, -3.042, 4.035, prob_ls)
+    LSE = _landslide_spatial_extent(prob_ls)
     LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
 
     return prob_ls, LSE
