@@ -690,17 +690,11 @@ class CompositeSourceModel:
         for cmaker in cmakers:
             size_gb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**3
             grp = self.src_groups[cmaker.grp_id]
-            nsplits = general.ceil(grp.weight / max_weight)
-            if size_gb / nsplits > max_gb:
-                nsplits = general.ceil(size_gb / max_gb)
-            if oq.split_by_gsim:
-                # disabled since slower
-                for cm in self._split(cmaker, nsplits):
-                    yield cm, sitecol
-            else:
-                # normal case
-                for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
-                    yield cmaker, sites
+            nsplits = general.ceil(size_gb / max_gb)
+            for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
+                n = general.ceil(grp.weight / max_weight / nsplits)
+                for cm in self._split(cmaker, n):
+                    yield cm, sites
 
     def _split(self, cmaker, nsplits):
         gsims = list(cmaker.gsims)
