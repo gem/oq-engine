@@ -218,7 +218,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
     Computes the landslide probability from PGV and areal coverage.
     """
 
-    outputs = ["LsProb", "LP"]
+    outputs = ["LsProb", "LSE"]
 
     def __init__(
         self,
@@ -259,7 +259,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
                 "probability using the AllstadtEtAl2022Liquefaction model"
             )
         
-        prob_ls, coverage = nowicki_jessee_2018(
+        prob_ls, lse = nowicki_jessee_2018(
             pga = pga,
             pgv = pgv,
             slope=sites.slope,
@@ -268,7 +268,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
             cti=sites.cti,
         )
         out.append(prob_ls)
-        out.append(coverage)
+        out.append(lse)
             
         return out
 

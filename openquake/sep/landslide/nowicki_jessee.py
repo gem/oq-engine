@@ -51,10 +51,20 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def areal_coverage(a: float, b: float, c: float, d: float, p: float):
-    LP = np.exp(a + b * p + c * p**2 + d * p**3)
+def _landslide_spatial_extent(a: float, b: float, c: float, d: float, p: float):
+    """Calculates the landslide spatial extent (LSE) as per formulae 9
+    from the Reference. LSE after an earthquake can be interpreted as the
+    portion of each cell that is expected to have landslide occurrence.
 
-    return LP
+    Reference: Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., 
+    Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018). 
+    A global empirical model for near-real-time assessment of seismically 
+    induced landslides. 
+    Journal of Geophysical Research: Earth Surface, 123, 1835–1859. 
+    https://doi.org/10.1029/2017JF004494
+    """
+    LSE = np.exp(a + b * p + c * p**2 + d * p**3)
+    return LSE
 
     
 def nowicki_jessee_2018(
@@ -127,7 +137,7 @@ def nowicki_jessee_2018(
     )
 
     prob_ls = sigmoid(Xg)
-    coverage = areal_coverage(-7.592, 5.237, -3.042, 4.035, prob_ls)
-    coverage = np.where((slope < 2) | (pga < 0.02), 0, coverage)
+    LSE = _landslide_spatial_extent(-7.592, 5.237, -3.042, 4.035, prob_ls)
+    LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
 
-    return prob_ls, coverage
+    return prob_ls, LSE

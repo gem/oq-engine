@@ -300,7 +300,7 @@ def LiqOccur():
 
 def LSE():
     """
-    Liquefaction spatial extent as percentage of a pixel area.
+    Liquefaction or Landslide spatial extent.
     """
     return IMT('LSE')
 
@@ -333,9 +333,3 @@ def LsProb():
     """
     return IMT('LsProb')
 
-
-def LP():
-    """
-    Landslide areal coverage.
-    """
-    return IMT('LP')
