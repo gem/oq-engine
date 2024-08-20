@@ -1121,7 +1121,7 @@ class ContextMaker(object):
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
             yield poes, slc
         #ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
-        #print('C=%d, mean_stds=%.1fM, poes=%.1fM' % (len(ctx), ms, ps))
+        #print('C=%d, mean_stds=%.1fM, poes=%.1fM, G=%d' % (len(ctx), ms, ps, G))
 
     def gen_poes(self, ctx):
         """
