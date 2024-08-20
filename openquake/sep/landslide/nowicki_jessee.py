@@ -142,6 +142,8 @@ def nowicki_jessee_2018(
 
     prob_ls = sigmoid(Xg)
     LSE = _landslide_spatial_extent(prob_ls)
+
+    # Slope cutoff proposed by Allstadt et al. (2022), minimum pga threshold proposed by Jibson and Harp (2016)
     LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
 
     return prob_ls, LSE
