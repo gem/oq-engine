@@ -175,7 +175,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     fac = oq.imtls.size * N * 4 / 1024**3
     sizes = [len(cm.gsims) * fac for cm in cmakers]
-    ok = req_gb < 8 * max_gb and max(sizes) < max_gb
+    ok = req_gb < max_gb and max(sizes) < max_gb
     regular = ok or oq.disagg_by_src or N < oq.max_sites_disagg or oq.tile_spec
     tiles = numpy.array([(cm.grp_id, len(cm.gsims), len(tile),
                           len(cm.gsims) * fac * len(tile) / N)
