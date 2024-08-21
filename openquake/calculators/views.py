@@ -780,14 +780,32 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-    num_ruptures = sdata.nrupts.sum()
-    eff_sites = sdata.nsites.sum()
-    msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-           'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                 taskno, len(sdata), num_ruptures, eff_sites,
-                 rec['weight'], rec['duration'])
+    if len(dstore['source_data/src_id']):
+        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
+        num_ruptures = sdata.nrupts.sum()
+        eff_sites = sdata.nsites.sum()
+        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
+               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+                     taskno, len(sdata), num_ruptures, eff_sites,
+                     rec['weight'], rec['duration'])
+    else:
+        w = dstore.read_df('source_info').groupby('grp_id').weight.sum()
+        tdata = dstore.read_df('tiles').loc[taskno]
+        grp_id = int(tdata.grp_id)
+        msg = ('taskno={:_d}, grp_id={:_d}, G={:_d}, N={:_d}, weight={:.1f}, '
+               'duration={:.1f}s').format(
+                   taskno, grp_id, int(tdata.G), int(tdata.N),
+                   w.loc[grp_id] / tdata.G, rec['duration'])
     return msg
+
+
+@view.add('source_groups')
+def view_source_groups(token, dstore):
+    """
+    Display the weights
+    """
+    w = dstore.read_df('source_info').groupby('grp_id')[['weight']].sum()
+    return w
 
 
 @view.add('source_data')

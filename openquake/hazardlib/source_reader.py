@@ -690,15 +690,14 @@ class CompositeSourceModel:
         for cmaker in cmakers:
             size_gb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**3
             grp = self.src_groups[cmaker.grp_id]
-            nsplits = general.ceil(grp.weight / max_weight)
-            if size_gb / nsplits > max_gb:
-                nsplits = general.ceil(size_gb / max_gb)
+            nsplits = general.ceil(max(size_gb / max_gb, grp.weight / max_weight))
             if oq.split_by_gsim:
-                # disabled since slower
+                nsplits *= .75  # generate less tasks
                 for cm in self._split(cmaker, nsplits):
-                    yield cm, sitecol
-            else:
-                # normal case
+                    n = nsplits * len(cm.gsims) / len(cmaker.gsims)
+                    for sites in sitecol.split(n, minsize=oq.max_sites_disagg):
+                        yield cm, sites
+            else:  # regular tiling
                 for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
                     yield cmaker, sites
 
