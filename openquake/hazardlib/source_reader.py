@@ -685,7 +685,6 @@ class CompositeSourceModel:
 
     def split(self, cmakers, sitecol, max_weight):
         N = len(sitecol)
-        maxtiles = general.ceil(N / 10_000)  # at max 10_000 sites each
         oq = cmakers[0].oq
         max_gb = float(config.memory.pmap_max_gb)
         for cmaker in cmakers:
@@ -693,8 +692,9 @@ class CompositeSourceModel:
             grp = self.src_groups[cmaker.grp_id]
             nsplits = general.ceil(max(size_gb / max_gb, grp.weight / max_weight))
             if oq.split_by_gsim:
-                for sites in sitecol.split(maxtiles, minsize=oq.max_sites_disagg):
-                    for cm in self._split(cmaker, nsplits / maxtiles):
+                for cm in self._split(cmaker, nsplits):
+                    n = nsplits * len(cm.gsims) / len(cmaker.gsims)
+                    for sites in sitecol.split(n, minsize=oq.max_sites_disagg):
                         yield cm, sites
             else:  # regular tiling
                 for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
