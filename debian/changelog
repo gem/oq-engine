@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Refined the tiling calculator (partial tiling)
   * Optimized "computing pnes" in classical calculations (3x in the common case)
     and fully switched to 32 bit rates, thus saving memory and improving performance
 
