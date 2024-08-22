@@ -318,7 +318,7 @@ world, however, there is minimum magnitude and there is a
 finite maximum distance, so ruptures are discarded from the
 calculation. If enough ruptures are discarded, the probability of
 exceedence will stay under 1, no matter how small the intensity is.
-The hazard curve is given by the formula
+For poissonian curves the hazard curve is given by the formula
 
 .. math::
 
