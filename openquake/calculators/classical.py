@@ -30,7 +30,7 @@ from PIL import Image
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, ceil)
+    AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -46,7 +46,6 @@ F64 = numpy.float64
 I64 = numpy.int64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-MAXSITES = 60_000
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
@@ -497,10 +496,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        ntiles = ceil(self.N / MAXSITES)
-        if ntiles > 1:
-            logging.info('Using %d tiles', ntiles)
-        maxw = self.max_weight * ntiles
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
@@ -512,6 +507,12 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
+        size_mb = ds['source_groups']['size_mb']
+        max_mb = float(config.memory.pmap_max_mb)
+        ntiles = numpy.ceil(size_mb / max_mb).max()
+        if ntiles > 1:
+            logging.info('Using %d tiles', ntiles)
+        maxw = self.max_weight * ntiles
         for cm in self.cmakers:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
@@ -524,10 +525,10 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                if self.N <= MAXSITES:
+                if ntiles == 1:
                     allargs.append((block, None, cm, ds))
                 else:
-                    for sites in self.sitecol.split(self.N / MAXSITES):
+                    for sites in self.sitecol.split(ntiles):
                         allargs.append((block, sites, cm, ds))
 
         self.datastore.swmr_on()  # must come before the Starmap
