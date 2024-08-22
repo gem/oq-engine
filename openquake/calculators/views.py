@@ -799,15 +799,6 @@ def view_task_hazard(token, dstore):
     return msg
 
 
-@view.add('source_groups')
-def view_source_groups(token, dstore):
-    """
-    Display the weights
-    """
-    w = dstore.read_df('source_info').groupby('grp_id')[['weight']].sum()
-    return w
-
-
 @view.add('source_data')
 def view_source_data(token, dstore):
     """
