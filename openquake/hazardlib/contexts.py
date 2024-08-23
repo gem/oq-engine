@@ -1904,7 +1904,7 @@ def read_cmakers(dstore, csm=None):
     """
     :param dstore: a DataStore-like object
     :param csm: a CompositeSourceModel instance, if given
-    :returns: a list of ContextMaker instances, one per source group
+    :returns: an array of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
@@ -1922,7 +1922,7 @@ def read_cmakers(dstore, csm=None):
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-    return cmakers
+    return numpy.array(cmakers)
 
 
 # used in event_based

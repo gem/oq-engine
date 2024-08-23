@@ -576,9 +576,10 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        # pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
-        # first the tasks with few tiles, then the ones with many tiles
-        for cm, sites in self.csm.split(self.cmakers, self.sitecol, self.max_weight):
+        weight = ds['source_groups']['weight']
+        grp_ids = numpy.argsort(weight)[::-1]  # heavy groups first
+        for cm, sites in self.csm.split(
+                self.cmakers[grp_ids], self.sitecol, self.max_weight):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
