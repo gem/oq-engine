@@ -507,13 +507,15 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        size_mb = ds['source_groups']['size_mb']
+        dset = ds['source_groups']
+        size_mb = dset['size_mb']
         max_mb = float(config.memory.pmap_max_mb)
         ntiles = numpy.ceil(size_mb / max_mb).max()
         if ntiles > 1:
             logging.info('Using %d tiles', ntiles)
         maxw = self.max_weight * ntiles
-        for cm in self.cmakers:
+        grp_ids = numpy.argsort(dset['weight'])[::-1]
+        for cm in self.cmakers[grp_ids]:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
@@ -576,8 +578,8 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        weight = ds['source_groups']['weight']
-        grp_ids = numpy.argsort(weight)[::-1]  # heavy groups first
+        # send heavy groups first
+        grp_ids = numpy.argsort(ds['source_groups']['weight'])[::-1]
         for cm, sites in self.csm.split(
                 self.cmakers[grp_ids], self.sitecol, self.max_weight):
             sg = self.csm.src_groups[cm.grp_id]
