@@ -181,9 +181,9 @@ def store_tiles(dstore, csm, sitecol, cmakers):
          for cm, tile in csm.split(cmakers, sitecol, max_weight)],
         [('grp_id', U16), ('G', U16), ('N', U32), ('gb', F32)])
     data = numpy.array(
-        [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight)
+        [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight, grp.codes)
          for grp, cm in zip(csm.src_groups, cmakers)],
-        [('gsims', U16), ('size_mb', F32), ('weight', F32)])
+        [('gsims', U16), ('size_mb', F32), ('weight', F32), ('codes', '<S8')])
     dstore.create_dset('source_groups', data, fillvalue=None)
     dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, tiling=not regular))
