@@ -412,10 +412,13 @@ class MapArray(object):
         return self.new(self.array ** n)
 
     def __iadd__(self, other):
-        G = other.array.shape[2]  # NLG
         sidx = self.sidx[other.sids]
-        for i, g in enumerate(other.gid):
-            self.array[sidx, :, g] += other.array[:, :, i % G]
+        if hasattr(other, 'gid'):
+            G = other.array.shape[2]  # NLG
+            for i, g in enumerate(other.gid):
+                self.array[sidx, :, g] += other.array[:, :, i % G]
+        else:
+            self.array[sidx] += other.array
         return self
 
     def __repr__(self):
