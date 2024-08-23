@@ -411,5 +411,12 @@ class MapArray(object):
     def __pow__(self, n):
         return self.new(self.array ** n)
 
+    def __iadd__(self, other):
+        G = other.array.shape[2]  # NLG
+        sidx = self.sidx[other.sids]
+        for i, g in enumerate(other.gid):
+            self.array[sidx, :, g] += other.array[:, :, i % G]
+        return self
+
     def __repr__(self):
         return '<MapArray(%d, %d, %d)>' % self.shape

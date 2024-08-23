@@ -125,6 +125,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
             result['pnemap'] = result['pnemap'].to_rates()
+            result['pnemap'].gid = cmaker.gid
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
@@ -143,6 +144,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = rmap.to_array(gid)
         else:
             result['pnemap'] = rmap
+            result['pnemap'].gid = cmaker.gid
         yield result
 
 
@@ -351,16 +353,11 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        pnemap = dic['pnemap']  # probabilities of no exceedence
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(pnemap, grp_id)
-        G = pnemap.array.shape[2]
-        rates = self.rmap.array
-        sidx = self.rmap.sidx[pnemap.sids]
-        for i, g in enumerate(self.cmakers[grp_id].gid):
-            rates[sidx, :, g] += pnemap.array[:, :, i % G]
+            acc[source_id] += self.haz.get_rates(dic['pnemap'], grp_id)
+        self.rmap += dic['pnemap']  # add rates
         return acc
 
     def create_rup(self):
