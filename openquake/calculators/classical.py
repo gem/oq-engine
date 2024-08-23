@@ -130,19 +130,19 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = result.pop('pnemap').to_rates()
+        rmap = result.pop('pnemap').to_rates()
         if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rates.array):
+            if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates.to_array(gid), cmaker.num_chunks, h5)
+                    _store(rmap.to_array(gid), cmaker.num_chunks, h5)
         elif tiling:
-            result['pnemap'] = rates.to_array(gid)
+            result['pnemap'] = rmap.to_array(gid)
         else:
-            result['pnemap'] = rates
+            result['pnemap'] = rmap
         yield result
 
 
@@ -357,8 +357,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             acc[source_id] += self.haz.get_rates(pnemap, grp_id)
         G = pnemap.array.shape[2]
-        rates = self.pmap.array
-        sidx = self.pmap.sidx[pnemap.sids]
+        rates = self.rmap.array
+        sidx = self.rmap.sidx[pnemap.sids]
         for i, g in enumerate(self.cmakers[grp_id].gid):
             rates[sidx, :, g] += pnemap.array[:, :, i % G]
         return acc
@@ -501,7 +501,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
+        self.rmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -537,8 +537,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.num_chunks, self.datastore)
-        del self.pmap
+            _store(self.rmap.to_array(), self.num_chunks, self.datastore)
+        del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
