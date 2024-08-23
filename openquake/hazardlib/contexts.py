@@ -1325,7 +1325,7 @@ class ContextMaker(object):
                     elif src.code == b'C':
                         src.weight += 10.
                     elif src.code == b'F':
-                        src.weight += .5  * src.num_ruptures
+                        src.weight += .25  * src.num_ruptures
                     else:
                         src.weight += 1.
 
