@@ -206,7 +206,10 @@ class IntegrationDistance(dict):
         >>> md
         {'default': [(2.5, 50), (10.2, 50)]}
         """
-        items_by_trt = floatdict(value)
+        if value == 'magdist':
+            items_by_trt = {'default': [(3, 0), (6, 150), (10, 600)]}
+        else:
+            items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):

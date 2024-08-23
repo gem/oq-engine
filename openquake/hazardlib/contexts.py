@@ -1292,10 +1292,9 @@ class ContextMaker(object):
                 self.pointsource_distance < 1000):
             # cps or pointsource with nontrivial nphc
             esites = self.estimate_sites(src, sites) * multiplier
-        elif src.code == b'F':  # multifault
-            esites = len(sites) * src.num_ruptures
         else:
-            ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
+            step = 100 if src.code == b'F' else 10
+            ctxs = list(self.get_ctx_iter(src, sites, step=step))  # reduced
             if not ctxs:
                 return src.num_ruptures if N == 1 else 0, 0
             esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
@@ -1325,6 +1324,8 @@ class ContextMaker(object):
                         src.weight += .1
                     elif src.code == b'C':
                         src.weight += 10.
+                    elif src.code == b'F':
+                        src.weight += .25  * src.num_ruptures
                     else:
                         src.weight += 1.
 
@@ -1903,7 +1904,7 @@ def read_cmakers(dstore, csm=None):
     """
     :param dstore: a DataStore-like object
     :param csm: a CompositeSourceModel instance, if given
-    :returns: a list of ContextMaker instances, one per source group
+    :returns: an array of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
@@ -1921,7 +1922,7 @@ def read_cmakers(dstore, csm=None):
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-    return cmakers
+    return numpy.array(cmakers)
 
 
 # used in event_based

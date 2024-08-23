@@ -107,7 +107,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    tiling = not hasattr(sources, '__iter__')  # passed gid
+    tiling = sources is None
     disagg_by_src = cmaker.disagg_by_src
     with dstore:
         gid = cmaker.gid[0]
@@ -115,7 +115,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        else:  # regular calculator, read the sites from the datastore
+        if sitecol is None:  # regular calculator, read the sites
             sitecol = dstore['sitecol']  # super-fast
 
     if disagg_by_src and not getattr(sources, 'atomic', False):
@@ -130,19 +130,19 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker)
         if tiling:
             del result['source_data']  # save some data transfer
-        rates = result.pop('pnemap').to_rates()
+        rmap = result.pop('pnemap').to_rates()
         if tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rates.array):
+            if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rates.to_array(gid), cmaker.num_chunks, h5)
+                    _store(rmap.to_array(gid), cmaker.num_chunks, h5)
         elif tiling:
-            result['pnemap'] = rates.to_array(gid)
+            result['pnemap'] = rmap.to_array(gid)
         else:
-            result['pnemap'] = rates
+            result['pnemap'] = rmap
         yield result
 
 
@@ -357,8 +357,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             acc[source_id] += self.haz.get_rates(pnemap, grp_id)
         G = pnemap.array.shape[2]
-        rates = self.pmap.array
-        sidx = self.pmap.sidx[pnemap.sids]
+        rates = self.rmap.array
+        sidx = self.rmap.sidx[pnemap.sids]
         for i, g in enumerate(self.cmakers[grp_id].gid):
             rates[sidx, :, g] += pnemap.array[:, :, i % G]
         return acc
@@ -496,19 +496,26 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        maxw = self.max_weight
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.pmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
+        self.rmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        for cm in self.cmakers:
+        dset = ds['source_groups']
+        size_mb = dset['size_mb']
+        max_mb = float(config.memory.pmap_max_mb)
+        ntiles = numpy.ceil(size_mb / max_mb).max()
+        if ntiles > 1:
+            logging.info('Using %d tiles', ntiles)
+        maxw = self.max_weight * ntiles
+        grp_ids = numpy.argsort(dset['weight'])[::-1]
+        for cm in self.cmakers[grp_ids]:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
@@ -520,18 +527,58 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                allargs.append((block, None, cm, ds))
+                if ntiles == 1:
+                    allargs.append((block, None, cm, ds))
+                else:
+                    for sites in self.sitecol.split(ntiles):
+                        allargs.append((block, sites, cm, ds))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.pmap.to_array(), self.num_chunks, self.datastore)
-        del self.pmap
+            _store(self.rmap.to_array(), self.num_chunks, self.datastore)
+        del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
+
+    def execute_big(self):
+        """
+        Use parallel tiling
+        """
+        oq = self.oqparam
+        assert not oq.disagg_by_src
+        assert self.N > self.oqparam.max_sites_disagg, self.N
+        allargs = []
+        if config.distribution.save_on_tmp:
+            scratch = parallel.scratch_dir(self.datastore.calc_id)
+            logging.info('Storing the rates in %s', scratch)
+            self.datastore.hdf5.attrs['scratch_dir'] = scratch
+        if '_csm' in self.datastore.parent:
+            ds = self.datastore.parent
+        else:
+            ds = self.datastore
+        # send heavy groups first
+        grp_ids = numpy.argsort(ds['source_groups']['weight'])[::-1]
+        for cm, sites in self.csm.split(
+                self.cmakers[grp_ids], self.sitecol, self.max_weight):
+            sg = self.csm.src_groups[cm.grp_id]
+            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.save_on_tmp = config.distribution.save_on_tmp
+            cm.num_chunks = self.num_chunks
+            allargs.append((None, sites, cm, ds))
+        self.datastore.swmr_on()  # must come before the Starmap
+        mon = self.monitor('storing rates')
+        self.offset = 0
+        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
+            self.cfactor += dic['cfactor']
+            if 'pnemap' in dic:  # save_on_tmp is false
+                with mon:
+                    self.offset = _store(
+                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
+        return {}
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular disaggregation/case_15 is sensitive to num_cores
@@ -550,41 +597,6 @@ class ClassicalCalculator(base.HazardCalculator):
             # (it happens in logictree/case_05 and in Japan)
             ok = got[m] < 2.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
-
-    def execute_big(self):
-        """
-        Use parallel tiling
-        """
-        oq = self.oqparam
-        assert not oq.disagg_by_src
-        assert self.N > self.oqparam.max_sites_disagg, self.N
-        allargs = []
-        if config.distribution.save_on_tmp:
-            scratch = parallel.scratch_dir(self.datastore.calc_id)
-            logging.info('Storing the rates in %s', scratch)
-            self.datastore.hdf5.attrs['scratch_dir'] = scratch
-        if '_csm' in self.datastore.parent:
-            ds = self.datastore.parent
-        else:
-            ds = self.datastore
-        # pairs = sorted(zip(self.cmakers, self.ntiles), key=lambda cn: cn[1])
-        # first the tasks with few tiles, then the ones with many tiles
-        for cm, sites in self.csm.split(self.cmakers, self.sitecol, self.max_weight):
-            sg = self.csm.src_groups[cm.grp_id]
-            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.num_chunks = self.num_chunks
-            allargs.append((None, sites, cm, ds))
-        self.datastore.swmr_on()  # must come before the Starmap
-        mon = self.monitor('storing rates')
-        self.offset = 0
-        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
-            self.cfactor += dic['cfactor']
-            if 'pnemap' in dic:  # save_on_tmp is false
-                with mon:
-                    self.offset = _store(
-                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
-        return {}
 
     def store_info(self):
         """

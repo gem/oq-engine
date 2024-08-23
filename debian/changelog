@@ -3,6 +3,7 @@
     computes the areal coverage by landslide occurrence.
   
   [Michele Simionato]
+  * Refined the tiling calculator (partial tiling, task weighting)
   * Optimized "computing pnes" in classical calculations (3x in the common case)
     and fully switched to 32 bit rates, thus saving memory and improving performance
 

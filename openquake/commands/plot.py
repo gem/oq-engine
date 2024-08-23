@@ -47,6 +47,8 @@ def make_figure_magdist(extractors, what):
     grp = ex.dstore['source_mags']
     ax.set_xlabel('magnitude')
     ax.set_ylabel('distance')
+    ax.set_xlim(4, 10)
+    ax.set_ylim(0, 600)
     for trt in grp:
         magdist = ex.oqparam.maximum_distance(trt)
         mags = numpy.float64(grp[trt][:])
@@ -54,8 +56,6 @@ def make_figure_magdist(extractors, what):
         ax.plot(mags, dsts, '-', label=trt)
         ax.grid(True)
         ax.legend()
-    ax.set_xlim(mags.min() - .1, mags.max() + .1)
-    ax.set_ylim(0, dsts.max() + 10)
     return plt
 
 def make_figure_hcurves(extractors, what):

@@ -692,7 +692,7 @@ class CompositeSourceModel:
             grp = self.src_groups[cmaker.grp_id]
             nsplits = general.ceil(max(size_gb / max_gb, grp.weight / max_weight))
             if oq.split_by_gsim:
-                nsplits *= .75  # generate less tasks
+                nsplits *= .8  # generate less tasks
                 for cm in self._split(cmaker, nsplits):
                     n = nsplits * len(cm.gsims) / len(cmaker.gsims)
                     for sites in sitecol.split(n, minsize=oq.max_sites_disagg):
