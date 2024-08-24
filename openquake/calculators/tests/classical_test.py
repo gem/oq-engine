@@ -168,6 +168,9 @@ class ClassicalTestCase(CalculatorTestCase):
         with open(tmp, 'wb') as f:
             nrml.write([gnode], f)
 
+    def getLG(self):
+        return self.calc.datastore['hcurves-stats'][3, 0]
+
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
@@ -185,6 +188,14 @@ class ClassicalTestCase(CalculatorTestCase):
         ], case_22.__file__, delta=1E-6)
         splits = self.calc.datastore['tiles'][:]
         self.assertEqual(len(splits), 10)
+
+        hc1 = self.getLG()
+        # tiling without save_on_tmp
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(config.distribution, {'save_on_tmp': 'false'}):
+            self.run_calc(case_22.__file__, 'job.ini')
+        hc2 = self.getLG()
+        aac(hc1, hc2)  # site_id=3 was different in earlier versions
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

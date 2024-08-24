@@ -467,6 +467,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
+        self.offset = 0
         if self.datastore['tiles'].attrs['tiling']:
             self.execute_big()
         else:
@@ -534,12 +535,15 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.rmap.to_array(), self.num_chunks, self.datastore)
+            self.store(self.rmap.to_array())
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
+
+    def store(self, rates):
+        self.offset += _store(rates, self.num_chunks, self.datastore, self.offset)
 
     def execute_big(self):
         """
@@ -568,7 +572,6 @@ class ClassicalCalculator(base.HazardCalculator):
             allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
-        self.offset = 0
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
