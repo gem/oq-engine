@@ -576,8 +576,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    self.offset = _store(
-                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
+                    self.store(dic['pnemap'])
         return {}
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
