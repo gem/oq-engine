@@ -412,6 +412,8 @@ class MapArray(object):
         return self.new(self.array ** n)
 
     def __iadd__(self, other):
+        if not hasattr(self, 'array'):
+            self.fill(0)
         sidx = self.sidx[other.sids]
         if hasattr(other, 'gid'):
             G = other.array.shape[2]  # NLG

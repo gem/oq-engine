@@ -497,7 +497,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.rmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
+        self.rmap = MapArray(self.sitecol.sids, L, Gt)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -516,6 +516,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
+            cm.num_chunks = self.num_chunks
             if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
