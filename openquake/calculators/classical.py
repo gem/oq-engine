@@ -53,18 +53,19 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
-def _store(rates, num_chunks, h5, offset=0):
+def _store(rates, num_chunks, h5):
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
-        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-        offset += len(ch_rates)
         try:
             h5.create_df(
                 '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         except ValueError:  # already created
-            pass
+            offset = len(h5['_rates/sid'])
+        else:
+            offset = 0
+        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
         hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
         hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
         hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
@@ -74,7 +75,6 @@ def _store(rates, num_chunks, h5, offset=0):
         hdf5.extend(h5['_rates/slice_by_idx'], iss)
     else:  # writing small file
         h5['_rates/slice_by_idx'] = iss
-    return offset
 
 
 class Set(set):
@@ -290,7 +290,6 @@ class Hazard:
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
         self.acc = AccumDict(accum={})
-        self.offset = 0
 
     # used in in disagg_by_src
     def get_rates(self, pmap, grp_id):
@@ -467,7 +466,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        self.offset = 0
         if self.datastore['tiles'].attrs['tiling']:
             self.execute_big()
         else:
@@ -543,7 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.check_mean_rates(mrs)
 
     def store(self, rates):
-        self.offset += _store(rates, self.num_chunks, self.datastore, self.offset)
+        _store(rates, self.num_chunks, self.datastore)
 
     def execute_big(self):
         """

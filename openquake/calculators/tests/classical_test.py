@@ -192,7 +192,7 @@ class ClassicalTestCase(CalculatorTestCase):
         hc1 = self.getLG()
         # tiling without save_on_tmp
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': 'false'}):
+             mock.patch.dict(config.distribution, {'save_on_tmp': ''}):
             self.run_calc(case_22.__file__, 'job.ini')
         hc2 = self.getLG()
         aac(hc1, hc2)  # site_id=3 was different in earlier versions
