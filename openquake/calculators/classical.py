@@ -129,8 +129,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        if tiling:
-            del result['source_data']  # save some data transfer
         rmap = result.pop('pnemap').to_rates()
         if tiling and cmaker.save_on_tmp:
             # tested in case_22
@@ -140,8 +138,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rmap.to_array(gid), cmaker.num_chunks, h5)
-        elif tiling:
-            result['pnemap'] = rmap.to_array(gid)
         else:
             result['pnemap'] = rmap
             result['pnemap'].gid = cmaker.gid
@@ -518,12 +514,13 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.num_chunks = self.num_chunks
             if sg.atomic or sg.weight <= maxw:
-                blks = [sg]
+                blks = [None]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
             for block in blks:
-                logging.debug('Sending %d source(s) with weight %d',
-                              len(block), sg.weight)
+                if block:
+                    logging.debug('Sending %d source(s) with weight %d',
+                                  len(block), sg.weight)
                 if ntiles == 1:
                     allargs.append((block, None, cm, ds))
                 else:
@@ -575,7 +572,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    self.store(dic['pnemap'])
+                    gid = dic['pnemap'].gid[0]
+                    self.store(dic['pnemap'].to_array(gid))
         return {}
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
