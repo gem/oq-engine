@@ -53,18 +53,19 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
-def _store(rates, num_chunks, h5, offset=0):
+def _store(rates, num_chunks, h5):
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
     for chunk in numpy.unique(chunks):
         ch_rates = rates[chunks == chunk]
-        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-        offset += len(ch_rates)
         try:
             h5.create_df(
                 '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
         except ValueError:  # already created
-            pass
+            offset = len(h5['_rates/sid'])
+        else:
+            offset = 0
+        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
         hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
         hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
         hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
@@ -74,7 +75,6 @@ def _store(rates, num_chunks, h5, offset=0):
         hdf5.extend(h5['_rates/slice_by_idx'], iss)
     else:  # writing small file
         h5['_rates/slice_by_idx'] = iss
-    return offset
 
 
 class Set(set):
@@ -290,7 +290,6 @@ class Hazard:
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
         self.acc = AccumDict(accum={})
-        self.offset = 0
 
     # used in in disagg_by_src
     def get_rates(self, pmap, grp_id):
@@ -534,12 +533,15 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            _store(self.rmap.to_array(), self.num_chunks, self.datastore)
+            self.store(self.rmap.to_array())
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
+
+    def store(self, rates):
+        _store(rates, self.num_chunks, self.datastore)
 
     def execute_big(self):
         """
@@ -568,13 +570,11 @@ class ClassicalCalculator(base.HazardCalculator):
             allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
-        self.offset = 0
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    self.offset = _store(
-                        dic['pnemap'], self.num_chunks, self.datastore, self.offset)
+                    self.store(dic['pnemap'])
         return {}
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
