@@ -499,8 +499,8 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        self.Gt = len(self.trt_rlzs)
-        self.rmap = MapArray(self.sitecol.sids, L, self.Gt)
+        Gt = len(self.trt_rlzs)
+        self.rmap = MapArray(self.sitecol.sids, L, Gt)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
