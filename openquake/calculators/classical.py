@@ -334,35 +334,36 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        sdata = dic['source_data']
-        self.source_data += sdata
-        grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
-        cfactor = dic.pop('cfactor')
-        if cfactor[1] != cfactor[0]:
-            print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
-                cfactor[1] / cfactor[2], cfactor[1] / cfactor[0]))
-        self.cfactor += cfactor
+        with self.monitor('aggregating rates', measuremem=True):
+            sdata = dic['source_data']
+            self.source_data += sdata
+            grp_id = dic.pop('grp_id')
+            self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+            cfactor = dic.pop('cfactor')
+            if cfactor[1] != cfactor[0]:
+                print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
+                    cfactor[1] / cfactor[2], cfactor[1] / cfactor[0]))
+            self.cfactor += cfactor
 
-        # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']):
-            with self.monitor('saving rup_data'):
-                store_ctxs(self.datastore, dic['rup_data'], grp_id)
+            # store rup_data if there are few sites
+            if self.few_sites and len(dic['rup_data']):
+                with self.monitor('saving rup_data'):
+                    store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        rmap = dic.pop('pnemap', None)
-        source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
-        if source_id:
-            # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(rmap, grp_id)
-        if rmap is None:
-            # already stored in the workers, case_22
-            pass
-        elif dic.get('allsources'):
-            # store the rates directly, case_03
-            self.store(rmap.to_array(rmap.gid[0]))
-        else:
-            # add the rates
-            self.rmap += rmap
+            rmap = dic.pop('pnemap', None)
+            source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
+            if source_id:
+                # accumulate the rates for the given source
+                acc[source_id] += self.haz.get_rates(rmap, grp_id)
+            if rmap is None:
+                # already stored in the workers, case_22
+                pass
+            elif dic.get('allsources'):
+                # store the rates directly, case_03
+                self.store(rmap.to_array(rmap.gid[0]))
+            else:
+                # add the rates
+                self.rmap += rmap
         return acc
 
     def create_rup(self):
