@@ -108,9 +108,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     disagg_by_src = cmaker.disagg_by_src
+    allsources = sources is None
     with dstore:
         gid = cmaker.gid[0]
-        if sources is None:  # read the sources from the datastore
+        if allsources:  # read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
@@ -128,6 +129,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
+        result['allsources'] = allsources
         rmap = result.pop('pnemap').to_rates()
         if cmaker.tiling and cmaker.save_on_tmp:
             # tested in case_22
@@ -347,12 +349,17 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
+        rmap = dic.pop('pnemap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(dic['pnemap'], grp_id)
-        if 'pnemap' in dic:
-            self.rmap += dic['pnemap']  # add rates
+            acc[source_id] += self.haz.get_rates(rmap, grp_id)
+        if rmap is None:  # already stored in the workers
+            pass
+        elif dic.get('allsources'):
+            self.store(rmap.to_array(rmap.gid[0]))
+        else:
+            self.rmap += rmap  # add rates
         return acc
 
     def create_rup(self):
