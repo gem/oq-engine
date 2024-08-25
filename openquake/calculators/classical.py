@@ -354,12 +354,15 @@ class ClassicalCalculator(base.HazardCalculator):
         if source_id:
             # accumulate the rates for the given source
             acc[source_id] += self.haz.get_rates(rmap, grp_id)
-        if rmap is None:  # already stored in the workers
+        if rmap is None:
+            # already stored in the workers, case_22
             pass
         elif dic.get('allsources'):
+            # store the rates directly, case_03
             self.store(rmap.to_array(rmap.gid[0]))
         else:
-            self.rmap += rmap  # add rates
+            # add the rates
+            self.rmap += rmap
         return acc
 
     def create_rup(self):
