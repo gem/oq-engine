@@ -129,7 +129,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     else:
         result = hazclassical(sources, sitecol, cmaker)
         result['allsources'] = allsources
-        rmap = result.pop('pnemap').to_rates()
+        rmap = result.pop('pnemap').remove_zeros().to_rates()
         if cmaker.tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
