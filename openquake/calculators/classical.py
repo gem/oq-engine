@@ -513,6 +513,7 @@ class ClassicalCalculator(base.HazardCalculator):
         dset = ds['source_groups']
         size_mb = dset['size_mb']
         max_mb = float(config.memory.pmap_max_mb)
+        max_gb = float(config.memory.pmap_max_gb)
         ntiles = numpy.ceil(size_mb / max_mb).max()
         if ntiles > 1:
             logging.info('Using %d tiles', ntiles)
@@ -533,8 +534,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 if block:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                if block is None or ntiles == 1:
-                    allargs.append((block, None, cm, ds))
+                if block is None:
+                    for sites in self.sitecol.split(size_mb[cm.grp_id] / (1024*max_gb)):
+                        allargs.append((block, sites, cm, ds))
                 else:
                     for sites in self.sitecol.split(ntiles):
                         allargs.append((block, sites, cm, ds))
