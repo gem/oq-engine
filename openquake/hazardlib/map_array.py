@@ -339,28 +339,25 @@ class MapArray(object):
         rates = -numpy.log(pnes).astype(F32) / itime
         return self.new(rates)
 
-    def to_array(self, gid=0):
+    def to_array(self, gid):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if hasattr(self, 'array') :
-            rates = self.array
-            idxs, lids, gids = rates.nonzero()
-            out = numpy.zeros(len(idxs), rates_dt)
-            out['sid'] = self.sids[idxs]
-            out['lid'] = lids
-            out['gid'] = gids + gid
-            out['rate'] = rates[idxs, lids, gids]
-        else:
-            rates = self.acc[gid]
+        outs = []
+        for i, g in enumerate(gid):
+            if hasattr(self, 'array') :
+                rates = self.array[:, :, i]
+            else:
+                rates = self.acc[g]
             idxs, lids = rates.nonzero()
             out = numpy.zeros(len(idxs), rates_dt)
             out['sid'] = self.sids[idxs]
             out['lid'] = lids
-            out['gid'] = gid
+            out['gid'] = g
             out['rate'] = rates[idxs, lids]
-        return out
+            outs.append(out)
+        return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
         """
@@ -395,7 +392,8 @@ class MapArray(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        arr = self.to_rates().to_array()
+        G = self.array.shape[2]
+        arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
     def update_indep(self, poes, invs, ctxt, itime):

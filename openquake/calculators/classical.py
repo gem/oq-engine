@@ -110,7 +110,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     disagg_by_src = cmaker.disagg_by_src
     allsources = sources is None
     with dstore:
-        gid = cmaker.gid[0]
         if allsources:  # read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
@@ -138,7 +137,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rmap.to_array(gid), cmaker.num_chunks, h5)
+                    _store(rmap.to_array(cmaker.gid), cmaker.num_chunks, h5)
         else:
             result['pnemap'] = rmap
             result['pnemap'].gid = cmaker.gid
@@ -360,7 +359,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 pass
             elif dic.get('allsources'):
                 # store the rates directly, case_03
-                self.store(rmap.to_array(rmap.gid[0]))
+                self.store(rmap.to_array(rmap.gid))
             else:
                 # add the rates
                 self.rmap += rmap
@@ -547,7 +546,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
             for g in self.rmap.acc:
-                self.store(self.rmap.to_array(g))
+                self.store(self.rmap.to_array([g]))
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -589,7 +588,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    gid = dic['pnemap'].gid[0]
+                    gid = dic['pnemap'].gid
                     self.store(dic['pnemap'].to_array(gid))
         return {}
 
