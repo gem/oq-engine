@@ -539,6 +539,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for sites in self.sitecol.split(ntiles):
                         allargs.append((block, sites, cm, ds))
 
+        logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
