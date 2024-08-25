@@ -492,8 +492,8 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        Gt = len(self.trt_rlzs)
-        self.rmap = MapArray(self.sitecol.sids, L, Gt)
+        self.Gt = len(self.trt_rlzs)
+        self.rmap = MapArray(self.sitecol.sids, L, self.Gt)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -531,7 +531,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            self.store(self.rmap.to_array())
+            for g in range(self.Gt):
+                self.store(self.rmap.to_array(g))
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
