@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 import numba
-from openquake.baselib.general import cached_property
+from openquake.baselib.general import cached_property, AccumDict
 from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
@@ -236,6 +236,7 @@ class MapArray(object):
         self.sids = sids
         self.shape = (len(sids), shape_y, shape_z)
         self.rates = rates
+        self.acc = AccumDict(accum=numpy.zeros(self.shape[:2], F32))
 
     @cached_property
     def sidx(self):
@@ -247,9 +248,12 @@ class MapArray(object):
             idxs[sid] = idx
         return idxs
 
-    def new(self, array):
+    def new(self, acc):
         new = copy.copy(self)
-        new.array = array
+        if isinstance(acc, numpy.ndarray):
+            new.array = acc
+        else:
+            new.acc = acc
         return new
 
     def split(self):
@@ -320,7 +324,9 @@ class MapArray(object):
         """
         if self.rates:
             return self
-
+        if self.acc:
+            return self.new({g: -numpy.log(self.acc[g]) / itime
+                             for g in self.acc})
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -338,13 +344,22 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        rates = self.array
-        idxs, lids, gids = rates.nonzero()
-        out = numpy.zeros(len(idxs), rates_dt)
-        out['sid'] = self.sids[idxs]
-        out['lid'] = lids
-        out['gid'] = gids + gid
-        out['rate'] = rates[idxs, lids, gids]
+        if hasattr(self, 'array') :
+            rates = self.array
+            idxs, lids, gids = rates.nonzero()
+            out = numpy.zeros(len(idxs), rates_dt)
+            out['sid'] = self.sids[idxs]
+            out['lid'] = lids
+            out['gid'] = gids + gid
+            out['rate'] = rates[idxs, lids, gids]
+        else:
+            rates = self.acc[gid]
+            idxs, lids = rates.nonzero()
+            out = numpy.zeros(len(idxs), rates_dt)
+            out['sid'] = self.sids[idxs]
+            out['lid'] = lids
+            out['gid'] = gid
+            out['rate'] = rates[idxs, lids]
         return out
 
     def interp4D(self, imtls, poes):
@@ -413,12 +428,13 @@ class MapArray(object):
 
     def __iadd__(self, other):
         sidx = self.sidx[other.sids]
-        if hasattr(other, 'gid'):
-            G = other.array.shape[2]  # NLG
+        G = other.array.shape[2]  # NLG
+        if hasattr(self, 'array'):
             for i, g in enumerate(other.gid):
                 self.array[sidx, :, g] += other.array[:, :, i % G]
         else:
-            self.array[sidx] += other.array
+            for i, g in enumerate(other.gid):
+                self.acc[g][sidx] += other.array[:, :, i % G]
         return self
 
     def __repr__(self):

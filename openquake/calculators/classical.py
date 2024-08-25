@@ -107,15 +107,15 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    tiling = sources is None
     disagg_by_src = cmaker.disagg_by_src
+    allsources = sources is None
     with dstore:
         gid = cmaker.gid[0]
-        if tiling:  # tiling calculator, read the sources from the datastore
+        if allsources:  # read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        if sitecol is None:  # regular calculator, read the sites
+        if sitecol is None:  # read the sites
             sitecol = dstore['sitecol']  # super-fast
 
     if disagg_by_src and not getattr(sources, 'atomic', False):
@@ -129,10 +129,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        if tiling:
-            del result['source_data']  # save some data transfer
+        result['allsources'] = allsources
         rmap = result.pop('pnemap').to_rates()
-        if tiling and cmaker.save_on_tmp:
+        if cmaker.tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
@@ -140,8 +139,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rmap.to_array(gid), cmaker.num_chunks, h5)
-        elif tiling:
-            result['pnemap'] = rmap.to_array(gid)
         else:
             result['pnemap'] = rmap
             result['pnemap'].gid = cmaker.gid
@@ -352,11 +349,20 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
+        rmap = dic.pop('pnemap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(dic['pnemap'], grp_id)
-        self.rmap += dic['pnemap']  # add rates
+            acc[source_id] += self.haz.get_rates(rmap, grp_id)
+        if rmap is None:
+            # already stored in the workers, case_22
+            pass
+        elif dic.get('allsources'):
+            # store the rates directly, case_03
+            self.store(rmap.to_array(rmap.gid[0]))
+        else:
+            # add the rates
+            self.rmap += rmap
         return acc
 
     def create_rup(self):
@@ -497,7 +503,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        self.rmap = MapArray(self.sitecol.sids, L, Gt).fill(0)
+        self.rmap = MapArray(self.sitecol.sids, L, Gt)
         allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
@@ -516,13 +522,16 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
+            cm.num_chunks = self.num_chunks
+            cm.tiling = False
             if sg.atomic or sg.weight <= maxw:
-                blks = [sg]
+                blks = [None]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
             for block in blks:
-                logging.debug('Sending %d source(s) with weight %d',
-                              len(block), sg.weight)
+                if block:
+                    logging.debug('Sending %d source(s) with weight %d',
+                                  len(block), sg.weight)
                 if ntiles == 1:
                     allargs.append((block, None, cm, ds))
                 else:
@@ -533,7 +542,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing rates', measuremem=True):
-            self.store(self.rmap.to_array())
+            for g in self.rmap.acc:
+                self.store(self.rmap.to_array(g))
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
@@ -567,6 +577,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.num_chunks = self.num_chunks
+            cm.tiling = True
             allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         mon = self.monitor('storing rates')
@@ -574,7 +585,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor += dic['cfactor']
             if 'pnemap' in dic:  # save_on_tmp is false
                 with mon:
-                    self.store(dic['pnemap'])
+                    gid = dic['pnemap'].gid[0]
+                    self.store(dic['pnemap'].to_array(gid))
         return {}
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!

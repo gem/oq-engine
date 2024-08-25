@@ -172,26 +172,36 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     oq = cmakers[0].oq
     max_weight = csm.get_max_weight(oq)
     max_gb = float(config.memory.pmap_max_gb)
-    req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     fac = oq.imtls.size * N * 4 / 1024**3
-    regular = (req_gb < max_gb or oq.disagg_by_src or
-               N < oq.max_sites_disagg or oq.tile_spec)
-    tiles = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tile), len(cm.gsims)*fac*len(tile)/N)
-         for cm, tile in csm.split(cmakers, sitecol, max_weight)],
-        [('grp_id', U16), ('G', U16), ('N', U32), ('gb', F32)])
+
+    # store source_groups
     data = numpy.array(
         [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight, grp.codes)
          for grp, cm in zip(csm.src_groups, cmakers)],
         [('gsims', U16), ('size_mb', F32), ('weight', F32), ('codes', '<S8')])
     dstore.create_dset('source_groups', data, fillvalue=None)
+
+    light = [cm.grp_id for cm, sg in zip(cmakers, csm.src_groups)
+             if sg.weight <= max_weight]
+    logging.info('There are %d light groups out of %d',
+                 len(light), len(csm.src_groups))
+    req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
+    mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
+    if light:
+        logging.info('mem_gb = %.2f', mem_gb)
+    regular = (mem_gb < max_gb or oq.disagg_by_src or
+               N < oq.max_sites_disagg or oq.tile_spec)
+    tiles = numpy.array(
+        [(cm.grp_id, len(cm.gsims), len(tile), len(cm.gsims)*fac*len(tile)/N)
+         for cm, tile in csm.split(cmakers, sitecol, max_weight)],
+        [('grp_id', U16), ('G', U16), ('N', U32), ('gb', F32)])
     dstore.create_dset('tiles', tiles, fillvalue=None,
-                       attrs=dict(req_gb=req_gb, tiling=not regular))
+                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
     if not regular:
         logging.info(
             'This will be a tiling calculation with %d tasks, min_sites=%d',
             len(tiles), min(tiles['N']))
-        if req_gb >= 30 and (not config.directory.custom_tmp or
+        if mem_gb >= 30 and (not config.directory.custom_tmp or
                              not config.distribution.save_on_tmp):
             logging.info('We suggest to set custom_tmp and save_on_tmp')
     return req_gb, max_weight, trt_rlzs, gids
