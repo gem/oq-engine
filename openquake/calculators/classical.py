@@ -532,7 +532,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if block:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                if ntiles == 1:
+                if block is None or ntiles == 1:
                     allargs.append((block, None, cm, ds))
                 else:
                     for sites in self.sitecol.split(ntiles):
