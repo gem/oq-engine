@@ -516,10 +516,11 @@ class ClassicalCalculator(base.HazardCalculator):
         dset = ds['source_groups']
         size_mb = dset['size_mb']
         max_mb = float(config.memory.pmap_max_mb)
-        ntiles = numpy.ceil(size_mb / max_mb).max()
-        if ntiles > 1:
-            logging.info('Using %d tiles', ntiles)
-        maxw = self.max_weight * ntiles
+        tiles = numpy.ceil(size_mb / max_mb)
+        maxtiles = tiles.max()
+        if maxtiles > 1:
+            logging.info('Using %d tiles', maxtiles)
+        maxw = self.max_weight * maxtiles
         grp_ids = numpy.argsort(dset['weight'])[::-1]  # heavy groups first
         for cm in self.cmakers[grp_ids]:
             cm.gsims = list(cm.gsims)  # save data transfer
@@ -534,10 +535,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
             for block in blks:
                 if block:
-                    tiles = self.sitecol.split(ntiles)
+                    splits = self.sitecol.split(maxtiles)
                 else:  # weight <= max_weight
-                    tiles = self.sitecol.split(ntiles / 2)  # larger tiles
-                for tile in tiles:
+                    splits = self.sitecol.split(tiles[cm.grp_id] / 2)  # less tiles
+                for tile in splits:
                     logging.debug('Sending group %d with weight %d and %d sites',
                                   cm.grp_id, sg.weight, len(tile))
                     allargs.append((block, tile, cm, ds))
