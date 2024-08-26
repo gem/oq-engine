@@ -146,7 +146,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
             result['pnemap'] = rmap
-            result['pnemap'].gid = cmaker.gid
+            if not cmaker.light:
+                result['pnemap'].gid = cmaker.gid
         yield result
 
 
@@ -534,9 +535,10 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.num_chunks = self.num_chunks
             cm.tiling = False
+            cm.light = sg.weight <= self.max_weight
             if sg.atomic:
                 blks = [sg]
-            elif sg.weight <= self.max_weight:
+            elif cm.light:
                 blks = [None]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
