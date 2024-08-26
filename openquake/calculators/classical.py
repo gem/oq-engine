@@ -529,7 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.num_chunks = self.num_chunks
             cm.tiling = False
-            if sg.atomic or sg.weight <= maxw:
+            if sg.atomic or sg.weight <= self.max_weight:
                 blks = [None]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
