@@ -535,14 +535,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
             for block in blks:
                 if block:
+                    tiles = self.sitecol.split(ntiles)
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sg.weight)
-                if block is None:
-                    for sites in self.sitecol.split(size_mb[cm.grp_id] / (1024*max_gb)):
-                        allargs.append((block, sites, cm, ds))
                 else:
-                    for sites in self.sitecol.split(ntiles):
-                        allargs.append((block, sites, cm, ds))
+                    tiles = self.sitecol.split(size_mb[cm.grp_id] / (1024*max_gb))
+                for tile in tiles:
+                    allargs.append((block, tile, cm, ds))
 
         logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
