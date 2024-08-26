@@ -325,8 +325,9 @@ class MapArray(object):
         if self.rates:
             return self
         if self.acc:
-            return self.new({g: -numpy.log(self.acc[g]) / itime
-                             for g in self.acc})
+            for g in self.acc:
+                self.acc[g] = -numpy.log(self.acc[g]) / itime
+            return self.new(self.acc)
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -336,8 +337,7 @@ class MapArray(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes).astype(F32) / itime
-        return self.new(rates)
+        return self.new(-numpy.log(pnes) / itime)
 
     def to_array(self, gid):
         """
