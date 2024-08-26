@@ -436,11 +436,17 @@ class MapArray(object):
         G = other.array.shape[2]  # NLG
         if hasattr(self, 'array'):
             for i, g in enumerate(other.gid):
-                self.array[sidx, :, g] += other.array[:, :, i % G]
+                iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
         else:
             for i, g in enumerate(other.gid):
-                self.acc[g][sidx] += other.array[:, :, i % G]
+                iadd(self.acc[g], other.array[:, :, i % G], sidx)
         return self
 
     def __repr__(self):
         return '<MapArray(%d, %d, %d)>' % self.shape
+
+
+@compile("(float32[:, :], float32[:, :], uint32[:])")
+def iadd(arr, array, sidx):
+    for i, sid in enumerate(sidx):
+        arr[sid] += array[i]
