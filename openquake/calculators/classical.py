@@ -499,6 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return True
 
     def store(self, rates):
+        # logging.info('Storing %s', humansize(rates.nbytes))
         _store(rates, self.num_chunks, self.datastore)
 
     def execute_reg(self):
