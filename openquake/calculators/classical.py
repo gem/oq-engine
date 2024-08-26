@@ -46,6 +46,7 @@ F64 = numpy.float64
 I64 = numpy.int64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+GZIP = None
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
@@ -60,7 +61,7 @@ def _store(rates, num_chunks, h5):
         ch_rates = rates[chunks == chunk]
         try:
             h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
         except ValueError:  # already created
             offset = len(h5['_rates/sid'])
         else:
@@ -363,7 +364,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 pass
             elif isinstance(rmap, numpy.ndarray):
                 # store the rates directly, case_03
-                self.store(rmap)
+                self.store(rmap, grp_id)
             else:
                 # add the rates
                 self.rmap += rmap
@@ -423,7 +424,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.num_chunks = getters.get_num_chunks(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], 'gzip')
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):
@@ -498,8 +499,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def store(self, rates):
-        # logging.info('Storing %s', humansize(rates.nbytes))
+    def store(self, rates, gid):
+        logging.info('Storing %s for gid=%d', humansize(rates.nbytes), gid)
         _store(rates, self.num_chunks, self.datastore)
 
     def execute_reg(self):
@@ -546,10 +547,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        logging.info('Storing rates')
         with self.monitor('storing rates', measuremem=True):
             for g in self.rmap.acc:
-                self.store(self.rmap.to_array([g]))
+                self.store(self.rmap.to_array([g]), g)
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
