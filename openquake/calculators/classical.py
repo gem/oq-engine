@@ -536,8 +536,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 if block:
                     splits = self.sitecol.split(maxtiles)
-                else:  # weight <= max_weight
-                    splits = self.sitecol.split(tiles[cm.grp_id] / 2)  # less tiles
+                elif sg.weight <= self.max_weight / tiles[cm.grp_id]:
+                    splits = self.sitecol.split(tiles[cm.grp_id])  # less tiles
                 for tile in splits:
                     logging.debug('Sending group %d with weight %d and %d sites',
                                   cm.grp_id, sg.weight, len(tile))
