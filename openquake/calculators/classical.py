@@ -140,6 +140,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rmap.to_array(cmaker.gid), cmaker.num_chunks, h5)
+        elif allsources and not getattr(sources, 'atomic', False):
+            result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
             result['pnemap'] = rmap
             result['pnemap'].gid = cmaker.gid
@@ -359,9 +361,9 @@ class ClassicalCalculator(base.HazardCalculator):
             if rmap is None:
                 # already stored in the workers, case_22
                 pass
-            elif dic.get('allsources'):
+            elif isinstance(rmap, numpy.ndarray):
                 # store the rates directly, case_03
-                self.store(rmap.to_array(rmap.gid))
+                self.store(rmap)
             else:
                 # add the rates
                 self.rmap += rmap
@@ -534,10 +536,10 @@ class ClassicalCalculator(base.HazardCalculator):
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
             for block in blks:
-                if block:
-                    splits = self.sitecol.split(maxtiles)
-                elif sg.weight <= self.max_weight:
+                if sg.weight <= self.max_weight:
                     splits = self.sitecol.split(tiles[cm.grp_id])  # less tiles
+                else:
+                    splits = self.sitecol.split(maxtiles)
                 for tile in splits:
                     logging.debug('Sending group %d with weight %d and %d sites',
                                   cm.grp_id, sg.weight, len(tile))
