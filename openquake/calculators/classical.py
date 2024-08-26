@@ -521,7 +521,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if ntiles > 1:
             logging.info('Using %d tiles', ntiles)
         maxw = self.max_weight * ntiles
-        grp_ids = numpy.argsort(dset['weight'])[::-1]
+        grp_ids = numpy.argsort(dset['weight'])[::-1]  # heavy groups first
         for cm in self.cmakers[grp_ids]:
             cm.gsims = list(cm.gsims)  # save data transfer
             sg = self.csm.src_groups[cm.grp_id]
@@ -536,11 +536,11 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 if block:
                     tiles = self.sitecol.split(ntiles)
-                    logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), sg.weight)
-                else:
+                else:  # all sources
                     tiles = self.sitecol.split(size_mb[cm.grp_id] / (1024*max_gb))
                 for tile in tiles:
+                    logging.debug('Sending group %d with weight %d and %d sites',
+                                  cm.grp_id, sg.weight, len(tile))
                     allargs.append((block, tile, cm, ds))
 
         logging.info('Generated %d tasks', len(allargs))
