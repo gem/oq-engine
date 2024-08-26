@@ -30,6 +30,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+TWO20 = 2 ** 20  # 1 MB
 TWO24 = 2 ** 24
 rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
                         ('rate', F32)])
@@ -248,6 +249,12 @@ class MapArray(object):
             idxs[sid] = idx
         return idxs
 
+    @property
+    def size_mb(self):
+        if hasattr(self, 'array'):
+            return self.array.nbytes / TWO20
+        return sum(arr.nbytes / TWO20 for arr in self.acc.values())
+            
     def new(self, acc):
         new = copy.copy(self)
         if isinstance(acc, numpy.ndarray):

@@ -128,8 +128,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
+        # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         result['allsources'] = allsources
         rmap = result.pop('pnemap').remove_zeros().to_rates()
+        # print(f"{monitor.task_no=} {rmap.size_mb=}")
         if cmaker.tiling and cmaker.save_on_tmp:
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
