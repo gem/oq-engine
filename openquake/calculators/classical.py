@@ -547,6 +547,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+        logging.info('Storing rates')
         with self.monitor('storing rates', measuremem=True):
             for g in self.rmap.acc:
                 self.store(self.rmap.to_array([g]))
