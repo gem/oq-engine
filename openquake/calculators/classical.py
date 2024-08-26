@@ -110,6 +110,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     cmaker.init_monitoring(monitor)
     disagg_by_src = cmaker.disagg_by_src
     allsources = sources is None
+    atomic = getattr(sources, 'atomic', False)
     with dstore:
         if allsources:  # read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
@@ -118,7 +119,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         if sitecol is None:  # read the sites
             sitecol = dstore['sitecol']  # super-fast
 
-    if disagg_by_src and not getattr(sources, 'atomic', False):
+    if disagg_by_src and not atomic:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -141,7 +142,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rmap.to_array(cmaker.gid), cmaker.num_chunks, h5)
-        elif allsources and not getattr(sources, 'atomic', False):
+        elif allsources and not atomic:
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
             result['pnemap'] = rmap
@@ -500,7 +501,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return True
 
     def store(self, rates, gid):
-        logging.info('Storing %s for gid=%d', humansize(rates.nbytes), gid)
+        logging.info('Storing %s [%02d]', humansize(rates.nbytes), gid)
         _store(rates, self.num_chunks, self.datastore)
 
     def execute_reg(self):
@@ -533,7 +534,9 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.num_chunks = self.num_chunks
             cm.tiling = False
-            if sg.atomic or sg.weight <= self.max_weight:
+            if sg.atomic:
+                blks = [sg]
+            elif sg.weight <= self.max_weight:
                 blks = [None]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
