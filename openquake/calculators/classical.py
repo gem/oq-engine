@@ -54,6 +54,19 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 get_weight = operator.attrgetter('weight')
 
 
+def split2(sg, sitecol, maxtiles, maxw=None):
+    """
+    :yields: (sources, sites)
+    """
+    if maxw is None:
+        for tile in sitecol.split(maxtiles):
+            yield sg, tile
+    else:
+        for block in block_splitter(sg, maxw, get_weight, sort=True):
+            for tile in sitecol.split(maxtiles):
+                yield block, tile
+
+
 def _store(rates, num_chunks, h5):
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
@@ -109,7 +122,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     disagg_by_src = cmaker.disagg_by_src
-    atomic = getattr(sources, 'atomic', False)
+    atomic = cmaker.atomic
     allsources = sources is None or atomic
     with dstore:
         if allsources:  # read the sources from the datastore
@@ -536,14 +549,12 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.num_chunks = self.num_chunks
             cm.tiling = False
             cm.light = sg.weight <= self.max_weight
-            if sg.atomic:
-                blks = [sg]
-            elif cm.light:
-                blks = [None]
+            cm.atomic  = sg.atomic
+            if cm.atomic or cm.light:
+                for block, tile in split2(sg, self.sitecol, maxtiles):
+                    allargs.append((None, tile, cm, ds))
             else:
-                blks = block_splitter(sg, maxw, get_weight, sort=True)
-            for block in blks:
-                for tile in self.sitecol.split(maxtiles):
+                for block, tile in split2(sg, self.sitecol, maxtiles, maxw):
                     logging.debug('Sending group %d with weight %d and %d sites',
                                   cm.grp_id, sg.weight, len(tile))
                     allargs.append((block, tile, cm, ds))
@@ -586,6 +597,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.save_on_tmp = config.distribution.save_on_tmp
             cm.num_chunks = self.num_chunks
             cm.tiling = True
+            cm.atomic = sg.atomic
             allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         parallel.Starmap(
