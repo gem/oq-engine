@@ -30,6 +30,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+TWO20 = 2 ** 20  # 1 MB
 TWO24 = 2 ** 24
 rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
                         ('rate', F32)])
@@ -248,6 +249,12 @@ class MapArray(object):
             idxs[sid] = idx
         return idxs
 
+    @property
+    def size_mb(self):
+        if hasattr(self, 'array'):
+            return self.array.nbytes / TWO20
+        return sum(arr.nbytes / TWO20 for arr in self.acc.values())
+            
     def new(self, acc):
         new = copy.copy(self)
         if isinstance(acc, numpy.ndarray):
@@ -325,8 +332,9 @@ class MapArray(object):
         if self.rates:
             return self
         if self.acc:
-            return self.new({g: -numpy.log(self.acc[g]) / itime
-                             for g in self.acc})
+            for g in self.acc:
+                self.acc[g] = -numpy.log(self.acc[g]) / itime
+            return self.new(self.acc)
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -336,31 +344,29 @@ class MapArray(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes).astype(F32) / itime
-        return self.new(rates)
+        return self.new(-numpy.log(pnes) / itime)
 
-    def to_array(self, gid=0):
+    def to_array(self, gid):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if hasattr(self, 'array') :
-            rates = self.array
-            idxs, lids, gids = rates.nonzero()
-            out = numpy.zeros(len(idxs), rates_dt)
-            out['sid'] = self.sids[idxs]
-            out['lid'] = lids
-            out['gid'] = gids + gid
-            out['rate'] = rates[idxs, lids, gids]
-        else:
-            rates = self.acc[gid]
+        outs = []
+        for i, g in enumerate(gid):
+            if hasattr(self, 'array') :
+                rates = self.array[:, :, i]
+            else:
+                rates = self.acc[g]
             idxs, lids = rates.nonzero()
             out = numpy.zeros(len(idxs), rates_dt)
             out['sid'] = self.sids[idxs]
             out['lid'] = lids
-            out['gid'] = gid
+            out['gid'] = g
             out['rate'] = rates[idxs, lids]
-        return out
+            outs.append(out)
+        if len(outs) == 1:
+            return out
+        return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
         """
@@ -395,7 +401,8 @@ class MapArray(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        arr = self.to_rates().to_array()
+        G = self.array.shape[2]
+        arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
     def update_indep(self, poes, invs, ctxt, itime):
@@ -431,11 +438,17 @@ class MapArray(object):
         G = other.array.shape[2]  # NLG
         if hasattr(self, 'array'):
             for i, g in enumerate(other.gid):
-                self.array[sidx, :, g] += other.array[:, :, i % G]
+                iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
         else:
             for i, g in enumerate(other.gid):
-                self.acc[g][sidx] += other.array[:, :, i % G]
+                iadd(self.acc[g], other.array[:, :, i % G], sidx)
         return self
 
     def __repr__(self):
         return '<MapArray(%d, %d, %d)>' % self.shape
+
+
+@compile("(float32[:, :], float32[:, :], uint32[:])")
+def iadd(arr, array, sidx):
+    for i, sid in enumerate(sidx):
+        arr[sid] += array[i]
