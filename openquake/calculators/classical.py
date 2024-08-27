@@ -109,8 +109,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     disagg_by_src = cmaker.disagg_by_src
-    allsources = sources is None
     atomic = getattr(sources, 'atomic', False)
+    allsources = sources is None or atomic
     with dstore:
         if allsources:  # read the sources from the datastore
             with monitor('reading sources'):  # fast, but uses a lot of RAM
@@ -142,12 +142,12 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 # print('Saving rates on %s' % fname)
                 with hdf5.File(fname, 'a') as h5:
                     _store(rmap.to_array(cmaker.gid), cmaker.num_chunks, h5)
-        elif allsources and not atomic:
+        elif allsources and not disagg_by_src:
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
+            assert not cmaker.light, cmaker.grp_id
             result['pnemap'] = rmap
-            if not cmaker.light:
-                result['pnemap'].gid = cmaker.gid
+            result['pnemap'].gid = cmaker.gid
         yield result
 
 
@@ -366,7 +366,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 pass
             elif isinstance(rmap, numpy.ndarray):
                 # store the rates directly, case_03
-                self.store(rmap, grp_id)
+                self.store(rmap, self.gids[grp_id])
             else:
                 # add the rates
                 self.rmap += rmap
@@ -502,7 +502,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return True
 
     def store(self, rates, gid):
-        logging.info('Storing %s [%02d]', humansize(rates.nbytes), gid)
+        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
         _store(rates, self.num_chunks, self.datastore)
 
     def execute_reg(self):
@@ -554,7 +554,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         with self.monitor('storing rates', measuremem=True):
             for g in self.rmap.acc:
-                self.store(self.rmap.to_array([g]), g)
+                self.store(self.rmap.to_array([g]), [g])
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
