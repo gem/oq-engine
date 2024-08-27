@@ -551,8 +551,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.light = sg.weight <= self.max_weight
             cm.atomic  = sg.atomic
             if cm.atomic or cm.light:
-                mult = max(maxw / sg.weight, 10)
-                for block, tile in split2(sg, self.sitecol, maxtiles / mult):
+                for block, tile in split2(sg, self.sitecol, maxtiles / 2):
                     allargs.append((None, tile, cm, ds))
             else:
                 for block, tile in split2(sg, self.sitecol, maxtiles, maxw):
