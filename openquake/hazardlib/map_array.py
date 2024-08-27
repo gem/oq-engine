@@ -364,6 +364,8 @@ class MapArray(object):
             out['gid'] = g
             out['rate'] = rates[idxs, lids]
             outs.append(out)
+        if len(outs) == 1:
+            return out
         return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
