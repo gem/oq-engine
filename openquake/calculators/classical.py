@@ -153,8 +153,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
                 # print('Saving rates on %s' % fname)
+                with monitor('save rates', measuremem=True) as mon:
+                    rates = rmap.to_array(cmaker.gid)
+                print(mon)
                 with hdf5.File(fname, 'a') as h5:
-                    _store(rmap.to_array(cmaker.gid), cmaker.num_chunks, h5)
+                    _store(rates, cmaker.num_chunks, h5)
         elif allsources and not disagg_by_src:
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
