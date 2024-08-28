@@ -692,8 +692,6 @@ class CompositeSourceModel:
             size_mb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**2
             tiles.append(size_mb / max_mb)
         maxtiles = max(tiles)
-        if maxtiles > 1:
-            logging.info('Using %d tiles', maxtiles)
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
