@@ -702,7 +702,7 @@ class CompositeSourceModel:
             for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
                 yield None, sites, cmaker
 
-    def split2(self, cmakers, sitecol, max_weight, num_chunks):
+    def split_reg(self, cmakers, sitecol, max_weight, num_chunks):
         """
         :yields: (sources, sites, cmaker)
         """

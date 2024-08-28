@@ -443,6 +443,10 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
 
+    def store(self, rates, gid):
+        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
+        _store(rates, self.num_chunks, self.datastore)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -481,11 +485,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        if self.datastore['tiles'].attrs['tiling']:
-            self.execute_big()
-        else:
-            self.execute_reg()
-
+        self._execute()
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -503,28 +503,35 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def store(self, rates, gid):
-        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore)
-
-    def execute_reg(self):
-        """
-        Regular case
-        """
-        self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+    def _execute(self):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
         self.rmap = MapArray(self.sitecol.sids, L, Gt)
-        allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        for block, tile, cm in self.csm.split2(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
-            allargs.append((block, tile, cm, ds))
-
+        allargs = []
+        if self.datastore['tiles'].attrs['tiling']:
+            # tiling calculator
+            assert not oq.disagg_by_src
+            assert self.N > self.oqparam.max_sites_disagg, self.N
+            allargs = []
+            if config.distribution.save_on_tmp:
+                scratch = parallel.scratch_dir(self.datastore.calc_id)
+                logging.info('Storing the rates in %s', scratch)
+                self.datastore.hdf5.attrs['scratch_dir'] = scratch
+            for block, tile, cm in self.csm.split(
+                    self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
+                allargs.append((block, tile, cm, ds))
+        else:
+            # regular calculator
+            self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+            for block, tile, cm in self.csm.split_reg(
+                    self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
+                allargs.append((block, tile, cm, ds))
+            
         logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -537,30 +544,6 @@ class ClassicalCalculator(base.HazardCalculator):
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
-
-    def execute_big(self):
-        """
-        Use parallel tiling
-        """
-        oq = self.oqparam
-        assert not oq.disagg_by_src
-        assert self.N > self.oqparam.max_sites_disagg, self.N
-        allargs = []
-        if config.distribution.save_on_tmp:
-            scratch = parallel.scratch_dir(self.datastore.calc_id)
-            logging.info('Storing the rates in %s', scratch)
-            self.datastore.hdf5.attrs['scratch_dir'] = scratch
-        if '_csm' in self.datastore.parent:
-            ds = self.datastore.parent
-        else:
-            ds = self.datastore
-        for block, sites, cm in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
-            allargs.append((None, sites, cm, ds))
-        self.datastore.swmr_on()  # must come before the Starmap
-        parallel.Starmap(
-            classical, allargs, h5=self.datastore.hdf5
-        ).reduce(self.agg_dicts, AccumDict(accum=0.))
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular disaggregation/case_15 is sensitive to num_cores
