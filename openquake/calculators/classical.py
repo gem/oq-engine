@@ -507,31 +507,26 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
+        tiling = self.datastore['tiles'].attrs['tiling']
         self.rmap = MapArray(self.sitecol.sids, L, Gt)
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
         allargs = []
-        if self.datastore['tiles'].attrs['tiling']:
-            # tiling calculator
+        if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            allargs = []
             if config.distribution.save_on_tmp:
                 scratch = parallel.scratch_dir(self.datastore.calc_id)
                 logging.info('Storing the rates in %s', scratch)
                 self.datastore.hdf5.attrs['scratch_dir'] = scratch
-            for block, tile, cm in self.csm.split(
-                    self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
-                allargs.append((block, tile, cm, ds))
-        else:
-            # regular calculator
+        else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-            for block, tile, cm in self.csm.split_reg(
-                    self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
-                allargs.append((block, tile, cm, ds))
-            
+        for block, tile, cm in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight,
+                self.num_chunks if tiling else None):
+            allargs.append((block, tile, cm, ds))
         logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)

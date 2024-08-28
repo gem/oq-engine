@@ -684,28 +684,6 @@ class CompositeSourceModel:
         """
         :yields: (sources, sites, cmaker)
         """
-        N = len(sitecol)
-        oq = cmakers[0].oq
-        max_mb = float(config.memory.pmap_max_mb)
-        # send heavy groups first
-        grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
-        for cmaker in cmakers[grp_ids]:
-            sg = self.src_groups[cmaker.grp_id]
-            size_mb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**2
-            grp = self.src_groups[cmaker.grp_id]
-            nsplits = max(size_mb / max_mb / 2, grp.weight / max_weight)
-            cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cmaker.save_on_tmp = config.distribution.save_on_tmp
-            cmaker.num_chunks = num_chunks
-            cmaker.tiling = True
-            cmaker.atomic = sg.atomic
-            for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
-                yield None, sites, cmaker
-
-    def split_reg(self, cmakers, sitecol, max_weight, num_chunks):
-        """
-        :yields: (sources, sites, cmaker)
-        """
         max_mb = float(config.memory.pmap_max_mb)
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -724,10 +702,14 @@ class CompositeSourceModel:
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cmaker.save_on_tmp = config.distribution.save_on_tmp
             cmaker.num_chunks = num_chunks
-            cmaker.tiling = False
+            cmaker.tiling = num_chunks is not None
             cmaker.light = sg.weight <= max_weight
-            cmaker.atomic  = sg.atomic
-            if sg.atomic or sg.weight <= max_weight:
+            cmaker.atomic = sg.atomic
+            if cmaker.tiling:
+                nsplits = max(size_mb / max_mb / 2, sg.weight / max_weight)
+                for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
+                    yield None, sites, cmaker
+            elif sg.atomic or sg.weight <= max_weight:
                 for tile in sitecol.split(maxtiles / 2):
                     yield None, tile, cmaker
             else:
