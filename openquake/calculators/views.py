@@ -20,7 +20,6 @@ import io
 import ast
 import html
 import json
-import zlib
 import os.path
 import numbers
 import operator
@@ -28,7 +27,6 @@ import functools
 import itertools
 import collections
 import logging
-import pickle
 import numpy
 import pandas
 

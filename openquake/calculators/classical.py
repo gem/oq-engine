@@ -23,14 +23,13 @@ import zlib
 import pickle
 import psutil
 import logging
-import operator
 import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize)
+    AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
