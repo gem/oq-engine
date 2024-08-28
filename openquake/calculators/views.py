@@ -20,6 +20,7 @@ import io
 import ast
 import html
 import json
+import zlib
 import os.path
 import numbers
 import operator
@@ -27,6 +28,7 @@ import functools
 import itertools
 import collections
 import logging
+import pickle
 import numpy
 import pandas
 
@@ -1851,3 +1853,14 @@ def view_long_ruptures(token, dstore):
                             ('maxmag', float), ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
+
+@view.add('groups_mem')
+def view_groups_mem(token, dstore):
+    mem = []
+    for grp_id, tup in enumerate(dstore['source_groups']):
+        with Monitor('reading sources', measuremem=True) as mon:
+            arr = dstore.getitem('_csm')[grp_id]
+            sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        del sources
+        mem.append((mon.mem / 1024**2, grp_id))
+    return numpy.array(sorted(mem), [('mem_mb', F32), ('grp_id', U32)])
