@@ -1853,15 +1853,3 @@ def view_long_ruptures(token, dstore):
                             ('maxmag', float), ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
-
-@view.add('groups_mem')
-def view_groups_mem(token, dstore):
-    mem = []
-    for grp_id, tup in enumerate(dstore['source_groups']):
-        with Monitor('reading sources', measuremem=True) as mon:
-            arr = dstore.getitem('_csm')[grp_id]
-            bytes = zlib.decompress(arr.tobytes())
-            group = pickle.loads(bytes)
-        del group
-        mem.append((mon.mem / 1024**2, len(bytes)/ 1024**2, grp_id))
-    return numpy.array(sorted(mem), [('mem_mb', F32), ('bytes', F32), ('grp_id', U32)])
