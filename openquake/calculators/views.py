@@ -1860,7 +1860,8 @@ def view_groups_mem(token, dstore):
     for grp_id, tup in enumerate(dstore['source_groups']):
         with Monitor('reading sources', measuremem=True) as mon:
             arr = dstore.getitem('_csm')[grp_id]
-            sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        del sources
-        mem.append((mon.mem / 1024**2, grp_id))
-    return numpy.array(sorted(mem), [('mem_mb', F32), ('grp_id', U32)])
+            bytes = zlib.decompress(arr.tobytes())
+            group = pickle.loads(bytes)
+        del group
+        mem.append((mon.mem / 1024**2, len(bytes)/ 1024**2, grp_id))
+    return numpy.array(sorted(mem), [('mem_mb', F32), ('bytes', F32), ('grp_id', U32)])
