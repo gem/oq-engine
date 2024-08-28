@@ -126,7 +126,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     allsources = sources is None or atomic
     with dstore:
         if allsources:  # read the sources from the datastore
-            with monitor('reading sources'):  # fast, but uses a lot of RAM
+            with monitor('reading source group', measuremem=True):
+                # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(zlib.decompress(arr.tobytes()))
         if sitecol is None:  # read the sites
