@@ -87,7 +87,7 @@ def _store(rates, num_chunks, h5):
     iss = numpy.array(idx_start_stop, getters.slice_dt)
     if '_rates/slice_by_idx' in h5:
         hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    else:  # writing small file
+    else:  # writing on a small file
         h5['_rates/slice_by_idx'] = iss
 
 
@@ -143,22 +143,22 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
+        print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         result['allsources'] = allsources
         rmap = result.pop('pnemap').remove_zeros().to_rates()
         # print(f"{monitor.task_no=} {rmap.size_mb=}")
         if cmaker.tiling and cmaker.save_on_tmp:
+            del result['source_data']
             # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
-                # print('Saving rates on %s' % fname)
-                with monitor('save rates', measuremem=True) as mon:
+                with monitor('save rates', measuremem=True):
                     rates = rmap.to_array(cmaker.gid)
-                print(mon)
-                with hdf5.File(fname, 'a') as h5:
-                    _store(rates, cmaker.num_chunks, h5)
+                    with hdf5.File(fname, 'a') as h5:
+                        _store(rates, cmaker.num_chunks, h5)
         elif allsources and not disagg_by_src:
+            del result['source_data']
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
             assert not cmaker.light, cmaker.grp_id
@@ -356,10 +356,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        sdata = dic['source_data']
-        self.source_data += sdata
         grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+        sdata = dic.pop('source_data', None)
+        if sdata is not None:
+            self.source_data += sdata
+            self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         cfactor = dic.pop('cfactor')
         if cfactor[1] != cfactor[0]:
             print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
