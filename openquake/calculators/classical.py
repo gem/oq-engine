@@ -146,7 +146,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         result['allsources'] = allsources
         rmap = result.pop('pnemap').remove_zeros().to_rates()
-        # print(f"{monitor.task_no=} {rmap.size_mb=}")
         if cmaker.tiling and cmaker.save_on_tmp:
             del result['source_data']
             # tested in case_22
