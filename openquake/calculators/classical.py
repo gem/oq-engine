@@ -23,14 +23,13 @@ import zlib
 import pickle
 import psutil
 import logging
-import operator
 import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize)
+    AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -51,7 +50,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
-get_weight = operator.attrgetter('weight')
 
 
 def _store(rates, num_chunks, h5):
@@ -74,7 +72,7 @@ def _store(rates, num_chunks, h5):
     iss = numpy.array(idx_start_stop, getters.slice_dt)
     if '_rates/slice_by_idx' in h5:
         hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    else:  # writing small file
+    else:  # writing on a small file
         h5['_rates/slice_by_idx'] = iss
 
 
@@ -108,18 +106,15 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    disagg_by_src = cmaker.disagg_by_src
-    atomic = getattr(sources, 'atomic', False)
-    allsources = sources is None or atomic
+    allsources = sources is None or cmaker.atomic
     with dstore:
-        if allsources:  # read the sources from the datastore
-            with monitor('reading sources'):  # fast, but uses a lot of RAM
-                arr = dstore.getitem('_csm')[cmaker.grp_id]
-                sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        if sources is None:  # read the sources from the datastore
+            arr = dstore.getitem('_csm')[cmaker.grp_id]
+            sources = pickle.loads(zlib.decompress(arr.tobytes()))
         if sitecol is None:  # read the sites
             sitecol = dstore['sitecol']  # super-fast
 
-    if disagg_by_src and not atomic:
+    if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -131,21 +126,20 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     else:
         result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
-        result['allsources'] = allsources
         rmap = result.pop('pnemap').remove_zeros().to_rates()
-        # print(f"{monitor.task_no=} {rmap.size_mb=}")
-        if cmaker.tiling and cmaker.save_on_tmp:
-            # tested in case_22
+        if cmaker.tiling and cmaker.save_on_tmp:  # tested in case_22
+            del result['source_data']
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
-                # print('Saving rates on %s' % fname)
-                with hdf5.File(fname, 'a') as h5:
-                    _store(rmap.to_array(cmaker.gid), cmaker.num_chunks, h5)
-        elif allsources and not disagg_by_src:
+                with monitor('save rates', measuremem=True):
+                    rates = rmap.to_array(cmaker.gid)
+                    with hdf5.File(fname, 'a') as h5:
+                        _store(rates, cmaker.num_chunks, h5)
+        elif allsources and not cmaker.disagg_by_src:
+            del result['source_data']
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
-            assert not cmaker.light, cmaker.grp_id
             result['pnemap'] = rmap
             result['pnemap'].gid = cmaker.gid
         yield result
@@ -340,10 +334,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        sdata = dic['source_data']
-        self.source_data += sdata
         grp_id = dic.pop('grp_id')
-        self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+        sdata = dic.pop('source_data', None)
+        if sdata is not None:
+            self.source_data += sdata
+            self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         cfactor = dic.pop('cfactor')
         if cfactor[1] != cfactor[0]:
             print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
@@ -441,6 +436,10 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
 
+    def store(self, rates, gid):
+        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
+        _store(rates, self.num_chunks, self.datastore)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -479,11 +478,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        if self.datastore['tiles'].attrs['tiling']:
-            self.execute_big()
-        else:
-            self.execute_reg()
-
+        self._execute()
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -501,53 +496,30 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def store(self, rates, gid):
-        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore)
-
-    def execute_reg(self):
-        """
-        Regular case
-        """
-        self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+    def _execute(self):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
+        tiling = self.datastore['tiles'].attrs['tiling']
         self.rmap = MapArray(self.sitecol.sids, L, Gt)
-        allargs = []
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        dset = ds['source_groups']
-        size_mb = dset['size_mb']
-        max_mb = float(config.memory.pmap_max_mb)
-        tiles = numpy.ceil(size_mb / max_mb)
-        maxtiles = tiles.max()
-        if maxtiles > 1:
-            logging.info('Using %d tiles', maxtiles)
-        maxw = self.max_weight * maxtiles
-        grp_ids = numpy.argsort(dset['weight'])[::-1]  # heavy groups first
-        for cm in self.cmakers[grp_ids]:
-            cm.gsims = list(cm.gsims)  # save data transfer
-            sg = self.csm.src_groups[cm.grp_id]
-            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.num_chunks = self.num_chunks
-            cm.tiling = False
-            cm.light = sg.weight <= self.max_weight
-            if sg.atomic:
-                blks = [sg]
-            elif cm.light:
-                blks = [None]
-            else:
-                blks = block_splitter(sg, maxw, get_weight, sort=True)
-            for block in blks:
-                for tile in self.sitecol.split(maxtiles):
-                    logging.debug('Sending group %d with weight %d and %d sites',
-                                  cm.grp_id, sg.weight, len(tile))
-                    allargs.append((block, tile, cm, ds))
-
+        allargs = []
+        if tiling:
+            assert not oq.disagg_by_src
+            assert self.N > self.oqparam.max_sites_disagg, self.N
+            if config.distribution.save_on_tmp:
+                scratch = parallel.scratch_dir(self.datastore.calc_id)
+                logging.info('Storing the rates in %s', scratch)
+                self.datastore.hdf5.attrs['scratch_dir'] = scratch
+        else:  # regular calculator
+            self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+        for block, tile, cm in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight,
+                self.num_chunks if tiling else None):
+            allargs.append((block, tile, cm, ds))
         logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -560,37 +532,6 @@ class ClassicalCalculator(base.HazardCalculator):
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
-
-    def execute_big(self):
-        """
-        Use parallel tiling
-        """
-        oq = self.oqparam
-        assert not oq.disagg_by_src
-        assert self.N > self.oqparam.max_sites_disagg, self.N
-        allargs = []
-        if config.distribution.save_on_tmp:
-            scratch = parallel.scratch_dir(self.datastore.calc_id)
-            logging.info('Storing the rates in %s', scratch)
-            self.datastore.hdf5.attrs['scratch_dir'] = scratch
-        if '_csm' in self.datastore.parent:
-            ds = self.datastore.parent
-        else:
-            ds = self.datastore
-        # send heavy groups first
-        grp_ids = numpy.argsort(ds['source_groups']['weight'])[::-1]
-        for cm, sites in self.csm.split(
-                self.cmakers[grp_ids], self.sitecol, self.max_weight):
-            sg = self.csm.src_groups[cm.grp_id]
-            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.num_chunks = self.num_chunks
-            cm.tiling = True
-            allargs.append((None, sites, cm, ds))
-        self.datastore.swmr_on()  # must come before the Starmap
-        parallel.Starmap(
-            classical, allargs, h5=self.datastore.hdf5
-        ).reduce(self.agg_dicts, AccumDict(accum=0.))
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular disaggregation/case_15 is sensitive to num_cores

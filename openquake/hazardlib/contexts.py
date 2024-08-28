@@ -1120,8 +1120,8 @@ class ContextMaker(object):
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
             yield poes, slc
-        #ms, ps = mean_stdt.nbytes / TWO20, poes.nbytes / TWO20
-        #print('C=%d, mean_stds=%.1fM, poes=%.1fM, G=%d' % (len(ctx), ms, ps, G))
+        #cs, ms, ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
+        #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
 
     def gen_poes(self, ctx):
         """

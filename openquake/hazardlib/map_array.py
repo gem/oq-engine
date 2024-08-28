@@ -354,18 +354,17 @@ class MapArray(object):
         outs = []
         for i, g in enumerate(gid):
             if hasattr(self, 'array') :
-                rates = self.array[:, :, i]
+                rates_g = self.array[:, :, i]
             else:
-                rates = self.acc[g]
-            idxs, lids = rates.nonzero()
-            out = numpy.zeros(len(idxs), rates_dt)
-            out['sid'] = self.sids[idxs]
-            out['lid'] = lids
-            out['gid'] = g
-            out['rate'] = rates[idxs, lids]
-            outs.append(out)
-        if len(outs) == 1:
-            return out
+                rates_g = self.acc[g]
+            for lid, rates in enumerate(rates_g.T):
+                idxs, = rates.nonzero()
+                out = numpy.zeros(len(idxs), rates_dt)
+                out['sid'] = self.sids[idxs]
+                out['lid'] = lid
+                out['gid'] = g
+                out['rate'] = rates[idxs]
+                outs.append(out)
         return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
