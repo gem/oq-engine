@@ -686,7 +686,7 @@ class CompositeSourceModel:
         for cmaker in cmakers:
             size_mb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**2
             grp = self.src_groups[cmaker.grp_id]
-            nsplits = general.ceil(max(size_mb / max_mb, grp.weight / max_weight))
+            nsplits = max(size_mb / max_mb / 2, grp.weight / max_weight)
             for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
                 yield cmaker, sites
 
