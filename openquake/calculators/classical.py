@@ -125,7 +125,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     atomic = cmaker.atomic
     allsources = sources is None or atomic
     with dstore:
-        if allsources:  # read the sources from the datastore
+        if sources is None:  # read the sources from the datastore
             with monitor('reading source group', measuremem=True):
                 # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
@@ -144,8 +144,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
-        result['allsources'] = allsources
+        # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         rmap = result.pop('pnemap').remove_zeros().to_rates()
         if cmaker.tiling and cmaker.save_on_tmp:
             del result['source_data']
