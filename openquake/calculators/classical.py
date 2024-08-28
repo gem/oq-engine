@@ -107,19 +107,15 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    disagg_by_src = cmaker.disagg_by_src
-    atomic = cmaker.atomic
-    allsources = sources is None or atomic
+    allsources = sources is None or cmaker.atomic
     with dstore:
         if sources is None:  # read the sources from the datastore
-            with monitor('reading source group', measuremem=True):
-                # fast, but uses a lot of RAM
-                arr = dstore.getitem('_csm')[cmaker.grp_id]
-                sources = pickle.loads(zlib.decompress(arr.tobytes()))
+            arr = dstore.getitem('_csm')[cmaker.grp_id]
+            sources = pickle.loads(zlib.decompress(arr.tobytes()))
         if sitecol is None:  # read the sites
             sitecol = dstore['sitecol']  # super-fast
 
-    if disagg_by_src and not atomic:
+    if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -132,9 +128,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         rmap = result.pop('pnemap').remove_zeros().to_rates()
-        if cmaker.tiling and cmaker.save_on_tmp:
+        if cmaker.tiling and cmaker.save_on_tmp:  # tested in case_22
             del result['source_data']
-            # tested in case_22
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
@@ -142,11 +137,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                     rates = rmap.to_array(cmaker.gid)
                     with hdf5.File(fname, 'a') as h5:
                         _store(rates, cmaker.num_chunks, h5)
-        elif allsources and not disagg_by_src:
+        elif allsources and not cmaker.disagg_by_src:
             del result['source_data']
             result['pnemap'] = rmap.to_array(cmaker.gid)
         else:
-            assert not cmaker.light, cmaker.grp_id
             result['pnemap'] = rmap
             result['pnemap'].gid = cmaker.gid
         yield result

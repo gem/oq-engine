@@ -703,7 +703,7 @@ class CompositeSourceModel:
             cmaker.save_on_tmp = config.distribution.save_on_tmp
             cmaker.num_chunks = num_chunks
             cmaker.tiling = num_chunks is not None
-            cmaker.light = sg.weight <= max_weight
+            cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
             if cmaker.tiling:
                 nsplits = max(size_mb / max_mb / 2, sg.weight / max_weight)
