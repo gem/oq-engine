@@ -195,9 +195,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                N < oq.max_sites_disagg or oq.tile_spec)
     num_chunks = None if regular else 1
     tiles = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tile), len(cm.gsims)*fac*len(tile)/N)
+        [(cm.grp_id, len(cm.gsims), len(tile),
+          cm.weight, len(cm.gsims) * fac * len(tile) / N)
          for _, tile, cm in csm.split(cmakers, sitecol, max_weight, num_chunks)],
-        [('grp_id', U16), ('G', U16), ('N', U32), ('gb', F32)])
+        [('grp_id', U16), ('G', U16), ('N', U32), ('weight', F32), ('gb', F32)])
     dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
     if not regular:
