@@ -51,20 +51,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
-get_weight = operator.attrgetter('weight')
-
-
-def split2(sg, sitecol, maxtiles, maxw=None):
-    """
-    :yields: (sources, sites)
-    """
-    if maxw is None:
-        for tile in sitecol.split(maxtiles):
-            yield sg, tile
-    else:
-        for block in block_splitter(sg, maxw, get_weight, sort=True):
-            for tile in sitecol.split(maxtiles):
-                yield block, tile
 
 
 def _store(rates, num_chunks, h5):
@@ -535,32 +521,9 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        dset = ds['source_groups']
-        size_mb = dset['size_mb']
-        max_mb = float(config.memory.pmap_max_mb)
-        tiles = numpy.ceil(size_mb / max_mb)
-        maxtiles = tiles.max()
-        if maxtiles > 1:
-            logging.info('Using %d tiles', maxtiles)
-        maxw = self.max_weight * maxtiles
-        grp_ids = numpy.argsort(dset['weight'])[::-1]  # heavy groups first
-        for cm in self.cmakers[grp_ids]:
-            cm.gsims = list(cm.gsims)  # save data transfer
-            sg = self.csm.src_groups[cm.grp_id]
-            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.num_chunks = self.num_chunks
-            cm.tiling = False
-            cm.light = sg.weight <= self.max_weight
-            cm.atomic  = sg.atomic
-            if cm.atomic or cm.light:
-                for block, tile in split2(sg, self.sitecol, maxtiles / 2):
-                    allargs.append((None, tile, cm, ds))
-            else:
-                for block, tile in split2(sg, self.sitecol, maxtiles, maxw):
-                    logging.debug('Sending group %d with weight %d and %d sites',
-                                  cm.grp_id, sg.weight, len(tile))
-                    allargs.append((block, tile, cm, ds))
+        for block, tile, cm in self.csm.split2(
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
+            allargs.append((block, tile, cm, ds))
 
         logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
@@ -591,16 +554,8 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        # send heavy groups first
-        grp_ids = numpy.argsort(ds['source_groups']['weight'])[::-1]
-        for cm, sites in self.csm.split(
-                self.cmakers[grp_ids], self.sitecol, self.max_weight):
-            sg = self.csm.src_groups[cm.grp_id]
-            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.save_on_tmp = config.distribution.save_on_tmp
-            cm.num_chunks = self.num_chunks
-            cm.tiling = True
-            cm.atomic = sg.atomic
+        for block, sites, cm in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             allargs.append((None, sites, cm, ds))
         self.datastore.swmr_on()  # must come before the Starmap
         parallel.Starmap(
