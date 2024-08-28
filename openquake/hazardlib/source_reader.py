@@ -682,11 +682,11 @@ class CompositeSourceModel:
     def split(self, cmakers, sitecol, max_weight):
         N = len(sitecol)
         oq = cmakers[0].oq
-        max_gb = float(config.memory.pmap_max_gb)
+        max_mb = float(config.memory.pmap_max_mb)
         for cmaker in cmakers:
-            size_gb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**3
+            size_mb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**2
             grp = self.src_groups[cmaker.grp_id]
-            nsplits = general.ceil(max(size_gb / max_gb, grp.weight / max_weight))
+            nsplits = general.ceil(max(size_mb / max_mb, grp.weight / max_weight))
             for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
                 yield cmaker, sites
 
