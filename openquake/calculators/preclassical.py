@@ -176,9 +176,11 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # store source_groups
     data = numpy.array(
-        [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight, grp.codes)
+        [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight,
+          grp.codes, cm.trt)
          for grp, cm in zip(csm.src_groups, cmakers)],
-        [('gsims', U16), ('size_mb', F32), ('weight', F32), ('codes', '<S8')])
+        [('gsims', U16), ('size_mb', F32), ('weight', F32), ('codes', '<S8'),
+         ('trt', '<S20')])
     dstore.create_dset('source_groups', data, fillvalue=None)
 
     light = [cm.grp_id for cm, sg in zip(cmakers, csm.src_groups)
