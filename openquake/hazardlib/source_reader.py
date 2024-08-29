@@ -693,10 +693,10 @@ class CompositeSourceModel:
             split_by_gsim = oq.split_by_gsim
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         if split_by_gsim:
+            self.splits = numpy.full(len(cmakers), mb_per_gsim / max_mb)
+        else:
             self.splits = numpy.array([len(cmaker.gsims) * mb_per_gsim / max_mb
                                        for cmaker in cmakers])
-        else:
-            self.splits = numpy.full(len(cmakers), mb_per_gsim / max_mb)
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
