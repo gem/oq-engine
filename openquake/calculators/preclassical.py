@@ -202,9 +202,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
     if not regular:
+        Ns = tiles['N']
         logging.info(
-            'This will be a tiling calculation with %d tasks, min_sites=%d',
-            len(tiles), min(tiles['N']))
+            'This will be a tiling calculation with %d tasks, '
+            'min_sites=%d, max_sites=%d', len(tiles), Ns.min(), Ns.max())
         if mem_gb >= 30 and (not config.directory.custom_tmp or
                              not config.distribution.save_on_tmp):
             logging.info('We suggest to set custom_tmp and save_on_tmp')

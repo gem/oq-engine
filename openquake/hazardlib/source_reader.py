@@ -696,11 +696,12 @@ class CompositeSourceModel:
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
             if split_by_gsim:
+                G = len(cmaker.gsims)
                 for g, gsim in zip(cmaker.gid, cmaker.gsims):
                     cm = copy.copy(cmaker)
                     cm.gid = [g]
                     cm.gsims = [gsim]
-                    yield from self._split(cm, sitecol, max_weight, num_chunks)
+                    yield from self._split(cm, sitecol, max_weight*G, num_chunks)
             else:
                 yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
