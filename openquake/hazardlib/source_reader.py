@@ -691,15 +691,17 @@ class CompositeSourceModel:
             split_by_gsim = oq.concurrent_tasks > 512
         else:
             split_by_gsim = oq.split_by_gsim
-        size_mb = numpy.array([len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**2
-                               for cmaker in cmakers])
-        self.splits = size_mb / max_mb
+        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
+        if split_by_gsim:
+            self.splits = numpy.array([len(cmaker.gsims) * mb_per_gsim / max_mb
+                                       for cmaker in cmakers])
+        else:
+            self.splits = numpy.full(len(cmakers), mb_per_gsim / max_mb)
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
             if split_by_gsim:
                 G = len(cmaker.gsims)
-                self.splits /= G
                 for g, gsim in zip(cmaker.gid, cmaker.gsims):
                     cm = copy.copy(cmaker)
                     cm.gid = [g]
@@ -709,7 +711,7 @@ class CompositeSourceModel:
                 yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
-        maxtiles = self.splits.max()
+        maxsplits = self.splits.max()
         sg = self.src_groups[cmaker.grp_id]
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
@@ -719,16 +721,16 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if cmaker.tiling:
-            nsplits = max(self.splits[cmaker.grp_id] / 2, sg.weight / max_weight)
+            nsplits = max(self.splits[cmaker.grp_id], sg.weight / max_weight)
             for sites in sitecol.split(nsplits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:
-            for tile in sitecol.split(maxtiles / 2):
+            for tile in sitecol.split(maxsplits):
                 yield None, tile, cmaker
         else:
-            maxw = max_weight * maxtiles
+            maxw = max_weight * maxsplits
             for block in general.block_splitter(sg, maxw, get_weight):
-                for tile in sitecol.split(maxtiles):
+                for tile in sitecol.split(maxsplits):
                     yield block, tile, cmaker
 
     def __toh5__(self):
