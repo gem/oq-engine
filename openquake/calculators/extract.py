@@ -897,11 +897,11 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
-def _gmf(df, num_sites, imts):
+def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
-    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts])
-    for m, imt in enumerate(imts):
-        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}']
+    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
+    for m, imt in enumerate(imts + sec_imts):
+        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}'] if imt in imts else df[imt]
     return gmfa
 
 
@@ -952,7 +952,9 @@ def extract_gmf_npz(dstore, what):
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
-        gmfa = _gmf(df, n, oq.imtls)
+        imts = list(oq.imtls)
+        sec_imts = oq.sec_imts
+        gmfa = _gmf(df, n, imts, sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
