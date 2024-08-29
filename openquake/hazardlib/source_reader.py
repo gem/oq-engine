@@ -706,6 +706,7 @@ class CompositeSourceModel:
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
         max_mb = float(config.memory.pmap_max_mb)
+        size_mb = self.size_mb[cmaker.grp_id]
         maxtiles = (self.size_mb / max_mb).max()
         sg = self.src_groups[cmaker.grp_id]
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
@@ -716,7 +717,7 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if cmaker.tiling:
-            nsplits = max(self.size_mb / max_mb / 2, sg.weight / max_weight)
+            nsplits = max(size_mb / max_mb / 2, sg.weight / max_weight)
             for sites in sitecol.split(nsplits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:

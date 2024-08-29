@@ -500,7 +500,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        tiling = self.datastore['tiles'].attrs['tiling']
+        tiles = self.datastore['tiles']
+        Ns = numpy.unique(tiles['N'])
+        if len(Ns) > 1:
+            logging.info('min_sites=%d, max_sites=%d', Ns.min(), Ns.max())
+        tiling = tiles.attrs['tiling']
         self.rmap = MapArray(self.sitecol.sids, L, Gt)
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
