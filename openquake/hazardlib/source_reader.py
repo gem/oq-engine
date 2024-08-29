@@ -687,12 +687,8 @@ class CompositeSourceModel:
         N = len(sitecol)
         oq = cmakers[0].oq
         max_mb = float(config.memory.pmap_max_mb)
-        if oq.split_by_gsim is None:
-            split_by_gsim = oq.concurrent_tasks > 512
-        else:
-            split_by_gsim = oq.split_by_gsim
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        if split_by_gsim:
+        if oq.split_by_gsim:
             self.splits = numpy.full(len(cmakers), numpy.ceil(mb_per_gsim / max_mb))
         else:
             self.splits = numpy.ceil([len(cmaker.gsims) * mb_per_gsim / max_mb
@@ -700,7 +696,7 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
-            if split_by_gsim:
+            if oq.split_by_gsim:
                 G = len(cmaker.gsims)
                 for g, gsim in zip(cmaker.gid, cmaker.gsims):
                     cm = copy.copy(cmaker)
