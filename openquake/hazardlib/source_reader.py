@@ -715,7 +715,7 @@ class CompositeSourceModel:
         splits = self.splits[cmaker.grp_id]
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-        cmaker.save_on_tmp = config.distribution.save_on_tmp
+        cmaker.custom_tmp = config.directory.custom_tmp
         cmaker.num_chunks = num_chunks
         cmaker.tiling = num_chunks is not None
         cmaker.weight = sg.weight

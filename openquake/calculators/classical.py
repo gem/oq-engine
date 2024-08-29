@@ -127,7 +127,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         rmap = result.pop('pnemap').remove_zeros().to_rates()
-        if cmaker.tiling and cmaker.save_on_tmp:  # tested in case_22
+        if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
             del result['source_data']
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
@@ -511,7 +511,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            if config.distribution.save_on_tmp:
+            if config.directory.custom_tmp:
                 scratch = parallel.scratch_dir(self.datastore.calc_id)
                 logging.info('Storing the rates in %s', scratch)
                 self.datastore.hdf5.attrs['scratch_dir'] = scratch
@@ -664,7 +664,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = [(getter, wget, hstats, individual, oq.max_sites_disagg,
                     self.amplifier) for getter in getters.map_getters(
                         dstore, self.full_lt)]
-        if not config.distribution.save_on_tmp and not allargs:  # case_60
+        if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
             return
         self.hazard = {}  # kind -> array
