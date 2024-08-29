@@ -68,15 +68,13 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     rmap = MapArray(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
-        G = len(cmaker.gsims)
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
         rates = dic['pnemap'].to_rates()
+        rates.gid = gids[cmaker.grp_id]
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        for i, gid in enumerate(gids[cmaker.grp_id]):
-            # += tested in logictree/case_05
-            rmap.array[:, :, gid] += rates.array[:, :, i % G]
+        rmap += rates  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
 

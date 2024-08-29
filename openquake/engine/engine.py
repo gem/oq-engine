@@ -376,7 +376,7 @@ def run_jobs(jobctxs, concurrent_jobs=None):
                     # here the logger is not initialized yet
                     print('Starting from a hazard (%d) computed with'
                           ' an obsolete version of the engine: %s' %
-                          (hc_id, version))
+                          (hc_id, prev_version))
     jobarray = len(jobctxs) > 1 and jobctxs[0].multi
     try:
         poll_queue(jobctxs[0].calc_id, poll_time=15)
