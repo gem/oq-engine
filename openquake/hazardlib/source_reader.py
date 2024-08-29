@@ -711,8 +711,8 @@ class CompositeSourceModel:
                 yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
-        maxsplits = self.splits.max()
         sg = self.src_groups[cmaker.grp_id]
+        splits = self.splits[cmaker.grp_id]
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
         cmaker.save_on_tmp = config.distribution.save_on_tmp
@@ -721,16 +721,15 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if cmaker.tiling:
-            nsplits = max(self.splits[cmaker.grp_id], sg.weight / max_weight)
+            nsplits = max(splits, sg.weight / max_weight)
             for sites in sitecol.split(nsplits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:
-            for tile in sitecol.split(maxsplits):
+            for tile in sitecol.split(splits):
                 yield None, tile, cmaker
         else:
-            maxw = max_weight * maxsplits
-            for block in general.block_splitter(sg, maxw, get_weight):
-                for tile in sitecol.split(maxsplits):
+            for block in general.block_splitter(sg, max_weight * splits, get_weight):
+                for tile in sitecol.split(splits):
                     yield block, tile, cmaker
 
     def __toh5__(self):
