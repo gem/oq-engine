@@ -168,13 +168,15 @@ class ClassicalTestCase(CalculatorTestCase):
         with open(tmp, 'wb') as f:
             nrml.write([gnode], f)
 
+    def getLG(self):
+        return self.calc.datastore['hcurves-stats'][3, 0]
+
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
         tmp = tempfile.gettempdir()
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}):
+             mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',

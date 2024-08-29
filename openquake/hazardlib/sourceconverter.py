@@ -219,6 +219,16 @@ class SourceGroup(collections.abc.Sequence):
         """
         return sum(src.weight for src in self)
 
+    @property
+    def codes(self):
+        """
+        The codes of the underlying sources as a byte string
+        """
+        codes = set()
+        for src in self.sources:
+            codes.add(src.code)
+        return b''.join(sorted(codes))
+
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
         if src_interdep not in ('indep', 'mutex'):

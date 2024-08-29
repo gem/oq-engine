@@ -190,7 +190,10 @@ def gsim(value, basedir=''):
 
 def modified_gsim(gmpe, **kwargs):
     """
-    Builds a ModifiableGMPE from a gmpe
+    Builds a ModifiableGMPE from a gmpe. Used for instance in the GEESE project
+    as follows:
+
+    mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
     """
     text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
     text += toml.dumps({'ModifiableGMPE': kwargs})

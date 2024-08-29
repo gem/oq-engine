@@ -545,7 +545,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline('openquake.commands compare uhs -2 -3')
         print(p)
-        self.assertIn('rms-diff', str(p))
+        self.assertIn('There are no differences', str(p))
         # testing different sitecols
         with read(-1, 'r+') as ds1:
             sitecol = ds1['sitecol']

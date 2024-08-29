@@ -503,6 +503,7 @@ hazard_uhs-std.csv
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
+        # testing also split_by_gsim
         self.run_calc(case_36.__file__, 'job.ini')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_36.__file__, 'job.ini', hazard_calculation_id=hc_id,
