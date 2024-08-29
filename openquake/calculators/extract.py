@@ -953,10 +953,7 @@ def extract_gmf_npz(dstore, what):
         yield 'rlz-%03d' % rlzi, []
     else:
         imts = [imt for imt in oq.imtls]
-        try:
-            sec_imts = oq.sec_imts
-        except AttributeError:
-            sec_imts = []
+        sec_imts = oq.sec_imts
         gmfa = _gmf(df, n, imts, sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
