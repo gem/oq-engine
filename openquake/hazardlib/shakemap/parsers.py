@@ -443,7 +443,17 @@ def download_rupture_dict(id, ignore_shakemap=False):
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': is_point_rup,
                 'usgs_id': id, 'rupture_file': None}
-    oq_rup = convert_to_oq_rupture(rup_data)
+    try:
+        oq_rup = convert_to_oq_rupture(rup_data)
+    except Exception as exc:
+        logging.error('', exc_info=True)
+        error_msg = (
+            f'Unable to convert the rupture from the USGS format: {exc}')
+        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
+                'mag': md['mag'], 'rake': md['rake'],
+                'local_timestamp': str(local_time), 'time_event': time_event,
+                'is_point_rup': True,
+                'usgs_id': id, 'rupture_file': None, 'error': error_msg}
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
@@ -452,7 +462,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
     return {'lon': lon, 'lat': lat, 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
-            'is_point_rup': is_point_rup,
+            'is_point_rup': False,
             'usgs_id': id, 'rupture_file': rupture_file}
 
 

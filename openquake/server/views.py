@@ -887,6 +887,8 @@ def aristotle_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
+    if 'error' in rupdic:
+        del rupdic['error']
     try:
         allparams = get_aristotle_allparams(
             rupdic,
