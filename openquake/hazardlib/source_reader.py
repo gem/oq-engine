@@ -713,7 +713,8 @@ class CompositeSourceModel:
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
         sg = self.src_groups[cmaker.grp_id]
-        splits = self.splits[cmaker.grp_id]
+        mul = .3 if sg.weight < max_weight / 3 else 1.
+        splits = self.splits[cmaker.grp_id] * mul
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
         cmaker.custom_tmp = config.directory.custom_tmp
@@ -722,8 +723,8 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if cmaker.tiling:
-            nsplits = max(splits, sg.weight / max_weight)
-            for sites in sitecol.split(nsplits, minsize=cmaker.oq.max_sites_disagg):
+            splits = max(splits, sg.weight / max_weight)
+            for sites in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:
             for tile in sitecol.split(splits):
