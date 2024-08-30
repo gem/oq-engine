@@ -1119,7 +1119,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    split_by_gsim = valid.Param(valid.boolean, None)
+    split_by_gsim = valid.Param(valid.positiveint, 0)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     tectonic_region_type = valid.Param(valid.utf8, '*')

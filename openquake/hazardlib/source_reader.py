@@ -689,7 +689,8 @@ class CompositeSourceModel:
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         if oq.split_by_gsim:
-            self.splits = numpy.full(len(cmakers), numpy.ceil(mb_per_gsim / max_mb))
+            self.splits = numpy.ceil([oq.split_by_gsim * mb_per_gsim / max_mb
+                                      for cmaker in cmakers])
         else:
             self.splits = numpy.ceil([len(cmaker.gsims) * mb_per_gsim / max_mb
                                       for cmaker in cmakers])
@@ -697,12 +698,16 @@ class CompositeSourceModel:
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
             if oq.split_by_gsim:
-                G = len(cmaker.gsims)
-                for g, gsim in zip(cmaker.gid, cmaker.gsims):
+                mul = len(cmaker.gsims) / oq.split_by_gsim
+                # for instance for G=32 and split_by_gsim=4, multiply the
+                # weight by 32/4=8 times to keep more sources in the same task
+                gid_blk = general.block_splitter(cmaker.gid, oq.split_by_gsim)
+                gsims_blk = general.block_splitter(cmaker.gsims, oq.split_by_gsim)
+                for gid, gsims in zip(gid_blk, gsims_blk):
                     cm = copy.copy(cmaker)
-                    cm.gid = [g]
-                    cm.gsims = [gsim]
-                    yield from self._split(cm, sitecol, max_weight*G, num_chunks)
+                    cm.gid = gid
+                    cm.gsims = gsims
+                    yield from self._split(cm, sitecol, max_weight*mul, num_chunks)
             else:
                 yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
