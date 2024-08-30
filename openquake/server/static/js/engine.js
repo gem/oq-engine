@@ -562,8 +562,9 @@
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
                     $('#rupture_file_from_usgs').val(data.rupture_file_from_usgs);
                     $('#rupture_file_from_usgs_loaded').val(data.rupture_file_from_usgs ? 'Loaded' : 'N.A.');
-                    if (data.error) {
+                    if ('error' in data) {
                         diaerror.show(false, "Error", data.error);
+                        $('#rupture_file_from_usgs_loaded').val('N.A. (conversion error)');
                     }
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
