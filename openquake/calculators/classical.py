@@ -132,7 +132,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
-                with monitor('save rates', measuremem=True):
+                with monitor('storing rates', measuremem=True):
                     rates = rmap.to_array(cmaker.gid)
                     with hdf5.File(fname, 'a') as h5:
                         _store(rates, cmaker.num_chunks, h5)
