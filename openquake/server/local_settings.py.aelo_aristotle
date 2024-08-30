@@ -6,6 +6,8 @@ CSRF_TRUSTED_ORIGINS = [<protocol://hostname>]
 
 DISABLE_VERSION_WARNING = True
 
+ARISTOTLE_DEFAULT_USGS_ID = ''
+
 # # Static Folder
 # STATIC_ROOT = ''
 

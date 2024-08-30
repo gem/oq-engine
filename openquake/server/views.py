@@ -1342,6 +1342,8 @@ def web_engine(request, **kwargs):
     elif application_mode == 'ARISTOTLE':
         params['aristotle_form_labels'] = ARISTOTLE_FORM_LABELS
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
+        params['aristotle_default_usgs_id'] = \
+            settings.ARISTOTLE_DEFAULT_USGS_ID
     return render(
         request, "engine/index.html", params)
 

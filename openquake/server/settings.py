@@ -197,6 +197,8 @@ APPLICATION_MODES = [
 
 APPLICATION_MODE = 'PUBLIC'
 
+ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'
+
 try:
     EXTERNAL_TOOLS = True if os.environ['EXTERNAL_TOOLS'] == 'True' else False
 except KeyError:
