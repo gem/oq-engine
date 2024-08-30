@@ -176,8 +176,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # this also tests the splitting in two tiles
         tmp = tempfile.gettempdir()
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}):
+             mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -188,14 +187,6 @@ class ClassicalTestCase(CalculatorTestCase):
         ], case_22.__file__, delta=1E-6)
         splits = self.calc.datastore['tiles'][:]
         self.assertEqual(len(splits), 10)
-
-        hc1 = self.getLG()
-        # tiling without save_on_tmp
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': ''}):
-            self.run_calc(case_22.__file__, 'job.ini')
-        hc2 = self.getLG()
-        aac(hc1, hc2)  # site_id=3 was different in earlier versions
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

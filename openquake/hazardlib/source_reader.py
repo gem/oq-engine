@@ -36,6 +36,7 @@ TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 bybranch = operator.attrgetter('branch')
+get_weight = operator.attrgetter('weight')
 
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
@@ -125,12 +126,8 @@ def create_source_info(csm, h5):
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, 0)
-        if src.code == b'p':
-            code = b'p'
-        else:
-            code = csm.code.get(srcid, b'P')
         lens.append(len(src.trt_smrs))
-        row = [srcid, src.grp_id, code, 0, 0, num_ruptures,
+        row = [srcid, src.grp_id, src.code, 0, 0, num_ruptures,
                src.weight, mutex, trti]
         data[srcid] = row
 
@@ -683,26 +680,58 @@ class CompositeSourceModel:
             logging.info('Heaviest: %s', maxsrc)
         return max_weight * 1.02  # increased a bit to produce a bit less tasks
 
-    def split(self, cmakers, sitecol, max_weight):
+    def split(self, cmakers, sitecol, max_weight, num_chunks=None):
+        """
+        :yields: (sources, sites, cmaker)
+        """
         N = len(sitecol)
         oq = cmakers[0].oq
-        max_gb = float(config.memory.pmap_max_gb)
-        for cmaker in cmakers:
-            size_gb = len(cmaker.gsims) * oq.imtls.size * N * 4 / 1024**3
-            grp = self.src_groups[cmaker.grp_id]
-            nsplits = general.ceil(max(size_gb / max_gb, grp.weight / max_weight))
-            for sites in sitecol.split(nsplits, minsize=oq.max_sites_disagg):
-                yield cmaker, sites
+        max_mb = float(config.memory.pmap_max_mb)
+        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
+        if oq.split_by_gsim:
+            self.splits = numpy.ceil([oq.split_by_gsim * mb_per_gsim / max_mb
+                                      for cmaker in cmakers])
+        else:
+            self.splits = numpy.ceil([len(cmaker.gsims) * mb_per_gsim / max_mb
+                                      for cmaker in cmakers])
+        # send heavy groups first
+        grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
+        for cmaker in cmakers[grp_ids]:
+            if oq.split_by_gsim:
+                mul = len(cmaker.gsims) / oq.split_by_gsim
+                # for instance for G=32 and split_by_gsim=4, multiply the
+                # weight by 32/4=8 times to keep more sources in the same task
+                gid_blk = general.block_splitter(cmaker.gid, oq.split_by_gsim)
+                gsims_blk = general.block_splitter(cmaker.gsims, oq.split_by_gsim)
+                for gid, gsims in zip(gid_blk, gsims_blk):
+                    cm = copy.copy(cmaker)
+                    cm.gid = gid
+                    cm.gsims = gsims
+                    yield from self._split(cm, sitecol, max_weight*mul, num_chunks)
+            else:
+                yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
-    # not used right now
-    def _split(self, cmaker, nsplits):
-        gsims = list(cmaker.gsims)
-        G = len(gsims)
-        for slc in general.gen_slices(0, G, general.ceil(G / nsplits)):
-            cm = copy.copy(cmaker)
-            cm.gid = cmaker.gid[slc]
-            cm.gsims = gsims[slc]
-            yield cm
+    def _split(self, cmaker, sitecol, max_weight, num_chunks):
+        sg = self.src_groups[cmaker.grp_id]
+        splits = self.splits[cmaker.grp_id]
+        cmaker.gsims = list(cmaker.gsims)  # save data transfer
+        cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+        cmaker.custom_tmp = config.directory.custom_tmp
+        cmaker.num_chunks = num_chunks
+        cmaker.tiling = num_chunks is not None
+        cmaker.weight = sg.weight
+        cmaker.atomic = sg.atomic
+        if cmaker.tiling:
+            nsplits = max(splits, sg.weight / max_weight)
+            for sites in sitecol.split(nsplits, minsize=cmaker.oq.max_sites_disagg):
+                yield None, sites, cmaker
+        elif sg.atomic or sg.weight <= max_weight:
+            for tile in sitecol.split(splits):
+                yield None, tile, cmaker
+        else:
+            for block in general.block_splitter(sg, max_weight * splits, get_weight):
+                for tile in sitecol.split(splits):
+                    yield block, tile, cmaker
 
     def __toh5__(self):
         G = len(self.src_groups)

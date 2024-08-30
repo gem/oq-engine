@@ -176,9 +176,11 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # store source_groups
     data = numpy.array(
-        [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight, grp.codes)
+        [(len(cm.gsims), len(cm.gsims) * fac * 1024, grp.weight,
+          grp.codes, cm.trt)
          for grp, cm in zip(csm.src_groups, cmakers)],
-        [('gsims', U16), ('size_mb', F32), ('weight', F32), ('codes', '<S8')])
+        [('gsims', U16), ('size_mb', F32), ('weight', F32), ('codes', '<S8'),
+         ('trt', '<S20')])
     dstore.create_dset('source_groups', data, fillvalue=None)
 
     light = [cm.grp_id for cm, sg in zip(cmakers, csm.src_groups)
@@ -191,19 +193,20 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         logging.info('mem_gb = %.2f', mem_gb)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
+    num_chunks = None if regular else 1
     tiles = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tile), len(cm.gsims)*fac*len(tile)/N)
-         for cm, tile in csm.split(cmakers, sitecol, max_weight)],
-        [('grp_id', U16), ('G', U16), ('N', U32), ('gb', F32)])
+        [(cm.grp_id, len(cm.gsims), len(tile),
+          cm.weight, len(cm.gsims) * fac * len(tile) / N)
+         for _, tile, cm in csm.split(cmakers, sitecol, max_weight, num_chunks)],
+        [('grp_id', U16), ('G', U16), ('N', U32), ('weight', F32), ('gb', F32)])
     dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
-    if not regular:
-        logging.info(
-            'This will be a tiling calculation with %d tasks, min_sites=%d',
-            len(tiles), min(tiles['N']))
-        if mem_gb >= 30 and (not config.directory.custom_tmp or
-                             not config.distribution.save_on_tmp):
-            logging.info('We suggest to set custom_tmp and save_on_tmp')
+    Ns = tiles['N']
+    logging.info('This will be a %s calculation with %d tasks, '
+                 'min_sites=%d, max_sites=%d', 'regular' if regular else 'tiling',
+                 len(tiles), Ns.min(), Ns.max())
+    if mem_gb >= 30 and not config.directory.custom_tmp:
+        logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids
 
 
