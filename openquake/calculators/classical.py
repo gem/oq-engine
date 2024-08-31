@@ -521,7 +521,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks if tiling else None):
             allargs.append((block, tile, cm, ds))
-        logging.info('Generated %d tasks', len(allargs))
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
