@@ -51,7 +51,7 @@ def main(n: int, job_ini):
         runcalc = f'''#!/bin/bash
         trap 'oq workers stop' EXIT
         job_id=`oq create_jobs 1`
-        {submit} -n {n} python -m openquake.workerpool {num_cores} $job_id
+        {submit} -n {n} `which python` -m openquake.workerpool {num_cores} $job_id
         {submit.replace('sbatch', 'srun')} -c16 oq run {job_ini} -p job_id=$job_id'''
         print(runcalc)
 
