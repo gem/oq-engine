@@ -25,7 +25,6 @@ job_id=(`oq create_jobs %(n)d`)
 time oq collect_jobs ${job_id[@]}
 '''
 
-
 def main(n: int, job_ini):
     """
     Print a bash script generating many calculations
@@ -37,15 +36,24 @@ def main(n: int, job_ini):
     submit_cmd = config.distribution.submit_cmd.split()
     if submit_cmd[0] == 'sbatch':
         submit_cmd.insert(1, '--cpus-per-task=%s' % num_cores)
-    descr = readinput.get_params(job_ini)['description']
-    lines = []
-    pp = 'OQ_DISTRIBUTE=processpool '
-    for i in range(n):
-        spec = '[%d,%d]' % (i+1, n) 
-        params = "tile_spec='%s' description=\"%s%s\" job_id=${job_id[%d]}" % (
-            spec, descr, spec, i)
-        lines.append(pp + ' '.join(submit_cmd) + f" {job_ini} -p {params}")
-    print(script % dict(n=len(lines), lines='\n'.join(lines)))
+    if False:
+        descr = readinput.get_params(job_ini)['description']
+        lines = []
+        pp = 'OQ_DISTRIBUTE=processpool '
+        for i in range(n):
+            spec = '[%d,%d]' % (i+1, n) 
+            params = "tile_spec='%s' description=\"%s%s\" job_id=${job_id[%d]}" % (
+                spec, descr, spec, i)
+            lines.append(pp + ' '.join(submit_cmd) + f" {job_ini} -p {params}")
+        print(script % dict(n=len(lines), lines='\n'.join(lines)))
+    else:
+        submit = ' '.join(submit_cmd[:-2])
+        runcalc = f'''#!/bin/bash
+        trap 'oq workers stop' EXIT
+        job_id=`oq create_jobs 1`
+        {submit} -n {n} python -m openquake.workerpool {num_cores} $job_id
+        {submit.replace('sbatch', 'srun')} -c16 oq run {job_ini} -p job_id=$job_id'''
+        print(runcalc)
 
 main.n = dict(help='number of jobs to generate')
 main.job_ini = dict(help='path to .ini file')

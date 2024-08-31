@@ -125,17 +125,8 @@ def main(job_ini,
     job_id = jobs[0].calc_id
     dist = parallel.oq_distribute()
     if dist == 'slurm':
-        assert nodes, 'oq_distribute=slurm requires the --nodes option'
-        start_workers(nodes, str(job_id))
-    else:
-        assert not nodes, 'The --nodes option requires oq_distribute=slurm'
-    if nodes:
         wait_workers(nodes, job_id)
-    try:
-        run_jobs(jobs)
-    finally:
-        if nodes:
-            stop_workers(str(job_id))
+    run_jobs(jobs)
     return job_id
 
 # ########################## SLURM support ############################## #
