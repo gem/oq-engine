@@ -155,15 +155,17 @@ def start_workers(n, job_id: str):
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
-                              job_id=job_id, nodes=n)
-    with open(slurm_sh, 'w') as f:
-        f.write(code)
-    os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)
-
-    submit_cmd = config.distribution.submit_cmd.split()
-    assert submit_cmd[0] == 'sbatch', submit_cmd
-    # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
-    subprocess.run(submit_cmd[:-2] + [slurm_sh])
+                              job_id=job_id, nodes=n-1)
+    subprocess.Popen(['python', '-m', 'openquake.baselib.workerpool',
+                      config.distribution.num_cores, str(job_id)])
+    if n > 1:
+        with open(slurm_sh, 'w') as f:
+            f.write(code)
+        os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)
+        submit_cmd = config.distribution.submit_cmd.split()
+        assert submit_cmd[0] == 'sbatch', submit_cmd
+        # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
+        subprocess.run(submit_cmd[:-2] + [slurm_sh])
 
 
 def wait_workers(n, job_id):
@@ -182,8 +184,8 @@ def wait_workers(n, job_id):
         if len(hosts) == n:
             break
         else:
-            print('%d/%d workerpools started' % (len(hosts), n))
             time.sleep(1)
+        print('%d/%d workerpools started' % (len(hosts), n))
 
 
 def stop_workers(job_id: str):
