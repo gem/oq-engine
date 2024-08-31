@@ -68,7 +68,7 @@ def main(n: int, job_ini):
             lines.append(pp + ' '.join(submit_cmd) + f" {job_ini} -p {params}")
         print(script % dict(n=len(lines), lines='\n'.join(lines)))
     else:
-        job_id = create_job(job_ini)
+        job_id = create_job(n, job_ini)
         code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
                                   job_id=job_id, nodes=n)
         with open('slurm.sh', 'w') as f:
@@ -77,7 +77,7 @@ def main(n: int, job_ini):
         submit = ' '.join(submit_cmd[:-2])
         runcalc = f'''#!/bin/bash
         trap 'oq workers stop' EXIT
-        {submit} -n {n} slurm.sh
+        {submit} slurm.sh
         {submit.replace('sbatch', 'srun')} -c16 oq run {job_ini} -p job_id={job_id}'''
         print(runcalc)
 
