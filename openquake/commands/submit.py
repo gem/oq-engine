@@ -34,9 +34,9 @@ def main(n: int, job_ini):
     except AttributeError:
         num_cores = parallel.tot_cores
     submit_cmd = config.distribution.submit_cmd.split()
-    if submit_cmd[0] == 'sbatch':
-        submit_cmd.insert(1, '--cpus-per-task=%s' % num_cores)
     if False:
+        if submit_cmd[0] == 'sbatch':
+            submit_cmd.insert(1, '--cpus-per-task=%s' % num_cores)
         descr = readinput.get_params(job_ini)['description']
         lines = []
         pp = 'OQ_DISTRIBUTE=processpool '
