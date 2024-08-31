@@ -105,20 +105,23 @@ def main(n: int, job_ini):
             lines.append(pp + ' '.join(submit_cmd) + f" {job_ini} -p {params}")
         print(script % dict(n=len(lines), lines='\n'.join(lines)))
     else:
-        job_id = create_job(n, job_ini)
+        dic = readinput.get_params(job_ini)
+        ct = dic.get('concurrent_tasks', 2 * int(num_cores) * n)
+        [job] = create_jobs([dic])
         code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
-                                  job_id=job_id, nodes=n)
+                                  job_id=job.calc_id, nodes=n)
         with open('slurm.sh', 'w') as f:
             f.write(code)
         os.chmod('slurm.sh', os.stat('slurm.sh').st_mode | stat.S_IEXEC)
         subprocess.run(submit_cmd[:-2] + ['slurm.sh'])
-        wait_workers(n, job_id)
+        wait_workers(n, job.calc_id)
         submit_cmd[0] = 'srun'
         submit_cmd.insert(1, '--cpus-per-task=16')
         try:
-            subprocess.run(submit_cmd + [job_ini, '-p', f'job_id={job_id}'])
+            subprocess.run(submit_cmd + [job_ini, '-p', f'job_id={job.calc_id}',
+                                         f'concurrent_tasks={ct}'])
         finally:
-            stop_workers(job_id)
+            stop_workers(job.calc_id)
 
 
 main.n = dict(help='number of jobs to generate')
