@@ -20,7 +20,7 @@ import os
 import stat
 import time
 import subprocess
-from openquake.baselib import config, parallel
+from openquake.baselib import config, parallel, zeromq as z
 from openquake.commonlib import readinput
 from openquake.engine.engine import create_jobs
 
