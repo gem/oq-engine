@@ -124,8 +124,6 @@ def main(job_ini,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
     dist = parallel.oq_distribute()
-    if dist == 'slurm':
-        wait_workers(nodes, job_id)
     run_jobs(jobs)
     return job_id
 
@@ -157,26 +155,6 @@ def start_workers(n, job_id: str):
         assert submit_cmd[0] == 'sbatch', submit_cmd
         # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
         subprocess.run(submit_cmd[:-2] + [slurm_sh])
-
-
-def wait_workers(n, job_id):
-    """
-    Wait until the hostcores file is filled with n names
-    """
-    calc_dir = parallel.scratch_dir(job_id)
-    fname = os.path.join(calc_dir, 'hostcores')
-    while True:
-        if not os.path.exists(fname):
-            time.sleep(5)
-            print(f'Waiting for {fname}')
-            continue
-        with open(fname) as f:
-            hosts = f.readlines()
-        if len(hosts) == n:
-            break
-        else:
-            time.sleep(1)
-        print('%d/%d workerpools started' % (len(hosts), n))
 
 
 def stop_workers(job_id: str):

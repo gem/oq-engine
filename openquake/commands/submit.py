@@ -18,6 +18,8 @@
 
 import os
 import stat
+import time
+import subprocess
 from openquake.baselib import config, parallel
 from openquake.commonlib import readinput
 from openquake.engine.engine import create_jobs
@@ -44,6 +46,41 @@ def create_job(n, job_ini):
         dic['concurrent_tasks'] = str(ct)
     [job] = create_jobs([dic])
     return job.calc_id
+
+
+def wait_workers(n, job_id):
+    """
+    Wait until the hostcores file is filled with n names
+    """
+    calc_dir = parallel.scratch_dir(job_id)
+    fname = os.path.join(calc_dir, 'hostcores')
+    while True:
+        if not os.path.exists(fname):
+            time.sleep(5)
+            print(f'Waiting for {fname}')
+            continue
+        with open(fname) as f:
+            hosts = f.readlines()
+        if len(hosts) == n:
+            break
+        else:
+            time.sleep(1)
+        print('%d/%d workerpools started' % (len(hosts), n))
+
+
+def stop_workers(job_id: str):
+    """
+    Stop all the started workerpools (read from the file scratch_dir/hostcores)
+    """
+    fname = os.path.join(parallel.scratch_dir(job_id), 'hostcores')
+    with open(fname) as f:
+        hostcores = f.readlines()
+    for line in hostcores:
+        host, _ = line.split()
+        ctrl_url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+        print('Stopping %s' % host)
+        with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+            sock.send('stop')
 
 
 def main(n: int, job_ini):
@@ -74,12 +111,15 @@ def main(n: int, job_ini):
         with open('slurm.sh', 'w') as f:
             f.write(code)
         os.chmod('slurm.sh', os.stat('slurm.sh').st_mode | stat.S_IEXEC)
-        submit = ' '.join(submit_cmd[:-2])
-        runcalc = f'''#!/bin/bash
-        trap 'oq workers stop' EXIT
-        {submit} slurm.sh
-        {submit.replace('sbatch', 'srun')} -c16 oq run {job_ini} -p job_id={job_id}'''
-        print(runcalc)
+        subprocess.run(submit_cmd[:-2] + ['slurm.sh'])
+        wait_workers(n, job_id)
+        submit_cmd[0] = 'srun'
+        submit_cmd.insert(1, '--cpus-per-task=16')
+        try:
+            subprocess.run(submit_cmd + [job_ini, '-p', f'job_id={job_id}'])
+        finally:
+            stop_workers(job_id)
+
 
 main.n = dict(help='number of jobs to generate')
 main.job_ini = dict(help='path to .ini file')
