@@ -16,14 +16,35 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import stat
 from openquake.baselib import config, parallel
 from openquake.commonlib import readinput
+from openquake.engine.engine import create_jobs
 
 script = '''#!/bin/bash
 job_id=(`oq create_jobs %(n)d`)
 %(lines)s
 time oq collect_jobs ${job_id[@]}
 '''
+
+SLURM_BATCH = '''\
+#!/bin/bash
+#SBATCH --job-name=workerpool
+#SBATCH --time=10:00:00
+#SBATCH --cpus-per-task={num_cores}
+#SBATCH --nodes={nodes}
+srun python -m openquake.baselib.workerpool {num_cores} {job_id}
+'''
+
+def create_job(n, job_ini):
+    dic = readinput.get_params(job_ini)
+    if 'concurrent_tasks' not in dic:
+        ct = 2 * int(config.distribution.num_cores) * n
+        dic['concurrent_tasks'] = str(ct)
+    [job] = create_jobs([dic])
+    return job.calc_id
+
 
 def main(n: int, job_ini):
     """
@@ -47,12 +68,17 @@ def main(n: int, job_ini):
             lines.append(pp + ' '.join(submit_cmd) + f" {job_ini} -p {params}")
         print(script % dict(n=len(lines), lines='\n'.join(lines)))
     else:
+        job_id = create_job(job_ini)
+        code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
+                                  job_id=job_id, nodes=n)
+        with open('slurm.sh', 'w') as f:
+            f.write(code)
+        os.chmod('slurm.sh', os.stat('slurm.sh').st_mode | stat.S_IEXEC)
         submit = ' '.join(submit_cmd[:-2])
         runcalc = f'''#!/bin/bash
         trap 'oq workers stop' EXIT
-        job_id=`oq create_jobs 1`
-        {submit} -n {n} `which python` -m openquake.workerpool {num_cores} $job_id
-        {submit.replace('sbatch', 'srun')} -c16 oq run {job_ini} -p job_id=$job_id'''
+        {submit} -n {n} slurm.sh
+        {submit.replace('sbatch', 'srun')} -c16 oq run {job_ini} -p job_id={job_id}'''
         print(runcalc)
 
 main.n = dict(help='number of jobs to generate')
