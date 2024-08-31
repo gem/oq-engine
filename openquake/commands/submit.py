@@ -61,11 +61,11 @@ def wait_workers(n, job_id):
             continue
         with open(fname) as f:
             hosts = f.readlines()
+        print('%d/%d workerpools started' % (len(hosts), n))
         if len(hosts) == n:
             break
         else:
             time.sleep(1)
-        print('%d/%d workerpools started' % (len(hosts), n))
 
 
 def stop_workers(job_id: str):
