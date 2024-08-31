@@ -39,14 +39,6 @@ SLURM_BATCH = '''\
 srun python -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
 
-def create_job(n, job_ini):
-    dic = readinput.get_params(job_ini)
-    if 'concurrent_tasks' not in dic:
-        ct = 2 * int(config.distribution.num_cores) * n
-        dic['concurrent_tasks'] = str(ct)
-    [job] = create_jobs([dic])
-    return job.calc_id
-
 
 def wait_workers(n, job_id):
     """
