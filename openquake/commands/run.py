@@ -141,7 +141,7 @@ def main(job_ini,
         if param:
             run_args.append(param)
         try:
-            cmd = ['srun', '--cpus-per-task', '12', '--time', '24:00:00'] + \
+            cmd = ['srun', '--cpus-per-task', '16', '--time', '24:00:00'] + \
                 slurm.submit_cmd[1:] + run_args
             subprocess.run(cmd)
         finally:
