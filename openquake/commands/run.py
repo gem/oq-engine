@@ -124,7 +124,7 @@ def main(job_ini,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
     dist = parallel.oq_distribute()
-    if dist == 'slurm' and 'job_in' not in params:
+    if dist == 'slurm' and 'job_id' not in params:
         assert nodes, 'oq_distribute=slurm requires the --nodes option'
         slurm.start_workers(nodes, job_id)
         slurm.wait_workers(nodes, job_id)
