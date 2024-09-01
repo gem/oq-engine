@@ -80,7 +80,7 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         nodes: int = 0):
+         nodes: int = 1):
     """
     Run a calculation
     """
@@ -148,6 +148,7 @@ def main(job_ini,
         finally:
             slurm.stop_workers(job_id)
     else:
+        parallel.Starmap.CT = ct // 2
         run_jobs(jobs)
     return job_id
 
