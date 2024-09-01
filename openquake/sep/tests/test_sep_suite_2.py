@@ -223,15 +223,15 @@ class test_landslides_cali_small(unittest.TestCase):
         cls = np.array(
             [
                 0., 
-                0.001727, 
+                0.172675, 
                 0., 
-                0.207095, 
-                0.009533, 
-                0.009466,
-                0.060379, 
-                0.088845, 
-                0.011041, 
-                0.008392])
+                20.709538, 
+                0.953252, 
+                0.946616,
+                6.037904, 
+                8.884508, 
+                1.104123, 
+                0.839227])
 
         np.testing.assert_array_almost_equal(prob_ls, zlp)
         np.testing.assert_array_almost_equal(coverage, cls)

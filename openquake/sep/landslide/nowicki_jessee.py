@@ -67,7 +67,7 @@ def _landslide_spatial_extent(p: float):
     b = 5.237
     c = -3.042
     d = 4.035
-    LSE = np.exp(a + b * p + c * p**2 + d * p**3)
+    LSE = 100 *     np.exp(a + b * p + c * p**2 + d * p**3)
     return LSE
 
     
