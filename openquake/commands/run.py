@@ -111,7 +111,7 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    ct = 2 * int(config.distribution.num_cores) * nodes
+    ct = concurrent_tasks or 2 * int(config.distribution.num_cores) * nodes
     dics = [readinput.get_params(ini) for ini in job_ini]
     for dic in dics:
         dic.update(params)
