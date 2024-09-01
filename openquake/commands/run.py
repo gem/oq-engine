@@ -111,21 +111,20 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    ct = concurrent_tasks or 2 * int(config.distribution.num_cores) * nodes
     dics = [readinput.get_params(ini) for ini in job_ini]
     for dic in dics:
         dic.update(params)
         dic['exports'] = ','.join(exports)
         if concurrent_tasks:
             dic['concurrent_tasks'] = str(concurrent_tasks)
-        elif nodes and 'concurrent_tasks' not in dic:
+        elif 'concurrent_tasks' not in dic:
+            ct = 2 * int(config.distribution.num_cores) * nodes
             dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
     dist = parallel.oq_distribute()
     if dist == 'slurm' and 'job_id' not in params:
-        assert nodes, 'oq_distribute=slurm requires the --nodes option'
         slurm.start_workers(nodes, job_id)
         slurm.wait_workers(nodes, job_id)
         run_args = [' '.join(job_ini), '-l', loglevel]
@@ -148,7 +147,7 @@ def main(job_ini,
         finally:
             slurm.stop_workers(job_id)
     else:
-        parallel.Starmap.CT = ct // 2
+        parallel.Starmap.CT = concurrent_tasks or ct
         run_jobs(jobs)
     return job_id
 
