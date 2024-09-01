@@ -272,10 +272,10 @@ class WorkerPool(object):
                 pass
             if parallel.oq_distribute() == 'slurm':
                 fname = os.path.join(calc_dir, 'hostcores')
-                line = f'{self.hostname} {self.num_workers}\n'
+                line = f'{self.hostname} {self.num_workers}'
                 print(f'Writing {line} on {fname}')
                 with open(fname, 'a') as f:
-                    f.write(line)
+                    f.write(line + '\n')
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
