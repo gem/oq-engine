@@ -713,7 +713,7 @@ class CompositeSourceModel:
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
         sg = self.src_groups[cmaker.grp_id]
-        mul = .3 if sg.weight < max_weight / 3 else 1.
+        mul = .4 if sg.weight < max_weight / 3 else 1.
         splits = self.splits[cmaker.grp_id] * mul
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
