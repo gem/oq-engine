@@ -528,7 +528,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          redweight(src))
         if not heavy:
             maxsrc = max(srcs, key=redweight)
-            logging.info('Heaviest: %s', maxsrc)
+            logging.info('Heaviest: %s, weight=%.1f',
+                         maxsrc.source_id, redweight(maxsrc))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
