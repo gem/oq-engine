@@ -49,7 +49,7 @@ https://docs.openquake.org/oq-engine/master/manual/
 * [Underlying Science](https://docs.openquake.org/oq-engine/master/manual/underlying-science/)
 * [Release Notes](https://docs.openquake.org/oq-engine/master/manual/release-notes/)
 * [Contributing](https://docs.openquake.org/oq-engine/master/manual/contributing/)
-* [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq)
+* [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq.html)
 
 
 ## Mirrors

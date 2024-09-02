@@ -26,8 +26,7 @@ import logging
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat)
+from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
@@ -120,28 +119,27 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
-            result['pnemap'] = result['pnemap'].to_rates()
-            result['pnemap'].gid = cmaker.gid
+            result['rmap'].gid = cmaker.gid
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
-        rmap = result.pop('pnemap').remove_zeros().to_rates()
+        # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
+        rmap = result.pop('rmap').remove_zeros()
         if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
             del result['source_data']
             scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
                 fname = f'{scratch}/{monitor.task_no}.hdf5'
-                with monitor('save rates', measuremem=True):
+                with monitor('storing rates', measuremem=True):
                     rates = rmap.to_array(cmaker.gid)
                     with hdf5.File(fname, 'a') as h5:
                         _store(rates, cmaker.num_chunks, h5)
         elif allsources and not cmaker.disagg_by_src:
             del result['source_data']
-            result['pnemap'] = rmap.to_array(cmaker.gid)
+            result['rmap'] = rmap.to_array(cmaker.gid)
         else:
-            result['pnemap'] = rmap
-            result['pnemap'].gid = cmaker.gid
+            result['rmap'] = rmap
+            result['rmap'].gid = cmaker.gid
         yield result
 
 
@@ -350,7 +348,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        rmap = dic.pop('pnemap', None)
+        rmap = dic.pop('rmap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
@@ -474,9 +472,6 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        if not performance.numba:
-            logging.warning('numba is not installed: using the slow algorithm')
-
         t0 = time.time()
         self._execute()
         self.store_info()
@@ -521,7 +516,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks if tiling else None):
             allargs.append((block, tile, cm, ds))
-        logging.info('Generated %d tasks', len(allargs))
+
+        # log info about the heavy sources
+        srcs = self.csm.get_sources()
+        def redweight(src):
+            return src.weight / self.csm.splits[src.grp_id]
+        heavy = [src for src in srcs if redweight(src) > self.max_weight]
+        for src in sorted(heavy, key=redweight, reverse=True):
+            logging.info('source_id=%s, weight=%.1f', src.source_id,
+                         redweight(src))
+        if not heavy:
+            maxsrc = max(srcs, key=redweight)
+            logging.info('Heaviest: %s, weight=%.1f',
+                         maxsrc.source_id, redweight(maxsrc))
+
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))

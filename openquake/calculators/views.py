@@ -719,6 +719,12 @@ def view_required_params_per_trt(token, dstore):
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
 
+def discard_small(values):
+    """
+    Discard values 10x smaller than the mean
+    """
+    return values[values >= .1 * values.mean()]
+
 
 @view.add('task_info')
 def view_task_info(token, dstore):
@@ -742,7 +748,7 @@ def view_task_info(token, dstore):
 
     data = []
     for task, arr in group_array(task_info[()], 'taskname').items():
-        val = arr['duration']
+        val = discard_small(arr['duration'])
         if len(val):
             data.append(stats(task, val, val.max() / val.mean()))
     if not data:
