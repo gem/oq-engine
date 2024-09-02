@@ -161,9 +161,9 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
         cmaker = ContextMaker(src.tectonic_region_type, gsim_by_trt, param)
-        crv = ~classical(group, self.sites, cmaker)['rmap']
-        npt.assert_almost_equal([0.5692, 0.607 , 0.8902],
-                                crv.array[0, :, 0], decimal=4)
+        rmap = classical(group, self.sites, cmaker)['rmap']
+        npt.assert_almost_equal([0.4308, 0.393 , 0.1098],
+                                rmap.array[0, :, 0], decimal=4)
 
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)
