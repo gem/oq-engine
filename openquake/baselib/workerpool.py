@@ -73,8 +73,6 @@ class WorkerMaster(object):
             if int(cores) < -1:
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
-        self.remote_python = zworkers.remote_python or sys.executable
-        self.remote_user = zworkers.remote_user or getpass.getuser()
         self.popens = []
 
     def start(self):
