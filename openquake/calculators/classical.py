@@ -126,11 +126,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['rmap'].gid = cmaker.gid
             yield result
     else:
-        fewsites = len(sitecol) <= cmaker.oq.max_sites_disagg
         result = hazclassical(sources, sitecol, cmaker)
-        # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
         rmap = result.pop('rmap').remove_zeros()
-        if fewsites or not atomic:
+        # print(f"{monitor.task_no=} {rmap=}")
+        if rmap.size_mb < 1 or not atomic:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
         elif cmaker.custom_tmp:  # tested in case_22
