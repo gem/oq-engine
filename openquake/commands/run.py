@@ -138,8 +138,7 @@ def main(job_ini,
         if export:
             run_args.extend(['-e', export])
         run_args.extend(['-p', f'job_id={job_id}'])
-        if param:
-            run_args.extend(param)
+        run_args.extend(param)
         try:
             cmd = ['srun', '--cpus-per-task', '16', '--time', '24:00:00'] + \
                 slurm.submit_cmd[1:] + run_args
