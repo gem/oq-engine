@@ -673,7 +673,7 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight * 1.02  # increased to produce a bit less tasks
 
-    def split(self, cmakers, sitecol, max_weight, num_chunks=None):
+    def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (sources, sites, cmaker)
         """
@@ -696,19 +696,19 @@ class CompositeSourceModel:
             self.splits[cmaker.grp_id] *= mul
             if num_chunks:  # tiling
                 self.splits[grp_id] = max(self.splits[grp_id], sg.weight / max_weight)
-            yield from self._split(cmaker, sitecol, max_weight, num_chunks)
+            yield from self._split(cmaker, sitecol, max_weight, num_chunks, tiling)
 
-    def _split(self, cmaker, sitecol, max_weight, num_chunks):
+    def _split(self, cmaker, sitecol, max_weight, num_chunks, tiling):
         sg = self.src_groups[cmaker.grp_id]
         splits = self.splits[cmaker.grp_id]
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
         cmaker.custom_tmp = config.directory.custom_tmp
         cmaker.num_chunks = num_chunks
-        cmaker.tiling = num_chunks is not None
+        cmaker.tiling = tiling
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
-        if cmaker.tiling:
+        if tiling:
             for sites in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:
