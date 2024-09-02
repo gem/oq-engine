@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import stat
-import time
 import logging
 import os.path
 import socket
