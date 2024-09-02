@@ -27,6 +27,11 @@ from openquake.sep.landslide.newmark import (
     newmark_displ_from_pga_M,
     prob_failure_given_displacement,
 )
+from openquake.sep.landslide.nowicki_jessee import(
+    nowicki_jessee_2018,
+    LANDCOVER_TABLE,
+    LITHOLOGY_TABLE
+)
 from openquake.sep.landslide.rockfalls import (
     critical_accel_rock_slope,
     newmark_displ_from_pga,
@@ -206,6 +211,67 @@ class GrantEtAl2016RockSlopeFailure(SecondaryPeril):
                 )
             out.append(nd)
         return out
+
+
+class NowickiJessee2018Landslides(SecondaryPeril):
+    """
+    Computes the landslide probability from PGV and areal coverage.
+    """
+
+    outputs = ["LsProb", "LSE"]
+
+    def __init__(
+        self,
+        intercept: float = -6.30,
+        pgv_coeff: float = 1.65,
+        slope_coeff: float = 0.06,
+        coeff_table_lith = LITHOLOGY_TABLE,
+        coeff_table_cov = LANDCOVER_TABLE,
+        cti_coeff: float = 0.03,
+        interaction_term: float = 0.01,
+    ):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.slope_coeff = slope_coeff
+        self.coeff_table_lith = coeff_table_lith
+        self.coeff_table_cov = coeff_table_cov
+        self.cti_coeff = cti_coeff
+        self.interaction_term = interaction_term
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide "
+                "probability using the NowickiJessee2018Landslides model"
+            )
+        
+        prob_ls, lse = nowicki_jessee_2018(
+            pga = pga,
+            pgv = pgv,
+            slope=sites.slope,
+            lithology=sites.lithology,
+            landcover=sites.landcover,
+            cti=sites.cti,
+        )
+        out.append(prob_ls)
+        out.append(lse)
+            
+        return out
+
 
 
 class HazusLiquefaction(SecondaryPeril):
