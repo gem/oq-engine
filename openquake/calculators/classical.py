@@ -518,7 +518,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         for block, tile, cm in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
-                self.num_chunks if tiling else None):
+                self.num_chunks, tiling):
             allargs.append((block, tile, cm, ds))
 
         # log info about the heavy sources

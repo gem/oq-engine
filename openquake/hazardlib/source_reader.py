@@ -694,7 +694,7 @@ class CompositeSourceModel:
             sg = self.src_groups[grp_id]
             mul = .4 if sg.weight < max_weight / 3 else 1.
             self.splits[cmaker.grp_id] *= mul
-            if num_chunks:  # tiling
+            if tiling:
                 self.splits[grp_id] = max(self.splits[grp_id], sg.weight / max_weight)
             yield from self._split(cmaker, sitecol, max_weight, num_chunks, tiling)
 
