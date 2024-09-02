@@ -73,8 +73,6 @@ class WorkerMaster(object):
             if int(cores) < -1:
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
-        self.remote_python = zworkers.remote_python or sys.executable
-        self.remote_user = zworkers.remote_user or getpass.getuser()
         self.popens = []
 
     def start(self):
@@ -272,10 +270,10 @@ class WorkerPool(object):
                 pass
             if parallel.oq_distribute() == 'slurm':
                 fname = os.path.join(calc_dir, 'hostcores')
-                line = f'{self.hostname} {self.num_workers}\n'
+                line = f'{self.hostname} {self.num_workers}'
                 print(f'Writing {line} on {fname}')
                 with open(fname, 'a') as f:
-                    f.write(line)
+                    f.write(line + '\n')
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')

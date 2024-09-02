@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import stat
-import time
 import logging
 import os.path
 import socket
@@ -27,7 +25,7 @@ import getpass
 import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, parallel, config, zeromq as z
+from openquake.baselib import performance, general, parallel, config, slurm
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
@@ -80,7 +78,7 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         nodes: int = 0):
+         nodes: int = 1):
     """
     Run a calculation
     """
@@ -117,88 +115,39 @@ def main(job_ini,
         dic['exports'] = ','.join(exports)
         if concurrent_tasks:
             dic['concurrent_tasks'] = str(concurrent_tasks)
-        elif nodes and 'concurrent_tasks' not in dic:
+        elif 'concurrent_tasks' not in dic:
             ct = 2 * int(config.distribution.num_cores) * nodes
             dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
     dist = parallel.oq_distribute()
-    if dist == 'slurm':
-        assert nodes, 'oq_distribute=slurm requires the --nodes option'
-        start_workers(nodes, str(job_id))
-    else:
-        assert not nodes, 'The --nodes option requires oq_distribute=slurm'
-    if nodes:
-        wait_workers(nodes, job_id)
-    try:
-        run_jobs(jobs)
-    finally:
-        if nodes:
-            stop_workers(str(job_id))
-    return job_id
-
-# ########################## SLURM support ############################## #
-
-SLURM_BATCH = '''\
-#!/bin/bash
-#SBATCH --job-name=workerpool
-#SBATCH --time=10:00:00
-#SBATCH --cpus-per-task={num_cores}
-#SBATCH --nodes={nodes}
-srun python -m openquake.baselib.workerpool {num_cores} {job_id}
-'''
-def start_workers(n, job_id: str):
-    """
-    Start n workerpools which will write on scratch_dir/hostcores)
-    """
-    calc_dir = parallel.scratch_dir(job_id)
-    slurm_sh = os.path.join(calc_dir, 'slurm.sh')
-    code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
-                              job_id=job_id, nodes=n)
-    with open(slurm_sh, 'w') as f:
-        f.write(code)
-    os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)
-
-    submit_cmd = config.distribution.submit_cmd.split()
-    assert submit_cmd[0] == 'sbatch', submit_cmd
-    # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
-    subprocess.run(submit_cmd[:-2] + [slurm_sh])
-
-
-def wait_workers(n, job_id):
-    """
-    Wait until the hostcores file is filled with n names
-    """
-    calc_dir = parallel.scratch_dir(job_id)
-    fname = os.path.join(calc_dir, 'hostcores')
-    while True:
-        if not os.path.exists(fname):
-            time.sleep(5)
-            print(f'Waiting for {fname}')
-            continue
-        with open(fname) as f:
-            hosts = f.readlines()
-        if len(hosts) == n:
-            break
+    if dist == 'slurm' and 'job_id' not in params:
+        slurm.start_workers(nodes, job_id)
+        slurm.wait_workers(nodes, job_id)
+        run_args = [' '.join(job_ini), '-l', loglevel]
+        if hc:
+            run_args.extend(['--hc', str(hc)])
+        if concurrent_tasks:
+            run_args.extend(['-c', str(concurrent_tasks)])
         else:
-            print('%d/%d workerpools started' % (len(hosts), n))
-            time.sleep(1)
-
-
-def stop_workers(job_id: str):
-    """
-    Stop all the started workerpools (read from the file scratch_dir/hostcores)
-    """
-    fname = os.path.join(parallel.scratch_dir(job_id), 'hostcores')
-    with open(fname) as f:
-        hostcores = f.readlines()
-    for line in hostcores:
-        host, _ = line.split()
-        ctrl_url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
-        print('Stopping %s' % host)
-        with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-            sock.send('stop')
+            run_args.extend(['-c', str(ct)])
+        export = ','.join(exports)
+        if export:
+            run_args.extend(['-e', export])
+        run_args.extend(['-p', f'job_id={job_id}'])
+        run_args.extend(param)
+        try:
+            cmd = ['srun', '--cpus-per-task', '16', '--time', '24:00:00'] + \
+                slurm.submit_cmd[1:] + run_args
+            subprocess.run(cmd)
+        finally:
+            slurm.stop_workers(job_id)
+    else:
+        if dist == 'slurm':
+            parallel.Starmap.CT = concurrent_tasks
+        run_jobs(jobs)
+    return job_id
 
 
 main.job_ini = dict(help='calculation configuration file '

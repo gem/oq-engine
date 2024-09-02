@@ -26,8 +26,7 @@ import logging
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat)
+from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
@@ -474,9 +473,6 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        if not performance.numba:
-            logging.warning('numba is not installed: using the slow algorithm')
-
         t0 = time.time()
         self._execute()
         self.store_info()
@@ -521,6 +517,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks if tiling else None):
             allargs.append((block, tile, cm, ds))
+
+        # log info about the heavy sources
+        srcs = self.csm.get_sources()
+        def redweight(src):
+            return src.weight / self.csm.splits[src.grp_id]
+        heavy = [src for src in srcs if redweight(src) > self.max_weight]
+        for src in sorted(heavy, key=redweight, reverse=True):
+            logging.info('source_id=%s, weight=%.1f', src.source_id,
+                         redweight(src))
+        if not heavy:
+            maxsrc = max(srcs, key=redweight)
+            logging.info('Heaviest: %s, weight=%.1f',
+                         maxsrc.source_id, redweight(maxsrc))
+
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
