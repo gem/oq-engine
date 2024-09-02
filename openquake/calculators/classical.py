@@ -114,8 +114,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         if sources is None:  # read the sources from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        if sitecol is None:  # read the sites
-            sitecol = dstore['sitecol']  # super-fast
+        if sitecol is None or callable(sitecol):  # read the sites
+            complete = dstore['sitecol'].complete  # super-fast
+            sitecol = sitecol(complete)
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;

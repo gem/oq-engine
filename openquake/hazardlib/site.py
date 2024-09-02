@@ -76,6 +76,18 @@ def rnd5(lons):
     return numpy.round(lons, 5)
 
 
+def tile(tileno, ntiles):
+    """
+    :returns: a tile extractor complete->filtered
+    """
+    def new(complete):
+        sc = SiteCollection.__new__(SiteCollection)
+        sc.array = complete.array[complete.sids % ntiles == tileno]
+        sc.complete = complete
+        return sc
+    return new
+
+
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -546,16 +558,8 @@ class SiteCollection(object):
         maxtiles = int(numpy.ceil(len(self) / minsize))
         ntiles = min(int(numpy.ceil(ntiles)), maxtiles)
         if ntiles <= 1:
-            return [self]
-        tiles = []
-        for i in range(ntiles):
-            sc = SiteCollection.__new__(SiteCollection)
-            # smart trick to split in "homogenous" tiles
-            sc.array = self.array[self.sids % ntiles == i]
-            sc.complete = self
-            if len(sc):
-                tiles.append(sc)
-        return tiles
+            return [lambda complete: complete]
+        return [tile(i, ntiles) for i in range(ntiles)]
 
     def split_in_tiles(self, hint):
         """
