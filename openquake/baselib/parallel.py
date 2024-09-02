@@ -1115,33 +1115,6 @@ def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
             n += 1
 
 
-def slurm_task(calc_dir: str, task_id: str, delta='1'):
-    """
-    Read the files '<task_id>.inp' ... '<task_id+delta>.inp' and
-    run safely and sequentially the corresponding tasks.
-    """
-    t = int(task_id)
-    for task in range(t, t + int(delta)):
-        fname = f'{calc_dir}/{task}.inp'
-        if os.path.exists(fname):
-            with open(fname, 'rb') as f:
-                func, args, mon = pickle.load(f)
-            safely_call(func, args, task - 1, mon)
-
-
-def slurm_tasks(calc_dir, start, stop):
-    """
-    Read the files '<start>.inp' ... '<stop>.inp' and
-    run safely and concurrently the corresponding tasks.
-    """
-    start = int(start)
-    stop = int(stop)
-    allargs = [(calc_dir, str(task_id))
-               for task_id in range(start, stop + 1)]
-    nprocs = min(stop + 1 - start, Starmap.num_cores)
-    multispawn(slurm_task, allargs, nprocs, logfinish=False)
-
-
 if oq_distribute() == 'slurm':
     if not config.directory.custom_tmp:
         raise ValueError('oq_distribute=slurm requires setting custom_tmp')

@@ -156,10 +156,8 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pnemap = dic['pnemap']
-            if pnemap.rates:
-                pnemap.array[:] = numpy.exp(-pnemap.array)
-            pmap.array[:] = 1. - (1.-pmap.array) * pnemap.array
+            rmap = dic['rmap']
+            pmap.array[:] = 1. - (1.-pmap.array) * numpy.exp(-rmap.array)
     return pmap.convert(imtls, len(sitecol.complete))
 
 
@@ -178,7 +176,5 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pnemap = PmapMaker(cmaker, srcfilter, [src]).make()['pnemap']
-    if pnemap.rates:
-        pnemap.array[:] = numpy.exp(-pnemap.array)
-    return 1. - pnemap.array[0]
+    rmap = PmapMaker(cmaker, srcfilter, [src]).make()['rmap']
+    return 1. - numpy.exp(-rmap.array[0])

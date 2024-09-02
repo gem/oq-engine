@@ -582,8 +582,7 @@ class SourceModelLogicTree(object):
         # branches; however, you can actually raise the limit to 33489 branches
         # by commenting/uncommenting the two lines below, if you really need
         maxlen = 183
-        # maxlen = 183 if bsno else 33489  # the sourceModel branchset
-        #                                    can be longer
+        # maxlen = 183 if bsno else 33489  # sourceModel branchset can be longer
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
