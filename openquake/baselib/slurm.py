@@ -1,5 +1,4 @@
 import os
-import sys
 import stat
 import time
 import subprocess
@@ -66,7 +65,3 @@ def stop_workers(job_id: str):
         print('Stopping %s' % host)
         with zeromq.Socket(ctrl_url, zeromq.zmq.REQ, 'connect') as sock:
             sock.send('stop')
-
-
-if __name__ == '__main__':
-    parallel.slurm_tasks(*sys.argv[1:])
