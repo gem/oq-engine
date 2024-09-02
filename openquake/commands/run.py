@@ -114,7 +114,7 @@ def main(job_ini,
         dic.update(params)
         dic['exports'] = ','.join(exports)
         if concurrent_tasks:
-            dic['concurrent_tasks'] = str(concurrent_tasks)
+            dic['concurrent_tasks'] = ct = str(concurrent_tasks)
         elif 'concurrent_tasks' not in dic:
             ct = 2 * parallel.Starmap.num_cores * nodes
             dic['concurrent_tasks'] = str(ct)
