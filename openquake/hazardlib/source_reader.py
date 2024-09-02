@@ -672,13 +672,7 @@ class CompositeSourceModel:
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
-        heavy = [src for src in srcs if src.weight > max_weight]
-        for src in sorted(heavy, key=lambda s: s.weight, reverse=True):
-            logging.info('%s', src)
-        if not heavy:
-            maxsrc = max(srcs, key=lambda s: s.weight)
-            logging.info('Heaviest: %s', maxsrc)
-        return max_weight * 1.02  # increased a bit to produce a bit less tasks
+        return max_weight * 1.02  # increased to produce a bit less tasks
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=None):
         """
