@@ -197,7 +197,9 @@ APPLICATION_MODES = [
 
 APPLICATION_MODE = 'PUBLIC'
 
-ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'
+ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
+# ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but not convertible
+
 
 try:
     EXTERNAL_TOOLS = True if os.environ['EXTERNAL_TOOLS'] == 'True' else False

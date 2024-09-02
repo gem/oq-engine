@@ -386,7 +386,10 @@ def download_rupture_dict(id, ignore_shakemap=False):
     """
     url = SHAKEMAP_URL.format(id)
     print('Downloading %s' % url)
-    js = json.loads(urlopen(url).read())
+    try:
+        js = json.loads(urlopen(url).read())
+    except URLError as exc:
+        raise URLError(f'Unable to download from the USGS website: {str(exc)}')
     mag = js['properties']['mag']
     products = js['properties']['products']
     try:

@@ -851,7 +851,9 @@ def aristotle_validate(request):
     try:
         rupdic = get_rupture_dict(dic, ignore_shakemap)
     except Exception as exc:
-        msg = f'Unable to retrieve rupture data: {exc}'
+        msg = f'Unable to retrieve rupture data: {str(exc)}'
+        # signs '<>' would not be properly rendered in the popup notification
+        msg = msg.replace('<', '"').replace('>', '"')
         response_data = {"status": "failed", "error_msg": msg,
                          "error_cls": type(exc).__name__}
         logging.error('', exc_info=True)
