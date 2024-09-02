@@ -76,16 +76,19 @@ def rnd5(lons):
     return numpy.round(lons, 5)
 
 
-def tile(tileno, ntiles):
+class Tile:
     """
-    :returns: a tile extractor complete->filtered
+    An extractor complete->tile
     """
-    def new(complete):
+    def __init__(self, tileno, ntiles):
+        self.tileno = tileno
+        self.ntiles = ntiles
+
+    def __call__(self, complete):
         sc = SiteCollection.__new__(SiteCollection)
-        sc.array = complete.array[complete.sids % ntiles == tileno]
+        sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
         sc.complete = complete
         return sc
-    return new
 
 
 class Site(object):
@@ -559,7 +562,7 @@ class SiteCollection(object):
         ntiles = min(int(numpy.ceil(ntiles)), maxtiles)
         if ntiles <= 1:
             return [lambda complete: complete]
-        return [tile(i, ntiles) for i in range(ntiles)]
+        return [Tile(i, ntiles) for i in range(ntiles)]
 
     def split_in_tiles(self, hint):
         """
