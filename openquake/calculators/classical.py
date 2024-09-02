@@ -119,13 +119,12 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
-            result['pnemap'] = result['pnemap'].to_rates()
-            result['pnemap'].gid = cmaker.gid
+            result['rmap'].gid = cmaker.gid
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
-        rmap = result.pop('pnemap').remove_zeros().to_rates()
+        # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
+        rmap = result.pop('rmap').remove_zeros()
         if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
             del result['source_data']
             scratch = parallel.scratch_dir(monitor.calc_id)
@@ -137,10 +136,10 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                         _store(rates, cmaker.num_chunks, h5)
         elif allsources and not cmaker.disagg_by_src:
             del result['source_data']
-            result['pnemap'] = rmap.to_array(cmaker.gid)
+            result['rmap'] = rmap.to_array(cmaker.gid)
         else:
-            result['pnemap'] = rmap
-            result['pnemap'].gid = cmaker.gid
+            result['rmap'] = rmap
+            result['rmap'].gid = cmaker.gid
         yield result
 
 
@@ -349,7 +348,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
-        rmap = dic.pop('pnemap', None)
+        rmap = dic.pop('rmap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source

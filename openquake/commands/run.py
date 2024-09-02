@@ -25,7 +25,7 @@ import getpass
 import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, parallel, config, slurm
+from openquake.baselib import performance, general, parallel, slurm
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
@@ -116,7 +116,7 @@ def main(job_ini,
         if concurrent_tasks:
             dic['concurrent_tasks'] = str(concurrent_tasks)
         elif 'concurrent_tasks' not in dic:
-            ct = 2 * int(config.distribution.num_cores) * nodes
+            ct = 2 * parallel.Starmap.num_cores * nodes
             dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)

@@ -100,7 +100,7 @@ class CollapseTestCase(unittest.TestCase):
         cmaker = contexts.ContextMaker(
             srcs[0].tectonic_region_type, self.gsims, params)
         res = classical(srcs, self.sitecol, cmaker)
-        pmap = ~res['pnemap']
+        pmap = ~res['rmap']
         effrups = sum(res['source_data']['nrupts'])
         curve = pmap.array[0, :, 0]
         return curve, srcs, effrups, weights
