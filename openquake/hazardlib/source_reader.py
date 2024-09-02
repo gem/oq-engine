@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import copy
 import zlib
 import os.path
 import pickle
@@ -672,13 +671,7 @@ class CompositeSourceModel:
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
-        heavy = [src for src in srcs if src.weight > max_weight]
-        for src in sorted(heavy, key=lambda s: s.weight, reverse=True):
-            logging.info('%s', src)
-        if not heavy:
-            maxsrc = max(srcs, key=lambda s: s.weight)
-            logging.info('Heaviest: %s', maxsrc)
-        return max_weight * 1.02  # increased a bit to produce a bit less tasks
+        return max_weight * 1.02  # increased to produce a bit less tasks
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=None):
         """
@@ -687,28 +680,23 @@ class CompositeSourceModel:
         N = len(sitecol)
         oq = cmakers[0].oq
         max_mb = float(config.memory.pmap_max_mb)
-        if oq.split_by_gsim is None:
-            split_by_gsim = oq.concurrent_tasks > 512
-        else:
-            split_by_gsim = oq.split_by_gsim
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        if split_by_gsim:
-            self.splits = numpy.full(len(cmakers), numpy.ceil(mb_per_gsim / max_mb))
+        if oq.split_by_gsim:
+            self.splits = numpy.ceil([oq.split_by_gsim * mb_per_gsim / max_mb
+                                      for cmaker in cmakers])
         else:
             self.splits = numpy.ceil([len(cmaker.gsims) * mb_per_gsim / max_mb
                                       for cmaker in cmakers])
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
-            if split_by_gsim:
-                G = len(cmaker.gsims)
-                for g, gsim in zip(cmaker.gid, cmaker.gsims):
-                    cm = copy.copy(cmaker)
-                    cm.gid = [g]
-                    cm.gsims = [gsim]
-                    yield from self._split(cm, sitecol, max_weight*G, num_chunks)
-            else:
-                yield from self._split(cmaker, sitecol, max_weight, num_chunks)
+            grp_id = cmaker.grp_id
+            sg = self.src_groups[grp_id]
+            mul = .4 if sg.weight < max_weight / 3 else 1.
+            self.splits[cmaker.grp_id] *= mul
+            if num_chunks:  # tiling
+                self.splits[grp_id] = max(self.splits[grp_id], sg.weight / max_weight)
+            yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
         sg = self.src_groups[cmaker.grp_id]
@@ -721,8 +709,7 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if cmaker.tiling:
-            nsplits = max(splits, sg.weight / max_weight)
-            for sites in sitecol.split(nsplits, minsize=cmaker.oq.max_sites_disagg):
+            for sites in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:
             for tile in sitecol.split(splits):

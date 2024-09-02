@@ -144,7 +144,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'mag': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
     'local_timestamp': '',
-    'time_event': 'avg|day|night|transit',
+    'time_event': 'day|night|transit',
     'dip': '0 ≤ float ≤ 90',
     'strike': '0 ≤ float ≤ 360',
     'maximum_distance': 'float ≥ 0',

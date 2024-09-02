@@ -215,6 +215,8 @@ site_param_dt = {
     'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'lithology': (numpy.bytes_,2),
+    'landcover': (numpy.float64),
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,

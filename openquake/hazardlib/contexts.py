@@ -1614,7 +1614,7 @@ class PmapMaker(object):
                     pmapclu.array += pnemap.array**nocc * prob_n_occ
             pnemap.array[:] = pmapclu.array
 
-        dic['pnemap'] = pnemap
+        dic['rmap'] = pnemap.to_rates()
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
