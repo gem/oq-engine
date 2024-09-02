@@ -109,7 +109,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    atomic = (cmaker.atomic or sources is None) and not cmaker.disagg_by_src
+    atomic = sources is None and not cmaker.disagg_by_src
     with dstore:
         if sources is None:  # read the sources from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
@@ -129,7 +129,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
         rmap = result.pop('rmap').remove_zeros()
-        if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
+        if cmaker.custom_tmp and cmaker.tiling:  # tested in case_22
             del result['source_data']
             if len(rmap.array):
                 rates = rmap.to_array(cmaker.gid)
