@@ -81,8 +81,6 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     usgs_id = dic['usgs_id']
     rupture_file = dic['rupture_file']
     if rupture_file:
-        # FIXME: we may want to download the station data even if we upload a
-        # rupture model xml
         [rup_node] = nrml.read(rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         rup = conv.convert_node(rup_node)
