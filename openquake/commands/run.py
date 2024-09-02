@@ -146,7 +146,8 @@ def main(job_ini,
         finally:
             slurm.stop_workers(job_id)
     else:
-        parallel.Starmap.CT = concurrent_tasks or ct
+        if dist == 'slurm':
+            parallel.Starmap.CT = concurrent_tasks
         run_jobs(jobs)
     return job_id
 

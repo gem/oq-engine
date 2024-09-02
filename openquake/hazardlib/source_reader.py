@@ -697,24 +697,17 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
-            if oq.split_by_gsim:
-                mul = len(cmaker.gsims) / oq.split_by_gsim
-                # for instance for G=32 and split_by_gsim=4, multiply the
-                # weight by 32/4=8 times to keep more sources in the same task
-                gid_blk = general.block_splitter(cmaker.gid, oq.split_by_gsim)
-                gsims_blk = general.block_splitter(cmaker.gsims, oq.split_by_gsim)
-                for gid, gsims in zip(gid_blk, gsims_blk):
-                    cm = copy.copy(cmaker)
-                    cm.gid = gid
-                    cm.gsims = gsims
-                    yield from self._split(cm, sitecol, max_weight*mul, num_chunks)
-            else:
-                yield from self._split(cmaker, sitecol, max_weight, num_chunks)
+            grp_id = cmaker.grp_id
+            sg = self.src_groups[grp_id]
+            mul = .4 if sg.weight < max_weight / 3 else 1.
+            self.splits[cmaker.grp_id] *= mul
+            if num_chunks:  # tiling
+                self.splits[grp_id] = max(self.splits[grp_id], sg.weight / max_weight)
+            yield from self._split(cmaker, sitecol, max_weight, num_chunks)
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks):
         sg = self.src_groups[cmaker.grp_id]
-        mul = .4 if sg.weight < max_weight / 3 else 1.
-        splits = self.splits[cmaker.grp_id] * mul
+        splits = self.splits[cmaker.grp_id]
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
         cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
         cmaker.custom_tmp = config.directory.custom_tmp
@@ -723,7 +716,6 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if cmaker.tiling:
-            splits = max(splits, sg.weight / max_weight)
             for sites in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
                 yield None, sites, cmaker
         elif sg.atomic or sg.weight <= max_weight:

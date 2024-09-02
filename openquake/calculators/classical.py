@@ -26,8 +26,7 @@ import logging
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat)
+from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
@@ -474,9 +473,6 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        if not performance.numba:
-            logging.warning('numba is not installed: using the slow algorithm')
-
         t0 = time.time()
         self._execute()
         self.store_info()
