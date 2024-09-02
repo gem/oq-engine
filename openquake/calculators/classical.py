@@ -126,10 +126,14 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['rmap'].gid = cmaker.gid
             yield result
     else:
+        fewsites = len(sitecol) <= cmaker.oq.max_sites_disagg
         result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
         rmap = result.pop('rmap').remove_zeros()
-        if cmaker.custom_tmp and cmaker.tiling:  # tested in case_22
+        if fewsites:
+            result['rmap'] = rmap
+            result['rmap'].gid = cmaker.gid
+        elif cmaker.custom_tmp and cmaker.tiling:  # tested in case_22
             del result['source_data']
             if len(rmap.array):
                 rates = rmap.to_array(cmaker.gid)
