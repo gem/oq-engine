@@ -124,8 +124,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'].gid = cmaker.gid
             yield result
     else:
-        result = parallel.Starmap.apply(
-            hazclassical, (sources, sitecol, cmaker), concurrent_tasks=2).reduce()
+        result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['pnemap'].size_mb=}")
         rmap = result.pop('pnemap').remove_zeros().to_rates()
         if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
