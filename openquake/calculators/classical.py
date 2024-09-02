@@ -109,7 +109,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    allsources = sources is None or cmaker.atomic
+    atomic = (cmaker.atomic or sources is None) and not cmaker.disagg_by_src
     with dstore:
         if sources is None:  # read the sources from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
@@ -134,7 +134,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             if len(rmap.array):
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
-        elif allsources and not cmaker.disagg_by_src:
+        elif atomic:
             del result['source_data']
             result['rmap'] = rmap.to_array(cmaker.gid)
         else:
