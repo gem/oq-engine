@@ -109,14 +109,14 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
+    ct = 2 * parallel.Starmap.num_cores * nodes
     dics = [readinput.get_params(ini) for ini in job_ini]
     for dic in dics:
         dic.update(params)
         dic['exports'] = ','.join(exports)
         if concurrent_tasks:
-            dic['concurrent_tasks'] = ct = str(concurrent_tasks)
+            dic['concurrent_tasks'] = str(concurrent_tasks)
         elif 'concurrent_tasks' not in dic:
-            ct = 2 * parallel.Starmap.num_cores * nodes
             dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
@@ -144,7 +144,7 @@ def main(job_ini,
         finally:
             slurm.stop_workers(job_id)
     else:
-        if dist == 'slurm':
+        if dist == 'slurm':  # job_id is set
             parallel.Starmap.CT = concurrent_tasks
         run_jobs(jobs)
     return job_id
