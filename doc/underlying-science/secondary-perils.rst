@@ -406,9 +406,9 @@ characteristic settlement amplitude corresponding to the liquefaction susceptibi
 
 Table 3: Ground settlements amplitudes for liquefaction susceptibility categories.
 
-****************
+
 Landslide models
-****************
+----------------
 
 Landslides are considered as one of the most damaging secondary perils associated with earthquakes. Earthquake-induced 
 landslides occurs when the static and inertia forces within the sliding mass reduces the factor of safety below 1. 
@@ -488,6 +488,50 @@ Finally, the coseismic displacements are estimated using the sliding block displ
 `Jibson (2007) <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_.
 
 
+****************************
+Nowicki Jessee et al. (2018)
+****************************
+
+A geospatial model used to predict probability of landsliding using globally available geospatial variables was proposed by 
+`Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_. The level of shaking is 
+characterised by Peak Ground Velocity , :math:`PGV`. Slope steepness affects slope stability, and here, the topographic 
+slope, :math:`slope`, has been derived from the median elevation value from the 7.5 arc sec Global Multi-resolution Terrain 
+Elevation Data (`Danielson and Gesch, 2011 <https://pubs.usgs.gov/of/2011/1073/>`_). The model uses lithology, as a proxy for 
+the strength of the shaken material. The global lithology map is available in `Hartman and Moosdort, 2012 <https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2012GC004370>`_. 
+Slope stability is further controlled by the composite strength of the soil-vegetation root matrix. The Globcover 2009 data, 
+available at 300-m resolution and separated into 20 classes has been used. More details on this database is available in 
+`Arino et al. (2012) <https://doi.pangaea.de/10.1594/PANGAEA.787668>`_. Finally, the Compound Topographic Index, :math:`CTI`, 
+has been used to characterise the wetness of the material. 
+
+Explanatory variable :math:`X` is calculated as:
+
+.. math:: 
+
+   X = -6.30 + 1.65 \ln(PGV) - 0.06 Slope + \alpha \cdot lithology \quad
+
+.. math:: 
+
+   + \beta \cdot landcover + 0.03 CTI - 0.01 \ln(PGV) \cdot Slope \quad (22)
+
+Coefficients \alpha and \beta values are estimated for several rock and landcover classes. The 
+reader is reffered to the original study by `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_, 
+where the coefficient values are reported in Table 3. 
+
+Probability of landsliding is then evaluated using logistic regression.
+.. math::
+
+	P(L) = \frac{1}{1+e^X} \quad (23)
+
+These probabilities are converted to areal percentages to unbias the precitions.
+.. math::
+
+	L_{P}(P) = e^(-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3) \quad (24)
+
+Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
+and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
+the combination of other predictor variables, areas with slopes less than :math:`2^\circ` are excluded.  Zero probability is 
+heuristically assigned if :math:`PGA = 0.02 \, \text{g}`. Finally, we adopted the USGS recommendation for modifying the 
+regression coefficient for unconsolidated sediments. The new proposed value is set to :math:`-1.36`. 
 
 
 Reference
@@ -542,3 +586,17 @@ Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.
 
 [15] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide
 hazard assessment. Engineering Geology, 212, 146-160. https://doi.org/10.1016/j.enggeo.2016.08.005
+
+[16] Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018).
+A global empirical model for near-real-time assessment of seismically induced landslides. Journal of Geophysical
+Research: Earth Surface, 123, 1835–1859. https://doi.org/10.1029/2017JF004494
+
+[17] Danielson, J.J., and Gesch, D.B., 2011, Global multi-resolution terrain elevation data 2010 (GMTED2010): 
+U.S. Geological Survey Open-File Report 2011–1073, 26 p.
+
+[18] Hartmann, J., and N. Moosdorf (2012), The new global lithological map database GLiM: A representation of rock
+properties atthe Earth surface, Geochem. Geophys. Geosyst., 13, Q12004, doi:10.1029/2012GC004370.
+
+[19] Arino, O., Ramos Perez, J.J., Kalogirou, V., Bontemps, S., Defourny, P., Van Bogaert, E. (2012): Global Land Cover 
+Map for 2009 (GlobCover 2009), https://doi.org/10.1594/PANGAEA.787668
+
