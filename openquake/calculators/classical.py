@@ -130,20 +130,17 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         result = hazclassical(sources, sitecol, cmaker)
         # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
         rmap = result.pop('rmap').remove_zeros()
-        if fewsites:
+        if fewsites or not atomic:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
-        elif cmaker.custom_tmp and cmaker.tiling:  # tested in case_22
+        elif cmaker.custom_tmp:  # tested in case_22
             del result['source_data']
             if len(rmap.array):
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
-        elif atomic:
+        else:
             del result['source_data']
             result['rmap'] = rmap.to_array(cmaker.gid)
-        else:
-            result['rmap'] = rmap
-            result['rmap'].gid = cmaker.gid
         yield result
 
 
