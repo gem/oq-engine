@@ -503,13 +503,13 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         allargs = []
+        if config.directory.custom_tmp:
+            scratch = parallel.scratch_dir(self.datastore.calc_id)
+            logging.info('Storing the rates in %s', scratch)
+            self.datastore.hdf5.attrs['scratch_dir'] = scratch
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            if config.directory.custom_tmp:
-                scratch = parallel.scratch_dir(self.datastore.calc_id)
-                logging.info('Storing the rates in %s', scratch)
-                self.datastore.hdf5.attrs['scratch_dir'] = scratch
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         for block, tile, cm in self.csm.split(
@@ -527,7 +527,7 @@ class ClassicalCalculator(base.HazardCalculator):
                          redweight(src))
         if not heavy:
             maxsrc = max(srcs, key=redweight)
-            logging.info('Heaviest: %s, weight=%.1f',
+            logging.info('Heaviest: %r, weight=%.1f',
                          maxsrc.source_id, redweight(maxsrc))
 
         self.datastore.swmr_on()  # must come before the Starmap

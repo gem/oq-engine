@@ -186,12 +186,15 @@ def map_getters(dstore, full_lt=None, disagg=False):
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
     else:
        weights = full_lt.weights
+    fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
-        fnames = [os.path.join(scratch_dir, f) for f in os.listdir(scratch_dir)
-                  if f.endswith('.hdf5')]
     except KeyError:  # no tiling
-        fnames = [dstore.filename]
+        pass
+    else:
+        for f in os.listdir(scratch_dir):
+            if f.endswith('.hdf5'):
+                fnames.append(os.path.join(scratch_dir, f))
     out = []
     for chunk in range(chunks):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
