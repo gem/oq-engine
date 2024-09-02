@@ -51,28 +51,32 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5):
-    chunks = rates['sid'] % num_chunks
-    idx_start_stop = []
-    for chunk in numpy.unique(chunks):
-        ch_rates = rates[chunks == chunk]
-        try:
-            h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
-        except ValueError:  # already created
-            offset = len(h5['_rates/sid'])
-        else:
-            offset = 0
-        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-        hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
-        hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
-        hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
-        hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
-    iss = numpy.array(idx_start_stop, getters.slice_dt)
-    if '_rates/slice_by_idx' in h5:
-        hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    else:  # writing on a small file
-        h5['_rates/slice_by_idx'] = iss
+def _store(rates, num_chunks, h5, mon):
+    if h5 is None:
+        scratch = parallel.scratch_dir(mon.calc_id)
+        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
+    with mon('storing rates', measuremem=True):
+        chunks = rates['sid'] % num_chunks
+        idx_start_stop = []
+        for chunk in numpy.unique(chunks):
+            ch_rates = rates[chunks == chunk]
+            try:
+                h5.create_df(
+                    '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+            except ValueError:  # already created
+                offset = len(h5['_rates/sid'])
+            else:
+                offset = 0
+            idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
+            hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
+            hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
+            hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
+            hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
+        iss = numpy.array(idx_start_stop, getters.slice_dt)
+        if '_rates/slice_by_idx' in h5:
+            hdf5.extend(h5['_rates/slice_by_idx'], iss)
+        else:  # writing on a small file
+            h5['_rates/slice_by_idx'] = iss
 
 
 class Set(set):
@@ -127,13 +131,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
         rmap = result.pop('rmap').remove_zeros()
         if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
             del result['source_data']
-            scratch = parallel.scratch_dir(monitor.calc_id)
             if len(rmap.array):
-                fname = f'{scratch}/{monitor.task_no}.hdf5'
-                with monitor('storing rates', measuremem=True):
-                    rates = rmap.to_array(cmaker.gid)
-                    with hdf5.File(fname, 'a') as h5:
-                        _store(rates, cmaker.num_chunks, h5)
+                rates = rmap.to_array(cmaker.gid)
+                _store(rates, cmaker.num_chunks, None, monitor)
         elif allsources and not cmaker.disagg_by_src:
             del result['source_data']
             result['rmap'] = rmap.to_array(cmaker.gid)
@@ -436,7 +436,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store(self, rates, gid):
         logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore)
+        _store(rates, self.num_chunks, self.datastore, self._monitor)
 
     def execute(self):
         """
