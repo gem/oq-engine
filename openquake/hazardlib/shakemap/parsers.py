@@ -264,7 +264,7 @@ def read_usgs_stations_json(stations_json_str):
         for _, chan in rec_station.items():
             if chan["name"].endswith("Z") or chan["name"].endswith("U"):
                 continue
-            # print(chan["name"])
+            # logging.info(chan["name"])
             df = pd.DataFrame(chan["amplitudes"])
             if 'pga' in df.name.unique():
                 pga = df.loc[df['name'] == 'pga', 'value'].values[0]
@@ -289,8 +289,7 @@ def read_usgs_stations_json(stations_json_str):
     try:
         # Some events might not have macroseismic data, then skip them
         vals = vals.combine_first(stations['pgm_from_mmi']).apply(pd.Series)
-    except Exception as e:
-        print(e, 'not available in json')
+    except Exception:
         vals = vals.apply(pd.Series)
     # Arrange columns since the data can include mixed positions for the IMTs
     values = pd.DataFrame()
@@ -369,7 +368,7 @@ def download_station_data_file(usgs_id):
     """
     # NOTE: downloading twice from USGS, but with a clearer workflow
     url = SHAKEMAP_URL.format(usgs_id)
-    print('Downloading %s' % url)
+    logging.info('Downloading %s' % url)
     js = json.loads(urlopen(url).read())
     products = js['properties']['products']
     station_data_file = None
@@ -382,7 +381,7 @@ def download_station_data_file(usgs_id):
         contents = shakemap['contents']
         if 'download/stationlist.json' in contents:
             stationlist_url = contents.get('download/stationlist.json')['url']
-            print('Downloading stationlist.json')
+            logging.info('Downloading stationlist.json')
             stations_json_str = urlopen(stationlist_url).read()
             try:
                 stations = read_usgs_stations_json(stations_json_str)
@@ -412,7 +411,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
     url = SHAKEMAP_URL.format(id)
-    print('Downloading %s' % url)
+    logging.info('Downloading %s' % url)
     js = json.loads(urlopen(url).read())
     mag = js['properties']['mag']
     products = js['properties']['products']
@@ -437,7 +436,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
             ff = products['finite-fault']
         except KeyError:
             raise MissingLink('There is no finite-fault info for %s' % id)
-        print('Getting finite-fault properties')
+        logging.info('Getting finite-fault properties')
         if isinstance(ff, list):
             if len(ff) > 1:
                 logging.warning(f'The finite-fault list contains {len(ff)}'
@@ -455,7 +454,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
                   'is_point_rup': False, 'usgs_id': id, 'rupture_file': None}
         return rupdic
     url = contents.get('download/rupture.json')['url']
-    print('Downloading rupture.json')
+    logging.info('Downloading rupture.json')
     rup_data = json.loads(urlopen(url).read())
     feats = rup_data['features']
     is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
