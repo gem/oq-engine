@@ -76,7 +76,7 @@ def rnd5(lons):
     return numpy.round(lons, 5)
 
 
-class Tile:
+class TileGetter:
     """
     An extractor complete->tile
     """
@@ -560,7 +560,7 @@ class SiteCollection(object):
         """
         maxtiles = numpy.ceil(len(self) / minsize)
         ntiles = min(numpy.ceil(ntiles), maxtiles)
-        return [Tile(i, ntiles) for i in range(int(ntiles))]
+        return [TileGetter(i, ntiles) for i in range(int(ntiles))]
 
     def split_in_tiles(self, hint):
         """
