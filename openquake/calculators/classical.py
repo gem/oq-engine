@@ -23,12 +23,13 @@ import zlib
 import pickle
 import psutil
 import logging
+import operator
 import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -37,6 +38,7 @@ from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical
 
+get_weight = operator.attrgetter('weight')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -421,7 +423,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.num_chunks = getters.get_num_chunks(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):
@@ -497,14 +499,12 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        tiles = self.datastore['tiles']
-        tiling = tiles.attrs['tiling']
+        tiling = self.datastore['source_groups'].attrs['tiling']
         self.rmap = MapArray(self.sitecol.sids, L, Gt)
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        allargs = []
         if config.directory.custom_tmp:
             scratch = parallel.scratch_dir(self.datastore.calc_id)
             logging.info('Storing the rates in %s', scratch)
@@ -514,10 +514,17 @@ class ClassicalCalculator(base.HazardCalculator):
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        for block, tile, cm in self.csm.split(
+        allargs = []
+        for cmaker, tiles, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
-            allargs.append((block, tile, cm, ds))
+            for tile in self.sitecol.split(tiles, minsize=oq.max_sites_disagg):
+                if blocks == 1:
+                    allargs.append((None, tile, cmaker, ds))
+                else:
+                    sg = self.csm.src_groups[cmaker.grp_id]
+                    for block in split_in_blocks(sg, blocks, get_weight):
+                        allargs.append((block, tile, cmaker, ds))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
