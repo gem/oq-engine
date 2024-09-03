@@ -185,8 +185,10 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        splits = self.calc.datastore['tiles'][:]
-        self.assertEqual(len(splits), 10)
+        data = self.calc.datastore['source_groups'][:]
+        self.assertEqual(data['gsims'], 4)
+        self.assertEqual(data['tiles'], 9)   
+        self.assertEqual(data['blocks'], 1)        
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

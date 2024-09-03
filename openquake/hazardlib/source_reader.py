@@ -35,7 +35,6 @@ TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 bybranch = operator.attrgetter('branch')
-get_weight = operator.attrgetter('weight')
 
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
@@ -695,29 +694,24 @@ class CompositeSourceModel:
             mul = .4 if sg.weight < max_weight / 3 else 1.
             self.splits[cmaker.grp_id] *= mul
             if tiling:
-                self.splits[grp_id] = max(self.splits[grp_id], sg.weight / max_weight)
-            yield from self._split(cmaker, sitecol, max_weight, num_chunks, tiling)
+                splits = max(self.splits[grp_id], sg.weight / max_weight)
+                blocks = 1
+            else:
+                splits = self.splits[grp_id]
+                blocks = numpy.ceil(sg.weight / max_weight / splits)
 
-    def _split(self, cmaker, sitecol, max_weight, num_chunks, tiling):
-        sg = self.src_groups[cmaker.grp_id]
-        splits = self.splits[cmaker.grp_id]
-        cmaker.gsims = list(cmaker.gsims)  # save data transfer
-        cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-        cmaker.custom_tmp = config.directory.custom_tmp
-        cmaker.num_chunks = num_chunks
-        cmaker.tiling = tiling
-        cmaker.weight = sg.weight
-        cmaker.atomic = sg.atomic
-        if tiling:
-            for tile in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
-                yield None, tile, cmaker
-        elif sg.atomic or sg.weight <= max_weight:
-            for tile in sitecol.split(splits):
-                yield None, tile, cmaker
-        else:
-            for block in general.block_splitter(sg, max_weight * splits, get_weight):
-                for tile in sitecol.split(splits):
-                    yield block, tile, cmaker
+            cmaker.gsims = list(cmaker.gsims)  # save data transfer
+            cmaker.codes = sg.codes
+            cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cmaker.custom_tmp = config.directory.custom_tmp
+            cmaker.num_chunks = num_chunks
+            cmaker.tiling = tiling
+            cmaker.weight = sg.weight
+            cmaker.atomic = sg.atomic
+            if sg.atomic:
+                yield cmaker, splits, 1
+            else:
+                yield cmaker, splits, blocks
 
     def __toh5__(self):
         G = len(self.src_groups)
