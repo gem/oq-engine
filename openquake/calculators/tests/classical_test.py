@@ -173,7 +173,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # crossing date line calculation for Alaska
-        # this also tests the splitting in two tiles
+        # this also tests the splitting in tiles
         tmp = tempfile.gettempdir()
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': tmp}):
@@ -187,7 +187,7 @@ class ClassicalTestCase(CalculatorTestCase):
         ], case_22.__file__, delta=1E-6)
         data = self.calc.datastore['source_groups'][:]
         self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 9)   
+        self.assertEqual(data['tiles'], 10)
         self.assertEqual(data['blocks'], 1)        
 
     def test_case_23(self):  # filtering away on TRT

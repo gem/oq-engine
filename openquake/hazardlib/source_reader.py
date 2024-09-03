@@ -674,18 +674,14 @@ class CompositeSourceModel:
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (sources, sites, cmaker)
+        :yields: (cmaker, ntiles, nblocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        if oq.split_by_gsim:
-            self.splits = numpy.ceil([oq.split_by_gsim * mb_per_gsim / max_mb
-                                      for cmaker in cmakers])
-        else:
-            self.splits = numpy.ceil([len(cmaker.gsims) * mb_per_gsim / max_mb
-                                      for cmaker in cmakers])
+        self.splits = numpy.ceil(
+            [len(cm.gsims) * mb_per_gsim / max_mb for cm in cmakers])
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
@@ -694,7 +690,7 @@ class CompositeSourceModel:
             mul = .4 if sg.weight < max_weight / 3 else 1.
             self.splits[cmaker.grp_id] *= mul
             if tiling:
-                splits = max(self.splits[grp_id], sg.weight / max_weight)
+                splits = max(self.splits[grp_id], numpy.ceil(sg.weight / max_weight))
                 blocks = 1
             else:
                 splits = self.splits[grp_id]

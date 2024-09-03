@@ -505,7 +505,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        allargs = []
         if config.directory.custom_tmp:
             scratch = parallel.scratch_dir(self.datastore.calc_id)
             logging.info('Storing the rates in %s', scratch)
@@ -515,6 +514,7 @@ class ClassicalCalculator(base.HazardCalculator):
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+        allargs = []
         for cmaker, tiles, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
