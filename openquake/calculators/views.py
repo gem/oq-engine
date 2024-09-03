@@ -416,9 +416,8 @@ def view_job_info(token, dstore):
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
         recv = get_array(task_info, taskname=encode(task))['received']
-        data.append((task, ' '.join(sent),
-                     humansize(recv.sum()), humansize(recv.mean())))
-    return numpy.array(data, dt('task sent received mean_recv'))
+        data.append((task, ' '.join(sent), humansize(recv.sum())))
+    return numpy.array(data, dt('task sent received'))
 
 
 @view.add('avglosses_data_transfer')
