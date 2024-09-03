@@ -110,6 +110,10 @@ def main(job_ini,
                                ext='org'))
         return
     ct = 2 * parallel.Starmap.num_cores * nodes
+    max_cores = int(config.distribution.max_cores)
+    if ct > 2 * max_cores:
+        raise ValueError('You can use at most %d nodes' %
+                         max_cores // parallel.Starmap.num_cores)
     dics = [readinput.get_params(ini) for ini in job_ini]
     for dic in dics:
         dic.update(params)
