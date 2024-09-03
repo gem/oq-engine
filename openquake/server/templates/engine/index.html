@@ -113,6 +113,7 @@
                 <label for"rake">{{ aristotle_form_labels.rake }}</label>
                 <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}" disabled />
               </div>
+              <input class="aristotle-input" type="hidden" id="is_point_rup" name="is_point_rup"/>
               <div class="aristotle_form_row">
                 <label for="trt">{{ aristotle_form_labels.trt }}</label>
                 <select name="trt" id="trt" class="aristotle-select">
@@ -125,6 +126,18 @@
               <div class="aristotle_form_row">
                 <label for"strike">{{ aristotle_form_labels.strike }}</label>
                 <input class="aristotle-input" type="text" id="strike" name="strike" placeholder="{{ aristotle_form_placeholders.strike }}" value="0"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"local_timestamp">{{ aristotle_form_labels.local_timestamp }}</label>
+                <input class="aristotle-input" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ aristotle_form_placeholders.local_timestamp }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"time_event">{{ aristotle_form_labels.time_event }}</label>
+                <select id="time_event" name="time_event" class="aristotle-select">
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                    <option value="transit">Transit</option>
+                </select>
               </div>
               <div class="aristotle_form_row">
                 <label for"maximum_distance">{{ aristotle_form_labels.maximum_distance }}</label>
