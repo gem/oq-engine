@@ -423,7 +423,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.num_chunks = getters.get_num_chunks(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):

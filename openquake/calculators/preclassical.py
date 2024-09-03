@@ -197,7 +197,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     Ns = data['tiles']
     ntasks = Ns @ data['blocks']
     logging.info('This will be a %s calculation with ~%d tasks, '
-                 'min_sites=%d, max_sites=%d', 'regular' if regular else 'tiling',
+                 'min_tiles=%d, max_tiles=%d', 'regular' if regular else 'tiling',
                  ntasks, Ns.min(), Ns.max())
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
