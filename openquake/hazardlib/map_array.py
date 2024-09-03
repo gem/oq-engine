@@ -389,8 +389,6 @@ class MapArray(object):
     # dangerous since it changes the shape by removing sites
     def remove_zeros(self):
         ok = self.array.sum(axis=(1, 2)) > 0
-        if ok.sum() == 0:  # avoid empty array
-            ok = slice(0, 1)
         new = self.__class__(self.sids[ok], self.shape[1], self.shape[2], self.rates)
         new.array = self.array[ok]
         return new

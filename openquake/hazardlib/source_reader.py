@@ -709,8 +709,8 @@ class CompositeSourceModel:
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
         if tiling:
-            for sites in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
-                yield None, sites, cmaker
+            for tile in sitecol.split(splits, minsize=cmaker.oq.max_sites_disagg):
+                yield None, tile, cmaker
         elif sg.atomic or sg.weight <= max_weight:
             for tile in sitecol.split(splits):
                 yield None, tile, cmaker

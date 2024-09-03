@@ -194,18 +194,20 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     triples = csm.split(cmakers, sitecol, max_weight, tiling=not regular)
-    tiles = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tile),
-          cm.weight, len(cm.gsims) * fac * len(tile) / N)
-         for _, tile, cm in triples],
-        [('grp_id', U16), ('G', U16), ('N', U32), ('weight', F32), ('gb', F32)])
+    tiles = []
+    for _, tile_get, cm in triples:
+        tile = tile_get(sitecol)
+        tiles.append((cm.grp_id, len(cm.gsims), len(tile),
+                      cm.weight, len(cm.gsims) * fac * len(tile) / N))
+    tiles = numpy.array(tiles, [('grp_id', U16), ('G', U16), ('N', U32),
+                                ('weight', F32), ('gb', F32)])
     dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
     Ns = tiles['N']
     logging.info('This will be a %s calculation with %d tasks, '
                  'min_sites=%d, max_sites=%d', 'regular' if regular else 'tiling',
                  len(tiles), Ns.min(), Ns.max())
-    if mem_gb >= 30 and not config.directory.custom_tmp:
+    if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids
 
