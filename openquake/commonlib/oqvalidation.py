@@ -1528,10 +1528,6 @@ class OqParam(valid.ParamSet):
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
-    @property
-    def manytasks(self):
-        return self.concurrent_tasks > 2
-
     def risk_event_rates(self, num_events, num_haz_rlzs):
         """
         :param num_events: the number of events per risk realization
