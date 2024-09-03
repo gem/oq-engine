@@ -25,7 +25,7 @@ import getpass
 import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, parallel, slurm
+from openquake.baselib import performance, general, parallel, slurm, config
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
@@ -137,10 +137,14 @@ def main(job_ini,
             run_args.extend(['-e', export])
         run_args.extend(['-p', f'job_id={job_id}'])
         run_args.extend(param)
+        mcores = config.distribution.master_cores
         try:
-            cmd = ['srun', '--cpus-per-task', '16', '--time', '24:00:00'] + \
-                slurm.submit_cmd[1:] + run_args
-            subprocess.run(cmd)
+            if not mcores:  # run on the login node (IUSS cluster)
+                run_jobs(jobs)
+            else:  # run on an extra node (CEA cluster)
+                cmd = ['srun', '--cpus-per-task', mcores, '--time', '24:00:00'] + \
+                    slurm.submit_cmd[1:] + run_args
+                subprocess.run(cmd)
         finally:
             slurm.stop_workers(job_id)
     else:
