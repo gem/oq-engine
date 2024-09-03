@@ -444,7 +444,8 @@ class MapArray(object):
         return self
 
     def __repr__(self):
-        return '<MapArray(%d, %d, %d)>' % self.shape
+        tup = self.shape + (self.size_mb,)
+        return '<MapArray(%d, %d, %d)[%.1fM]>' % tup
 
 
 @compile("(float32[:, :], float32[:, :], uint32[:])")

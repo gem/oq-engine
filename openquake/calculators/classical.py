@@ -51,28 +51,32 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5):
-    chunks = rates['sid'] % num_chunks
-    idx_start_stop = []
-    for chunk in numpy.unique(chunks):
-        ch_rates = rates[chunks == chunk]
-        try:
-            h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
-        except ValueError:  # already created
-            offset = len(h5['_rates/sid'])
-        else:
-            offset = 0
-        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-        hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
-        hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
-        hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
-        hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
-    iss = numpy.array(idx_start_stop, getters.slice_dt)
-    if '_rates/slice_by_idx' in h5:
-        hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    else:  # writing on a small file
-        h5['_rates/slice_by_idx'] = iss
+def _store(rates, num_chunks, h5, mon):
+    if h5 is None:
+        scratch = parallel.scratch_dir(mon.calc_id)
+        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
+    with mon('storing rates', measuremem=True):
+        chunks = rates['sid'] % num_chunks
+        idx_start_stop = []
+        for chunk in numpy.unique(chunks):
+            ch_rates = rates[chunks == chunk]
+            try:
+                h5.create_df(
+                    '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+            except ValueError:  # already created
+                offset = len(h5['_rates/sid'])
+            else:
+                offset = 0
+            idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
+            hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
+            hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
+            hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
+            hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
+        iss = numpy.array(idx_start_stop, getters.slice_dt)
+        if '_rates/slice_by_idx' in h5:
+            hdf5.extend(h5['_rates/slice_by_idx'], iss)
+        else:  # writing on a small file
+            h5['_rates/slice_by_idx'] = iss
 
 
 class Set(set):
@@ -105,7 +109,7 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    allsources = sources is None or cmaker.atomic
+    atomic = sources is None and not cmaker.disagg_by_src
     with dstore:
         if sources is None:  # read the sources from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
@@ -123,23 +127,19 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
         rmap = result.pop('rmap').remove_zeros()
-        if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
-            del result['source_data']
-            scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rmap.array):
-                fname = f'{scratch}/{monitor.task_no}.hdf5'
-                with monitor('storing rates', measuremem=True):
-                    rates = rmap.to_array(cmaker.gid)
-                    with hdf5.File(fname, 'a') as h5:
-                        _store(rates, cmaker.num_chunks, h5)
-        elif allsources and not cmaker.disagg_by_src:
-            del result['source_data']
-            result['rmap'] = rmap.to_array(cmaker.gid)
-        else:
+        # print(f"{monitor.task_no=} {rmap=}")
+        if rmap.size_mb < 1 or not atomic:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
+        elif cmaker.custom_tmp:  # tested in case_22
+            del result['source_data']
+            if len(rmap.array):
+                rates = rmap.to_array(cmaker.gid)
+                _store(rates, cmaker.num_chunks, None, monitor)
+        else:
+            del result['source_data']
+            result['rmap'] = rmap.to_array(cmaker.gid)
         yield result
 
 
@@ -436,7 +436,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store(self, rates, gid):
         logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore)
+        _store(rates, self.num_chunks, self.datastore, self._monitor)
 
     def execute(self):
         """
@@ -503,18 +503,18 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         allargs = []
+        if config.directory.custom_tmp:
+            scratch = parallel.scratch_dir(self.datastore.calc_id)
+            logging.info('Storing the rates in %s', scratch)
+            self.datastore.hdf5.attrs['scratch_dir'] = scratch
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            if config.directory.custom_tmp:
-                scratch = parallel.scratch_dir(self.datastore.calc_id)
-                logging.info('Storing the rates in %s', scratch)
-                self.datastore.hdf5.attrs['scratch_dir'] = scratch
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         for block, tile, cm in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
-                self.num_chunks if tiling else None):
+                self.num_chunks, tiling):
             allargs.append((block, tile, cm, ds))
 
         # log info about the heavy sources
@@ -527,7 +527,7 @@ class ClassicalCalculator(base.HazardCalculator):
                          redweight(src))
         if not heavy:
             maxsrc = max(srcs, key=redweight)
-            logging.info('Heaviest: %s, weight=%.1f',
+            logging.info('Heaviest: %r, weight=%.1f',
                          maxsrc.source_id, redweight(maxsrc))
 
         self.datastore.swmr_on()  # must come before the Starmap

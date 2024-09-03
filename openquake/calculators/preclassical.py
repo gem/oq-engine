@@ -193,11 +193,11 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         logging.info('mem_gb = %.2f', mem_gb)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
-    num_chunks = None if regular else 1
+    triples = csm.split(cmakers, sitecol, max_weight, tiling=not regular)
     tiles = numpy.array(
         [(cm.grp_id, len(cm.gsims), len(tile),
           cm.weight, len(cm.gsims) * fac * len(tile) / N)
-         for _, tile, cm in csm.split(cmakers, sitecol, max_weight, num_chunks)],
+         for _, tile, cm in triples],
         [('grp_id', U16), ('G', U16), ('N', U32), ('weight', F32), ('gb', F32)])
     dstore.create_dset('tiles', tiles, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
