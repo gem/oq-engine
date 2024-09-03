@@ -514,34 +514,27 @@ class ClassicalCalculator(base.HazardCalculator):
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        allargs = []
+        heavy, light = [], []
         for cmaker, tiles, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
             for tile in self.sitecol.split(tiles, minsize=oq.max_sites_disagg):
                 if blocks == 1:
-                    allargs.append((None, tile, cmaker, ds))
+                    light.append((None, tile, cmaker, ds))
                 else:
                     sg = self.csm.src_groups[cmaker.grp_id]
                     for block in split_in_blocks(sg, blocks, get_weight):
-                        allargs.append((block, tile, cmaker, ds))
-
-        # log info about the heavy sources
-        srcs = self.csm.get_sources()
-        def redweight(src):
-            return src.weight / self.csm.splits[src.grp_id]
-        heavy = [src for src in srcs if redweight(src) > self.max_weight]
-        for src in sorted(heavy, key=redweight, reverse=True):
-            logging.info('source_id=%s, weight=%.1f', src.source_id,
-                         redweight(src))
-        if not heavy:
-            maxsrc = max(srcs, key=redweight)
-            logging.info('Heaviest: %r, weight=%.1f',
-                         maxsrc.source_id, redweight(maxsrc))
+                        heavy.append((block, tile, cmaker, ds))
+        logging.info('Spawning %d light tasks and %d heavy tasks',
+                     len(light), len(heavy))
 
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+        smap_h = parallel.Starmap(classical, heavy, h5=self.datastore.hdf5)
+        smap_l = parallel.Starmap(classical, light, h5=self.datastore.hdf5)
+        smap_l.submit_all()
+        smap_h.task_no = smap_h.task_no
+        acc = smap_h.reduce(self.agg_dicts, AccumDict(accum=0.))
+        acc = smap_l.reduce(self.agg_dicts, acc)
         for g in self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
                 self.store(self.rmap.to_array([g]), [g])
