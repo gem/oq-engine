@@ -566,6 +566,8 @@
                         diaerror.show(false, "Error", data.error);
                         $('#rupture_file_from_usgs_loaded').val('N.A. (conversion error)');
                     }
+                    $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
+                    $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);
@@ -644,6 +646,7 @@
                                 $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
+                formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
                 formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());

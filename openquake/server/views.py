@@ -57,6 +57,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
+from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
     get_trts_around, get_aristotle_allparams, get_rupture_dict)
 from openquake.server import utils
@@ -130,6 +131,7 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
     'ses_seed': 'Random seed',
+    'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
@@ -153,6 +155,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'number_of_ground_motion_fields': 'float ≥ 1',
     'asset_hazard_distance': 'float ≥ 0',
     'ses_seed': 'int ≥ 0',
+    'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
 }
@@ -714,7 +717,7 @@ def aristotle_get_rupture_data(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    [rupdic] = res
+    rupdic, station_data_file = res
     try:
         trts, mosaic_model = get_trts_around(
             rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
@@ -735,6 +738,7 @@ def aristotle_get_rupture_data(request):
     rupdic['trts'] = trts
     rupdic['mosaic_model'] = mosaic_model
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
+    rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -829,11 +833,6 @@ def aristotle_validate(request):
     if 'is_point_rup' in request.POST:
         dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
 
-    # FIXME: validate station_data_file
-    if 'lon' in request.POST:
-        # NOTE: if the request contains all form parameters
-        params['station_data_file'] = station_data_path
-
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -859,6 +858,15 @@ def aristotle_validate(request):
         logging.error('', exc_info=True)
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=500)
+    if station_data_path is not None:
+        # giving precedence to the user-uploaded station data file
+        params['station_data_file'] = station_data_path
+    elif request.POST.get('station_data_file_from_usgs'):
+        params['station_data_file'] = request.POST.get(
+            'station_data_file_from_usgs')
+    else:
+        station_data_file = download_station_data_file(dic['usgs_id'])
+        params['station_data_file'] = station_data_file
     return rupdic, *params.values()
 
 
