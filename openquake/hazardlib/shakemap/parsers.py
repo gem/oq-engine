@@ -34,7 +34,6 @@ import logging
 import json
 import zipfile
 import pytz
-import tempfile
 import pandas as pd
 from datetime import datetime
 from shapely.geometry import Polygon
