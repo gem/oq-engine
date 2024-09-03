@@ -140,6 +140,7 @@ def main(job_ini,
         mcores = config.distribution.master_cores
         try:
             if not mcores:  # run on the login node (IUSS cluster)
+                parallel.Starmap.CT = ct
                 run_jobs(jobs)
             else:  # run on an extra node (CEA cluster)
                 cmd = ['srun', '--cpus-per-task', mcores, '--time', '24:00:00'] + \
