@@ -31,6 +31,8 @@ import pathlib
 import logging
 import json
 import zipfile
+import pytz
+from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
 from openquake.baselib.node import node_from_xml
@@ -200,6 +202,38 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
+def utc_to_local_time(utc_timestamp, lon, lat):
+    try:
+        # NOTE: optional dependency needed for ARISTOTLE
+        from timezonefinder import TimezoneFinder
+    except ImportError:
+        raise ImportError(
+            'The python package "timezonefinder" is not installed. It is'
+            ' required in order to convert the UTC time to the local time of'
+            ' the event. You can install it running:'
+            ' pip install timezonefinder==6.5.2')
+    tf = TimezoneFinder()
+    timezone_str = tf.timezone_at(lng=lon, lat=lat)
+    if timezone_str is None:
+        logging.warning(
+            'Could not determine the timezone. Using the UTC time')
+        return utc_timestamp
+    utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+    utc_zone = pytz.utc
+    utc_time = utc_zone.localize(utc_time)
+    local_zone = pytz.timezone(timezone_str)
+    local_timestamp = utc_time.astimezone(local_zone)
+    return local_timestamp
+
+
+def local_time_to_time_event(local_time):
+    if 9 <= local_time.hour < 17:
+        return 'day'
+    if local_time.hour >= 21 or local_time.hour < 5:
+        return 'night'
+    return 'transit'
+
+
 def download_rupture_dict(id, ignore_shakemap=False):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
@@ -240,16 +274,32 @@ def download_rupture_dict(id, ignore_shakemap=False):
                                 f' elements. We are using the first one.')
             ff = ff[0]
         p = ff['properties']
-        rupdic = {'lon': float(p['longitude']), 'lat': float(p['latitude']),
-                  'dep': float(p['depth']),
-                  'mag': mag, 'rake': 0., 'usgs_id': id, 'rupture_file': None}
+        lon = float(p['longitude'])
+        lat = float(p['latitude'])
+        utc_time = p['eventtime']
+        local_time = utc_to_local_time(utc_time, lon, lat)
+        time_event = local_time_to_time_event(local_time)
+        rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
+                  'mag': mag, 'rake': 0.,
+                  'local_timestamp': str(local_time), 'time_event': time_event,
+                  'is_point_rup': False, 'usgs_id': id, 'rupture_file': None}
         return rupdic
     url = contents.get('download/rupture.json')['url']
     print('Downloading rupture.json')
-    md = json.loads(urlopen(url).read())['metadata']
-    return {'lon': md['lon'], 'lat': md['lat'], 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake'], 'usgs_id': id,
-            'rupture_file': None}
+    rup_data = json.loads(urlopen(url).read())
+    feats = rup_data['features']
+    is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
+    md = rup_data['metadata']
+    lon = md['lon']
+    lat = md['lat']
+    utc_time = md['time']
+    local_time = utc_to_local_time(utc_time, lon, lat)
+    time_event = local_time_to_time_event(local_time)
+    return {'lon': lon, 'lat': lat, 'dep': md['depth'],
+            'mag': md['mag'], 'rake': md['rake'],
+            'local_timestamp': str(local_time), 'time_event': time_event,
+            'is_point_rup': is_point_rup,
+            'usgs_id': id, 'rupture_file': None}
 
 
 def get_array_usgs_id(kind, id):
