@@ -558,11 +558,9 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
-        maxtiles = int(numpy.ceil(len(self) / minsize))
-        ntiles = min(int(numpy.ceil(ntiles)), maxtiles)
-        if ntiles <= 1:
-            return [lambda complete: complete]
-        return [Tile(i, ntiles) for i in range(ntiles)]
+        maxtiles = numpy.ceil(len(self) / minsize)
+        ntiles = min(numpy.ceil(ntiles), maxtiles)
+        return [Tile(i, ntiles) for i in range(int(ntiles))]
 
     def split_in_tiles(self, hint):
         """
