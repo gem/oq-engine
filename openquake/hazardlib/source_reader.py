@@ -690,7 +690,7 @@ class CompositeSourceModel:
             mul = .4 if sg.weight < max_weight / 3 else 1.
             self.splits[cmaker.grp_id] *= mul
             if tiling:
-                splits = max(self.splits[grp_id], numpy.ceil(sg.weight / max_weight))
+                splits = numpy.ceil(max(self.splits[grp_id], sg.weight / max_weight))
                 blocks = 1
             else:
                 splits = self.splits[grp_id]
