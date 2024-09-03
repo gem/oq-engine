@@ -55,28 +55,27 @@ def _store(rates, num_chunks, h5, mon):
     if h5 is None:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
-    with mon('storing rates', measuremem=True):
-        chunks = rates['sid'] % num_chunks
-        idx_start_stop = []
-        for chunk in numpy.unique(chunks):
-            ch_rates = rates[chunks == chunk]
-            try:
-                h5.create_df(
-                    '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
-            except ValueError:  # already created
-                offset = len(h5['_rates/sid'])
-            else:
-                offset = 0
-            idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-            hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
-            hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
-            hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
-            hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
-        iss = numpy.array(idx_start_stop, getters.slice_dt)
-        if '_rates/slice_by_idx' in h5:
-            hdf5.extend(h5['_rates/slice_by_idx'], iss)
-        else:  # writing on a small file
-            h5['_rates/slice_by_idx'] = iss
+    chunks = rates['sid'] % num_chunks
+    idx_start_stop = []
+    for chunk in numpy.unique(chunks):
+        ch_rates = rates[chunks == chunk]
+        try:
+            h5.create_df(
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+        except ValueError:  # already created
+            offset = len(h5['_rates/sid'])
+        else:
+            offset = 0
+        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
+        hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
+        hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
+        hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
+        hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
+    iss = numpy.array(idx_start_stop, getters.slice_dt)
+    if '_rates/slice_by_idx' in h5:
+        hdf5.extend(h5['_rates/slice_by_idx'], iss)
+    else:  # writing on a small file
+        h5['_rates/slice_by_idx'] = iss
 
 
 class Set(set):
@@ -129,19 +128,21 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     else:
         result = hazclassical(sources, sitecol, cmaker)
         rmap = result.pop('rmap').remove_zeros()
-        # print(f"{monitor.task_no=} {rmap=}")
-        if rmap.size_mb < 1 or not atomic:
-            result['rmap'] = rmap
-            result['rmap'].gid = cmaker.gid
-        elif cmaker.custom_tmp:  # tested in case_22
-            del result['source_data']
-            if len(rmap.array):
-                rates = rmap.to_array(cmaker.gid)
-                _store(rates, cmaker.num_chunks, None, monitor)
-        else:
-            del result['source_data']
-            result['rmap'] = rmap.to_array(cmaker.gid)
-        yield result
+        if rmap.size_mb:
+            # print(f"{monitor.task_no=} {rmap=}")
+            if rmap.size_mb < 1 or not atomic:
+                assert rmap.size_mb > 0
+                result['rmap'] = rmap
+                result['rmap'].gid = cmaker.gid
+            elif cmaker.custom_tmp:  # tested in case_22
+                del result['source_data']
+                if len(rmap.array):
+                    rates = rmap.to_array(cmaker.gid)
+                    _store(rates, cmaker.num_chunks, None, monitor)
+            else:
+                del result['source_data']
+                result['rmap'] = rmap.to_array(cmaker.gid)
+            yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
