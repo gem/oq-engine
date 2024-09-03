@@ -23,12 +23,13 @@ import zlib
 import pickle
 import psutil
 import logging
+import operator
 import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -37,6 +38,7 @@ from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical
 
+get_weight = operator.attrgetter('weight')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -51,7 +53,10 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5):
+def _store(rates, num_chunks, h5, mon):
+    if h5 is None:
+        scratch = parallel.scratch_dir(mon.calc_id)
+        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
     for chunk in numpy.unique(chunks):
@@ -105,13 +110,14 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    allsources = sources is None or cmaker.atomic
+    atomic = sources is None and not cmaker.disagg_by_src
     with dstore:
         if sources is None:  # read the sources from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        if sitecol is None:  # read the sites
-            sitecol = dstore['sitecol']  # super-fast
+        if sitecol is None or callable(sitecol):  # read the sites
+            complete = dstore['sitecol'].complete  # super-fast
+            sitecol = sitecol(complete)
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
@@ -123,24 +129,22 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        # print(f"{monitor.task_no=} {result['rmap'].size_mb=}")
         rmap = result.pop('rmap').remove_zeros()
-        if cmaker.tiling and cmaker.custom_tmp:  # tested in case_22
-            del result['source_data']
-            scratch = parallel.scratch_dir(monitor.calc_id)
-            if len(rmap.array):
-                fname = f'{scratch}/{monitor.task_no}.hdf5'
-                with monitor('storing rates', measuremem=True):
+        if rmap.size_mb:
+            # print(f"{monitor.task_no=} {rmap=}")
+            if rmap.size_mb < 1 or not atomic:
+                assert rmap.size_mb > 0
+                result['rmap'] = rmap
+                result['rmap'].gid = cmaker.gid
+            elif cmaker.custom_tmp:  # tested in case_22
+                del result['source_data']
+                if len(rmap.array):
                     rates = rmap.to_array(cmaker.gid)
-                    with hdf5.File(fname, 'a') as h5:
-                        _store(rates, cmaker.num_chunks, h5)
-        elif allsources and not cmaker.disagg_by_src:
-            del result['source_data']
-            result['rmap'] = rmap.to_array(cmaker.gid)
-        else:
-            result['rmap'] = rmap
-            result['rmap'].gid = cmaker.gid
-        yield result
+                    _store(rates, cmaker.num_chunks, None, monitor)
+            else:
+                del result['source_data']
+                result['rmap'] = rmap.to_array(cmaker.gid)
+            yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -419,7 +423,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.num_chunks = getters.get_num_chunks(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):
@@ -436,7 +440,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store(self, rates, gid):
         logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore)
+        _store(rates, self.num_chunks, self.datastore, self._monitor)
 
     def execute(self):
         """
@@ -495,27 +499,32 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        tiles = self.datastore['tiles']
-        tiling = tiles.attrs['tiling']
+        tiling = self.datastore['source_groups'].attrs['tiling']
         self.rmap = MapArray(self.sitecol.sids, L, Gt)
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        allargs = []
+        if config.directory.custom_tmp:
+            scratch = parallel.scratch_dir(self.datastore.calc_id)
+            logging.info('Storing the rates in %s', scratch)
+            self.datastore.hdf5.attrs['scratch_dir'] = scratch
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            if config.directory.custom_tmp:
-                scratch = parallel.scratch_dir(self.datastore.calc_id)
-                logging.info('Storing the rates in %s', scratch)
-                self.datastore.hdf5.attrs['scratch_dir'] = scratch
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        for block, tile, cm in self.csm.split(
+        allargs = []
+        for cmaker, tiles, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
-                self.num_chunks if tiling else None):
-            allargs.append((block, tile, cm, ds))
+                self.num_chunks, tiling):
+            for tile in self.sitecol.split(tiles, minsize=oq.max_sites_disagg):
+                if blocks == 1:
+                    allargs.append((None, tile, cmaker, ds))
+                else:
+                    sg = self.csm.src_groups[cmaker.grp_id]
+                    for block in split_in_blocks(sg, blocks, get_weight):
+                        allargs.append((block, tile, cmaker, ds))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
@@ -527,7 +536,7 @@ class ClassicalCalculator(base.HazardCalculator):
                          redweight(src))
         if not heavy:
             maxsrc = max(srcs, key=redweight)
-            logging.info('Heaviest: %s, weight=%.1f',
+            logging.info('Heaviest: %r, weight=%.1f',
                          maxsrc.source_id, redweight(maxsrc))
 
         self.datastore.swmr_on()  # must come before the Starmap
