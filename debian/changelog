@@ -1,7 +1,10 @@
+  [Michele Simionato]
+  * Honored the custom_tmp in classical calculations
+
   [Lana Todorovic]
   * Implemented Nowicki Jessee et al. (2018) landslide geospatial model that
     computes the areal coverage by landslide occurrence.
-  
+
   [Paolo Tormene]
   * Updated extractor for gmf_data for a single event id (used by the IRMT
     QGIS plugin), including data for secondary perils
