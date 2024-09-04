@@ -23,6 +23,7 @@ import os
 import getpass
 import logging
 import numpy
+from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
 from openquake.hazardlib.shakemap.parsers import (
@@ -118,7 +119,11 @@ def get_aristotle_allparams(rupture_dict, time_event,
     rupdic = get_rupture_dict(rupture_dict, ignore_shakemap)
     if station_data_file is None:
         # NOTE: giving precedence to the station_data_file uploaded via form
-        station_data_file = download_station_data_file(rupture_dict['usgs_id'])
+        try:
+            station_data_file = download_station_data_file(
+                rupture_dict['usgs_id'])
+        except HTTPError as exc:
+            logging.info(f'Station data is not available: {str(exc)}')
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
