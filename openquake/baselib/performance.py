@@ -16,14 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import os
 import time
 import pstats
 import pickle
 import signal
 import getpass
-import cProfile
 import tempfile
 import operator
 import itertools
