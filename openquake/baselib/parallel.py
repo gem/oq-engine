@@ -996,7 +996,18 @@ class Starmap(object):
                 self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
                 n = self.name + ':' + name if name == 'split_task' else name
-                mem_gb = memory_gb(Starmap.pids)
+                if self.distribute in ('zmq', 'slurm'):
+                    mem_gb = 0
+                    if res.mon.task_no % 10 == 0:
+                        # measure the memory only for 1 task out of 10, to be fast
+                        # with 8 nodes the time to get the memory is 0.01 secs
+                        for line in host_cores:
+                            host, _cores = line.split()
+                            addr = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+                            with Socket(addr, zmq.REQ, 'connect') as sock:
+                                mem_gb += sock.send('memory_gb')
+                else:
+                    mem_gb = memory_gb(Starmap.pids)
                 res.mon.save_task_info(self.h5, res, n, mem_gb)
                 res.mon.flush(self.h5)
             elif res.func:  # add subtask
