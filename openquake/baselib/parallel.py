@@ -203,7 +203,7 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
-    Monitor, memory_rss, init_performance)
+    Monitor, memory_gb, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
@@ -996,14 +996,7 @@ class Starmap(object):
                 self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
                 n = self.name + ':' + name if name == 'split_task' else name
-                if sys.platform != 'darwin':
-                    # it normally works on macOS, but not in notebooks calling
-                    # notebooks, which is the case relevant for Marco Pagani
-                    mem_gb = (memory_rss(os.getpid()) + sum(
-                        memory_rss(pid) for pid in Starmap.pids)) / GB
-                else:
-                    # measure only the memory used by the main process
-                    mem_gb = memory_rss(os.getpid()) / GB
+                mem_gb = memory_gb(Starmap.pids)
                 res.mon.save_task_info(self.h5, res, n, mem_gb)
                 res.mon.flush(self.h5)
             elif res.func:  # add subtask
