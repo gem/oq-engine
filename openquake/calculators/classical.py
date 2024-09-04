@@ -549,7 +549,9 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         if config.directory.custom_tmp:
             allargs = [(g, self.num_chunks) for g in self.rmap.acc]
-            savemap = parallel.Starmap(save_rmap, allargs, h5=self.datastore)
+            savemap = parallel.Starmap(save_rmap, allargs, h5=self.datastore,
+                                       distribute='processpool')
+            savemap.num_cores = 8
             dic = {'sids': self.rmap.sids}
             for g, arr in self.rmap.acc.items():
                 dic['rates_%d' % g] = arr
