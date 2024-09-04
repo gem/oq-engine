@@ -162,6 +162,24 @@ def get_lvl(hcurve, imls, poe):
     return numpy.searchsorted(imls, iml)
 
 
+def to_rates_dt(sids, rates_g, g):
+    """
+    :param sids: N sites
+    :param rates_g: (N, L) rates
+    :param g: an integer
+    """
+    outs = []
+    for lid, rates in enumerate(rates_g.T):
+        idxs, = rates.nonzero()
+        out = numpy.zeros(len(idxs), rates_dt)
+        out['sid'] = sids[idxs]
+        out['lid'] = lid
+        out['gid'] = g
+        out['rate'] = rates[idxs]
+        outs.append(out)
+    return numpy.concatenate(outs, dtype=rates_dt)
+
+
 # ############################# probability maps ##############################
 
 t = numba.types
@@ -357,14 +375,9 @@ class MapArray(object):
                 rates_g = self.array[:, :, i]
             else:
                 rates_g = self.acc[g]
-            for lid, rates in enumerate(rates_g.T):
-                idxs, = rates.nonzero()
-                out = numpy.zeros(len(idxs), rates_dt)
-                out['sid'] = self.sids[idxs]
-                out['lid'] = lid
-                out['gid'] = g
-                out['rate'] = rates[idxs]
-                outs.append(out)
+            outs.append(to_rates_dt(self.sids, rates_g, g))
+        if len(outs) == 1:
+            return outs[0]
         return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):

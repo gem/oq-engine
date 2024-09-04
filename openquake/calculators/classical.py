@@ -34,7 +34,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import MapArray, rates_dt
+from openquake.hazardlib.map_array import MapArray, rates_dt, to_rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical
 
@@ -54,7 +54,8 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 
 
 def _store(rates, num_chunks, h5, mon, gzip=GZIP):
-    assert len(rates)
+    if len(rates) == 0:
+        return
     if h5 is None:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
@@ -104,6 +105,13 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 
 #  ########################### task functions ############################ #
+
+    
+def save_rmap(g, num_chunks, mon):
+    with mon.shared['sids'] as sids, mon.shared['rates_%d' % g] as rates_g:
+        rates = to_rates_dt(sids, rates_g, g)
+        _store(rates, num_chunks, None, mon)
+
 
 def classical(sources, sitecol, cmaker, dstore, monitor):
     """
@@ -439,14 +447,6 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
 
-    def store(self, rates, gid, mon):
-        if len(rates):
-            logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-            if config.directory.custom_tmp:
-                _store(rates, self.num_chunks, None, mon)
-            else:
-                _store(rates, self.num_chunks, self.datastore, mon)
-
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -547,11 +547,19 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        for task_no, g in enumerate(self.rmap.acc, smap.task_no):
-            with self.monitor('storing rates', measuremem=True):
-                mon = self._monitor()
-                mon.task_no = task_no
-                self.store(self.rmap.to_array([g]), [g], mon)
+        if config.directory.custom_tmp:
+            allargs = [(g, self.num_chunks) for g in self.rmap.acc]
+            savemap = parallel.Starmap(save_rmap, allargs, h5=self.datastore)
+            dic = {'sids': self.rmap.sids}
+            for g, arr in self.rmap.acc.items():
+                dic['rates_%d' % g] = arr
+            savemap.share(**dic)
+            savemap.reduce()
+        else:
+            for g in self.rmap.acc:
+                with self.monitor('storing rates', measuremem=True):
+                    rates = self.rmap.to_array([g])
+                    _store(rates, self.num_chunks, self.datastore)
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
