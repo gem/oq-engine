@@ -69,6 +69,15 @@ def perf_stat():
     p.send_signal(signal.SIGINT)
 
 
+def print_stats(pr, fname):
+    """
+    Print the stats of a Profile instance
+    """
+    with open(fname, 'w') as f:
+        ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
+        ps.print_stats()
+
+
 def get_pstats(pstatfile, n):
     """
     Return profiling information as a list [(ncalls, cumtime, path), ...]
