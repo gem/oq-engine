@@ -53,7 +53,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5, mon):
+def _store(rates, num_chunks, h5, mon, gzip=GZIP):
     if h5 is None:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
@@ -63,7 +63,9 @@ def _store(rates, num_chunks, h5, mon):
         ch_rates = rates[chunks == chunk]
         try:
             h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
+            hdf5.create(
+                h5, '_rates/slice_by_idx', getters.slice_dt, fillvalue=None)
         except ValueError:  # already created
             offset = len(h5['_rates/sid'])
         else:
@@ -74,10 +76,8 @@ def _store(rates, num_chunks, h5, mon):
         hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
         hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
     iss = numpy.array(idx_start_stop, getters.slice_dt)
-    if '_rates/slice_by_idx' in h5:
-        hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    else:  # writing on a small file
-        h5['_rates/slice_by_idx'] = iss
+    hdf5.extend(h5['_rates/slice_by_idx'], iss)
+    return h5.filename
 
 
 class Set(set):
