@@ -54,6 +54,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 
 
 def _store(rates, num_chunks, h5, mon, gzip=GZIP):
+    assert len(rates)
     if h5 is None:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
@@ -439,11 +440,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 'You have only %s of free RAM' % humansize(avail))
 
     def store(self, rates, gid, mon):
-        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        if config.directory.custom_tmp:
-            _store(rates, self.num_chunks, None, mon)
-        else:
-            _store(rates, self.num_chunks, self.datastore, mon)
+        if len(rates):
+            logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
+            if config.directory.custom_tmp:
+                _store(rates, self.num_chunks, None, mon)
+            else:
+                _store(rates, self.num_chunks, self.datastore, mon)
 
     def execute(self):
         """
