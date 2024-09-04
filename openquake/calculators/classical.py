@@ -53,7 +53,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5, mon, gzip=GZIP):
+def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     if len(rates) == 0:
         return
     if h5 is None:
