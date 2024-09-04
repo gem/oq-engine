@@ -56,7 +56,8 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     if len(rates) == 0:
         return
-    if h5 is None:
+    newh5 = h5 is None
+    if newh5:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
@@ -79,7 +80,10 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
     iss = numpy.array(idx_start_stop, getters.slice_dt)
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    return h5.filename
+    if newh5:
+        fname = h5.filename
+        h5.close()
+        return fname
 
 
 class Set(set):
