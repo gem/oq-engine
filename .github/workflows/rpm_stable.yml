@@ -229,7 +229,7 @@ jobs:
       - name: Create structure of downloaded files
         run: mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
       - name: Download artifact of workflow to upload
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: srpm_files
           path: ~/rpmbuild/SRPMS
