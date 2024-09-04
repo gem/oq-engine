@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os
 import time
 import pstats
 import pickle
 import signal
 import getpass
+import cProfile
 import tempfile
 import operator
 import itertools
@@ -67,6 +69,15 @@ def perf_stat():
     time.sleep(0.5)
     yield
     p.send_signal(signal.SIGINT)
+
+
+def print_stats(pr, fname):
+    """
+    Print the stats of a Profile instance
+    """
+    with open(fname, 'w') as f:
+        ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
+        ps.print_stats()
 
 
 def get_pstats(pstatfile, n):
