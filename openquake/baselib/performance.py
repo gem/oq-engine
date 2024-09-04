@@ -166,6 +166,13 @@ def memory_rss(pid):
         return 0
 
 
+def memory_gb(pids):
+    """
+    :returns: the total memory allocated by the current process and all the PIDs
+    """
+    return sum(map(memory_rss, [os.getpid()] + list(pids))) / 1024**3
+
+
 # this is not thread-safe
 class Monitor(object):
     """
