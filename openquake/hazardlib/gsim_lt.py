@@ -121,6 +121,12 @@ class ImtWeight(object):
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
+    def __eq__(self, other):
+        for key in self.dic:
+            if numpy.abs(self.dic[key] - other.dic[key]) > 1e-10:
+                return False
+        return True
+
 
 def keyno(branch_id, bsno, brno, base=BASE183):
     """
@@ -258,7 +264,7 @@ class GsimLogicTree(object):
             # the default weight is stored in the last index
             i = len(self.imti) - 1
         return weights[:, i]
-        
+
     @property
     def req_site_params(self):
         site_params = set()
@@ -317,7 +323,7 @@ class GsimLogicTree(object):
                     N('uncertaintyWeight', text=br.weight['default']))
                 bsnode.nodes.append(brnode)
                 brno += 1
-            root.nodes.append(bsnode)    
+            root.nodes.append(bsnode)
         return root
 
     def __toh5__(self):
