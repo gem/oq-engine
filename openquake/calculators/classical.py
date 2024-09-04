@@ -51,7 +51,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
-
+rmap = {}
 
 def _store(rates, num_chunks, h5, mon, gzip=GZIP):
     if h5 is None:
@@ -78,6 +78,12 @@ def _store(rates, num_chunks, h5, mon, gzip=GZIP):
     iss = numpy.array(idx_start_stop, getters.slice_dt)
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     return h5.filename
+
+
+def store_in_thread(g, num_chunks, mon):
+    rates = rmap.to_array([g])
+    fname = _store(rates, num_chunks, None, mon, gzip=None)
+    print('-------------------------------------', fname)
 
 
 class Set(set):
@@ -496,11 +502,12 @@ class ClassicalCalculator(base.HazardCalculator):
         return True
 
     def _execute(self):
+        global rmap
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
         tiling = self.datastore['source_groups'].attrs['tiling']
-        self.rmap = MapArray(self.sitecol.sids, L, Gt)
+        rmap = self.rmap = MapArray(self.sitecol.sids, L, Gt)
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -542,9 +549,13 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        for g in self.rmap.acc:
-            with self.monitor('storing rates', measuremem=True):
-                self.store(self.rmap.to_array([g]), [g])
+        storemap = parallel.Starmap(
+            store_in_thread,
+            [(g, self.num_chunks) for g in self.rmap.acc],
+            distribute='threadpool')
+        storemap.task_no = smap.task_no
+        print('+++++++++++++++++++++++++++++++', smap.task_no)
+        storemap.reduce()
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
