@@ -187,8 +187,8 @@ class ClassicalTestCase(CalculatorTestCase):
         ], case_22.__file__, delta=1E-6)
         data = self.calc.datastore['source_groups'][:]
         self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 10)
-        self.assertEqual(data['blocks'], 1)        
+        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['blocks'], 10)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

@@ -186,7 +186,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                N < oq.max_sites_disagg or oq.tile_spec)
 
     # store source_groups
-    triples = csm.split(cmakers, sitecol, max_weight, tiling=not regular)
+    triples = csm.split(cmakers, sitecol, max_weight)
     data = numpy.array(
         [(len(cm.gsims), tiles, blocks, len(cm.gsims) * fac * 1024,
           cm.weight, cm.codes, cm.trt) for cm, tiles, blocks in triples],
