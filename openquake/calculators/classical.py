@@ -110,7 +110,10 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rmap(rates_g, g, N, num_chunks, mon):
+def save_rates(rates_g, g, N, num_chunks, mon):
+    """
+    Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
+    """
     rates = from_rates_g(rates_g, g, numpy.arange(N))
     _store(rates, num_chunks, None, mon)
 
@@ -562,7 +565,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((rates_g, g, self.N, self.num_chunks, mon))
             with self.monitor('storing rates', measuremem=True), \
                  mp.Pool(mcores) as pool:
-                pool.starmap(save_rmap, allargs)
+                pool.starmap(save_rates, allargs)
         elif self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
                 for g, rates_g in self.rmap.acc.items():
