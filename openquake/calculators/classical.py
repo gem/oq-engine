@@ -554,7 +554,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         logging.info('Storing %s', self.rmap)
-        if self.rmap.acc and config.directory.custom_tmp and self.N > 1000:
+        if self.rmap.acc and config.directory.custom_tmp and (
+                self.N > oq.max_sites_disagg * 100):
             # tested in the oq-risk-tests
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for rmap in self.rmap.gen_chunks(self.num_chunks):
