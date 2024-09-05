@@ -104,19 +104,18 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
 
-def classical(sources, sitecol, cmaker, dstore, monitor):
+def classical(sources, sitegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if sources is None:  # read the sources from the datastore
+        if sources is None:  # read the full group from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        if sitecol is None or callable(sitecol):  # read the sites
-            complete = dstore['sitecol'].complete  # super-fast
-            sitecol = sitecol(complete)
+        complete = dstore['sitecol'].complete  # super-fast
+        sitecol = sitegetter(complete)
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
