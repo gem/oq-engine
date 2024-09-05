@@ -36,7 +36,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt, from_rates_g
 from openquake.commonlib import calc
-from openquake.calculators import base, getters, preclassical
+from openquake.calculators import base, getters, preclassical, views
 
 get_weight = operator.attrgetter('weight')
 U16 = numpy.uint16
@@ -637,7 +637,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = task_info.loc[b'classical'].duration
+            dur = views.discard_small(task_info.loc[b'classical'].duration)
         except KeyError:  # no data
             pass
         else:
