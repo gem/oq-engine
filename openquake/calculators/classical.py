@@ -547,6 +547,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Storing %s', self.rmap)
         with self.monitor('converting rates', measuremem=True):
             rates = self.rmap.to_array()
+        logging.info('Got {:_d} records, {}'.format(
+            len(rates), humansize(rates.nbytes)))
         if len(rates) and self.N > 1000 and config.directory.custom_tmp:
             mcores = int(config.distribution.master_cores or 8)
             slices = split_in_slices(len(rates), mcores)
