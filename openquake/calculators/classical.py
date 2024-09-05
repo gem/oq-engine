@@ -24,6 +24,7 @@ import pickle
 import psutil
 import logging
 import operator
+import multiprocessing
 import numpy
 import pandas
 from PIL import Image
@@ -110,8 +111,8 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rmap(rates_g, g, sids, num_chunks, mon):
-    rates = from_rates_g(rates_g, g, sids)
+def save_rmap(rates_g, g, N, num_chunks, mon):
+    rates = from_rates_g(rates_g, g, numpy.arange(N))
     _store(rates, num_chunks, None, mon)
 
 
@@ -545,7 +546,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         logging.info('Storing %s', self.rmap)
-        if self.rmap.acc and config.directory.custom_tmp and self.N > 1000:
+        if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
+                and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
             mcores = int(config.distribution.master_cores or 8)
             allargs = []
@@ -553,9 +555,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 mon = performance.Monitor()
                 mon.calc_id = self.datastore.calc_id
                 mon.task_no = smap.task_no + g
-                allargs.append((rates_g, g, self.rmap.sids, self.num_chunks, mon))
-            with self.monitor('storing rates', measuremem=True):
-                parallel.multispawn(save_rmap, allargs, mcores, logfinish=False)
+                allargs.append((rates_g, g, self.N, self.num_chunks, mon))
+            with self.monitor('storing rates', measuremem=True), \
+                 multiprocessing.pool.Pool(mcores) as pool:
+                pool.starmap(save_rmap, allargs)
         elif self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
                 for g, rates_g in self.rmap.acc.items():
