@@ -138,7 +138,12 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        rmap = result.pop('rmap').remove_zeros()
+        if cmaker.disagg_by_src:
+            # do not remove zeros, otherwise AELO for JPN will break
+            # since there are 4 sites out of 18 with zeros
+            rmap = result.pop('rmap')
+        else:
+            rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
             del result['source_data']
