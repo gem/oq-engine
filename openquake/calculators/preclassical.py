@@ -201,9 +201,9 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     Ns = data['tiles']
     ntasks = Ns @ data['blocks']
-    logging.info('This will be a %s calculation with ~%d tasks, '
-                 'min_tiles=%d, max_tiles=%d', 'tiling' if tiling else 'regular',
-                 ntasks, Ns.min(), Ns.max())
+    if not tiling:
+        logging.info('This will be a calculation with ~%d tasks, '
+                     'min_tiles=%d, max_tiles=%d', ntasks, Ns.min(), Ns.max())
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids
