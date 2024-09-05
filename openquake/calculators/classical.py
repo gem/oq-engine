@@ -27,14 +27,14 @@ import operator
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import parallel, hdf5, config, python3compat
+from openquake.baselib import parallel, performance, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks, split_in_slices)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import MapArray, rates_dt
+from openquake.hazardlib.map_array import MapArray, rates_dt, from_rates_g
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical
 
@@ -110,9 +110,9 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rmap(slc, num_chunks, mon):
-    with mon.shared['rates'] as rates:
-        _store(rates[slc], num_chunks, None, mon)
+def save_rmap(rates_g, g, sids, num_chunks, mon):
+    rates = from_rates_g(rates_g, g, sids)
+    _store(rates, num_chunks, None, mon)
 
 
 def classical(sources, sitegetter, cmaker, dstore, monitor):
@@ -545,24 +545,24 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         logging.info('Storing %s', self.rmap)
-        with self.monitor('converting rates', measuremem=True):
-            rates = self.rmap.to_array()
-        logging.info('Got {:_d} records, {}'.format(
-            len(rates), humansize(rates.nbytes)))
-        if len(rates) and self.N > 1000 and config.directory.custom_tmp:
+        dist = parallel.oq_distribute()
+        if (self.rmap.acc and config.directory.custom_tmp
+                and self.N > 1000 and dist != 'no'):
+            # tested in the oq-risk-tests
             mcores = int(config.distribution.master_cores or 8)
-            slices = split_in_slices(len(rates), mcores)
-            allargs = [(slc, self.num_chunks) for slc in slices]
-            dist = parallel.oq_distribute()
-            savemap = parallel.Starmap(
-                save_rmap, allargs, h5=self.datastore,
-                distribute='no' if dist == 'no' else 'processpool')
-            savemap.num_cores = mcores
-            savemap.share(rates=rates)
-            savemap.reduce()
-        elif len(rates):
+            allargs = []
+            for g, rates_g in self.rmap.acc.items():
+                mon = performance.Monitor()
+                mon.calc_id = self.datastore.calc_id
+                mon.task_no = smap.task_no + g
+                allargs.append((rates_g, g, self.rmap.sids, self.num_chunks, mon))
             with self.monitor('storing rates', measuremem=True):
-                _store(rates, self.num_chunks, self.datastore)
+                parallel.multispawn(save_rmap, allargs, mcores, logfinish=False)
+        elif self.rmap.acc:
+            with self.monitor('storing rates', measuremem=True):
+                for g, rates_g in self.rmap.acc.items():
+                    rates = from_rates_g(rates_g, g, self.rmap.sids)
+                    _store(rates, self.num_chunks, self.datastore)
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)

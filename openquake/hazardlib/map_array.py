@@ -361,18 +361,8 @@ class MapArray(object):
                 rates_g = self.array[:, :, i]
             else:
                 rates_g = self.acc[g]
-            for lid, rates in enumerate(rates_g.T):
-                idxs, = rates.nonzero()
-                if len(idxs):
-                    out = numpy.zeros(len(idxs), rates_dt)
-                    out['sid'] = self.sids[idxs]
-                    out['lid'] = lid
-                    out['gid'] = g
-                    out['rate'] = rates[idxs]
-                    outs.append(out)
-        if not outs:
-            return numpy.array([], rates_dt)
-        elif len(outs) == 1:
+            outs.append(from_rates_g(rates_g, g, self.sids))
+        if len(outs) == 1:
             return outs[0]
         return numpy.concatenate(outs, dtype=rates_dt)
 
@@ -459,3 +449,26 @@ class MapArray(object):
 def iadd(arr, array, sidx):
     for i, sid in enumerate(sidx):
         arr[sid] += array[i]
+
+
+def from_rates_g(rates_g, g, sids):
+    """
+    :param rates_g: an array of shape (N, L)
+    :param g: an integer representing a GSIM index
+    :param sids: an array of site IDs
+    """
+    outs = []
+    for lid, rates in enumerate(rates_g.T):
+        idxs, = rates.nonzero()
+        if len(idxs):
+            out = numpy.zeros(len(idxs), rates_dt)
+            out['sid'] = sids[idxs]
+            out['lid'] = lid
+            out['gid'] = g
+            out['rate'] = rates[idxs]
+            outs.append(out)
+    if not outs:
+        return numpy.array([], rates_dt)
+    elif len(outs) == 1:
+        return outs[0]
+    return numpy.concatenate(outs, dtype=rates_dt)
