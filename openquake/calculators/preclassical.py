@@ -188,17 +188,21 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
         logging.info('mem_gb = %.2f', mem_gb)
-    max_gb = float(config.memory.pmap_max_gb)
+    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores / 4.)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
 
     # store source_groups
+    if oq.tiling is None:
+        tiling = not regular
+    else:
+        tiling = oq.tiling
     dstore.create_dset('source_groups', data, fillvalue=None,
-                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
+                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     Ns = data['tiles']
     ntasks = Ns @ data['blocks']
     logging.info('This will be a %s calculation with ~%d tasks, '
-                 'min_tiles=%d, max_tiles=%d', 'regular' if regular else 'tiling',
+                 'min_tiles=%d, max_tiles=%d', 'tiling' if tiling else 'regular',
                  ntasks, Ns.min(), Ns.max())
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
