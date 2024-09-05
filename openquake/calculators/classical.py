@@ -545,9 +545,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         logging.info('Storing %s', self.rmap)
-        dist = parallel.oq_distribute()
-        if (self.rmap.acc and config.directory.custom_tmp
-                and self.N > 1000 and dist != 'no'):
+        if self.rmap.acc and config.directory.custom_tmp and self.N > 1000:
             # tested in the oq-risk-tests
             mcores = int(config.distribution.master_cores or 8)
             allargs = []
