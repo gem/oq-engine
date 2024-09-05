@@ -176,9 +176,9 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     # build source_groups
     triples = csm.split(cmakers, sitecol, max_weight)
     data = numpy.array(
-        [(len(cm.gsims), tiles, blocks, len(cm.gsims) * fac * 1024,
+        [(cm.grp_id, len(cm.gsims), tiles, blocks, len(cm.gsims) * fac * 1024,
           cm.weight, cm.codes, cm.trt) for cm, tiles, blocks in triples],
-        [('gsims', U16), ('tiles', U16), ('blocks', U16),
+        [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
 
     # determine light groups and tiling

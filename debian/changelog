@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Honored the custom_tmp in classical calculations and saved data transfer
-    by using TileGetters
+    by using TileGetters, then parallelized the saving of the rates
 
   [Lana Todorovic]
   * Implemented Nowicki Jessee et al. (2018) landslide geospatial model that
