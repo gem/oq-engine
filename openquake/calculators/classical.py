@@ -24,13 +24,12 @@ import pickle
 import psutil
 import logging
 import operator
-from multiprocessing.pool import Pool
 import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, performance, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks, mp)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -557,7 +556,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 mon.task_no = smap.task_no + g
                 allargs.append((rates_g, g, self.N, self.num_chunks, mon))
             with self.monitor('storing rates', measuremem=True), \
-                 Pool(mcores) as pool:
+                 mp.Pool(mcores) as pool:
                 pool.starmap(save_rmap, allargs)
         elif self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
