@@ -146,7 +146,6 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
             else:
-                del result['source_data']
                 result['rmap'] = rmap.to_array(cmaker.gid)
         elif rmap.size_mb:
             result['rmap'] = rmap
@@ -370,7 +369,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly, case_03
             with self.monitor('storing rates', measuremem=True):
-                self.store(rmap, self.gids[grp_id])
+                _store(rmap, self.num_chunks, self.datastore)
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap += rmap
