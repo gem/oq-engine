@@ -123,7 +123,7 @@ def get_aristotle_allparams(rupture_dict, time_event,
             station_data_file = download_station_data_file(
                 rupture_dict['usgs_id'])
         except HTTPError as exc:
-            logging.info(f'Station data is not available: {str(exc)}')
+            logging.info(f'Station data is not available: {exc}')
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
