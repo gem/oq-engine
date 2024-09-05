@@ -27,9 +27,9 @@ import operator
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import parallel, performance, hdf5, config, python3compat
+from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks, mp)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -53,13 +53,14 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
+def _store(rates, num_chunks, h5, offset=0, mon=None, gzip=GZIP):
     if len(rates) == 0:
         return
     newh5 = h5 is None
     if newh5:
+        task_no = mon.task_no + offset
         scratch = parallel.scratch_dir(mon.calc_id)
-        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
+        h5 = hdf5.File(f'{scratch}/{task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
     for chunk in numpy.unique(chunks):
@@ -110,12 +111,12 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rates(rates_g, g, N, num_chunks, mon):
+def save_rates(rmap, offset, mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
     """
-    rates = from_rates_g(rates_g, g, numpy.arange(N))
-    _store(rates, num_chunks, None, mon)
+    rates = rmap.to_array(rmap.gids)
+    _store(rates, rmap.num_chunks, None, offset, mon)
 
 
 def classical(sources, sitegetter, cmaker, dstore, monitor):
@@ -152,7 +153,7 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
             del result['source_data']
             if cmaker.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
-                _store(rates, cmaker.num_chunks, None, monitor)
+                _store(rates, cmaker.num_chunks, None, mon=monitor)
             else:
                 result['rmap'] = rmap.to_array(cmaker.gid)
         elif rmap.size_mb:
@@ -553,24 +554,17 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         logging.info('Storing %s', self.rmap)
-        if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
-                and parallel.oq_distribute() != 'no'):
+        if self.rmap.acc and config.directory.custom_tmp and self.N > 1000:
             # tested in the oq-risk-tests
-            mcores = int(config.distribution.master_cores or 8)
-            allargs = []
-            for g, rates_g in self.rmap.acc.items():
-                mon = performance.Monitor()
-                mon.calc_id = self.datastore.calc_id
-                mon.task_no = smap.task_no + g
-                allargs.append((rates_g, g, self.N, self.num_chunks, mon))
-            with self.monitor('storing rates', measuremem=True), \
-                 mp.Pool(mcores) as pool:
-                pool.starmap(save_rates, allargs)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore)
+            for rmap in self.rmap.gen_chunks(self.num_chunks):
+                savemap.submit((rmap, smap.task_no))
+            savemap.reduce()
         elif self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
                 for g, rates_g in self.rmap.acc.items():
                     rates = from_rates_g(rates_g, g, self.rmap.sids)
-                    _store(rates, self.num_chunks, self.datastore)
+                    _store(rates, self.num_chunks, self.datastore, smap.task_no)
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
