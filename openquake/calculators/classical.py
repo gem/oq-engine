@@ -110,7 +110,6 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    atomic = sources is None and not cmaker.disagg_by_src
     with dstore:
         if sources is None:  # read the sources from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
@@ -130,21 +129,18 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     else:
         result = hazclassical(sources, sitecol, cmaker)
         rmap = result.pop('rmap').remove_zeros()
-        if rmap.size_mb:
-            # print(f"{monitor.task_no=} {rmap=}")
-            if rmap.size_mb < 1 or not atomic:
-                assert rmap.size_mb > 0
-                result['rmap'] = rmap
-                result['rmap'].gid = cmaker.gid
-            elif cmaker.custom_tmp:  # tested in case_22
-                del result['source_data']
-                if len(rmap.array):
-                    rates = rmap.to_array(cmaker.gid)
-                    _store(rates, cmaker.num_chunks, None, monitor)
+        # print(f"{monitor.task_no=} {rmap=}")
+        if rmap.size_mb and cmaker.blocks == 1:
+            del result['source_data']
+            if cmaker.custom_tmp:
+                rates = rmap.to_array(cmaker.gid)
+                _store(rates, cmaker.num_chunks, None, monitor)
             else:
-                del result['source_data']
                 result['rmap'] = rmap.to_array(cmaker.gid)
-            yield result
+        elif rmap.size_mb:
+            result['rmap'] = rmap
+            result['rmap'].gid = cmaker.gid
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
