@@ -33,6 +33,7 @@ import re
 import psutil
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus
+from urllib.error import HTTPError
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -857,8 +858,13 @@ def aristotle_validate(request):
         params['station_data_file'] = request.POST.get(
             'station_data_file_from_usgs')
     else:
-        station_data_file = download_station_data_file(dic['usgs_id'])
-        params['station_data_file'] = station_data_file
+        try:
+            station_data_file = download_station_data_file(dic['usgs_id'])
+        except HTTPError as exc:
+            logging.info(f'Station data is not available: {exc}')
+            params['station_data_file'] = None
+        else:
+            params['station_data_file'] = station_data_file
     return rupdic, *params.values()
 
 

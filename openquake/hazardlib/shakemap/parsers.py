@@ -386,7 +386,7 @@ def download_station_data_file(usgs_id):
             try:
                 stations = read_usgs_stations_json(stations_json_str)
             except LookupError as exc:
-                logging.warning(str(exc))
+                logging.info(str(exc))
             else:
                 df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
                 if len(df) < 1:
