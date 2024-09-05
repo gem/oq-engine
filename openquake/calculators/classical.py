@@ -109,7 +109,6 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 
 #  ########################### task functions ############################ #
-
     
 def save_rmap(g, num_chunks, mon):
     with mon.shared['sids'] as sids, mon.shared['rates_%d' % g] as rates_g:
@@ -117,20 +116,18 @@ def save_rmap(g, num_chunks, mon):
         _store(rates, num_chunks, None, mon)
 
 
-def classical(sources, sitecol, cmaker, dstore, monitor):
+def classical(sources, sitegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    atomic = sources is None and not cmaker.disagg_by_src
     with dstore:
-        if sources is None:  # read the sources from the datastore
+        if sources is None:  # read the full group from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        if sitecol is None or callable(sitecol):  # read the sites
-            complete = dstore['sitecol'].complete  # super-fast
-            sitecol = sitecol(complete)
+        complete = dstore['sitecol'].complete  # super-fast
+        sitecol = sitegetter(complete)
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
@@ -143,21 +140,19 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     else:
         result = hazclassical(sources, sitecol, cmaker)
         rmap = result.pop('rmap').remove_zeros()
-        if rmap.size_mb:
-            # print(f"{monitor.task_no=} {rmap=}")
-            if rmap.size_mb < 1 or not atomic:
-                assert rmap.size_mb > 0
-                result['rmap'] = rmap
-                result['rmap'].gid = cmaker.gid
-            elif cmaker.custom_tmp:  # tested in case_22
-                del result['source_data']
-                if len(rmap.array):
-                    rates = rmap.to_array(cmaker.gid)
-                    _store(rates, cmaker.num_chunks, None, monitor)
+        # print(f"{monitor.task_no=} {rmap=}")
+        if rmap.size_mb and cmaker.blocks == 1:
+            del result['source_data']
+            if cmaker.custom_tmp:
+                rates = rmap.to_array(cmaker.gid)
+                _store(rates, cmaker.num_chunks, None, monitor)
             else:
                 del result['source_data']
                 result['rmap'] = rmap.to_array(cmaker.gid)
-            yield result
+        elif rmap.size_mb:
+            result['rmap'] = rmap
+            result['rmap'].gid = cmaker.gid
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -562,10 +557,10 @@ class ClassicalCalculator(base.HazardCalculator):
             savemap.share(**dic)
             savemap.reduce()
         else:
-            for g in self.rmap.acc:
-                with self.monitor('storing rates', measuremem=True):
-                    rates = self.rmap.to_array([g])
-                    _store(rates, self.num_chunks, self.datastore)
+            with self.monitor('storing rates', measuremem=True):
+                rates = self.rmap.to_array()
+                logging.info('Storing %s', self.rmap)
+                _store(rates, self.num_chunks, self.datastore)
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)

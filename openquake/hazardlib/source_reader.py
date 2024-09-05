@@ -699,7 +699,7 @@ class CompositeSourceModel:
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cmaker.custom_tmp = config.directory.custom_tmp
             cmaker.num_chunks = num_chunks
-            cmaker.tiling = tiling
+            cmaker.blocks = blocks
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
             if sg.atomic:

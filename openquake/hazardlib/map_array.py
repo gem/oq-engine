@@ -364,11 +364,15 @@ class MapArray(object):
         pnes[pnes == 0.] = 1.11E-16
         return self.new(-numpy.log(pnes) / itime)
 
-    def to_array(self, gid):
+    def to_array(self, gid=None):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
+        if gid is None:
+            gid = sorted(self.acc)
+        if len(gid) == 0:
+            return numpy.array([], rates_dt)
         outs = []
         for i, g in enumerate(gid):
             if hasattr(self, 'array') :
