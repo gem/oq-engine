@@ -24,7 +24,7 @@ import pickle
 import psutil
 import logging
 import operator
-import multiprocessing
+from multiprocessing.pool import Pool
 import numpy
 import pandas
 from PIL import Image
@@ -557,7 +557,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 mon.task_no = smap.task_no + g
                 allargs.append((rates_g, g, self.N, self.num_chunks, mon))
             with self.monitor('storing rates', measuremem=True), \
-                 multiprocessing.pool.Pool(mcores) as pool:
+                 Pool(mcores) as pool:
                 pool.starmap(save_rmap, allargs)
         elif self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
