@@ -433,10 +433,6 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
 
-    def store(self, rates, gid):
-        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore, self._monitor)
-
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -537,9 +533,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        for g in self.rmap.acc:
-            with self.monitor('storing rates', measuremem=True):
-                self.store(self.rmap.to_array([g]), [g])
+        with self.monitor('storing rates', measuremem=True):
+            rates = self.rmap.to_array()
+            logging.info('Storing %s', humansize(rates.nbytes))
+            _store(rates, self.num_chunks, self.datastore, self._monitor)
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
