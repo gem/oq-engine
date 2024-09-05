@@ -399,7 +399,7 @@ def download_station_data_file(usgs_id):
                         df.to_csv(station_data_file, encoding='utf8',
                                   index=False)
                         logging.info(f'Wrote stations to {station_data_file}')
-    return station_data_file
+                        return station_data_file
 
 
 def download_rupture_dict(id, ignore_shakemap=False):
