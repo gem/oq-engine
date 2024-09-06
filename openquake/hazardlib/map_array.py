@@ -506,9 +506,10 @@ class RateMap:
 
     def __iadd__(self, other):
         G = self.shape[2]
+        sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
             iadd(self.array[:, :, self.jid[g]],
-                 other.array[:, :, i % G], self.sidx)
+                 other.array[:, :, i % G], sidx)
         return self
 
     def gen_chunks(self, num_chunks):
