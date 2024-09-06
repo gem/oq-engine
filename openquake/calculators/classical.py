@@ -110,10 +110,11 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rates(rmap, mon):
+def save_rates(rmap_mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
     """
+    rmap, mon = rmap_mon
     rates = rmap.to_array(rmap.gids)
     _store(rates, rmap.num_chunks, None, mon)
 
@@ -553,24 +554,25 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
-        allargs = []
-        for rmap in self.rmap.gen_chunks(self.num_chunks):
-            mon = performance.Monitor()
-            mon.calc_id = self.datastore.calc_id
-            mon.task_no = rmap.chunk_no + smap.task_no
-            allargs.append((rmap, mon))
-        logging.info('Processing %d rmaps from %s', len(allargs), self.rmap)
-        if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
-                and parallel.oq_distribute() != 'no'):
-            # tested in the oq-risk-tests
-            mcores = int(config.distribution.master_cores or 16)
-            with self.monitor('storing rates', measuremem=True), mp.Pool(mcores) as p:
-                p.starmap_async(save_rates, allargs, chunksize=mcores)
-        elif self.rmap.acc:
-            with self.monitor('storing rates', measuremem=True):
-                for args in allargs:
-                    save_rates(*args)
-        del self.rmap
+        with self.monitor('storing rates', measuremem=True):
+            allargs = []
+            for rmap in self.rmap.gen_chunks(self.num_chunks):
+                mon = performance.Monitor()
+                mon.calc_id = self.datastore.calc_id
+                mon.task_no = rmap.chunk_no + smap.task_no
+                allargs.append((rmap, mon))
+            logging.info('Processing %d rmaps from %s', len(allargs), self.rmap)
+            if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
+                    and parallel.oq_distribute() != 'no'):
+                # tested in the oq-risk-tests
+                mcores = int(config.distribution.master_cores or 16)
+                with mp.Pool(mcores) as p:
+                    for _ in p.imap_unordered(save_rates, allargs, chunksize=mcores):
+                        pass
+            elif self.rmap.acc:
+                for rmap_mon in allargs:
+                    save_rates(rmap_mon)
+            del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
