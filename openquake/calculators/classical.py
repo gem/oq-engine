@@ -565,7 +565,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # tested in the oq-risk-tests
             mcores = int(config.distribution.master_cores or 16)
             with self.monitor('storing rates', measuremem=True), mp.Pool(mcores) as p:
-                p.starmap(save_rates, allargs)
+                p.starmap_async(save_rates, allargs, chunksize=mcores)
         elif self.rmap.acc:
             with self.monitor('storing rates', measuremem=True):
                 for args in allargs:
