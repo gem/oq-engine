@@ -143,16 +143,24 @@ def trt_smrs(src):
     return tuple(src.trt_smrs)
 
 
-def read_source_model(fname, branch, converter, monitor):
+def read_source_model(fname, branch, converter, sample, monitor):
     """
     :param fname: path to a source model XML file
     :param branch: source model logic tree branch ID
     :param converter: SourceConverter
+    :param sample: a string with the sampling factor (if any)
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
+    for sg in sm.src_groups:
+        if sample and not sg.atomic:
+            srcs = []
+            for src in sg:
+                srcs.extend(calc.filters.split_source(src))
+            sg.sources = general.random_filter(
+                srcs, float(sample)) or [srcs[0]]
     return {fname: sm}
 
 
@@ -243,17 +251,18 @@ def get_csm(oq, full_lt, dstore=None):
     allpaths = set(full_lt.source_model_lt.info.smpaths)
     dic = general.group_array(sdata, 'fname')
     smpaths = []
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
     for fname, rows in dic.items():
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        allargs.append((path, rows[0]['branch'], converter))
+        allargs.append((path, rows[0]['branch'], converter, ss))
     for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter))
+        allargs.append((path, '', converter, ss))
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
-    smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
+    smdict = {k: smdict[k] for k in sorted(smdict)}
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
@@ -502,15 +511,9 @@ def _get_csm(full_lt, groups, event_based):
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
-    # optionally sample the sources
-    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    # sort by source_id
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
-        if ss:
-            srcs = []
-            for src in sg:
-                srcs.extend(calc.filters.split_source(src))
-            sg.sources = general.random_filter(srcs, float(ss)) or [srcs[0]]
     return CompositeSourceModel(full_lt, src_groups)
 
 
