@@ -267,9 +267,29 @@ class MapArray(object):
         """
         :yields: G MapArrays of shape (N, L, 1)
         """
-        _N, L, G = self.array.shape
+        _N, L, G = self.shape
         for g in range(G):
-            yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            if hasattr(self, 'array'):
+                new = self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            else:
+                new = self.__class__(self.sids, L, 1).new(self.acc[g][:, :, None])
+            new.gids = [g]
+            yield new
+
+    def gen_chunks(self, num_chunks):
+        """
+        :yields: many rate maps of shape (C, L, 1)
+        """
+        for chunk_no in range(num_chunks):
+            ch = self.sids % num_chunks == chunk_no
+            sids = self.sids[ch]
+            for g, rates_g in self.acc.items():
+                rmap = self.__class__(sids, self.shape[1], 1)
+                rmap.array = rates_g[ch, :, None]
+                rmap.gids = [g]
+                rmap.chunk_no = chunk_no
+                rmap.num_chunks = num_chunks
+                yield rmap
 
     def fill(self, value):
         """
