@@ -27,7 +27,7 @@ import operator
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import parallel, performance, hdf5, config, python3compat
+from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, split_in_blocks, mp)
 from openquake.hazardlib import valid, InvalidFile
@@ -130,7 +130,7 @@ def save_rates(g, N, jid, num_chunks, mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
     """
-    with mon.shared('rates') as rates:
+    with mon.shared['rates'] as rates:
         rmap = MapArray(numpy.arange(N), rates.shape[1], 1)
         rmap.array = rates[:, :, [jid[g]]]
         rats = rmap.to_array([g])
@@ -577,10 +577,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         def genargs():
             for g, j in self.rmap.jid.items():
-                mon = performance.Monitor()
-                mon.calc_id = self.datastore.calc_id
-                mon.task_no = smap.task_no + j
-                yield g, self.N, self.rmap.jid, self.num_chunks, mon
+                yield g, self.N, self.rmap.jid, self.num_chunks
 
         with self.monitor('storing rates', measuremem=True):
             logging.info('Processing %s', self.rmap)
@@ -588,14 +585,16 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.N > 1000 and parallel.oq_distribute() != 'no'):
                 # tested in the oq-risk-tests
                 mcores = int(config.distribution.master_cores or 16)
-                savemap = parallel.Starmap(save_rates, genargs())
+                savemap = parallel.Starmap(save_rates, genargs(),
+                                           h5=self.datastore,
+                                           distribute='processpool')
                 savemap.share(rates=self.rmap.array)
                 savemap.num_cores = mcores
                 savemap.reduce()
             elif self.rmap.size_mb:
-                for g, N, jid, num_chunks, mon in genargs():
+                for g, N, jid, num_chunks in genargs():
                     rates = self.rmap.to_array(g)
-                    _store(rates, self.num_chunks, self.datastore, mon)
+                    _store(rates, self.num_chunks, self.datastore)
             del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
