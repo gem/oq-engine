@@ -280,14 +280,14 @@ class MapArray(object):
         """
         :yields: many rate maps of shape (C, L, 1)
         """
-        for chunk in range(num_chunks):
-            ch = self.sids % num_chunks == chunk
+        for chunk_no in range(num_chunks):
+            ch = self.sids % num_chunks == chunk_no
             sids = self.sids[ch]
             for g, rates_g in self.acc.items():
                 rmap = self.__class__(sids, self.shape[1], 1)
                 rmap.array = rates_g[ch, :, None]
                 rmap.gids = [g]
-                rmap.chunk = chunk
+                rmap.chunk_no = chunk_no
                 rmap.num_chunks = num_chunks
                 yield rmap
 

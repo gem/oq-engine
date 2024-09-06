@@ -552,13 +552,14 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        logging.info('Storing %s', self.rmap)
+
         allargs = []
-        for i, rmap in enumerate(self.rmap.gen_chunks(self.num_chunks)):
+        for rmap in self.rmap.gen_chunks(self.num_chunks):
             mon = performance.Monitor()
             mon.calc_id = self.datastore.calc_id
-            mon.task_no = smap.task_no + i
+            mon.task_no = rmap.chunk_no + smap.task_no
             allargs.append((rmap, mon))
+        logging.info('Processing %d rmaps from %s', len(allargs), self.rmap)
         if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
                 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
