@@ -556,7 +556,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
                 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
-            mcores = int(config.distribution.master_cores or 8)
+            mcores = int(config.distribution.master_cores or 16)
             allargs = []
             for g, rates_g in self.rmap.acc.items():
                 mon = performance.Monitor()
