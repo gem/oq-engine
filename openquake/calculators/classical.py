@@ -131,10 +131,13 @@ def save_rates(g, N, jid, num_chunks, mon):
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
     """
     with mon.shared['rates'] as rates:
-        rmap = MapArray(numpy.arange(N), rates.shape[1], 1)
-        rmap.array = rates[:, :, [jid[g]]]
-        rats = rmap.to_array([g])
-        _store(rats, num_chunks, None, mon)
+        sids = numpy.arange(N)
+        for chunk in range(num_chunks):
+            ch = sids % num_chunks == chunk
+            rmap = MapArray(sids[ch], rates.shape[1], 1)
+            rmap.array = rates[ch][:, :, [jid[g]]]
+            rats = rmap.to_array([g])
+            _store(rats, num_chunks, None, mon)
 
 
 def classical(sources, sitegetter, cmaker, dstore, monitor):
