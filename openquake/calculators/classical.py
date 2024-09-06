@@ -27,16 +27,16 @@ import operator
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import parallel, hdf5, config, python3compat
+from openquake.baselib import parallel, performance, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks, mp)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters, preclassical
+from openquake.calculators import base, getters, preclassical, views
 
 get_weight = operator.attrgetter('weight')
 U16 = numpy.uint16
@@ -53,8 +53,11 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5, mon):
-    if h5 is None:
+def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
+    if len(rates) == 0:
+        return
+    newh5 = h5 is None
+    if newh5:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
@@ -63,7 +66,9 @@ def _store(rates, num_chunks, h5, mon):
         ch_rates = rates[chunks == chunk]
         try:
             h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
+            hdf5.create(
+                h5, '_rates/slice_by_idx', getters.slice_dt, fillvalue=None)
         except ValueError:  # already created
             offset = len(h5['_rates/sid'])
         else:
@@ -74,10 +79,11 @@ def _store(rates, num_chunks, h5, mon):
         hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
         hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
     iss = numpy.array(idx_start_stop, getters.slice_dt)
-    if '_rates/slice_by_idx' in h5:
-        hdf5.extend(h5['_rates/slice_by_idx'], iss)
-    else:  # writing on a small file
-        h5['_rates/slice_by_idx'] = iss
+    hdf5.extend(h5['_rates/slice_by_idx'], iss)
+    if newh5:
+        fname = h5.filename
+        h5.close()
+        return fname
 
 
 class Set(set):
@@ -103,21 +109,28 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 
 #  ########################### task functions ############################ #
+    
+def save_rates(rmap_mon):
+    """
+    Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
+    """
+    rmap, mon = rmap_mon
+    rates = rmap.to_array(rmap.gids)
+    _store(rates, rmap.num_chunks, None, mon)
 
-def classical(sources, sitecol, cmaker, dstore, monitor):
+
+def classical(sources, sitegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    atomic = sources is None and not cmaker.disagg_by_src
     with dstore:
-        if sources is None:  # read the sources from the datastore
+        if sources is None:  # read the full group from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        if sitecol is None or callable(sitecol):  # read the sites
-            complete = dstore['sitecol'].complete  # super-fast
-            sitecol = sitecol(complete)
+        complete = dstore['sitecol'].complete  # super-fast
+        sitecol = sitegetter(complete)
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
@@ -129,22 +142,24 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             yield result
     else:
         result = hazclassical(sources, sitecol, cmaker)
-        rmap = result.pop('rmap').remove_zeros()
-        if rmap.size_mb:
-            # print(f"{monitor.task_no=} {rmap=}")
-            if rmap.size_mb < 1 or not atomic:
-                assert rmap.size_mb > 0
-                result['rmap'] = rmap
-                result['rmap'].gid = cmaker.gid
-            elif cmaker.custom_tmp:  # tested in case_22
-                del result['source_data']
-                if len(rmap.array):
-                    rates = rmap.to_array(cmaker.gid)
-                    _store(rates, cmaker.num_chunks, None, monitor)
+        if cmaker.disagg_by_src:
+            # do not remove zeros, otherwise AELO for JPN will break
+            # since there are 4 sites out of 18 with zeros
+            rmap = result.pop('rmap')
+        else:
+            rmap = result.pop('rmap').remove_zeros()
+        # print(f"{monitor.task_no=} {rmap=}")
+        if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
+            del result['source_data']
+            if cmaker.custom_tmp:
+                rates = rmap.to_array(cmaker.gid)
+                _store(rates, cmaker.num_chunks, None, monitor)
             else:
-                del result['source_data']
                 result['rmap'] = rmap.to_array(cmaker.gid)
-            yield result
+        elif rmap.size_mb:
+            result['rmap'] = rmap
+            result['rmap'].gid = cmaker.gid
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -363,7 +378,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly, case_03
             with self.monitor('storing rates', measuremem=True):
-                self.store(rmap, self.gids[grp_id])
+                _store(rmap, self.num_chunks, self.datastore)
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap += rmap
@@ -437,10 +452,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if avail < size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
-
-    def store(self, rates, gid):
-        logging.info('Storing %s, gid=%s', humansize(rates.nbytes), gid)
-        _store(rates, self.num_chunks, self.datastore, self._monitor)
 
     def execute(self):
         """
@@ -542,10 +553,28 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        for g in self.rmap.acc:
-            with self.monitor('storing rates', measuremem=True):
-                self.store(self.rmap.to_array([g]), [g])
-        del self.rmap
+
+        def genargs():
+            for rmap in self.rmap.gen_chunks(self.num_chunks):
+                mon = performance.Monitor()
+                mon.calc_id = self.datastore.calc_id
+                mon.task_no = rmap.chunk_no + smap.task_no
+                yield rmap, mon
+
+        with self.monitor('storing rates', measuremem=True):
+            logging.info('Processing %s', self.rmap)
+            if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
+                    and parallel.oq_distribute() != 'no'):
+                # tested in the oq-risk-tests
+                mcores = int(config.distribution.master_cores or 16)
+                with mp.Pool(mcores) as p:
+                    for _ in p.imap_unordered(save_rates, genargs(), self.num_chunks):
+                        pass
+            elif self.rmap.acc:
+                for rmap, mon in genargs():
+                    rates = rmap.to_array(rmap.gids)
+                    _store(rates, rmap.num_chunks, self.datastore, mon)
+            del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
@@ -614,7 +643,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = task_info.loc[b'classical'].duration
+            dur = views.discard_small(task_info.loc[b'classical'].duration)
         except KeyError:  # no data
             pass
         else:

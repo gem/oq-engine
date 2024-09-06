@@ -170,35 +170,40 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     """
     N = len(sitecol)
     oq = cmakers[0].oq
-    max_weight = csm.get_max_weight(oq)
-    max_gb = float(config.memory.pmap_max_gb)
     fac = oq.imtls.size * N * 4 / 1024**3
+    max_weight = csm.get_max_weight(oq)
 
-    light = [cm.grp_id for cm, sg in zip(cmakers, csm.src_groups)
-             if sg.weight <= max_weight]
-    logging.info('There are %d light groups out of %d',
-                 len(light), len(csm.src_groups))
+    # build source_groups
+    triples = csm.split(cmakers, sitecol, max_weight)
+    data = numpy.array(
+        [(cm.grp_id, len(cm.gsims), tiles, blocks, len(cm.gsims) * fac * 1024,
+          cm.weight, cm.codes, cm.trt) for cm, tiles, blocks in triples],
+        [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
+         ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
+
+    # determine light groups and tiling
+    light, = numpy.where(data['blocks'] == 1)
+    logging.info('There are %d light groups out of %d', len(light), len(data))
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
-    if light:
+    if len(light):
         logging.info('mem_gb = %.2f', mem_gb)
+    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores / 4.)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
 
     # store source_groups
-    triples = csm.split(cmakers, sitecol, max_weight, tiling=not regular)
-    data = numpy.array(
-        [(len(cm.gsims), tiles, blocks, len(cm.gsims) * fac * 1024,
-          cm.weight, cm.codes, cm.trt) for cm, tiles, blocks in triples],
-        [('gsims', U16), ('tiles', U16), ('blocks', U16),
-         ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
+    if oq.tiling is None:
+        tiling = not regular
+    else:
+        tiling = oq.tiling
     dstore.create_dset('source_groups', data, fillvalue=None,
-                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=not regular))
+                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     Ns = data['tiles']
     ntasks = Ns @ data['blocks']
-    logging.info('This will be a %s calculation with ~%d tasks, '
-                 'min_tiles=%d, max_tiles=%d', 'regular' if regular else 'tiling',
-                 ntasks, Ns.min(), Ns.max())
+    if not tiling:
+        logging.info('This will be a calculation with ~%d tasks, '
+                     'min_tiles=%d, max_tiles=%d', ntasks, Ns.min(), Ns.max())
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids

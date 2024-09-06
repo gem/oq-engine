@@ -267,9 +267,29 @@ class MapArray(object):
         """
         :yields: G MapArrays of shape (N, L, 1)
         """
-        _N, L, G = self.array.shape
+        _N, L, G = self.shape
         for g in range(G):
-            yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            if hasattr(self, 'array'):
+                new = self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            else:
+                new = self.__class__(self.sids, L, 1).new(self.acc[g][:, :, None])
+            new.gids = [g]
+            yield new
+
+    def gen_chunks(self, num_chunks):
+        """
+        :yields: many rate maps of shape (C, L, 1)
+        """
+        for chunk_no in range(num_chunks):
+            ch = self.sids % num_chunks == chunk_no
+            sids = self.sids[ch]
+            for g, rates_g in self.acc.items():
+                rmap = self.__class__(sids, self.shape[1], 1)
+                rmap.array = rates_g[ch, :, None]
+                rmap.gids = [g]
+                rmap.chunk_no = chunk_no
+                rmap.num_chunks = num_chunks
+                yield rmap
 
     def fill(self, value):
         """
@@ -346,25 +366,24 @@ class MapArray(object):
         pnes[pnes == 0.] = 1.11E-16
         return self.new(-numpy.log(pnes) / itime)
 
-    def to_array(self, gid):
+    def to_array(self, gid=None):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
+        if gid is None:
+            gid = sorted(self.acc)
+        if len(gid) == 0:
+            return numpy.array([], rates_dt)
         outs = []
         for i, g in enumerate(gid):
             if hasattr(self, 'array') :
                 rates_g = self.array[:, :, i]
             else:
                 rates_g = self.acc[g]
-            for lid, rates in enumerate(rates_g.T):
-                idxs, = rates.nonzero()
-                out = numpy.zeros(len(idxs), rates_dt)
-                out['sid'] = self.sids[idxs]
-                out['lid'] = lid
-                out['gid'] = g
-                out['rate'] = rates[idxs]
-                outs.append(out)
+            outs.append(from_rates_g(rates_g, g, self.sids))
+        if len(outs) == 1:
+            return outs[0]
         return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
@@ -450,3 +469,26 @@ class MapArray(object):
 def iadd(arr, array, sidx):
     for i, sid in enumerate(sidx):
         arr[sid] += array[i]
+
+
+def from_rates_g(rates_g, g, sids):
+    """
+    :param rates_g: an array of shape (N, L)
+    :param g: an integer representing a GSIM index
+    :param sids: an array of site IDs
+    """
+    outs = []
+    for lid, rates in enumerate(rates_g.T):
+        idxs, = rates.nonzero()
+        if len(idxs):
+            out = numpy.zeros(len(idxs), rates_dt)
+            out['sid'] = sids[idxs]
+            out['lid'] = lid
+            out['gid'] = g
+            out['rate'] = rates[idxs]
+            outs.append(out)
+    if not outs:
+        return numpy.array([], rates_dt)
+    elif len(outs) == 1:
+        return outs[0]
+    return numpy.concatenate(outs, dtype=rates_dt)
