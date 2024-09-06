@@ -252,8 +252,17 @@ def get_csm(oq, full_lt, dstore=None):
         allargs.append((path, '', converter))
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
-    smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
+    smdict = {k: smdict[k] for k in sorted(smdict)}
+
+    # optionally sample the sources
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    if ss:
+        for sm in smdict.values():
+            for sg in sm.src_groups:
+                if not sg.atomic:
+                    sg.sources = general.random_filter(
+                        sg.sources, float(ss)) or [sg.sources[0]]
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
