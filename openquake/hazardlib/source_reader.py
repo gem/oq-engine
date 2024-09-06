@@ -272,7 +272,7 @@ def get_csm(oq, full_lt, dstore=None):
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
             segments = []
             for src in sg:
-                segments.append(int(src.source_id.split(':')[1]))
+                segments.append(src.source_id.split(':')[1])
                 t = (src.source_id, src.grp_id,
                      src.count_ruptures(), src.mutex_weight)
                 out.append(t)

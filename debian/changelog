@@ -1,3 +1,7 @@
+  [Kendra Johnson]
+  * Fixed an error `invalid literal for int() with base 10` affecting
+    event based calculations using mutex sources and a nontrivial logic tree
+
   [Michele Simionato]
   * Honored the custom_tmp in classical calculations and saved data transfer
     by using TileGetters, then parallelized the saving of the rates
