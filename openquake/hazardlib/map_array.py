@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 import numba
-from openquake.baselib.general import cached_property, AccumDict
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
@@ -475,17 +475,10 @@ class RateMap:
                  other.array[:, :, i % G], sidx)
         return self
 
-    def gen_chunks(self, num_chunks):
+    def to_array(self, g):
         """
-        :yields: many rate maps of shape (C, L, 1)
+        Assuming self contains an array of rates,
+        returns a composite array with fields sid, lid, gid, rate
         """
-        for chunk_no in range(num_chunks):
-            ch = self.sids % num_chunks == chunk_no
-            sids = self.sids[ch]
-            for g, j in self.jid.items():
-                rmap = MapArray(sids, self.shape[1], 1)
-                rmap.array = self.array[ch, :, j][:, :, None]
-                rmap.gids = [g]
-                rmap.chunk_no = chunk_no
-                rmap.num_chunks = num_chunks
-                yield rmap
+        rates_g = self.array[:, :, self.jid[g]]
+        return from_rates_g(rates_g, g, self.sids)

@@ -126,13 +126,15 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rates(rmap_mon):
+def save_rates(g, N, jid, num_chunks, mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
     """
-    rmap, mon = rmap_mon
-    rates = rmap.to_array(rmap.gids)
-    _store(rates, rmap.num_chunks, None, mon)
+    with mon.shared('rates') as rates:
+        rmap = MapArray(numpy.arange(N), rates.shape[1], 1)
+        rmap.array = rates[:, :, [jid[g]]]
+        rats = rmap.to_array([g])
+        _store(rats, num_chunks, None, mon)
 
 
 def classical(sources, sitegetter, cmaker, dstore, monitor):
@@ -574,11 +576,11 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
         def genargs():
-            for rmap in self.rmap.gen_chunks(self.num_chunks):
+            for g, j in self.rmap.jid.items():
                 mon = performance.Monitor()
                 mon.calc_id = self.datastore.calc_id
-                mon.task_no = rmap.chunk_no + smap.task_no
-                yield rmap, mon
+                mon.task_no = smap.task_no + j
+                yield g, self.N, self.rmap.jid, self.num_chunks, mon
 
         with self.monitor('storing rates', measuremem=True):
             logging.info('Processing %s', self.rmap)
@@ -586,14 +588,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.N > 1000 and parallel.oq_distribute() != 'no'):
                 # tested in the oq-risk-tests
                 mcores = int(config.distribution.master_cores or 16)
-                with mp.Pool(mcores) as p:
-                    for _ in p.imap_unordered(
-                            save_rates, genargs(), self.num_chunks):
-                        pass
+                savemap = parallel.Starmap(save_rates, genargs())
+                savemap.share(rates=self.rmap.array)
+                savemap.num_cores = mcores
+                savemap.reduce()
             elif self.rmap.size_mb:
-                for rmap, mon in genargs():
-                    rates = rmap.to_array(rmap.gids)
-                    _store(rates, rmap.num_chunks, self.datastore, mon)
+                for g, N, jid, num_chunks, mon in genargs():
+                    rates = self.rmap.to_array(g)
+                    _store(rates, self.num_chunks, self.datastore, mon)
             del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
