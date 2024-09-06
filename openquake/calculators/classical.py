@@ -568,7 +568,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 # tested in the oq-risk-tests
                 mcores = int(config.distribution.master_cores or 16)
                 with mp.Pool(mcores) as p:
-                    for _ in p.imap_unordered(save_rates, genargs(), chunksize=mcores):
+                    for _ in p.imap_unordered(save_rates, genargs(), self.num_chunks):
                         pass
             elif self.rmap.acc:
                 for rmap, mon in genargs():
