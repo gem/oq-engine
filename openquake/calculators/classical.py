@@ -34,7 +34,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import MapArray, rates_dt
+from openquake.hazardlib.map_array import RateMap, MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -88,6 +88,22 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
 
 class Set(set):
     __iadd__ = set.__ior__
+
+
+def get_heavy_gids(source_groups, cmakers):
+    """
+    :returns: the g-indices associated to the heavy groups
+    """
+    if source_groups.attrs['tiling']:
+        return []
+    elif cmakers[0].oq.disagg_by_src:
+        grp_ids = source_groups['grp_id']  # all groups
+    else:
+        grp_ids = source_groups['grp_id'][source_groups['blocks'] > 1]
+    gids = []
+    for grp_id in grp_ids:
+        gids.extend(cmakers[grp_id].gid)
+    return gids
 
 
 def store_ctxs(dstore, rupdata_list, grp_id):
@@ -149,6 +165,8 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
         else:
             rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
+
+        print('-------------', cmaker.blocks)
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
             del result['source_data']
             if cmaker.custom_tmp:
@@ -509,9 +527,8 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute(self):
         oq = self.oqparam
         L = oq.imtls.size
-        Gt = len(self.trt_rlzs)
-        tiling = self.datastore['source_groups'].attrs['tiling']
-        self.rmap = MapArray(self.sitecol.sids, L, Gt)
+        sgs = self.datastore['source_groups']
+        tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -549,6 +566,9 @@ class ClassicalCalculator(base.HazardCalculator):
             maxsrc = max(srcs, key=redweight)
             logging.info('Heaviest: %r, weight=%.1f',
                          maxsrc.source_id, redweight(maxsrc))
+    
+        gids = get_heavy_gids(sgs, self.cmakers)
+        self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -563,14 +583,15 @@ class ClassicalCalculator(base.HazardCalculator):
 
         with self.monitor('storing rates', measuremem=True):
             logging.info('Processing %s', self.rmap)
-            if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
-                    and parallel.oq_distribute() != 'no'):
+            if (self.rmap.size_mb and config.directory.custom_tmp and
+                self.N > 1000 and parallel.oq_distribute() != 'no'):
                 # tested in the oq-risk-tests
                 mcores = int(config.distribution.master_cores or 16)
                 with mp.Pool(mcores) as p:
-                    for _ in p.imap_unordered(save_rates, genargs(), self.num_chunks):
+                    for _ in p.imap_unordered(
+                            save_rates, genargs(), self.num_chunks):
                         pass
-            elif self.rmap.acc:
+            elif self.rmap.size_mb:
                 for rmap, mon in genargs():
                     rates = rmap.to_array(rmap.gids)
                     _store(rates, rmap.num_chunks, self.datastore, mon)
