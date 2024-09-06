@@ -166,7 +166,6 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
             rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
 
-        print('-------------', cmaker.blocks)
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
             del result['source_data']
             if cmaker.custom_tmp:
