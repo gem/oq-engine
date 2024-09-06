@@ -562,7 +562,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield rmap, mon
 
         with self.monitor('storing rates', measuremem=True):
-            logging.info('Processing %s rmaps', self.rmap)
+            logging.info('Processing %s', self.rmap)
             if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
                     and parallel.oq_distribute() != 'no'):
                 # tested in the oq-risk-tests
