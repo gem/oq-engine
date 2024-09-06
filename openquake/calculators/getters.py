@@ -152,6 +152,19 @@ def get_pmaps_gb(dstore, full_lt=None):
     return max_gb, trt_rlzs, gids
 
 
+def get_heavy_gids(dstore, cmakers):
+    """
+    :returns: the g-indices associated to the heavy groups
+    """
+    sgs = dstore['source_groups']
+    if sgs.attrs['tiling']:
+        return []
+    gids = []
+    for grp_id in sgs['grp_id'][sgs['blocks'] > 1]:
+        gids.extend(cmakers[grp_id].gid)
+    return gids
+
+
 def get_num_chunks(dstore):
     """
     :returns: the number of postclassical tasks to generate.

@@ -492,3 +492,45 @@ def from_rates_g(rates_g, g, sids):
     elif len(outs) == 1:
         return outs[0]
     return numpy.concatenate(outs, dtype=rates_dt)
+
+
+class RateMap:
+    sidx = MapArray.sidx
+
+    def __init__(self, sids, L, gids):
+        self.sids
+        self.shape = len(sids), L, len(gids)
+        self.array = numpy.zeros(self.shape, F32)
+        self.jid = {g: j for j, g in enumerate(gids)}
+
+    def __iadd__(self, other):
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, self.jid[g]],
+                 other.array[:, :, i], self.sidx)
+
+    def to_array(self, gid):
+        """
+        Assuming self contains an array of rates,
+        returns a composite array with fields sid, lid, gid, rate
+        """
+        outs = []
+        for i, g in enumerate(gid):
+            outs.append(from_rates_g(self.array[:, :, i], g, self.sids))
+        if len(outs) == 1:
+            return outs[0]
+        return numpy.concatenate(outs, dtype=rates_dt)
+
+    def gen_chunks(self, num_chunks):
+        """
+        :yields: many rate maps of shape (C, L, 1)
+        """
+        for chunk_no in range(num_chunks):
+            ch = self.sids % num_chunks == chunk_no
+            sids = self.sids[ch]
+            for g, j in self.jid.items():
+                rmap = self.__class__(sids, self.shape[1], 1)
+                rmap.array = self.array[ch, :, j]
+                rmap.gids = [g]
+                rmap.chunk_no = chunk_no
+                rmap.num_chunks = num_chunks
+                yield rmap
