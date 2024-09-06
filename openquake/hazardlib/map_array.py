@@ -278,18 +278,18 @@ class MapArray(object):
 
     def gen_chunks(self, num_chunks):
         """
-        :yields: num_chunks rate maps of shape (C, L, G)
+        :yields: many rate maps of shape (C, L, 1)
         """
-        gids = sorted(self.acc)
         for chunk in range(num_chunks):
             ch = self.sids % num_chunks == chunk
-            rates = [rates_g[ch] for g, rates_g in self.acc.items()]
-            rmap = self.__class__(self.sids[ch], self.shape[1], len(gids))
-            rmap.array = numpy.array(rates).transpose(1, 2, 0)  # (C, L, G)
-            rmap.gids = gids
-            rmap.chunk = chunk
-            rmap.num_chunks = num_chunks
-            yield rmap
+            sids = self.sids[ch]
+            for g, rates_g in self.acc.items():
+                rmap = self.__class__(sids, self.shape[1], 1)
+                rmap.array = rates_g[ch, :, None]
+                rmap.gids = [g]
+                rmap.chunk = chunk
+                rmap.num_chunks = num_chunks
+                yield rmap
 
     def fill(self, value):
         """

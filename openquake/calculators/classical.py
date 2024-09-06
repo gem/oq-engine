@@ -34,7 +34,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import MapArray, rates_dt, from_rates_g
+from openquake.hazardlib.map_array import MapArray, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -110,12 +110,12 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
     
-def save_rates(rates_g, g, N, num_chunks, mon):
+def save_rates(rmap, mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
     """
-    rates = from_rates_g(rates_g, g, numpy.arange(N))
-    _store(rates, num_chunks, None, mon)
+    rates = rmap.to_array(rmap.gids)
+    _store(rates, rmap.num_chunks, None, mon)
 
 
 def classical(sources, sitegetter, cmaker, dstore, monitor):
@@ -554,11 +554,11 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         logging.info('Storing %s', self.rmap)
         allargs = []
-        for g, rates_g in self.rmap.acc.items():
+        for i, rmap in enumerate(self.rmap.gen_chunks(self.num_chunks)):
             mon = performance.Monitor()
             mon.calc_id = self.datastore.calc_id
-            mon.task_no = smap.task_no + g
-            allargs.append((rates_g, g, self.N, self.num_chunks, mon))
+            mon.task_no = smap.task_no + i
+            allargs.append((rmap, mon))
         if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
                 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
