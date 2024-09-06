@@ -554,24 +554,26 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
-        with self.monitor('storing rates', measuremem=True):
-            allargs = []
+        def genargs():
             for rmap in self.rmap.gen_chunks(self.num_chunks):
                 mon = performance.Monitor()
                 mon.calc_id = self.datastore.calc_id
                 mon.task_no = rmap.chunk_no + smap.task_no
-                allargs.append((rmap, mon))
-            logging.info('Processing %d rmaps from %s', len(allargs), self.rmap)
+                yield rmap, mon
+
+        with self.monitor('storing rates', measuremem=True):
+            logging.info('Processing %s rmaps', self.rmap)
             if (self.rmap.acc and config.directory.custom_tmp and self.N > 1000
                     and parallel.oq_distribute() != 'no'):
                 # tested in the oq-risk-tests
                 mcores = int(config.distribution.master_cores or 16)
                 with mp.Pool(mcores) as p:
-                    for _ in p.imap_unordered(save_rates, allargs, chunksize=mcores):
+                    for _ in p.imap_unordered(save_rates, genargs(), chunksize=mcores):
                         pass
             elif self.rmap.acc:
-                for rmap_mon in allargs:
-                    save_rates(rmap_mon)
+                for rmap, mon in genargs():
+                    rates = rmap.to_array(rmap.gids)
+                    _store(rates, rmap.num_chunks, self.datastore, mon)
             del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
