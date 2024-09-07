@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 import numba
-from openquake.baselib.general import cached_property, AccumDict
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
@@ -237,7 +237,6 @@ class MapArray(object):
         self.sids = sids
         self.shape = (len(sids), shape_y, shape_z)
         self.rates = rates
-        self.acc = AccumDict(accum=numpy.zeros(self.shape[:2], F32))
 
     @cached_property
     def sidx(self):
@@ -251,16 +250,11 @@ class MapArray(object):
 
     @property
     def size_mb(self):
-        if hasattr(self, 'array'):
-            return self.array.nbytes / TWO20
-        return sum(arr.nbytes / TWO20 for arr in self.acc.values())
+        return self.array.nbytes / TWO20
             
-    def new(self, acc):
+    def new(self, arr):
         new = copy.copy(self)
-        if isinstance(acc, numpy.ndarray):
-            new.array = acc
-        else:
-            new.acc = acc
+        new.array = arr
         return new
 
     def split(self):
@@ -269,27 +263,9 @@ class MapArray(object):
         """
         _N, L, G = self.shape
         for g in range(G):
-            if hasattr(self, 'array'):
-                new = self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
-            else:
-                new = self.__class__(self.sids, L, 1).new(self.acc[g][:, :, None])
+            new = self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
             new.gids = [g]
             yield new
-
-    def gen_chunks(self, num_chunks):
-        """
-        :yields: many rate maps of shape (C, L, 1)
-        """
-        for chunk_no in range(num_chunks):
-            ch = self.sids % num_chunks == chunk_no
-            sids = self.sids[ch]
-            for g, rates_g in self.acc.items():
-                rmap = self.__class__(sids, self.shape[1], 1)
-                rmap.array = rates_g[ch, :, None]
-                rmap.gids = [g]
-                rmap.chunk_no = chunk_no
-                rmap.num_chunks = num_chunks
-                yield rmap
 
     def fill(self, value):
         """
@@ -351,10 +327,6 @@ class MapArray(object):
         """
         if self.rates:
             return self
-        if self.acc:
-            for g in self.acc:
-                self.acc[g] = -numpy.log(self.acc[g]) / itime
-            return self.new(self.acc)
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -366,21 +338,16 @@ class MapArray(object):
         pnes[pnes == 0.] = 1.11E-16
         return self.new(-numpy.log(pnes) / itime)
 
-    def to_array(self, gid=None):
+    def to_array(self, gid):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if gid is None:
-            gid = sorted(self.acc)
         if len(gid) == 0:
             return numpy.array([], rates_dt)
         outs = []
         for i, g in enumerate(gid):
-            if hasattr(self, 'array') :
-                rates_g = self.array[:, :, i]
-            else:
-                rates_g = self.acc[g]
+            rates_g = self.array[:, :, i]
             outs.append(from_rates_g(rates_g, g, self.sids))
         if len(outs) == 1:
             return outs[0]
@@ -452,17 +419,13 @@ class MapArray(object):
     def __iadd__(self, other):
         sidx = self.sidx[other.sids]
         G = other.array.shape[2]  # NLG
-        if hasattr(self, 'array'):
-            for i, g in enumerate(other.gid):
-                iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
-        else:
-            for i, g in enumerate(other.gid):
-                iadd(self.acc[g], other.array[:, :, i % G], sidx)
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
         return self
 
     def __repr__(self):
         tup = self.shape + (self.size_mb,)
-        return '<MapArray(%d, %d, %d)[%.1fM]>' % tup
+        return f'<{self.__class__.__name__}(%d, %d, %d)[%.1fM]>' % tup
 
 
 @compile("(float32[:, :], float32[:, :], uint32[:])")
@@ -492,3 +455,34 @@ def from_rates_g(rates_g, g, sids):
     elif len(outs) == 1:
         return outs[0]
     return numpy.concatenate(outs, dtype=rates_dt)
+
+
+class RateMap:
+    """
+    A kind of MapArray specifically for rates
+    """
+    sidx = MapArray.sidx
+    size_mb = MapArray.size_mb
+    __repr__ = MapArray.__repr__
+
+    def __init__(self, sids, L, gids):
+        self.sids = sids
+        self.shape = len(sids), L, len(gids)
+        self.array = numpy.zeros(self.shape, F32)
+        self.jid = {g: j for j, g in enumerate(gids)}
+
+    def __iadd__(self, other):
+        G = self.shape[2]
+        sidx = self.sidx[other.sids]
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, self.jid[g]],
+                 other.array[:, :, i % G], sidx)
+        return self
+
+    def to_array(self, g):
+        """
+        Assuming self contains an array of rates,
+        returns a composite array with fields sid, lid, gid, rate
+        """
+        rates_g = self.array[:, :, self.jid[g]]
+        return from_rates_g(rates_g, g, self.sids)
