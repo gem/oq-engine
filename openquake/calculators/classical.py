@@ -136,7 +136,7 @@ def save_rates(g, N, jid, num_chunks, mon):
         for chunk in range(num_chunks):
             ch = sids % num_chunks == chunk
             rmap = MapArray(sids[ch], rates.shape[1], 1)
-            rmap.array = rates_g[ch][:, :, None]
+            rmap.array = rates_g[ch, :, None]
             rats = rmap.to_array([g])
             _store(rats, num_chunks, None, mon)
 
