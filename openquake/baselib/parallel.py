@@ -1006,6 +1006,10 @@ class Starmap(object):
                             addr = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
                             with Socket(addr, zmq.REQ, 'connect') as sock:
                                 mem_gb += sock.send('memory_gb')
+                elif self._shared:
+                    # do not measure the memory on the workers, only in the master
+                    # otherwise memory_rss would double count the shared memory
+                    mem_gb = memory_gb()
                 else:
                     mem_gb = memory_gb(Starmap.pids)
                 res.mon.save_task_info(self.h5, res, n, mem_gb)
