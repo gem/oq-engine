@@ -143,11 +143,18 @@ def trt_smrs(src):
     return tuple(src.trt_smrs)
 
 
-def read_source_model(fname, branch, converter, sample, monitor):
+def _sample(srcs, sample, applied):
+    out = [src for src in srcs if src.source_id in applied]
+    rand = general.random_filter(srcs, sample)
+    return (out + rand) or [srcs[0]]
+
+
+def read_source_model(fname, branch, converter, applied, sample, monitor):
     """
     :param fname: path to a source model XML file
     :param branch: source model logic tree branch ID
     :param converter: SourceConverter
+    :param applied: list of source IDs within applyToSources
     :param sample: a string with the sampling factor (if any)
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
@@ -158,9 +165,11 @@ def read_source_model(fname, branch, converter, sample, monitor):
         if sample and not sg.atomic:
             srcs = []
             for src in sg:
-                srcs.extend(calc.filters.split_source(src))
-            sg.sources = general.random_filter(
-                srcs, float(sample)) or [srcs[0]]
+                if src.source_id in applied:
+                    srcs.append(src)
+                else:
+                    srcs.extend(calc.filters.split_source(src))
+            sg.sources = _sample(srcs, float(sample), applied)
     return {fname: sm}
 
 
@@ -252,13 +261,16 @@ def get_csm(oq, full_lt, dstore=None):
     dic = general.group_array(sdata, 'fname')
     smpaths = []
     ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    applied = set()
+    for srcs in full_lt.source_model_lt.info.applytosources.values():
+        applied.update(srcs)
     for fname, rows in dic.items():
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        allargs.append((path, rows[0]['branch'], converter, ss))
+        allargs.append((path, rows[0]['branch'], converter, applied, ss))
     for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter, ss))
+        allargs.append((path, '', converter, applied, ss))
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
