@@ -425,7 +425,7 @@ class MapArray(object):
 
     def __repr__(self):
         tup = self.shape + (self.size_mb,)
-        return '<MapArray(%d, %d, %d)[%.1fM]>' % tup
+        return f'<{self.__class__.__name__}(%d, %d, %d)[%.1fM]>' % tup
 
 
 @compile("(float32[:, :], float32[:, :], uint32[:])")
@@ -458,8 +458,12 @@ def from_rates_g(rates_g, g, sids):
 
 
 class RateMap:
+    """
+    A kind of MapArray specifically for rates
+    """
     sidx = MapArray.sidx
     size_mb = MapArray.size_mb
+    __repr__ = MapArray.__repr__
 
     def __init__(self, sids, L, gids):
         self.sids = sids
