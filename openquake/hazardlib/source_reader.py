@@ -709,7 +709,7 @@ class CompositeSourceModel:
                 splits = numpy.ceil(max(splits, sg.weight / max_weight))
                 blocks = 1
             else:
-                blocks = numpy.ceil(sg.weight / max_weight / splits)
+                blocks = numpy.ceil(sg.weight / max_weight)
             self.splits.append(splits)
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
