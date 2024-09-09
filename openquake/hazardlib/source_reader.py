@@ -143,16 +143,33 @@ def trt_smrs(src):
     return tuple(src.trt_smrs)
 
 
-def read_source_model(fname, branch, converter, monitor):
+def _sample(srcs, sample, applied):
+    out = [src for src in srcs if src.source_id in applied]
+    rand = general.random_filter(srcs, sample)
+    return (out + rand) or [srcs[0]]
+
+
+def read_source_model(fname, branch, converter, applied, sample, monitor):
     """
     :param fname: path to a source model XML file
     :param branch: source model logic tree branch ID
     :param converter: SourceConverter
+    :param applied: list of source IDs within applyToSources
+    :param sample: a string with the sampling factor (if any)
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
+    for sg in sm.src_groups:
+        if sample and not sg.atomic:
+            srcs = []
+            for src in sg:
+                if src.source_id in applied:
+                    srcs.append(src)
+                else:
+                    srcs.extend(calc.filters.split_source(src))
+            sg.sources = _sample(srcs, float(sample), applied)
     return {fname: sm}
 
 
@@ -243,17 +260,21 @@ def get_csm(oq, full_lt, dstore=None):
     allpaths = set(full_lt.source_model_lt.info.smpaths)
     dic = general.group_array(sdata, 'fname')
     smpaths = []
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    applied = set()
+    for srcs in full_lt.source_model_lt.info.applytosources.values():
+        applied.update(srcs)
     for fname, rows in dic.items():
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        allargs.append((path, rows[0]['branch'], converter))
+        allargs.append((path, rows[0]['branch'], converter, applied, ss))
     for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter))
+        allargs.append((path, '', converter, applied, ss))
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
-    smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
+    smdict = {k: smdict[k] for k in sorted(smdict)}
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
@@ -272,7 +293,7 @@ def get_csm(oq, full_lt, dstore=None):
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
             segments = []
             for src in sg:
-                segments.append(int(src.source_id.split(':')[1]))
+                segments.append(src.source_id.split(':')[1])
                 t = (src.source_id, src.grp_id,
                      src.count_ruptures(), src.mutex_weight)
                 out.append(t)
@@ -502,15 +523,9 @@ def _get_csm(full_lt, groups, event_based):
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
-    # optionally sample the sources
-    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    # sort by source_id
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
-        if ss:
-            srcs = []
-            for src in sg:
-                srcs.extend(calc.filters.split_source(src))
-            sg.sources = general.random_filter(srcs, float(ss)) or [srcs[0]]
     return CompositeSourceModel(full_lt, src_groups)
 
 
@@ -670,11 +685,11 @@ class CompositeSourceModel:
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
-        return max_weight * 1.02  # increased to produce a bit less tasks
+        return max_weight * 1.05  # increased to produce a bit less tasks
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, ntiles, nblocks) for each source group
+        :yields: (cmaker, tilegetter, nblocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -688,24 +703,23 @@ class CompositeSourceModel:
             sg = self.src_groups[grp_id]
             mul = .4 if sg.weight < max_weight / 3 else 1.
             splits = numpy.ceil(mul * len(cmaker.gsims) * mb_per_gsim / max_mb)
-            if tiling:
+            if sg.atomic:
+                blocks = 1
+            elif tiling:
                 splits = numpy.ceil(max(splits, sg.weight / max_weight))
                 blocks = 1
             else:
-                blocks = numpy.ceil(sg.weight / max_weight / splits)
+                blocks = numpy.ceil(sg.weight / max_weight)
             self.splits.append(splits)
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cmaker.custom_tmp = config.directory.custom_tmp
             cmaker.num_chunks = num_chunks
-            cmaker.tiling = tiling
+            cmaker.blocks = blocks
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            if sg.atomic:
-                yield cmaker, splits, 1
-            else:
-                yield cmaker, splits, blocks
+            yield cmaker, site.TileGetter(0, splits), blocks
 
     def __toh5__(self):
         G = len(self.src_groups)

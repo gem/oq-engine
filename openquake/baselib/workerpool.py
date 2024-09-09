@@ -278,6 +278,7 @@ class WorkerPool(object):
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
         self.pool = general.mp.Pool(self.num_workers, init_workers)
+        pids = [proc.pid for proc in self.pool._pool]
         # start control loop accepting the commands stop
         try:
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
@@ -297,6 +298,8 @@ class WorkerPool(object):
                     elif cmd == 'get_executing':
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
+                    elif cmd == 'memory_gb':
+                        ctrlsock.send(performance.memory_gb(pids))
                     elif isinstance(cmd, tuple):
                         _func, _args, taskno, mon = cmd
                         self.pool.apply_async(

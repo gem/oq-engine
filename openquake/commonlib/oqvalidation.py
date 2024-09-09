@@ -762,6 +762,11 @@ sites:
 tile_spec:
   INTERNAL
 
+tiling:
+  Used to force the tiling or non-tiling strategy in classical calculations
+  Example: *tiling = true*.
+  Default: None, meaning the engine will decide what to do
+
 smlt_branch:
    Used to restrict the source model logic tree to a specific branch
    Example: *smlt_branch=b1*
@@ -1118,6 +1123,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
+    tiling = valid.Param(valid.boolean, None)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])

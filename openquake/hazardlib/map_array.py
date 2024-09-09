@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 import numba
-from openquake.baselib.general import cached_property, AccumDict
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
@@ -237,7 +237,6 @@ class MapArray(object):
         self.sids = sids
         self.shape = (len(sids), shape_y, shape_z)
         self.rates = rates
-        self.acc = AccumDict(accum=numpy.zeros(self.shape[:2], F32))
 
     @cached_property
     def sidx(self):
@@ -251,25 +250,22 @@ class MapArray(object):
 
     @property
     def size_mb(self):
-        if hasattr(self, 'array'):
-            return self.array.nbytes / TWO20
-        return sum(arr.nbytes / TWO20 for arr in self.acc.values())
+        return self.array.nbytes / TWO20
             
-    def new(self, acc):
+    def new(self, arr):
         new = copy.copy(self)
-        if isinstance(acc, numpy.ndarray):
-            new.array = acc
-        else:
-            new.acc = acc
+        new.array = arr
         return new
 
     def split(self):
         """
         :yields: G MapArrays of shape (N, L, 1)
         """
-        _N, L, G = self.array.shape
+        _N, L, G = self.shape
         for g in range(G):
-            yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            new = self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            new.gids = [g]
+            yield new
 
     def fill(self, value):
         """
@@ -331,10 +327,6 @@ class MapArray(object):
         """
         if self.rates:
             return self
-        if self.acc:
-            for g in self.acc:
-                self.acc[g] = -numpy.log(self.acc[g]) / itime
-            return self.new(self.acc)
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -351,20 +343,14 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
+        if len(gid) == 0:
+            return numpy.array([], rates_dt)
         outs = []
         for i, g in enumerate(gid):
-            if hasattr(self, 'array') :
-                rates_g = self.array[:, :, i]
-            else:
-                rates_g = self.acc[g]
-            for lid, rates in enumerate(rates_g.T):
-                idxs, = rates.nonzero()
-                out = numpy.zeros(len(idxs), rates_dt)
-                out['sid'] = self.sids[idxs]
-                out['lid'] = lid
-                out['gid'] = g
-                out['rate'] = rates[idxs]
-                outs.append(out)
+            rates_g = self.array[:, :, i]
+            outs.append(from_rates_g(rates_g, g, self.sids))
+        if len(outs) == 1:
+            return outs[0]
         return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
@@ -433,20 +419,70 @@ class MapArray(object):
     def __iadd__(self, other):
         sidx = self.sidx[other.sids]
         G = other.array.shape[2]  # NLG
-        if hasattr(self, 'array'):
-            for i, g in enumerate(other.gid):
-                iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
-        else:
-            for i, g in enumerate(other.gid):
-                iadd(self.acc[g], other.array[:, :, i % G], sidx)
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
         return self
 
     def __repr__(self):
         tup = self.shape + (self.size_mb,)
-        return '<MapArray(%d, %d, %d)[%.1fM]>' % tup
+        return f'<{self.__class__.__name__}(%d, %d, %d)[%.1fM]>' % tup
 
 
 @compile("(float32[:, :], float32[:, :], uint32[:])")
 def iadd(arr, array, sidx):
     for i, sid in enumerate(sidx):
         arr[sid] += array[i]
+
+
+def from_rates_g(rates_g, g, sids):
+    """
+    :param rates_g: an array of shape (N, L)
+    :param g: an integer representing a GSIM index
+    :param sids: an array of site IDs
+    """
+    outs = []
+    for lid, rates in enumerate(rates_g.T):
+        idxs, = rates.nonzero()
+        if len(idxs):
+            out = numpy.zeros(len(idxs), rates_dt)
+            out['sid'] = sids[idxs]
+            out['lid'] = lid
+            out['gid'] = g
+            out['rate'] = rates[idxs]
+            outs.append(out)
+    if not outs:
+        return numpy.array([], rates_dt)
+    elif len(outs) == 1:
+        return outs[0]
+    return numpy.concatenate(outs, dtype=rates_dt)
+
+
+class RateMap:
+    """
+    A kind of MapArray specifically for rates
+    """
+    sidx = MapArray.sidx
+    size_mb = MapArray.size_mb
+    __repr__ = MapArray.__repr__
+
+    def __init__(self, sids, L, gids):
+        self.sids = sids
+        self.shape = len(sids), L, len(gids)
+        self.array = numpy.zeros(self.shape, F32)
+        self.jid = {g: j for j, g in enumerate(gids)}
+
+    def __iadd__(self, other):
+        G = self.shape[2]
+        sidx = self.sidx[other.sids]
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, self.jid[g]],
+                 other.array[:, :, i % G], sidx)
+        return self
+
+    def to_array(self, g):
+        """
+        Assuming self contains an array of rates,
+        returns a composite array with fields sid, lid, gid, rate
+        """
+        rates_g = self.array[:, :, self.jid[g]]
+        return from_rates_g(rates_g, g, self.sids)

@@ -69,6 +69,15 @@ def perf_stat():
     p.send_signal(signal.SIGINT)
 
 
+def print_stats(pr, fname):
+    """
+    Print the stats of a Profile instance
+    """
+    with open(fname, 'w') as f:
+        ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
+        ps.print_stats()
+
+
 def get_pstats(pstatfile, n):
     """
     Return profiling information as a list [(ncalls, cumtime, path), ...]
@@ -164,6 +173,14 @@ def memory_rss(pid):
         return psutil.Process(pid).memory_info().rss
     except psutil.NoSuchProcess:
         return 0
+
+
+def memory_gb(pids=()):
+    """
+    :params pids: a list or PIDs running on the same machine
+    :returns: the total memory allocated by the current process and all the PIDs
+    """
+    return sum(map(memory_rss, [os.getpid()] + list(pids))) / 1024**3
 
 
 # this is not thread-safe

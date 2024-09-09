@@ -203,7 +203,7 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
-    Monitor, memory_rss, init_performance)
+    Monitor, memory_gb, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
@@ -831,13 +831,12 @@ class Starmap(object):
         """
         Log the progress of the computation in percentage
         """
-        queued = len(self.task_queue)
-        total = self.task_no
-        done = total - len(self.tasks)
-        percent = int(float(done) / total * 100)
+        done = self.task_no - len(self.tasks)
+        percent = int(done / self.task_no * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
         elif percent > self.prev_percent:
+            queued = len(self.task_queue)
             self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, self.task_no, queued)
             self.prev_percent = percent
@@ -977,8 +976,8 @@ class Starmap(object):
         isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
         while self.tasks:
-            self.log_percent()
             res = next(isocket)
+            self.log_percent()
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
@@ -996,14 +995,22 @@ class Starmap(object):
                 self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
                 n = self.name + ':' + name if name == 'split_task' else name
-                if sys.platform != 'darwin':
-                    # it normally works on macOS, but not in notebooks calling
-                    # notebooks, which is the case relevant for Marco Pagani
-                    mem_gb = (memory_rss(os.getpid()) + sum(
-                        memory_rss(pid) for pid in Starmap.pids)) / GB
+                if self.distribute in ('zmq', 'slurm'):
+                    mem_gb = 0
+                    if res.mon.task_no % 10 == 0:
+                        # measure the memory only for 1 task out of 10, to be fast
+                        # with 8 nodes the time to get the memory is 0.01 secs
+                        for line in host_cores:
+                            host, _cores = line.split()
+                            addr = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+                            with Socket(addr, zmq.REQ, 'connect') as sock:
+                                mem_gb += sock.send('memory_gb')
+                elif self._shared:
+                    # do not measure the memory on the workers, only in the master
+                    # otherwise memory_rss would double count the shared memory
+                    mem_gb = memory_gb()
                 else:
-                    # measure only the memory used by the main process
-                    mem_gb = memory_rss(os.getpid()) / GB
+                    mem_gb = memory_gb(Starmap.pids)
                 res.mon.save_task_info(self.h5, res, n, mem_gb)
                 res.mon.flush(self.h5)
             elif res.func:  # add subtask
