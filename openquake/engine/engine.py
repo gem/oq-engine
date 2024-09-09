@@ -328,22 +328,35 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     return jobs
 
 
-def cleanup(kind, orig_dist):
+def stop_workers(dist, kind):
     """
     Stop or kill the zmq workers
     """
-    assert kind in ("stop", "kill"), kind
-    if kind == 'stop':
-        # called in the regular case, does not require ssh access
-        print('Stopping the workers')
-        workers_stop()
-    elif kind == 'kill':
-        # called in case of exceptions (or out of memory), requires ssh
-        print('Killing the workers')
-        logs.dbcmd('workers_kill', config.zworkers)
-    os.environ['OQ_DISTRIBUTE'] = orig_dist
+    if dist == 'zmq':
+        assert kind in ("stop", "kill"), kind
+        if kind == 'stop':
+            # called in the regular case, does not require ssh access
+            print('Stopping the workers')
+            workers_stop()
+        elif kind == 'kill':
+            # called in case of exceptions (or out of memory), requires ssh
+            print('Killing the workers')
+            logs.dbcmd('workers_kill', config.zworkers)
+        os.environ['OQ_DISTRIBUTE'] = dist
+    elif dist == 'slurm':
+        pass
 
 
+def start_workers(dist, nodes=1):
+    if dist == 'zmq':
+        print('Starting the workers %s' % config.zworkers.host_cores)
+        logs.dbcmd('workers_start', config.zworkers)  # start the workers
+    elif dist == 'slurm':
+        pass
+
+
+
+    
 def run_jobs(jobctxs, concurrent_jobs=None):
     """
     Run jobs using the specified config file and other options.
@@ -393,8 +406,7 @@ def run_jobs(jobctxs, concurrent_jobs=None):
     try:
         if (orig_dist == 'zmq' or use_zmq) and \
            w.WorkerMaster(config.zworkers).status() == []:
-            print('Starting the workers %s' % config.zworkers.host_cores)
-            logs.dbcmd('workers_start', config.zworkers)  # start the workers
+            start_workers('zmq')
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and parallel.oq_distribute() != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
@@ -402,7 +414,7 @@ def run_jobs(jobctxs, concurrent_jobs=None):
             for jobctx in jobctxs:
                 run_calc(jobctx)
         if orig_dist == 'zmq' or use_zmq:
-            cleanup('stop', orig_dist)
+            stop_workers(orig_dist, 'stop')
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
         rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
@@ -410,7 +422,7 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         for job_id, in rows:
             logs.dbcmd("set_status", job_id, 'failed')
         if orig_dist == 'zmq' or use_zmq:
-            cleanup('kill', orig_dist)
+            stop_workers(orig_dist, 'kill')
         raise
     return jobctxs
 

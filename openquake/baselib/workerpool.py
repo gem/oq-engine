@@ -66,10 +66,10 @@ class WorkerMaster(object):
         self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(zworkers.ctrl_port)
-        self.host_cores = (
+        host_cores = (
             [hc.split() for hc in zworkers.host_cores.split(',')]
             if zworkers.host_cores else [])
-        for host, cores in self.host_cores:
+        for host, cores in host_cores:
             if int(cores) < -1:
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
@@ -97,7 +97,8 @@ class WorkerMaster(object):
         Send a "stop" command to all worker pools
         """
         stopped = []
-        for host, _ in self.host_cores:
+        for line in parallel.host_cores:
+            host, _cores = line.split()
             if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
@@ -132,7 +133,8 @@ class WorkerMaster(object):
         :returns: a list [(host, running, total), ...]
         """
         executing = []
-        for host, _cores in self.host_cores:
+        for line in parallel.host_cores:
+            host, cores = line.split()
             if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
@@ -146,7 +148,7 @@ class WorkerMaster(object):
         """
         Wait until all workers are active
         """
-        num_hosts = len(self.zworkers.host_cores.split(','))
+        num_hosts = len(parallel.host_cores)
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
@@ -161,7 +163,7 @@ class WorkerMaster(object):
         """
         Stop and start again
         """
-        for host, _ in self.host_cores:
+        for host, _ in self.zworkers.host_cores:
             if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
