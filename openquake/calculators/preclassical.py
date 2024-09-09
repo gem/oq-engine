@@ -176,8 +176,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     # build source_groups
     triples = csm.split(cmakers, sitecol, max_weight)
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), tg.ntiles, blocks, len(cm.gsims) * fac * 1024,
-          cm.weight, cm.codes, cm.trt) for cm, tg, blocks in triples],
+        [(cm.grp_id, len(cm.gsims), len(tgets), blocks, len(cm.gsims) * fac * 1024,
+          cm.weight, cm.codes, cm.trt) for cm, tgets, blocks in triples],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
 

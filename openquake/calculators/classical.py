@@ -141,7 +141,7 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(sources, tilegetter, cmaker, dstore, monitor):
+def classical(sources, tilegetters, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
@@ -163,11 +163,7 @@ def classical(sources, tilegetter, cmaker, dstore, monitor):
             yield result
         return
 
-    if cmaker.tiling:
-        tilegets = [tilegetter]
-    else:
-        tilegets = sitecol.split(tilegetter.ntiles, cmaker.max_sites_disagg)
-    for tileget in tilegets:
+    for tileget in tilegetters:
         result = hazclassical(sources, tileget(sitecol), cmaker)
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
@@ -553,25 +549,22 @@ class ClassicalCalculator(base.HazardCalculator):
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         allargs = []
-        expected_outputs = 0
-        ntiles = []
-        for cmaker, tilegetter, blocks in self.csm.split(
+        n_out = []
+        for cmaker, tilegetters, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
-            ntiles.append(tilegetter.ntiles)
-            if blocks == 1:
-                for tget in self.sitecol.split(tilegetter.ntiles):
-                    allargs.append((None, tget, cmaker, ds))
-                    expected_outputs += 1
-            else:
-                sg = self.csm.src_groups[cmaker.grp_id]
-                for block in split_in_blocks(sg, blocks, get_weight):
-                    allargs.append((block, tilegetter, cmaker, ds))
-                    expected_outputs += tilegetter.ntiles
+            sg = self.csm.src_groups[cmaker.grp_id]
+            for blk in split_in_blocks(sg, blocks, get_weight):
+                if blocks == 1:                    
+                    for tileget in tilegetters:
+                        allargs.append((None, [tileget], cmaker, ds))
+                else:
+                    allargs.append((blk, tilegetters, cmaker, ds))
+                n_out.append(len(tilegetters))
 
         logging.info('This will be a calculation with %d outputs, '
-                     'min_tiles=%d, max_tiles=%d', expected_outputs,
-                     min(ntiles), max(ntiles))
+                     'min_tiles=%d, max_tiles=%d', sum(n_out),
+                     min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
@@ -591,7 +584,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        smap.expected_outputs = expected_outputs
+        smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
         def genargs():
