@@ -831,13 +831,12 @@ class Starmap(object):
         """
         Log the progress of the computation in percentage
         """
-        queued = len(self.task_queue)
-        total = self.task_no
-        done = total - len(self.tasks)
-        percent = int(float(done) / total * 100)
+        done = self.task_no - len(self.tasks)
+        percent = int(done / self.task_no * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
         elif percent > self.prev_percent:
+            queued = len(self.task_queue)
             self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, self.task_no, queued)
             self.prev_percent = percent
@@ -977,8 +976,8 @@ class Starmap(object):
         isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
         while self.tasks:
-            self.log_percent()
             res = next(isocket)
+            self.log_percent()
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
