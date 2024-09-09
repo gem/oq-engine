@@ -85,6 +85,8 @@ class TileGetter:
         self.ntiles = ntiles
 
     def __call__(self, complete):
+        if self.ntiles == 1:
+            return complete
         sc = SiteCollection.__new__(SiteCollection)
         sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
         sc.complete = complete
