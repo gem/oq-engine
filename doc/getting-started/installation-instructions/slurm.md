@@ -1,11 +1,10 @@
 (slurm)=
 
-# Running on a SLURM cluster
+# Running on a SLURM cluster (experimental)
 
 Most HPC clusters support a scheduler called SLURM (
 Simple Linux Utility for Resource Management). The OpenQuake engine
-is able to interface with SLURM to make use of all the resources
-of the cluster.
+is able to transparently interface with SLURM.
 
 ## Running OpenQuake calculations with SLURM
 
@@ -16,44 +15,38 @@ libraries with the command
 $ load module openquake
 ```
 Then running a calculation is quite trivial. The user has two choices:
-running the calculation on-the-fly with the command
+to run the calculation on a single node with the command
 ```
-$ srun oq engine --run job.ini
+$ oq engine --run job.ini
 ```
-or running the calculation in a batch with the command
+or running the calculation on multiple nodes with a command like
 ```
-$ sbatch oq engine --run job.ini
+$ oq engine --run job.ini --nodes=4
 ```
-In the first case the engine will log on the console the progress
-of the job and the errors, if any, will be clearly visible. This
-is the recommended approach for beginners. In the
-second case the progress will not be visible but it
-can be extracted from the engine database with
-the command
-```
-$ srun oq engine --show-log -1
-```
-where `-1` denotes the last submitted job. Using `sbatch` is
-recommended to users that needs to send multiple calculations. The
-calculations might be serialized by the engine queue, depending on the
-configuration, but even if the jobs are sequential, the subtasks
-spawned by them will run in parallel and make use of all of the
-cluster.
+which will split the calculation over 4 nodes. Clearly, there are
+limitations on the number of available nodes, so if you set a number
+of nodes which is too large you can have one of the following:
 
-NB: by default the engine will use a couple of nodes of the cluster.
-You may use more or less resources by setting the parameter
-`concurrent_tasks`. For instance, if you want to use around 600
-cores you can give the command
-```
-$ srun oq engine --run job.ini -p concurrent_tasks=600
-```
+1. an error "You can use at most N nodes"; N depends on the
+   configuration chosen your system administrator and can be inferred from
+   the parameters in the openquake.cfg file as `max_cores / num_cores`;
+   for instance for `max_cores=1024` and `num_cores=128` you would have `N=8`
 
-All the usual `oq commands` are available, but you need to prepend
-`srun` to them; for instance
-```
-$ srun oq show performance
-```
-will give informations about the performance of the last submitted job.
+2. a non-starting calculation, forever waiting for resources that
+   cannot be allocated; you can see if you are in this situation
+   by giving the command `$ squeue -u $USER` and looking at the reason
+   why the nodelist is not being allocated (check for `AssocMaxCpuPerJobLimit`)
+
+3. a non-starting calculation, waiting for resources which *can* be allocated,
+   it is just a matter of waiting; in this case the reason will be
+   `Resources` (waiting for resources to become available) or `Priority`
+   (queued behind a higher priority job).
+
+If you are stuck in situation 2 you must kill the openquake job and the
+SLURM job with the command `scancel JOBID` (JOBID is listed by the
+command `$ squeue -u $USER`). If you are stuck in situation 3 for a long
+time it can be better to kill the jobs (both openquake and SLURM) and
+then relaunch the calculations, this time asking for less nodes.
 
 ## Running out of quota
 
@@ -71,8 +64,6 @@ work transparently for all users but only the sysadmin can set it.
 ## Installing on HPC
 
 This section is for the administrators of the HPC cluster.
-Installing the engine requires access to PyPI since the universal
-installer will download packages from there. 
 
 Here are the installations instructions to create modules for
 engine 3.18 assuming you have python3.10 installed as modules.
