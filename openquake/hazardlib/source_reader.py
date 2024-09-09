@@ -689,7 +689,7 @@ class CompositeSourceModel:
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, tilegetter, nblocks) for each source group
+        :yields: (cmaker, tilegetters, nblocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -711,6 +711,7 @@ class CompositeSourceModel:
             else:
                 blocks = numpy.ceil(sg.weight / max_weight)
             self.splits.append(splits)
+            cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
@@ -719,7 +720,8 @@ class CompositeSourceModel:
             cmaker.blocks = blocks
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            yield cmaker, site.TileGetter(0, splits), blocks
+            tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
+            yield cmaker, tilegetters, blocks
 
     def __toh5__(self):
         G = len(self.src_groups)
