@@ -141,7 +141,7 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(sources, sitegetter, cmaker, dstore, monitor):
+def classical(sources, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
@@ -151,8 +151,7 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
         if sources is None:  # read the full group from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        complete = dstore['sitecol'].complete  # super-fast
-        sitecol = sitegetter(complete)
+        sitecol = dstore['sitecol'].complete  # super-fast
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
@@ -162,8 +161,10 @@ def classical(sources, sitegetter, cmaker, dstore, monitor):
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
             yield result
-    else:
-        result = hazclassical(sources, sitecol, cmaker)
+        return
+
+    for tileget in sitecol.split(tilegetter.ntiles):
+        result = hazclassical(sources, tileget(sitecol), cmaker)
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
             # since there are 4 sites out of 18 with zeros
@@ -548,16 +549,15 @@ class ClassicalCalculator(base.HazardCalculator):
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         allargs = []
-        for cmaker, tiles, blocks in self.csm.split(
+        for cmaker, tilegetter, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
-            for tile in self.sitecol.split(tiles, minsize=oq.max_sites_disagg):
-                if blocks == 1:
-                    allargs.append((None, tile, cmaker, ds))
-                else:
-                    sg = self.csm.src_groups[cmaker.grp_id]
-                    for block in split_in_blocks(sg, blocks, get_weight):
-                        allargs.append((block, tile, cmaker, ds))
+            if blocks == 1:
+                allargs.append((None, tilegetter, cmaker, ds))
+            else:
+                sg = self.csm.src_groups[cmaker.grp_id]
+                for block in split_in_blocks(sg, blocks, get_weight):
+                    allargs.append((block, tilegetter, cmaker, ds))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()

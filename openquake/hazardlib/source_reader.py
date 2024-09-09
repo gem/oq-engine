@@ -685,11 +685,11 @@ class CompositeSourceModel:
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
-        return max_weight * 1.02  # increased to produce a bit less tasks
+        return max_weight * 1.05  # increased to produce a bit less tasks
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, ntiles, nblocks) for each source group
+        :yields: (cmaker, tilegetter, nblocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -709,7 +709,7 @@ class CompositeSourceModel:
                 splits = numpy.ceil(max(splits, sg.weight / max_weight))
                 blocks = 1
             else:
-                blocks = numpy.ceil(sg.weight / max_weight / splits)
+                blocks = numpy.ceil(sg.weight / max_weight)
             self.splits.append(splits)
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
@@ -719,7 +719,7 @@ class CompositeSourceModel:
             cmaker.blocks = blocks
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            yield cmaker, splits, blocks
+            yield cmaker, site.TileGetter(0, splits), blocks
 
     def __toh5__(self):
         G = len(self.src_groups)
