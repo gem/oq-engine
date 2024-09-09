@@ -702,6 +702,7 @@ class Starmap(object):
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
     CT = num_cores * 3 if num_cores < cpu_count else num_cores * 2
+    expected_outputs = 0  # unknown
 
     @classmethod
     def init(cls, distribute=None):
@@ -826,6 +827,7 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self._shared = {}
+        self.n_out = 0
 
     def log_percent(self):
         """
@@ -835,7 +837,10 @@ class Starmap(object):
         percent = int(done / self.task_no * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
-        elif percent > self.prev_percent:
+        if self.expected_outputs:
+            pc = int(self.n_out / self.expected_outputs * 100)
+            percent = max(percent, min(pc, 99))
+        if percent > self.prev_percent:
             queued = len(self.task_queue)
             self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, self.task_no, queued)
@@ -1017,6 +1022,7 @@ class Starmap(object):
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
             else:
+                self.n_out += 1
                 yield res
         self.log_percent()
         self.socket.__exit__(None, None, None)
