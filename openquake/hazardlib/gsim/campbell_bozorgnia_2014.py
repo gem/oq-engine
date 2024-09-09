@@ -35,7 +35,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA, IA, CAV
 CONSTS = {"h4": 1.0,
           "c": 1.88,
           "n": 1.18,}
-          #"philnAF": 0.3} not constant in CB19 test
+          #"philnAF": 0.3} this is not constant in CB19
 
 
 def _get_alpha(C, vs30, pga_rock):
