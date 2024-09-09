@@ -355,7 +355,8 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     df.loc[:, adj_cols] = round(df.loc[:, adj_cols].
                                 apply(pd.to_numeric, errors='coerce') / 100, 6)
     df_seismic = df[df['STATION_TYPE'] == 'seismic']
-    return df_seismic
+    df_seismic_non_null = df_seismic.dropna()
+    return df_seismic_non_null
 
 
 def download_station_data_file(usgs_id):
