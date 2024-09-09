@@ -562,9 +562,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     allargs.append((block, tilegetters, cmaker, ds))
                 n_out.append(len(tilegetters))
 
-        logging.info('This will be a calculation with %d outputs, '
-                     'min_tiles=%d, max_tiles=%d', sum(n_out),
-                     min(n_out), max(n_out))
+        logging.info('This will be a %s calculation with %d outputs, '
+                     'min_tiles=%d, max_tiles=%d',
+                     'tiling' if tiling else 'regular',
+                     sum(n_out), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
