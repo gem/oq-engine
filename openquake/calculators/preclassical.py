@@ -199,11 +199,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
     dstore.create_dset('source_groups', data, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
-    Ns = data['tiles']
-    outs = Ns @ data['blocks']
-    if not tiling:
-        logging.info('This will be a calculation with ~%d outputs, '
-                     'min_tiles=%d, max_tiles=%d', outs, Ns.min(), Ns.max())
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids

@@ -163,7 +163,7 @@ def classical(sources, tilegetter, cmaker, dstore, monitor):
             yield result
         return
 
-    for tileget in sitecol.split(tilegetter.ntiles):
+    for tileget in sitecol.split(tilegetter.ntiles, cmaker.max_sites_disagg):
         result = hazclassical(sources, tileget(sitecol), cmaker)
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
@@ -546,20 +546,27 @@ class ClassicalCalculator(base.HazardCalculator):
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            expected_outputs = 0  # equal to the number of tasks
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-            expected_outputs = sgs['blocks'] @ sgs['tiles']
         allargs = []
+        expected_outputs = 0
+        ntiles = []
         for cmaker, tilegetter, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
+            ntiles.append(tilegetter.ntiles)
             if blocks == 1:
                 allargs.append((None, tilegetter, cmaker, ds))
+                expected_outputs += tilegetter.ntiles
             else:
                 sg = self.csm.src_groups[cmaker.grp_id]
                 for block in split_in_blocks(sg, blocks, get_weight):
                     allargs.append((block, tilegetter, cmaker, ds))
+                    expected_outputs += tilegetter.ntiles
+
+        logging.info('This will be a calculation with %d outputs, '
+                     'min_tiles=%d, max_tiles=%d', expected_outputs,
+                     min(ntiles), max(ntiles))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
