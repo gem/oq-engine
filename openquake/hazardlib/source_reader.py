@@ -689,7 +689,7 @@ class CompositeSourceModel:
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, ntiles, nblocks) for each source group
+        :yields: (cmaker, sitegetter, nblocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -719,7 +719,7 @@ class CompositeSourceModel:
             cmaker.blocks = blocks
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            yield cmaker, splits, blocks
+            yield cmaker, site.TileGetter(0, splits), blocks
 
     def __toh5__(self):
         G = len(self.src_groups)
