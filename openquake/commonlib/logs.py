@@ -59,7 +59,7 @@ def dbcmd(action, *args):
     if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # access the database directly
         if action.startswith('workers_'):
-            master = w.WorkerMaster()  # zworkers
+            master = w.WorkerMaster(-1)  # current job
             return getattr(master, action[8:])()
         from openquake.server.db import actions
         try:
