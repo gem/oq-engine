@@ -689,7 +689,7 @@ class CompositeSourceModel:
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, sitegetter, nblocks) for each source group
+        :yields: (cmaker, tilegetter, nblocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq

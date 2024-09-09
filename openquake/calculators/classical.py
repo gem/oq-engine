@@ -151,8 +151,7 @@ def classical(sources, tilegetter, cmaker, dstore, monitor):
         if sources is None:  # read the full group from the datastore
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
-        complete = dstore['sitecol'].complete  # super-fast
-        sitecol = tilegetter(complete)
+        sitecol = dstore['sitecol'].complete  # super-fast
 
     if cmaker.disagg_by_src and not cmaker.atomic:
         # in case_27 (Japan) we do NOT enter here;
@@ -164,8 +163,8 @@ def classical(sources, tilegetter, cmaker, dstore, monitor):
             yield result
         return
 
-    for tilegetter in sitecol.split(tilegetter.ntiles):
-        result = hazclassical(sources, tilegetter(complete), cmaker)
+    for tileget in sitecol.split(tilegetter.ntiles):
+        result = hazclassical(sources, tileget(sitecol), cmaker)
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
             # since there are 4 sites out of 18 with zeros
