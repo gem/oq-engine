@@ -163,7 +163,11 @@ def classical(sources, tilegetter, cmaker, dstore, monitor):
             yield result
         return
 
-    for tileget in sitecol.split(tilegetter.ntiles, cmaker.max_sites_disagg):
+    if cmaker.tiling:
+        tilegets = [tilegetter]
+    else:
+        tilegets = sitecol.split(tilegetter.ntiles, cmaker.max_sites_disagg)
+    for tileget in tilegets:
         result = hazclassical(sources, tileget(sitecol), cmaker)
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
@@ -557,7 +561,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ntiles.append(tilegetter.ntiles)
             if blocks == 1:
                 for tget in self.sitecol.split(tilegetter.ntiles):
-                    tget.ntiles = 1
                     allargs.append((None, tget, cmaker, ds))
                     expected_outputs += 1
             else:

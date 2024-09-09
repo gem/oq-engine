@@ -711,6 +711,7 @@ class CompositeSourceModel:
             else:
                 blocks = numpy.ceil(sg.weight / max_weight)
             self.splits.append(splits)
+            cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
