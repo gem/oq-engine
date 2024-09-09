@@ -73,8 +73,6 @@ class WorkerMaster(object):
             if int(cores) < -1:
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
-        self.remote_python = zworkers.remote_python or sys.executable
-        self.remote_user = zworkers.remote_user or getpass.getuser()
         self.popens = []
 
     def start(self):
@@ -263,7 +261,7 @@ class WorkerPool(object):
         """
         self.hostname = socket.gethostname()
         if self.job_id:
-            # save the hostname in calc_XXX/hostnames
+            # save the hostname in calc_XXX/hostcores
             calc_dir = os.path.join(
                 config.directory.custom_tmp, 'calc_%s' % self.job_id)
             try:
@@ -271,13 +269,16 @@ class WorkerPool(object):
             except FileExistsError:  # somebody else created it
                 pass
             if parallel.oq_distribute() == 'slurm':
-                fname = os.path.join(calc_dir, 'hostnames')
+                fname = os.path.join(calc_dir, 'hostcores')
+                line = f'{self.hostname} {self.num_workers}'
+                print(f'Writing {line} on {fname}')
                 with open(fname, 'a') as f:
-                    f.write(f'{self.hostname} {self.num_workers}\n')
+                    f.write(line + '\n')
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
         self.pool = general.mp.Pool(self.num_workers, init_workers)
+        pids = [proc.pid for proc in self.pool._pool]
         # start control loop accepting the commands stop
         try:
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
@@ -297,6 +298,8 @@ class WorkerPool(object):
                     elif cmd == 'get_executing':
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
+                    elif cmd == 'memory_gb':
+                        ctrlsock.send(performance.memory_gb(pids))
                     elif isinstance(cmd, tuple):
                         _func, _args, taskno, mon = cmd
                         self.pool.apply_async(

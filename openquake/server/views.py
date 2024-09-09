@@ -31,8 +31,9 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import unquote_plus
+from urllib.error import HTTPError
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -46,7 +47,6 @@ import numpy
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -58,6 +58,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
+from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
     get_trts_around, get_aristotle_allparams, get_rupture_dict)
 from openquake.server import utils
@@ -120,6 +121,8 @@ ARISTOTLE_FORM_LABELS = {
     'dep': 'Depth (km)',
     'mag': 'Magnitude (Mw)',
     'rake': 'Rake (degrees)',
+    'local_timestamp': 'Local timestamp of the event',
+    'time_event': 'Time of the event',
     'dip': 'Dip (degrees)',
     'strike': 'Strike (degrees)',
     'maximum_distance': 'Maximum source-to-site distance (km)',
@@ -128,6 +131,7 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
     'ses_seed': 'Random seed',
+    'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
@@ -140,6 +144,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'dep': 'float ≥ 0',
     'mag': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
+    'local_timestamp': '',
+    'time_event': 'day|night|transit',
     'dip': '0 ≤ float ≤ 90',
     'strike': '0 ≤ float ≤ 360',
     'maximum_distance': 'float ≥ 0',
@@ -148,6 +154,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'number_of_ground_motion_fields': 'float ≥ 1',
     'asset_hazard_distance': 'float ≥ 0',
     'ses_seed': 'int ≥ 0',
+    'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
 }
@@ -709,7 +716,7 @@ def aristotle_get_rupture_data(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    [rupdic] = res
+    rupdic, station_data_file = res
     try:
         trts, mosaic_model = get_trts_around(
             rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
@@ -729,6 +736,7 @@ def aristotle_get_rupture_data(request):
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
     rupdic['mosaic_model'] = mosaic_model
+    rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -777,6 +785,9 @@ def aristotle_validate(request):
         'rake': valid.rake_range,
         'dip': valid.dip_range,
         'strike': valid.strike_range,
+        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
+        'local_timestamp': valid.local_timestamp,
+        'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
@@ -794,11 +805,17 @@ def aristotle_validate(request):
         try:
             value = validation_func(request.POST.get(fieldname))
         except Exception as exc:
-            if (fieldname == 'maximum_distance_stations' and
-                    request.POST.get('maximum_distance_stations') == ''):
-                # NOTE: valid.positivefloat raises an error if the value is
-                # blank or None
-                params['maximum_distance_stations'] = None
+            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
+                                'local_timestamp']
+            # NOTE: valid.positivefloat, valid_dip_range and
+            #       valid_strike_range raise errors if their
+            #       value is blank or None
+            if (fieldname in blankable_fields and
+                    request.POST.get(fieldname) == ''):
+                if fieldname in dic:
+                    dic[fieldname] = None
+                else:
+                    params[fieldname] = None
                 continue
             validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
             invalid_inputs.append(fieldname)
@@ -808,10 +825,8 @@ def aristotle_validate(request):
         else:
             params[fieldname] = value
 
-    # FIXME: validate station_data_file
-    if 'lon' in request.POST:
-        # NOTE: if the request contains all form parameters
-        params['station_data_file'] = station_data_path
+    if 'is_point_rup' in request.POST:
+        dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -836,6 +851,20 @@ def aristotle_validate(request):
         logging.error('', exc_info=True)
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=500)
+    if station_data_path is not None:
+        # giving precedence to the user-uploaded station data file
+        params['station_data_file'] = station_data_path
+    elif request.POST.get('station_data_file_from_usgs'):
+        params['station_data_file'] = request.POST.get(
+            'station_data_file_from_usgs')
+    else:
+        try:
+            station_data_file = download_station_data_file(dic['usgs_id'])
+        except HTTPError as exc:
+            logging.info(f'Station data is not available: {exc}')
+            params['station_data_file'] = None
+        else:
+            params['station_data_file'] = station_data_file
     return rupdic, *params.values()
 
 
@@ -849,31 +878,40 @@ def aristotle_run(request):
     :param request:
         a `django.http.HttpRequest` object containing
         usgs_id, rupture_file,
-        lon, lat, dep, mag, rake, dip, strike, maximum_distance, trt,
+        lon, lat, dep, mag, rake, dip, strike,
+        local_timestamp, time_event,
+        maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
-        asset_hazard_distance, ses_seed, station_data_file,
-        maximum_distance_stations
+        asset_hazard_distance, ses_seed,
+        maximum_distance_stations, station_data_file
     """
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupdic, maximum_distance, trt,
+    (rupdic, local_timestamp, time_event, maximum_distance, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
+    for key in ['dip', 'strike']:
+        if key in rupdic and rupdic[key] is None:
+            del rupdic[key]
     try:
         allparams = get_aristotle_allparams(
             rupdic,
+            time_event,
             maximum_distance, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
+            local_timestamp,
             station_data_file=station_data_file,
             maximum_distance_stations=maximum_distance_stations)
-    except SiteAssociationError as exc:
-        response_data = {"status": "failed", "error_msg": str(exc)}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=406)
+    except Exception as exc:
 
+        response_data = {"status": "failed", "error_msg": str(exc),
+                         "error_cls": type(exc).__name__}
+        logging.error('', exc_info=True)
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=500)
     user = utils.get_user(request)
     jobctxs = engine.create_jobs(
         allparams, config.distribution.log_level, None, user, None)
@@ -1446,6 +1484,17 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                        warnings=warnings))
 
 
+def format_time_delta(td):
+    days = td.days
+    seconds = td.seconds
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    # Format without microseconds
+    formatted_time = f'{days} days, {hours:02}:{minutes:02}:{seconds:02}'
+    return formatted_time
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aristotle(request, calc_id):
@@ -1453,6 +1502,11 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     if job is None:
         return HttpResponseNotFound()
     description = job.description
+    job_start_time = job.start_time
+    job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+    local_timestamp_str = None
+    time_job_after_event = None
+    time_job_after_event_str = None
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses = views.view('aggrisk', ds)
@@ -1464,6 +1518,11 @@ def web_engine_get_outputs_aristotle(request, calc_id):
         else:
             assets = False
             avg_gmf = []
+        oqparam = ds['oqparam']
+        if hasattr(oqparam, 'local_timestamp'):
+            local_timestamp_str = (
+                oqparam.local_timestamp if oqparam.local_timestamp != 'None'
+                else None)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     if 'warnings' in ds:
         ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
@@ -1471,8 +1530,17 @@ def web_engine_get_outputs_aristotle(request, calc_id):
             warnings = ds_warnings
         else:
             warnings += '\n' + ds_warnings
+    if local_timestamp_str is not None:
+        local_timestamp = datetime.strptime(
+            local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
+        time_job_after_event = (
+            job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
+        time_job_after_event_str = format_time_delta(time_job_after_event)
     return render(request, "engine/get_outputs_aristotle.html",
                   dict(calc_id=calc_id, description=description,
+                       local_timestamp=local_timestamp_str,
+                       job_start_time=job_start_time_str,
+                       time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        avg_gmf=avg_gmf, assets=assets, warnings=warnings))

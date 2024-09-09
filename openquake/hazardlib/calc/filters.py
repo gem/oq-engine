@@ -110,7 +110,6 @@ def get_distances(rupture, sites, param):
         dist = numpy.zeros_like(sites.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
-    dist.flags.writeable = False
     return dist
 
 
@@ -207,7 +206,10 @@ class IntegrationDistance(dict):
         >>> md
         {'default': [(2.5, 50), (10.2, 50)]}
         """
-        items_by_trt = floatdict(value)
+        if value == 'magdist':
+            items_by_trt = {'default': [(3, 0), (6, 150), (10, 600)]}
+        else:
+            items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):

@@ -551,11 +551,31 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
-                    if ('dip' in data) {
-                        $('#dip').val(data.dip);
+                    $('#dip').val('dip' in data ? data.dip : '90');
+                    $('#strike').val('strike' in data ? data.strike : '0');
+                    $('#local_timestamp').val(data.local_timestamp);
+                    $('#time_event').val(data.time_event);
+                    $('#is_point_rup').val(data.is_point_rup);
+                    // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
+                    //       set a specific file in an HTML file input element using JavaScript or jQuery,
+                    //       therefore we can not pre-populate the station_data_file_input with the station_data_file
+                    //       obtained converting the USGS stationlist.json, and we use a separate field referencing it
+                    $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
+                    $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                    if ($('#rupture_file_input')[0].files.length == 1) {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
                     }
-                    if ('strike' in data) {
-                        $('#strike').val(data.strike);
+                    else if (data.is_point_rup) {
+                        $('#dip').prop('disabled', false);
+                        $('#strike').prop('disabled', false);
+                        $('#dip').val('90');
+                        $('#strike').val('0');
+                    } else {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                        $('#dip').val('');
+                        $('#strike').val('');
                     }
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
@@ -610,6 +630,8 @@
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
+                formData.append('is_point_rup', $("#is_point_rup").val());
+                formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());
@@ -617,6 +639,8 @@
                                 $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
+                formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
+                formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 $.ajax({

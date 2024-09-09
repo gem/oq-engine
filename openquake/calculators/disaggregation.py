@@ -290,7 +290,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 continue
 
             # split by tiles
-            for tile in self.sitecol.split(ntasks):
+            for tile_get in self.sitecol.split(ntasks):
+                tile = tile_get(self.sitecol)
                 ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
                 if len(ctx) * cmaker.Z > maxsize:
                     # split by magbin too

@@ -23,9 +23,11 @@ import os
 import getpass
 import logging
 import numpy
+from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
+from openquake.hazardlib.shakemap.parsers import (
+    download_rupture_dict, download_station_data_file)
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
@@ -98,9 +100,11 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     return rupdic
 
 
-def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
+def get_aristotle_allparams(rupture_dict, time_event,
+                            maximum_distance, trt,
                             truncation_level, number_of_ground_motion_fields,
                             asset_hazard_distance, ses_seed,
+                            local_timestamp=None,
                             exposure_hdf5=None, station_data_file=None,
                             maximum_distance_stations=None,
                             ignore_shakemap=False):
@@ -113,6 +117,13 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(rupture_dict, ignore_shakemap)
+    if station_data_file is None:
+        # NOTE: giving precedence to the station_data_file uploaded via form
+        try:
+            station_data_file = download_station_data_file(
+                rupture_dict['usgs_id'])
+        except HTTPError as exc:
+            logging.info(f'Station data is not available: {exc}')
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
@@ -124,6 +135,7 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
+        time_event=time_event,
         maximum_distance=str(maximum_distance),
         tectonic_region_type=trt,
         truncation_level=str(truncation_level),
@@ -131,6 +143,8 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
         asset_hazard_distance=str(asset_hazard_distance),
         ses_seed=str(ses_seed),
         inputs=inputs)
+    if local_timestamp is not None:
+        params['local_timestamp'] = local_timestamp
     if maximum_distance_stations is not None:
         params['maximum_distance_stations'] = str(maximum_distance_stations)
     oq = readinput.get_oqparam(params)
@@ -140,6 +154,8 @@ def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
     id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
     tmap_keys = get_tmap_keys(exposure_hdf5, countries)
+    if not tmap_keys:
+        raise LookupError(f'No taxonomy mapping was found for {countries}')
     logging.root.handlers = []  # avoid breaking the logs
     allparams = []
     for key in tmap_keys:
@@ -172,9 +188,11 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
+             time_event='day',
              maximum_distance='300', trt=None, truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', exposure_hdf5=None, station_data_file=None,
+             ses_seed='42',
+             local_timestamp=None, exposure_hdf5=None, station_data_file=None,
              maximum_distance_stations=None, ignore_shakemap=False):
     """
     This script is meant to be called from the command-line
@@ -183,9 +201,10 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
         allparams = get_aristotle_allparams(
-            rupture_dict, maximum_distance, trt, truncation_level,
+            rupture_dict, time_event, maximum_distance, trt,
+            truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, exposure_hdf5, station_data_file,
+            ses_seed, local_timestamp, exposure_hdf5, station_data_file,
             maximum_distance_stations, ignore_shakemap)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
@@ -206,12 +225,14 @@ main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
 main_cmd.callback = ''
+main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.trt = 'Tectonic region type'
 main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '

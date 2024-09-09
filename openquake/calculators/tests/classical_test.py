@@ -168,13 +168,15 @@ class ClassicalTestCase(CalculatorTestCase):
         with open(tmp, 'wb') as f:
             nrml.write([gnode], f)
 
+    def getLG(self):
+        return self.calc.datastore['hcurves-stats'][3, 0]
+
     def test_case_22(self):
         # crossing date line calculation for Alaska
-        # this also tests the splitting in two tiles
+        # this also tests the splitting in tiles
         tmp = tempfile.gettempdir()
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}):
+             mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -183,7 +185,10 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertGreater(max(self.calc.ntiles), 2)
+        data = self.calc.datastore['source_groups'][:]
+        self.assertEqual(data['gsims'], 4)
+        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['blocks'], 10)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -660,26 +665,27 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
-        oq = self.calc.oqparam
-        L = oq.imtls.size  # 25 levels x 9 IMTs
-        L1 = L // len(oq.imtls)
-        branches = self.calc.datastore['full_lt/gsim_lt'].branches
-        gsims = [br.gsim for br in branches]
-        df = self.calc.datastore.read_df('_rates')
-        del df['sid']
-        for g, gsim in enumerate(gsims):
-            curve = numpy.zeros(L1, oq.imt_dt())
-            df_for_g = df[df.gid == g]
-            poes = numpy.zeros(L)
-            poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
-            for im in oq.imtls:
-                curve[im] = poes[oq.imtls(im)]
-            gs = gsim.__class__.__name__
-            if 'submodel' in gsim._toml:
-                gs += '_' + gsim.kwargs['submodel']
-            got = general.gettemp(text_table(curve, ext='org'))
-            delta = .0003 if sys.platform == 'darwin' else 1E-5
-            self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
+        if not config.directory.custom_tmp:
+            oq = self.calc.oqparam
+            L = oq.imtls.size  # 25 levels x 9 IMTs
+            L1 = L // len(oq.imtls)
+            branches = self.calc.datastore['full_lt/gsim_lt'].branches
+            gsims = [br.gsim for br in branches]
+            df = self.calc.datastore.read_df('_rates')
+            del df['sid']
+            for g, gsim in enumerate(gsims):
+                curve = numpy.zeros(L1, oq.imt_dt())
+                df_for_g = df[df.gid == g]
+                poes = numpy.zeros(L)
+                poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
+                for im in oq.imtls:
+                    curve[im] = poes[oq.imtls(im)]
+                gs = gsim.__class__.__name__
+                if 'submodel' in gsim._toml:
+                    gs += '_' + gsim.kwargs['submodel']
+                got = general.gettemp(text_table(curve, ext='org'))
+                delta = .0003 if sys.platform == 'darwin' else 1E-5
+                self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM

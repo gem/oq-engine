@@ -445,6 +445,11 @@ limit_states:
    Example: *limit_states = moderate, complete*
    Default: no default
 
+local_timestamp:
+  Timestamp that includes both the date, time and the time zone information
+  Example: 2023-02-06 04:17:34+03:00
+  Default: None
+
 lrem_steps_per_interval:
   Used in the vulnerability functions.
   Example: *lrem_steps_per_interval  = 1*.
@@ -757,6 +762,11 @@ sites:
 tile_spec:
   INTERNAL
 
+tiling:
+  Used to force the tiling or non-tiling strategy in classical calculations
+  Example: *tiling = true*.
+  Default: None, meaning the engine will decide what to do
+
 smlt_branch:
    Used to restrict the source model logic tree to a specific branch
    Example: *smlt_branch=b1*
@@ -785,6 +795,9 @@ specific_assets:
 split_sources:
   INTERNAL
 
+split_by_gsim:
+  INTERNAL
+
 outs_per_task:
   How many outputs per task to generate (honored in some calculators)
   Example: *outs_per_task = 3*
@@ -807,7 +820,7 @@ tectonic_region_type:
 
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
-  Valid choices are "day", "night", "transit".
+  Valid choices are "avg", "day", "night", "transit".
   Example: *time_event = day*.
   Default: "avg"
 
@@ -1038,6 +1051,7 @@ class OqParam(valid.ParamSet):
     investigation_time = valid.Param(valid.positivefloat, None)
     job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
+    local_timestamp = valid.Param(valid.local_timestamp, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
@@ -1109,6 +1123,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
+    tiling = valid.Param(valid.boolean, None)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
@@ -1116,10 +1131,12 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_by_gsim = valid.Param(valid.positiveint, 0)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     tectonic_region_type = valid.Param(valid.utf8, '*')
-    time_event = valid.Param(str, 'avg')
+    time_event = valid.Param(
+        valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)

@@ -45,7 +45,8 @@ from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.getters import get_ebrupture, MapGetter, get_pmaps_gb
+from openquake.calculators.getters import (
+    get_ebrupture, MapGetter, get_pmaps_gb)
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -233,6 +234,17 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             lines.append(sepline)
     return '\n'.join(lines)
 
+@view.add('high_hazard')
+def view_high_hazard(token, dstore):
+    """
+    Returns the sites with hazard curve below max(poes)
+    """
+    oq = dstore['oqparam']
+    max_poe= max(oq.poes)
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    high = (max_hazard > max_poe).all(axis=1)
+    return max_hazard[high]
+
 
 @view.add('worst_sources')
 def view_worst_sources(token, dstore):
@@ -405,9 +417,8 @@ def view_job_info(token, dstore):
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
         recv = get_array(task_info, taskname=encode(task))['received']
-        data.append((task, ' '.join(sent),
-                     humansize(recv.sum()), humansize(recv.mean())))
-    return numpy.array(data, dt('task sent received mean_recv'))
+        data.append((task, ' '.join(sent), humansize(recv.sum())))
+    return numpy.array(data, dt('task sent received'))
 
 
 @view.add('avglosses_data_transfer')
@@ -707,6 +718,12 @@ def view_required_params_per_trt(token, dstore):
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
 
+def discard_small(values):
+    """
+    Discard values 10x smaller than the mean
+    """
+    return values[values >= .1 * values.mean()]
+
 
 @view.add('task_info')
 def view_task_info(token, dstore):
@@ -730,7 +747,7 @@ def view_task_info(token, dstore):
 
     data = []
     for task, arr in group_array(task_info[()], 'taskname').items():
-        val = arr['duration']
+        val = discard_small(arr['duration'])
         if len(val):
             data.append(stats(task, val, val.max() / val.mean()))
     if not data:
@@ -780,13 +797,22 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-    num_ruptures = sdata.nrupts.sum()
-    eff_sites = sdata.nsites.sum()
-    msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-           'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                 taskno, len(sdata), num_ruptures, eff_sites,
-                 rec['weight'], rec['duration'])
+    if len(dstore['source_data/src_id']):
+        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
+        num_ruptures = sdata.nrupts.sum()
+        eff_sites = sdata.nsites.sum()
+        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
+               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+                     taskno, len(sdata), num_ruptures, eff_sites,
+                     rec['weight'], rec['duration'])
+    else:
+        w = dstore.read_df('source_info').groupby('grp_id').weight.sum()
+        tdata = dstore.read_df('tiles').loc[taskno]
+        grp_id = int(tdata.grp_id)
+        msg = ('taskno={:_d}, grp_id={:_d}, G={:_d}, N={:_d}, weight={:.1f}, '
+               'duration={:.1f}s').format(
+                   taskno, grp_id, int(tdata.G), int(tdata.N),
+                   w.loc[grp_id] / tdata.G, rec['duration'])
     return msg
 
 

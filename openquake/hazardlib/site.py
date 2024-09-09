@@ -76,6 +76,23 @@ def rnd5(lons):
     return numpy.round(lons, 5)
 
 
+class TileGetter:
+    """
+    An extractor complete->tile
+    """
+    def __init__(self, tileno, ntiles):
+        self.tileno = tileno
+        self.ntiles = ntiles
+
+    def __call__(self, complete):
+        if self.ntiles == 1:
+            return complete
+        sc = SiteCollection.__new__(SiteCollection)
+        sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
+        sc.complete = complete
+        return sc
+
+
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -215,6 +232,8 @@ site_param_dt = {
     'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'lithology': (numpy.bytes_,2),
+    'landcover': (numpy.float64),
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
@@ -541,19 +560,9 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
-        maxtiles = int(numpy.ceil(len(self) / minsize))
-        ntiles = min(int(numpy.ceil(ntiles)), maxtiles)
-        if ntiles <= 1:
-            return [self]
-        tiles = []
-        for i in range(ntiles):
-            sc = SiteCollection.__new__(SiteCollection)
-            # smart trick to split in "homogenous" tiles
-            sc.array = self.array[self.sids % ntiles == i]
-            sc.complete = self
-            if len(sc):
-                tiles.append(sc)
-        return tiles
+        maxtiles = numpy.ceil(len(self) / minsize)
+        ntiles = min(numpy.ceil(ntiles), maxtiles)
+        return [TileGetter(i, ntiles) for i in range(int(ntiles))]
 
     def split_in_tiles(self, hint):
         """

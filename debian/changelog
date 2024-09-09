@@ -1,5 +1,37 @@
   [Enrico Abcede, Francis Bernales]
   * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014  
+  
+  [Kendra Johnson]
+  * Fixed an error `invalid literal for int() with base 10` affecting
+    event based calculations using mutex sources and a nontrivial logic tree
+
+  [Michele Simionato]
+  * Honored the custom_tmp in classical calculations and saved data transfer
+    by using TileGetters, then parallelized the saving of the rates
+
+  [Lana Todorovic]
+  * Implemented Nowicki Jessee et al. (2018) landslide geospatial model that
+    computes the areal coverage by landslide occurrence.
+
+  [Paolo Tormene]
+  * Updated extractor for gmf_data for a single event id (used by the IRMT
+    QGIS plugin), including data for secondary perils
+
+  [Michele Simionato]
+  * Refined the tiling calculator (partial tiling, task weighting, saving memory)
+  * Optimized "computing pnes" in classical calculations (3x in the common case)
+    and fully switched to 32 bit rates, thus saving memory and improving performance
+
+  [Nicolas Schmid]
+  * Fixed a regression in the ShakeMap to_gmfs code, a forgotten sigma^2/2 term
+
+  [Marco Pagani]
+  * Fixed aliases for Kuehn2020 GMPEs (signalled by Eric Thompson)
+
+  [Michele Simionato]
+  * Internal: splitting in groups with homogeneous temporal occurrence model
+  * Optimized the calculation of mean and stdevs in event based calculations, with
+    a speedup of 13x for the EUR model
 
   [Chris di Caprio]
   * Allowed extrapolation in the Kuehn (2020) GMPEs to solve numeric issues
@@ -10,10 +42,9 @@
     "object has no attribute msparams"
   * Fixed a critical memory bug causing over 80 GB per core to be needed for
     event based calculations with ~6 million sites
-  * Made `minimum_magnitude` and `minimum_intensity` mandatory in event based
-    calculations
+  * Made `minimum_intensity` mandatory in event based calculations
   * Reduced the memory consumption in event_based calculations: now even calculations
-    with 5 million sites can be run using ~4 GB per core
+    with 5 million sites can be run with ~2 GB per core
   * Reduced the memory occupation in `gen_poes`
   * Using half the memory in postclassical by using 32 bit arrays
   * Using half the memory on Windows by using half the threads by default

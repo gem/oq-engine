@@ -139,7 +139,7 @@ def get_pmaps_gb(dstore, full_lt=None):
     """
     :returns: memory required on the master node to keep the pmaps
     """
-    N = len(dstore['sitecol'])
+    N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
     if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
@@ -148,20 +148,22 @@ def get_pmaps_gb(dstore, full_lt=None):
         trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     gids = full_lt.get_gids(trt_smrs)
-    return len(trt_rlzs) * N * L * 4 / 1024**3, trt_rlzs, gids
+    max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
+    return max_gb, trt_rlzs, gids
 
 
 def get_num_chunks(dstore):
     """
     :returns: the number of postclassical tasks to generate.
 
-    It is 4 times the number of GB required to store the rates.
+    It is 5 times the number of GB required to store the rates.
     """
     msd = dstore['oqparam'].max_sites_disagg
     try:
-        chunks = max(int(4 * dstore['rates_max_gb'][()]), msd)
+        req_gb = dstore['source_groups'].attrs['req_gb']
     except KeyError:
-        chunks = msd
+        return msd
+    chunks = max(int(5 * req_gb), msd)
     return chunks
 
     
@@ -184,12 +186,15 @@ def map_getters(dstore, full_lt=None, disagg=False):
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
     else:
        weights = full_lt.weights
+    fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
-        fnames = [os.path.join(scratch_dir, f) for f in os.listdir(scratch_dir)
-                  if f.endswith('.hdf5')]
     except KeyError:  # no tiling
-        fnames = [dstore.filename]
+        pass
+    else:
+        for f in os.listdir(scratch_dir):
+            if f.endswith('.hdf5'):
+                fnames.append(os.path.join(scratch_dir, f))
     out = []
     for chunk in range(chunks):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
@@ -335,7 +340,7 @@ class MapGetter(object):
         """
         M = self.M
         L1 = self.L // M
-        means = MapArray(U32(self.sids), M, L1).fill(0, F32)
+        means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)

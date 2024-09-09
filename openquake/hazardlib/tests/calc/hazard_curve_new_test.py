@@ -156,13 +156,14 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
             grp_probability=1.0)
         param = dict(imtls=self.imtls,
                      investigation_time=1.,
+                     af=None,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
         cmaker = ContextMaker(src.tectonic_region_type, gsim_by_trt, param)
-        crv = classical(group, self.sites, cmaker)['pmap']
-        npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
-                                crv.array[0, :, 0], decimal=4)
+        rmap = classical(group, self.sites, cmaker)['rmap']
+        npt.assert_almost_equal([0.4308, 0.393 , 0.1098],
+                                rmap.array[0, :, 0], decimal=4)
 
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)
@@ -230,10 +231,10 @@ class MultiPointTestCase(unittest.TestCase):
         hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
         expected = [9.999978e-01, 9.084040e-01, 1.489753e-01, 3.690966e-03,
                     2.763261e-05]
-        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=3E-4)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-3)
 
         # splitting in point sources
         [[mps1, mps2]] = groups
         psources = list(mps1) + list(mps2)
         hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
-        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=3E-4)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=4E-3)
