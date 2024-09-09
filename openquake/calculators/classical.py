@@ -546,8 +546,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
+            expected_outputs = 0  # equal to the number of tasks
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+            expected_outputs = sgs['blocks'] @ sgs['tiles']
         allargs = []
         for cmaker, tilegetter, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
@@ -577,6 +579,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+        smap.expected_outputs = expected_outputs
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
         def genargs():
