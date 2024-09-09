@@ -556,8 +556,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.num_chunks, tiling):
             ntiles.append(tilegetter.ntiles)
             if blocks == 1:
-                allargs.append((None, tilegetter, cmaker, ds))
-                expected_outputs += tilegetter.ntiles
+                for tget in self.sitecol.split(tilegetter.ntiles):
+                    tget.ntiles = 1
+                    allargs.append((None, tget, cmaker, ds))
+                    expected_outputs += 1
             else:
                 sg = self.csm.src_groups[cmaker.grp_id]
                 for block in split_in_blocks(sg, blocks, get_weight):
