@@ -834,12 +834,12 @@ class Starmap(object):
         Log the progress of the computation in percentage
         """
         done = self.task_no - len(self.tasks)
-        percent = int(done / self.task_no * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
         if self.expected_outputs:
-            pc = int(self.n_out / self.expected_outputs * 100)
-            percent = max(percent, min(pc, 99))
+            percent = int(self.n_out / self.expected_outputs * 100)
+        else:
+            percent = int(done / self.task_no * 100)
         if percent > self.prev_percent:
             queued = len(self.task_queue)
             self.progress('%s %3d%% [%d submitted, %d queued]',
