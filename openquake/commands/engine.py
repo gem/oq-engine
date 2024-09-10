@@ -19,8 +19,7 @@ import os
 import sys
 import getpass
 import logging
-import subprocess
-from openquake.baselib import config, parallel, slurm
+from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore

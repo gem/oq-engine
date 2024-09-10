@@ -24,7 +24,7 @@ import warnings
 import getpass
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, parallel, config
+from openquake.baselib import performance, general
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
