@@ -132,7 +132,7 @@ that defines only the total standard deviation. If you wish to use the
 conditioned ground shaking module you have to select a GSIM that provides
 the inter and intra event standard deviations, or use the ModifiableGMPE
 with `add_between_within_stds.with_betw_ratio`.
-""" % self.gsim.__class__.__name_
+""" % self.gsim.__class__.__name__
 
 
 class IterationLimitWarning(Warning):
