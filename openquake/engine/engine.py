@@ -30,6 +30,7 @@ import signal
 import getpass
 import logging
 import platform
+import functools
 from os.path import getsize
 from datetime import datetime
 import psutil
@@ -60,10 +61,6 @@ SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND host=?x AND is_running=1 AND pid > 0 ORDER BY id'''
 
 
-def workers_stop():
-    w.WorkerMaster(config.zworkers).stop()
-
-
 def get_zmq_ports():
     """
     :returns: an array with the receiver ports
@@ -80,7 +77,7 @@ def set_concurrent_tasks_default(calc):
     """
     dist = parallel.oq_distribute()
     if dist in ('zmq', 'slurm'):
-        master = w.WorkerMaster(calc.calc_id)
+        master = w.WorkerMaster(calc.datastore.calc_id)
         num_workers = sum(total for host, running, total in master.wait())
         if num_workers == 0:
             logging.critical("No live compute nodes, aborting calculation")
@@ -164,11 +161,7 @@ class MasterKilled(KeyboardInterrupt):
     "Exception raised when a job is killed manually"
 
 
-def inhibitSigInt(signum, _stack):
-    logging.warning('Killing job, please wait')
-
-
-def manage_signals(signum, _stack):
+def manage_signals(job_id, signum, _stack):
     """
     Convert a SIGTERM into a SystemExit exception and a SIGINT/SIGHUP into
     a MasterKilled exception with an appropriate error message.
@@ -177,34 +170,35 @@ def manage_signals(signum, _stack):
     :param _stack: the current frame object, ignored
     """
     if signum == signal.SIGINT:
-        workers_stop()
+        stop_workers(job_id)
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
-        workers_stop()
+        stop_workers(job_id)
         raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
         if signum == signal.SIGHUP and os.getppid() != _PPID:
-            workers_stop()
+            stop_workers(job_id)
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
 
-def register_signals():
+def register_signals(job_id):
     # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
     # when using the Django development server this module is imported by a
     # thread, so one gets a `ValueError: signal only works in main thread` that
     # can be safely ignored
+    manage = functools.partial(manage_signals, job_id)
     try:
-        signal.signal(signal.SIGTERM, manage_signals)
-        signal.signal(signal.SIGINT, manage_signals)
+        signal.signal(signal.SIGTERM, manage)
+        signal.signal(signal.SIGINT, manage)
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
-                signal.signal(signal.SIGHUP, manage_signals)
+                signal.signal(signal.SIGHUP, manage)
     except ValueError:
         pass
 
@@ -243,9 +237,8 @@ def run_calc(log):
     :param log:
         LogContext of the current job
     """
-    register_signals()
+    register_signals(log.calc_id)
     setproctitle('oq-job-%d' % log.calc_id)
-    dist = parallel.oq_distribute()
     with log:
         # check the available memory before starting
         while True:
@@ -327,25 +320,6 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     return jobs
 
 
-def stop_workers(dist, kind):
-    """
-    Stop or kill the zmq workers
-    """
-    if dist == 'zmq':
-        assert kind in ("stop", "kill"), kind
-        if kind == 'stop':
-            # called in the regular case, does not require ssh access
-            print('Stopping the workers')
-            workers_stop()
-        elif kind == 'kill':
-            # called in case of exceptions (or out of memory), requires ssh
-            print('Killing the workers')
-            logs.dbcmd('workers_kill', config.zworkers)
-        os.environ['OQ_DISTRIBUTE'] = dist
-    elif dist == 'slurm':
-        pass
-
-
 def start_workers(dist, nodes=1):
     if dist == 'zmq':
         print('Starting the workers %s' % config.zworkers.host_cores)
@@ -354,6 +328,11 @@ def start_workers(dist, nodes=1):
         pass
 
 
+def stop_workers(job_id):
+    """
+    Stop the workers spawned by the current job via the WorkerMaster
+    """
+    w.WorkerMaster(job_id).stop()
 
     
 def run_jobs(jobctxs, concurrent_jobs=None):
@@ -412,17 +391,17 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
-        if orig_dist == 'zmq' or use_zmq:
-            stop_workers(orig_dist, 'stop')
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
         rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
                           "AND status IN ('created', 'executing')", ids)
         for job_id, in rows:
             logs.dbcmd("set_status", job_id, 'failed')
-        if orig_dist == 'zmq' or use_zmq:
-            stop_workers(orig_dist, 'kill')
         raise
+    finally:
+        if orig_dist == 'zmq' or use_zmq:
+            stop_workers(jobctxs[0].calc_id)
+            os.environ['OQ_DISTRIBUTE'] = orig_dist
     return jobctxs
 
 
