@@ -62,7 +62,7 @@ def ssh(jobs):
     """
     scratch_dir = parallel.scratch_dir(jobs[0].calc_id)
     pik = os.path.join(scratch_dir, 'jobs.pik')
-    with open(pik, 'w') as f:
+    with open(pik, 'wb') as f:
         pickle.dump(jobs, f)
     with open(os.path.join(scratch_dir, 'hostcores')) as f:
         line = f.read().split('\n')[0]
