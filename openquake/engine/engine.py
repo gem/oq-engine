@@ -43,7 +43,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import parallel, general, config, workerpool as w
+from openquake.baselib import parallel, general, config, slurm, workerpool as w
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base, export
@@ -320,12 +320,16 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     return jobs
 
 
-def start_workers(dist, nodes=1):
+def start_workers(job_id, dist, nodes):
+    """
+    Start the workers via the DbServer or via slurm
+    """
     if dist == 'zmq':
         print('Starting the workers %s' % config.zworkers.host_cores)
         logs.dbcmd('workers_start', config.zworkers)  # start the workers
     elif dist == 'slurm':
-        pass
+        slurm.start_workers(job_id, nodes)
+        slurm.wait_workers(job_id, nodes)
 
 
 def stop_workers(job_id):
@@ -335,7 +339,7 @@ def stop_workers(job_id):
     w.WorkerMaster(job_id).stop()
 
     
-def run_jobs(jobctxs, concurrent_jobs=None):
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
     """
     Run jobs using the specified config file and other options.
 
@@ -348,10 +352,11 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         # // 10 is chosen so that the core occupation in cole is decent
         concurrent_jobs = parallel.Starmap.CT // 10 or 1
 
+    job_id = jobctxs[0].calc_id
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     orig_dist = parallel.oq_distribute()
-    use_zmq = (hc_id is None and len(jobctxs) > 1 and
-               config.zworkers.host_cores == '127.0.0.1 -1')
+    use_zmq = (orig_dist == 'processpool' and config.zworkers.host_cores ==
+               '127.0.0.1 -1' and hc_id is None and len(jobctxs) > 1)
     if use_zmq:
         # use multispawn with zmq on a single machine
         os.environ['OQ_DISTRIBUTE'] = 'zmq'
@@ -382,9 +387,9 @@ def run_jobs(jobctxs, concurrent_jobs=None):
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if (orig_dist == 'zmq' or use_zmq) and \
-           w.WorkerMaster(config.zworkers).status() == []:
-            start_workers('zmq')
+        dist = 'zmq' if use_zmq else orig_dist
+        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
+            start_workers(job_id, dist, nodes)
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and parallel.oq_distribute() != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
@@ -395,12 +400,12 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         ids = [jc.calc_id for jc in jobctxs]
         rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
                           "AND status IN ('created', 'executing')", ids)
-        for job_id, in rows:
-            logs.dbcmd("set_status", job_id, 'failed')
+        for jid, in rows:
+            logs.dbcmd("set_status", jid, 'failed')
         raise
     finally:
-        if orig_dist == 'zmq' or use_zmq:
-            stop_workers(jobctxs[0].calc_id)
+        if orig_dist in ('zmq', 'slurm') or use_zmq:
+            stop_workers(job_id)
             os.environ['OQ_DISTRIBUTE'] = orig_dist
     return jobctxs
 

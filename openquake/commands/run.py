@@ -127,8 +127,6 @@ def main(job_ini,
     job_id = jobs[0].calc_id
     dist = parallel.oq_distribute()
     if dist == 'slurm' and 'job_id' not in params:
-        slurm.start_workers(nodes, job_id)
-        slurm.wait_workers(nodes, job_id)
         run_args = [' '.join(job_ini), '-l', loglevel]
         if hc:
             run_args.extend(['--hc', str(hc)])
@@ -142,19 +140,13 @@ def main(job_ini,
         run_args.extend(['-p', f'job_id={job_id}'])
         run_args.extend(param)
         mcores = config.distribution.master_cores
-        try:
-            if not mcores:  # run on the login node (IUSS cluster)
-                parallel.Starmap.CT = ct
-                run_jobs(jobs)
-            else:  # run on an extra node (CEA cluster)
-                cmd = ['srun', '--cpus-per-task', mcores, '--time', '24:00:00'] + \
-                    slurm.submit_cmd[1:] + run_args
-                subprocess.run(cmd)
-        finally:
-            slurm.stop_workers(job_id)
+        if not mcores:  # run on the login node (IUSS cluster)
+            run_jobs(jobs, nodes=nodes)
+        else:  # run on an extra node (CEA cluster)
+            cmd = ['srun', '--cpus-per-task', mcores, '--time', '24:00:00'] + \
+                slurm.submit_cmd[1:] + run_args
+            subprocess.run(cmd)
     else:
-        if dist == 'slurm':  # job_id is set
-            parallel.Starmap.CT = concurrent_tasks
         run_jobs(jobs)
     return job_id
 
