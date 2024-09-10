@@ -397,7 +397,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
         if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
         allargs = [(ctx,) for ctx in jobctxs]
-        if jobarray and parallel.oq_distribute() != 'no':
+        if jobarray and orig_dist != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
         else:
             for jobctx in jobctxs:
