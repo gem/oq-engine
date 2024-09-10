@@ -390,9 +390,11 @@ def download_station_data_file(usgs_id):
             stations_json_str = urlopen(stationlist_url).read()
             try:
                 stations = read_usgs_stations_json(stations_json_str)
-            except (LookupError, UnicodeDecodeError) as exc:
-                # TODO: return this info also to the webui
-                logging.warning(str(exc))
+            except (LookupError, UnicodeDecodeError,
+                    json.decoder.JSONDecodeError) as exc:
+                # TODO: return this also to the webui
+                logging.error(str(exc))
+                return None
             else:
                 original_len = len(stations)
                 seismic_len = len(
