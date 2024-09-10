@@ -46,20 +46,20 @@ If you are stuck in situation 2 you must kill the openquake job and the
 SLURM job with the command `scancel JOBID` (JOBID is listed by the
 command `$ squeue -u $USER`). If you are stuck in situation 3 for a long
 time it can be better to kill the jobs (both openquake and SLURM) and
-then relaunch the calculations, this time asking for less nodes.
+then relaunch the calculations, this time asking for fewer nodes.
 
 ## Running out of quota
 
-Right now the engine store all of its files (intermediate results and
-`calc_XXX.hdf5` files) under the `$HOME/oqdata` directory. It is therefore
-easy to run out of the quota for large calculations. Fortunaly there
-is an environment variable `$OQ_DATADIR` that can be configured to point
-to some other target, like a directory on a large shared disk. Such
-directory must be accessible in read/write mode from all workers in
-the clusters. Another option is to set a `shared_dir` in the
-`openquake.cfg` file and then the engine will store its data under the
-path `shared_dir/$HOME/oqdata`. This option is preferable since it will
-work transparently for all users but only the sysadmin can set it.
+The engine will store the calculation files in `shared_dir`
+and some auxiliary files in `custom_dir`; both directories and
+mandatory and must be specified in the configuration file. The
+`shared_dir` is meant to point to the work area of the cluster
+and the `custom_tmp` to the scratch area of the cluster.
+
+Classical calculations will generate an .hdf5 file for each
+task spawned, so each calculation can spawn thousands of files.
+We suggest to periodically purge the scratch directories for
+old calculations, which will have the form `scratch_dir/calc_XXX`.
 
 ## Installing on HPC
 
