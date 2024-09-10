@@ -125,29 +125,7 @@ def main(job_ini,
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
-    dist = parallel.oq_distribute()
-    if dist == 'slurm' and 'job_id' not in params:
-        run_args = [' '.join(job_ini), '-l', loglevel]
-        if hc:
-            run_args.extend(['--hc', str(hc)])
-        if concurrent_tasks:
-            run_args.extend(['-c', str(concurrent_tasks)])
-        else:
-            run_args.extend(['-c', str(ct)])
-        export = ','.join(exports)
-        if export:
-            run_args.extend(['-e', export])
-        run_args.extend(['-p', f'job_id={job_id}'])
-        run_args.extend(param)
-        mcores = config.distribution.master_cores
-        if not mcores:  # run on the login node (IUSS cluster)
-            run_jobs(jobs, nodes=nodes)
-        else:  # run on an extra node (CEA cluster)
-            cmd = ['srun', '--cpus-per-task', mcores, '--time', '24:00:00'] + \
-                slurm.submit_cmd[1:] + run_args
-            subprocess.run(cmd)
-    else:
-        run_jobs(jobs)
+    run_jobs(jobs, nodes=nodes)
     return job_id
 
 
