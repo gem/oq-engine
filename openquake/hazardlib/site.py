@@ -42,34 +42,53 @@ param = dict(
     xvf='xvf')
 
 
+
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
 # are inside some GSIM implementations, we should avoid duplication
-def calculate_z1pt0(vs30):
+def calculate_z1pt0(vs30, country):
     '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 1.0 km/s velocity horizon (in m)
+    Reads an array of vs30 values (in m/s) and returns the depth to
+    the 1.0 km/s velocity horizon (in m)
     Ref: Chiou & Youngs (2014) California model
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
+    :param country: country as defined within the file 
+                    geoBoundariesCGAZ_ADM0.shp
     '''
-    c1 = 571 ** 4.
-    c2 = 1360.0 ** 4.
-    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
+    if country != 'JPN': # Use global relationship
+        c1 = 571 ** 4.
+        c2 = 1360.0 ** 4.
+        return numpy.exp((-7.15 / 4.0) * numpy.log(
+            (vs30 ** 4. + c1) / (c2 + c1)))
+    
+    else: # Use relationship specifically for Japan
+        c1 = 412 ** 2.
+        c2 = 1360.0 ** 2.
+        return numpy.exp((-5.23 / 2.0) * numpy.log(
+            (numpy.power(vs30, 2.) + c1) / (c2 + c1)))
 
 
-def calculate_z2pt5(vs30):
+def calculate_z2pt5(vs30, country):
     '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 2.5 km/s velocity horizon (in km)
+    Reads an array of vs30 values (in m/s) and returns the depth
+      to the 2.5 km/s velocity horizon (in km)
     Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
     'NGA-West2 ground motion model for the average horizontal components of
     PGA, PGV, and 5pct damped linear acceleration response spectra.'
     Earthquake Spectra, 30(3), pp.1087–1114.
 
     :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
+    :param country: country as defined within the file 
+                    geoBoundariesCGAZ_ADM0.shp
     '''
-    c1 = 7.089
-    c2 = -1.144
-    return numpy.exp(c1 + numpy.log(vs30) * c2)
+    if country != 'JPN': # Use global relationship
+        c1 = 7.089
+        c2 = -1.144
+        return numpy.exp(c1 + numpy.log(vs30) * c2)
+
+    else: # Use relationship specifically for Japan
+        c1 = 5.359
+        c2 = -1.102
+        return numpy.exp(5.359 - 1.102 * numpy.log(vs30))
 
 
 def rnd5(lons):
@@ -352,6 +371,7 @@ class SiteCollection(object):
             items = list(dupl.items())[:9]
             raise ValueError('There are %d duplicate sites %s%s' %
                              (n, items, dots))
+        self.country = self.get_countries()
         return self
 
     @classmethod
@@ -721,18 +741,24 @@ class SiteCollection(object):
         array[N1:]['lat'] = lats
         complete.array = array
 
-    def by_country(self):
+    def get_countries(self):
         """
-        Returns a table with the number of sites per country. The countries
-        are defined as in the file geoBoundariesCGAZ_ADM0.shp
+        Return the country for each site in the SiteCollection.
+        The boundaries of the countries are defined as in the file
+        geoBoundariesCGAZ_ADM0.shp
         """
         from openquake.commonlib import readinput
         geom_df = readinput.read_countries_df()
         lonlats = numpy.zeros((len(self), 2), numpy.float32)
         lonlats[:, 0] = self.lons
         lonlats[:, 1] = self.lats
-        codes = geolocate(lonlats, geom_df)
-        uni, cnt = numpy.unique(codes, return_counts=True)
+        return geolocate(lonlats, geom_df)
+
+    def by_country(self):
+        """
+        Returns a table with the number of sites per country.
+        """
+        uni, cnt = numpy.unique(self.country, return_counts=True)
         out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
                                      ('num_sites', int)])
         out['country'] = uni
@@ -758,15 +784,17 @@ class SiteCollection(object):
 
     def calculate_z1pt0(self):
         """
-        Compute the column z1pt0 from the vs30
+        Compute the column z1pt0 from the vs30 using a region-dependent
+        formula for NGA-West2
         """
-        self.array['z1pt0'] = calculate_z1pt0(self.vs30)
+        self.array['z1pt0'] = calculate_z1pt0(self.vs30, self.country)
 
     def calculate_z2pt5(self):
         """
-        Compute the column z2pt5 from the vs30 using a formula for NGA-West2
+        Compute the column z2pt5 from the vs30 using a region-dependent
+        formula for NGA-West2
         """
-        self.array['z2pt5'] = calculate_z2pt5(self.vs30)
+        self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.country)
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)
