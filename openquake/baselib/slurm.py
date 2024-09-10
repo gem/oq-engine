@@ -8,7 +8,7 @@ submit_cmd = list(config.distribution.submit_cmd.split())
 SLURM_BATCH = '''\
 #!/bin/bash
 #SBATCH --job-name=workerpool
-#SBATCH --time=24:00:00
+#SBATCH --time={slurm_time}
 #SBATCH --cpus-per-task={num_cores}
 #SBATCH --nodes={nodes}
 srun python -m openquake.baselib.workerpool {num_cores} {job_id}
@@ -22,6 +22,7 @@ def start_workers(job_id, n):
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
+                              slurm_time=config.distribution.slurm_time,
                               job_id=job_id, nodes=n)
     with open(slurm_sh, 'w') as f:
         f.write(code)
