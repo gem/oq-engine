@@ -1,6 +1,8 @@
 import os
+import sys
 import stat
 import time
+import pickle
 import subprocess
 from openquake.baselib import parallel, config
 
@@ -52,3 +54,19 @@ def wait_workers(job_id, n):
             break
         else:
             time.sleep(5)
+
+
+def ssh(jobs):
+    """
+    Run the jobs on the first host
+    """
+    scratch_dir = parallel.scratch_dir(jobs[0].calc_id)
+    pik = os.path.join(scratch_dir, 'jobs.pik')
+    with open(pik, 'w') as f:
+        pickle.dump(jobs, f)
+    with open(os.path.join(scratch_dir, 'hostcores')) as f:
+        line = f.read().split('\n')[0]
+    host, _cores = line.split()
+    cmd = ['ssh', host, sys.executable, '-m', 'openquake.engine.engine', pik]
+    print(' '.join(ssh))
+    subprocess.run(cmd)
