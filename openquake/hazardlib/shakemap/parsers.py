@@ -237,6 +237,10 @@ def local_time_to_time_event(local_time):
 
 
 def read_usgs_stations_json(stations_json_str):
+    try:
+        stations_json_str = stations_json_str.decode('utf8')
+    except UnicodeDecodeError:
+        stations_json_str = stations_json_str.decode('latin1')
     sj = json.loads(stations_json_str)
     if 'features' not in sj or not sj['features']:
         raise LookupError('Station data is not available yet.')
@@ -386,12 +390,18 @@ def download_station_data_file(usgs_id):
             stations_json_str = urlopen(stationlist_url).read()
             try:
                 stations = read_usgs_stations_json(stations_json_str)
-            except LookupError as exc:
+            except (LookupError, UnicodeDecodeError) as exc:
                 logging.info(str(exc))
             else:
+                original_len = len(stations)
                 df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
                 if len(df) < 1:
-                    logging.warning('No seismic stations found')
+                    if original_len > 1:
+                        logging.warning(
+                            f'{original_len} stations were found, but they'
+                            f' were all discarded')
+                    else:
+                        logging.warning('No seismic stations found')
                 else:
                     with tempfile.NamedTemporaryFile(
                             delete=False, mode='w+', newline='',
