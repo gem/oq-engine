@@ -1,11 +1,15 @@
   [Enrico Abcede, Francis Bernales]
   * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014  
   
+  [Michele Simionato]
+  * Improved the progress log in classical calculations
+
   [Kendra Johnson]
   * Fixed an error `invalid literal for int() with base 10` affecting
     event based calculations using mutex sources and a nontrivial logic tree
 
   [Michele Simionato]
+  * Optimized the --sample-sources feature
   * Honored the custom_tmp in classical calculations and saved data transfer
     by using TileGetters, then parallelized the saving of the rates
 

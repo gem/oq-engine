@@ -27,7 +27,7 @@ import subprocess
 from datetime import datetime
 import psutil
 from openquake.baselib import (
-    zeromq as z, general, performance, parallel, config, sap, InvalidFile)
+    DotDict, zeromq as z, general, performance, parallel, config, sap)
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -40,12 +40,30 @@ def init_workers():
     setproctitle('oq-zworker')
 
 
+def get_zworkers(job_id):
+    """
+    :returns: DotDict str->str with keys ctrl_port and host_cores
+    """
+    dist = parallel.oq_distribute()
+    if dist == 'zmq':
+        return config.zworkers
+    elif dist == 'slurm':
+        calc_dir = parallel.scratch_dir(job_id)
+        try:
+            with open(os.path.join(calc_dir, 'hostcores')) as f:
+                hostcores = f.read()
+        except FileNotFoundError:
+            hostcores = ''
+        return DotDict(ctrl_port=config.zworkers.ctrl_port,
+                       host_cores=hostcores.replace('\n', ','))
+    return {}
+
+
 def ssh_args(zworkers):
     """
     :yields: triples (hostIP, num_cores, [ssh remote python command])
     """
-    remote_python = zworkers.remote_python or sys.executable
-    remote_user = zworkers.remote_user or getpass.getuser()
+    user = getpass.getuser()
     if zworkers.host_cores.strip():
         for hostcores in zworkers.host_cores.split(','):
             host, cores = hostcores.split()
@@ -53,26 +71,23 @@ def ssh_args(zworkers):
                 yield host, cores, [sys.executable]
             else:
                 yield host, cores, [
-                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
+                    'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
 class WorkerMaster(object):
     """
-    :param ctrl_port: port on which the worker pools listen
-    :param host_cores: names of the remote hosts and number of cores to use
-    :param remote_python: path of the Python executable on the remote hosts
+    :param zworkers: dictionary with keys host_keys and ctrl_port
     """
-    def __init__(self, zworkers=config.zworkers, receiver_ports=None):
-        self.zworkers = zworkers
+    def __init__(self, zworkers, receiver_ports=None):
+        if isinstance(zworkers, int):  # passed job_id
+            self.zworkers = get_zworkers(zworkers)
+        else:  # passed dictionary of strings
+            self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
-        self.ctrl_port = int(zworkers.ctrl_port)
+        self.ctrl_port = int(self.zworkers.ctrl_port)
         self.host_cores = (
-            [hc.split() for hc in zworkers.host_cores.split(',')]
-            if zworkers.host_cores else [])
-        for host, cores in self.host_cores:
-            if int(cores) < -1:
-                raise InvalidFile('openquake.cfg: found %s %s' %
-                                  (host, cores))
+            [hc.split() for hc in self.zworkers.host_cores.split(',')]
+            if self.zworkers.host_cores else [])
         self.popens = []
 
     def start(self):

@@ -176,8 +176,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     # build source_groups
     triples = csm.split(cmakers, sitecol, max_weight)
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), tg.ntiles, blocks, len(cm.gsims) * fac * 1024,
-          cm.weight, cm.codes, cm.trt) for cm, tg, blocks in triples],
+        [(cm.grp_id, len(cm.gsims), len(tgets), blocks, len(cm.gsims) * fac * 1024,
+          cm.weight, cm.codes, cm.trt) for cm, tgets, blocks in triples],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
 
@@ -199,11 +199,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
     dstore.create_dset('source_groups', data, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
-    Ns = data['tiles']
-    outs = Ns @ data['blocks']
-    if not tiling:
-        logging.info('This will be a calculation with ~%d outputs, '
-                     'min_tiles=%d, max_tiles=%d', outs, Ns.min(), Ns.max())
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids
