@@ -78,17 +78,20 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
-    master = w.WorkerMaster(config.zworkers)
-    num_workers = sum(total for host, running, total in master.wait())
-    if num_workers == 0:
-        logging.critical("No live compute nodes, aborting calculation")
-        logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
-        sys.exit(1)
+    dist = parallel.oq_distribute()
+    if dist in ('zmq', 'slurm'):
+        master = w.WorkerMaster(calc.calc_id)
+        num_workers = sum(total for host, running, total in master.wait())
+        if num_workers == 0:
+            logging.critical("No live compute nodes, aborting calculation")
+            logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
+            sys.exit(1)
 
-    parallel.Starmap.CT = num_workers * 2
-    OqParam.concurrent_tasks.default = num_workers * 2
-    logging.warning('Using %d %s workers', num_workers,
-                    parallel.oq_distribute())
+        parallel.Starmap.CT = num_workers * 2
+        OqParam.concurrent_tasks.default = num_workers * 2
+    else:
+        num_workers = parallel.Starmap.num_workers
+    logging.warning('Using %d %s workers', num_workers, dist)
 
 
 def expose_outputs(dstore, owner=USER, status='complete'):
@@ -269,11 +272,7 @@ def run_calc(log):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        if dist == 'zmq':
-            set_concurrent_tasks_default(calc)
-        else:
-            logging.warning('Using %d %s workers',
-                            parallel.Starmap.CT // 2, dist)
+        set_concurrent_tasks_default(calc)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
