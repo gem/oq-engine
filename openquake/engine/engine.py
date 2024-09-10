@@ -348,6 +348,13 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
     :param concurrent_jobs:
         How many jobs to run concurrently (default num_cores/4)
     """
+    # check the total number of required cores
+    tot_cores = parallel.Starmap.num_cores * nodes
+    max_cores = int(config.distribution.max_cores)
+    if tot_cores > max_cores:
+        raise ValueError('You can use at most %d nodes' %
+                         max_cores // parallel.Starmap.num_cores)
+
     if concurrent_jobs is None:
         # // 10 is chosen so that the core occupation in cole is decent
         concurrent_jobs = parallel.Starmap.CT // 10 or 1

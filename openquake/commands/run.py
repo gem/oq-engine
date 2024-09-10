@@ -108,19 +108,10 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    ct = 2 * parallel.Starmap.num_cores * nodes
-    max_cores = int(config.distribution.max_cores)
-    if ct > 2 * max_cores:
-        raise ValueError('You can use at most %d nodes' %
-                         max_cores // parallel.Starmap.num_cores)
     dics = [readinput.get_params(ini) for ini in job_ini]
     for dic in dics:
         dic.update(params)
         dic['exports'] = ','.join(exports)
-        if concurrent_tasks:
-            dic['concurrent_tasks'] = str(concurrent_tasks)
-        elif 'concurrent_tasks' not in dic:
-            dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
