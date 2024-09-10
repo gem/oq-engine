@@ -87,7 +87,7 @@ def set_concurrent_tasks_default(calc):
         parallel.Starmap.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
-        num_workers = parallel.Starmap.num_workers
+        num_workers = parallel.Starmap.num_cores
     logging.warning('Using %d %s workers', num_workers, dist)
 
 
