@@ -38,6 +38,7 @@ from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
 from openquake.baselib.node import node_from_xml
+from json.decoder import JSONDecodeError
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -380,8 +381,9 @@ def download_station_data_file(usgs_id):
     try:
         shakemap = products['shakemap']
     except KeyError:
-        logging.warning('No shakemap was found')
-        return None
+        msg = 'No shakemap was found'
+        logging.warning(msg)
+        raise
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
         if 'download/stationlist.json' in contents:
@@ -390,41 +392,38 @@ def download_station_data_file(usgs_id):
             stations_json_str = urlopen(stationlist_url).read()
             try:
                 stations = read_usgs_stations_json(stations_json_str)
-            except (LookupError, UnicodeDecodeError,
-                    json.decoder.JSONDecodeError) as exc:
-                # TODO: return this also to the webui
+            except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
                 logging.warning(str(exc))
-                return None
-            else:
-                original_len = len(stations)
-                seismic_len = len(
-                    stations[stations['station_type'] == 'seismic'])
-                df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
-                if len(df) < 1:
-                    if original_len > 1:
-                        if seismic_len > 1:
-                            # TODO: return this info also to the webui
-                            logging.warning(
-                                f'{original_len} stations were found, but the'
-                                f' {seismic_len} seismic stations were all'
-                                f' discarded')
-                        else:
-                            # TODO: return this info also to the webui
-                            logging.warning(
-                                f'{original_len} stations were found, but none'
-                                f' of them are seismic')
+                raise
+            original_len = len(stations)
+            seismic_len = len(
+                stations[stations['station_type'] == 'seismic'])
+            df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+            if len(df) < 1:
+                if original_len > 1:
+                    if seismic_len > 1:
+                        msg = (f'{original_len} stations were found, but the'
+                               f' {seismic_len} seismic stations were all'
+                               f' discarded')
+                        logging.warning(msg)
+                        raise LookupError(msg)
                     else:
-                        # TODO: return this info also to the webui
-                        logging.warning('No stations were found')
+                        msg = (f'{original_len} stations were found, but none'
+                               f' of them are seismic')
+                        logging.warning(msg)
+                        raise LookupError(msg)
                 else:
-                    with tempfile.NamedTemporaryFile(
-                            delete=False, mode='w+', newline='',
-                            suffix='.csv') as temp_file:
-                        station_data_file = temp_file.name
-                        df.to_csv(station_data_file, encoding='utf8',
-                                  index=False)
-                        logging.info(f'Wrote stations to {station_data_file}')
-                        return station_data_file
+                    msg = 'No stations were found'
+                    logging.warning(msg)
+                    raise LookupError(msg)
+            else:
+                with tempfile.NamedTemporaryFile(
+                        delete=False, mode='w+', newline='',
+                        suffix='.csv') as temp_file:
+                    station_data_file = temp_file.name
+                    df.to_csv(station_data_file, encoding='utf8', index=False)
+                    logging.info(f'Wrote stations to {station_data_file}')
+                    return station_data_file
 
 
 def download_rupture_dict(id, ignore_shakemap=False):
