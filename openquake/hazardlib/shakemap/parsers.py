@@ -393,7 +393,7 @@ def download_station_data_file(usgs_id):
             except (LookupError, UnicodeDecodeError,
                     json.decoder.JSONDecodeError) as exc:
                 # TODO: return this also to the webui
-                logging.error(str(exc))
+                logging.warning(str(exc))
                 return None
             else:
                 original_len = len(stations)
