@@ -21,7 +21,7 @@ def start_workers(job_id, n):
     job_id = str(job_id)
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
-    print('Writing %s' % slurm_sh)
+    print('Using %s' % slurm_sh)
     code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
                               slurm_time=config.distribution.slurm_time,
                               job_id=job_id, nodes=n)

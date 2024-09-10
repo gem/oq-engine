@@ -336,7 +336,7 @@ def stop_workers(job_id):
     """
     Stop the workers spawned by the current job via the WorkerMaster
     """
-    w.WorkerMaster(job_id).stop()
+    print(w.WorkerMaster(job_id).stop())
 
     
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
