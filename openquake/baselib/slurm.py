@@ -68,5 +68,5 @@ def ssh(jobs):
         line = f.read().split('\n')[0]
     host, _cores = line.split()
     cmd = ['ssh', host, sys.executable, '-m', 'openquake.engine.engine', pik]
-    print(' '.join(ssh))
+    print(' '.join(cmd))
     subprocess.run(cmd)
