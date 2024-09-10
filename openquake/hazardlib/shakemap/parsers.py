@@ -391,17 +391,29 @@ def download_station_data_file(usgs_id):
             try:
                 stations = read_usgs_stations_json(stations_json_str)
             except (LookupError, UnicodeDecodeError) as exc:
-                logging.info(str(exc))
+                # TODO: return this info also to the webui
+                logging.warning(str(exc))
             else:
                 original_len = len(stations)
+                seismic_len = len(
+                    stations[stations['station_type'] == 'seismic'])
                 df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
                 if len(df) < 1:
                     if original_len > 1:
-                        logging.warning(
-                            f'{original_len} stations were found, but they'
-                            f' were all discarded')
+                        if seismic_len > 1:
+                            # TODO: return this info also to the webui
+                            logging.warning(
+                                f'{original_len} stations were found, but the'
+                                f' {seismic_len} seismic stations were all'
+                                f' discarded')
+                        else:
+                            # TODO: return this info also to the webui
+                            logging.warning(
+                                f'{original_len} stations were found, but none'
+                                f' of them are seismic')
                     else:
-                        logging.warning('No seismic stations found')
+                        # TODO: return this info also to the webui
+                        logging.warning('No stations were found')
                 else:
                     with tempfile.NamedTemporaryFile(
                             delete=False, mode='w+', newline='',
