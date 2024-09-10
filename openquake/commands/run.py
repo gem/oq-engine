@@ -22,10 +22,9 @@ import socket
 import cProfile
 import warnings
 import getpass
-import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, parallel, slurm, config
+from openquake.baselib import performance, general
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
@@ -109,53 +108,14 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    ct = 2 * parallel.Starmap.num_cores * nodes
-    max_cores = int(config.distribution.max_cores)
-    if ct > 2 * max_cores:
-        raise ValueError('You can use at most %d nodes' %
-                         max_cores // parallel.Starmap.num_cores)
     dics = [readinput.get_params(ini) for ini in job_ini]
     for dic in dics:
         dic.update(params)
         dic['exports'] = ','.join(exports)
-        if concurrent_tasks:
-            dic['concurrent_tasks'] = str(concurrent_tasks)
-        elif 'concurrent_tasks' not in dic:
-            dic['concurrent_tasks'] = str(ct)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
                        user_name=user_name, host=host, multi=False)
     job_id = jobs[0].calc_id
-    dist = parallel.oq_distribute()
-    if dist == 'slurm' and 'job_id' not in params:
-        slurm.start_workers(nodes, job_id)
-        slurm.wait_workers(nodes, job_id)
-        run_args = [' '.join(job_ini), '-l', loglevel]
-        if hc:
-            run_args.extend(['--hc', str(hc)])
-        if concurrent_tasks:
-            run_args.extend(['-c', str(concurrent_tasks)])
-        else:
-            run_args.extend(['-c', str(ct)])
-        export = ','.join(exports)
-        if export:
-            run_args.extend(['-e', export])
-        run_args.extend(['-p', f'job_id={job_id}'])
-        run_args.extend(param)
-        mcores = config.distribution.master_cores
-        try:
-            if not mcores:  # run on the login node (IUSS cluster)
-                parallel.Starmap.CT = ct
-                run_jobs(jobs)
-            else:  # run on an extra node (CEA cluster)
-                cmd = ['srun', '--cpus-per-task', mcores, '--time', '24:00:00'] + \
-                    slurm.submit_cmd[1:] + run_args
-                subprocess.run(cmd)
-        finally:
-            slurm.stop_workers(job_id)
-    else:
-        if dist == 'slurm':  # job_id is set
-            parallel.Starmap.CT = concurrent_tasks
-        run_jobs(jobs)
+    run_jobs(jobs, nodes=nodes)
     return job_id
 
 
