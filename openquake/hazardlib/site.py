@@ -54,17 +54,22 @@ def calculate_z1pt0(vs30, country):
     :param country: country as defined within the file 
                     geoBoundariesCGAZ_ADM0.shp
     '''
-    if country != 'JPN': # Use global relationship
-        c1 = 571 ** 4.
-        c2 = 1360.0 ** 4.
-        return numpy.exp((-7.15 / 4.0) * numpy.log(
-            (vs30 ** 4. + c1) / (c2 + c1)))
+    z1pt0 = numpy.zeros(len(vs30))
+    df = pandas.DataFrame({'codes': country})
+    idx_glo = df.loc[df.codes!='JPN'].index.values
+    idx_jpn = df.loc[df.codes=='JPN'].index.values
+
+    c1_glo = 571 ** 4.
+    c2_glo = 1360.0 ** 4.
+    z1pt0[idx_glo] = numpy.exp((-7.15 / 4.0) * numpy.log(
+        (vs30[idx_glo] ** 4. + c1_glo) / (c2_glo + c1_glo)))
     
-    else: # Use relationship specifically for Japan
-        c1 = 412 ** 2.
-        c2 = 1360.0 ** 2.
-        return numpy.exp((-5.23 / 2.0) * numpy.log(
-            (numpy.power(vs30, 2.) + c1) / (c2 + c1)))
+    c1_jpn = 412 ** 2.
+    c2_jpn = 1360.0 ** 2.
+    z1pt0[idx_jpn] = numpy.exp((-7.15 / 4.0) * numpy.log(
+        (vs30[idx_jpn] ** 4. + c1_jpn) / (c2_jpn + c1_jpn)))
+
+    return z1pt0
 
 
 def calculate_z2pt5(vs30, country):
@@ -80,15 +85,20 @@ def calculate_z2pt5(vs30, country):
     :param country: country as defined within the file 
                     geoBoundariesCGAZ_ADM0.shp
     '''
-    if country != 'JPN': # Use global relationship
-        c1 = 7.089
-        c2 = -1.144
-        return numpy.exp(c1 + numpy.log(vs30) * c2)
+    z2pt5 = numpy.zeros(len(vs30))
+    df = pandas.DataFrame({'codes': country})
+    idx_glo = df.loc[df.codes!='JPN'].index.values
+    idx_jpn = df.loc[df.codes=='JPN'].index.values
 
-    else: # Use relationship specifically for Japan
-        c1 = 5.359
-        c2 = -1.102
-        return numpy.exp(5.359 - 1.102 * numpy.log(vs30))
+    c1_glo = 7.089
+    c2_glo = -1.144
+    z2pt5[idx_glo] = numpy.exp(c1_glo + numpy.log(vs30[idx_glo]) * c2_glo)
+
+    c1_jpn = 5.359
+    c2_jpn = -1.102    
+    z2pt5[idx_jpn] = numpy.exp(c1_jpn + c2_jpn * numpy.log(vs30[idx_jpn]))
+
+    return z2pt5
 
 
 def rnd5(lons):
