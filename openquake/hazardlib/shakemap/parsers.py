@@ -218,8 +218,10 @@ def make_surface_from_pt_set(rup_coords):
 
 
 def convert_to_oq_rupture(rup_json):
+    # NOTE: adapted from
+    # https://github.com/gem/earthquake-scenarios/blob/main/src/2_1_rupture_usgs_json_to_oq_xml.ipynb
     ftype = rup_json['features'][0]['geometry']['type']
-    # FIXME: the notebook overrides the rake found in metadata. Why?
+    # NOTE: the code in the notebook overrides the rake found in metadata.
     # # Set rake to a reference value
     # rup_json['metadata']['rake'] = rake
     if ftype == 'Point':
@@ -247,6 +249,12 @@ def convert_to_oq_rupture(rup_json):
     hyp_lat = rup_json['metadata']['lat']
     hyp_depth = rup_json['metadata']['depth']
     hypocenter = Point(hyp_lon, hyp_lat, hyp_depth)
+    try:
+        rake = rup_json['metadata']['rake']
+    except KeyError:
+        logging.info(
+            'The rake was not found in the metadata. Setting it to 0.')
+        rake = 0
 
     # FIXME: handle ARISTOTLE form accordingly?
     trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
@@ -255,7 +263,6 @@ def convert_to_oq_rupture(rup_json):
 
     # Create surface
     if mode == "PlanarSurface":
-        rake = rup_json['metadata']['rake']  # NOTE: if not passed to the func
         surf = make_surface_from_pt_set(rup_coordinates)
         rupture = ParametricProbabilisticRupture(
             Mw, rake, trt, hypocenter, surf, 1.0, PoissonTOM(1.0))
