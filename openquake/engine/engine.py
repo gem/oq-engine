@@ -170,18 +170,17 @@ def manage_signals(job_id, signum, _stack):
     :param _stack: the current frame object, ignored
     """
     if signum == signal.SIGINT:
-        stop_workers(job_id)
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
         stop_workers(job_id)
         raise SystemExit('Terminated')
 
-    if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
+    if hasattr(signal, 'SIGHUP'):
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
+        # Note: there is no SIGHUP on Windows
         if signum == signal.SIGHUP and os.getppid() != _PPID:
-            stop_workers(job_id)
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
