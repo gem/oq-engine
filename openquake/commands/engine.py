@@ -96,7 +96,7 @@ def main(
         exports='',
         log_level='info',
         sample_sources=False,
-        nodes=1):
+        nodes:int=1):
     """
     Run a calculation using the traditional command line API
     """
@@ -289,3 +289,4 @@ main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
 main.sample_sources = dict(abbrev='--ss',
                            help="Sample fraction in the range 0..1")
+main.nodes = 'Number of SLURM nodes (if applicable)'
