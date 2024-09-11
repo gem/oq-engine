@@ -386,7 +386,7 @@ def download_station_data_file(usgs_id):
         shakemap = products['shakemap']
     except KeyError:
         msg = 'No shakemap was found'
-        logging.warning(msg)
+        logging.info(msg)
         raise
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
@@ -397,7 +397,7 @@ def download_station_data_file(usgs_id):
             try:
                 stations = read_usgs_stations_json(stations_json_str)
             except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
-                logging.warning(str(exc))
+                logging.info(str(exc))
                 raise
             original_len = len(stations)
             try:
@@ -416,16 +416,16 @@ def download_station_data_file(usgs_id):
                         msg = (f'{original_len} stations were found, but the'
                                f' {seismic_len} seismic stations were all'
                                f' discarded')
-                        logging.warning(msg)
+                        logging.info(msg)
                         raise LookupError(msg)
                     else:
                         msg = (f'{original_len} stations were found, but none'
                                f' of them are seismic')
-                        logging.warning(msg)
+                        logging.info(msg)
                         raise LookupError(msg)
                 else:
                     msg = 'No stations were found'
-                    logging.warning(msg)
+                    logging.info(msg)
                     raise LookupError(msg)
             else:
                 with tempfile.NamedTemporaryFile(
