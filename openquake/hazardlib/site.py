@@ -753,14 +753,15 @@ class SiteCollection(object):
         array[N1:]['lat'] = lats
         complete.array = array
 
-    def get_countries(self):
+    def get_countries(self, buffer=0.):
         """
         Return the country for each site in the SiteCollection.
         The boundaries of the countries are defined as in the file
         geoBoundariesCGAZ_ADM0.shp
+        :param buffer: Distance in km to apply around country borders
         """
         from openquake.commonlib import readinput
-        geom_df = readinput.read_countries_df()
+        geom_df = readinput.read_countries_df(buffer=buffer)
         lonlats = numpy.zeros((len(self), 2), numpy.float32)
         lonlats[:, 0] = self.lons
         lonlats[:, 1] = self.lats
@@ -799,7 +800,7 @@ class SiteCollection(object):
         Compute the column z1pt0 from the vs30 using a region-dependent
         formula for NGA-West2
         """
-        self.country = self.get_countries()
+        self.country = self.get_countries(buffer=100)
         self.array['z1pt0'] = calculate_z1pt0(self.vs30, self.country)
 
     def calculate_z2pt5(self):
@@ -807,7 +808,7 @@ class SiteCollection(object):
         Compute the column z2pt5 from the vs30 using a region-dependent
         formula for NGA-West2
         """
-        self.country = self.get_countries()
+        self.country = self.get_countries(buffer=100)
         self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.country)
 
     def __getstate__(self):
