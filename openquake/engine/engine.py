@@ -399,8 +399,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and orig_dist != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
-        elif orig_dist == 'slurm' and config.distribution.use_ssh:
-            slurm.ssh(jobctxs)
+        elif orig_dist == 'slurm' and config.distribution.master_cores:
+            slurm.srun(jobctxs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)

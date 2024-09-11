@@ -56,17 +56,16 @@ def wait_workers(job_id, n):
             time.sleep(5)
 
 
-def ssh(jobs):
+def srun(jobs):
     """
-    Run the jobs on the first host
+    Run the jobs via srun
     """
     scratch_dir = parallel.scratch_dir(jobs[0].calc_id)
     pik = os.path.join(scratch_dir, 'jobs.pik')
     with open(pik, 'wb') as f:
         pickle.dump(jobs, f)
-    with open(os.path.join(scratch_dir, 'hostcores')) as f:
-        line = f.read().split('\n')[0]
-    host, _cores = line.split()
-    cmd = ['ssh', host, sys.executable, '-m', 'openquake.engine.engine', pik]
+    cmd = ['srun'] + submit_cmd[1:-2] + [
+        '-c', config.distribution.master_cores,
+        sys.executable, '-m', 'openquake.engine.engine', pik]
     print(' '.join(cmd))
     subprocess.run(cmd)

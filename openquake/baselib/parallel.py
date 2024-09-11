@@ -701,7 +701,7 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
-    CT = num_cores * 3 if num_cores < cpu_count else num_cores * 2
+    CT = num_cores * 2
     expected_outputs = 0  # unknown
 
     @classmethod
