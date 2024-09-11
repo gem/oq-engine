@@ -1,27 +1,31 @@
 import os
+import sys
 import stat
 import time
+import pickle
 import subprocess
-from openquake.baselib import parallel, config, zeromq
+from openquake.baselib import parallel, config
 
 submit_cmd = list(config.distribution.submit_cmd.split())
 SLURM_BATCH = '''\
 #!/bin/bash
 #SBATCH --job-name=workerpool
-#SBATCH --time=24:00:00
+#SBATCH --time={slurm_time}
 #SBATCH --cpus-per-task={num_cores}
 #SBATCH --nodes={nodes}
 srun python -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
 
-def start_workers(n, job_id):
+def start_workers(job_id, n):
     """
     Start n workerpools which will write on scratch_dir/hostcores)
     """
     job_id = str(job_id)
     calc_dir = parallel.scratch_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
+    print('Using %s' % slurm_sh)
     code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
+                              slurm_time=config.distribution.slurm_time,
                               job_id=job_id, nodes=n)
     with open(slurm_sh, 'w') as f:
         f.write(code)
@@ -32,7 +36,7 @@ def start_workers(n, job_id):
     subprocess.run(submit_cmd[:-2] + [slurm_sh])
 
 
-def wait_workers(n, job_id):
+def wait_workers(job_id, n):
     """
     Wait until the hostcores file is filled with n names
     """
@@ -52,16 +56,16 @@ def wait_workers(n, job_id):
             time.sleep(5)
 
 
-def stop_workers(job_id: str):
+def srun(jobs):
     """
-    Stop all the started workerpools (read from the file scratch_dir/hostcores)
+    Run the jobs via srun
     """
-    fname = os.path.join(parallel.scratch_dir(job_id), 'hostcores')
-    with open(fname) as f:
-        hostcores = f.readlines()
-    for line in hostcores:
-        host, _ = line.split()
-        ctrl_url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
-        print('Stopping %s' % host)
-        with zeromq.Socket(ctrl_url, zeromq.zmq.REQ, 'connect') as sock:
-            sock.send('stop')
+    scratch_dir = parallel.scratch_dir(jobs[0].calc_id)
+    pik = os.path.join(scratch_dir, 'jobs.pik')
+    with open(pik, 'wb') as f:
+        pickle.dump(jobs, f)
+    cmd = ['srun'] + submit_cmd[1:-2] + [
+        '-c', config.distribution.master_cores,
+        sys.executable, '-m', 'openquake.engine.engine', pik]
+    print(' '.join(cmd))
+    subprocess.run(cmd)

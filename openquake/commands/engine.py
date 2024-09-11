@@ -95,7 +95,8 @@ def main(
         config_file=None,
         exports='',
         log_level='info',
-        sample_sources=False,):
+        sample_sources=False,
+        nodes:int=1):
     """
     Run a calculation using the traditional command line API
     """
@@ -179,7 +180,7 @@ def main(
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs)
+        run_jobs(jobs, nodes=nodes)
 
     # hazard
     elif list_hazard_calculations:
@@ -288,3 +289,4 @@ main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
 main.sample_sources = dict(abbrev='--ss',
                            help="Sample fraction in the range 0..1")
+main.nodes = 'Number of SLURM nodes (if applicable)'

@@ -561,7 +561,12 @@
                     //       therefore we can not pre-populate the station_data_file_input with the station_data_file
                     //       obtained converting the USGS stationlist.json, and we use a separate field referencing it
                     $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
-                    $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                    if (data.station_data_error) {
+                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion error)');
+                        diaerror.show(false, "Error", data.station_data_error);
+                    } else {
+                        $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                    }
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);

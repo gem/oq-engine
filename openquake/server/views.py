@@ -43,6 +43,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
+from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
@@ -717,6 +718,10 @@ def aristotle_get_rupture_data(request):
     if isinstance(res, HttpResponse):  # error
         return res
     rupdic, station_data_file = res
+    if not os.path.isfile(station_data_file):
+        rupdic['station_data_error'] = (
+            'Unable to collect station data: %s' % station_data_file)
+        station_data_file = None
     try:
         trts, mosaic_model = get_trts_around(
             rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
@@ -863,6 +868,12 @@ def aristotle_validate(request):
         except HTTPError as exc:
             logging.info(f'Station data is not available: {exc}')
             params['station_data_file'] = None
+        except (KeyError, LookupError, UnicodeDecodeError,
+                JSONDecodeError) as exc:
+            logging.info(str(exc))
+            # NOTE: saving the error instead of the file path, then we need to
+            # check if that is a file or not
+            params['station_data_file'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
     return rupdic, *params.values()
@@ -895,6 +906,8 @@ def aristotle_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
+    if not os.path.isfile(station_data_file):
+        station_data_file = None
     try:
         allparams = get_aristotle_allparams(
             rupdic,
