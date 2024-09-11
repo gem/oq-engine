@@ -897,6 +897,9 @@ class ValidatingXmlParser(object):
         """
         Parse a file or a filename
         """
+        
+            
+        file_or_fname = 'C:\\Users\\Christopher Brooks\\Downloads\\case_16\\exposure.xml'
         with self._context():
             if hasattr(file_or_fname, 'read'):
                 self.filename = getattr(
