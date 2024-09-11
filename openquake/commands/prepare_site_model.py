@@ -166,6 +166,8 @@ def main(
             else:
                 raise RuntimeError('Missing exposures or missing sites')
             associate(haz_sitecol, vs30_csv, assoc_distance)
+            if z1pt0 or z2pt5:
+                haz_sitecol.get_countries()
             if z1pt0:
                 haz_sitecol.calculate_z1pt0()
             if z2pt5:
