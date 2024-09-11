@@ -49,10 +49,12 @@ def calculate_z1pt0(vs30, country):
     '''
     Reads an array of vs30 values (in m/s) and returns the depth to
     the 1.0 km/s velocity horizon (in m)
-    Ref: Chiou & Youngs (2014) California model
+    Ref: Chiou, B. S.-J. and Youngs, R. R., 2014. 'Update of the 
+    Chiou and Youngs NGA model for the average horizontal component
+    of peak ground motion and response spectra.' Earthquake Spectra,
+    30(3), pp.1117–1153.
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
-    :param country: country as defined within the file 
-                    geoBoundariesCGAZ_ADM0.shp
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
 
     '''
     z1pt0 = numpy.zeros(len(vs30))
@@ -76,15 +78,14 @@ def calculate_z1pt0(vs30, country):
 def calculate_z2pt5(vs30, country):
     '''
     Reads an array of vs30 values (in m/s) and returns the depth
-      to the 2.5 km/s velocity horizon (in km)
+    to the 2.5 km/s velocity horizon (in km)
     Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
     'NGA-West2 ground motion model for the average horizontal components of
     PGA, PGV, and 5pct damped linear acceleration response spectra.'
     Earthquake Spectra, 30(3), pp.1087–1114.
 
     :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
-    :param country: country as defined within the file 
-                    geoBoundariesCGAZ_ADM0.shp
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
                     
     '''
     z2pt5 = numpy.zeros(len(vs30))
