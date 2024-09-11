@@ -471,5 +471,5 @@ if __name__ == '__main__':
     # run LogContext objects stored in a pickle file, called by job.yaml
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
-    os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    run_jobs(jobctxs)
+    for jobctx in jobctxs:
+        run_calc(jobctx)
