@@ -399,6 +399,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and orig_dist != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
+        elif orig_dist == 'slurm' and config.distribution.master_cores:
+            slurm.srun(jobctxs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -466,7 +468,8 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run a LogContext object stored in a pickle file, called by job.yaml
+    # run LogContext objects stored in a pickle file, called by job.yaml
     with open(sys.argv[1], 'rb') as f:
-        jobctx = pickle.load(f)
-    run_jobs([jobctx])
+        jobctxs = pickle.load(f)
+    os.environ['OQ_DISTRIBUTE'] = 'processpool'
+    run_jobs(jobctxs)

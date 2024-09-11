@@ -702,8 +702,7 @@ class CompositeSourceModel:
         for cmaker in cmakers[grp_ids]:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
-            mul = .4 if sg.weight < max_weight / 3 else 1.
-            splits = numpy.ceil(mul * len(cmaker.gsims) * mb_per_gsim / max_mb)
+            splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
             if sg.atomic:
                 blocks = 1
             elif tiling:
