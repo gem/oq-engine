@@ -561,7 +561,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in split_in_blocks(sg, blocks, get_weight):
                 for tgetters in block_splitter(
                         tilegetters, sg.weight / self.max_weight,
-                        lambda tg: block.weight):
+                        lambda tg, block=block: block.weight):
                     allargs.append((block if blocks > 1 else None,
                                     tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
