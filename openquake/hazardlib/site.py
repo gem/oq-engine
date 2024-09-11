@@ -64,12 +64,12 @@ def calculate_z1pt0(vs30, country):
     c1_glo = 571 ** 4.
     c2_glo = 1360.0 ** 4.
     z1pt0[idx_glo] = numpy.exp((-7.15 / 4.0) * numpy.log(
-        (vs30[idx_glo] ** 4. + c1_glo) / (c2_glo + c1_glo)))
+        (vs30[idx_glo] ** 4 + c1_glo) / (c2_glo + c1_glo)))
     
     c1_jpn = 412 ** 2.
     c2_jpn = 1360.0 ** 2.
-    z1pt0[idx_jpn] = numpy.exp((-7.15 / 4.0) * numpy.log(
-        (vs30[idx_jpn] ** 4. + c1_jpn) / (c2_jpn + c1_jpn)))
+    z1pt0[idx_jpn] = numpy.exp((-5.23 / 2.0) * numpy.log(
+        (vs30[idx_jpn] ** 2 + c1_jpn) / (c2_jpn + c1_jpn)))
 
     return z1pt0
 
