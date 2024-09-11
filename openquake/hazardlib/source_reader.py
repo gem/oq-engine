@@ -683,10 +683,9 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        max_weight *= 1.05  # increased to produce fewer tasks
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
-        if oq.concurrent_tasks > 256:
-            return max_weight * 1.3  # increased to produce less tasks
         return max_weight
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
