@@ -42,7 +42,6 @@ param = dict(
     xvf='xvf')
 
 
-
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
 # are inside some GSIM implementations, we should avoid duplication
 def calculate_z1pt0(vs30, country):
