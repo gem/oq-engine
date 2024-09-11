@@ -114,10 +114,8 @@ Because of this requirement, we abandoned *concurrent.futures*, which is also in
 the ability to kill the pool of processes, which is instead available in multiprocessing with the *Pool.shutdown* method. 
 For the same reason, we discarded *dask*.
 
-Using a real cluster scheduling mechanism (like SLURM) would be of course better, but we do not want to impose on our 
-users a specific cluster architecture. Zeromq has the advantage of being simple to install and manage. Still, the 
-architecture of the engine parallelization library is such that it is very simple to replace zeromq with other 
-parallelization mechanisms: people interested in doing so should just contact us.
+zeromq has the advantage of being simple to install and manage. Still, the
+architecture of the engine parallelization library is such that it is very simple to interface zeromq with other parallelization mechanisms: for instance, we recently integrated zeromq with SLURM for calculations running on HPC clusters.
 
 Another tricky aspect of parallelizing large scientific calculations is that the amount of data returned can exceed the 
 4 GB limit of Python pickles: in this case one gets ugly runtime errors. The solution we found is to make it possible 

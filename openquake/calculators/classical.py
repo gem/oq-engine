@@ -592,23 +592,22 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
-        with self.monitor('storing rates', measuremem=True):
-            logging.info('Processing %s', self.rmap)
-            if (self.rmap.size_mb and config.directory.custom_tmp and
-                self.N > 1000 and parallel.oq_distribute() != 'no'):
-                # tested in the oq-risk-tests
-                mcores = int(config.distribution.master_cores or 16)
-                savemap = parallel.Starmap(save_rates, genargs(),
-                                           h5=self.datastore,
-                                           distribute='processpool')
-                savemap.share(rates=self.rmap.array)
-                savemap.num_cores = mcores
-                savemap.reduce()
-            elif self.rmap.size_mb:
-                for g, N, jid, num_chunks in genargs():
-                    rates = self.rmap.to_array(g)
-                    _store(rates, self.num_chunks, self.datastore)
-            del self.rmap
+        logging.info('Processing %s', self.rmap)
+        if (self.rmap.size_mb and config.directory.custom_tmp and
+            self.N > 1000 and parallel.oq_distribute() != 'no'):
+            # tested in the oq-risk-tests
+            mcores = int(config.distribution.master_cores or 16)
+            savemap = parallel.Starmap(save_rates, genargs(),
+                                       h5=self.datastore,
+                                       distribute='processpool')
+            savemap.share(rates=self.rmap.array)
+            savemap.num_cores = mcores
+            savemap.reduce()
+        elif self.rmap.size_mb:
+            for g, N, jid, num_chunks in genargs():
+                rates = self.rmap.to_array(g)
+                _store(rates, self.num_chunks, self.datastore)
+        del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check

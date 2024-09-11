@@ -60,7 +60,7 @@ def dbcmd(action, *args):
         # access the database directly
         if action.startswith('workers_'):
             master = w.WorkerMaster(-1)  # current job
-            return getattr(master, action[8:])()
+            return getattr(master, action[8:])()  # workers_(stop|kill)
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)

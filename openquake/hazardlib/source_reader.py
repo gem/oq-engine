@@ -683,9 +683,10 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        max_weight *= 1.1  # increased to produce fewer tasks
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
-        return max_weight * 1.05  # increased to produce a bit less tasks
+        return max_weight
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
@@ -701,8 +702,7 @@ class CompositeSourceModel:
         for cmaker in cmakers[grp_ids]:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
-            mul = .4 if sg.weight < max_weight / 3 else 1.
-            splits = numpy.ceil(mul * len(cmaker.gsims) * mb_per_gsim / max_mb)
+            splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
             if sg.atomic:
                 blocks = 1
             elif tiling:
