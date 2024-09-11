@@ -23,7 +23,7 @@ import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib.general import not_equal, get_duplicates
+from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
     spherical_to_cartesian, get_middle_point, geolocate)
@@ -752,9 +752,10 @@ class SiteCollection(object):
         array[N1:]['lat'] = lats
         complete.array = array
 
-    def get_countries(self):
+    @cached_property
+    def countries(self):
         """
-        Return the country for each site in the SiteCollection.
+        Return the countries for each site in the SiteCollection.
         The boundaries of the countries are defined as in the file
         geoBoundariesCGAZ_ADM0.shp
         """
@@ -769,7 +770,7 @@ class SiteCollection(object):
         """
         Returns a table with the number of sites per country.
         """
-        uni, cnt = numpy.unique(self.country, return_counts=True)
+        uni, cnt = numpy.unique(self.countries, return_counts=True)
         out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
                                      ('num_sites', int)])
         out['country'] = uni
@@ -798,16 +799,14 @@ class SiteCollection(object):
         Compute the column z1pt0 from the vs30 using a region-dependent
         formula for NGA-West2
         """
-        self.country = self.get_countries()
-        self.array['z1pt0'] = calculate_z1pt0(self.vs30, self.country)
+        self.array['z1pt0'] = calculate_z1pt0(self.vs30, self.countries)
 
     def calculate_z2pt5(self):
         """
         Compute the column z2pt5 from the vs30 using a region-dependent
         formula for NGA-West2
         """
-        self.country = self.get_countries()
-        self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.country)
+        self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.countries)
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)
