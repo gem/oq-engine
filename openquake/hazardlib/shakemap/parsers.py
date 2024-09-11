@@ -368,11 +368,14 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic_non_null
 
 
-def download_station_data_file(usgs_id):
+def download_station_data_file(usgs_id, save_to_home=False):
     """
     Download station data from the USGS site given a ShakeMap ID.
 
     :param usgs_id: ShakeMap ID
+    :param save_to_home: for debugging purposes you may want to check the
+        contents of the station data before and after the conversion from the
+        usgs format to the oq format
     :returns: the path of a csv file with station data converted to a format
         compatible with OQ
     """
@@ -410,6 +413,12 @@ def download_station_data_file(usgs_id):
                 logging.info(msg)
                 raise LookupError(msg)
             df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+            if save_to_home:
+                homedir = os.path.expanduser('~')
+                stations_usgs = os.path.join(homedir, 'stations_usgs.csv')
+                stations.to_csv(stations_usgs, index=False)
+                stations_oq = os.path.join(homedir, 'stations_oq.csv')
+                df.to_csv(stations_oq, index=False)
             if len(df) < 1:
                 if original_len > 1:
                     if seismic_len > 1:
