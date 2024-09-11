@@ -29,7 +29,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -559,8 +559,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.num_chunks, tiling):
             sg = self.csm.src_groups[cmaker.grp_id]
             for block in split_in_blocks(sg, blocks, get_weight):
-                allargs.append((block if blocks > 1 else None,
-                                tilegetters, cmaker, ds))
+                for tgetters in block_splitter(
+                        tilegetters, sg.weight / self.max_weight,
+                        lambda tg: block.weight):
+                    allargs.append((block if blocks > 1 else None,
+                                    tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
 
         logging.info('This will be a %s calculation with %d outputs, '
