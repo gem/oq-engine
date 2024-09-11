@@ -38,6 +38,7 @@ from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
 from openquake.baselib.node import node_from_xml
+from json.decoder import JSONDecodeError
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -237,11 +238,19 @@ def local_time_to_time_event(local_time):
 
 
 def read_usgs_stations_json(stations_json_str):
+    try:
+        stations_json_str = stations_json_str.decode('utf8')
+    except UnicodeDecodeError:
+        stations_json_str = stations_json_str.decode('latin1')
     sj = json.loads(stations_json_str)
     if 'features' not in sj or not sj['features']:
         raise LookupError('Station data is not available yet.')
     stations = pd.json_normalize(sj, 'features')
-    stations['eventid'] = sj['metadata']['eventid']
+    try:
+        stations['eventid'] = sj['metadata']['eventid']
+    except KeyError:
+        # the eventid is not essential
+        pass
     # Rename columns
     stations.columns = [
         col.replace('properties.', '') for col in stations.columns]
@@ -359,11 +368,14 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic_non_null
 
 
-def download_station_data_file(usgs_id):
+def download_station_data_file(usgs_id, save_to_home=False):
     """
     Download station data from the USGS site given a ShakeMap ID.
 
     :param usgs_id: ShakeMap ID
+    :param save_to_home: for debugging purposes you may want to check the
+        contents of the station data before and after the conversion from the
+        usgs format to the oq format
     :returns: the path of a csv file with station data converted to a format
         compatible with OQ
     """
@@ -376,8 +388,9 @@ def download_station_data_file(usgs_id):
     try:
         shakemap = products['shakemap']
     except KeyError:
-        logging.warning('No shakemap was found')
-        return None
+        msg = 'No shakemap was found'
+        logging.info(msg)
+        raise
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
         if 'download/stationlist.json' in contents:
@@ -386,21 +399,51 @@ def download_station_data_file(usgs_id):
             stations_json_str = urlopen(stationlist_url).read()
             try:
                 stations = read_usgs_stations_json(stations_json_str)
-            except LookupError as exc:
+            except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
                 logging.info(str(exc))
-            else:
-                df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
-                if len(df) < 1:
-                    logging.warning('No seismic stations found')
+                raise
+            original_len = len(stations)
+            try:
+                seismic_len = len(
+                    stations[stations['station_type'] == 'seismic'])
+            except KeyError:
+                msg = (f'{original_len} stations were found, but the'
+                       f' "station_type" is not specified, so we can not'
+                       f' identify the "seismic" stations.')
+                logging.info(msg)
+                raise LookupError(msg)
+            df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+            if save_to_home:
+                homedir = os.path.expanduser('~')
+                stations_usgs = os.path.join(homedir, 'stations_usgs.csv')
+                stations.to_csv(stations_usgs, index=False)
+                stations_oq = os.path.join(homedir, 'stations_oq.csv')
+                df.to_csv(stations_oq, index=False)
+            if len(df) < 1:
+                if original_len > 1:
+                    if seismic_len > 1:
+                        msg = (f'{original_len} stations were found, but the'
+                               f' {seismic_len} seismic stations were all'
+                               f' discarded')
+                        logging.info(msg)
+                        raise LookupError(msg)
+                    else:
+                        msg = (f'{original_len} stations were found, but none'
+                               f' of them are seismic')
+                        logging.info(msg)
+                        raise LookupError(msg)
                 else:
-                    with tempfile.NamedTemporaryFile(
-                            delete=False, mode='w+', newline='',
-                            suffix='.csv') as temp_file:
-                        station_data_file = temp_file.name
-                        df.to_csv(station_data_file, encoding='utf8',
-                                  index=False)
-                        logging.info(f'Wrote stations to {station_data_file}')
-                        return station_data_file
+                    msg = 'No stations were found'
+                    logging.info(msg)
+                    raise LookupError(msg)
+            else:
+                with tempfile.NamedTemporaryFile(
+                        delete=False, mode='w+', newline='',
+                        suffix='.csv') as temp_file:
+                    station_data_file = temp_file.name
+                    df.to_csv(station_data_file, encoding='utf8', index=False)
+                    logging.info(f'Wrote stations to {station_data_file}')
+                    return station_data_file
 
 
 def download_rupture_dict(id, ignore_shakemap=False):

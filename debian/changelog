@@ -1,7 +1,12 @@
   [Enrico Abcede, Francis Bernales]
   * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014  
+
+  [Christopher Brooks]
+  * Added the Japan region versions of the NGAWest2 relations used to obtain
+    z1pt0 and z2pt5 from vs30 in prepare sites command
   
   [Michele Simionato]
+  * Fixed logging the classical time with --sample-sources
   * Improved the progress log in classical calculations
 
   [Kendra Johnson]

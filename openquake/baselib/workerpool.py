@@ -55,7 +55,7 @@ def get_zworkers(job_id):
         except FileNotFoundError:
             hostcores = ''
         return DotDict(ctrl_port=config.zworkers.ctrl_port,
-                       host_cores=hostcores.replace('\n', ','))
+                       host_cores=hostcores.replace('\n', ',').rstrip(','))
     return {}
 
 

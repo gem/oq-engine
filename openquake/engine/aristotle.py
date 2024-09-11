@@ -23,6 +23,7 @@ import os
 import getpass
 import logging
 import numpy
+from json.decoder import JSONDecodeError
 from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
@@ -124,6 +125,9 @@ def get_aristotle_allparams(rupture_dict, time_event,
                 rupture_dict['usgs_id'])
         except HTTPError as exc:
             logging.info(f'Station data is not available: {exc}')
+        except (KeyError, LookupError, UnicodeDecodeError,
+                JSONDecodeError) as exc:
+            logging.info(str(exc))
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
