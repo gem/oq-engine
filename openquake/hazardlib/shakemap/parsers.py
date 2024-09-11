@@ -394,7 +394,8 @@ def read_usgs_stations_json(stations_json_str):
         stations_json_str = stations_json_str.decode('latin1')
     sj = json.loads(stations_json_str)
     if 'features' not in sj or not sj['features']:
-        raise LookupError('Station data is not available yet.')
+        raise LookupError(
+            'stationlist.json was downloaded, but it contains no features')
     stations = pd.json_normalize(sj, 'features')
     try:
         stations['eventid'] = sj['metadata']['eventid']
