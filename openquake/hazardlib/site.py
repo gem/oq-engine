@@ -799,7 +799,6 @@ class SiteCollection(object):
         Compute the column z1pt0 from the vs30 using a region-dependent
         formula for NGA-West2
         """
-        self.country = self.get_countries()
         self.array['z1pt0'] = calculate_z1pt0(self.vs30, self.country)
 
     def calculate_z2pt5(self):
@@ -807,7 +806,6 @@ class SiteCollection(object):
         Compute the column z2pt5 from the vs30 using a region-dependent
         formula for NGA-West2
         """
-        self.country = self.get_countries()
         self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.country)
 
     def __getstate__(self):

@@ -1003,6 +1003,8 @@ class HazardCalculator(BaseCalculator):
                     # override vs30, z1pt0 and z2pt5
                     names = self.sitecol.array.dtype.names
                     self.sitecol.array['vs30'] = oq.override_vs30
+                    if 'z1pt0' in names or 'z2pt5' in names:
+                        self.sitecol.get_countries()
                     if 'z1pt0' in names:
                         self.sitecol.calculate_z1pt0()
                     if 'z2pt5' in names:
