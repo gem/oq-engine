@@ -513,7 +513,12 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_data = AccumDict(accum=[])
         t0 = time.time()
         self._execute()
-        self.store_info()
+        classical_time = time.time() - t0
+        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
+        if fraction:
+            est_time = classical_time / float(fraction)
+            logging.info('Estimated time for the classical part: %.1f hours',
+                         est_time / 3600)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -525,9 +530,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
                 int(self.cfactor[1]), int(self.cfactor[0]),
                 self.cfactor[1] / self.cfactor[0]))
+        self.store_info()
         self.build_curves_maps()
-        if not oq.hazard_calculation_id:
-            self.classical_time = time.time() - t0
         return True
 
     def _execute(self):
@@ -772,13 +776,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
-
-        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
-        if fraction and hasattr(self, 'classical_time'):
-            total_time = time.time() - self.t0
-            delta = total_time - self.classical_time
-            est_time = self.classical_time / float(fraction) + delta
-            logging.info('Estimated time: %.1f hours', est_time / 3600)
 
         if 'hmaps-stats' in self.datastore and not oq.tile_spec:
             self.plot_hmaps()
