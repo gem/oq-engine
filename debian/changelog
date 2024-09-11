@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added the Japan region versions of the NGAWest2 relations used to obtain
+    z1pt0 and z2pt5 from vs30 in prepare sites command
+  
   [Michele Simionato]
   * Improved the progress log in classical calculations
 
