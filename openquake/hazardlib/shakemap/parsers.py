@@ -396,8 +396,15 @@ def download_station_data_file(usgs_id):
                 logging.warning(str(exc))
                 raise
             original_len = len(stations)
-            seismic_len = len(
-                stations[stations['station_type'] == 'seismic'])
+            try:
+                seismic_len = len(
+                    stations[stations['station_type'] == 'seismic'])
+            except KeyError:
+                msg = (f'{original_len} stations were found, but the'
+                       f' "station_type" is not specified, so we can not'
+                       f' identify the "seismic" stations.')
+                logging.info(msg)
+                raise LookupError(msg)
             df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
             if len(df) < 1:
                 if original_len > 1:
