@@ -97,6 +97,8 @@ def main(job_ini,
         params = {}
     if hc:
         params['hazard_calculation_id'] = str(hc)
+    if concurrent_tasks is not None:
+        params['concurrent_tasks'] = str(concurrent_tasks)
     if slowest:
         prof = cProfile.Profile()
         prof.runctx('_run(job_ini[0], None, pdb, reuse_input, loglevel, '
