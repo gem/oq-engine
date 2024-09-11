@@ -246,7 +246,11 @@ def read_usgs_stations_json(stations_json_str):
     if 'features' not in sj or not sj['features']:
         raise LookupError('Station data is not available yet.')
     stations = pd.json_normalize(sj, 'features')
-    stations['eventid'] = sj['metadata']['eventid']
+    try:
+        stations['eventid'] = sj['metadata']['eventid']
+    except KeyError:
+        # the eventid is not essential
+        pass
     # Rename columns
     stations.columns = [
         col.replace('properties.', '') for col in stations.columns]
