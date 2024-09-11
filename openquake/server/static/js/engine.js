@@ -562,16 +562,20 @@
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
                     $('#rupture_file_from_usgs').val(data.rupture_file_from_usgs);
                     $('#rupture_file_from_usgs_loaded').val(data.rupture_file_from_usgs ? 'Loaded' : 'N.A.');
+                    var errors = '';
                     if ('error' in data) {
-                        diaerror.show(false, "Error", data.error);
+                        errors += '<p>' + data.error + '</p>';
                         $('#rupture_file_from_usgs_loaded').val('N.A. (conversion error)');
                     }
                     $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
                     if (data.station_data_error) {
                         $('#station_data_file_from_usgs_loaded').val('N.A. (conversion error)');
-                        diaerror.show(false, "Error", data.station_data_error);
+                        errors += '<p>' + data.station_data_error + '</p>';
                     } else {
                         $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                    }
+                    if (errors != '') {
+                        diaerror.show(false, "Error", errors);
                     }
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
