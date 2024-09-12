@@ -198,7 +198,7 @@ APPLICATION_MODES = [
 APPLICATION_MODE = 'PUBLIC'
 
 ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
-# ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but not convertible
+# ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
 
 
 try:
