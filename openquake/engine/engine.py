@@ -360,13 +360,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
 
     job_id = jobctxs[0].calc_id
     hc_id = jobctxs[-1].params['hazard_calculation_id']
-    orig_dist = parallel.oq_distribute()
-    use_zmq = (orig_dist == 'processpool' and config.zworkers.host_cores ==
-               '127.0.0.1 -1' and hc_id is None and len(jobctxs) > 1)
-    if use_zmq:
-        # use multispawn with zmq on a single machine
-        os.environ['OQ_DISTRIBUTE'] = 'zmq'
-
+    dist = parallel.oq_distribute()
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
@@ -379,7 +373,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
                     print('Starting from a hazard (%d) computed with'
                           ' an obsolete version of the engine: %s' %
                           (hc_id, prev_version))
-    jobarray = len(jobctxs) > 1 and jobctxs[0].multi
     try:
         poll_queue(jobctxs[0].calc_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
@@ -393,14 +386,14 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        dist = 'zmq' if use_zmq else orig_dist
         if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
-        allargs = [(ctx,) for ctx in jobctxs]
-        if jobarray and orig_dist != 'no':
-            parallel.multispawn(run_calc, allargs, concurrent_jobs)
-        elif orig_dist == 'slurm' and config.distribution.master_cores:
+
+        # run the jobs sequentially or in parallel, with slurm or without
+        if dist == 'slurm' and config.distribution.master_cores:
             slurm.srun(jobctxs)
+        elif len(jobctxs) > 1 and jobctxs[0].multi and dist != 'no':
+            parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -412,9 +405,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
             logs.dbcmd("set_status", jid, 'failed')
         raise
     finally:
-        if orig_dist in ('zmq', 'slurm') or use_zmq:
+        if dist in ('zmq', 'slurm'):
             stop_workers(job_id)
-            os.environ['OQ_DISTRIBUTE'] = orig_dist
     return jobctxs
 
 
@@ -468,8 +460,12 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run LogContext objects stored in a pickle file, called by job.yaml
+    # run LogContext objects stored in a pickle file, called by job.yaml or slurm
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
-    for jobctx in jobctxs:
-        run_calc(jobctx)
+    if len(jobctxs) > 1 and jobctxs[0].multi:
+        parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
+                            parallel.Starmap.CT // 10 or 1)
+    else:
+        for jobctx in jobctxs:
+            run_calc(jobctx)

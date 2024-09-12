@@ -1134,7 +1134,7 @@ def save_pik(job, dirname):
     """
     pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
     with open(pathpik, 'wb') as f:
-        pickle.dump(job, f)
+        pickle.dump([job], f)
     return pathpik
 
 
