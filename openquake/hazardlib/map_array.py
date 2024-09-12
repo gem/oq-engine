@@ -21,7 +21,7 @@ import warnings
 import numpy
 import pandas
 import numba
-from openquake.baselib.general import cached_property
+from openquake.baselib.general import cached_property, humansize
 from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
@@ -424,8 +424,8 @@ class MapArray(object):
         return self
 
     def __repr__(self):
-        tup = self.shape + (self.size_mb,)
-        return f'<{self.__class__.__name__}(%d, %d, %d)[%.1fM]>' % tup
+        tup = self.shape + (humansize(self.array.nbytes),)
+        return f'<{self.__class__.__name__}(%d, %d, %d)[%s]>' % tup
 
 
 @compile("(float32[:, :], float32[:, :], uint32[:])")

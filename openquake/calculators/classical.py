@@ -28,8 +28,7 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks)
+from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -82,6 +81,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     if newh5:
         fname = h5.filename
+        h5.flush()
         h5.close()
         return fname
 
@@ -174,7 +174,8 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         # print(f"{monitor.task_no=} {rmap=}")
 
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
-            del result['source_data']
+            if len(tilegetters) > 1:
+                del result['source_data']
             if cmaker.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
@@ -517,8 +518,8 @@ class ClassicalCalculator(base.HazardCalculator):
         fraction = os.environ.get('OQ_SAMPLE_SOURCES')
         if fraction:
             est_time = classical_time / float(fraction)
-            logging.info('Estimated time for the classical part: %.1f hours',
-                         est_time / 3600)
+            logging.info('Estimated time for the classical part: %.1f hours '
+                         '(upper limit)', est_time / 3600)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -555,18 +556,18 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight,
-                self.num_chunks, tiling):
-            sg = self.csm.src_groups[cmaker.grp_id]
-            for block in split_in_blocks(sg, blocks, get_weight):
-                allargs.append((block if blocks > 1 else None,
-                                tilegetters, cmaker, ds))
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, tiling):
+            for block in blocks:
+                if tiling:
+                    for tgetter in tilegetters:
+                        allargs.append((block, [tgetter], cmaker, ds))
+                else:
+                    allargs.append((block, tilegetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-
-        logging.info('This will be a %s calculation with %d outputs, '
-                     '%d tasks, min_tiles=%d, max_tiles=%d',
-                     'tiling' if tiling else 'regular',
-                     sum(n_out), len(allargs), min(n_out), max(n_out))
+        if tiling:
+            logging.info('This will be a tiling calculation with %d outputs, '
+                         '%d tasks, min_tiles=%d, max_tiles=%d',
+                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
@@ -608,6 +609,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, N, jid, num_chunks in genargs():
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
+        else:
+            logging.warning('Empty ratemap')
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
