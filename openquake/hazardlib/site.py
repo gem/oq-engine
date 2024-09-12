@@ -681,7 +681,7 @@ class SiteCollection(object):
 
         :returns: the site model array reduced to the hazard sites
         """
-        # NB: self != self.complete in the aristotle tests
+        # NB: self != self.complete in the aristotle tests with stations
         m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
