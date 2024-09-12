@@ -176,7 +176,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     # build source_groups
     triples = csm.split(cmakers, sitecol, max_weight)
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tgets), blocks, len(cm.gsims) * fac * 1024,
+        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), len(cm.gsims) * fac * 1024,
           cm.weight, cm.codes, cm.trt) for cm, tgets, blocks in triples],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
@@ -191,6 +191,12 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores / 4.)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
+    if regular:
+        n_out = data['tiles'] @ data['blocks']
+        n_tasks = data['blocks'].sum()
+        logging.info('This will be a regular calculation with %d outputs, '
+                     '%d tasks, min_tiles=%d, max_tiles=%d',
+                     n_out, n_tasks, data['tiles'].min(), data['tiles'].max())
 
     # store source_groups
     if oq.tiling is None:

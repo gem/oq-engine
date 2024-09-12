@@ -557,16 +557,13 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tilegetters, blocks in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
-            sg = self.csm.src_groups[cmaker.grp_id]
-            for block in split_in_blocks(sg, blocks, get_weight):
-                allargs.append((block if blocks > 1 else None,
-                                tilegetters, cmaker, ds))
+            for block in blocks:
+                allargs.append((block, tilegetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-
-        logging.info('This will be a %s calculation with %d outputs, '
-                     '%d tasks, min_tiles=%d, max_tiles=%d',
-                     'tiling' if tiling else 'regular',
-                     sum(n_out), len(allargs), min(n_out), max(n_out))
+        if tiling:
+            logging.info('This will be a tiling calculation with %d outputs, '
+                         '%d tasks, min_tiles=%d, max_tiles=%d',
+                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
