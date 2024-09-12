@@ -33,7 +33,7 @@ def main(cmd, job_id: int=-1):
             getpass.getuser() not in 'openquake'):
         sys.exit('oq workers only works in single user mode')
     dist = p.oq_distribute()
-    if dist in ('zmq', 'slurm'):
+    if dist == 'zmq':
         master = workerpool.WorkerMaster(config.zworkers)
         print(getattr(master, cmd)())
     elif dist == 'slurm':
