@@ -703,15 +703,12 @@ class CompositeSourceModel:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
             splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
-            if sg.atomic:
-                blocks = [None]
-            elif tiling:
+            if sg.atomic or tiling:
                 splits = numpy.ceil(max(splits, sg.weight / max_weight))
                 blocks = [None]
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
-                blocks = list(general.split_in_blocks(
-                    sg, hint, lambda src: src.weight))
+                blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer

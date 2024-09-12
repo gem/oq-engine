@@ -200,7 +200,9 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # store source_groups
     if oq.tiling is None:
-        tiling = not regular
+        # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
+        ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
+        tiling = ss or not regular
     else:
         tiling = oq.tiling
     dstore.create_dset('source_groups', data, fillvalue=None,
