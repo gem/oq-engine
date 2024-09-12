@@ -21,7 +21,6 @@ import time
 import shutil
 import socket
 import getpass
-import tempfile
 import functools
 import subprocess
 from datetime import datetime
@@ -233,7 +232,7 @@ def debug_task(msg, mon):
 
 
 def call(func, args, taskno, mon, executing):
-    fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
+    fname = os.path.join(executing, str(taskno))
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
@@ -267,7 +266,11 @@ class WorkerPool(object):
                 self.num_workers = psutil.cpu_count()
         else:
             self.num_workers = num_workers
-        self.executing = parallel.scratch_dir(job_id)
+        self.executing = os.path.join(parallel.scratch_dir(job_id), 'executing')
+        try:
+            os.mkdir(self.executing)
+        except FileExistsError:  # already created by another WorkerPool
+            pass
         self.pid = os.getpid()
 
     def start(self):
