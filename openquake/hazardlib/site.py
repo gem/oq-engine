@@ -681,17 +681,18 @@ class SiteCollection(object):
 
         :returns: the site model array reduced to the hazard sites
         """
-        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
+        # NB: self != self.complete in the aristotle tests with stations
+        m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self, assoc_dist, 'warn')
+                site_model).assoc(self.complete, assoc_dist, 'warn')
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
             ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
-            self._set(name, site_model[name])
+            self.complete._set(name, site_model[name])
         for name in set(self.array.dtype.names) - set(site_model.dtype.names):
             if name == 'vs30measured':
-                self._set(name, 0)  # default
+                self.complete._set(name, 0)  # default
                 # NB: by default reference_vs30_type == 'measured' is 1
                 # but vs30measured is 0 (the opposite!!)
 
