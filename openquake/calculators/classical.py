@@ -81,6 +81,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     if newh5:
         fname = h5.filename
+        h5.flush()
         h5.close()
         return fname
 
@@ -608,6 +609,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, N, jid, num_chunks in genargs():
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
+        else:
+            logging.warning('Empty ratemap')
         del self.rmap
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
