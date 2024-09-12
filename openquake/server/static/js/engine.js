@@ -594,12 +594,10 @@
                     }
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
-                    $('#trt').prop('disabled', false);
                     $.each(data.trts, function(index, trt) {
                         var selected = '';
                         if ('trt' in data && trt == data.trt) {
                             selected = ' selected';
-                            $('#trt').prop('disabled', 'disabled');
                         }
                         $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
                     });
