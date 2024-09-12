@@ -517,8 +517,8 @@ class ClassicalCalculator(base.HazardCalculator):
         fraction = os.environ.get('OQ_SAMPLE_SOURCES')
         if fraction:
             est_time = classical_time / float(fraction)
-            logging.info('Estimated time for the classical part: %.1f hours',
-                         est_time / 3600)
+            logging.info('Estimated time for the classical part: %.1f hours '
+                         '(upper limit)', est_time / 3600)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
