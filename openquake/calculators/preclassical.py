@@ -191,7 +191,13 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores / 4.)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
-    if regular:
+    if oq.tiling is None:
+        # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
+        ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
+        tiling = ss or not regular
+    else:
+        tiling = oq.tiling
+    if not tiling:
         n_out = data['tiles'] @ data['blocks']
         n_tasks = data['blocks'].sum()
         logging.info('This will be a regular calculation with %d outputs, '
@@ -199,12 +205,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                      n_out, n_tasks, data['tiles'].min(), data['tiles'].max())
 
     # store source_groups
-    if oq.tiling is None:
-        # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
-        ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
-        tiling = ss or not regular
-    else:
-        tiling = oq.tiling
     dstore.create_dset('source_groups', data, fillvalue=None,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     if req_gb >= 30 and not config.directory.custom_tmp:
