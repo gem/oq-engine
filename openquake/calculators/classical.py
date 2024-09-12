@@ -555,8 +555,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight,
-                self.num_chunks, tiling):
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, tiling):
             for block in blocks:
                 if tiling:
                     for tgetter in tilegetters:

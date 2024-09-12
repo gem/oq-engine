@@ -704,7 +704,9 @@ class CompositeSourceModel:
             sg = self.src_groups[grp_id]
             splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
             if sg.atomic or tiling:
-                splits = numpy.ceil(max(splits, sg.weight / max_weight))
+                # splits/4 reduce the number of tasks for very light groups
+                # (will use 4x more memory, but pmap_max_mb is only 120 MB)
+                splits = numpy.ceil(max(splits / 4, sg.weight / max_weight))
                 blocks = [None]
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
