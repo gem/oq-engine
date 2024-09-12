@@ -267,7 +267,7 @@ class WorkerPool(object):
                 self.num_workers = psutil.cpu_count()
         else:
             self.num_workers = num_workers
-        self.executing = tempfile.mkdtemp()
+        self.executing = parallel.scratch_dir(job_id)
         self.pid = os.getpid()
 
     def start(self):
