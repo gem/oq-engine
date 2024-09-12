@@ -558,7 +558,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.cmakers, self.sitecol, self.max_weight,
                 self.num_chunks, tiling):
             for block in blocks:
-                allargs.append((block, tilegetters, cmaker, ds))
+                if tiling:
+                    for tgetter in tilegetters:
+                        allargs.append((block, [tgetter], cmaker, ds))
+                else:
+                    allargs.append((block, tilegetters, cmaker, ds))
                 n_out.append(len(tilegetters))
         if tiling:
             logging.info('This will be a tiling calculation with %d outputs, '
