@@ -257,7 +257,6 @@ def convert_to_oq_rupture(rup_json):
             'The rake was not found in the metadata. Setting it to 0.')
         rake = 0
 
-    # FIXME: handle ARISTOTLE form accordingly?
     trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
 
     Mw = rup_json['metadata']['mag']
@@ -688,6 +687,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
             'is_point_rup': False,
+            'trt': oq_rup.tectonic_region_type,
             'usgs_id': id, 'rupture_file': rupture_file}
 
 

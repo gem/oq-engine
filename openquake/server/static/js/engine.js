@@ -595,7 +595,11 @@
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
-                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                        var selected = '';
+                        if ('trt' in data && trt == data.trt) {
+                            selected = ' selected';
+                        }
+                        $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
                     });
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
