@@ -690,7 +690,7 @@ class CompositeSourceModel:
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, tilegetters, nblocks) for each source group
+        :yields: (cmaker, tilegetters, blocks) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -703,13 +703,14 @@ class CompositeSourceModel:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
             splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
-            if sg.atomic:
-                blocks = 1
-            elif tiling:
-                splits = numpy.ceil(max(splits, sg.weight / max_weight))
-                blocks = 1
+            if sg.atomic or tiling:
+                # splits/4 reduce the number of tasks for very light groups
+                # (will use 4x more memory, but pmap_max_mb is only 120 MB)
+                splits = numpy.ceil(max(splits / 4, sg.weight / max_weight))
+                blocks = [None]
             else:
-                blocks = numpy.ceil(sg.weight / max_weight)
+                hint = numpy.ceil(sg.weight / max_weight)
+                blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
@@ -717,7 +718,7 @@ class CompositeSourceModel:
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cmaker.custom_tmp = config.directory.custom_tmp
             cmaker.num_chunks = num_chunks
-            cmaker.blocks = blocks
+            cmaker.blocks = len(blocks)
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))

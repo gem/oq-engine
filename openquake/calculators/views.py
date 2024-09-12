@@ -307,6 +307,12 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
+    scratch_dir = dstore['/'].attrs.get('scratch_dir')
+    if scratch_dir:
+        size = 0
+        for fname in os.listdir(scratch_dir):
+            size += os.path.getsize(os.path.join(scratch_dir, fname))
+        rows.append((scratch_dir, humansize(size)))
     return numpy.array(rows, dt('dataset size'))
 
 
@@ -806,13 +812,7 @@ def view_task_hazard(token, dstore):
                      taskno, len(sdata), num_ruptures, eff_sites,
                      rec['weight'], rec['duration'])
     else:
-        w = dstore.read_df('source_info').groupby('grp_id').weight.sum()
-        tdata = dstore.read_df('tiles').loc[taskno]
-        grp_id = int(tdata.grp_id)
-        msg = ('taskno={:_d}, grp_id={:_d}, G={:_d}, N={:_d}, weight={:.1f}, '
-               'duration={:.1f}s').format(
-                   taskno, grp_id, int(tdata.G), int(tdata.N),
-                   w.loc[grp_id] / tdata.G, rec['duration'])
+        msg = ''
     return msg
 
 
