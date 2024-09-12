@@ -173,7 +173,8 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         # print(f"{monitor.task_no=} {rmap=}")
 
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
-            del result['source_data']
+            if len(tilegetters) > 1:
+                del result['source_data']
             if cmaker.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
