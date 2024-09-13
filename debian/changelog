@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Used `oq engine --run` to submit asynchronous jobs to SLURM and
+    `oq run` to submit interactive jobs
+
   [Christopher Brooks]
   * Added the Japan region versions of the NGAWest2 relations used to obtain
     z1pt0 and z2pt5 from vs30 in prepare sites command
