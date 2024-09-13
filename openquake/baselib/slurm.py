@@ -54,18 +54,3 @@ def wait_workers(job_id, n):
             break
         else:
             time.sleep(5)
-
-
-def srun(jobs):
-    """
-    Run the jobs via srun
-    """
-    scratch_dir = parallel.scratch_dir(jobs[0].calc_id)
-    pik = os.path.join(scratch_dir, 'jobs.pik')
-    with open(pik, 'wb') as f:
-        pickle.dump(jobs, f)
-    cmd = ['srun'] + submit_cmd[1:-2] + [
-        '-c', config.distribution.master_cores,
-        sys.executable, '-m', 'openquake.engine.engine', pik]
-    print(' '.join(cmd))
-    subprocess.run(cmd)
