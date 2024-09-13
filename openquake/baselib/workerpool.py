@@ -156,6 +156,15 @@ class WorkerMaster(object):
                 executing.append((host, running, total))
         return executing
 
+    def send_jobs(self):
+        """
+        Send an asynchronous "run_jobs" command to the first WorkerPool
+        """
+        host, _cores = self.host_cores[0]
+        ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+        with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+            return sock.send('run_jobs')
+
     def wait(self, seconds=120):
         """
         Wait until all workers are active
@@ -266,7 +275,8 @@ class WorkerPool(object):
                 self.num_workers = psutil.cpu_count()
         else:
             self.num_workers = num_workers
-        self.executing = os.path.join(parallel.scratch_dir(job_id), 'executing')
+        self.scratch = parallel.scratch_dir(job_id)
+        self.executing = os.path.join(self.scratch, 'executing')
         try:
             os.mkdir(self.executing)
         except FileExistsError:  # already created by another WorkerPool
@@ -316,6 +326,11 @@ class WorkerPool(object):
                     elif cmd == 'get_executing':
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
+                    elif cmd == 'run_jobs':
+                        pik = os.path.join(self.scratch, 'jobs.pik')
+                        lst = ['python', '-m', 'openquake.engine.engine', pik]
+                        subprocess.Popen(lst)
+                        ctrlsock.send("started %d" % self.job_id)
                     elif cmd == 'memory_gb':
                         ctrlsock.send(performance.memory_gb(pids))
                     elif isinstance(cmd, tuple):
