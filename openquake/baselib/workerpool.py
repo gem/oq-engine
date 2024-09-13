@@ -276,7 +276,7 @@ class WorkerPool(object):
         else:
             self.num_workers = num_workers
         self.scratch = parallel.scratch_dir(job_id)
-        self.executing = os.path.join(self.scratch_dir, 'executing')
+        self.executing = os.path.join(self.scratch, 'executing')
         try:
             os.mkdir(self.executing)
         except FileExistsError:  # already created by another WorkerPool
