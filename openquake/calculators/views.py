@@ -1840,11 +1840,17 @@ def view_fastmean(token, dstore):
 
 @view.add('gw')
 def view_gw(token, dstore):
+    """
+    Display the gweights
+    """
     return numpy.round(dstore['gweights'][:].sum(), 3)
 
 
 @view.add('long_ruptures')
 def view_long_ruptures(token, dstore):
+    """
+    Display the planar ruptures with maxlen > 900 km
+    """
     lst = []
     for src in dstore['_csm'].get_sources():
         maxlen = source.point.get_rup_maxlen(src)
