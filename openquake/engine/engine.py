@@ -399,7 +399,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
             with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
                 pickle.dump(jobctxs, f)
             w.WorkerMaster(job_id).send_jobs()
-            print('oq engine --show-logs %d to see the progress' % job_id)
+            print('oq engine --show-log %d to see the progress' % job_id)
         elif len(jobctxs) > 1 and jobctxs[0].multi and dist != 'no':
             parallel.multispawn(
                 run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
