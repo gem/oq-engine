@@ -689,12 +689,9 @@ class SiteCollection(object):
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
             ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
-            self.complete._set(name, site_model[name])
-        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
-            if name == 'vs30measured':
-                self.complete._set(name, 0)  # default
-                # NB: by default reference_vs30_type == 'measured' is 1
-                # but vs30measured is 0 (the opposite!!)
+            vals = site_model[name]
+            self._set(name, vals[self.sids])
+            self.complete._set(name, vals)
 
         # sanity check
         for param in self.req_site_params:
