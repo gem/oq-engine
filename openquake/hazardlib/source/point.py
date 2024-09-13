@@ -73,6 +73,7 @@ def msr_name(src):
     """
     :returns: string representation of the MSR or "Undefined" if not applicable
     """
+    # NB: the MSR is None for characteristicFault sources
     try:
         return str(src.magnitude_scaling_relationship)
     except AttributeError:   # no MSR for nonparametric sources
