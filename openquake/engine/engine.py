@@ -338,7 +338,7 @@ def stop_workers(job_id):
     print(w.WorkerMaster(job_id).stop())
 
     
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -385,15 +385,20 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
+    wm = w.WorkerMaster(job_id)
     try:
-        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
+        if dist in ('zmq', 'slurm') and wm.status() == []:
             start_workers(job_id, dist, nodes)
 
         # run the jobs sequentially or in parallel, with slurm or without
-        if dist == 'slurm' and config.distribution.master_cores:
-            slurm.srun(jobctxs)
+        if dist == 'slurm' and sbatch:
+            scratch_dir = parallel.scratch_dir(job_id)
+            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
+                pickle.dump(jobctxs, f)
+            wm.send_jobs()
         elif len(jobctxs) > 1 and jobctxs[0].multi and dist != 'no':
-            parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
+            parallel.multispawn(
+                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -405,7 +410,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
             logs.dbcmd("set_status", jid, 'failed')
         raise
     finally:
-        if dist in ('zmq', 'slurm'):
+        if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
     return jobctxs
 
@@ -460,12 +465,22 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run LogContext objects stored in a pickle file, called by job.yaml or slurm
+    # run LogContexts stored in jobs.pik, called by job.yaml or slurm
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
-    if len(jobctxs) > 1 and jobctxs[0].multi:
-        parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
-                            parallel.Starmap.CT // 10 or 1)
-    else:
-        for jobctx in jobctxs:
-            run_calc(jobctx)
+    try:
+        if len(jobctxs) > 1 and jobctxs[0].multi:
+            parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
+                                parallel.Starmap.CT // 10 or 1)
+        else:
+            for jobctx in jobctxs:
+                run_calc(jobctx)
+    except Exception:
+        ids = [jc.calc_id for jc in jobctxs]
+        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
+                          "AND status IN ('created', 'executing')", ids)
+        for jid, in rows:
+            logs.dbcmd("set_status", jid, 'failed')
+        raise
+    finally:
+        stop_workers(jobctxs[0].calc_id)
