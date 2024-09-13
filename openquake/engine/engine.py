@@ -347,12 +347,14 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
     :param concurrent_jobs:
         How many jobs to run concurrently (default num_cores/4)
     """
-    # check the total number of required cores
-    tot_cores = parallel.Starmap.num_cores * nodes
-    max_cores = int(config.distribution.max_cores)
-    if tot_cores > max_cores:
-        raise ValueError('You can use at most %d nodes' %
-                         max_cores // parallel.Starmap.num_cores)
+    dist = parallel.oq_distribute()
+    if dist == 'slurm':
+        # check the total number of required cores
+        tot_cores = parallel.Starmap.num_cores * nodes
+        max_cores = int(config.distribution.max_cores)
+        if tot_cores > max_cores:
+            raise ValueError('You can use at most %d nodes' %
+                             max_cores // parallel.Starmap.num_cores)
 
     if concurrent_jobs is None:
         # // 10 is chosen so that the core occupation in cole is decent
@@ -360,7 +362,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
 
     job_id = jobctxs[0].calc_id
     hc_id = jobctxs[-1].params['hazard_calculation_id']
-    dist = parallel.oq_distribute()
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
@@ -373,14 +374,17 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
                     print('Starting from a hazard (%d) computed with'
                           ' an obsolete version of the engine: %s' %
                           (hc_id, prev_version))
-    try:
-        poll_queue(jobctxs[0].calc_id, poll_time=15)
-        # wait for an empty slot or a CTRL-C
-    except BaseException:
-        # the job aborted even before starting
-        for job in jobctxs:
-            logs.dbcmd('finish', job.calc_id, 'aborted')
-        raise
+    if dist == 'slurm' and sbatch:
+        pass  # do not wait in the job queue
+    else:
+        try:
+            poll_queue(jobctxs[0].calc_id, poll_time=15)
+            # wait for an empty slot or a CTRL-C
+        except BaseException:
+            # the job aborted even before starting
+            for job in jobctxs:
+                logs.dbcmd('finish', job.calc_id, 'aborted')
+            raise
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
