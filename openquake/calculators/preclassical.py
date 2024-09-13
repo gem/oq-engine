@@ -151,6 +151,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         else:
             cnt = 0
             for msr, block in groupby(splits, msr_name).items():
+                print('---------------------------------', msr)
                 dic = grid_point_sources(block, spacing, msr, cnt, monitor)
                 cnt = dic.pop('cnt')
                 for src in dic[grp_id]:
