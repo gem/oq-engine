@@ -385,9 +385,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
-    wm = w.WorkerMaster(job_id)
     try:
-        if dist in ('zmq', 'slurm') and wm.status() == []:
+        if dist in ('zmq', 'slurm') and  w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
 
         # run the jobs sequentially or in parallel, with slurm or without
@@ -395,7 +394,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
             scratch_dir = parallel.scratch_dir(job_id)
             with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
                 pickle.dump(jobctxs, f)
-            wm.send_jobs()
+            w.WorkerMaster(job_id).send_jobs()
         elif len(jobctxs) > 1 and jobctxs[0].multi and dist != 'no':
             parallel.multispawn(
                 run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
