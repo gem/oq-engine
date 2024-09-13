@@ -41,7 +41,7 @@ import subprocess
 import collections
 import multiprocessing
 from contextlib import contextmanager
-from collections.abc import Mapping, Container, MutableSequence
+from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
 from decorator import decorator
@@ -1795,3 +1795,20 @@ def loada(arr):
     23
     """
     return pickle.loads(bytes(arr))
+
+
+class Unique(Sequence):
+    """
+    Compress objects containing copies
+    """
+    def __init__(self, objects):
+        pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                   for obj in objects]
+        uni, self.inv = numpy.unique(pickles, return_inverse=True)
+        self.uni = [pickle.loads(pik) for pik in uni]
+
+    def __getitem__(self, i):
+        return self.uni[self.inv[i]]
+
+    def __len__(self):
+        return len(self.inv)
