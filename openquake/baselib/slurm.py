@@ -1,8 +1,6 @@
 import os
-import sys
 import stat
 import time
-import pickle
 import subprocess
 from openquake.baselib import parallel, config
 
