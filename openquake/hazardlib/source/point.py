@@ -387,13 +387,14 @@ def psources_to_pdata(pointsources, name):
                  array=array,
                  tom=ps.temporal_occurrence_model,
                  trt=ps.tectonic_region_type,
-                 msr=ps.magnitude_scaling_relationship,
                  rms=ps.rupture_mesh_spacing,
                  npd=Deduplicate([ps.nodal_plane_distribution
                                   for ps in pointsources]),
                  hcd=Deduplicate([ps.hypocenter_distribution
                                   for ps in pointsources]),
-                 mfd=Deduplicate([ps.mfd for ps in pointsources]))
+                 mfd=Deduplicate([ps.mfd for ps in pointsources]),
+                 msr=Deduplicate([ps.magnitude_scaling_relationship
+                                  for ps in pointsources]))
     return pdata
 
 
@@ -417,7 +418,7 @@ def pdata_to_psources(pdata):
             tectonic_region_type=trt,
             mfd=mfd[i],
             rupture_mesh_spacing=rms,
-            magnitude_scaling_relationship=msr,
+            magnitude_scaling_relationship=msr[i],
             rupture_aspect_ratio=rec['rar'],
             upper_seismogenic_depth=rec['usd'],
             lower_seismogenic_depth=rec['lsd'],
@@ -499,17 +500,12 @@ class CollapsedPointSource(PointSource):
                    for src in pdata_to_psources(self.pdata))
 
 
-def grid_point_sources(
-        sources, ps_grid_spacing, msr, cnt=0, monitor=Monitor()):
+def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
-    :param msr:
-         magnitude scaling relationship as a string
-    :param cnt:
-         a counter starting from 0 used to produce distinct source IDs
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
@@ -517,11 +513,11 @@ def grid_point_sources(
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if not ps_grid_spacing:
-        return {grp_id: sources, 'cnt': cnt}
+        return {grp_id: sources}
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
-        return {grp_id: out + list(ps), 'cnt': cnt}
+        return {grp_id: out + list(ps)}
     coords = numpy.zeros((len(ps), 3))
     for p, psource in enumerate(ps):
         coords[p, 0] = psource.location.x
@@ -530,11 +526,12 @@ def grid_point_sources(
     if (len(numpy.unique(coords[:, 0])) == 1 or
             len(numpy.unique(coords[:, 1])) == 1):
         # degenerated rectangle, there is no grid, do not collapse
-        return {grp_id: out + list(ps), 'cnt': cnt}
+        return {grp_id: out + list(ps)}
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
     task_no = getattr(monitor, 'task_no', 0)
+    cnt = 0
     for idxs in grid.values():
         if len(idxs) > 1:
             cnt += 1
@@ -546,7 +543,7 @@ def grid_point_sources(
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])
-    return {grp_id: out, 'cnt': cnt}
+    return {grp_id: out}
 
 
 def get_rup_maxlen(src):
