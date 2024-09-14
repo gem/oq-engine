@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib.general import Unique
+from openquake.baselib.general import Deduplicate
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
 
@@ -74,7 +74,7 @@ class ArbitraryMFDTestCase(BaseMFDTestCase):
                             occurrence_rates=(1., 2.5, 3.))
         mfd2 = ArbitraryMFD(magnitudes=(4., 5., 6.),
                             occurrence_rates=(1., 2., 3.))
-        mfd = Unique([mfd0, mfd1, mfd2])
+        mfd = Deduplicate([mfd0, mfd1, mfd2])
         self.assertEqual(len(mfd.uni), 2)
         self.assertEqual(len(mfd.inv), 3)
         numpy.testing.assert_equal(mfd[1].occurrence_rates, [1., 2.5, 3.])

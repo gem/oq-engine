@@ -1797,9 +1797,9 @@ def loada(arr):
     return pickle.loads(bytes(arr))
 
 
-class Unique(Sequence):
+class Deduplicate(Sequence):
     """
-    Compress objects containing copies
+    Deduplicate lists containing duplicated objects
     """
     def __init__(self, objects):
         pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)

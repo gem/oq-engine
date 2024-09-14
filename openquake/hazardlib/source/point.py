@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 import copy
 import numpy
-from openquake.baselib.general import AccumDict, groupby_grid
+from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -367,6 +367,52 @@ class PointSource(ParametricSeismicSource):
         return 'POINT(%s %s)' % (loc.x, loc.y)
 
 
+def psources_to_pdata(pointsources, name):
+    """
+    Build a pdata dictionary from a list of homogeneous point sources
+    with the same tom, trt, npd and hcd.
+    """
+    ps = pointsources[0]
+    pdata = dict(name=name,
+                 tom=ps.temporal_occurrence_model,
+                 trt=ps.tectonic_region_type,
+                 npd=ps.nodal_plane_distribution,
+                 hcd=ps.hypocenter_distribution,
+                 rms=ps.rupture_mesh_spacing,
+                 mfd=Deduplicate([ps.mfd for ps in pointsources]),
+                 msr=Deduplicate([ps.magnitude_scaling_relationship
+                                  for ps in pointsources]))
+    return pdata
+
+def pdata_to_psources(pdata):
+    """
+    Generate point sources from a pdata dictionary
+    """
+    name = pdata['name']
+    tom = pdata['tom']
+    trt = pdata['trt']
+    npd = pdata['npd']
+    hcd = pdata['hcd']
+    rms = pdata['rms']
+    mfd = pdata['mfd']
+    msr = pdata['msr']
+    for i, rec in pdata['array']:
+        yield PointSource(
+            source_id=f'{name}:{i}',
+            name=name,
+            tectonic_region_type=trt,
+            mfd=mfd[i],
+            rupture_mesh_spacing=rms,
+            magnitude_scaling_relationship=msr[i],
+            rupture_aspect_ratio=rec['rar'],
+            upper_seismogenic_depth=rec['usd'],
+            lower_seismogenic_depth=rec['lsd'],
+            location=Point(rec['lon'], rec['lat']),
+            nodal_plane_distribution=npd,
+            hypocenter_distribution=hcd,
+            temporal_occurrence_model=tom)
+
+    
 class CollapsedPointSource(PointSource):
     """
     Source typology representing a cluster of point sources around a
