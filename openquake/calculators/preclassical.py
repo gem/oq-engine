@@ -27,7 +27,7 @@ from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.geo.surface.multi import build_secparams
-from openquake.hazardlib.source.point import grid_point_sources, msr_name
+from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import (
@@ -148,19 +148,16 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             dic['before'] = len(srcs)
             dic['after'] = len(splits)
             yield dic
-        else:
-            cnt = 0
-            for msr, block in groupby(splits, msr_name).items():
-                dic = grid_point_sources(block, spacing, msr, cnt, monitor)
-                cnt = dic.pop('cnt')
-                for src in dic[grp_id]:
-                    src.num_ruptures = src.count_ruptures()
-                # this is also prefiltering the split sources
-                cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-                # print(f'{mon.task_no=}, {mon.duration=}')
-                dic['before'] = len(block)
-                dic['after'] = len(dic[grp_id])
-                yield dic
+        elif splits:
+            dic = grid_point_sources(splits, spacing, monitor)
+            for src in dic[grp_id]:
+                src.num_ruptures = src.count_ruptures()
+            # this is also prefiltering the split sources
+            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+            # print(f'{mon.task_no=}, {mon.duration=}')
+            dic['before'] = len(splits)
+            dic['after'] = len(dic[grp_id])
+            yield dic
 
 
 def store_tiles(dstore, csm, sitecol, cmakers):
