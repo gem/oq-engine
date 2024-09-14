@@ -598,12 +598,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if (self.rmap.size_mb and config.directory.custom_tmp and
             self.N > 1000 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
-            mcores = int(config.distribution.master_cores or 16)
             savemap = parallel.Starmap(save_rates, genargs(),
                                        h5=self.datastore,
                                        distribute='processpool')
             savemap.share(rates=self.rmap.array)
-            savemap.num_cores = mcores
             savemap.reduce()
         elif self.rmap.size_mb:
             for g, N, jid, num_chunks in genargs():
