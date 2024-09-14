@@ -188,7 +188,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
         logging.info('mem_gb = %.2f', mem_gb)
-    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores / 4.)
+    max_gb = float(config.memory.pmap_max_gb)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
