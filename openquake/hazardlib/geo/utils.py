@@ -899,6 +899,7 @@ def geohash(lons, lats, length):
     return chars
 
 
+# corresponds to blocks of 2.4 km
 def geohash5(coords):
     """
     :returns: a geohash of length 5*len(points) as a string
@@ -911,6 +912,7 @@ def geohash5(coords):
     return b'_'.join(row.tobytes() for row in arr).decode('ascii')
 
 
+# corresponds to blocks of 78 km
 def geohash3(lons, lats):
     """
     :returns: a geohash of length 3 as a 16 bit integer

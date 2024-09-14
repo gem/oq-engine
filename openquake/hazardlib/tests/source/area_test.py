@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+from openquake.baselib.general import Deduplicate
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -61,6 +62,8 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                                                 Point(0, 0), Point(-2, 0)]),
                                        discretization=66.7,
                                        rupture_mesh_spacing=5)
+        mfds = Deduplicate([src.magnitude_scaling_relationship for src in source])
+        self.assertEqual(len(mfds.uni), 1)  # there is a single MFD
         ruptures = list(source.iter_ruptures())
         self.assertEqual(len(ruptures), source.count_ruptures())
         self.assertEqual(len(ruptures), 9 * 4)

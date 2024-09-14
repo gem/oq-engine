@@ -26,6 +26,7 @@ import numpy
 from openquake.baselib import parallel, general, hdf5, python3compat, config
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
 from openquake.hazardlib.source.multi_fault import save_and_split
+from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 
@@ -664,6 +665,16 @@ class CompositeSourceModel:
                         '%s contains more than 2**30 ruptures' % src)
                 # print(src, src.offset, offset)
             src_id += 1
+
+    def get_msr_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> MSR string
+        """
+        acc = general.AccumDict(accum=set())
+        for grp_id, sg in enumerate(self.src_groups):
+            for src in sg:
+                acc[grp_id].add(msr_name(src))
+        return {grp_id: ' '.join(sorted(acc[grp_id])) for grp_id in acc}
 
     def get_max_weight(self, oq):  # used in preclassical
         """

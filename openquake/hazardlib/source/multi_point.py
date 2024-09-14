@@ -46,7 +46,7 @@ class MultiPointSource(ParametricSeismicSource):
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
     code = b'M'
-    MODIFICATIONS = set(())
+    MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
