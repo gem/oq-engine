@@ -21,6 +21,7 @@ import time
 import shutil
 import socket
 import getpass
+import tempfile
 import functools
 import subprocess
 from datetime import datetime
@@ -276,7 +277,7 @@ class WorkerPool(object):
         else:
             self.num_workers = num_workers
         self.scratch = parallel.scratch_dir(job_id)
-        self.executing = os.path.join(self.scratch, 'executing')
+        self.executing = tempfile.mkdtemp(dir=self.scratch)
         try:
             os.mkdir(self.executing)
         except FileExistsError:  # already created by another WorkerPool
