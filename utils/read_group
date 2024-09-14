@@ -10,7 +10,7 @@ def main(grp_id: int, calc_id: int=-1):
     Determine how much memory is needed to read a source group.
     To be run after a (pre)classical calculation.
     """
-    dstore = datastore.read(115049)
+    dstore = datastore.read(calc_id)
     with performance.Monitor(measuremem=True) as mon:
         arr = dstore.getitem('_csm')[grp_id]
         grp = pickle.loads(zlib.decompress(arr.tobytes()))

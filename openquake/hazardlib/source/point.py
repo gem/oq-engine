@@ -370,19 +370,32 @@ class PointSource(ParametricSeismicSource):
 def psources_to_pdata(pointsources, name):
     """
     Build a pdata dictionary from a list of homogeneous point sources
-    with the same tom, trt, npd and hcd.
+    with the same tom, trt, msr.
     """
     ps = pointsources[0]
+    dt = [(f, numpy.float32) for f in 'lon lat rar usd lsd'.split()]
+    array = numpy.empty(len(pointsources), dt)
+    for i, ps in enumerate(pointsources):
+        rec = array[i]
+        loc = ps.location
+        rec['lon'] = loc.x
+        rec['lat'] = loc.y
+        rec['rar'] = ps.rupture_aspect_ratio
+        rec['usd'] = ps.upper_seismogenic_depth
+        rec['lsd'] = ps.lower_seismogenic_depth
     pdata = dict(name=name,
+                 array=array,
                  tom=ps.temporal_occurrence_model,
                  trt=ps.tectonic_region_type,
-                 npd=ps.nodal_plane_distribution,
-                 hcd=ps.hypocenter_distribution,
+                 msr=ps.magnitude_scaling_relationship,
                  rms=ps.rupture_mesh_spacing,
-                 mfd=Deduplicate([ps.mfd for ps in pointsources]),
-                 msr=Deduplicate([ps.magnitude_scaling_relationship
-                                  for ps in pointsources]))
+                 npd=Deduplicate([ps.nodal_plane_distribution
+                                  for ps in pointsources]),
+                 hcd=Deduplicate([ps.hypocenter_distribution
+                                  for ps in pointsources]),
+                 mfd=Deduplicate([ps.mfd for ps in pointsources]))
     return pdata
+
 
 def pdata_to_psources(pdata):
     """
@@ -396,23 +409,25 @@ def pdata_to_psources(pdata):
     rms = pdata['rms']
     mfd = pdata['mfd']
     msr = pdata['msr']
-    for i, rec in pdata['array']:
-        yield PointSource(
+    out = []
+    for i, rec in enumerate(pdata['array']):
+        out.append(PointSource(
             source_id=f'{name}:{i}',
             name=name,
             tectonic_region_type=trt,
             mfd=mfd[i],
             rupture_mesh_spacing=rms,
-            magnitude_scaling_relationship=msr[i],
+            magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=rec['rar'],
             upper_seismogenic_depth=rec['usd'],
             lower_seismogenic_depth=rec['lsd'],
             location=Point(rec['lon'], rec['lat']),
-            nodal_plane_distribution=npd,
-            hypocenter_distribution=hcd,
-            temporal_occurrence_model=tom)
+            nodal_plane_distribution=npd[i],
+            hypocenter_distribution=hcd[i],
+            temporal_occurrence_model=tom))
+    return out
 
-    
+
 class CollapsedPointSource(PointSource):
     """
     Source typology representing a cluster of point sources around a
@@ -425,7 +440,7 @@ class CollapsedPointSource(PointSource):
 
     def __init__(self, source_id, pointsources):
         self.source_id = source_id
-        self.pointsources = pointsources
+        self.pdata = psources_to_pdata(pointsources, source_id)
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.magnitude_scaling_relationship = (
             pointsources[0].magnitude_scaling_relationship)
@@ -436,6 +451,13 @@ class CollapsedPointSource(PointSource):
         self.nodal_plane_distribution = PMF(
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
+
+    @property
+    def pointsources(self):
+        """
+        :returns: the underlying point sources
+        """
+        return pdata_to_psources(self.pdata)
 
     def get_annual_occurrence_rates(self):
         """
@@ -473,7 +495,8 @@ class CollapsedPointSource(PointSource):
         """
         :returns: the total number of underlying ruptures
         """
-        return sum(src.count_ruptures() for src in self.pointsources)
+        return sum(src.count_ruptures()
+                   for src in pdata_to_psources(self.pdata))
 
 
 def grid_point_sources(

@@ -1801,14 +1801,20 @@ class Deduplicate(Sequence):
     """
     Deduplicate lists containing duplicated objects
     """
-    def __init__(self, objects):
+    def __init__(self, objects, check_one=False):
         pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
                    for obj in objects]
         uni, self.inv = numpy.unique(pickles, return_inverse=True)
         self.uni = [pickle.loads(pik) for pik in uni]
+        if check_one:
+            assert len(self.uni) == 1, self.uni
 
     def __getitem__(self, i):
         return self.uni[self.inv[i]]
+
+    def __repr__(self):
+        name = self[0].__class__.__name__
+        return '<Deduplicated %s %d/%d>' % (name, len(self.uni), len(self.inv))
 
     def __len__(self):
         return len(self.inv)
