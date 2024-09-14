@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: reduced the space used by the CollapsedPointSources (2.7x)
   * Fixed the site model association procedure to work in conditioned
     scenario calculations
   * Used `oq engine --run` to submit asynchronous jobs to SLURM and
