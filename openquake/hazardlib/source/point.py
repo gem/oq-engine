@@ -91,10 +91,8 @@ def calc_average(pointsources):
                rupture_aspect_ratio=[])
     rates = []
     trt = pointsources[0].tectonic_region_type
-    msr = msr_name(pointsources[0])
     for src in pointsources:
         assert src.tectonic_region_type == trt
-        assert msr_name(src) == msr
         rates.append(sum(r for m, r in src.get_annual_occurrence_rates()))
         ws, ds = zip(*src.nodal_plane_distribution.data)
         strike = numpy.average([np.strike for np in ds], weights=ws)
