@@ -196,12 +196,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = ss or not regular
     else:
         tiling = oq.tiling
-    if not tiling:
-        n_out = data['tiles'] @ data['blocks']
-        n_tasks = numpy.ceil(data['tiles'] / data['splits']) @ data['blocks']
-        logging.info('This will be a regular calculation with %d outputs, '
-                     '%.0f tasks, min_tiles=%d, max_tiles=%d',
-                     n_out, n_tasks, data['tiles'].min(), data['tiles'].max())
 
     # store source_groups
     dstore.create_dset('source_groups', data, fillvalue=None,
