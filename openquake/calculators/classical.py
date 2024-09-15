@@ -551,7 +551,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            self.max_weight *= 2  # produce half the tasks
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         allargs = []

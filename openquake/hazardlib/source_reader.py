@@ -694,7 +694,7 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        max_weight *= 1.1  # increased to produce fewer tasks
+        max_weight *= 1.05  # increased to produce fewer tasks
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
@@ -721,7 +721,12 @@ class CompositeSourceModel:
                 blocks = [None]
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
-                blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
+                mul = hint // 100
+                if mul:  # avoid too much data transfer
+                    hint = 100
+                    splits *= mul                
+                blocks = list(general.split_in_blocks(
+                    sg, hint, lambda s: s.weight))
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
