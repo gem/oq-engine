@@ -556,14 +556,15 @@ class ClassicalCalculator(base.HazardCalculator):
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, tiling):
+        for cmaker, tilegetters, blocks, splits in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
+                tiling):
             for block in blocks:
                 if tiling:
                     for tgetter in tilegetters:
                         allargs.append((block, [tgetter], cmaker, ds))
                 else:
-                    for tgetters in block_splitter(tilegetters, 20):
+                    for tgetters in block_splitter(tilegetters, splits):
                         allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
         if tiling:
