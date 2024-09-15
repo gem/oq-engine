@@ -563,10 +563,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 if tiling:
                     for tgetter in tilegetters:
                         allargs.append((block, [tgetter], cmaker, ds))
+                    n_out.append(len(tilegetters))
                 else:
                     for tgetters in block_splitter(tilegetters, splits):
                         allargs.append((block, tgetters, cmaker, ds))
-                n_out.append(len(tilegetters))
+                        n_out.append(len(tgetters))
         if tiling:
             logging.info('This will be a tiling calculation with %d outputs, '
                          '%d tasks, min_tiles=%d, max_tiles=%d',
