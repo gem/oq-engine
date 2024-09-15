@@ -196,10 +196,9 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
     if not tiling:
         n_out = data['tiles'] @ data['blocks']
-        n_tasks = data['blocks'].sum()
         logging.info('This will be a regular calculation with %d outputs, '
-                     '%d tasks, min_tiles=%d, max_tiles=%d',
-                     n_out, n_tasks, data['tiles'].min(), data['tiles'].max())
+                     'min_tiles=%d, max_tiles=%d',
+                     n_out, data['tiles'].min(), data['tiles'].max())
 
     # store source_groups
     dstore.create_dset('source_groups', data, fillvalue=None,

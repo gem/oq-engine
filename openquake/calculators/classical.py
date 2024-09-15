@@ -28,7 +28,8 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -562,7 +563,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     for tgetter in tilegetters:
                         allargs.append((block, [tgetter], cmaker, ds))
                 else:
-                    allargs.append((block, tilegetters, cmaker, ds))
+                    for tgetters in block_splitter(tilegetters, 20):
+                        allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
         if tiling:
             logging.info('This will be a tiling calculation with %d outputs, '
