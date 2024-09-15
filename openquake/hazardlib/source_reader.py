@@ -711,9 +711,10 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
+            G = len(cmaker.gsims)
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
-            splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
+            splits = numpy.ceil(G * mb_per_gsim / max_mb)
             if sg.atomic or tiling:
                 # splits/4 reduce the number of tasks for very light groups
                 # (will use 4x more memory, but pmap_max_mb is only 120 MB)
@@ -721,10 +722,9 @@ class CompositeSourceModel:
                 blocks = [None]
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
-                mul = hint // 100
-                if mul:  # avoid too much data transfer
+                if hint > 100:  # avoid too much data transfer
+                    splits = numpy.ceil(G * mb_per_gsim / max_mb * hint / 100)
                     hint = 100
-                    splits *= mul                
                 blocks = list(general.split_in_blocks(
                     sg, hint, lambda s: s.weight))
             self.splits.append(splits)
