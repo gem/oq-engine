@@ -724,6 +724,7 @@ class CompositeSourceModel:
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
                 if hint > 100:
+                    # enable split_by_gsim to save data transfer
                     split_by_gsim = True
                     hint /= G
                 blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
