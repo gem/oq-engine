@@ -734,6 +734,16 @@ class ContextMaker(object):
                 logging.info(f'Conversion from {imc.name} not applicable to'
                              f' {gsim.__class__.__name__}')
 
+    def split(self):
+        """
+        Split the ContextMaker by gsim
+        """
+        for g, gsim in zip(self.gid, self.gsims):
+            new = copy.copy(self)
+            new.gsims = [gsim]
+            new.gid = [g]
+            yield new
+
     def horiz_comp_to_geom_mean(self, mean_stds, gsim):
         """
         This function converts ground-motion obtained for a given description

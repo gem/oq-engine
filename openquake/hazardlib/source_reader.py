@@ -715,16 +715,18 @@ class CompositeSourceModel:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
             splits = numpy.ceil(G * mb_per_gsim / max_mb)
+            split_by_gsim = False
             if sg.atomic or tiling:
                 # splits/4 reduce the number of tasks for very light groups
                 # (will use 4x more memory, but pmap_max_mb is only 120 MB)
                 splits = numpy.ceil(max(splits / 4, sg.weight / max_weight))
                 blocks = [None]
-                hint = 100
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
-                blocks = list(general.split_in_blocks(
-                    sg, min(hint, 100), lambda s: s.weight))
+                if hint > 100:
+                    split_by_gsim = True
+                    hint /= G
+                blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
@@ -735,10 +737,8 @@ class CompositeSourceModel:
             cmaker.blocks = len(blocks)
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            tilegetters = list(sitecol.split(
-                numpy.ceil(G * mb_per_gsim / max_mb * hint / 100),
-                oq.max_sites_disagg))
-            yield cmaker, tilegetters, blocks, splits
+            tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
+            yield cmaker, tilegetters, blocks, split_by_gsim
 
     def __toh5__(self):
         G = len(self.src_groups)

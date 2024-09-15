@@ -171,13 +171,13 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     max_weight = csm.get_max_weight(oq)
 
     # build source_groups
-    quartets = csm.split(cmakers, sitecol, max_weight)
+    quartets = list(csm.split(cmakers, sitecol, max_weight))
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
+        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), by_gsim,
           len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
-         for cm, tgets, blocks, splits in quartets],
+         for cm, tgets, blocks, by_gsim in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
-         ('splits', U16), ('size_mb', F32), ('weight', F32),
+         ('split_by_gsim', bool), ('size_mb', F32), ('weight', F32),
          ('codes', '<S8'), ('trt', '<S20')])
 
     # determine light groups and tiling
@@ -197,8 +197,12 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         tiling = oq.tiling
     if not tiling:
-        n_out = data['tiles'] @ data['blocks']
-        n_tasks = numpy.ceil(data['tiles'] / data['splits']) @ data['blocks']
+        n_out = 0
+        n_tasks = 0
+        for cm, tgets, blocks, by_gsim in quartets:
+            G = len(cm.gsims) if by_gsim else 1
+            n_tasks += len(blocks) * G
+            n_out += len(blocks) * len(tgets) * G
         logging.info('This will be a regular calculation with %d outputs, '
                      '%.0f tasks, min_tiles=%d, max_tiles=%d',
                      n_out, n_tasks, data['tiles'].min(), data['tiles'].max())
