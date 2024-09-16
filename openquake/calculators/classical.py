@@ -28,7 +28,8 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -512,14 +513,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        t0 = time.time()
         self._execute()
-        classical_time = time.time() - t0
-        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
-        if fraction:
-            est_time = classical_time / float(fraction)
-            logging.info('Estimated time for the classical part: %.1f hours '
-                         '(upper limit)', est_time / 3600)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -535,11 +529,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.build_curves_maps()
         return True
 
-    def _execute(self):
+    def _pre_execute(self):
         oq = self.oqparam
-        L = oq.imtls.size
         sgs = self.datastore['source_groups']
-        tiling = sgs.attrs['tiling']
+        self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -548,26 +541,32 @@ class ClassicalCalculator(base.HazardCalculator):
             scratch = parallel.scratch_dir(self.datastore.calc_id)
             logging.info('Storing the rates in %s', scratch)
             self.datastore.hdf5.attrs['scratch_dir'] = scratch
-        if tiling:
+        if self.tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+        return sgs, ds
+
+    def _execute(self):
+        sgs, ds = self._pre_execute()
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, tiling):
+        for cmaker, tilegetters, blocks, splits in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
+                self.tiling):
             for block in blocks:
-                if tiling:
+                if self.tiling:
                     for tgetter in tilegetters:
                         allargs.append((block, [tgetter], cmaker, ds))
                 else:
-                    allargs.append((block, tilegetters, cmaker, ds))
+                    for tgetters in block_splitter(tilegetters, splits):
+                        allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-        if tiling:
-            logging.info('This will be a tiling calculation with %d outputs, '
-                         '%d tasks, min_tiles=%d, max_tiles=%d',
-                         sum(n_out), len(allargs), min(n_out), max(n_out))
+        logging.info('This is a %s calculation with %d outputs, '
+                     '%d tasks, min_tiles=%d, max_tiles=%d',
+                     'tiling' if self.tiling else 'regular',
+                     sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
@@ -581,40 +580,51 @@ class ClassicalCalculator(base.HazardCalculator):
             maxsrc = max(srcs, key=redweight)
             logging.info('Heaviest: %r, weight=%.1f',
                          maxsrc.source_id, redweight(maxsrc))
-    
+
+        L = self.oqparam.imtls.size
         gids = get_heavy_gids(sgs, self.cmakers)
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
+        t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
+        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
+        if fraction:
+            est_time = time.time() - t0 / float(fraction)
+            logging.info('Estimated time for the classical part: %.1f hours '
+                         '(upper limit)', est_time / 3600)
+        self._post_execute(acc)
+
+    def _post_execute(self, acc):
+        # save the rates and performs some checks
+        logging.info('Processing %s', self.rmap)
         def genargs():
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
-        logging.info('Processing %s', self.rmap)
         if (self.rmap.size_mb and config.directory.custom_tmp and
             self.N > 1000 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
-            mcores = int(config.distribution.master_cores or 16)
+            self.datastore.swmr_on()  # must come before the Starmap
             savemap = parallel.Starmap(save_rates, genargs(),
                                        h5=self.datastore,
                                        distribute='processpool')
             savemap.share(rates=self.rmap.array)
-            savemap.num_cores = mcores
             savemap.reduce()
         elif self.rmap.size_mb:
             for g, N, jid, num_chunks in genargs():
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
-        else:
+        elif not self.tiling:
+            # for tiling the ratemap is always empty, don't warn
             logging.warning('Empty ratemap')
         del self.rmap
-        if oq.disagg_by_src:
+        if self.oqparam.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
-            if oq.use_rates and self.N == 1:  # sanity check
+            if self.oqparam.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!

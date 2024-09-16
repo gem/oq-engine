@@ -338,7 +338,7 @@ def stop_workers(job_id):
     print(w.WorkerMaster(job_id).stop())
 
     
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -347,12 +347,14 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
     :param concurrent_jobs:
         How many jobs to run concurrently (default num_cores/4)
     """
-    # check the total number of required cores
-    tot_cores = parallel.Starmap.num_cores * nodes
-    max_cores = int(config.distribution.max_cores)
-    if tot_cores > max_cores:
-        raise ValueError('You can use at most %d nodes' %
-                         max_cores // parallel.Starmap.num_cores)
+    dist = parallel.oq_distribute()
+    if dist == 'slurm':
+        # check the total number of required cores
+        tot_cores = parallel.Starmap.num_cores * nodes
+        max_cores = int(config.distribution.max_cores)
+        if tot_cores > max_cores:
+            raise ValueError('You can use at most %d nodes' %
+                             max_cores // parallel.Starmap.num_cores)
 
     if concurrent_jobs is None:
         # // 10 is chosen so that the core occupation in cole is decent
@@ -360,7 +362,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
 
     job_id = jobctxs[0].calc_id
     hc_id = jobctxs[-1].params['hazard_calculation_id']
-    dist = parallel.oq_distribute()
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
         ppath = job.ds_calc_dir + '.hdf5'
@@ -373,27 +374,35 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
                     print('Starting from a hazard (%d) computed with'
                           ' an obsolete version of the engine: %s' %
                           (hc_id, prev_version))
-    try:
-        poll_queue(jobctxs[0].calc_id, poll_time=15)
-        # wait for an empty slot or a CTRL-C
-    except BaseException:
-        # the job aborted even before starting
-        for job in jobctxs:
-            logs.dbcmd('finish', job.calc_id, 'aborted')
-        raise
+    if dist == 'slurm' and sbatch:
+        pass  # do not wait in the job queue
+    else:
+        try:
+            poll_queue(jobctxs[0].calc_id, poll_time=15)
+            # wait for an empty slot or a CTRL-C
+        except BaseException:
+            # the job aborted even before starting
+            for job in jobctxs:
+                logs.dbcmd('finish', job.calc_id, 'aborted')
+            raise
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
+        if dist in ('zmq', 'slurm') and  w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
 
         # run the jobs sequentially or in parallel, with slurm or without
-        if dist == 'slurm' and config.distribution.master_cores:
-            slurm.srun(jobctxs)
+        if dist == 'slurm' and sbatch:
+            scratch_dir = parallel.scratch_dir(job_id)
+            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
+                pickle.dump(jobctxs, f)
+            w.WorkerMaster(job_id).send_jobs()
+            print('oq engine --show-log %d to see the progress' % job_id)
         elif len(jobctxs) > 1 and jobctxs[0].multi and dist != 'no':
-            parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
+            parallel.multispawn(
+                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -405,7 +414,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
             logs.dbcmd("set_status", jid, 'failed')
         raise
     finally:
-        if dist in ('zmq', 'slurm'):
+        if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
     return jobctxs
 
@@ -460,12 +469,22 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run LogContext objects stored in a pickle file, called by job.yaml or slurm
+    # run LogContexts stored in jobs.pik, called by job.yaml or slurm
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
-    if len(jobctxs) > 1 and jobctxs[0].multi:
-        parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
-                            parallel.Starmap.CT // 10 or 1)
-    else:
-        for jobctx in jobctxs:
-            run_calc(jobctx)
+    try:
+        if len(jobctxs) > 1 and jobctxs[0].multi:
+            parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
+                                parallel.Starmap.CT // 10 or 1)
+        else:
+            for jobctx in jobctxs:
+                run_calc(jobctx)
+    except Exception:
+        ids = [jc.calc_id for jc in jobctxs]
+        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
+                          "AND status IN ('created', 'executing')", ids)
+        for jid, in rows:
+            logs.dbcmd("set_status", jid, 'failed')
+        raise
+    finally:
+        stop_workers(jobctxs[0].calc_id)

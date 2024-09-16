@@ -34,8 +34,6 @@ from openquake.commands.abort import main as abort
 DEFAULT_EXPORTS = 'csv,xml,rst'
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
-ZMQ = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 
 def get_job_id(job_id, username=None):
@@ -180,7 +178,7 @@ def main(
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs, nodes=nodes)
+        run_jobs(jobs, nodes=nodes, sbatch=True)
 
     # hazard
     elif list_hazard_calculations:

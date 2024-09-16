@@ -417,6 +417,7 @@ class MapArray(object):
         return self.new(self.array ** n)
 
     def __iadd__(self, other):
+        # used in calc.mean_rates
         sidx = self.sidx[other.sids]
         G = other.array.shape[2]  # NLG
         for i, g in enumerate(other.gid):
