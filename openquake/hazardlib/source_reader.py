@@ -715,13 +715,19 @@ class CompositeSourceModel:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
             splits = numpy.ceil(G * mb_per_gsim / max_mb)
+            hint = numpy.ceil(sg.weight / max_weight)
+
             if sg.atomic or tiling:
                 blocks = [None]
-                hint = 100
+                tilegetters = list(sitecol.split(
+                    max(hint, splits), oq.max_sites_disagg))
             else:
-                hint = numpy.ceil(sg.weight / max_weight)
                 blocks = list(general.split_in_blocks(
                     sg, min(hint, 100), lambda s: s.weight))
+                tilegetters = list(sitecol.split(
+                    numpy.ceil(G * mb_per_gsim / max_mb * hint / 100),
+                    oq.max_sites_disagg))
+
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
@@ -732,9 +738,6 @@ class CompositeSourceModel:
             cmaker.blocks = len(blocks)
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            tilegetters = list(sitecol.split(
-                numpy.ceil(G * mb_per_gsim / max_mb * hint / 100),
-                oq.max_sites_disagg))
             yield cmaker, tilegetters, blocks, splits
 
     def __toh5__(self):
