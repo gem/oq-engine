@@ -28,7 +28,8 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -551,24 +552,25 @@ class ClassicalCalculator(base.HazardCalculator):
         if tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
-            self.max_weight *= 2  # produce half the tasks
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, tiling):
+        for cmaker, tilegetters, blocks, splits in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
+                tiling):
             for block in blocks:
                 if tiling:
                     for tgetter in tilegetters:
                         allargs.append((block, [tgetter], cmaker, ds))
                 else:
-                    allargs.append((block, tilegetters, cmaker, ds))
+                    for tgetters in block_splitter(tilegetters, splits):
+                        allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-        if tiling:
-            logging.info('This will be a tiling calculation with %d outputs, '
-                         '%d tasks, min_tiles=%d, max_tiles=%d',
-                         sum(n_out), len(allargs), min(n_out), max(n_out))
+        logging.info('This is a %s calculation with %d outputs, '
+                     '%d tasks, min_tiles=%d, max_tiles=%d',
+                     'tiling' if tiling else 'regular',
+                     sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()

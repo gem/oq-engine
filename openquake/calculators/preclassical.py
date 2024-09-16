@@ -171,12 +171,14 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     max_weight = csm.get_max_weight(oq)
 
     # build source_groups
-    triples = csm.split(cmakers, sitecol, max_weight)
+    quartets = csm.split(cmakers, sitecol, max_weight)
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), len(cm.gsims) * fac * 1024,
-          cm.weight, cm.codes, cm.trt) for cm, tgets, blocks in triples],
+        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
+          len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
+         for cm, tgets, blocks, splits in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
-         ('size_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S20')])
+         ('splits', U16), ('size_mb', F32), ('weight', F32),
+         ('codes', '<S8'), ('trt', '<S20')])
 
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)
@@ -185,7 +187,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
         logging.info('mem_gb = %.2f', mem_gb)
-    max_gb = float(config.memory.pmap_max_gb)
+    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores/8)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
@@ -194,12 +196,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = ss or not regular
     else:
         tiling = oq.tiling
-    if not tiling:
-        n_out = data['tiles'] @ data['blocks']
-        n_tasks = data['blocks'].sum()
-        logging.info('This will be a regular calculation with %d outputs, '
-                     '%d tasks, min_tiles=%d, max_tiles=%d',
-                     n_out, n_tasks, data['tiles'].min(), data['tiles'].max())
 
     # store source_groups
     dstore.create_dset('source_groups', data, fillvalue=None,

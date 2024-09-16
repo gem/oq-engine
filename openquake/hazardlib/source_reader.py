@@ -694,14 +694,14 @@ class CompositeSourceModel:
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        max_weight *= 1.1  # increased to produce fewer tasks
+        max_weight *= 1.05  # increased to produce fewer tasks
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
     def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
         """
-        :yields: (cmaker, tilegetters, blocks) for each source group
+        :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         N = len(sitecol)
         oq = cmakers[0].oq
@@ -711,17 +711,17 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
+            G = len(cmaker.gsims)
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
-            splits = numpy.ceil(len(cmaker.gsims) * mb_per_gsim / max_mb)
+            splits = numpy.ceil(G * mb_per_gsim / max_mb)
             if sg.atomic or tiling:
-                # splits/4 reduce the number of tasks for very light groups
-                # (will use 4x more memory, but pmap_max_mb is only 120 MB)
-                splits = numpy.ceil(max(splits / 4, sg.weight / max_weight))
                 blocks = [None]
+                hint = 100
             else:
                 hint = numpy.ceil(sg.weight / max_weight)
-                blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
+                blocks = list(general.split_in_blocks(
+                    sg, min(hint, 100), lambda s: s.weight))
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
@@ -732,8 +732,10 @@ class CompositeSourceModel:
             cmaker.blocks = len(blocks)
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
-            yield cmaker, tilegetters, blocks
+            tilegetters = list(sitecol.split(
+                numpy.ceil(G * mb_per_gsim / max_mb * hint / 100),
+                oq.max_sites_disagg))
+            yield cmaker, tilegetters, blocks, splits
 
     def __toh5__(self):
         G = len(self.src_groups)
