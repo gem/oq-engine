@@ -567,7 +567,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for tgetters in block_splitter(tilegetters, splits):
                         allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-        logging.info('This will be a %s calculation with %d outputs, '
+        logging.info('This is a %s calculation with %d outputs, '
                      '%d tasks, min_tiles=%d, max_tiles=%d',
                      'tiling' if tiling else 'regular',
                      sum(n_out), len(allargs), min(n_out), max(n_out))
