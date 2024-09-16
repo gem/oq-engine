@@ -513,14 +513,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        t0 = time.time()
         self._execute()
-        classical_time = time.time() - t0
-        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
-        if fraction:
-            est_time = classical_time / float(fraction)
-            logging.info('Estimated time for the classical part: %.1f hours '
-                         '(upper limit)', est_time / 3600)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -536,9 +529,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.build_curves_maps()
         return True
 
-    def _execute(self):
+    def _pre_execute(self):
         oq = self.oqparam
-        L = oq.imtls.size
         sgs = self.datastore['source_groups']
         self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
@@ -554,6 +546,10 @@ class ClassicalCalculator(base.HazardCalculator):
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+        return sgs, ds
+
+    def _execute(self):
+        sgs, ds = self._pre_execute()
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
@@ -584,14 +580,22 @@ class ClassicalCalculator(base.HazardCalculator):
             maxsrc = max(srcs, key=redweight)
             logging.info('Heaviest: %r, weight=%.1f',
                          maxsrc.source_id, redweight(maxsrc))
-    
+
+        L = self.oqparam.imtls.size
         gids = get_heavy_gids(sgs, self.cmakers)
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
+        t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+
+        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
+        if fraction:
+            est_time = time.time() - t0 / float(fraction)
+            logging.info('Estimated time for the classical part: %.1f hours '
+                         '(upper limit)', est_time / 3600)
         self._post_execute(acc)
 
     def _post_execute(self, acc):
@@ -604,6 +608,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if (self.rmap.size_mb and config.directory.custom_tmp and
             self.N > 1000 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
+            self.datastore.swmr_on()  # must come before the Starmap
             savemap = parallel.Starmap(save_rates, genargs(),
                                        h5=self.datastore,
                                        distribute='processpool')
