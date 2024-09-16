@@ -311,10 +311,10 @@ class KiteSurface(BaseSurface):
 
             # Compare the dip direction from the strike against the one from
             # the quadrilateral
-            # tmp = geo_utils._angles_diff(azi_strike, 90)
-            # if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
-            tmp = (azi_strike + 90.0) % 360
-            if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
+            tmp = geo_utils._angles_diff(azi_strike, 90)
+            if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
+            #tmp = (azi_strike + 90.0) % 360
+            #if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
