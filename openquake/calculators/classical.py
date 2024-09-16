@@ -188,6 +188,27 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         yield result
 
 
+def tiling(sources, tilegetters, cmaker, dstore, monitor):
+    """
+    Tiling calculator
+    """
+    # NB: removing the yield would cause terrible slow tasks
+    cmaker.init_monitoring(monitor)
+    with dstore:
+        arr = dstore.getitem('_csm')[cmaker.grp_id]
+        sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        sitecol = dstore['sitecol'].complete  # super-fast
+    for tileget in tilegetters:
+        result = hazclassical(sources, tileget(sitecol), cmaker)
+        rmap = result.pop('rmap').remove_zeros()
+        if cmaker.custom_tmp:
+            rates = rmap.to_array(cmaker.gid)
+            _store(rates, cmaker.num_chunks, None, monitor)
+        else:
+            result['rmap'] = rmap.to_array(cmaker.gid)
+        yield result
+
+
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
 def fast_mean(pgetter, monitor):
@@ -603,7 +624,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(tiling, allargs, h5=self.datastore.hdf5)
         smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
         fraction = os.environ.get('OQ_SAMPLE_SOURCES')
