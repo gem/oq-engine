@@ -192,7 +192,6 @@ def tiling(sources, tilegetters, cmaker, dstore, monitor):
     """
     Tiling calculator
     """
-    # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
         arr = dstore.getitem('_csm')[cmaker.grp_id]
