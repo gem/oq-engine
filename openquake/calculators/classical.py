@@ -188,6 +188,25 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         yield result
 
 
+def tiling(tilegetter, cmaker, dstore, monitor):
+    """
+    Tiling calculator
+    """
+    cmaker.init_monitoring(monitor)
+    with dstore:
+        arr = dstore.getitem('_csm')[cmaker.grp_id]
+        sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        sitecol = dstore['sitecol'].complete  # super-fast
+    result = hazclassical(sources, tilegetter(sitecol), cmaker)
+    rmap = result.pop('rmap').remove_zeros()
+    if cmaker.custom_tmp:
+        rates = rmap.to_array(cmaker.gid)
+        _store(rates, cmaker.num_chunks, None, monitor)
+    else:
+        result['rmap'] = rmap.to_array(cmaker.gid)
+    return result
+
+
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
 def fast_mean(pgetter, monitor):
@@ -402,7 +421,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # already stored in the workers, case_22
             pass
         elif isinstance(rmap, numpy.ndarray):
-            # store the rates directly, case_03
+            # store the rates directly, case_03 or tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
                 _store(rmap, self.num_chunks, self.datastore)
         else:
@@ -513,7 +532,11 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        self._execute()
+        sgs, ds = self._pre_execute()
+        if self.tiling:
+            self._execute_tiling(sgs, ds)
+        else:
+            self._execute_regular(sgs, ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -548,24 +571,17 @@ class ClassicalCalculator(base.HazardCalculator):
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         return sgs, ds
 
-    def _execute(self):
-        sgs, ds = self._pre_execute()
+    def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
-                self.tiling):
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                if self.tiling:
-                    for tgetter in tilegetters:
-                        allargs.append((block, [tgetter], cmaker, ds))
-                else:
-                    for tgetters in block_splitter(tilegetters, splits):
-                        allargs.append((block, tgetters, cmaker, ds))
+                for tgetters in block_splitter(tilegetters, splits):
+                    allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-        logging.info('This is a %s calculation with %d outputs, '
+        logging.info('This is a regular calculation with %d outputs, '
                      '%d tasks, min_tiles=%d, max_tiles=%d',
-                     'tiling' if self.tiling else 'regular',
                      sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
@@ -585,20 +601,37 @@ class ClassicalCalculator(base.HazardCalculator):
         gids = get_heavy_gids(sgs, self.cmakers)
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
-        t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+        self._post_regular(acc)
+
+    def _execute_tiling(self, sgs, ds):
+        allargs = []
+        n_out = []
+        for cmaker, tilegetters, blocks, splits in self.csm.split(
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, True):
+            for block in blocks:
+                for tgetter in tilegetters:
+                    allargs.append((tgetter, cmaker, ds))
+                n_out.append(len(tilegetters))
+        logging.info('This is a tiling calculation with '
+                     '%d tasks, min_tiles=%d, max_tiles=%d',
+                     len(allargs), min(n_out), max(n_out))
+
+        t0 = time.time()
+        self.datastore.swmr_on()  # must come before the Starmap
+        smap = parallel.Starmap(tiling, allargs, h5=self.datastore.hdf5)
+        smap.reduce(self.agg_dicts, AccumDict(accum=0.))
 
         fraction = os.environ.get('OQ_SAMPLE_SOURCES')
         if fraction:
             est_time = time.time() - t0 / float(fraction)
             logging.info('Estimated time for the classical part: %.1f hours '
                          '(upper limit)', est_time / 3600)
-        self._post_execute(acc)
 
-    def _post_execute(self, acc):
+    def _post_regular(self, acc):
         # save the rates and performs some checks
         logging.info('Processing %s', self.rmap)
         def genargs():
