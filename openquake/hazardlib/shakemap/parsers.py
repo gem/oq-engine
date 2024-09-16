@@ -648,7 +648,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
         rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
                   'mag': mag, 'rake': 0.,
                   'local_timestamp': str(local_time), 'time_event': time_event,
-                  'is_point_rup': False, 'usgs_id': id, 'rupture_file': None}
+                  'is_point_rup': True, 'usgs_id': id, 'rupture_file': None}
         return rupdic
     url = contents.get('download/rupture.json')['url']
     logging.info('Downloading rupture.json')
