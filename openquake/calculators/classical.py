@@ -188,7 +188,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         yield result
 
 
-def tiling(sources, tilegetters, cmaker, dstore, monitor):
+def tiling(tilegetter, cmaker, dstore, monitor):
     """
     Tiling calculator
     """
@@ -197,15 +197,14 @@ def tiling(sources, tilegetters, cmaker, dstore, monitor):
         arr = dstore.getitem('_csm')[cmaker.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
-    for tileget in tilegetters:
-        result = hazclassical(sources, tileget(sitecol), cmaker)
-        rmap = result.pop('rmap').remove_zeros()
-        if cmaker.custom_tmp:
-            rates = rmap.to_array(cmaker.gid)
-            _store(rates, cmaker.num_chunks, None, monitor)
-        else:
-            result['rmap'] = rmap.to_array(cmaker.gid)
-        yield result
+    result = hazclassical(sources, tilegetter(sitecol), cmaker)
+    rmap = result.pop('rmap').remove_zeros()
+    if cmaker.custom_tmp:
+        rates = rmap.to_array(cmaker.gid)
+        _store(rates, cmaker.num_chunks, None, monitor)
+    else:
+        result['rmap'] = rmap.to_array(cmaker.gid)
+    return result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -615,7 +614,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks, True):
             for block in blocks:
                 for tgetter in tilegetters:
-                    allargs.append((block, [tgetter], cmaker, ds))
+                    allargs.append((tgetter, cmaker, ds))
                 n_out.append(len(tilegetters))
         logging.info('This is a tiling calculation with '
                      '%d tasks, min_tiles=%d, max_tiles=%d',
