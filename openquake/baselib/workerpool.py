@@ -100,8 +100,6 @@ class WorkerMaster(object):
             if general.socket_ready((host, self.ctrl_port)):
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-            if cores == '-1':
-                cores = str(parallel.Starmap.num_cores)
             args += ['-m', 'openquake.baselib.workerpool', cores]
             if host != '127.0.0.1':
                 print('%s: if it hangs, check the ssh keys' % ' '.join(args))
