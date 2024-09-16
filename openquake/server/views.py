@@ -914,8 +914,6 @@ def aristotle_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    if 'error' in rupdic:
-        del rupdic['error']
     if station_data_file is None or not os.path.isfile(station_data_file):
         station_data_file = None
     try:
