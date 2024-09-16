@@ -540,7 +540,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         L = oq.imtls.size
         sgs = self.datastore['source_groups']
-        tiling = sgs.attrs['tiling']
+        self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -549,7 +549,7 @@ class ClassicalCalculator(base.HazardCalculator):
             scratch = parallel.scratch_dir(self.datastore.calc_id)
             logging.info('Storing the rates in %s', scratch)
             self.datastore.hdf5.attrs['scratch_dir'] = scratch
-        if tiling:
+        if self.tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
@@ -558,9 +558,9 @@ class ClassicalCalculator(base.HazardCalculator):
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
-                tiling):
+                self.tiling):
             for block in blocks:
-                if tiling:
+                if self.tiling:
                     for tgetter in tilegetters:
                         allargs.append((block, [tgetter], cmaker, ds))
                 else:
@@ -569,7 +569,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 n_out.append(len(tilegetters))
         logging.info('This is a %s calculation with %d outputs, '
                      '%d tasks, min_tiles=%d, max_tiles=%d',
-                     'tiling' if tiling else 'regular',
+                     'tiling' if self.tiling else 'regular',
                      sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
@@ -592,12 +592,15 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+        self._post_execute(acc)
 
+    def _post_execute(self, acc):
+        # save the rates and performs some checks
+        logging.info('Processing %s', self.rmap)
         def genargs():
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
-        logging.info('Processing %s', self.rmap)
         if (self.rmap.size_mb and config.directory.custom_tmp and
             self.N > 1000 and parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
@@ -610,12 +613,13 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, N, jid, num_chunks in genargs():
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
-        else:
+        elif not self.tiling:
+            # for tiling the ratemap is always empty, don't warn
             logging.warning('Empty ratemap')
         del self.rmap
-        if oq.disagg_by_src:
+        if self.oqparam.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
-            if oq.use_rates and self.N == 1:  # sanity check
+            if self.oqparam.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
