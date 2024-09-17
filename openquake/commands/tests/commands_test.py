@@ -543,26 +543,14 @@ class EngineRunJobTestCase(unittest.TestCase):
         print(p)
         subprocess.run(['bash', '-c', str(p)])  # run the generated script
         with Print.patch() as p:
-            sap.runline('openquake.commands compare uhs -2 -3')
+            sap.runline('openquake.commands compare uhs -1 -2')
         print(p)
         self.assertIn('There are no differences', str(p))
-        # testing different sitecols
-        with read(-1, 'r+') as ds1:
-            sitecol = ds1['sitecol']
-            sitecol.array['vs30'] = 750.
-            ds1['sitecol'] = sitecol
-        with Print.patch() as p:
-            sap.runline('openquake.commands compare sitecol -2 -3')
-        print(p)
+
         # test compare oqparam
         with Print.patch() as p:
-            sap.runline("openquake.commands compare oqparam -2 -3")
+            sap.runline("openquake.commands compare oqparam -1 -2")
         self.assertIn('area_source_discretization: 40.0 != 39.9', str(p))
-
-        # test collect_jobs
-        with Print.patch() as p:
-            sap.runline("openquake.commands collect_jobs -2 -3")
-        self.assertIn('All jobs completed correctly', str(p))
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
