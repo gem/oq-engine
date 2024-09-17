@@ -193,7 +193,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     if oq.tiling is None:
         # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
         ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
-        tiling = ss or not regular
+        tiling = ss and N > 1000 or not regular
     else:
         tiling = oq.tiling
 
