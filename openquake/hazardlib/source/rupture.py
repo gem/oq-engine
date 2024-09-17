@@ -884,16 +884,23 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-def get_planar_from_corners(corners, mag, rake, trt, msr=None):
+def get_multiplanar(multipolygon_coords, mag, rake, trt):
     """
-    :returns: a BaseRupture with a PlanarSurface
+    :param multipolygon_coords:
+       an array or list of shape (P, 5, 3) coming from geojson
+    :returns: a BaseRupture with a PlanarSurface or a multiPlanarSurface
     """
-    if msr is None:
-        from openquake.hazardlib.scalerel.wc1994 import WC1994
-        msr = WC1994()
-    surf = PlanarSurface.from_corner_points(*corners)
-    hc = surf.get_middle_point()
-    rup = BaseRupture(mag, rake, trt, hc, surf)
+    # NB: in geojson the last vertex is the same as the first, so I discard it
+    coords = numpy.array(multipolygon_coords)[:, :4, :]  # shape (P, 4, 3)
+    P, vertices, _ = coords.shape
+    if vertices != 4:
+        raise ValueError('Expecting 4 vertices, got %d', vertices)
+    if P == 1:
+        surf = PlanarSurface.from_array(coords[0, :, :].T)
+    else:
+        surf = geo.MultiSurface([geo.PlanarSurface.from_array(array.T)
+                                 for array in coords])
+    rup = BaseRupture(mag, rake, trt, surf.get_middle_point(), surf)
     rup.rup_id = 0
     return rup
 

@@ -21,7 +21,8 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import BaseRupture, \
-    ParametricProbabilisticRupture, NonParametricProbabilisticRupture
+    ParametricProbabilisticRupture, NonParametricProbabilisticRupture, \
+    get_multiplanar
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -84,6 +85,17 @@ class RuptureCreationTestCase(unittest.TestCase):
     def test_rupture_topo(self):
         rupture = make_rupture(BaseRupture, hypocenter=Point(5, 6, -2))
         self.assertEqual(rupture.hypocenter.depth, -2)
+
+    def test_planar(self):
+        mpoly = []
+        rupture = get_multiplanar(mpoly, mag=6, rake=0, trt='*')
+        for surf in rupture.surface:
+            assert isinstance(surf, PlanarSurface)
+
+    def test_multiplanar(self):
+        poly = []
+        rupture = get_multiplanar([poly], mag=6, rake=0, trt='*')
+        assert isinstance(rupture.surface, PlanarSurface)
 
 
 class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
