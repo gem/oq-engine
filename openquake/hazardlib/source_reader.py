@@ -723,7 +723,7 @@ class CompositeSourceModel:
                     max(hint, splits), oq.max_sites_disagg))
             else:
                 blocks = list(general.split_in_blocks(
-                    sg, min(hint, 100), lambda s: s.weight))
+                    sg, hint, lambda s: s.weight))
                 tilegetters = list(sitecol.split(
                     splits, oq.max_sites_disagg))
 
