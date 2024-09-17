@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import config
+from openquake.baselib import config, parallel
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
@@ -77,7 +77,7 @@ def main(
         list_hazard_calculations=False,
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
-        multi=False,
+        seq=False,
         reuse_input=False,
         *,
         log_file=None,
@@ -173,8 +173,12 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
+        if (len(job_inis) > 1 and not seq and
+                parallel.oq_distribute() in ('no', 'processpool')):
+            sys.exit('Please specify --seq if you want to run multiple '
+                     'jobs sequentially')
         jobs = create_jobs(job_inis, log_level, log_file, user_name,
-                           hc_id, multi)
+                           hc_id, not seq)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
@@ -244,7 +248,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.multi = 'Run multiple job.inis in parallel'
+main.seq = 'Run multiple job.inis sequentially'
 main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
 
 # options

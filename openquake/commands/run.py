@@ -115,7 +115,7 @@ def main(job_ini,
         dic.update(params)
         dic['exports'] = ','.join(exports)
     jobs = create_jobs(dics, loglevel, hc_id=hc,
-                       user_name=user_name, host=host, multi=False)
+                       user_name=user_name, host=host, multi=True)
     job_id = jobs[0].calc_id
     run_jobs(jobs, nodes=nodes)
     return job_id

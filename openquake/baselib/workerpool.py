@@ -242,7 +242,7 @@ def debug_task(msg, mon):
 
 
 def call(func, args, taskno, mon, executing):
-    fname = os.path.join(executing, str(taskno))
+    fname = os.path.join(executing, f'{mon.calc_id}-{taskno}')
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
