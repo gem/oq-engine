@@ -42,10 +42,7 @@ from json.decoder import JSONDecodeError
 from openquake.baselib.node import (
     node_from_xml, node_to_xml, Node, floatformat)
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.source.rupture import get_multiplanar
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -212,78 +209,20 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
-def make_surface_from_pt_set(rup_coords):
-    corner_pts = [Point(*cc) for cc in rup_coords]
-    surf = PlanarSurface.from_corner_points(*corner_pts)
-    return surf
-
 
 def convert_to_oq_rupture(rup_json):
-    # NOTE: adapted from
-    # https://github.com/gem/earthquake-scenarios/blob/main/src/2_1_rupture_usgs_json_to_oq_xml.ipynb
+    """
+    Convert USGS json into an hazardlib rupture
+    """
     ftype = rup_json['features'][0]['geometry']['type']
-    # NOTE: the code in the notebook overrides the rake found in metadata.
-    # # Set rake to a reference value
-    # rup_json['metadata']['rake'] = rake
-    if ftype == 'Point':
-        raise ValueError('Point geometries are not supported in this context.')
-    if ftype == 'MultiPolygon':
-        coords = numpy.array(
-           rup_json['features'][0]['geometry']['coordinates'][0])
-        # Define rupture type and coordinates
-        if len(coords) == 1:
-            num_points = len(coords[0]) - (len(coords[0]) % 2)
-            # Single plane
-            if num_points == 4:
-                mode = "PlanarSurface"
-                rup_coordinates = coords[0][:num_points]
-            else:
-                mode = "ComplexSurface"
-                raise ValueError(
-                    'Ruptures with complex geometries are not supported yet')
-        else:
-            mode = "MultiSurface"
-            rup_coordinates = numpy.array(
-                rup_json['features'][0]['geometry']['coordinates'][0])
-    # print(f'Coordinates: {rup_coordinates}')
-    hyp_lon = rup_json['metadata']['lon']
-    hyp_lat = rup_json['metadata']['lat']
+    assert ftype == 'MultiPolygon', ftype
+    multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
     hyp_depth = rup_json['metadata']['depth']
-    hypocenter = Point(hyp_lon, hyp_lat, hyp_depth)
-    try:
-        rake = rup_json['metadata']['rake']
-    except KeyError:
-        logging.info(
-            'The rake was not found in the metadata. Setting it to 0.')
-        rake = 0
-
+    rake = rup_json['metadata'].get('rake', 0)
     trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
-
     Mw = rup_json['metadata']['mag']
-
-    # Create surface
-    if mode == "PlanarSurface":
-        surf = make_surface_from_pt_set(rup_coordinates)
-        rupture = ParametricProbabilisticRupture(
-            Mw, rake, trt, hypocenter, surf, 1.0, PoissonTOM(1.0))
-    elif mode == "MultiSurface":
-        surfaces = {}
-        for i, pt_set in enumerate(rup_coordinates):
-            assert len(pt_set) == 5, f"""Multi planar with complex planes.
-            More than 4 points in set: {pt_set}"""
-            surfaces[i] = make_surface_from_pt_set(pt_set[:4])
-        rup_idxs = [list(surfaces.keys())]
-        sections = list(surfaces.values())
-        pmfs = [[0.0, 1.0]]
-        source = MultiFaultSource("01", "Multi-Fault rupture",
-                                  trt, rup_idxs, pmfs, [Mw], [rake])
-        source.set_sections(sections)
-        for rupture in source.iter_ruptures():
-            # FIXME: is this supposed to get the last rupture?
-            rupture = rupture
-    else:
-        raise AttributeError(f'{mode} not supported')
-    return rupture
+    rup = get_multiplanar(multicoords, Mw, rake, trt)
+    return rup
 
 
 # Namespace

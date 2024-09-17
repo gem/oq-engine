@@ -86,14 +86,18 @@ class RuptureCreationTestCase(unittest.TestCase):
         rupture = make_rupture(BaseRupture, hypocenter=Point(5, 6, -2))
         self.assertEqual(rupture.hypocenter.depth, -2)
 
-    def test_planar(self):
-        mpoly = []
+    def test_multiplanar(self):
+        mpoly = [[[-72, -31, 0.1], [-72, -30, 0.1], [-71, -30, 30.], [-71, -31, 30],
+                  [-72, -31, 0.1]],
+                 [[-72, -32, 0.1], [-72, -31, 0.1], [-71, -31, 17], [-71, -32, 17],
+                  [-72, -32, 0.1]]]
         rupture = get_multiplanar(mpoly, mag=6, rake=0, trt='*')
-        for surf in rupture.surface:
+        for surf in rupture.surface.surfaces:
             assert isinstance(surf, PlanarSurface)
 
-    def test_multiplanar(self):
-        poly = []
+    def test_planar(self):
+        poly = [[-72, -31, 0.1], [-72, -30, 0.1], [-71, -30, 30.], [-71, -31, 30],
+                [-72, -31, 0.1]]
         rupture = get_multiplanar([poly], mag=6, rake=0, trt='*')
         assert isinstance(rupture.surface, PlanarSurface)
 
