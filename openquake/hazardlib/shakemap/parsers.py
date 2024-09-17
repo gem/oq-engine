@@ -42,6 +42,7 @@ from json.decoder import JSONDecodeError
 from openquake.baselib.node import (
     node_from_xml, node_to_xml, Node, floatformat)
 from openquake.hazardlib.source.rupture import get_multiplanar
+from openquake.hazardlib import nrml, sourceconverter
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -620,6 +621,19 @@ def download_rupture_dict(id, ignore_shakemap=False):
         f" Reference: {md['reference']}.-->\n")
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     rupture_file = rup_to_file(oq_rup, temp_file.name, comment_str)
+    try:
+        [rup_node] = nrml.read(rupture_file)
+        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+        conv.convert_node(rup_node)
+    except ValueError as exc:
+        logging.error('', exc_info=True)
+        error_msg = (
+            f'Unable to convert the rupture from the USGS format: {exc}')
+        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
+                'mag': md['mag'], 'rake': md['rake'],
+                'local_timestamp': str(local_time), 'time_event': time_event,
+                'is_point_rup': True,
+                'usgs_id': id, 'rupture_file': None, 'error': error_msg}
     return {'lon': lon, 'lat': lat, 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
