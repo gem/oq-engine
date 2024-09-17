@@ -126,12 +126,16 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 
 def _gen(cmaker, blocks):
+    # limit the data transfer
     if len(blocks) <= 100:
         yield cmaker, blocks
     else:
         hint = len(blocks) / len(cmaker.gsims)
-        blocks = split_in_blocks(sum(blocks, []),  hint)
-        for cm in cmaker.split():
+        sources = []
+        for block in blocks:
+            sources.extend(blocks)
+        blocks[:] = split_in_blocks(sources,  hint)
+        for cm in cmaker.split(1):
             yield cm, blocks
 
 
