@@ -191,6 +191,25 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(data['tiles'], 1)
         self.assertEqual(data['blocks'], 2)
 
+    def test_case_22_bis(self):
+        # crossing date line calculation for Alaska
+        # this also tests the splitting in tiles
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(config.directory, {'custom_tmp': ''}):
+            self.assert_curves_ok([
+                '/hazard_curve-mean-PGA.csv',
+                'hazard_curve-mean-SA(0.1)',
+                'hazard_curve-mean-SA(0.2).csv',
+                'hazard_curve-mean-SA(0.5).csv',
+                'hazard_curve-mean-SA(1.0).csv',
+                'hazard_curve-mean-SA(2.0).csv',
+        ], case_22.__file__, delta=1E-6)
+        data = self.calc.datastore['source_groups']
+        self.assertTrue(data.attrs['tiling'])
+        self.assertEqual(data['gsims'], 4)
+        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['blocks'], 2)
+
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
