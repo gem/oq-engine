@@ -884,15 +884,33 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-def fix_order(array43):
+def fix_vertices_order(array43):
     """
     Make sure the point inside array43 are in the form top_left, top_right,
     bottom_left, bottom_right
+    >>> array43 = numpy.array(
+    ...    [[-99.7 ,  16.82,   9.  ],
+    ...     [-99.92,  16.9 ,   9.  ],
+    ...     [-99.84,  17.09,  17.23],
+    ...     [-99.63,  17.02,  17.23]])
+    >>> fix_vertices_order(array43)
+    array([[-99.84,  17.09,  17.23],
+           [-99.63,  17.02,  17.23],
+           [-99.92,  16.9 ,   9.  ],
+           [-99.7 ,  16.82,   9.  ]])
     """
-    v0, v1, v2, v3 = array43
-    # TODO
+    # lat is the second column of the array; sort to have the highest lat first
+    sorted_by_lat = array43[array43[:, 1].argsort()[::-1]]
+    top_points = sorted_by_lat[:2]  # highest 2 lat
+    bottom_points = sorted_by_lat[2:]  # lowest 2 lat
+    top_left = top_points[numpy.argmin(top_points[:, 0])]   # smallest lon
+    top_right = top_points[numpy.argmax(top_points[:, 0])]  # largest lon
+    # sorting by lon
+    bottom_left = bottom_points[numpy.argmin(bottom_points[:, 0])]
+    bottom_right = bottom_points[numpy.argmax(bottom_points[:, 0])]
+    return numpy.array([top_left, top_right, bottom_left, bottom_right])
 
-    
+
 def get_multiplanar(multipolygon_coords, mag, rake, trt):
     """
     :param multipolygon_coords:
@@ -901,12 +919,11 @@ def get_multiplanar(multipolygon_coords, mag, rake, trt):
     """
     # NB: in geojson the last vertex is the same as the first, so I discard it
     coords = numpy.array(multipolygon_coords, float)[:, :4, :]  # shape (P, 4, 3)
-    for p, array43 in enumerate(coords):
-        coords[p] = fix_order(array43)
-
     P, vertices, _ = coords.shape
     if vertices != 4:
         raise ValueError('Expecting 4 vertices, got %d', vertices)
+    for p, array43 in enumerate(coords):
+        coords[p] = fix_vertices_order(array43)
     if P == 1:
         surf = PlanarSurface.from_array(coords[0, :, :].T)
     else:
@@ -1004,4 +1021,3 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     rup.rup_id = 0
     vars(rup).update(vars(hypocenter))
     return rup
-    
