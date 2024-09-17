@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the `oq engine` command to run parallel calculations by default
+    unless the `--seq` flag is passed; removed the `--multi` flag
   * Internal: reduced the space used by the CollapsedPointSources (2.7x)
   * Fixed the site model association procedure to work in conditioned
     scenario calculations
