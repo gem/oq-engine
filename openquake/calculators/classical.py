@@ -29,7 +29,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, block_splitter)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -123,6 +123,16 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], rupdata[par])
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
+
+
+def _gen(cmaker, blocks):
+    if len(blocks) <= 100:
+        yield cmaker, blocks
+    else:
+        hint = len(blocks) / len(cmaker.gsims)
+        blocks = split_in_blocks(sum(blocks, []),  hint)
+        for cm in cmaker.split():
+            yield cm, blocks
 
 
 #  ########################### task functions ############################ #
@@ -576,10 +586,10 @@ class ClassicalCalculator(base.HazardCalculator):
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
-            for block in blocks:
-                for tgetters in block_splitter(tilegetters, splits):
-                    allargs.append((block, tgetters, cmaker, ds))
-                n_out.append(len(tilegetters))
+           for cm, blocks in _gen(cmaker, blocks):
+               for block in blocks:
+                   allargs.append((block, tilegetters, cm, ds))
+                   n_out.append(len(tilegetters))
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))

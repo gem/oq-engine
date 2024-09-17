@@ -725,8 +725,7 @@ class CompositeSourceModel:
                 blocks = list(general.split_in_blocks(
                     sg, min(hint, 100), lambda s: s.weight))
                 tilegetters = list(sitecol.split(
-                    numpy.ceil(G * mb_per_gsim / max_mb * hint / 100),
-                    oq.max_sites_disagg))
+                    splits, oq.max_sites_disagg))
 
             self.splits.append(splits)
             cmaker.tiling = tiling
