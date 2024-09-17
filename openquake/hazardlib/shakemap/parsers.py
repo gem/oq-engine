@@ -41,7 +41,6 @@ import numpy
 from json.decoder import JSONDecodeError
 from openquake.baselib.node import (
     node_from_xml, node_to_xml, Node, floatformat)
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.source.rupture import get_multiplanar
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -207,7 +206,6 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
     except FileNotFoundError as e:
         raise FileNotFoundError(
             'USGS xml grid file could not be found at %s' % grid_url) from e
-
 
 
 def convert_to_oq_rupture(rup_json):
