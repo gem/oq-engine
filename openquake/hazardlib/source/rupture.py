@@ -888,11 +888,14 @@ def fix_vertices_order(array43):
     """
     Make sure the point inside array43 are in the form top_left, top_right,
     bottom_left, bottom_right
-    >>> array43 = numpy.array(
-    ...    [[-99.7 ,  16.82,   9.  ],
-    ...     [-99.92,  16.9 ,   9.  ],
-    ...     [-99.84,  17.09,  17.23],
-    ...     [-99.63,  17.02,  17.23]])
+
+    Example:
+    >>> array43 = numpy.array([
+    ...    [-99.7 ,  16.82,   9.  ],
+    ...    [-99.92,  16.9 ,   9.  ],
+    ...    [-99.84,  17.09,  17.23],
+    ...    [-99.63,  17.02,  17.23]
+    ... ])
     >>> fix_vertices_order(array43)
     array([[-99.84,  17.09,  17.23],
            [-99.63,  17.02,  17.23],
