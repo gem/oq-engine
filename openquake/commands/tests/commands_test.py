@@ -563,6 +563,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline("openquake.commands collect_jobs -2 -3")
         self.assertIn('All jobs completed correctly', str(p))
+
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
