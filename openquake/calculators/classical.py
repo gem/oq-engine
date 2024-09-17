@@ -135,7 +135,8 @@ def _gen(cmaker, blocks, max_weight):
         sources = []
         for block in blocks:
             sources.extend(block)
-        blocks[:] = block_splitter(sources, max_weight * len(cmaker.gsims))
+        blocks[:] = block_splitter(sources, max_weight * len(cmaker.gsims),
+                                   lambda src: src.weight)
         for cm in cmaker.split(1):
             yield cm, blocks
 
