@@ -7,7 +7,7 @@ from openquake.baselib import parallel, config
 submit_cmd = list(config.distribution.submit_cmd.split())
 SLURM_BATCH = '''\
 #!/bin/bash
-#SBATCH --job-name=oq-{job_id}
+#SBATCH --job-name=oq{job_id}
 #SBATCH --time={slurm_time}
 #SBATCH --cpus-per-task={num_cores}
 #SBATCH --nodes={nodes}
