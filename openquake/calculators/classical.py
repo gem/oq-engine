@@ -133,7 +133,7 @@ def _gen(cmaker, blocks):
         hint = len(blocks) / len(cmaker.gsims)
         sources = []
         for block in blocks:
-            sources.extend(blocks)
+            sources.extend(block)
         blocks[:] = split_in_blocks(sources,  hint)
         for cm in cmaker.split(1):
             yield cm, blocks
