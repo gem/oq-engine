@@ -47,6 +47,8 @@ GST = {'gsim_logic_tree': gettemp('''\
        "source_model_logic_tree": "fake"}
 
 fakeinputs = {"job_ini": "job.ini", "source_model_logic_tree": "fake"}
+fakeinputs_risk = {"job_ini": "job.ini", "source_model_logic_tree": "fake",
+                   "structural_vulnerability": "fake"}
 
 
 class OqParamTestCase(unittest.TestCase):
@@ -95,14 +97,14 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical_risk',
                 truncation_level='3',
                 hazard_calculation_id=None, hazard_output_id=None,
-                inputs=fakeinputs, maximum_distance='10', sites='',
+                inputs=fakeinputs_risk, maximum_distance='10', sites='',
                 hazard_maps='true',  poes='').validate()
         with self.assertRaises(ValueError):
             OqParam(
                 calculation_mode='classical_risk',
                 truncation_level='3',
                 hazard_calculation_id=None, hazard_output_id=None,
-                inputs=fakeinputs, maximum_distance='10', sites='',
+                inputs=fakeinputs_risk, maximum_distance='10', sites='',
                 uniform_hazard_spectra='true',  poes='').validate()
 
     def test_site_model(self):
