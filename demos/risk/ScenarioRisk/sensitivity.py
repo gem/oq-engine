@@ -27,7 +27,7 @@ def path(name, cwd=os.path.dirname(__file__)):
     return os.path.join(cwd, name)
 
 
-job_ini = dict(
+base_ini = dict(
     description="scenario_risk with strike ",
     calculation_mode="scenario_risk",
     region="78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5",
@@ -46,7 +46,7 @@ def run_risk(strikes):
     "Run a scenario_risk calculation for each strike"
     inis = []
     for strike in strikes:
-        ini = job_ini.copy()
+        ini = base_ini.copy()
         ini['description'] += str(strike)
         ini['rupture_dict'] = str({
             'lon': 80, 'lat': 30, 'dep': 10, 'mag': 6, 'rake': 0,

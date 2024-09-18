@@ -124,7 +124,7 @@ The relevant code is something like this:
   from openquake.engine import engine
 
   # template for the ini parameters
-  job_ini = dict(
+  base_ini = dict(
       description="scenario_risk with strike ",
       calculation_mode="scenario_risk",
       region="78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5",
@@ -142,7 +142,7 @@ The relevant code is something like this:
       # build ini dictionaries with different strikes
       inis = []
       for strike in strikes:
-          ini = job_ini.copy()
+          ini = base_ini.copy()
           ini['description'] += str(strike)
           ini['rupture_dict'] = str({
               'lon': 80, 'lat': 30, 'dep': 10, 'mag': 6, 'rake': 0,
@@ -154,7 +154,7 @@ The relevant code is something like this:
   if __name__ == '__main__':
       run_risk(strikes=[0, 90, 180])
 
-Notice that this documentation can go out of sync with the code, the version
+Notice that this documentation can get out of sync with the code. The version
 which is tested and guaranteed to run is the one at https://github.com/gem/oq-engine/blob/master/demos/risk/ScenarioRisk/sensitivity.py, which also sets the environment
 variable OQ_DISTRIBUTE to 'zmq'. This is the easiest way to parallelize the jobs,
 which makes sense since in this case the jobs are small.
