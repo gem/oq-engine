@@ -191,7 +191,7 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    multi = False
+    multi = False  # set in create_jobs
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
@@ -203,7 +203,8 @@ class LogContext:
         if 'inputs' not in self.params:  # for reaggregate
             self.tag = tag
         else:
-            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
+            inputs = self.params['inputs']
+            self.tag = tag or get_tag(inputs.get('job_ini', '<in-memory>'))
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         calc_id = int(params.get('job_id', 0))

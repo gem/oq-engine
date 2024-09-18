@@ -503,12 +503,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     (len(arr) - len(uni), dupl[0, 2]))
 
         if oq.avg_losses:
-            logging.info('Storing avg_losses-rlzs')
             for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]
                 name = 'avg_losses-rlzs/' + lt
+                logging.info(f'Storing {name}')
                 self.datastore[name][:] = al
                 stats.set_rlzs_stats(self.datastore, name,
                                      asset_id=self.assetcol['id'])
