@@ -46,7 +46,7 @@ def run_risk(strikes):
         ini = job_ini.copy()
         ini['description'] += str(strike)
         ini['rupture_dict'] = str({
-            'lon': 80, 'lat': 30, 'dep': 10, 'mag': 8, 'rake': 0,
+            'lon': 80, 'lat': 30, 'dep': 10, 'mag': 6, 'rake': 0,
             'strike': strike, 'dip': 90})
         inis.append(ini)
     os.environ['OQ_DISTRIBUTE'] = 'zmq'  # run the jobs in parallel

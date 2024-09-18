@@ -115,10 +115,11 @@ files, you can generate dictionaries, which is a lot more convenient.
 There is an example in the directory
 demos/risk/ScenarioRisk, called ``sensitivity.py``, which is performing
 scenario risk calculations starting for the same planar rupture, but with
-different values of the strike angle (0, 90 and 180 degrees). This is useful
-for a sensitivity analysis. The relevant code is something like this:
+different values of the strike angle (0, 90 and 180 degrees).
+The relevant code is something like this:
 
 .. python:
+  """Sensitivy of the risk from the strike parameter"""
   import os
   from openquake.engine import engine
 
@@ -144,7 +145,7 @@ for a sensitivity analysis. The relevant code is something like this:
           ini = job_ini.copy()
           ini['description'] += str(strike)
           ini['rupture_dict'] = str({
-              'lon': 80, 'lat': 30, 'dep': 10, 'mag': 8, 'rake': 0,
+              'lon': 80, 'lat': 30, 'dep': 10, 'mag': 6, 'rake': 0,
               'strike': strike, 'dip': 90})
           inis.append(ini)
       # run sequentially the calculations
@@ -164,25 +165,25 @@ on the risk by looking at the portfolio_loss:
 .. bash::
 
    $ oq show portfolio_loss -3  # strike=0
-   +------+-------------+
-   | loss | structural  |
-   +------+-------------+
-   | avg  | 880_067_840 |
-   +------+-------------+
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 77_607_416 |
+   +------+------------+
 
    $ oq show portfolio_loss -2  # strike=90
-   +------+-------------+
-   | loss | structural  |
-   +------+-------------+
-   | avg  | 819_692_928 |
-   +------+-------------+
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 78_381_808 |
+   +------+------------+
 
    $ oq show portfolio_loss -1  # strike=180
-   +------+-------------+
-   | loss | structural  |
-   +------+-------------+
-   | avg  | 871_352_576 |
-   +------+-------------+
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 77_601_176 |
+   +------+------------+
 
 The exact numbers may change depending on the version of the engine.
 
