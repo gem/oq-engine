@@ -160,9 +160,7 @@ variable OQ_DISTRIBUTE to 'zmq'. This is the easiest way to parallelize the jobs
 which makes sense since in this case the jobs are small.
 
 After running the script you will have 3 calculations and you can see the effect
-on the risk by looking at the portfolio_loss:
-
-.. bash::
+on the risk by looking at the portfolio_loss::
 
    $ oq show portfolio_loss -3  # strike=0
    +------+------------+

@@ -191,7 +191,6 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    multi = False  # set in create_jobs
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
