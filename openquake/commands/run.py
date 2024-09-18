@@ -88,9 +88,10 @@ def main(job_ini,
     user_name = getpass.getuser()
 
     # automatically create the user db if missing
-    if user_name != 'openquake' and not os.path.exists(config.dbserver.file):
-         db.actions.upgrade_db(dbapi.db)
-
+    if config.dbserver.host == '127.0.0.1' and not config.multi_user:
+        dbfile = os.path.expanduser(config.dbserver.file)
+        if not os.path.exists(dbfile):
+            db.actions.upgrade_db(dbapi.db)
     try:
         host = socket.gethostname()
     except Exception:  # gaierror
