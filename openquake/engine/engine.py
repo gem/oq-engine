@@ -395,9 +395,13 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                 pickle.dump(jobctxs, f)
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
-        elif len(jobctxs) > 1 and not precalc and dist in ('zmq', 'slurm'):
-            parallel.multispawn(
-                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
+        elif len(jobctxs) > 1 and dist in ('zmq', 'slurm'):
+            if precalc:
+                run_calc(jobctxs[0])
+                args = [(ctx,) for ctx in jobctxs[1:]]
+            else:
+                args = [(ctx,) for ctx in jobctxs]
+            parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
