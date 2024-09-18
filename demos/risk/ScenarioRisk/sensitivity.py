@@ -22,12 +22,17 @@ import os
 from openquake.engine import engine
 
 
+def path(name, cwd=os.path.dirname(__file__)):
+    "From relative path to absolute path"
+    return os.path.join(cwd, name)
+
+
 job_ini = dict(
     description="scenario_risk with strike ",
     calculation_mode="scenario_risk",
     region="78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5",
-    inputs={'exposure': ["exposure_model.xml"],
-            'structural_vulnerability': 'structural_vulnerability_model.xml'},
+    inputs={'exposure': [path("exposure_model.xml")],
+            'structural_vulnerability': path('structural_vulnerability_model.xml')},
     reference_vs30_value="760.0",
     reference_depth_to_1pt0km_per_sec='100.0',
     intensity_measure_types="PGA",
@@ -38,9 +43,7 @@ job_ini = dict(
 
 
 def run_risk(strikes):
-    """
-    Run a scenario_risk calculation for each strike
-    """
+    "Run a scenario_risk calculation for each strike"
     inis = []
     for strike in strikes:
         ini = job_ini.copy()
