@@ -119,7 +119,7 @@ different values of the strike angle (0, 90 and 180 degrees).
 The relevant code is something like this:
 
 .. python:
-  """Sensitivy of the risk from the strike parameter"""
+  """Sensitivity of the risk from the strike parameter"""
   import os
   from openquake.engine import engine
 
