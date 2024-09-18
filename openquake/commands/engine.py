@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import config, parallel
+from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
@@ -77,7 +77,7 @@ def main(
         list_hazard_calculations=False,
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
-        seq=False,
+        multi=False,
         reuse_input=False,
         *,
         log_file=None,
@@ -173,16 +173,11 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        if (len(job_inis) > 1 and not seq and
-                parallel.oq_distribute() in ('no', 'processpool')):
-            sys.exit('Please specify --seq if you want to run multiple '
-                     'jobs sequentially')
-        jobs = create_jobs(job_inis, log_level, log_file, user_name,
-                           hc_id, not seq)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name, hc_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs, nodes=nodes, sbatch=True)
+        run_jobs(jobs, nodes=nodes, sbatch=True, precalc=not multi)
 
     # hazard
     elif list_hazard_calculations:
