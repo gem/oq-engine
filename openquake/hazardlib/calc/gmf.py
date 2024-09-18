@@ -241,7 +241,7 @@ class GmfComputer(object):
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
-        self.eps = numpy.zeros((E, M), F32)  # not the same
+        self.inter_eps = numpy.zeros((E, M), F32)  # not the same
 
     def build_sig_eps(self, se_dt):
         """
@@ -253,7 +253,7 @@ class GmfComputer(object):
         sig_eps['rlz_id'] = self.rlz
         for m, imt in enumerate(self.cmaker.imtls):
             sig_eps[f'sig_inter_{imt}'] = self.sig[:, m]
-            sig_eps[f'eps_inter_{imt}'] = self.eps[:, m]
+            sig_eps[f'eps_inter_{imt}'] = self.inter_eps[:, m]
         return sig_eps
 
     def update(self, data, array, rlzs, mean, max_iml=None):
@@ -338,7 +338,7 @@ class GmfComputer(object):
                     # arrays of random numbers of shape (M, N, E) and (M, E)
                     intra_eps = [ccdist.rvs((self.N, E), rng)
                                  for _ in range(self.M)]
-                    self.eps[idxs] = self.cross_correl.get_inter_eps(
+                    self.inter_eps[idxs] = self.cross_correl.get_inter_eps(
                         self.imts, E, rng).T
                 for m, imt in enumerate(self.imts):
                     try:
@@ -364,13 +364,13 @@ class GmfComputer(object):
             # mea, tau, phi with shapes (N,1), (N,N), (N,N)
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
-            eps = self.cmaker.oq.correlation_cutoff
+            cutoff = self.cmaker.oq.correlation_cutoff
             if self.cmaker.truncation_level <= 1E-9:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
                 # add a cutoff to remove negative eigenvalues
-                cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
+                cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * cutoff
                 arr = rng.multivariate_normal(
                     mu_Y.flatten(), cov_Y_Y, size=E,
                     check_valid="raise", tol=1e-5, method="cholesky")
@@ -408,7 +408,7 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau[:, None] * self.eps[idxs, m]
+            inter_res = tau[:, None] * self.inter_eps[idxs, m]
             # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + intra_res + inter_res, im != 'MMI')
             self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
