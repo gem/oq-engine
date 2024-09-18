@@ -23,7 +23,7 @@ from openquake.engine import engine
 
 
 def path(name, cwd=os.path.dirname(__file__)):
-    "From relative path to absolute path"
+    "From path relative to this directory to working path"
     return os.path.join(cwd, name)
 
 
