@@ -351,19 +351,24 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
 
     job_id = jobctxs[0].calc_id
     if precalc:
+        # assume the first job is a precalculation from which the other starts
         for jobctx in jobctxs[1:]:
             jobctx.params['hazard_calculation_id'] = job_id
-        job = logs.dbcmd('get_job', job_id)
-        ppath = job.ds_calc_dir + '.hdf5'
-        if os.path.exists(ppath):
-            version = logs.dbcmd('engine_version')
-            with h5py.File(ppath, 'r') as f:
-                prev_version = f.attrs['engine_version']
-                if prev_version != version:
-                    # here the logger is not initialized yet
-                    print('Starting from a hazard (%d) computed with'
-                          ' an obsolete version of the engine: %s' %
-                          (job_id, prev_version))
+    else:
+        for jobctx in jobctxs:
+            hc_id = jobctx.params.get('hazard_calculation_id')
+            if hc_id:
+                job = logs.dbcmd('get_job', hc_id)
+                ppath = job.ds_calc_dir + '.hdf5'
+                if os.path.exists(ppath):
+                    version = logs.dbcmd('engine_version')
+                    with h5py.File(ppath, 'r') as f:
+                        prev_version = f.attrs['engine_version']
+                        if prev_version != version:
+                            # here the logger is not initialized yet
+                            print('Starting from a hazard (%d) computed with'
+                                  ' an obsolete version of the engine: %s' %
+                                  (hc_id, prev_version))
     if dist == 'slurm' and sbatch:
         pass  # do not wait in the job queue
     else:
