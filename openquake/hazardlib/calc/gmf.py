@@ -31,7 +31,10 @@ from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
+U8 = numpy.uint8
+U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 
 
@@ -191,6 +194,9 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
+    mtp_dt = numpy.dtype([('rup_id', I64), ('site_id', U32), ('gsim_id', U16),
+                          ('imt_id', U8), ('mea', F32), ('tau', F32), ('phi', F32)])
+
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an EBRupture instance containing a
     # :class:`openquake.hazardlib.source.rupture.Rupture` instance as an
@@ -214,6 +220,7 @@ class GmfComputer(object):
         self.amplifier = amplifier
         self.sec_perils = sec_perils
         self.ebrupture = rupture
+        self.rup_id = rupture.id
         self.seed = rupture.seed
         rupture = rupture.rupture  # the underlying rupture
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
@@ -225,6 +232,7 @@ class GmfComputer(object):
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
+        self.mea_tau_phi = []
         self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
         self.mmi_index = -1
         for m, imt in enumerate(cmaker.imtls):
@@ -318,6 +326,7 @@ class GmfComputer(object):
         rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
+            gs.gid = self.cmaker.gid[g]
             idxs, = numpy.where(numpy.isin(self.rlz, rlzs))
             E = len(idxs)
             if E == 0:  # crucial for performance
@@ -379,7 +388,15 @@ class GmfComputer(object):
 
         # regular case, sets self.sig, returns gmf
         im = imt.string
-        mean, sig, tau, phi = mean_stds
+        mean, sig, tau, phi = mean_stds  # shapes N
+        if self.cmaker.oq.mea_tau_phi:
+            min_iml = self.cmaker.min_iml[m]
+            gmv = numpy.exp(mean)
+            for s, sid in enumerate(self.ctx.sids):
+                if gmv[s] > min_iml:
+                    self.mea_tau_phi.append(
+                        (self.rup_id, sid, gsim.gid, m, mean[s], tau[s], phi[s]))
+
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
