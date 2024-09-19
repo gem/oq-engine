@@ -591,6 +591,8 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
+        if ntiles <= 1:
+            return [TileGetter(0, 1)]
         maxtiles = numpy.ceil(len(self) / minsize)
         ntiles = min(numpy.ceil(ntiles), maxtiles)
         return [TileGetter(i, ntiles) for i in range(int(ntiles))]
