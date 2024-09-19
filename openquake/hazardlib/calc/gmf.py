@@ -329,8 +329,7 @@ class GmfComputer(object):
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
             with cmon:
                 E = len(idxs)
-                result = numpy.zeros(
-                    (len(self.imts), len(self.ctx.sids), E), F32)
+                result = numpy.zeros((self.M, self.N, E), F32)
                 ccdist = self.cross_correl.distribution
                 if conditioned:
                     intra_eps = [None] * self.M
