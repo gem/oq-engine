@@ -198,11 +198,13 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
+    oq = cmaker.oq
     alldata = []
     sig_eps = []
     times = []
-    max_iml = cmaker.oq.get_max_iml()
-    se_dt = sig_eps_dt(cmaker.oq.imtls)
+    max_iml = oq.get_max_iml()
+    se_dt = sig_eps_dt(oq.imtls)
+    mea_tau_phi = []
     for proxy in proxies:
         t0 = time.time()
         with fmon:
@@ -219,6 +221,9 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
                 df = computer.compute_all([mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, max_iml, mmon, cmon, umon)
+            if oq.mean_tau_phi:
+                mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
+                mea_tau_phi.append(mtp)
         sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
         times.append((proxy['id'], computer.ctx.rrup.min(), dt))
@@ -229,8 +234,12 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         return dict(gmfdata={}, times=times, sig_eps=())
 
     gmfdata = pandas.concat(alldata)  # ~40 MB
-    return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
-                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
+    dic = dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+               times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
+    if oq.mean_tau_phi:
+        mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
+        dic['mean_tau_phi'] = {col: mtpdata[col] for col in mtpdata.dtype.names}
+    return dic
 
 
 def event_based(proxies, cmaker, stations, dstore, monitor):
@@ -330,6 +339,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
@@ -360,6 +370,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
+        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         if station_data is not None:
             if parallel.oq_distribute() in ('zmq', 'slurm'):
@@ -477,11 +488,14 @@ class EventBasedCalculator(base.HazardCalculator):
             mosaic_df = readinput.read_mosaic_df(buffer=.1).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
-        for sg in self.csm.src_groups:
+        g_index = 0
+        for sg_id, sg in enumerate(self.csm.src_groups):
             if not sg.sources:
                 continue
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
+            cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
+            g_index += len(rgb)
             if oq.mosaic_model or 'geometry' in oq.inputs:
                 cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
@@ -561,6 +575,12 @@ class EventBasedCalculator(base.HazardCalculator):
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
+
+            # optionally save mean_tau_phi
+            mtp = result.pop('mean_tau_phi')
+            if mtp:
+                for col, arr in mtp.items():
+                    hdf5.extend(self.datastore[f'mean_tau_phi/{col}'], arr)
         return acc
 
     def _read_scenario_ruptures(self):
@@ -608,6 +628,7 @@ class EventBasedCalculator(base.HazardCalculator):
             rup = readinput.get_rupture(oq)
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+            self.cmaker.gid = numpy.arange(len(rlzs_by_gsim))
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
                 for i in range(ngmfs):

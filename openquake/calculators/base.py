@@ -43,6 +43,7 @@ from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
@@ -1380,6 +1381,9 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
                      imts=' '.join(map(str, prim_imts)),
                      investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
+    if oq.mean_tau_phi:
+        dstore.create_df('mean_tau_phi', GmfComputer.mtp_dt.descr)
+
     if data is not None:
         _df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, N, M + len(sec_imts)), F32)
