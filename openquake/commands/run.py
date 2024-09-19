@@ -88,8 +88,9 @@ def main(job_ini,
     user_name = getpass.getuser()
 
     # automatically create the user db if missing
-    if config.dbserver.host == '127.0.0.1' and (
-            config.dbserver.file == '~/oqdata/db.sqlite3'):
+    if (config.dbserver.host == '127.0.0.1' and
+        config.dbserver.file == '~/oqdata/db.sqlite3'
+        and user_name != 'openquake'):
         dbfile = os.path.expanduser(config.dbserver.file)
         if not os.path.exists(dbfile):
             db.actions.upgrade_db(dbapi.db)
