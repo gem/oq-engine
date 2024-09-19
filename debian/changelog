@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Added parameter `mea_tau_phi` to save the corrisponding parameters
-    for each rupture, site, gsim and imt in GMF calculations
+  * Added a parameter `mea_tau_phi` in the job.ini to save mean, tau and phi
+    for each rupture, site, gsim and imt in a GMF calculation
   * Internal: changed `oq run` to automatically generate the db when possible
   * Added a check on missing risk files
   * Reduced the space used by the CollapsedPointSources (2.7x)
