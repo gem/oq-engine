@@ -722,9 +722,10 @@ class CompositeSourceModel:
                     max(hint, splits), oq.max_sites_disagg))
             else:
                 blocks = list(general.split_in_blocks(
-                    sg, min(hint, 100), lambda s: s.weight))
+                    sg, min(hint, oq.max_blocks), lambda s: s.weight))
                 tilegetters = list(sitecol.split(
-                    int(G * mb_per_gsim / max_mb * hint / 100), oq.max_sites_disagg))
+                    int(G * mb_per_gsim / max_mb * hint / oq.max_blocks),
+                    oq.max_sites_disagg))
             self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
