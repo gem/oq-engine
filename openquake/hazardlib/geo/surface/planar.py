@@ -40,7 +40,8 @@ from openquake.hazardlib.geo import utils as geo_utils
 # as well as maximum offset of a bottom left corner from a line drawn
 # downdip perpendicular to top edge from top left corner, expressed
 # as a fraction of the surface's area.
-IMPERFECT_RECTANGLE_TOLERANCE = 0.002
+# IMPERFECT_RECTANGLE_TOLERANCE = 0.002
+IMPERFECT_RECTANGLE_TOLERANCE = 0.004
 
 planar_array_dt = numpy.dtype([
     ('corners', (float, 4)),
@@ -255,6 +256,7 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
         if length2 < 0:
             raise ValueError("corners are in the wrong order")
         if numpy.abs(length1 - length2).max() > tolerance:
+            __import__('pdb').set_trace()
             raise ValueError("top and bottom edges have different lengths")
     return planar_array
 

@@ -994,7 +994,7 @@ def fix_vertices_order(array43):
     two = array43[1]
     three = array43[2]
     four = array43[3]
-    return numpy.array([four, three, two, one])
+    return numpy.array([one, two, four, three])
 
 
 def get_multiplanar(multipolygon_coords, mag, rake, trt):
@@ -1004,7 +1004,8 @@ def get_multiplanar(multipolygon_coords, mag, rake, trt):
     :returns: a BaseRupture with a PlanarSurface or a multiPlanarSurface
     """
     # NB: in geojson the last vertex is the same as the first, so I discard it
-    coords = numpy.array(multipolygon_coords, float)[:, :4, :]  # shape (P, 4, 3)
+    # coords = numpy.array(multipolygon_coords, float)[:, :4, :]  # shape (P, 4, 3)
+    coords = numpy.array(multipolygon_coords, float)[:, :-1, :]  # shape (P, 4, 3)
     P, vertices, _ = coords.shape
     if vertices != 4:
         raise ValueError('Expecting 4 vertices, got %d', vertices)
