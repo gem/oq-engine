@@ -391,9 +391,11 @@ class GmfComputer(object):
         im = imt.string
         mean, sig, tau, phi = mean_stds  # shapes N
         if self.mean_tau_phi:
+            min_iml = self.cmaker.min_iml[m]
             for s, sid in enumerate(self.ctx.sids):
-                self.mea_tau_phi.append(
-                    (self.rup_id, sid, gsim.gid, m, mean[s], tau[s], phi[s]))
+                if mean[s] > min_iml:
+                    self.mea_tau_phi.append(
+                        (self.rup_id, sid, gsim.gid, m, mean[s], tau[s], phi[s]))
 
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
