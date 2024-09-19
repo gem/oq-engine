@@ -557,13 +557,13 @@ class EventBasedCalculator(base.HazardCalculator):
                     hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
-                for m in range(len(primary)):
+                for m, imt in enumerate(primary):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 df[f'gmv_{m}'])
                     if intra_residuals:
                         # tested in event_based/case_22
-                        hdf5.extend(self.datastore[f'gmf_data/intra_{m}'],
-                                    df[f'intra_{m}'])
+                        hdf5.extend(self.datastore[f'gmf_data/intra_{imt}'],
+                                    df[f'intra_{imt}'])
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
                                 df[sec_imt])
@@ -714,7 +714,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Compute and save avg_gmf, unless there are too many GMFs
         """
-        M = len(self.oqparam.get_primary_imtls())
+        primary = self.oqparam.get_primary_imtls()
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
@@ -726,7 +726,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         rlzs = self.datastore['events']['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
-        gmfields = ['eid'] + [f'gmv_{m}' for m in range(M)]
+        gmfields = ['eid'] + [f'gmv_{m}' for m in range(len(primary))]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')[gmfields]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)

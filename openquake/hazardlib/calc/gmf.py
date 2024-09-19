@@ -301,7 +301,7 @@ class GmfComputer(object):
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field] = gmv[:, m].T.reshape(-1)
             if self.intra_residuals:
-                data[f'intra_{m}'] = intra[:, m].T.reshape(-1)
+                data[f'intra_{self.imts[m]}'] = intra[:, m].T.reshape(-1)
 
         # build dataframe
         df = pandas.DataFrame(data)

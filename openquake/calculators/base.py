@@ -1366,11 +1366,11 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
         assert N is not None  # pass len(complete) here
     items = [('sid', U32 if N == 0 else data['sid']),
              ('eid', U32 if N == 0 else data['eid'])]
-    for m in range(M):
+    for m, imt in enumerate(prim_imts):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
         if oq.intra_residuals:
-            items.append((f'intra_{m}', F32))
+            items.append((f'intra_{imt}', F32))
     for imt in sec_imts:
         items.append((str(imt), F32 if N == 0 else data[imt]))
     if oq.investigation_time:
