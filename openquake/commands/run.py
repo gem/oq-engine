@@ -105,6 +105,8 @@ def main(job_ini,
     else:
         params = {}
     if hc:
+        if hc == -1:
+            hc = logs.dbcmd('get_job', -1, user_name).id
         params['hazard_calculation_id'] = str(hc)
     if concurrent_tasks is not None:
         params['concurrent_tasks'] = str(concurrent_tasks)
