@@ -194,6 +194,8 @@ def trivial(ctx, name):
 
 
 class Oq(object):
+    mean_tau_phi = False
+
     def __init__(self, **hparams):
         vars(self).update(hparams)
 
@@ -557,6 +559,8 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
         self.gsims = gsims
+        # NB: the gid array can be overridden later on
+        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         if isinstance(oq, dict):
             param = oq
             oq = Oq(**param)
