@@ -207,7 +207,7 @@ class GmfComputer(object):
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
         self.cmaker = cmaker
-        self.save_intra_res = cmaker.oq.save_intra_res
+        self.intra_residuals = cmaker.oq.intra_residuals
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.cmaker = cmaker
         self.gsims = sorted(cmaker.gsims)
@@ -300,7 +300,7 @@ class GmfComputer(object):
         ok = gmv.sum(axis=1).T.reshape(-1) > 0
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field] = gmv[:, m].T.reshape(-1)
-            if self.save_intra_res:
+            if self.intra_residuals:
                 data[f'intra_{m}'] = intra[:, m].T.reshape(-1)
 
         # build dataframe

@@ -543,7 +543,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sav_mon = self.monitor('saving gmfs')
         primary = self.oqparam.get_primary_imtls()
         sec_imts = self.oqparam.sec_imts
-        save_intra_res = self.oqparam.save_intra_res
+        intra_residuals = self.oqparam.intra_residuals
         with sav_mon:
             gmfdata = result.pop('gmfdata')
             if len(gmfdata):
@@ -560,8 +560,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 df[f'gmv_{m}'])
-                    if save_intra_res:
-                        # tested in 
+                    if intra_residuals:
+                        # tested in event_based/case_22
                         hdf5.extend(self.datastore[f'gmf_data/intra_{m}'],
                                     df[f'intra_{m}'])
                 for sec_imt in sec_imts:
