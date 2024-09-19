@@ -616,6 +616,33 @@ def download_rupture_dict(id, ignore_shakemap=False):
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': True,
                 'usgs_id': id, 'rupture_file': None, 'error': error_msg}
+
+    from openquake.calculators.postproc.plots import import_plt
+    from openquake.calculators.postproc.plots import add_borders
+    color = 'purple'
+    kind = 'Multi-point'
+    from openquake.commonlib import readinput
+    ZOOM_MARGIN = 2
+    plt = import_plt()
+    plt.figure(figsize=(6, 6))
+    _fix, ax = plt.subplots()
+    ax.set_aspect('equal')
+    ax.grid(True)
+    poly = oq_rup.surface.mesh.get_convex_hull()
+    min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
+    ax.fill(poly.lons, poly.lats, alpha=.5, color=color, label=kind)
+    ax.plot(oq_rup.hypocenter.x, oq_rup.hypocenter.y,
+            marker='*', color='orange', markersize=4, alpha=.5,
+            label='Hypocenter')
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    ax.set_xlim(min_x_ - ZOOM_MARGIN, max_x_ + ZOOM_MARGIN)
+    ax.set_ylim(min_y_ - ZOOM_MARGIN, max_y_ + ZOOM_MARGIN)
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
+    ax.set_title('Rupture for %s' % id)
+    plt.savefig('ruptures/Rupture_%s.png' % id, dpi=300)
+
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
@@ -629,11 +656,19 @@ def download_rupture_dict(id, ignore_shakemap=False):
         logging.error('', exc_info=True)
         error_msg = (
             f'Unable to convert the rupture from the USGS format: {exc}')
+
+        # FIXME:
+        raise
+
         return {'lon': lon, 'lat': lat, 'dep': md['depth'],
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': True,
                 'usgs_id': id, 'rupture_file': None, 'error': error_msg}
+
+    # FIXME:
+    raise RuntimeError('OK')
+
     return {'lon': lon, 'lat': lat, 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,

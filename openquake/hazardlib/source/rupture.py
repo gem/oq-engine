@@ -884,10 +884,89 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-def fix_vertices_order(array43):
+# def fix_vertices_order_lon(array43):
+#     """
+#     Make sure the point inside array43 are in the form top_left, top_right,
+#     bottom_left, bottom_right (where top corresponds to a smaller depth and
+#     bottom to a bigger depth, whereas left corresponds to a smaller longitude
+#     and right to a bigger longitude)
+
+#     :param array43: a numpy array of shape (4, 3), where each row represents a
+#         point in (lon, lat, depth)
+
+#     :returns: a numpy array of shape (4, 3) with reordered vertices
+
+#     Example:
+#     >>> array43 = numpy.array([
+#     ...    [-99.7 ,  16.82,   9.  ],
+#     ...    [-99.92,  16.9 ,   9.  ],
+#     ...    [-99.84,  17.09,  17.23],
+#     ...    [-99.63,  17.02,  17.23]
+#     ... ])
+#     >>> fix_vertices_order(array43)
+#     array([[-99.84,  17.09,  17.23],
+#            [-99.63,  17.02,  17.23],
+#            [-99.92,  16.9 ,   9.  ],
+#            [-99.7 ,  16.82,   9.  ]])
+#     """
+#     # Sort by depth, smallest depth first
+#     sorted_by_depth = array43[array43[:, 2].argsort()]
+#     top_points = sorted_by_depth[:2]
+#     bottom_points = sorted_by_depth[2:]
+#     # Sort the top points by longitude
+#     top_left = top_points[numpy.argmin(top_points[:, 0])]   # smallest lon
+#     top_right = top_points[numpy.argmax(top_points[:, 0])]  # largest lon
+#     # Sort the bottom points by longitude
+#     bottom_left = bottom_points[numpy.argmin(bottom_points[:, 0])]
+#     bottom_right = bottom_points[numpy.argmax(bottom_points[:, 0])]
+#     return numpy.array([top_left, top_right, bottom_left, bottom_right])
+
+
+# def fix_vertices_order_lat(array43):
+#     """
+#     Make sure the point inside array43 are in the form top_left, top_right,
+#     bottom_left, bottom_right (where top corresponds to a smaller depth and
+#     bottom to a bigger depth, whereas left corresponds to a smaller latitude
+#     and right to a bigger latitude)
+
+#     :param array43: a numpy array of shape (4, 3), where each row represents a
+#         point in (lon, lat, depth)
+
+#     :returns: a numpy array of shape (4, 3) with reordered vertices
+
+#     Example:
+#     >>> array43 = numpy.array([
+#     ...    [-99.7 ,  16.82,   9.  ],
+#     ...    [-99.92,  16.9 ,   9.  ],
+#     ...    [-99.84,  17.09,  17.23],
+#     ...    [-99.63,  17.02,  17.23]
+#     ... ])
+#     >>> fix_vertices_order(array43)
+#     array([[-99.84,  17.09,  17.23],
+#            [-99.63,  17.02,  17.23],
+#            [-99.92,  16.9 ,   9.  ],
+#            [-99.7 ,  16.82,   9.  ]])
+#     """
+#     sorted_by_depth = array43[array43[:, 2].argsort()]
+#     top_points = sorted_by_depth[:2]
+#     bottom_points = sorted_by_depth[2:]
+#     top_left = top_points[numpy.argmin(top_points[:, 1])]
+#     top_right = top_points[numpy.argmax(top_points[:, 1])]
+#     bottom_left = bottom_points[numpy.argmin(bottom_points[:, 1])]
+#     bottom_right = bottom_points[numpy.argmax(bottom_points[:, 1])]
+#     return numpy.array([top_left, top_right, bottom_left, bottom_right])
+
+
+def fix_vertices_order_depth(array43):
     """
     Make sure the point inside array43 are in the form top_left, top_right,
-    bottom_left, bottom_right
+    bottom_left, bottom_right (where top corresponds to a smaller depth and
+    bottom to a bigger depth)
+
+    :param array43: a numpy array of shape (4, 3), where each row represents a
+        point in (lon, lat, depth)
+
+    :returns: a numpy array of shape (4, 3) with reordered vertices
 
     Example:
     >>> array43 = numpy.array([
@@ -896,22 +975,26 @@ def fix_vertices_order(array43):
     ...    [-99.84,  17.09,  17.23],
     ...    [-99.63,  17.02,  17.23]
     ... ])
-    >>> fix_vertices_order(array43)
-    array([[-99.84,  17.09,  17.23],
-           [-99.63,  17.02,  17.23],
+    >>> fix_vertices_order_depth(array43)
+    array([[-99.7 ,  16.82,   9.  ],
            [-99.92,  16.9 ,   9.  ],
-           [-99.7 ,  16.82,   9.  ]])
+           [-99.84,  17.09,  17.23],
+           [-99.63,  17.02,  17.23]])
     """
-    # lat is the second column of the array; sort to have the highest lat first
-    sorted_by_lat = array43[array43[:, 1].argsort()[::-1]]
-    top_points = sorted_by_lat[:2]  # highest 2 lat
-    bottom_points = sorted_by_lat[2:]  # lowest 2 lat
-    top_left = top_points[numpy.argmin(top_points[:, 0])]   # smallest lon
-    top_right = top_points[numpy.argmax(top_points[:, 0])]  # largest lon
-    # sorting by lon
-    bottom_left = bottom_points[numpy.argmin(bottom_points[:, 0])]
-    bottom_right = bottom_points[numpy.argmax(bottom_points[:, 0])]
-    return numpy.array([top_left, top_right, bottom_left, bottom_right])
+    # Sort by depth (3rd column of the array), smallest depth first
+    sorted_by_depth = array43[array43[:, 2].argsort()]
+    # Return vertices sorted by depth (top to bottom)
+    return sorted_by_depth
+
+
+def fix_vertices_order(array43):
+    # return array43
+    # return numpy.concatenate([array43[-1:], array43[:-1]])
+    one = array43[0]
+    two = array43[1]
+    three = array43[2]
+    four = array43[3]
+    return numpy.array([four, three, two, one])
 
 
 def get_multiplanar(multipolygon_coords, mag, rake, trt):
@@ -927,8 +1010,34 @@ def get_multiplanar(multipolygon_coords, mag, rake, trt):
         raise ValueError('Expecting 4 vertices, got %d', vertices)
     for p, array43 in enumerate(coords):
         coords[p] = fix_vertices_order(array43)
+
+    # for  perm in list(itertools.permutations(coords):
+    #     for p, array43 in enumerate(coords):
+    #         coords[p] = fix_vertices_order_depth(array43)
+    #     if P == 1:
+    #         surf = PlanarSurface.from_array(coords[0, :, :].T)
+    #         # surf = PlanarSurface.from_ucerf(coords[0, :, :])
+    #     else:
+    #         surf = geo.MultiSurface([geo.PlanarSurface.from_array(array.T)
+    #                                 for array in coords])
+    #     rup = BaseRupture(mag, rake, trt, surf.get_middle_point(), surf)
+    #     rup.rup_id = 0
+
+    # __import__('pdb').set_trace()
+    # for p, array43 in enumerate(coords):
+    #     coords[p] = fix_vertices_order_depth(array43)
+    # one = [-99.7, 16.82, 9.]
+    # two = [-99.92, 16.9, 9.]
+    # three = [-99.84, 17.09, 17.23]
+    # four = [-99.63, 17.02, 17.23]
+    # coords = numpy.array([
+    #     # [three, four, two, one]
+    #     [three, four, two, one]
+    # ])
+    # __import__('pdb').set_trace()
     if P == 1:
         surf = PlanarSurface.from_array(coords[0, :, :].T)
+        # surf = PlanarSurface.from_ucerf(coords[0, :, :])
     else:
         surf = geo.MultiSurface([geo.PlanarSurface.from_array(array.T)
                                  for array in coords])

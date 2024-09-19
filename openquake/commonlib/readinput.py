@@ -794,6 +794,7 @@ def get_rupture(oqparam):
     rupture_model = oqparam.inputs.get('rupture_model')
     if rupture_model:
         [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+        __import__('pdb').set_trace()
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
