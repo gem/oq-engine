@@ -709,6 +709,11 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
+save_intra_res:
+  Save the intra residuals in GMF calculations
+  Example: *save_intra_res = true*
+  Default: False
+
 sec_peril_params:
   INTERNAL
 
@@ -1110,6 +1115,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
+    save_intra_res = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})

@@ -198,11 +198,12 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
+    oq = cmaker.oq
     alldata = []
     sig_eps = []
     times = []
-    max_iml = cmaker.oq.get_max_iml()
-    se_dt = sig_eps_dt(cmaker.oq.imtls)
+    max_iml = oq.get_max_iml()
+    se_dt = sig_eps_dt(oq.imtls)
     for proxy in proxies:
         t0 = time.time()
         with fmon:
@@ -220,6 +221,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
                     [mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, max_iml, mmon, cmon, umon)
+
         sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
         times.append((proxy['id'], computer.ctx.rrup.min(), dt))
@@ -254,7 +256,8 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             sitecol = dstore['sitecol']
             if 'complete' in dstore:
                 sitecol.complete = dstore['complete']
-        srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance(cmaker.trt))
+        srcfilter = SourceFilter(
+            sitecol.complete, oq.maximum_distance(cmaker.trt))
         dset = dstore['rupgeoms']
         for proxy in proxies:
             proxy.geom = dset[proxy['geom_id']]
@@ -540,6 +543,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sav_mon = self.monitor('saving gmfs')
         primary = self.oqparam.get_primary_imtls()
         sec_imts = self.oqparam.sec_imts
+        save_intra_res = self.oqparam.save_intra_res
         with sav_mon:
             gmfdata = result.pop('gmfdata')
             if len(gmfdata):
@@ -556,6 +560,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 df[f'gmv_{m}'])
+                    if save_intra_res:
+                        # tested in 
+                        hdf5.extend(self.datastore[f'gmf_data/intra_{m}'],
+                                    df[f'intra_{m}'])
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
                                 df[sec_imt])
@@ -706,6 +714,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Compute and save avg_gmf, unless there are too many GMFs
         """
+        M = len(self.oqparam.get_primary_imtls())
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
@@ -717,9 +726,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         rlzs = self.datastore['events']['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
-        gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        for sec_imt in self.oqparam.sec_imts:  # ignore secondary perils
-            del gmf_df[sec_imt]
+        gmfields = ['eid'] + [f'gmv_{m}' for m in range(M)]
+        gmf_df = self.datastore.read_df('gmf_data', 'sid')[gmfields]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
         if e == 0:

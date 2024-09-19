@@ -1369,6 +1369,8 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
     for m in range(M):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
+        if oq.save_intra_res:
+            items.append((f'intra_{m}', F32))
     for imt in sec_imts:
         items.append((str(imt), F32 if N == 0 else data[imt]))
     if oq.investigation_time:
