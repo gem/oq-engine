@@ -194,8 +194,8 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
-    mtp_dt = numpy.dtype([('rid', I64), ('sid', U32), ('gid', U16), ('mid', U8),
-                          ('mea', F32), ('tau', F32), ('phi', F32)])
+    mtp_dt = numpy.dtype([('rup_id', I64), ('site_id', U32), ('gsim_id', U16),
+                          ('imt_id', U8), ('mea', F32), ('tau', F32), ('phi', F32)])
 
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an EBRupture instance containing a
@@ -213,7 +213,6 @@ class GmfComputer(object):
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
         self.cmaker = cmaker
-        self.mean_tau_phi = cmaker.oq.mean_tau_phi
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.cmaker = cmaker
         self.gsims = sorted(cmaker.gsims)
@@ -390,7 +389,7 @@ class GmfComputer(object):
         # regular case, sets self.sig, returns gmf
         im = imt.string
         mean, sig, tau, phi = mean_stds  # shapes N
-        if self.mean_tau_phi:
+        if self.cmaker.oq.mea_tau_phi:
             min_iml = self.cmaker.min_iml[m]
             gmv = numpy.exp(mean)
             for s, sid in enumerate(self.ctx.sids):

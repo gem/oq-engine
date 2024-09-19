@@ -386,12 +386,12 @@ class EventBasedTestCase(CalculatorTestCase):
         tmp = gettemp(view('global_gmfs', self.calc.datastore))
         self.assertEqualFiles('expected/global_gmfs.txt', tmp)
 
-        # checking mean_tau_phi
-        df = self.calc.datastore.read_df('mean_tau_phi')
-        ae(len(df.rid.unique()), 12)
-        ae(df.sid.unique(), [101, 108])
-        ae(df.gid.unique(), [0, 3, 1])
-        ae(df.mid.unique(), [0, 1, 2])
+        # checking mea_tau_phi
+        df = self.calc.datastore.read_df('mea_tau_phi')
+        ae(len(df.rup_id.unique()), 12)
+        ae(df.site_id.unique(), [101, 108])
+        ae(df.gsim_id.unique(), [0, 3, 1])
+        ae(df.imt_id.unique(), [0, 1, 2])
         ae(len(df.mea.unique()), 54)
         ae(len(df.tau.unique()), 7)
         ae(len(df.phi.unique()), 7)

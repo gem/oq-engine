@@ -194,7 +194,7 @@ def trivial(ctx, name):
 
 
 class Oq(object):
-    mean_tau_phi = False
+    mea_tau_phi = False
 
     def __init__(self, **hparams):
         vars(self).update(hparams)

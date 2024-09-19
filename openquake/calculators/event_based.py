@@ -221,7 +221,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
                 df = computer.compute_all([mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, max_iml, mmon, cmon, umon)
-            if oq.mean_tau_phi:
+            if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
                 mea_tau_phi.append(mtp)
         sig_eps.append(computer.build_sig_eps(se_dt))
@@ -236,9 +236,9 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     gmfdata = pandas.concat(alldata)  # ~40 MB
     dic = dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
-    if oq.mean_tau_phi:
+    if oq.mea_tau_phi:
         mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
-        dic['mean_tau_phi'] = {col: mtpdata[col] for col in mtpdata.dtype.names}
+        dic['mea_tau_phi'] = {col: mtpdata[col] for col in mtpdata.dtype.names}
     return dic
 
 
@@ -576,11 +576,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
 
-            # optionally save mean_tau_phi
-            mtp = result.pop('mean_tau_phi', None)
+            # optionally save mea_tau_phi
+            mtp = result.pop('mea_tau_phi', None)
             if mtp:
                 for col, arr in mtp.items():
-                    hdf5.extend(self.datastore[f'mean_tau_phi/{col}'], arr)
+                    hdf5.extend(self.datastore[f'mea_tau_phi/{col}'], arr)
         return acc
 
     def _read_scenario_ruptures(self):
