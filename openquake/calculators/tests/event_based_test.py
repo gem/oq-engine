@@ -46,6 +46,7 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
 aac = numpy.testing.assert_allclose
+ae = numpy.testing.assert_equal
 
 
 def strip_calc_id(fname):
@@ -384,6 +385,16 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
         tmp = gettemp(view('global_gmfs', self.calc.datastore))
         self.assertEqualFiles('expected/global_gmfs.txt', tmp)
+
+        # checking mean_tau_phi
+        df = self.calc.datastore.read_df('mean_tau_phi')
+        ae(len(df.rid.unique()), 12)
+        ae(df.sid.unique(), [101, 108])
+        ae(df.gid.unique(), [0, 3, 1])
+        ae(df.mid.unique(), [0, 1, 2])
+        ae(len(df.mea.unique()), 54)
+        ae(len(df.tau.unique()), 7)
+        ae(len(df.phi.unique()), 7)
 
     def test_case_17(self):  # oversampling
         # also, grp-00 does not produce ruptures
