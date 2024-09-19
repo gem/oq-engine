@@ -365,6 +365,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         save_tmp(smap.monitor)
 
     # NB: for conditioned scenarios we are looping on a single trt
+    toml_gsims = []
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
@@ -372,6 +373,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        for gsim in rlzs_by_gsim:
+            toml_gsims.append(gsim._toml)
         if station_data is not None:
             if parallel.oq_distribute() in ('zmq', 'slurm'):
                 logging.error('Conditioned scenarios are not meant to be run'
@@ -381,6 +384,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
+    dstore['gsims'] = numpy.array(toml_gsims)
     return smap
 
 
