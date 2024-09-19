@@ -374,6 +374,7 @@ class GmfComputer(object):
                     mu_Y.flatten(), Y_Y, size=E,
                     check_valid="raise", tol=1e-5, method="cholesky")
                 gmf = exp(arr, imt != "MMI").T
+            intra_res = numpy.zeros_like(gmf)
             return gmf  # shapes (N, E)
 
         # regular case, sets self.sig_inter, returns gmf
@@ -384,6 +385,7 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
+            intra_res = numpy.zeros_like(mean)
             gmf = exp(mean, im != 'MMI')[:, None].repeat(len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
@@ -393,22 +395,19 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
-            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im != 'MMI')
+            intra_res = sig[:, None] * intra_eps
+            gmf = exp(mean[:, None] + intra_res, im != 'MMI')
             self.sig_inter[idxs, m] = numpy.nan
         else:
             # the [:, None] is used to implement multiplication by row;
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
+            inter_res = tau[:, None] * self.eps_inter[idxs, m]  # shape (N, E)
             intra_res = phi[:, None] * intra_eps  # shape (N, E)
             if self.correlation_model is not None:
                 intra_res = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_res, phi)
-                if len(intra_res.shape) == 1:  # a vector
-                    intra_res = intra_res[:, None]
-
-            inter_res = tau[:, None] * self.eps_inter[idxs, m]
-            # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + intra_res + inter_res, im != 'MMI')
             self.sig_inter[idxs, m] = tau.max()  # from shape (N, 1) => scalar
         return gmf  # shapes (N, E)
