@@ -141,6 +141,7 @@ class IterationLimitWarning(Warning):
     """
 
 
+# the regular computer with a method get_mea_tau_phi
 class ConditionedGmfComputer(GmfComputer):
     """
     Given an earthquake rupture, and intensity observations from
