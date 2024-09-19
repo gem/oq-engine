@@ -269,7 +269,7 @@ class GmfComputer(object):
         if max_iml is None:
             max_iml = numpy.full(self.M, numpy.inf, float)
 
-        gmf, intra = array
+        gmf, _intra = array
         set_max_min(gmf, mean, max_iml, min_iml, self.mmi_index)
         data['array'].append(array)
 
