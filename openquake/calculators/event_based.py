@@ -216,7 +216,8 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], max_iml, mmon, cmon, umon)
+                df = computer.compute_all(
+                    [mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, max_iml, mmon, cmon, umon)
         sig_eps.append(computer.build_sig_eps(se_dt))

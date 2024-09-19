@@ -259,7 +259,7 @@ class GmfComputer(object):
     def update(self, data, array, rlzs, mean, max_iml=None):
         """
         Updates the data dictionary with the values coming from the array
-        of GMVs. Also indirectly updates the arrays .inter_sig and .inter_eps.
+        of GMVs.
         """
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
@@ -268,8 +268,9 @@ class GmfComputer(object):
         if max_iml is None:
             max_iml = numpy.full(self.M, numpy.inf, float)
 
-        set_max_min(array, mean, max_iml, min_iml, self.mmi_index)
-        data['gmv'].append(array)
+        gmf, intra = array
+        set_max_min(gmf, mean, max_iml, min_iml, self.mmi_index)
+        data['array'].append(array)
 
         if self.sec_perils:
             n = 0
@@ -277,7 +278,7 @@ class GmfComputer(object):
                 eids = self.eid[self.rlz == rlz]
                 E = len(eids)
                 for e, eid in enumerate(eids):
-                    gmfa = array[:, :, n + e].T  # shape (M, N)
+                    gmfa = gmf[:, :, n + e].T  # shape (M, N)
                     for sp in self.sec_perils:
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
@@ -294,10 +295,11 @@ class GmfComputer(object):
 
         for key, val in sorted(data.items()):
             data[key] = numpy.concatenate(data[key], axis=-1, dtype=F32)
-        gmv = data.pop('gmv')  # shape (N, M, E)
+        gmv, intra = data.pop('array')  # shapes (N, M, E)
         ok = gmv.sum(axis=1).T.reshape(-1) > 0
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field] = gmv[:, m].T.reshape(-1)
+            data[f'intra_{m}'] = intra[:, m].T.reshape(-1)
 
         # build dataframe
         df = pandas.DataFrame(data)
@@ -329,7 +331,7 @@ class GmfComputer(object):
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
             with cmon:
                 E = len(idxs)
-                result = numpy.zeros((self.M, self.N, E), F32)
+                result = numpy.zeros((self.M, 2, self.N, E), F32)
                 ccdist = self.cross_correl.distribution
                 if conditioned:
                     intra_eps = [None] * self.M
@@ -350,10 +352,11 @@ class GmfComputer(object):
                             (gs, imt, exc.__class__.__name__, exc)
                         ).with_traceback(exc.__traceback__)
                 if self.amplifier:
+                    gmfs = result[:, 0]
                     self.amplifier.amplify_gmfs(
-                        self.ctx.ampcode, result, self.imts, self.seed)
+                        self.ctx.ampcode, gmfs, self.imts, self.seed)
             with umon:
-                result = result.transpose(1, 0, 2)  # shape (N, M, E)
+                result = result.transpose(1, 2, 0, 3)  # shape (2, N, M, E)
                 self.update(data, result, rlzs, ms[0], max_iml)
         with umon:
             return self.strip_zeros(data)
@@ -375,7 +378,7 @@ class GmfComputer(object):
                     check_valid="raise", tol=1e-5, method="cholesky")
                 gmf = exp(arr, imt != "MMI").T
             intra_res = numpy.zeros_like(gmf)
-            return gmf  # shapes (N, E)
+            return gmf, intra_res  # shapes (N, E)
 
         # regular case, sets self.sig_inter, returns gmf
         im = imt.string
@@ -385,8 +388,8 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
-            intra_res = numpy.zeros_like(mean)
             gmf = exp(mean, im != 'MMI')[:, None].repeat(len(idxs), axis=1)
+            intra_res = numpy.zeros_like(gmf)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -410,7 +413,7 @@ class GmfComputer(object):
                     self.sites, imt, intra_res, phi)
             gmf = exp(mean[:, None] + intra_res + inter_res, im != 'MMI')
             self.sig_inter[idxs, m] = tau.max()  # from shape (N, 1) => scalar
-        return gmf  # shapes (N, E)
+        return gmf, intra_res  # shapes (N, E)
 
 
 # this is not used in the engine; it is still useful for usage in IPython
