@@ -307,6 +307,12 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
+    scratch_dir = dstore['/'].attrs.get('scratch_dir')
+    if scratch_dir:
+        size = 0
+        for fname in os.listdir(scratch_dir):
+            size += os.path.getsize(os.path.join(scratch_dir, fname))
+        rows.append((scratch_dir, humansize(size)))
     return numpy.array(rows, dt('dataset size'))
 
 
@@ -806,13 +812,7 @@ def view_task_hazard(token, dstore):
                      taskno, len(sdata), num_ruptures, eff_sites,
                      rec['weight'], rec['duration'])
     else:
-        w = dstore.read_df('source_info').groupby('grp_id').weight.sum()
-        tdata = dstore.read_df('tiles').loc[taskno]
-        grp_id = int(tdata.grp_id)
-        msg = ('taskno={:_d}, grp_id={:_d}, G={:_d}, N={:_d}, weight={:.1f}, '
-               'duration={:.1f}s').format(
-                   taskno, grp_id, int(tdata.G), int(tdata.N),
-                   w.loc[grp_id] / tdata.G, rec['duration'])
+        msg = ''
     return msg
 
 
@@ -1840,11 +1840,17 @@ def view_fastmean(token, dstore):
 
 @view.add('gw')
 def view_gw(token, dstore):
+    """
+    Display the gweights
+    """
     return numpy.round(dstore['gweights'][:].sum(), 3)
 
 
 @view.add('long_ruptures')
 def view_long_ruptures(token, dstore):
+    """
+    Display the planar ruptures with maxlen > 900 km
+    """
     lst = []
     for src in dstore['_csm'].get_sources():
         maxlen = source.point.get_rup_maxlen(src)
@@ -1857,3 +1863,9 @@ def view_long_ruptures(token, dstore):
                             ('maxmag', float), ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
+
+@view.add('msr')
+def view_msr(token, dstore):
+    dic = dstore['_csm'].get_msr_by_grp()
+    pairs = list(dic.items())
+    return numpy.array(pairs, dt('grp_id msr'))

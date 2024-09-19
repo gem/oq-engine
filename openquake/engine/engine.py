@@ -284,7 +284,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=USER, hc_id=None, multi=True, host=None):
+                user_name=USER, hc_id=None, host=None):
     """
     Create job records on the database.
 
@@ -295,14 +295,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         host = socket.gethostname()
     except Exception:  # gaierror
         host = None
-    if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
-        job = logs.init('job', job_inis[0], log_level, log_file,
-                        user_name, hc_id, host)
-        hc_id = job.calc_id
-        jobs = [job]
-        job_inis = job_inis[1:]
-    else:
-        jobs = []
+    jobs = []
     for job_ini in job_inis:
         if isinstance(job_ini, dict):
             dic = job_ini
@@ -310,12 +303,8 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
-        dic['hazard_calculation_id'] = hc_id
         jobs.append(logs.init(dic, None, log_level, log_file,
                               user_name, hc_id, host))
-    if multi:
-        for job in jobs:
-            job.multi = True
     return jobs
 
 
@@ -338,7 +327,7 @@ def stop_workers(job_id):
     print(w.WorkerMaster(job_id).stop())
 
     
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -347,60 +336,72 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
     :param concurrent_jobs:
         How many jobs to run concurrently (default num_cores/4)
     """
-    # check the total number of required cores
-    tot_cores = parallel.Starmap.num_cores * nodes
-    max_cores = int(config.distribution.max_cores)
-    if tot_cores > max_cores:
-        raise ValueError('You can use at most %d nodes' %
-                         max_cores // parallel.Starmap.num_cores)
+    dist = parallel.oq_distribute()
+    if dist == 'slurm':
+        # check the total number of required cores
+        tot_cores = parallel.Starmap.num_cores * nodes
+        max_cores = int(config.distribution.max_cores)
+        if tot_cores > max_cores:
+            raise ValueError('You can use at most %d nodes' %
+                             max_cores // parallel.Starmap.num_cores)
 
     if concurrent_jobs is None:
         # // 10 is chosen so that the core occupation in cole is decent
         concurrent_jobs = parallel.Starmap.CT // 10 or 1
 
     job_id = jobctxs[0].calc_id
-    hc_id = jobctxs[-1].params['hazard_calculation_id']
-    orig_dist = parallel.oq_distribute()
-    use_zmq = (orig_dist == 'processpool' and config.zworkers.host_cores ==
-               '127.0.0.1 -1' and hc_id is None and len(jobctxs) > 1)
-    if use_zmq:
-        # use multispawn with zmq on a single machine
-        os.environ['OQ_DISTRIBUTE'] = 'zmq'
-
-    if hc_id:
-        job = logs.dbcmd('get_job', hc_id)
-        ppath = job.ds_calc_dir + '.hdf5'
-        if os.path.exists(ppath):
-            version = logs.dbcmd('engine_version')
-            with h5py.File(ppath, 'r') as f:
-                prev_version = f.attrs['engine_version']
-                if prev_version != version:
-                    # here the logger is not initialized yet
-                    print('Starting from a hazard (%d) computed with'
-                          ' an obsolete version of the engine: %s' %
-                          (hc_id, prev_version))
-    jobarray = len(jobctxs) > 1 and jobctxs[0].multi
-    try:
-        poll_queue(jobctxs[0].calc_id, poll_time=15)
-        # wait for an empty slot or a CTRL-C
-    except BaseException:
-        # the job aborted even before starting
-        for job in jobctxs:
-            logs.dbcmd('finish', job.calc_id, 'aborted')
-        raise
+    if precalc:
+        # assume the first job is a precalculation from which the other starts
+        for jobctx in jobctxs[1:]:
+            jobctx.params['hazard_calculation_id'] = job_id
+    else:
+        for jobctx in jobctxs:
+            hc_id = jobctx.params.get('hazard_calculation_id')
+            if hc_id:
+                job = logs.dbcmd('get_job', hc_id)
+                ppath = job.ds_calc_dir + '.hdf5'
+                if os.path.exists(ppath):
+                    version = logs.dbcmd('engine_version')
+                    with h5py.File(ppath, 'r') as f:
+                        prev_version = f.attrs['engine_version']
+                        if prev_version != version:
+                            # here the logger is not initialized yet
+                            print('Starting from a hazard (%d) computed with'
+                                  ' an obsolete version of the engine: %s' %
+                                  (hc_id, prev_version))
+    if dist == 'slurm' and sbatch:
+        pass  # do not wait in the job queue
+    else:
+        try:
+            poll_queue(job_id, poll_time=15)
+            # wait for an empty slot or a CTRL-C
+        except BaseException:
+            # the job aborted even before starting
+            for job in jobctxs:
+                logs.dbcmd('finish', job.calc_id, 'aborted')
+            raise
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        dist = 'zmq' if use_zmq else orig_dist
-        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
+        if dist in ('zmq', 'slurm') and  w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
-        allargs = [(ctx,) for ctx in jobctxs]
-        if jobarray and orig_dist != 'no':
-            parallel.multispawn(run_calc, allargs, concurrent_jobs)
-        elif orig_dist == 'slurm' and config.distribution.master_cores:
-            slurm.srun(jobctxs)
+
+        # run the jobs sequentially or in parallel, with slurm or without
+        if dist == 'slurm' and sbatch:
+            scratch_dir = parallel.scratch_dir(job_id)
+            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
+                pickle.dump(jobctxs, f)
+            w.WorkerMaster(job_id).send_jobs()
+            print('oq engine --show-log %d to see the progress' % job_id)
+        elif len(jobctxs) > 1 and dist in ('zmq', 'slurm'):
+            if precalc:
+                run_calc(jobctxs[0])
+                args = [(ctx,) for ctx in jobctxs[1:]]
+            else:
+                args = [(ctx,) for ctx in jobctxs]
+            parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -412,9 +413,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1):
             logs.dbcmd("set_status", jid, 'failed')
         raise
     finally:
-        if orig_dist in ('zmq', 'slurm') or use_zmq:
+        if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
-            os.environ['OQ_DISTRIBUTE'] = orig_dist
     return jobctxs
 
 
@@ -468,8 +468,22 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run LogContext objects stored in a pickle file, called by job.yaml
+    # run LogContexts stored in jobs.pik, called by job.yaml or slurm
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
-    for jobctx in jobctxs:
-        run_calc(jobctx)
+    try:
+        if len(jobctxs) > 1 and jobctxs[0].multi:
+            parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
+                                parallel.Starmap.CT // 10 or 1)
+        else:
+            for jobctx in jobctxs:
+                run_calc(jobctx)
+    except Exception:
+        ids = [jc.calc_id for jc in jobctxs]
+        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
+                          "AND status IN ('created', 'executing')", ids)
+        for jid, in rows:
+            logs.dbcmd("set_status", jid, 'failed')
+        raise
+    finally:
+        stop_workers(jobctxs[0].calc_id)

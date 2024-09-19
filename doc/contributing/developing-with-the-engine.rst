@@ -95,18 +95,95 @@ There a lot of *oq commands*: if you are doing development you should study all 
 Running calculations programmatically
 -------------------------------------
 
-Starting from engine v3.12 the recommended way to run a job programmaticaly is the following::
+Starting from engine v3.21 the recommended way to run a calculation
+programmatically is via the pair ``create_jobs/run_jobs``::
 
-	>> from openquake.commonlib import logs
-	>> from openquake.calculators.base import calculators
-	>> with logs.init('job', 'job_ini') as log: # initialize logs
-	...   calc = calculators(log.get_oqparam(), log.calc_id)
-	...   calc.run()  # run the calculator
+	>> from openquake.engine import engine
+        >> jobs = engine.create_jobs(['job_ini'])  # one-element list
+        >> engine.run_jobs(jobs)
 
 Then the results can be read from the datastore by using the extract API::
 
+	>> from openquake.commonlib import datastore
 	>> from openquake.calculators.extract import extract
-	>> extract(calc.datastore, 'something')
+	>> extract(datastore.read(jobs[0].calc_id), 'something')
+
+The advantage of ``create_jobs`` is that it also accepts dictionaries
+of parameters. So, instead of generating multiple `job.ini`
+files, you can generate dictionaries, which is a lot more convenient.
+
+There is an example in the directory
+demos/risk/ScenarioRisk, called ``sensitivity.py``, which is performing
+scenario risk calculations starting for the same planar rupture, but with
+different values of the strike angle (0, 90 and 180 degrees).
+The relevant code is something like this:
+
+.. python:
+  """Sensitivity of the risk from the strike parameter"""
+  import os
+  from openquake.engine import engine
+
+  # template for the ini parameters
+  base_ini = dict(
+      description="scenario_risk with strike ",
+      calculation_mode="scenario_risk",
+      region="78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5",
+      inputs={'exposure': ["exposure_model.xml"],
+              'structural_vulnerability': 'structural_vulnerability_model.xml'},
+      reference_vs30_value="760.0",
+      reference_depth_to_1pt0km_per_sec='100.0',
+      intensity_measure_types="PGA",
+      truncation_level="0",  # ignore stochastic uncertainty
+      maximum_distance="500",
+      gsim="ChiouYoungs2008",
+      number_of_ground_motion_fields="1")
+
+  def run_risk(strikes):
+      # build ini dictionaries with different strikes
+      inis = []
+      for strike in strikes:
+          ini = base_ini.copy()
+          ini['description'] += str(strike)
+          ini['rupture_dict'] = str({
+              'lon': 80, 'lat': 30, 'dep': 10, 'mag': 6, 'rake': 0,
+              'strike': strike, 'dip': 90})
+          inis.append(ini)
+      # run sequentially the calculations
+      engine.run_jobs(engine.create_jobs(inis))
+  
+  if __name__ == '__main__':
+      run_risk(strikes=[0, 90, 180])
+
+Notice that this documentation can get out of sync with the code. The version
+which is tested and guaranteed to run is the one at https://github.com/gem/oq-engine/blob/master/demos/risk/ScenarioRisk/sensitivity.py, which also sets the environment
+variable OQ_DISTRIBUTE to 'zmq'. This is the easiest way to parallelize the jobs,
+which makes sense since in this case the jobs are small.
+
+After running the script you will have 3 calculations and you can see the effect
+on the risk by looking at the portfolio_loss::
+
+   $ oq show portfolio_loss -3  # strike=0
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 77_607_416 |
+   +------+------------+
+
+   $ oq show portfolio_loss -2  # strike=90
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 78_381_808 |
+   +------+------------+
+
+   $ oq show portfolio_loss -1  # strike=180
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 77_601_176 |
+   +------+------------+
+
+The exact numbers may change depending on the version of the engine.
 
 Case study: computing the impact of a source on a site
 ------------------------------------------------------

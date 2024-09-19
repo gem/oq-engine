@@ -1311,8 +1311,9 @@ class OqParam(valid.ParamSet):
     def check_risk(self, job_ini):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
-        if self.risk_files:
-            # checks for risk_files
+        if (self.job_type == 'risk' and not
+                self.shakemap_uri and not self.aristotle):
+            # check the risk_files
             hc = self.hazard_calculation_id
             if 'damage' in self.calculation_mode and not hc:
                 ok = any('fragility' in key for key in self._risk_files)

@@ -1,11 +1,21 @@
   [Enrico Abcede, Francis Bernales]
   * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014  
 
+  [Michele Simionato]
+  * Internal: changed `oq run` to automatically generate the db when possible
+  * Added a check on missing risk files
+  * Reduced the space used by the CollapsedPointSources (2.7x)
+  * Fixed the site model association procedure to work in conditioned
+    scenario calculations
+  * Used `oq engine --run` to submit asynchronous jobs to SLURM and
+    `oq run` to submit interactive jobs
+
   [Christopher Brooks]
   * Added the Japan region versions of the NGAWest2 relations used to obtain
     z1pt0 and z2pt5 from vs30 in prepare sites command
-  
+
   [Michele Simionato]
+  * Fixed `oq reduce_sm` for calculations with nonparametric sources
   * Fixed logging the classical time with --sample-sources
   * Improved the progress log in classical calculations
 

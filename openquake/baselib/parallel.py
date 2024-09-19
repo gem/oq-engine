@@ -255,17 +255,12 @@ def zmq_submit(self, func, args, monitor):
         assert sub == 'submitted', sub
 
 
-@submit.add('ipp')
-def ipp_submit(self, func, args, monitor):
-    self.executor.submit(safely_call, func, args, self.task_no, monitor)
-
-
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp', 'slurm'):
+    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'slurm'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -548,10 +543,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             zsocket.send(end)
 
 
-if oq_distribute() == 'ipp':
-    from ipyparallel import Cluster
-
-
 class IterResult(object):
     """
     :param iresults:
@@ -724,9 +715,6 @@ class Starmap(object):
             signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
-        elif cls.distribute == 'ipp' and not hasattr(cls, 'executor'):
-            rc = Cluster(n=cls.num_cores).start_and_connect_sync()
-            cls.executor = rc.executor()
 
     @classmethod
     def shutdown(cls):

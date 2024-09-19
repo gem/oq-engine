@@ -13,31 +13,29 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import numpy
+from openquake.baselib.general import Deduplicate
 from openquake.hazardlib.mfd import ArbitraryMFD
-
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
 
 class ArbitrarydMFDMFDConstraintsTestCase(BaseMFDTestCase):
     def test_empty_occurrence_rates(self):
         exc = self.assert_mfd_error(
             ArbitraryMFD,
-            magnitudes=[4., 5.], occurrence_rates=[]
-        )
+            magnitudes=[4., 5.], occurrence_rates=[])
         self.assertEqual(str(exc), 'at least one bin must be specified')
 
     def test_negative_occurrence_rate(self):
         exc = self.assert_mfd_error(
             ArbitraryMFD,
-            magnitudes=[4., 5.], occurrence_rates=[-0.1, 1]
-        )
+            magnitudes=[4., 5.], occurrence_rates=[-0.1, 1])
         self.assertEqual(str(exc), 'all occurrence rates '
                                       'must not be negative')
 
     def test_all_zero_occurrence_rates(self):
         exc = self.assert_mfd_error(
             ArbitraryMFD,
-            magnitudes=[4., 5.], occurrence_rates=[0, 0]
-        )
+            magnitudes=[4., 5.], occurrence_rates=[0, 0])
         self.assertEqual(str(exc), 'at least one occurrence rate '
                                       'must be positive')
 
@@ -45,8 +43,7 @@ class ArbitrarydMFDMFDConstraintsTestCase(BaseMFDTestCase):
     def test_unequal_lengths(self):
         exc = self.assert_mfd_error(
             ArbitraryMFD,
-            magnitudes=[4., 5., 6.], occurrence_rates=[0.1, 1]
-        )
+            magnitudes=[4., 5., 6.], occurrence_rates=[0.1, 1])
         self.assertEqual(str(exc),
                          'lists of magnitudes and rates must have same length')
 
@@ -68,3 +65,17 @@ class ArbitraryMFDTestCase(BaseMFDTestCase):
             {"magnitudes": [7, 8, 9], "occurrence_rates": [0, 2, 1]})
         self.assertListEqual(mfd.magnitudes, [7, 8, 9])
         self.assertListEqual(mfd.occurrence_rates, [0, 2, 1])
+
+    def test_three_instances(self):
+        # instances 1 and 3 are identical, instance 2 is different
+        mfd0 = ArbitraryMFD(magnitudes=(4., 5., 6.),
+                            occurrence_rates=(1., 2., 3.))
+        mfd1 = ArbitraryMFD(magnitudes=(4., 5., 6.),
+                            occurrence_rates=(1., 2.5, 3.))
+        mfd2 = ArbitraryMFD(magnitudes=(4., 5., 6.),
+                            occurrence_rates=(1., 2., 3.))
+        mfd = Deduplicate([mfd0, mfd1, mfd2])
+        self.assertEqual(len(mfd.uni), 2)
+        self.assertEqual(len(mfd.inv), 3)
+        numpy.testing.assert_equal(mfd[1].occurrence_rates, [1., 2.5, 3.])
+        numpy.testing.assert_equal(mfd[2].occurrence_rates, [1., 2., 3.])

@@ -906,7 +906,7 @@ def aristotle_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    if not os.path.isfile(station_data_file):
+    if station_data_file is None or not os.path.isfile(station_data_file):
         station_data_file = None
     try:
         allparams = get_aristotle_allparams(
@@ -1134,7 +1134,7 @@ def save_pik(job, dirname):
     """
     pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
     with open(pathpik, 'wb') as f:
-        pickle.dump(job, f)
+        pickle.dump([job], f)
     return pathpik
 
 
