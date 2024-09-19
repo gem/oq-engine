@@ -392,8 +392,9 @@ class GmfComputer(object):
         mean, sig, tau, phi = mean_stds  # shapes N
         if self.mean_tau_phi:
             min_iml = self.cmaker.min_iml[m]
+            gmv = numpy.exp(mean)
             for s, sid in enumerate(self.ctx.sids):
-                if mean[s] > min_iml:
+                if gmv[s] > min_iml:
                     self.mea_tau_phi.append(
                         (self.rup_id, sid, gsim.gid, m, mean[s], tau[s], phi[s]))
 
