@@ -594,7 +594,7 @@ class SiteCollection(object):
         if ntiles <= 1:
             return [TileGetter(0, 1)]
         maxtiles = numpy.ceil(len(self) / minsize)
-        ntiles = min(numpy.ceil(ntiles), maxtiles)
+        ntiles = min(int(ntiles), maxtiles)
         return [TileGetter(i, ntiles) for i in range(int(ntiles))]
 
     def split_in_tiles(self, hint):
