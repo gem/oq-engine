@@ -577,7 +577,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.offset += len(df)
 
             # optionally save mean_tau_phi
-            mtp = result.pop('mean_tau_phi')
+            mtp = result.pop('mean_tau_phi', None)
             if mtp:
                 for col, arr in mtp.items():
                     hdf5.extend(self.datastore[f'mean_tau_phi/{col}'], arr)
