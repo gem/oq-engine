@@ -1382,7 +1382,8 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
                      investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
     if oq.mean_tau_phi:
-        dstore.create_df('mean_tau_phi', GmfComputer.mtp_dt.descr)
+        dstore.create_df(
+            'mean_tau_phi', GmfComputer.mtp_dt.descr, compression='gzip')
 
     if data is not None:
         _df = pandas.DataFrame(dict(items))
