@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a parameter `intra_residuals` to save the within event residuals
+    in GMF calculations
   * Internal: changed `oq run` to automatically generate the db when possible
   * Added a check on missing risk files
   * Reduced the space used by the CollapsedPointSources (2.7x)
