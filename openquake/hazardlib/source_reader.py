@@ -734,7 +734,7 @@ class CompositeSourceModel:
             cmaker.blocks = len(blocks)
             cmaker.weight = sg.weight
             cmaker.atomic = sg.atomic
-            yield cmaker, tilegetters, blocks, splits
+            yield cmaker, tilegetters, blocks, round(splits)
 
     def __toh5__(self):
         G = len(self.src_groups)
