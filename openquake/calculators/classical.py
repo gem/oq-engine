@@ -589,9 +589,6 @@ class ClassicalCalculator(base.HazardCalculator):
         def redweight(src):
             return src.weight / self.csm.splits[src.grp_id]
         heavy = [src for src in srcs if redweight(src) > self.max_weight]
-        for src in sorted(heavy, key=redweight, reverse=True):
-            logging.info('source_id=%s, weight=%.1f', src.source_id,
-                         redweight(src))
         if not heavy:
             maxsrc = max(srcs, key=redweight)
             logging.info('Heaviest: %r, weight=%.1f',
