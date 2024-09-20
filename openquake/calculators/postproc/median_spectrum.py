@@ -36,9 +36,10 @@ def set_imls(cmaker, uhs):
         loglevs[imt] = [np.log(value)]
     cmaker.imtls = general.DictArray(imtls)
     cmaker.loglevels = general.DictArray(loglevs)
+    return cmaker
 
 
-def compute_median_spectrum(cmaker, ctx, ref_poe, ref_uhs):
+def compute_median_spectrum(cmaker, ctx, ref_poe):
     """
     For a given group, computes the median hazard spectrum using a weighted
     mean based on the poes.
@@ -48,9 +49,6 @@ def compute_median_spectrum(cmaker, ctx, ref_poe, ref_uhs):
     :param ref_poe: reference PoE for the spectrum
     :param ref_uhs: the mean UHS associated to the PoE
     """
-    # reduce the levels to 1 level per IMT
-    set_imls(cmaker, ref_uhs)
-
     weights = []
     for poes, ctxt, _inv in cmaker.gen_poes(ctx):
         C, M, G = poes.shape
@@ -61,11 +59,10 @@ def compute_median_spectrum(cmaker, ctx, ref_poe, ref_uhs):
             ocr = -np.log(probs) / cmaker.investigation_time
         weights.append(ocr * poes * cmaker.wei / ref_poe)
 
-    # the mean has shape (G, M, N)
-    mea, _, _, _ = cmaker.get_mean_stds([ctx])
+    mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
     wei = np.concatenate(weights)  # shape (N, M, G)
-    # Compute the median spectrum for this group
     median_spectrum = np.einsum('nmg,gmn->m', wei, mea)
+
     return {'grp_id': [cmaker.grp_id], 'mhs': median_spectrum}
 
 
@@ -73,6 +70,9 @@ def main(dstore, ref_poe):
     """
     Compute the median hazard spectrum for the reference poe,
     starting from the already stored mean hazard spectrum.
+
+    :param dstore: DataStore of the parent calculation
+    :param ref_poe: reference PoE for the spectrum
     """
     # consistency checks
     oqp = dstore['oqparam']
@@ -93,8 +93,12 @@ def main(dstore, ref_poe):
     
     smap = parallel.Starmap(compute_median_spectrum)
     for grp_id, ctx in ctx_by_grp.items():
-        smap.submit((cmakers[grp_id], ctx, ref_poe, ref_uhs))
+        # reduce the levels to 1 level per IMT
+        cmaker = set_imls(cmakers[grp_id], ref_uhs)
+        smap.submit((cmaker, ctx, ref_poe))
     res = smap.reduce()
+
+    # save the median_spectrum
     mhs = np.zeros(M, [('period', np.float32), ('iml', np.float32)])
     mhs['period'] = [imt.period for imt in oqp.imt_periods()]
     mhs['iml'] = res['mhs']
