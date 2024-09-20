@@ -55,7 +55,7 @@ def compute_median_spectrum(cmaker, ctx, monitor):
     M = len(cmaker.imts)
     P = len(cmaker.poes)
     for poes, ctxt, _inv in cmaker.gen_poes(ctx):
-        C, L, G = poes.shape  # L = M * P
+        C, _, G = poes.shape  # L = M * P
         if np.isfinite(ctxt[0].occurrence_rate):
             ocr = ctxt.occurrence_rate
         else:
@@ -76,13 +76,13 @@ def compute_median_spectrum(cmaker, ctx, monitor):
     return {(cmaker.grp_id, site_id): median_spectrum}
 
 
-def main(dstore):
+def main(dstore, csm):
     """
     Compute the median hazard spectrum for the reference poe,
     starting from the already stored mean hazard spectrum.
 
     :param dstore: DataStore of the parent calculation
-    :param ref_poe: reference PoE for the spectrum
+    :param csm: CompositeRiskModel
     """
     # consistency checks
     oqp = dstore['oqparam']
@@ -109,7 +109,7 @@ def main(dstore):
     res = smap.reduce()
 
     # save the median_spectrum
-    Gr = len(ctx_by_grp)  # number of groups
+    Gr = len(csm.src_groups)  # number of groups
     P = len(oqp.poes)
     median_spectrum = np.zeros((Gr, N, M, P), np.float32)
     for (grp_id, site_id), mhs in res.items():
