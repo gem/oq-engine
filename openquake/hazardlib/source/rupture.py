@@ -888,6 +888,8 @@ def fix_vertices_order(array43):
     """
     Make sure the point inside array43 are in the form top_left, top_right,
     bottom_left, bottom_right
+    The convention used in the USGS format has the last two points inverted
+    with respect to what is expected by OQ
 
     Example:
     >>> array43 = numpy.array([
@@ -897,20 +899,15 @@ def fix_vertices_order(array43):
     ...    [-99.63,  17.02,  17.23]
     ... ])
     >>> fix_vertices_order(array43)
-    array([[-99.84,  17.09,  17.23],
-           [-99.63,  17.02,  17.23],
+    array([[-99.7 ,  16.82,   9.  ],
            [-99.92,  16.9 ,   9.  ],
-           [-99.7 ,  16.82,   9.  ]])
+           [-99.63,  17.02,  17.23],
+           [-99.84,  17.09,  17.23]])
     """
-    # lat is the second column of the array; sort to have the highest lat first
-    sorted_by_lat = array43[array43[:, 1].argsort()[::-1]]
-    top_points = sorted_by_lat[:2]  # highest 2 lat
-    bottom_points = sorted_by_lat[2:]  # lowest 2 lat
-    top_left = top_points[numpy.argmin(top_points[:, 0])]   # smallest lon
-    top_right = top_points[numpy.argmax(top_points[:, 0])]  # largest lon
-    # sorting by lon
-    bottom_left = bottom_points[numpy.argmin(bottom_points[:, 0])]
-    bottom_right = bottom_points[numpy.argmax(bottom_points[:, 0])]
+    top_left = array43[0]
+    top_right = array43[1]
+    bottom_left = array43[3]
+    bottom_right = array43[2]
     return numpy.array([top_left, top_right, bottom_left, bottom_right])
 
 
