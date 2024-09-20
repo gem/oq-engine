@@ -890,19 +890,6 @@ def fix_vertices_order(array43):
     bottom_left, bottom_right
     The convention used in the USGS format has the last two points inverted
     with respect to what is expected by OQ
-
-    Example:
-    >>> array43 = numpy.array([
-    ...    [-99.7 ,  16.82,   9.  ],
-    ...    [-99.92,  16.9 ,   9.  ],
-    ...    [-99.84,  17.09,  17.23],
-    ...    [-99.63,  17.02,  17.23]
-    ... ])
-    >>> fix_vertices_order(array43)
-    array([[-99.7 ,  16.82,   9.  ],
-           [-99.92,  16.9 ,   9.  ],
-           [-99.63,  17.02,  17.23],
-           [-99.84,  17.09,  17.23]])
     """
     top_left = array43[0]
     top_right = array43[1]
