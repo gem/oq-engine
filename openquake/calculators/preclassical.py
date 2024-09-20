@@ -411,9 +411,16 @@ class PreClassicalCalculator(base.HazardCalculator):
             deltas = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
-        # save 'ntiles' if the calculation is large
+        # save 'source_groups'
         self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
             store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+
+        # save gsims
+        toml = []
+        for cmaker in self.cmakers:
+            for gsim in cmaker.gsims:
+                toml.append(gsim._toml)
+        self.datastore['gsims'] = numpy.array(toml)
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':

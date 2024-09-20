@@ -88,7 +88,9 @@ def main(job_ini,
     user_name = getpass.getuser()
 
     # automatically create the user db if missing
-    if config.dbserver.host == '127.0.0.1' and not config.multi_user:
+    if (config.dbserver.host == '127.0.0.1' and
+        config.dbserver.file == '~/oqdata/db.sqlite3'
+        and user_name != 'openquake'):
         dbfile = os.path.expanduser(config.dbserver.file)
         if not os.path.exists(dbfile):
             db.actions.upgrade_db(dbapi.db)
@@ -104,6 +106,8 @@ def main(job_ini,
     else:
         params = {}
     if hc:
+        if hc == -1:
+            hc = logs.dbcmd('get_job', -1, user_name).id
         params['hazard_calculation_id'] = str(hc)
     if concurrent_tasks is not None:
         params['concurrent_tasks'] = str(concurrent_tasks)
