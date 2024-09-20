@@ -39,7 +39,7 @@ def set_imls(cmaker, uhs):
     return cmaker
 
 
-def compute_median_spectrum(cmaker, ctx, ref_poe):
+def compute_median_spectrum(cmaker, ctx, ref_poe, monitor):
     """
     For a given group, computes the median hazard spectrum using a weighted
     mean based on the poes.
@@ -95,7 +95,7 @@ def main(dstore, ref_poe):
     cmakers = contexts.read_cmakers(dstore)
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     
-    smap = parallel.Starmap(compute_median_spectrum)
+    smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
