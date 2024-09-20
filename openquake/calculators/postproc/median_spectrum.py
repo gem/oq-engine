@@ -105,7 +105,7 @@ def main(dstore, ref_poe):
     # save the median_spectrum
     mhs = np.zeros(M, [('period', np.float32), ('iml', np.float32)])
     mhs['period'] = [imt.period for imt in oqp.imt_periods()]
-    mhs['iml'] = res['mhs']
+    mhs['iml'] = np.exp(res['mhs'])
     dstore.create_dset('median_spectrum', mhs, fillvalue=None)
 
 
