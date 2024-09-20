@@ -615,6 +615,8 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         logging.error('', exc_info=True)
         error_msg = (
             f'Unable to convert the rupture from the USGS format: {exc}')
+        # TODO: we can try to handle also cases that currently are not properly
+        # converted, then raise an exception here in case of failure
         return {'lon': lon, 'lat': lat, 'dep': md['depth'],
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
@@ -633,6 +635,8 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         logging.error('', exc_info=True)
         error_msg = (
             f'Unable to convert the rupture from the USGS format: {exc}')
+        # TODO: we can try to handle also cases that currently are not properly
+        # converted, then raise an exception here in case of failure
         return {'lon': lon, 'lat': lat, 'dep': md['depth'],
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
