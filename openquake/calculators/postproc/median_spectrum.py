@@ -111,11 +111,11 @@ def main(dstore, csm):
     # save the median_spectrum
     Gr = len(csm.src_groups)  # number of groups
     P = len(oqp.poes)
-    median_spectrum = np.ones((Gr, N, M, P), np.float32)
+    median_spectra = np.ones((Gr, N, M, P), np.float32)
     for (grp_id, site_id), mhs in res.items():
-        median_spectrum[grp_id, site_id] = np.exp(mhs)
-    dstore.create_dset('median_spectrum', median_spectrum)
-    dstore.set_shape_descr('median_spectrum',
+        median_spectra[grp_id, site_id] = np.exp(mhs)
+    dstore.create_dset('median_spectra', median_spectra)
+    dstore.set_shape_descr('median_spectra',
                            grp_id=Gr, site_id=N,
                            period=[imt.period for imt in oqp.imt_periods()],
                            poe=oqp.poes)
