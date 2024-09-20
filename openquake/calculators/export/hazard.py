@@ -318,6 +318,15 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
+@export.add(('median_spectrum', 'csv'))
+def export_median_spectrum(ekey, dstore):
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('median_spectrum.csv')
+    comment = dstore.metadata.copy()
+    writer.save(dstore.read_df('median_spectrum'), fname, comment=comment)
+    return [fname]
+
+
 # TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
