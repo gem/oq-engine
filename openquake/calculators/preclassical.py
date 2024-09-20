@@ -245,7 +245,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull(trt_smrs)
-        gweights = self.full_lt.g_weights(trt_smrs)
+        gweights = numpy.concatenate([cm.wei for cm in self.cmakers])
         self.datastore['gweights'] = gweights
 
         Gt = len(gweights)

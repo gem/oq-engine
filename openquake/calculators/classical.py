@@ -633,7 +633,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _post_regular(self, acc):
         # save the rates and performs some checks
-        logging.info('Processing %s', self.rmap)
+        if self.rmap.size_mb:
+            logging.info('Processing %s', self.rmap)
+
         def genargs():
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
@@ -651,9 +653,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, N, jid, num_chunks in genargs():
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
-        elif not self.tiling:
-            # for tiling the ratemap is always empty, don't warn
-            logging.warning('Empty ratemap')
         del self.rmap
         if self.oqparam.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
