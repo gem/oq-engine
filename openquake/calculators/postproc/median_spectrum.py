@@ -57,7 +57,11 @@ def compute_median_spectrum(cmaker, ctx, ref_poe):
         else:
             probs = [rup.probs_occur[0] for rup in ctxt]
             ocr = -np.log(probs) / cmaker.investigation_time
-        weights.append(ocr * poes * cmaker.wei / ref_poe)
+        ws = np.empty((C, M, G), np.float32)
+        for g, w in enumerate(cmaker.wei):
+            for m in range(M):
+                ws[:, m, g] = ocr * poes[:, m, g] * w / ref_poe
+        weights.append(ws)
 
     mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
     wei = np.concatenate(weights)  # shape (N, M, G)
