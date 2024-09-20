@@ -336,8 +336,8 @@ def export_median_spectrum(ekey, dstore):
         comment['lat'] = sitecol.lats[n]
         fname = dstore.export_path('median_spectrum-%d.csv' % n)
         lst = [(period, spectra[n, i, p], poe)
-               for i, period in enumerate(periods)
-               for p, poe in enumerate(poes)] 
+               for p, poe in enumerate(poes)
+               for i, period in enumerate(periods)]
         array = numpy.array(lst, dt)
         writer.save(array, fname, comment=comment)
         fnames.append(fname)
