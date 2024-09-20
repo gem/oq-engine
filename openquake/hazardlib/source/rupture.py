@@ -918,7 +918,8 @@ def get_multiplanar(multipolygon_coords, mag, rake, trt):
     :returns: a BaseRupture with a PlanarSurface or a multiPlanarSurface
     """
     # NB: in geojson the last vertex is the same as the first, so I discard it
-    coords = numpy.array(multipolygon_coords, float)[:, :4, :]  # shape (P, 4, 3)
+    # expecting shape (P, 4, 3)
+    coords = numpy.array(multipolygon_coords, float)[:, :-1, :]
     P, vertices, _ = coords.shape
     if vertices != 4:
         raise ValueError('Expecting 4 vertices, got %d', vertices)
