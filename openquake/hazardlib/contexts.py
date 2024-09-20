@@ -1630,6 +1630,7 @@ class PmapMaker(object):
             pnemap.array[:] = pmapclu.array
 
         dic['rmap'] = pnemap.to_rates()
+        dic['rmap'].gid = self.cmaker.gid
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data

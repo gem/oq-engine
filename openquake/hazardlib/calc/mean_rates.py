@@ -70,10 +70,8 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
-        rates = dic['rmap']
-        rates.gid = cmaker.gid
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        rmap += rates  # tested in logictree/case_05
+        rmap += dic['rmap']  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
 
