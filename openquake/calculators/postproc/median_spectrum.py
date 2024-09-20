@@ -115,9 +115,10 @@ def main(dstore):
     for (grp_id, site_id), mhs in res.items():
         median_spectrum[grp_id, site_id] = np.exp(mhs)
     dstore.create_dset('median_spectrum', median_spectrum)
-    dstore.set_shape_descr(
-        'median_spectrum', grp_id=Gr, site_id=N,
-        imt=list(oqp.imtls), poe=oqp.poes)
+    dstore.set_shape_descr('median_spectrum',
+                           grp_id=Gr, site_id=N,
+                           period=[imt.period for imt in oqp.imt_periods()],
+                           poe=oqp.poes)
 
 if __name__ == '__main__':
     sap.run(main)
