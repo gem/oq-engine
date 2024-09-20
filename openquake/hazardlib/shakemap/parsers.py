@@ -534,6 +534,30 @@ def download_station_data_file(usgs_id, save_to_home=False):
                     return station_data_file
 
 
+def load_rupdic_from_finite_fault(mag, products):
+    try:
+        ff = products['finite-fault']
+    except KeyError:
+        raise MissingLink('There is no finite-fault info for %s' % id)
+    logging.info('Getting finite-fault properties')
+    if isinstance(ff, list):
+        if len(ff) > 1:
+            logging.warning(f'The finite-fault list contains {len(ff)}'
+                            f' elements. We are using the first one.')
+        ff = ff[0]
+    p = ff['properties']
+    lon = float(p['longitude'])
+    lat = float(p['latitude'])
+    utc_time = p['eventtime']
+    local_time = utc_to_local_time(utc_time, lon, lat)
+    time_event = local_time_to_time_event(local_time)
+    rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
+                'mag': mag, 'rake': 0.,
+                'local_timestamp': str(local_time), 'time_event': time_event,
+                'is_point_rup': True, 'usgs_id': id, 'rupture_file': None}
+    return rupdic
+
+
 def download_rupture_dict(id, ignore_shakemap=False):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
@@ -567,27 +591,7 @@ def download_rupture_dict(id, ignore_shakemap=False):
         if 'download/rupture.json' in contents:
             break
     else:  # missing rupture.json
-        try:
-            ff = products['finite-fault']
-        except KeyError:
-            raise MissingLink('There is no finite-fault info for %s' % id)
-        logging.info('Getting finite-fault properties')
-        if isinstance(ff, list):
-            if len(ff) > 1:
-                logging.warning(f'The finite-fault list contains {len(ff)}'
-                                f' elements. We are using the first one.')
-            ff = ff[0]
-        p = ff['properties']
-        lon = float(p['longitude'])
-        lat = float(p['latitude'])
-        utc_time = p['eventtime']
-        local_time = utc_to_local_time(utc_time, lon, lat)
-        time_event = local_time_to_time_event(local_time)
-        rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
-                  'mag': mag, 'rake': 0.,
-                  'local_timestamp': str(local_time), 'time_event': time_event,
-                  'is_point_rup': True, 'usgs_id': id, 'rupture_file': None}
-        return rupdic
+        return load_rupdic_from_finite_fault(mag, products)
     url = contents.get('download/rupture.json')['url']
     logging.info('Downloading rupture.json')
     rup_data = json.loads(urlopen(url).read())
