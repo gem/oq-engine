@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Added a median spectrum post-processor
+
   [Michele Simionato]
   * Added a parameter `mea_tau_phi` in the job.ini to save mean, tau and phi
     for each rupture, site, gsim and imt in a GMF calculation

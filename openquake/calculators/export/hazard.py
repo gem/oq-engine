@@ -318,28 +318,20 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
-@export.add(('median_spectrum', 'csv'))
-def export_median_spectrum(ekey, dstore):
-    oq = dstore['oqparam']
+@export.add(('median_spectra', 'csv'))
+def export_median_spectra(ekey, dstore):
     sitecol = dstore['sitecol']
-    dset = dstore['median_spectra']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    periods = [imt.period for imt in oq.imt_periods()]
-    poes = oq.poes
-    spectra = numpy.prod(dset[:], axis=0)  # (N, M, P)
     fnames = []
-    dt = [('period', float), ('iml', float), ('poe', float)]
     for n in sitecol.sids:
+        aw = extract(dstore, f'median_spectra?site_id={n}')
+        df = aw.to_dframe().sort_values('poe')
         comment = dstore.metadata.copy()
         comment['site_id'] = n
         comment['lon'] = sitecol.lons[n]
         comment['lat'] = sitecol.lats[n]
         fname = dstore.export_path('median_spectrum-%d.csv' % n)
-        lst = [(period, spectra[n, i, p], poe)
-               for p, poe in enumerate(poes)
-               for i, period in enumerate(periods)]
-        array = numpy.array(lst, dt)
-        writer.save(array, fname, comment=comment)
+        writer.save(df, fname, comment=comment)
         fnames.append(fname)
     return fnames
 
