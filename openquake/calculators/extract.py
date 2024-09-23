@@ -496,6 +496,22 @@ def extract_uhs(dstore, what):
             yield k, v
 
 
+@extract.add('median_spectra')
+def extract_median_spectra(dstore, what):
+    """
+    Extracts median spectra. Use it as /extract/median_spectra?site_id=0
+    """
+    qdict = parse(what)
+    [site_id] = qdict['site_id']
+    dset = dstore['median_spectra']
+    dic = json.loads(dset.attrs['json'])
+    spectra = numpy.prod(dset[:, site_id], axis=0)  # (M, P)
+    return ArrayWrapper(spectra, dict(
+        shape_descr=['period', 'poe'],
+        period=dic['period'],
+        poe=dic['poe']))
+
+
 @extract.add('effect')
 def extract_effect(dstore, what):
     """

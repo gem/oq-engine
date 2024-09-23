@@ -30,7 +30,7 @@ from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
-from openquake.qa_tests_data.postproc import case_mrd, case_rtgm
+from openquake.qa_tests_data.postproc import case_mrd, case_rtgm, case_median_spectrum
 
 PLOT = False
 
@@ -221,3 +221,9 @@ class PostProcTestCase(CalculatorTestCase):
                          'BSE2N_S1': 0.42968, 'BSE2E_S1': 0.34593,
                          'S1_5_50': 0.34593, 'BSE1N_S1': 0.28645,
                          'BSE1E_S1': 0.18822, 'S1_20_50': 0.18822}
+
+    def test_median_spectrum(self):
+        self.run_calc(case_median_spectrum.__file__, 'job.ini')
+        fnames = export(('median_spectra', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

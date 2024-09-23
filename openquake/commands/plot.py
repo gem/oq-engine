@@ -244,10 +244,14 @@ def make_figure_uhs(extractors, what):
     plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
+    spec = {}  # calc_id -> spectra
     for i, ex in enumerate(extractors):
         uhs = ex.get(what)
         for kind in uhs.kind:
             got[ex.calc_id, kind] = uhs[kind][0]  # 1 site
+        if 'median_spectra' in ex.dstore:
+            spec[ex.calc_id] = ex.get(
+                f'median_spectra?site_id={uhs.site_id[0]}')[:]  # (M, P)
     oq = ex.oqparam
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
@@ -260,8 +264,10 @@ def make_figure_uhs(extractors, what):
         ax.set_ylabel('g')
         for ck, arr in got.items():
             curve = list(arr['%.6f' % poe][imts])
-            ax.plot(periods, curve, '-', label='%s_%s' % ck)
+            ax.plot(periods, curve, '-', label='%s_%s_spectrum' % ck)
             ax.plot(periods, curve, '.')
+        for calc_id, spectra in spec.items():
+            ax.plot(periods, spectra[:, j], '-', label=f'{calc_id}_median_spectrum')
         ax.grid(True)
         ax.legend()
     return plt

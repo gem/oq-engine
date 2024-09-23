@@ -61,7 +61,6 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     oq.disagg_by_src = False
     L = oq.imtls.size
     cmakers = get_cmakers(src_groups, full_lt, oq)
-    gids = full_lt.get_gids([cm.trt_smrs for cm in cmakers])
     Gt = sum(len(cm.gsims) for cm in cmakers)
     logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
                  len(sitecol), oq.imtls.size, Gt)
@@ -71,10 +70,8 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
-        rates = dic['rmap']
-        rates.gid = gids[cmaker.grp_id]
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        rmap += rates  # tested in logictree/case_05
+        rmap += dic['rmap']  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
 

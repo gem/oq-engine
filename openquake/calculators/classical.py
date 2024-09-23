@@ -586,16 +586,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
-        def redweight(src):
-            return src.weight / self.csm.splits[src.grp_id]
-        heavy = [src for src in srcs if redweight(src) > self.max_weight]
-        for src in sorted(heavy, key=redweight, reverse=True):
-            logging.info('source_id=%s, weight=%.1f', src.source_id,
-                         redweight(src))
-        if not heavy:
-            maxsrc = max(srcs, key=redweight)
-            logging.info('Heaviest: %r, weight=%.1f',
-                         maxsrc.source_id, redweight(maxsrc))
+        maxsrc = max(srcs, key=lambda src: src.weight / self.csm.splits[src.grp_id])
+        logging.info('Heaviest: %s', maxsrc.source_id)
 
         L = self.oqparam.imtls.size
         gids = get_heavy_gids(sgs, self.cmakers)
@@ -633,7 +625,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _post_regular(self, acc):
         # save the rates and performs some checks
-        logging.info('Processing %s', self.rmap)
+        if self.rmap.size_mb:
+            logging.info('Processing %s', self.rmap)
+
         def genargs():
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
@@ -651,9 +645,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, N, jid, num_chunks in genargs():
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
-        elif not self.tiling:
-            # for tiling the ratemap is always empty, don't warn
-            logging.warning('Empty ratemap')
         del self.rmap
         if self.oqparam.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)

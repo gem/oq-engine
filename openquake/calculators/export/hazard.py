@@ -318,6 +318,24 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
+@export.add(('median_spectra', 'csv'))
+def export_median_spectra(ekey, dstore):
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fnames = []
+    for n in sitecol.sids:
+        aw = extract(dstore, f'median_spectra?site_id={n}')
+        df = aw.to_dframe().sort_values(['poe', 'period'])
+        comment = dstore.metadata.copy()
+        comment['site_id'] = n
+        comment['lon'] = sitecol.lons[n]
+        comment['lat'] = sitecol.lats[n]
+        fname = dstore.export_path('median_spectrum-%d.csv' % n)
+        writer.save(df, fname, comment=comment)
+        fnames.append(fname)
+    return fnames
+
+
 # TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0

@@ -742,11 +742,13 @@ class ContextMaker(object):
         """
         Split the ContextMaker by blocks of GSIMs
         """
-        for gid, gsims in zip(block_splitter(self.gid, blocksize),
-                              block_splitter(self.gsims, blocksize)):
+        for gid, wei, gsims in zip(block_splitter(self.gid, blocksize),
+                                   block_splitter(self.wei, blocksize),
+                                   block_splitter(self.gsims, blocksize)):
             new = copy.copy(self)
             new.gsims = gsims
             new.gid = gid
+            new.wei = wei
             yield new
 
     def horiz_comp_to_geom_mean(self, mean_stds, gsim):
@@ -1630,6 +1632,7 @@ class PmapMaker(object):
             pnemap.array[:] = pmapclu.array
 
         dic['rmap'] = pnemap.to_rates()
+        dic['rmap'].gid = self.cmaker.gid
         dic['cfactor'] = self.cmaker.collapser.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
@@ -1898,20 +1901,22 @@ def get_cmakers(src_groups, full_lt, oq):
         src = sg.sources[0]
         all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
+    gweights = full_lt.g_weights(all_trt_smrs)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
             continue
         trti = trt_smrs[0] // TWO24
-        cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
-        cmaker.trti = trti
-        cmaker.trt_smrs = trt_smrs
-        cmaker.grp_id = grp_id
-        cmakers.append(cmaker)
+        cm = ContextMaker(trts[trti], rlzs_by_gsim, oq)
+        cm.trti = trti
+        cm.trt_smrs = trt_smrs
+        cm.grp_id = grp_id
+        cmakers.append(cm)
     gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
     for cm in cmakers:
         cm.gid = gids[cm.grp_id]
+        cm.wei = gweights[cm.gid]
     return cmakers
 
 
