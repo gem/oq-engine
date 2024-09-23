@@ -70,11 +70,11 @@ def compute_median_spectrum(cmaker, ctxt, monitor):
                     for p, poe in enumerate(cmaker.poes):
                         ws[:, m, g, p] = ocr * poes_g[:, m, p] / poe * w
             weights.append(ws)
-
-        mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
-        wei = np.concatenate(weights)  # shape (N, M, G, P)
-        median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
-        yield {(cmaker.grp_id, site_id): median_spectrum}
+        if weights:
+            mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
+            wei = np.concatenate(weights)  # shape (N, M, G, P)
+            median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
+            yield {(cmaker.grp_id, site_id): median_spectrum}
 
 
 def main(dstore, csm):
@@ -123,8 +123,7 @@ def main(dstore, csm):
         grp_id=Gr,
         site_id=N,
         period=[imt.period for imt in oqp.imt_periods()],
-        poe=oqp.poes,
-    )
+        poe=oqp.poes)
 
 
 if __name__ == "__main__":
