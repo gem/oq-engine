@@ -251,15 +251,12 @@ def rup_to_file(rup, outfile, commentstr):
     rupt_nodes = [Node(name, nodes=geom_nodes)]
     node = Node('nrml', nodes=rupt_nodes)
     # Write file
-    with open(outfile, 'w') as ff:
-        bs = io.BytesIO()
-        nrml.write(node, output=bs)
-        ff.write(bs.getvalue().decode("utf-8"))
+    with open(outfile, 'wb') as f:
         # adding a comment like:
         # <!-- Rupture XML automatically generated from USGS (us7000f93v).
         #      Reference: Source: USGS NEIC Rapid Finite Fault
-        #      Event ID: 7000f93vModel created: 2021-09-08 03:53:15.-->
-        ff.write(commentstr)
+        #      Event ID: 7000f93v Model created: 2021-09-08 03:53:15.-->
+        nrml.write(node, f, commentstr=commentstr)
     return outfile
 
 
