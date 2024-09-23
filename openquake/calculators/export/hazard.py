@@ -325,7 +325,7 @@ def export_median_spectra(ekey, dstore):
     fnames = []
     for n in sitecol.sids:
         aw = extract(dstore, f'median_spectra?site_id={n}')
-        df = aw.to_dframe().sort_values('poe')
+        df = aw.to_dframe().sort_values(['poe', 'period'])
         comment = dstore.metadata.copy()
         comment['site_id'] = n
         comment['lon'] = sitecol.lons[n]
