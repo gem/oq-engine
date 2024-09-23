@@ -742,11 +742,13 @@ class ContextMaker(object):
         """
         Split the ContextMaker by blocks of GSIMs
         """
-        for gid, gsims in zip(block_splitter(self.gid, blocksize),
-                              block_splitter(self.gsims, blocksize)):
+        for gid, wei, gsims in zip(block_splitter(self.gid, blocksize),
+                                   block_splitter(self.wei, blocksize),
+                                   block_splitter(self.gsims, blocksize)):
             new = copy.copy(self)
             new.gsims = gsims
             new.gid = gid
+            new.wei = wei
             yield new
 
     def horiz_comp_to_geom_mean(self, mean_stds, gsim):
