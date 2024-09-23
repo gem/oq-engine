@@ -40,7 +40,7 @@ from openquake.hazardlib.geo import utils as geo_utils
 # as well as maximum offset of a bottom left corner from a line drawn
 # downdip perpendicular to top edge from top left corner, expressed
 # as a fraction of the surface's area.
-IMPERFECT_RECTANGLE_TOLERANCE = 0.004  # FIXME: or use kite surface instead?
+IMPERFECT_RECTANGLE_TOLERANCE = 0.004
 
 planar_array_dt = numpy.dtype([
     ('corners', (float, 4)),
