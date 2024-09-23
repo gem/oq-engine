@@ -224,39 +224,6 @@ def convert_to_oq_rupture(rup_json):
     return rup
 
 
-# Namespace
-F64 = numpy.float64
-NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
-NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
-GML_NAMESPACE = 'http://www.opengis.net/gml'
-SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
-PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
-
-
-# Write node
-def nwrite(nodes, output=sys.stdout, fmt='%.5f', gml=True, xmlns=None):
-    """
-    Convert nodes into a NRML file. output must be a file
-    object open in write mode. If you want to perform a
-    consistency check, open it in read-write mode, then it will
-    be read after creation and validated.
-    :params nodes: an iterable over Node objects
-    :params output: a file-like object in write or read-write mode
-    :param fmt: format used for writing the floats (default '%.7E')
-    :param gml: add the http://www.opengis.net/gml namespace
-    :param xmlns: NRML namespace like http://openquake.org/xmlns/nrml/0.4
-    """
-    root = Node('nrml', nodes=nodes)
-    namespaces = {xmlns or NRML05: ''}
-    if gml:
-        namespaces[GML_NAMESPACE] = 'gml:'
-    with floatformat(fmt):
-        node_to_xml(root, output, namespaces)
-    # if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
-    #     output.seek(0)
-    #     read(output)  # validate the written file
-
-
 # Convert rupture to file
 def rup_to_file(rup, outfile, commentstr):
     # Determine geometry
@@ -286,7 +253,7 @@ def rup_to_file(rup, outfile, commentstr):
     # Write file
     with open(outfile, 'w') as ff:
         bs = io.BytesIO()
-        nwrite(node, output=bs)
+        nrml.write(node, output=bs)
         ff.write(bs.getvalue().decode("utf-8"))
         ff.write(commentstr)
     return outfile
