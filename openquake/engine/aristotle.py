@@ -94,8 +94,6 @@ def get_rupture_dict(dic, ignore_shakemap=False):
                       dip=rup.surface.get_dip(),
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
-    elif dic.get('lon') is not None:  # when called from `oq mosaic aristotle`
-        rupdic = dic
     else:
         rupdic = download_rupture_dict(usgs_id, ignore_shakemap)
     return rupdic

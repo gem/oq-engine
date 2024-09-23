@@ -116,6 +116,7 @@ AELO_FORM_PLACEHOLDERS = {
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
+    'rupture_file_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
@@ -139,6 +140,7 @@ ARISTOTLE_FORM_LABELS = {
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
     'usgs_id': 'USGS ID or custom',
+    'rupture_file_from_usgs': '',
     'rupture_file': 'Rupture model XML',
     'lon': '-180 ≤ float ≤ 180',
     'lat': '-90 ≤ float ≤ 90',
@@ -741,6 +743,7 @@ def aristotle_get_rupture_data(request):
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
     rupdic['mosaic_model'] = mosaic_model
+    rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -790,8 +793,8 @@ def aristotle_validate(request):
         'rake': valid.rake_range,
         'dip': valid.dip_range,
         'strike': valid.strike_range,
-        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
         'local_timestamp': valid.local_timestamp,
+        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
         'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
         'trt': valid.utf8,
@@ -802,6 +805,9 @@ def aristotle_validate(request):
         'maximum_distance_stations': valid.positivefloat,
     }
     params = {}
+    if rupture_path is None and request.POST.get('rupture_file_from_usgs'):
+        # giving precedence to the user-uploaded rupture file
+        rupture_path = request.POST.get('rupture_file_from_usgs')
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
                dep=None, mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():
@@ -850,7 +856,9 @@ def aristotle_validate(request):
     try:
         rupdic = get_rupture_dict(dic, ignore_shakemap)
     except Exception as exc:
-        msg = f'Unable to retrieve rupture data: {exc}'
+        msg = f'Unable to retrieve rupture data: {str(exc)}'
+        # signs '<>' would not be properly rendered in the popup notification
+        msg = msg.replace('<', '"').replace('>', '"')
         response_data = {"status": "failed", "error_msg": msg,
                          "error_cls": type(exc).__name__}
         logging.error('', exc_info=True)
@@ -1361,6 +1369,8 @@ def web_engine(request, **kwargs):
     elif application_mode == 'ARISTOTLE':
         params['aristotle_form_labels'] = ARISTOTLE_FORM_LABELS
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
+        params['aristotle_default_usgs_id'] = \
+            settings.ARISTOTLE_DEFAULT_USGS_ID
     return render(
         request, "engine/index.html", params)
 

@@ -74,12 +74,14 @@ def main(calc_id: int = -1, site_model=False,
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
     if oq.rupture_xml or oq.rupture_dict:
+        # TODO: we may want to plot the rupture boundaries instead of just the
+        # hypocenter
         rec = dstore['ruptures'][0]
         lon, lat, _dep = rec['hypo']
         xlon, xlat = [lon], [lat]
         dist = sitecol.get_cdist(rec)
         print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
-        p.scatter(xlon, xlat, marker='o', color='red', label='rupture')
+        p.scatter(xlon, xlat, marker='o', color='red', label='hypocenter')
     else:
         xlon, xlat = [], []
 

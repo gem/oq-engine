@@ -558,14 +558,24 @@
                     $('#is_point_rup').val(data.is_point_rup);
                     // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
                     //       set a specific file in an HTML file input element using JavaScript or jQuery,
-                    //       therefore we can not pre-populate the station_data_file_input with the station_data_file
-                    //       obtained converting the USGS stationlist.json, and we use a separate field referencing it
+                    //       therefore we can not pre-populate the rupture_file_input with the rupture_file
+                    //       obtained converting the USGS rupture.json, and we use a separate field referencing it
+                    $('#rupture_file_from_usgs').val(data.rupture_file_from_usgs);
+                    $('#rupture_file_from_usgs_loaded').val(data.rupture_file_from_usgs ? 'Loaded' : 'N.A.');
+                    var errors = '';
+                    if ('error' in data) {
+                        errors += '<p>' + data.error + '</p>';
+                        $('#rupture_file_from_usgs_loaded').val('N.A. (conversion error)');
+                    }
                     $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
                     if (data.station_data_error) {
                         $('#station_data_file_from_usgs_loaded').val('N.A. (conversion error)');
-                        diaerror.show(false, "Error", data.station_data_error);
+                        errors += '<p>' + data.station_data_error + '</p>';
                     } else {
                         $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                    }
+                    if (errors != '') {
+                        diaerror.show(false, "Error", errors);
                     }
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
@@ -585,7 +595,11 @@
                     $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
                     $('#trt').empty();
                     $.each(data.trts, function(index, trt) {
-                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                        var selected = '';
+                        if ('trt' in data && trt == data.trt) {
+                            selected = ' selected';
+                        }
+                        $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
                     });
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
@@ -626,6 +640,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = new FormData();
+                formData.append('rupture_file_from_usgs', $('#rupture_file_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
                 formData.append('lon', $("#lon").val());

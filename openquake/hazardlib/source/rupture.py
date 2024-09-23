@@ -884,16 +884,40 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-def get_planar_from_corners(corners, mag, rake, trt, msr=None):
+def fix_vertices_order(array43):
     """
-    :returns: a BaseRupture with a PlanarSurface
+    Make sure the point inside array43 are in the form top_left, top_right,
+    bottom_left, bottom_right
+    The convention used in the USGS format has the last two points inverted
+    with respect to what is expected by OQ
     """
-    if msr is None:
-        from openquake.hazardlib.scalerel.wc1994 import WC1994
-        msr = WC1994()
-    surf = PlanarSurface.from_corner_points(*corners)
-    hc = surf.get_middle_point()
-    rup = BaseRupture(mag, rake, trt, hc, surf)
+    top_left = array43[0]
+    top_right = array43[1]
+    bottom_left = array43[3]
+    bottom_right = array43[2]
+    return numpy.array([top_left, top_right, bottom_left, bottom_right])
+
+
+def get_multiplanar(multipolygon_coords, mag, rake, trt):
+    """
+    :param multipolygon_coords:
+       an array or list of shape (P, 5, 3) coming from geojson
+    :returns: a BaseRupture with a PlanarSurface or a multiPlanarSurface
+    """
+    # NB: in geojson the last vertex is the same as the first, so I discard it
+    # expecting shape (P, 4, 3)
+    coords = numpy.array(multipolygon_coords, float)[:, :-1, :]
+    P, vertices, _ = coords.shape
+    if vertices != 4:
+        raise ValueError('Expecting 4 vertices, got %d', vertices)
+    for p, array43 in enumerate(coords):
+        coords[p] = fix_vertices_order(array43)
+    if P == 1:
+        surf = PlanarSurface.from_array(coords[0, :, :].T)
+    else:
+        surf = geo.MultiSurface([geo.PlanarSurface.from_array(array.T)
+                                 for array in coords])
+    rup = BaseRupture(mag, rake, trt, surf.get_middle_point(), surf)
     rup.rup_id = 0
     return rup
 
@@ -985,4 +1009,3 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     rup.rup_id = 0
     vars(rup).update(vars(hypocenter))
     return rup
-    
