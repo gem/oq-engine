@@ -101,11 +101,9 @@ def main(dstore, csm):
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
 
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
-    gsim_weights = csm.full_lt.gsim_lt.get_weights
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
-        cmaker.wei = gsim_weights(cmaker.trt)  # as requested by sponsor
         for sid in range(N):
             smap.submit((cmaker, ctx[ctx.sids == sid]))
     res = smap.reduce()
