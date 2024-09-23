@@ -69,9 +69,8 @@ def compute_median_spectrum(cmaker, context, monitor):
                 ocr = -np.log(probs) / cmaker.investigation_time
             for g, w in enumerate(cmaker.wei):
                 poes_g = poes[:, :, g].reshape(C, M, P)
-                for m in range(M):
-                    for p, poe in enumerate(cmaker.poes):
-                        wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w
+                for p, poe in enumerate(cmaker.poes):
+                    wei[slc, :, g, p] = ocr * poes_g[:, :, p] / poe * w
         mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
         median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
         yield {(cmaker.grp_id, site_id): median_spectrum}
