@@ -25,7 +25,6 @@ from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 
-import sys
 import tempfile
 import io
 import os
@@ -40,7 +39,7 @@ from shapely.geometry import Polygon
 import numpy
 from json.decoder import JSONDecodeError
 from openquake.baselib.node import (
-    node_from_xml, node_to_xml, Node, floatformat)
+    node_from_xml, Node)
 from openquake.hazardlib.source.rupture import get_multiplanar
 from openquake.hazardlib import nrml, sourceconverter
 
