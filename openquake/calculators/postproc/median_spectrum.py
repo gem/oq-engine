@@ -70,8 +70,8 @@ def compute_median_spectrum(cmaker, context, monitor):
             for g, w in enumerate(cmaker.wei):
                 poes_g = poes[:, :, g].reshape(C, M, P)
                 for p, poe in enumerate(cmaker.poes):
-                    for m in range(M):
-                        wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w
+                    for m, imt in enumerate(cmaker.imtls):
+                        wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w[m]
         mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
         median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
         yield {(cmaker.grp_id, site_id): median_spectrum}
@@ -103,9 +103,16 @@ def main(dstore, csm):
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
     blocksize = totsize / (oqp.concurrent_tasks or 1)
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
+    get_weight = csm.full_lt.gsim_lt.get_weight
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
+        grp_weight = cmaker.wei.sum()
+        # Canada has IMT-dependent weights
+        ws = [[get_weight(cmaker.trt, gsim, imt)
+               for gsim in cmaker.gsims]
+              for m, imt in enumerate(oqp.imtls)]
+        cmaker.wei = grp_weight * np.array(ws).T  # shape (G, M)
         splits = np.ceil(len(ctx) * G[cmaker.grp_id] / blocksize)
         for ctxt in np.array_split(ctx, splits):
             smap.submit((cmaker, ctxt))
