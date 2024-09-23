@@ -109,10 +109,9 @@ def main(dstore, csm):
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
         grp_weight = cmaker.wei.sum()
         # Canada has IMT-dependent weights
-        ws = [[get_weight(cmaker.trt, gsim, imt)
-               for gsim in cmaker.gsims]
-              for m, imt in enumerate(oqp.imtls)]
-        cmaker.wei = grp_weight * np.array(ws).T  # shape (G, M)
+        ws = [[get_weight(cmaker.trt, gsim, imt) for imt in oqp.imtls]
+              for gsim in cmaker.gsims]
+        cmaker.wei = grp_weight * np.array(ws)  # shape (G, M)
         splits = np.ceil(len(ctx) * G[cmaker.grp_id] / blocksize)
         for ctxt in np.array_split(ctx, splits):
             smap.submit((cmaker, ctxt))
