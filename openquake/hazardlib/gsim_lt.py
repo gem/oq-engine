@@ -530,15 +530,13 @@ class GsimLogicTree(object):
         branches.sort(key=lambda b: b.trt)
         return branches
 
-    def get_weights(self, trt, imt='weight'):
+    def get_weight(self, trt, gsim, imt='weight'):
         """
-        Branch weights for the given TRT
+        Branch weights for the given TRT and gsim
         """
-        weights = []
         for br in self.branches:
-            if br.trt == trt:
-                weights.append(br.weight[imt])
-        return numpy.array(weights)
+            if br.trt == trt and br.gsim._toml == gsim._toml:
+                return br.weight[imt]
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """

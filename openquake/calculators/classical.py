@@ -586,8 +586,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
-        maxsrc = max(srcs, key=lambda src: src.weight / self.csm.splits[src.grp_id])
-        logging.info('Heaviest: %s', maxsrc.source_id)
+        maxsrc = max(srcs, key=lambda s: s.weight / self.csm.splits[s.grp_id])
+        logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
         gids = get_heavy_gids(sgs, self.cmakers)
