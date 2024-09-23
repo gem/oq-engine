@@ -117,9 +117,9 @@ def main(dstore, csm):
     median_spectra = np.zeros((Gr, N, M, P), np.float32)
     for (grp_id, site_id), mhs in res.items():
         median_spectra[grp_id, site_id] = mhs
-    dstore.create_dset("median_spectra", median_spectra)
+    dstore.create_dset("log_median_spectra", median_spectra)
     dstore.set_shape_descr(
-        "median_spectra",
+        "log_median_spectra",
         grp_id=Gr,
         site_id=N,
         period=[imt.period for imt in oqp.imt_periods()],
