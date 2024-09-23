@@ -18,6 +18,7 @@
 """
 Median spectrum post-processor
 """
+
 import logging
 import numpy as np
 from openquake.baselib import sap, parallel, general
@@ -71,7 +72,7 @@ def compute_median_spectrum(cmaker, ctx, monitor):
 
     mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
     wei = np.concatenate(weights)  # shape (N, M, G, P)
-    median_spectrum = np.einsum('nmgp,gmn->mp', wei, mea)
+    median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
 
     return {(cmaker.grp_id, site_id): median_spectrum}
 
@@ -85,27 +86,28 @@ def main(dstore, csm):
     :param csm: CompositeRiskModel
     """
     # consistency checks
-    oqp = dstore['oqparam']
-    N = len(dstore['sitecol'])
+    oqp = dstore["oqparam"]
+    N = len(dstore["sitecol"])
     M = len(oqp.imtls)
     assert oqp.investigation_time == 1, oqp.investigation_time
-    assert 'PGV' not in oqp.imtls
+    assert "PGV" not in oqp.imtls
     assert N <= oqp.max_sites_disagg, N
-    logging.warning('Median spectrum calculations are still '
-                    'experimental')
+    logging.warning("Median spectrum calculations are still " "experimental")
 
     # read the precomputed mean hazard spectrum
-    uhs = dstore.sel('hmaps-stats', stat='mean')
+    uhs = dstore.sel("hmaps-stats", stat="mean")
     ref_uhs = uhs[0, 0]  # shape SNMP -> MP
     cmakers = contexts.read_cmakers(dstore)
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
-    
+
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
+    gsim_weights = csm.full_lt.gsim_lt.get_weights
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
+        cmaker.wei = gsim_weights(cmaker.trt)  # as requested by sponsor
         for sid in range(N):
-            smap.submit((cmaker, ctx[ctx.sids==sid]))
+            smap.submit((cmaker, ctx[ctx.sids == sid]))
     res = smap.reduce()
 
     # save the median_spectrum
@@ -114,11 +116,15 @@ def main(dstore, csm):
     median_spectra = np.ones((Gr, N, M, P), np.float32)
     for (grp_id, site_id), mhs in res.items():
         median_spectra[grp_id, site_id] = np.exp(mhs)
-    dstore.create_dset('median_spectra', median_spectra)
-    dstore.set_shape_descr('median_spectra',
-                           grp_id=Gr, site_id=N,
-                           period=[imt.period for imt in oqp.imt_periods()],
-                           poe=oqp.poes)
+    dstore.create_dset("median_spectra", median_spectra)
+    dstore.set_shape_descr(
+        "median_spectra",
+        grp_id=Gr,
+        site_id=N,
+        period=[imt.period for imt in oqp.imt_periods()],
+        poe=oqp.poes,
+    )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sap.run(main)
