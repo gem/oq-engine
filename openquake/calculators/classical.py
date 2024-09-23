@@ -580,9 +580,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tgetters in block_splitter(tilegetters, splits):
                     allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
-        logging.info('This is a regular calculation with %d outputs, '
-                     '%d tasks, min_tiles=%d, max_tiles=%d',
-                     sum(n_out), len(allargs), min(n_out), max(n_out))
+        logging.warning('This is a regular calculation with %d outputs, '
+                        '%d tasks, min_tiles=%d, max_tiles=%d',
+                        sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
@@ -616,9 +616,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tgetter in tilegetters:
                     allargs.append((tgetter, cmaker, ds))
                 n_out.append(len(tilegetters))
-        logging.info('This is a tiling calculation with '
-                     '%d tasks, min_tiles=%d, max_tiles=%d',
-                     len(allargs), min(n_out), max(n_out))
+        logging.warning('This is a tiling calculation with '
+                        '%d tasks, min_tiles=%d, max_tiles=%d',
+                        len(allargs), min(n_out), max(n_out))
 
         t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap

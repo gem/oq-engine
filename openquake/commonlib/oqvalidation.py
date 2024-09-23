@@ -477,6 +477,9 @@ max_aggregations:
   Example: *max_aggregations = 200_000*
   Default: 100_000
 
+max_blocks:
+  INTERNAL. Used in classical calculations
+
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
@@ -708,6 +711,11 @@ sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
+
+mea_tau_phi:
+  Save the mean and standard deviations computed by the GMPEs
+  Example: *mea_tau_phi = true*
+  Default: False
 
 sec_peril_params:
   INTERNAL
@@ -1060,6 +1068,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 1E5)
+    max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
@@ -1110,6 +1119,7 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
+    mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     secondary_simulations = valid.Param(valid.dictionary, {})
@@ -1311,8 +1321,9 @@ class OqParam(valid.ParamSet):
     def check_risk(self, job_ini):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
-        if self.risk_files:
-            # checks for risk_files
+        if (self.job_type == 'risk' and not
+                self.shakemap_uri and not self.aristotle):
+            # check the risk_files
             hc = self.hazard_calculation_id
             if 'damage' in self.calculation_mode and not hc:
                 ok = any('fragility' in key for key in self._risk_files)

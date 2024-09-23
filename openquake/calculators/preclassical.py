@@ -193,7 +193,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     if oq.tiling is None:
         # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
         ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
-        tiling = ss or not regular
+        tiling = ss and N > 10_000 or not regular
     else:
         tiling = oq.tiling
 
@@ -411,9 +411,16 @@ class PreClassicalCalculator(base.HazardCalculator):
             deltas = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
-        # save 'ntiles' if the calculation is large
+        # save 'source_groups'
         self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
             store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+
+        # save gsims
+        toml = []
+        for cmaker in self.cmakers:
+            for gsim in cmaker.gsims:
+                toml.append(gsim._toml)
+        self.datastore['gsims'] = numpy.array(toml)
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':

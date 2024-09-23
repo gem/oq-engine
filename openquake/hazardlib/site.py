@@ -588,7 +588,7 @@ class SiteCollection(object):
 
     def split(self, ntiles, minsize=1):
         """
-        :param ntiles: number of tiles to generate (rounded if float)
+        :param ntiles: number of tiles to generate (ceiled if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
         maxtiles = numpy.ceil(len(self) / minsize)

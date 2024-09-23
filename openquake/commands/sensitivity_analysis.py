@@ -39,7 +39,9 @@ def main(job_ini, toml_args):
             '%s=%s' % item for item in zip(analysis, map(str, values)))
         allparams = params + " description=\"%s [%s]\" job_id=${job_id[%d]}" % (
             descr, params, i)
-        lines.append(config.distribution.submit_cmd + f" {job_ini} -p {allparams}")
+        line = (f'OQ_DISTRIBUTE=processpool {config.distribution.submit_cmd} '
+                f'{job_ini} -p {allparams}')
+        lines.append(line)
     print(script % dict(n=len(lines), lines='\n'.join(lines)))
 
 

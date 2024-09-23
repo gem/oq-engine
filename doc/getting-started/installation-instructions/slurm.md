@@ -51,7 +51,7 @@ then relaunch the calculations, this time asking for fewer nodes.
 ## Running out of quota
 
 The engine will store the calculation files in `shared_dir`
-and some auxiliary files in `custom_dir`; both directories and
+and some auxiliary files in `custom_dir`; both directories are
 mandatory and must be specified in the configuration file. The
 `shared_dir` is meant to point to the work area of the cluster
 and the `custom_tmp` to the scratch area of the cluster.

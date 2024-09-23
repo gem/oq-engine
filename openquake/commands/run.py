@@ -24,11 +24,13 @@ import warnings
 import getpass
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general
+from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
+from openquake.commonlib import dbapi
 from openquake.engine.engine import create_jobs, run_jobs
+from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -84,6 +86,14 @@ def main(job_ini,
     # os.environ['OQ_DISTRIBUTE'] = 'processpool'
     warnings.filterwarnings("error", category=SettingWithCopyWarning)
     user_name = getpass.getuser()
+
+    # automatically create the user db if missing
+    if (config.dbserver.host == '127.0.0.1' and
+        config.dbserver.file == '~/oqdata/db.sqlite3'
+        and user_name != 'openquake'):
+        dbfile = os.path.expanduser(config.dbserver.file)
+        if not os.path.exists(dbfile):
+            db.actions.upgrade_db(dbapi.db)
     try:
         host = socket.gethostname()
     except Exception:  # gaierror
@@ -96,6 +106,8 @@ def main(job_ini,
     else:
         params = {}
     if hc:
+        if hc == -1:
+            hc = logs.dbcmd('get_job', -1, user_name).id
         params['hazard_calculation_id'] = str(hc)
     if concurrent_tasks is not None:
         params['concurrent_tasks'] = str(concurrent_tasks)
@@ -114,10 +126,9 @@ def main(job_ini,
     for dic in dics:
         dic.update(params)
         dic['exports'] = ','.join(exports)
-    jobs = create_jobs(dics, loglevel, hc_id=hc,
-                       user_name=user_name, host=host, multi=True)
+    jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name, host=host)
     job_id = jobs[0].calc_id
-    run_jobs(jobs, nodes=nodes)
+    run_jobs(jobs, nodes=nodes, precalc=True)
     return job_id
 
 
