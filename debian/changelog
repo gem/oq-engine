@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added a check on the signatures of `get_std_dev_mag` and `get_median_area`
+    and fixed the signature of `StrasserIntraslab.get_std_dev_mag`
+
   [Enrico Abcede, Francis Bernales]
   * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014
 
