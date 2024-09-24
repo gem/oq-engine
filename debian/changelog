@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed scenario_risk from GMFs in a case when the intensity measure
+    types were incorrectly identified
+
   [Marco Pagani, Michele Simionato]
   * Added a median spectrum post-processor
 
