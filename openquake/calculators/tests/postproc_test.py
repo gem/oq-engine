@@ -222,8 +222,13 @@ class PostProcTestCase(CalculatorTestCase):
                          'S1_5_50': 0.34593, 'BSE1N_S1': 0.28645,
                          'BSE1E_S1': 0.18822, 'S1_20_50': 0.18822}
 
-    def test_median_spectrum(self):
+    def test_median_spectrum1(self):
         self.run_calc(case_median_spectrum.__file__, 'job.ini')
+        [fname] = export(('median_spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/median_spectrum1.csv', fname)
+
+    def test_median_spectrum2(self):
+        self.run_calc(case_median_spectrum.__file__, 'job2.ini')
         fnames = export(('median_spectra', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
