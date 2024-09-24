@@ -641,6 +641,9 @@ class CompositeRiskModel(collections.abc.Mapping):
     def init(self):
         oq = self.oqparam
         if self.risklist:
+            #if 'gmfs' in oq.inputs and not oq.hazard_imtls:
+            #    raise InvalidFile('Please set intensity_measure_types in %s'
+            #                      % oq.inputs['job_ini'])
             oq.set_risk_imts(self.risklist)
         # LEGACY: extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
