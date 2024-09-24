@@ -1901,7 +1901,7 @@ def get_cmakers(src_groups, full_lt, oq):
         src = sg.sources[0]
         all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
-    gweights = full_lt.g_weights(all_trt_smrs)
+    gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
