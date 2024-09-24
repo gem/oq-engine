@@ -1118,7 +1118,7 @@ class FullLogicTree(object):
         self.trts = list(self.gsim_lt.values)
         R = self.get_num_paths()
         logging.info('Building {:_d} realizations'.format(R))
-        self.weights = numpy.array(
+        self.weights = numpy.array(  # shape (R, 1) or (R, M+1)
             [rlz.weight for rlz in self.get_realizations()])
         return self
 
@@ -1169,7 +1169,7 @@ class FullLogicTree(object):
         data = []
         for trt_smrs in all_trt_smrs:
             for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
-                data.append(self.weights[rlzs].sum())
+                data.append(self.weights[rlzs].sum(axis=0))
         return numpy.array(data)
 
     def trt_by(self, trt_smr):
