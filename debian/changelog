@@ -1,3 +1,10 @@
+  [Enrico Abcede, Francis Bernales]
+  * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014  
+
+  [Michele Simionato]
+  * Fixed scenario_risk from GMFs when the intensity measure types were
+    incorrectly identified
+
   [Marco Pagani, Michele Simionato]
   * Added a median spectrum post-processor
 

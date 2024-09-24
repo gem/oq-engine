@@ -26,7 +26,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_10, case_11, occupants, case_master,
+    case_6a, case_7, case_8, case_9, case_10, case_11, occupants, case_master,
     case_shakemap, case_shapefile, reinsurance, conditioned)
 
 
@@ -214,6 +214,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
+
+    def test_case_9(self):
+        # scenario_risk from GMFs with intensity_measure_types
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
 
     def test_case_10(self):
         # missing occupants in the exposure

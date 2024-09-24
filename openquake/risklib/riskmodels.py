@@ -685,7 +685,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             for riskid, vfs in self.risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
-        self.primary_imtls = oq.get_primary_imtls()
         self.imtls = oq.imtls
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation

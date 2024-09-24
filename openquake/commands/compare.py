@@ -267,8 +267,9 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
     arrays = c.compare('avg_gmf', imt, files, samplesites, rtol, atol)
     if len(calc_ids) == 2:  # print rms-diff
         gmf1, gmf2 = arrays
-        sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))
-        print('rms-diff =', sigma)
+        if len(gmf1):
+            sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))
+            print('rms-diff =', sigma)
 
 
 def compare_med_gmv(imt, calc_ids: int, *,
