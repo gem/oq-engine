@@ -17,10 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import io
 import numpy
+import logging
+from PIL import Image
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
+from openquake.calculators.getters import get_ebrupture
 
 
 def import_plt():
@@ -91,6 +95,39 @@ def plot_avg_gmf(ex, imt):
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
     return plt
+
+
+def plot_rupture(dstore):
+    rup_id = 0  # there is only 1 rupture
+    ebr = get_ebrupture(dstore, rup_id)
+    rup = ebr.rupture
+    poly = rup.surface.mesh.get_convex_hull()
+    min_x, min_y, max_x, max_y = poly.get_bbox()
+    plt = import_plt()
+    _fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_aspect('equal')
+    ax.grid(True)
+    ax.fill(poly.lons, poly.lats, alpha=.5, color='purple',
+            label='Rupture')
+    ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
+            color='orange', label='Hypocenter', alpha=.5,
+            linestyle='', markersize=8)
+    ax = add_borders(ax)
+    BUF_ANGLE = 4
+    ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
+    ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    ax.set_title('Rupture')
+    ax.legend()
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png', bbox_inches='tight')
+    fig_path = 'png/rupture.png'
+    logging.info(f'Saving {fig_path} into the datastore')
+    dstore[fig_path] = Image.open(bio)
+    # NOTE: for debugging purposes, we may uncomment the following lines
+    # plt.show()
+    # usgs_id = dstore['oqparam'].rupture_dict['usgs_id']
+    # TODO: create the ruptures dir
+    # plt.savefig('ruptures/%s.png' % usgs_id, dpi=300)
 
 
 def get_assetcol(calc_id):
