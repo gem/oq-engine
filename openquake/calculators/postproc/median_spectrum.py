@@ -71,12 +71,13 @@ def compute_median_spectrum(cmaker, context, monitor):
                 poes_g = poes[:, :, g].reshape(C, M, P)
                 for p, poe in enumerate(cmaker.poes):
                     for m, imt in enumerate(cmaker.imtls):
-                        wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w[m]
-        mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, N)
-        median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
+                        wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w
+        mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, U)
+        median_spectrum = np.einsum("umgp,gmu->mp", wei, mea)
         yield {(cmaker.grp_id, site_id): median_spectrum}
 
 
+# NB: we are ignoring IMT-dependent weights
 def main(dstore, csm):
     """
     Compute the median hazard spectrum for the reference poe,
@@ -103,15 +104,11 @@ def main(dstore, csm):
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
     blocksize = totsize / (oqp.concurrent_tasks or 1)
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
-    get_weight = csm.full_lt.gsim_lt.get_weight
     for grp_id, ctx in ctx_by_grp.items():
+        ctx.sort(order=['sids', 'mag'])
+
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
-        grp_weight = cmaker.wei.sum()
-        # Canada has IMT-dependent weights
-        ws = [[get_weight(cmaker.trt, gsim, imt) for imt in oqp.imtls]
-              for gsim in cmaker.gsims]
-        cmaker.wei = grp_weight * np.array(ws)  # shape (G, M)
         splits = np.ceil(len(ctx) * G[cmaker.grp_id] / blocksize)
         for ctxt in np.array_split(ctx, splits):
             smap.submit((cmaker, ctxt))
@@ -121,8 +118,8 @@ def main(dstore, csm):
     Gr = len(csm.src_groups)  # number of groups
     P = len(oqp.poes)
     median_spectra = np.zeros((Gr, N, M, P), np.float32)
-    for (grp_id, site_id), mhs in res.items():
-        median_spectra[grp_id, site_id] = mhs
+    for (grp_id, site_id), ms in res.items():
+        median_spectra[grp_id, site_id] = ms
     dstore.create_dset("log_median_spectra", median_spectra)
     dstore.set_shape_descr(
         "log_median_spectra",
