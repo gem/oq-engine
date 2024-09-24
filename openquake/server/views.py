@@ -1538,8 +1538,10 @@ def web_engine_get_outputs_aristotle(request, calc_id):
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             assets = 'assets.png' in ds['png']
+            rupture = 'rupture.png' in ds['png']
         else:
             assets = False
+            rupture = False
             avg_gmf = []
         oqparam = ds['oqparam']
         if hasattr(oqparam, 'local_timestamp'):
@@ -1566,7 +1568,9 @@ def web_engine_get_outputs_aristotle(request, calc_id):
                        time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
-                       avg_gmf=avg_gmf, assets=assets, warnings=warnings))
+                       avg_gmf=avg_gmf, assets=assets,
+                       rupture=rupture,
+                       warnings=warnings))
 
 
 @cross_domain_ajax

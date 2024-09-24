@@ -917,42 +917,12 @@ def plot_point_sources(srcs, ax, min_x, max_x, min_y, max_y):
     return min_x, max_x, min_y, max_y
 
 
-def make_figure_sources(extractors, what):
-    """
-    $ oq plot "sources?source_id=xxx"
-    $ oq plot "sources?code=N&code=F"
-    $ oq plot "sources?exclude=A"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
-    [ex] = extractors
-    dstore = ex.dstore
-    kwargs = what.split('?')[1]
-    if kwargs and 'exclude' in kwargs:
-        excluded_codes = [code.encode('utf8')
-                          for code in parse_qs(kwargs)['exclude']]
-    else:
-        excluded_codes = []
-    if kwargs and 'source_id' in kwargs:
-        src_ids = list(parse_qs(kwargs)['source_id'])
-    else:
-        src_ids = []
-    if kwargs and 'code' in kwargs:
-        codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']
-                 if code.encode('utf8') not in excluded_codes]
-    else:
-        codes = []
+def plot_sources(srcs, ax, min_x, max_x, min_y, max_y):
     PLOTTABLE_CODES = (
         b'N', b'M', b'X', b'S', b'C', b'P', b'p', b'P', b'F', b'A', b'K')
-    print('Reading sources...')
-    csm = dstore['_csm']
-    srcs = filter_sources(csm, src_ids, codes, excluded_codes)
-    assert srcs, ('All sources were filtered out')
-    _fig, ax = plt.subplots()
     ax.set_aspect('equal')
     ax.grid(True)
     print(f'Plotting {len(srcs)} sources...')
-    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     any_sources_were_plotted = False
     # NonParametricSource
     np_sources = [src for src in srcs if src.code == b'N']
@@ -1006,6 +976,7 @@ def make_figure_sources(extractors, what):
     # MultiFaultSource
     mf_sources = [src for src in srcs if src.code == b'F']
     if mf_sources:
+        src_ids = [src.source_id for src in srcs]
         min_x, max_x, min_y, max_y = plot_multi_fault_sources(
             mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
         any_sources_were_plotted = True
@@ -1015,6 +986,42 @@ def make_figure_sources(extractors, what):
         print(f'Plotting the following sources is not'
               f'implemented yet: {unplottable}')
     assert any_sources_were_plotted, 'No sources were plotted'
+    return min_x, max_x, min_y, max_y
+
+
+def make_figure_sources(extractors, what):
+    """
+    $ oq plot "sources?source_id=xxx"
+    $ oq plot "sources?code=N&code=F"
+    $ oq plot "sources?exclude=A"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    kwargs = what.split('?')[1]
+    if kwargs and 'exclude' in kwargs:
+        excluded_codes = [code.encode('utf8')
+                          for code in parse_qs(kwargs)['exclude']]
+    else:
+        excluded_codes = []
+    if kwargs and 'source_id' in kwargs:
+        src_ids = list(parse_qs(kwargs)['source_id'])
+    else:
+        src_ids = []
+    if kwargs and 'code' in kwargs:
+        codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']
+                 if code.encode('utf8') not in excluded_codes]
+    else:
+        codes = []
+    print('Reading sources...')
+    csm = dstore['_csm']
+    srcs = filter_sources(csm, src_ids, codes, excluded_codes)
+    assert srcs, ('All sources were filtered out')
+    _fig, ax = plt.subplots()
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
+    min_x, max_x, min_y, max_y = plot_sources(
+        srcs, ax, min_x, max_x, min_y, max_y)
     print('Plotting mosaic borders...')
     ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)

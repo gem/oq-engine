@@ -48,10 +48,12 @@ from openquake.commonlib.calc import (
     SLICE_BY_EVENT_NSITES)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
+from openquake.calculators.getters import (
+    get_rupture_getters, sig_eps_dt, get_ebrupture)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
-from openquake.calculators.postproc.plots import plot_avg_gmf
+from openquake.calculators.postproc.plots import (
+    plot_avg_gmf, import_plt, add_borders)
 from openquake.engine import engine
 from PIL import Image
 
@@ -724,7 +726,41 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
                 self.save_avg_gmf()
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+            with self.monitor('Plotting rupture', measuremem=True):
+                self.make_figure_rupture()
         return acc
+
+    def make_figure_rupture(self): # FIXME: move this to plot.py
+        rup_id = 0  # there is only 1 rupture
+        ebr = get_ebrupture(self.datastore, rup_id)
+        rup = ebr.rupture
+        poly = rup.surface.mesh.get_convex_hull()
+        min_x, min_y, max_x, max_y = poly.get_bbox()
+        plt = import_plt()
+        _fig, ax = plt.subplots(figsize=(10, 10))
+        ax.set_aspect('equal')
+        ax.grid(True)
+        ax.fill(poly.lons, poly.lats, alpha=.5, color='purple',
+                label='Rupture')
+        ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
+                color='orange', label='Hypocenter', alpha=.5,
+                linestyle='', markersize=8)
+        ax = add_borders(ax)
+        BUF_ANGLE = 4
+        ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
+        ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+        ax.set_title('Rupture')
+        ax.legend()
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        fig_path = 'png/rupture.png'
+        logging.info(f'Saving {fig_path} into the datastore')
+        self.datastore[fig_path] = Image.open(bio)
+        # NOTE: for debugging purposes, we may uncomment the following lines
+        # plt.show()
+        # usgs_id = self.datastore['oqparam'].rupture_dict['usgs_id']
+        # plt.savefig('ruptures/%s.png' % usgs_id, dpi=300)
 
     def save_avg_gmf(self):
         """
@@ -764,8 +800,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # make avg_gmf plots only if running via the webui
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             imts = list(self.oqparam.imtls)
+            ex = Extractor(self.datastore.calc_id)
             for imt in imts:
-                plt = plot_avg_gmf(Extractor(self.datastore.calc_id), imt)
+                plt = plot_avg_gmf(ex, imt)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
                 fig_path = f'png/avg_gmf-{imt}.png'
