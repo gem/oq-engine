@@ -56,7 +56,6 @@ def compute_median_spectrum(cmaker, context, monitor):
     G = len(cmaker.gsims)
     for site_id in np.unique(context.sids):
         ctx = context[context.sids == site_id]
-        U = len(ctx)  # number of ruptures
         wei = np.zeros((len(ctx), M, G, P), np.float32)
         start = 0
         for poes, ctxt, _inv in cmaker.gen_poes(ctx):
@@ -74,9 +73,8 @@ def compute_median_spectrum(cmaker, context, monitor):
                     for m, imt in enumerate(cmaker.imtls):
                         wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w[m]
         mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, U)
-        median_spectrum = np.einsum("nmgp,gmn->mp", wei, mea)
-        yield {(cmaker.grp_id, site_id):
-               general.AccumDict({'spec': median_spectrum, 'U': U})}
+        median_spectrum = np.einsum("umgp,gmu->mp", wei, mea)
+        yield {(cmaker.grp_id, site_id): median_spectrum}
 
 
 def main(dstore, csm):
@@ -126,8 +124,8 @@ def main(dstore, csm):
     Gr = len(csm.src_groups)  # number of groups
     P = len(oqp.poes)
     median_spectra = np.zeros((Gr, N, M, P), np.float32)
-    for (grp_id, site_id), dic in res.items():
-        median_spectra[grp_id, site_id] = dic['spec'] / dic['U']
+    for (grp_id, site_id), ms in res.items():
+        median_spectra[grp_id, site_id] = ms
     dstore.create_dset("log_median_spectra", median_spectra)
     dstore.set_shape_descr(
         "log_median_spectra",
