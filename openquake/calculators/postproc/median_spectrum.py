@@ -107,8 +107,11 @@ def main(dstore, csm):
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
     get_weight = csm.full_lt.gsim_lt.get_weight
     for grp_id, ctx in ctx_by_grp.items():
+        ctx.sort(order=['sids', 'mag'])
+
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
+
         grp_weight = cmaker.wei.sum()
         # Canada has IMT-dependent weights
         ws = [[get_weight(cmaker.trt, gsim, imt) for imt in oqp.imtls]
