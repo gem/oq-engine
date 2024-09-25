@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Reduced the size of the large CSV files in hazardlib and added a check
+    to forbid files larger than 600k
   * Added a check on the signatures of `get_std_dev_mag` and `get_median_area`
     and fixed the signature of `StrasserIntraslab.get_std_dev_mag`
 

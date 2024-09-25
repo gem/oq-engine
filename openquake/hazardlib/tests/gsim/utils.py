@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import csv
 import glob
 import logging
@@ -211,8 +210,7 @@ class BaseGSIMTestCase(unittest.TestCase):
             size = os.path.getsize(fname)
             hsize = humansize(size)
             if size > MAXSIZE:
-                #raise ValueError(f'{cls.__module__}: {fname} is {hsize}')
-                print(f'{cls.__module__}: {fname} is {hsize}', file=sys.stderr)
+                raise ValueError(f'{cls.__module__}: {fname} is {hsize}')
 
     def check(self, *filenames, max_discrep_percentage,
               std_discrep_percentage=None, truncation_level=99., **kwargs):
