@@ -315,8 +315,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     set_mags(oq, dstore)
     rups = dstore['ruptures'][:]
     logging.info('Reading {:_d} ruptures'.format(len(rups)))
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f', rups['nsites'].mean(),
-                 rups['nsites'].max())
+    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+                 rups['nsites'].mean(), rups['nsites'].max())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]

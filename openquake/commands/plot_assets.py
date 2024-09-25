@@ -24,7 +24,7 @@ from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes)
-from openquake.commands.plot import add_rupture
+from openquake.calculators.postproc.plots import add_rupture
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -79,13 +79,13 @@ def main(calc_id: int = -1, site_model=False,
         rec = dstore['ruptures'][0]
         lon, lat, _dep = rec['hypo']
         xlon, xlat = [lon], [lat]
+        dist = sitecol.get_cdist(rec)
+        print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             # assuming there is only 1 rupture, so rup_id=0
             ax, _min_x, min_y, _max_x, _max_y = add_rupture(
                 ax, dstore, rup_id=0)
         else:
-            dist = sitecol.get_cdist(rec)
-            print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
     else:

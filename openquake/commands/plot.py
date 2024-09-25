@@ -32,10 +32,9 @@ from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders)
+    plot_avg_gmf, import_plt, add_borders, plot_rupture)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
-from openquake.calculators.getters import get_ebrupture
 
 
 ZOOM_MARGIN = 8
@@ -1031,34 +1030,6 @@ def make_figure_sources(extractors, what):
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
-    return plt
-
-
-def add_rupture(ax, dstore, rup_id=0):
-    ebr = get_ebrupture(dstore, rup_id)
-    rup = ebr.rupture
-    poly = rup.surface.mesh.get_convex_hull()
-    min_x, min_y, max_x, max_y = poly.get_bbox()
-    ax.fill(poly.lons, poly.lats, alpha=.5, color='purple',
-            label='Rupture')
-    ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
-            color='orange', label='Hypocenter', alpha=.5,
-            linestyle='', markersize=8)
-    return ax, min_x, min_y, max_x, max_y
-
-
-def plot_rupture(dstore):
-    plt = import_plt()
-    _fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_aspect('equal')
-    ax.grid(True)
-    # assuming there is only 1 rupture, so rup_id=0
-    ax, min_x, min_y, max_x, max_y = add_rupture(ax, dstore, rup_id=0)
-    ax = add_borders(ax)
-    BUF_ANGLE = 4
-    ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
-    ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
-    ax.legend()
     return plt
 
 
