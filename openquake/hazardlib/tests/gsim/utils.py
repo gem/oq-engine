@@ -18,10 +18,9 @@
 
 import os
 import csv
-import runpy
 import logging
 import unittest
-import warnings
+import tokenize
 
 import numpy as np
 import pandas
@@ -29,7 +28,7 @@ from openquake.baselib.general import all_equals, RecordBuilder, random_filter
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
-
+MAXSIZE = 1024**2
 
 def _normalize(float_string):
     try:
@@ -201,21 +200,13 @@ class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
 
-    @classmethod
-    def get_files(cls):
-        # returns the full paths to MEAN_FILE, ..., STD_TOTAL_FILE
-        fnames = [os.path.join(cls.BASE_DATA_PATH, v)
-                  for k, v in cls.__dict__.items() if k.endswith('_FILE')]
-        return fnames
-
     def check_large_files(cls, fnames):
         """
         Log a warning for large files
         """
-        maxsize = 1024**2
         for fname in fnames:
-            if os.path.getsize(fname) > maxsize:
-                warnings.warn(f'{cls.__module__}: {fname} is larger than 1M')
+            if os.path.getsize(fname) > MAXSIZE:
+                raise ValueError(f'{cls.__module__}: {fname} is larger than 1M')
 
     def check(self, *filenames, max_discrep_percentage,
               std_discrep_percentage=None, truncation_level=99., **kwargs):
@@ -267,7 +258,7 @@ class BaseGSIMTestCase(unittest.TestCase):
 
 def _reduce_files(fnames, redfactor):
     # returns (before, after) pair
-    if not fnames:
+    if not fnames or os.path.getsize(fnames[0]) < MAXSIZE:
         return 0, 0
 
     dfs = []
@@ -290,9 +281,13 @@ def reduce_gsim_test(fname, redfactor):
 
     Reduce the mean and stddev files used by a gsim test by the redfactor
     """
-    before_after = np.zeros(2)
-    glob = runpy.run_path(fname)
-    for cls in glob.values():
-        if hasattr(cls, 'get_files'):
-            before_after += _reduce_files(cls.get_files(), redfactor)
+    fnames = []
+    with open(fname) as f:
+        for token in tokenize.generate_tokens(f.readline):
+            # parse literal strings corresponding to csv files
+            if token.type == 3 and token.string.endswith((".csv'", '.csv"')):
+                name = token.string[1:-1]  # strip quotes
+                fname = os.path.join(BaseGSIMTestCase.BASE_DATA_PATH, name)
+                fnames.append(fname)
+    before_after = _reduce_files(fnames, redfactor)
     return 'Reduced %d lines -> %d lines' % tuple(before_after)
