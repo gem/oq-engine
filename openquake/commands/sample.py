@@ -22,7 +22,6 @@ import numpy
 import pandas
 from openquake.hazardlib import (
     valid, nrml, sourceconverter, sourcewriter, logictree)
-from openquake.hazardlib.tests.gsim.utils import reduce_gsim_test
 from openquake.baselib import general
 
 
@@ -98,6 +97,8 @@ def main(fname, reduction_factor: valid.probability,
         print('Extracted %d rows out of %d' % (len(arr), len(array)))
         return
     elif fname.endswith('_test.py'):
+        # tests are not installed, so this import cannot stay at top-level
+        from openquake.hazardlib.tests.gsim.utils import reduce_gsim_test
         print(reduce_gsim_test(fname, reduction_factor))
         return
     node = nrml.read(fname)
