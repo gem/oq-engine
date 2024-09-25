@@ -98,7 +98,7 @@ def main(calc_id: int = -1, site_model=False,
     else:
         minx, miny, maxx, maxy = get_bbox(
             assetcol['lon'], assetcol['lat'], xlon, xlat)
-    BUF_ANGLE = 2
+    BUF_ANGLE = 1
     ax.set_xlim(minx - BUF_ANGLE, maxx + BUF_ANGLE)
     ax.set_ylim(miny - BUF_ANGLE, maxy + BUF_ANGLE)
 
