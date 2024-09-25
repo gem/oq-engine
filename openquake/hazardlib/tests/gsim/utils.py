@@ -21,6 +21,7 @@ import csv
 import runpy
 import logging
 import unittest
+import warnings
 
 import numpy as np
 import pandas
@@ -78,16 +79,6 @@ def normalize(csvfnames):
                         if f.startswith(('site_', 'rup_', 'dist_')))
             if tup in commonset:
                 writer.writerow([row[idx[c]] for c in cols])
-
-
-def check_large_files(fnames):
-    """
-    Log a warning for large files
-    """
-    maxsize = 1024**2
-    for fname in fnames:
-        if os.path.getsize(fname) > maxsize:
-            logging.warning(f'{fname} is larger than 1M')
 
 
 def read_cmaker_df(gsim, csvfnames):
@@ -217,13 +208,22 @@ class BaseGSIMTestCase(unittest.TestCase):
                   for k, v in cls.__dict__.items() if k.endswith('_FILE')]
         return fnames
 
+    def check_large_files(cls, fnames):
+        """
+        Log a warning for large files
+        """
+        maxsize = 1024**2
+        for fname in fnames:
+            if os.path.getsize(fname) > maxsize:
+                warnings.warn(f'{cls.__module__}: {fname} is larger than 1M')
+
     def check(self, *filenames, max_discrep_percentage,
               std_discrep_percentage=None, truncation_level=99., **kwargs):
         if std_discrep_percentage is None:
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
-        check_large_files(fnames)
+        self.check_large_files(fnames)
         if NORMALIZE:
             normalize(fnames)
             return
