@@ -18,6 +18,7 @@
 
 import os
 import csv
+import glob
 import logging
 import unittest
 import tokenize
@@ -29,7 +30,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
-MAXSIZE = 1024**2
+MAXSIZE = 600_000
 
 def _normalize(float_string):
     try:
@@ -270,8 +271,7 @@ def _reduce_files(fnames, redfactor):
     before = [len(df) for df in dfs]
     after = []
     for df, fname in zip(dfs, fnames):
-        if os.path.getsize(fname) > MAXSIZE:
-            df = random_filter(df, redfactor)
+        df = random_filter(df, redfactor)
         df.to_csv(fname, index=False)
         after.append(len(df))
     return sum(before), sum(after)
@@ -284,13 +284,17 @@ def reduce_gsim_test(fname, redfactor):
 
     Reduce the mean and stddev files used by a gsim test by the redfactor
     """
-    fnames = []
+    fnames = set()
     with open(fname) as f:
         for token in tokenize.generate_tokens(f.readline):
             # parse literal strings corresponding to csv files
             if token.type == 3 and token.string.endswith((".csv'", '.csv"')):
                 name = token.string[1:-1]  # strip quotes
                 fname = os.path.join(BaseGSIMTestCase.BASE_DATA_PATH, name)
-                fnames.append(fname)
+                if '%s' in name:  # boore_2014_test.py
+                    for f in glob.glob(fname.replace('%s', '*')):
+                        fnames.add(f)
+                else:
+                    fnames.add(fname)
     before_after = _reduce_files(fnames, redfactor)
     return 'Reduced %d lines -> %d lines' % tuple(before_after)
