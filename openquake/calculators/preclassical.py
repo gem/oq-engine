@@ -178,7 +178,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
          for cm, tgets, blocks, splits in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('splits', U16), ('size_mb', F32), ('weight', F32),
-         ('codes', '<S8'), ('trt', '<S20')])
+         ('codes', '<S8'), ('trt', '<S32')])
 
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)

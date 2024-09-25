@@ -1614,14 +1614,15 @@ class RiskComputer(dict):
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
     def __init__(self, crm, asset_df):
+        oq = crm.oqparam
         [taxidx] = asset_df.taxonomy.unique()
         self.asset_df = asset_df
-        self.imtls = crm.imtls
-        self.alias = {
-            imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
-        self.calculation_mode = crm.oqparam.calculation_mode
+        self.imtls = oq.imtls
+        self.alias = {imt: 'gmv_%d' % i
+                      for i, imt in enumerate(oq.get_primary_imtls())}
+        self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
-        self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
+        self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
         for lt in self.minimum_asset_loss:
             for riskid, weight in crm.tmap[lt][taxidx]:

@@ -586,8 +586,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
-        maxsrc = max(srcs, key=lambda src: src.weight / self.csm.splits[src.grp_id])
-        logging.info('Heaviest: %s', maxsrc.source_id)
+        maxsrc = max(srcs, key=lambda s: s.weight / self.csm.splits[s.grp_id])
+        logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
         gids = get_heavy_gids(sgs, self.cmakers)
@@ -632,8 +632,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
-        if (self.rmap.size_mb and config.directory.custom_tmp and
-            self.N > 1000 and parallel.oq_distribute() != 'no'):
+        if (self.rmap.size_mb > 200 and config.directory.custom_tmp and
+            parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
             self.datastore.swmr_on()  # must come before the Starmap
             savemap = parallel.Starmap(save_rates, genargs(),
