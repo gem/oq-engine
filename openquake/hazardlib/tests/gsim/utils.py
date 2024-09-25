@@ -280,4 +280,4 @@ def reduce_gsim_test(fname, redfactor):
     for cls in glob.values():
         if hasattr(cls, 'get_files'):
             before_after += _reduce_files(cls.get_files(), redfactor)
-    return 'Reduced %d lines -> %d lines' % before_after
+    return 'Reduced %d lines -> %d lines' % tuple(before_after)
