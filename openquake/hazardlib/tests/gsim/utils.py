@@ -214,8 +214,6 @@ class BaseGSIMTestCase(unittest.TestCase):
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 out_types.append(sdt.upper().replace(' ', '_') + '_STDDEV')
         cmaker, df = read_cmaker_df(gsim, fnames)
-        if len(df.result_type.unique()) > 1:
-            breakpoint()
         if truncation_level != 99.:
             cmaker.truncation_level = truncation_level
         for ctx in gen_ctxs(df):
