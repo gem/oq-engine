@@ -69,6 +69,9 @@ def compute_median_spectrum(cmaker, context, monitor):
                 ocr = -np.log(probs) / cmaker.investigation_time
             for g, w in enumerate(cmaker.wei):
                 poes_g = poes[:, :, g].reshape(C, M, P)
+                # NB: vectorizing the loops on M, P improves nothing;
+                # the important loop is the one on C (up to 6000 elements
+                # for Canada) which is vectorized
                 for p, poe in enumerate(cmaker.poes):
                     for m, imt in enumerate(cmaker.imtls):
                         wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w
