@@ -1869,3 +1869,17 @@ def view_msr(token, dstore):
     dic = dstore['_csm'].get_msr_by_grp()
     pairs = list(dic.items())
     return numpy.array(pairs, dt('grp_id msr'))
+
+
+@view.add('log_median_spectrum')
+def view_log_median_spectrum(token, dstore):
+    if ':' in token:
+        sid = int(token.split(':')[1])
+    else:
+        sid = 0
+    dset = dstore['log_median_spectra']
+    periods = [imt.period for imt in dstore['oqparam'].imt_periods()]
+    res = numpy.zeros(len(periods), dt('period value'))
+    res['period'] = periods
+    res['value'] = dset[:, sid, :, 0].sum(axis=0)
+    return res
