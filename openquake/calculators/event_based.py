@@ -51,8 +51,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
-from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders, plot_rupture)
+from openquake.calculators.postproc.plots import plot_avg_gmf
 from openquake.engine import engine
 from PIL import Image
 
@@ -725,9 +724,6 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
                 self.save_avg_gmf()
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
-            with self.monitor('Plotting rupture', measuremem=True):
-                plot_rupture(self.datastore)
         return acc
 
     def save_avg_gmf(self):
