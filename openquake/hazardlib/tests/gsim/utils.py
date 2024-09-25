@@ -283,6 +283,7 @@ def reduce_gsim_test(fname, redfactor):
     """
     :param fname: a test file, like campbell_bozorgnia_2014_test.py
     :param redfactor: reduction factor in the range 0..1
+    :returns: a message telling how much the CSV files were reduced
 
     Reduce the mean and stddev files used by a gsim test by the redfactor
     """
