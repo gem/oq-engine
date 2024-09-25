@@ -105,8 +105,6 @@ def main(dstore, csm):
     blocksize = totsize / (oqp.concurrent_tasks or 1)
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():
-        ctx.sort(order=['sids', 'mag'])
-
         # reduce the levels to 1 level per IMT
         cmaker = set_imls(cmakers[grp_id], ref_uhs)
         splits = np.ceil(len(ctx) * G[cmaker.grp_id] / blocksize)
