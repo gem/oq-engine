@@ -80,6 +80,16 @@ def normalize(csvfnames):
                 writer.writerow([row[idx[c]] for c in cols])
 
 
+def check_large_files(fnames):
+    """
+    Log a warning for large files
+    """
+    maxsize = 1024**2
+    for fname in fnames:
+        if os.path.getsize(fname) > maxsize:
+            logging.warning(f'{fname} is larger than 1M')
+
+
 def read_cmaker_df(gsim, csvfnames):
     """
     :param gsim:
@@ -213,9 +223,11 @@ class BaseGSIMTestCase(unittest.TestCase):
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
+        check_large_files(fnames)
         if NORMALIZE:
             normalize(fnames)
             return
+
         gsim = self.GSIM_CLASS(**kwargs)
         out_types = ["MEAN"]
         for sdt in contexts.STD_TYPES:
@@ -273,7 +285,10 @@ def _reduce_files(fnames, redfactor):
 
 def reduce_gsim_test(fname, redfactor):
     """
-    Reduce the mean and stddev files used by a test file.
+    :param fname: a test file, like campbell_bozorgnia_2014_test.py
+    :param redfactor: reduction factor in the range 0..1
+
+    Reduce the mean and stddev files used by a gsim test by the redfactor
     """
     before_after = np.zeros(2)
     glob = runpy.run_path(fname)
