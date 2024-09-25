@@ -17,19 +17,21 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import csv
-import runpy
+import glob
 import logging
 import unittest
-import warnings
+import tokenize
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals, RecordBuilder, random_filter
+from openquake.baselib.general import (
+    all_equals, RecordBuilder, random_filter, humansize)
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
-
+MAXSIZE = 600_000
 
 def _normalize(float_string):
     try:
@@ -201,21 +203,16 @@ class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
 
-    @classmethod
-    def get_files(cls):
-        # returns the full paths to MEAN_FILE, ..., STD_TOTAL_FILE
-        fnames = [os.path.join(cls.BASE_DATA_PATH, v)
-                  for k, v in cls.__dict__.items() if k.endswith('_FILE')]
-        return fnames
-
     def check_large_files(cls, fnames):
         """
         Log a warning for large files
         """
-        maxsize = 1024**2
         for fname in fnames:
-            if os.path.getsize(fname) > maxsize:
-                warnings.warn(f'{cls.__module__}: {fname} is larger than 1M')
+            size = os.path.getsize(fname)
+            hsize = humansize(size)
+            if size > MAXSIZE:
+                #raise ValueError(f'{cls.__module__}: {fname} is {hsize}')
+                print(f'{cls.__module__}: {fname} is {hsize}', file=sys.stderr)
 
     def check(self, *filenames, max_discrep_percentage,
               std_discrep_percentage=None, truncation_level=99., **kwargs):
@@ -273,14 +270,13 @@ def _reduce_files(fnames, redfactor):
     dfs = []
     for fname in fnames:
         dfs.append(pandas.read_csv(fname))
-    lens = np.array([len(df) for df in dfs])
-    if len(set(lens)) > 1:
-        raise RuntimeError('The files %s have different lengths: %s' %
-                           (fnames, lens))
+    before = [len(df) for df in dfs]
+    after = []
     for df, fname in zip(dfs, fnames):
         df = random_filter(df, redfactor)
         df.to_csv(fname, index=False)
-    return lens[0], len(df)
+        after.append(len(df))
+    return sum(before), sum(after)
 
 
 def reduce_gsim_test(fname, redfactor):
@@ -290,9 +286,17 @@ def reduce_gsim_test(fname, redfactor):
 
     Reduce the mean and stddev files used by a gsim test by the redfactor
     """
-    before_after = np.zeros(2)
-    glob = runpy.run_path(fname)
-    for cls in glob.values():
-        if hasattr(cls, 'get_files'):
-            before_after += _reduce_files(cls.get_files(), redfactor)
+    fnames = set()
+    with open(fname) as f:
+        for token in tokenize.generate_tokens(f.readline):
+            # parse literal strings corresponding to csv files
+            if token.type == 3 and token.string.endswith((".csv'", '.csv"')):
+                name = token.string[1:-1]  # strip quotes
+                fname = os.path.join(BaseGSIMTestCase.BASE_DATA_PATH, name)
+                if '%s' in name:  # boore_2014_test.py
+                    for f in glob.glob(fname.replace('%s', '*')):
+                        fnames.add(f)
+                else:
+                    fnames.add(fname)
+    before_after = _reduce_files(fnames, redfactor)
     return 'Reduced %d lines -> %d lines' % tuple(before_after)
