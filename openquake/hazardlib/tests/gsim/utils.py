@@ -24,7 +24,8 @@ import tokenize
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals, RecordBuilder, random_filter
+from openquake.baselib.general import (
+    all_equals, RecordBuilder, random_filter, humansize)
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
@@ -205,8 +206,10 @@ class BaseGSIMTestCase(unittest.TestCase):
         Log a warning for large files
         """
         for fname in fnames:
-            if os.path.getsize(fname) > MAXSIZE:
-                raise ValueError(f'{cls.__module__}: {fname} is larger than 1M')
+            size = os.path.getsize(fname)
+            hsize = humansize(size)
+            if size > MAXSIZE:
+                raise ValueError(f'{cls.__module__}: {fname} is {hsize}')
 
     def check(self, *filenames, max_discrep_percentage,
               std_discrep_percentage=None, truncation_level=99., **kwargs):
@@ -258,20 +261,20 @@ class BaseGSIMTestCase(unittest.TestCase):
 
 def _reduce_files(fnames, redfactor):
     # returns (before, after) pair
-    if not fnames or os.path.getsize(fnames[0]) < MAXSIZE:
+    if not fnames:
         return 0, 0
 
     dfs = []
     for fname in fnames:
         dfs.append(pandas.read_csv(fname))
-    lens = np.array([len(df) for df in dfs])
-    if len(set(lens)) > 1:
-        raise RuntimeError('The files %s have different lengths: %s' %
-                           (fnames, lens))
+    before = [len(df) for df in dfs]
+    after = []
     for df, fname in zip(dfs, fnames):
-        df = random_filter(df, redfactor)
+        if os.path.getsize(fname) > MAXSIZE:
+            df = random_filter(df, redfactor)
         df.to_csv(fname, index=False)
-    return lens[0], len(df)
+        after.append(len(df))
+    return sum(before), sum(after)
 
 
 def reduce_gsim_test(fname, redfactor):
