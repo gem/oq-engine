@@ -61,8 +61,8 @@ def get_country_iso_codes(calc_id, assetcol):
 
 def plot_avg_gmf(ex, imt):
     plt = import_plt()
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
+    _fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_aspect('equal')
     ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')

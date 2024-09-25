@@ -83,7 +83,7 @@ def main(calc_id: int = -1, site_model=False,
         print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             # assuming there is only 1 rupture, so rup_id=0
-            ax, _min_x, min_y, _max_x, _max_y = add_rupture(
+            ax, _min_x, _min_y, _max_x, _max_y = add_rupture(
                 ax, dstore, rup_id=0)
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
