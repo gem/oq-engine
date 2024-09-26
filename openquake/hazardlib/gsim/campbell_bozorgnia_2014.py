@@ -26,7 +26,7 @@ Module exports :class:`CampbellBozorgnia2014`
 """
 import numpy as np
 from numpy import exp, radians, cos
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, IA, CAV
@@ -413,10 +413,10 @@ class CampbellBozorgnia2014(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    SJ = 0  # 1 for Japan
-
-    def __init__(self, sigma_mu_epsilon=0.0, estimate_ztor=0,
-                 estimate_width=0, estimate_hypo_depth=0):
+    def __init__(self, SJ=False, sigma_mu_epsilon=0.0, estimate_ztor=False,
+                 estimate_width=False, estimate_hypo_depth=False):
+        # tested in logictree/case_71
+        self.SJ = SJ  # flag for Japan
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.estimate_ztor = estimate_ztor
         self.estimate_width = estimate_width
@@ -590,28 +590,6 @@ class CampbellBozorgnia2014LowQ(CampbellBozorgnia2014):
     ia     -10.272  2.318    0.88  -2.672  -0.837  -4.441  0.416  4.869  0.187  -0.196  1.165   1.596   2.829   2.76    0.108  -0.315  1.612   0.1311  0.0453  0.01242  -0.0103  -0.0051  0.167  0.241  1.474  -0.715  -0.337   -0.27   400  -1.982      1  1.174  0.809  0.614  0.435    0.948    0.911  0.615989848      0       0
     """)
 
-
-class CampbellBozorgnia2014JapanSite(CampbellBozorgnia2014):
-    """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for the case in
-    which the "Japan" shallow site response term is activited
-    """
-    SJ = 1
-
-
-class CampbellBozorgnia2014HighQJapanSite(CampbellBozorgnia2014HighQ):
-    """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE, for the low
-    attenuation (high quality factor) coefficients, for the case in which
-    the "Japan" shallow site response term is activited
-    """
-    SJ = 1
-
-
-class CampbellBozorgnia2014LowQJapanSite(CampbellBozorgnia2014LowQ):
-    """
-    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE, for the high
-    attenuation (low quality factor) coefficients, for the case in which
-    the "Japan" shallow site response term is activited
-    """
-    SJ = 1
+add_alias('CampbellBozorgnia2014JapanSite', CampbellBozorgnia2014, SJ=True)
+add_alias('CampbellBozorgnia2014HighQJapanSite', CampbellBozorgnia2014HighQ, SJ=True)
+add_alias('CampbellBozorgnia2014LowQJapanSite', CampbellBozorgnia2014LowQ, SJ=True)
