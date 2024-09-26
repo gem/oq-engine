@@ -20,9 +20,9 @@
 Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2014HighQ`
                :class:`CampbellBozorgnia2014LowQ`
-               :class:`CampbellBozorgnia2014JapanSite`
-               :class:`CampbellBozorgnia2014HighQJapanSite`
-               :class:`CampbellBozorgnia2014LowQJapanSite`
+               :class:`CampbellBozorgnia2019`
+               :class:`CampbellBozorgnia2019HighQ`
+               :class:`CampbellBozorgnia2019LowQ`
 """
 import numpy as np
 from numpy import exp, radians, cos
@@ -586,6 +586,23 @@ class CampbellBozorgnia2014LowQ(CampbellBozorgnia2014):
     ia     -10.272  2.318    0.88  -2.672  -0.837  -4.441  0.416  4.869  0.187  -0.196  1.165   1.596   2.829   2.76    0.108  -0.315  1.612   0.1311  0.0453  0.01242  -0.0103  -0.0051  0.167  0.241  1.474  -0.715  -0.337   -0.27   400  -1.982      1  1.174  0.809  0.614  0.435    0.948    0.911  0.615989848      0       0
     """)
 
+
+class CampbellBozorgnia2019(CampbellBozorgnia2014):
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
+
+
+class CampbellBozorgnia2019HighQ(CampbellBozorgnia2014HighQ):
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
+
+
+class CampbellBozorgnia2019LowQ(CampbellBozorgnia2014LowQ):
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
+
+
 add_alias('CampbellBozorgnia2014JapanSite', CampbellBozorgnia2014, SJ=True)
 add_alias('CampbellBozorgnia2014HighQJapanSite', CampbellBozorgnia2014HighQ, SJ=True)
 add_alias('CampbellBozorgnia2014LowQJapanSite', CampbellBozorgnia2014LowQ, SJ=True)
+
+add_alias('CampbellBozorgnia2019JapanSite', CampbellBozorgnia2019, SJ=True)
+add_alias('CampbellBozorgnia2019HighQJapanSite', CampbellBozorgnia2019HighQ, SJ=True)
+add_alias('CampbellBozorgnia2019LowQJapanSite', CampbellBozorgnia2019LowQ, SJ=True)
