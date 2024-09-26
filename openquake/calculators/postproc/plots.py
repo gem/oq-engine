@@ -21,6 +21,7 @@ import numpy
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
+from openquake.calculators.getters import get_ebrupture
 
 
 def import_plt():
@@ -60,8 +61,8 @@ def get_country_iso_codes(calc_id, assetcol):
 
 def plot_avg_gmf(ex, imt):
     plt = import_plt()
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
+    _fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_aspect('equal')
     ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
@@ -90,6 +91,34 @@ def plot_avg_gmf(ex, imt):
     w, h = maxx - minx, maxy - miny
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
+    return plt
+
+
+def add_rupture(ax, dstore, rup_id=0):
+    ebr = get_ebrupture(dstore, rup_id)
+    rup = ebr.rupture
+    poly = rup.surface.mesh.get_convex_hull()
+    min_x, min_y, max_x, max_y = poly.get_bbox()
+    ax.fill(poly.lons, poly.lats, alpha=.5, color='purple',
+            label='Rupture')
+    ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
+            color='orange', label='Hypocenter', alpha=.5,
+            linestyle='', markersize=8)
+    return ax, min_x, min_y, max_x, max_y
+
+
+def plot_rupture(dstore):
+    plt = import_plt()
+    _fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_aspect('equal')
+    ax.grid(True)
+    # assuming there is only 1 rupture, so rup_id=0
+    ax, min_x, min_y, max_x, max_y = add_rupture(ax, dstore, rup_id=0)
+    ax = add_borders(ax)
+    BUF_ANGLE = 4
+    ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
+    ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    ax.legend()
     return plt
 
 
