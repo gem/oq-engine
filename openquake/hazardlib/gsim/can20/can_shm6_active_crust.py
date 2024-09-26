@@ -429,13 +429,13 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = CB14._get_taulny(C_PGA, ctx.mag)
             phi_lnpga_b = np.sqrt(CB14._get_philny(C_PGA, ctx.mag) ** 2. -
-                                  CB14.CONSTS["philnAF"] ** 2.)
+                                  C["philnAF"] ** 2.)
 
             # Get tau_lny on the basement rock
             tau_lnyb = CB14._get_taulny(C, ctx.mag)
             # Get phi_lny on the basement rock
             phi_lnyb = np.sqrt(CB14._get_philny(C, ctx.mag) ** 2. -
-                               CB14.CONSTS["philnAF"] ** 2.)
+                               C["philnAF"] ** 2.)
             # Get site scaling term
             alpha = CB14._get_alpha(C, ctx.vs30, pga1100)
             # Evaluate tau according to equation 29
@@ -444,7 +444,7 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
 
             # Evaluate phi according to equation 30
             p = np.sqrt(
-                phi_lnyb**2 + CB14.CONSTS["philnAF"]**2 +
+                phi_lnyb**2 + C["philnAF"]**2 +
                 alpha**2 * phi_lnpga_b**2 +
                 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
             sig[m] = np.sqrt(t**2 + p**2)

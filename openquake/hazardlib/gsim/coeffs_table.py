@@ -156,12 +156,11 @@ class CoeffsTable(object):
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
         self.rb = self._setup_table_from_str(table, sa_damping)
         if self.opt == 1:
-            keys = list(self._coeffs)
-            num_coeff = len(self._coeffs[keys[0]])
-            self.cmtx = np.zeros((len(self._coeffs.keys()), num_coeff))
-            periods = np.array([imt.period for imt in keys])
+            imts = list(self._coeffs)
+            periods = np.array([imt.period for imt in imts])
             idxs = np.argsort(periods)
-            self.cmtx = np.array([self._coeffs[keys[i]].tolist() for i in idxs])
+            # regular array, if you want a composite one use .to_array()
+            self.cmtx = np.array([self._coeffs[imts[i]].tolist() for i in idxs])
             self.periods = periods[idxs]
 
     def _setup_table_from_str(self, table, sa_damping):
@@ -275,6 +274,12 @@ class CoeffsTable(object):
             vals = fit(np.log10(imt.period))
             self._coeffs[imt] = c = self.rb(*vals)
         return c
+
+    def to_array(self):
+        """
+        :returns: a composite array with the coefficient names as columns
+        """
+        return np.array([self[imt] for imt in self._coeffs])
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, ' '.join(self.rb.names))
