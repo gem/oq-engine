@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.campbell_2003 import (
     Campbell2003MblgAB1987NSHMP2008,
     Campbell2003MblgJ1996NSHMP2008,
     Campbell2003MwNSHMP2008)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from OpenSHA implementation.
 

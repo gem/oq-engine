@@ -16,7 +16,7 @@
 
 from openquake.hazardlib.gsim.kale_2015 import (KaleEtAl2015Turkey,
                                                 KaleEtAl2015Iran)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class KaleEtAlTurkey2015TestCase1(BaseGSIMTestCase):

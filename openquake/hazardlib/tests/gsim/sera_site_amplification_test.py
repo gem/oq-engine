@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.sera_amplification_models import (
     PitilakisEtAl2018, PitilakisEtAl2020, Eurocode8Amplification,
     Eurocode8AmplificationDefault, SandikkayaDinsever2018)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 MAX_DISCREP = 0.01

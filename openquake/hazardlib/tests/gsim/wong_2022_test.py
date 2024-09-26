@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.wong2022 import WongEtAl2022Shallow, WongEtAl2022Deep
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from digitalization of figures. Tolerance is therefore large, 10%.
 # to be updated with more accurate test tables. 

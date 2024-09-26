@@ -27,7 +27,7 @@ Modified the .ctl input file for FORTRAN program to include additional test
 iterations for SOF and regional cases
 """
 from openquake.hazardlib.gsim.stewart_2016 import StewartEtAl2016
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test Case A:
 #   Every combination of the following is asserted for the test suite:

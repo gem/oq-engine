@@ -17,7 +17,7 @@
 from openquake.hazardlib.gsim.akkar_2014 import (AkkarEtAlRjb2014,
                                                  AkkarEtAlRepi2014,
                                                  AkkarEtAlRhyp2014)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class AkkarEtAlRjb2014TestCase1(BaseGSIMTestCase):

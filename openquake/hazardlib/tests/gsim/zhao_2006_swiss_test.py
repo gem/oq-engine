@@ -18,7 +18,7 @@ from openquake.hazardlib.gsim.zhao_2006_swiss import (
     ZhaoEtAl2006AscSWISS05,
     ZhaoEtAl2006AscSWISS03,
     ZhaoEtAl2006AscSWISS08)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class ZhaoEtAl2006AscSWISS05TestCase(BaseGSIMTestCase):

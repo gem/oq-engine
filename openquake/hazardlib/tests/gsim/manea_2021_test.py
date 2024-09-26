@@ -20,7 +20,7 @@
 
 
 from openquake.hazardlib.gsim.manea_2021 import ManeaEtAl2021
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 #test case
 class ManeaEtAl2021TestCase(BaseGSIMTestCase):

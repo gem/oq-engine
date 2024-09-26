@@ -22,7 +22,7 @@ Test data are generated from the Fortran implementation provided by
 Efthimios Sokos (June, 2021)
 """
 import openquake.hazardlib.gsim.boore_2020 as bssa
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class BooreEtAl2020TestCase(BaseGSIMTestCase):

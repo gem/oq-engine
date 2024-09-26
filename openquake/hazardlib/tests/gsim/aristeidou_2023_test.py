@@ -28,7 +28,7 @@ from openquake.hazardlib.gsim.aristeidou_2023 import (
     AristeidouEtAl2023,
     AristeidouEtAl2023RotD100)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class AristeidouEtAl2023TestCase(BaseGSIMTestCase):

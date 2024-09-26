@@ -32,7 +32,7 @@ from openquake.hazardlib.gsim.armenia_2016 import (AkkarEtAlRjb2014Armenia,
                                                    ChiouYoungs2014Armenia,
                                                    KaleEtAl2015Armenia,
                                                    KothaEtAl2016Armenia)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Discrepency percentages to be applied to all tests

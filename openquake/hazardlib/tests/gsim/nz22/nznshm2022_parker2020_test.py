@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.nz22.nz_nshm2022_parker import (
     NZNSHM2022_ParkerEtAl2020SInter, NZNSHM2022_ParkerEtAl2020SSlab)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Tests developed using R code from Grace Parker
 # Received 17 September 2020.

@@ -24,7 +24,7 @@ from openquake.hazardlib.gsim.nz22.atkinson_2022 import (
     Atkinson2022SInter,
     Atkinson2022SSlab,
 )
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 #test case
 class Atkinson2022CrustTestCase(BaseGSIMTestCase):

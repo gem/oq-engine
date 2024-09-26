@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.abrahamson_silva_2008 import AbrahamsonSilva2008
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data have been generated from Fortran implementation
 # of Dave Boore available at:

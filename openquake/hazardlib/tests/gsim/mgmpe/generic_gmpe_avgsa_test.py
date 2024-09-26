@@ -20,7 +20,7 @@ from openquake.hazardlib.imt import AvgSA
 from openquake.hazardlib import gsim
 from openquake.hazardlib.gsim.mgmpe.generic_gmpe_avgsa import (
     GenericGmpeAvgSA, GmpeIndirectAvgSA)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class GenericGmpeAvgSATestCase(unittest.TestCase):

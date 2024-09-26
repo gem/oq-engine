@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.arteta_2021 import (
     ArtetaEtAl2021InterVs30, ArtetaEtAl2021Inter, ArtetaEtAl2021SlabVs30,
     ArtetaEtAl2021Slab)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 """
 Module exports :class:`ArtetaEtAl2021Inter`, 'ArtetaEtAl2021Slab'

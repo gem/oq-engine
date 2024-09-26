@@ -22,7 +22,7 @@ Test data taken from the Matlab implementation provided as a supplement
 to the original manuscript
 """
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.cauzzi_2014 import (
     CauzziEtAl2014,
     CauzziEtAl2014NoSOF,

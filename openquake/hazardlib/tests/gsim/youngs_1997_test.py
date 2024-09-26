@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.youngs_1997 import (
     YoungsEtAl1997SInterNSHMP2008
 )
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from OpenSHA implementation.
 # for the GSC version, test data have been generated from the hazardlib

@@ -25,7 +25,7 @@ from openquake.hazardlib.gsim.edwards_fah_2013f import (
     EdwardsFah2013Foreland75Bars,
     EdwardsFah2013Foreland90Bars,
     EdwardsFah2013Foreland120Bars)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class EdwardsFah2013Foreland10BarsTestCase(BaseGSIMTestCase):

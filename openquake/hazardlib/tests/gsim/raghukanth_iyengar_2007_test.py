@@ -31,7 +31,7 @@ import warnings
 import numpy as np
 
 from openquake.hazardlib import contexts, imt
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 from openquake.hazardlib.gsim.raghukanth_iyengar_2007 import (
     RaghukanthIyengar2007,

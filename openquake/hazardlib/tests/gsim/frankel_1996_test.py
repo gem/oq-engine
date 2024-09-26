@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.frankel_1996 import (
     FrankelEtAl1996MblgAB1987NSHMP2008,
     FrankelEtAl1996MblgJ1996NSHMP2008,
     FrankelEtAl1996MwNSHMP2008)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import SA
 from openquake.hazardlib.contexts import RuptureContext

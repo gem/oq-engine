@@ -23,7 +23,7 @@ Test data generated from source code provided by Philippe Roth
 """
 from openquake.hazardlib.gsim.bindi_2011_ipe import (
     BindiEtAl2011RepiFixedH, BindiEtAl2011Repi)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

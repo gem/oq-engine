@@ -16,7 +16,7 @@
 
 from openquake.hazardlib.gsim.zafarani_2018 import (ZafaraniEtAl2018,
                                                    ZafaraniEtAl2018VHratio)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class ZaferaniEtAl2018TestCase(BaseGSIMTestCase):

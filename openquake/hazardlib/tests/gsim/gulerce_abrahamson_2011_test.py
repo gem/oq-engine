@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.gulerce_abrahamson_2011 import (
     GulerceAbrahamson2011)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class GulreceAbrahamson2011TestCase(BaseGSIMTestCase):

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.can15.eastern import (
     EasternCan15Mid, EasternCan15Upp, EasternCan15Low)
 

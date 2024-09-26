@@ -17,7 +17,7 @@
 from openquake.hazardlib.gsim.sandikkaya_akkar_2017 import (SandikkayaAkkar2017Rjb,
                                                  SandikkayaAkkar2017Repi,
                                                  SandikkayaAkkar2017Rhyp)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepancy percentages to be applied to all tests
 MEAN_DISCREP = 0.1

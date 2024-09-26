@@ -22,7 +22,7 @@ Implements the tests for ECOS (2009) GMPE for macroseismic intensity
 Test data generated from source code provided by Philippe Roth
 """
 from openquake.hazardlib.gsim.ecos_2009 import ECOS2009, ECOS2009Highest
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.boore_atkinson_2011 import (BooreAtkinson2011,
                                                           Atkinson2008prime)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class BooreAtkinson2011TestCase(BaseGSIMTestCase):

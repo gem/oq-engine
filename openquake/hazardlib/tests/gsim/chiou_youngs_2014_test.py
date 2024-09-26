@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     _get_delta_cm, get_magnitude_scaling, _get_delta_g)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.calc.gmf import ground_motion_fields
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, from_string

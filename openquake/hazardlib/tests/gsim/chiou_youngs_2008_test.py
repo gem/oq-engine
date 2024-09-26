@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class ChiouYoungs2008TestCase(BaseGSIMTestCase):

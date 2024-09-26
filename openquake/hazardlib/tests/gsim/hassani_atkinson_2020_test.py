@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.hassani_atkinson_2020 import (
     HassaniAtkinson2020SInter, HassaniAtkinson2020SSlab,
     HassaniAtkinson2020Asc)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Tests developed using MATLAB code received 7 September 2020.
 

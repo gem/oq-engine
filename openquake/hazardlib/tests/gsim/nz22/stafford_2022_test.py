@@ -20,7 +20,7 @@
 
 
 from openquake.hazardlib.gsim.nz22.stafford_2022 import Stafford2022
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 #test case
 class Stafford2022TestCase(BaseGSIMTestCase):

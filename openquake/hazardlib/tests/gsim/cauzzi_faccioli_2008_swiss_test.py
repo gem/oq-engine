@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss import (
     CauzziFaccioli2008SWISS01,
     CauzziFaccioli2008SWISS04,

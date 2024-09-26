@@ -17,7 +17,7 @@
 import unittest
 import numpy as np
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.can15.western import (
     get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp,
     OceanicCan15Mid, OceanicCan15Low, OceanicCan15Upp)

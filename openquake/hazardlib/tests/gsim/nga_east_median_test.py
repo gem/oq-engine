@@ -26,7 +26,7 @@ and Eastern North America", Pacific Earthquake Engineering Research Center,
 Report Number 2015/08, University of California, Berkeley, August 2015
 """
 import openquake.hazardlib.gsim.nga_east as ne
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # A discrepancy of 0.1 % is tolerated

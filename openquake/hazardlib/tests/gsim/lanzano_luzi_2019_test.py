@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.lanzano_luzi_2019 import (LanzanoLuzi2019shallow,
                                                         LanzanoLuzi2019shallow_scaled,
                                                         LanzanoLuzi2019deep_scaled)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepancy percentages to be applied to all tests
 

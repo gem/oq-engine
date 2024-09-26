@@ -1,5 +1,5 @@
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.nz22.nz_nshm2022_kuehn_2020 import (
     NZNSHM2022_KuehnEtAl2020SInter,
     NZNSHM2022_KuehnEtAl2020SSlab

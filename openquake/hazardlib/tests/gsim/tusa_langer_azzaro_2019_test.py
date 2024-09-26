@@ -25,7 +25,7 @@ from openquake.hazardlib.gsim.tusa_langer_azzaro_2019 import (TusaLangerAzzaro20
                                                        TusaLangerAzzaro2019_60b)
 
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepancy percentages to be applied to all tests
 MEAN_DISCREP = 0.1

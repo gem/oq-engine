@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.garcia_2005 import (
     GarciaEtAl2005SSlab, GarciaEtAl2005SSlabVert)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class GarciaEtAl2005SSlabTestCase(BaseGSIMTestCase):

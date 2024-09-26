@@ -28,7 +28,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     # verification table. For this GMPE the distance required is just
     # epicentral and rrup and rjb are computed following the methodology
     # described in Atkinson (2012).
-    # See also :module:`openquake.hazardlib.tests.gsim.utils.py`
+    # See also :module:`openquake.hazardlib.gsim.utils.py`
     DO_NOT_CHECK_DISTANCES = {'rrup', 'rjb'}
 
     #: GMPE not tested against independent implementation so raise

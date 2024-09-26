@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.silva_2002 import (
     SilvaEtAl2002MwNSHMP2008,
     SilvaEtAl2002DoubleCornerSaturation,
     SilvaEtAl2002SingleCornerSaturation)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getSilva' in hazgridXnga2.f
 

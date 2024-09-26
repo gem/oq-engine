@@ -18,7 +18,7 @@
 
 import itertools
 from openquake.hazardlib.gsim import nga_east as ne
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Maximum discrepancy is increased to 2 % to account for misprints and
 # rounding errors in the tables used for the target values

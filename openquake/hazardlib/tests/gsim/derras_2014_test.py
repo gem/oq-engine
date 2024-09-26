@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Maximum discrepancy set to 0.1 %
 MAX_DISC = 0.1

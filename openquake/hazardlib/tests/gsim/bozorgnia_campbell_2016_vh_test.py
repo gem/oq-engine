@@ -35,7 +35,7 @@ from openquake.hazardlib.gsim.bozorgnia_campbell_2016_vh import (
     BozorgniaCampbell2016AveQJapanSiteVH,
     BozorgniaCampbell2016HighQJapanSiteVH,
     BozorgniaCampbell2016LowQJapanSiteVH)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class BozorgniaCampbell2016VHTestCase(BaseGSIMTestCase):

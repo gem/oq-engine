@@ -16,7 +16,7 @@
 
 from openquake.hazardlib.gsim.atkinson_2015 import (Atkinson2015,
                                                     Atkinson2015AltDistSat)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class Atkinson2015TestCase(BaseGSIMTestCase):

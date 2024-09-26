@@ -28,7 +28,7 @@ with the Earthquake Spectra paper
 import itertools
 from openquake.hazardlib.gsim.bozorgnia_campbell_2016 import (
     BozorgniaCampbell2016)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # expected files depending on sgn, SJ
 MEAN_FILE = {(0, 0): 'BC15/BC15_GLOBAL_MEAN.csv',

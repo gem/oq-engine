@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.arroyo_2010 import ArroyoEtAl2010SInter
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # The verification tables were generated using a Visual Basic code 
 # provided by Danny Arroyo. The format of the tables was adapted to 

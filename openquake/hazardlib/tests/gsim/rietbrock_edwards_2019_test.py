@@ -22,7 +22,7 @@ Test data created using the Fortran implementation provided by
 Ben Edwards
 """
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.rietbrock_edwards_2019 import \
     RietbrockEdwards2019Mean, RietbrockEdwards2019Low, RietbrockEdwards2019Up
 

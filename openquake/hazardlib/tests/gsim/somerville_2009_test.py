@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.somerville_2009 import \
     SomervilleEtAl2009YilgarnCraton, SomervilleEtAl2009NonCratonic, \
     SomervilleEtAl2009YilgarnCraton_SS14, SomervilleEtAl2009NonCratonic_SS14
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from EQRM implementation of Somerville 2009 GMPE.
 

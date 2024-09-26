@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.berge_thierry_2003 import (
     BergeThierryEtAl2003SIGMA, BergeThierryEtAl2003MwW,
     BergeThierryEtAl2003MwL_MED, BergeThierryEtAl2003MwL_ITA,
     BergeThierryEtAl2003MwL_GBL, BergeThierryEtAl2003Ms)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # test data generated from hazardlib implementation. Test data from

@@ -24,7 +24,7 @@ github page (https://github.com/nikuehn/KBCG20)
 """
 from openquake.hazardlib.gsim.kuehn_2020 import (KuehnEtAl2020SInter,
                                                  KuehnEtAl2020SSlab)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Interface

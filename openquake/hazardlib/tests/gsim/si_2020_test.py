@@ -25,7 +25,7 @@ appendix to the original PEER report
 """
 from openquake.hazardlib.gsim.si_2020 import (SiEtAl2020SInter,
                                               SiEtAl2020SSlab)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Interface

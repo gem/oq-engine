@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.dowrickrhoades_2005 import (
     DowrickRhoades2005SInter,
     DowrickRhoades2005SSlab,
     DowrickRhoades2005Volc)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from MS Excel implementation from G. McVerry
 # filename: NZSAallTmagwgtcorrected.xls (supplied 11 September 2014)

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.bahrampouri_2021 import BahrampouriEtAl2021Asc
 from openquake.hazardlib.gsim.bahrampouri_2021 import BahrampouriEtAl2021SInter
 from openquake.hazardlib.gsim.bahrampouri_2021 import BahrampouriEtAl2021SSlab

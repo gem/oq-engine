@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.yu_2013 import (YuEtAl2013Ms, YuEtAl2013MsTibet,
                                               YuEtAl2013MsStable)
 
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class YuEtAl2013ActiveTestCase(BaseGSIMTestCase):

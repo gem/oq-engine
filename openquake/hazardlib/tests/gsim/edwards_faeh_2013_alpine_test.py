@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.edwards_fah_2013a import (
     EdwardsFah2013Alpine75Bars,
     EdwardsFah2013Alpine90Bars,
     EdwardsFah2013Alpine120Bars)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 """
 Testing the single station GMPEs magnitude-distance dependent

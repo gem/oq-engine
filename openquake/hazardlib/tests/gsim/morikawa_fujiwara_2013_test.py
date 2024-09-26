@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013SubInterfaceNE,
         MorikawaFujiwara2013SubSlabSW,
         MorikawaFujiwara2013SubSlabNE)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):

@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.boore_1997 import (
     BooreEtAl1997ArbitraryHorizontal,
     BooreEtAl1997ArbitraryHorizontalUnspecified
     )
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class BooreEtAl1997TestCase(BaseGSIMTestCase):

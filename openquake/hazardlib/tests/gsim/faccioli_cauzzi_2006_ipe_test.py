@@ -22,7 +22,7 @@ Implements the tests for Bindi et al. (2011) GMPE for macroseismic intensity
 Test data generated from source code provided by Philippe Roth
 """
 from openquake.hazardlib.gsim.faccioli_cauzzi_2006 import FaccioliCauzzi2006
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

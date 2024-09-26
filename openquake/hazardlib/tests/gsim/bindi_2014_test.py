@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.bindi_2014 import (BindiEtAl2014Rjb,
                                                  BindiEtAl2014RhypEC8,
                                                  BindiEtAl2014RhypEC8NoSOF)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

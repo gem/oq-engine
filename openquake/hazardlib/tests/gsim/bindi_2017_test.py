@@ -25,7 +25,7 @@ Test data generated from source code provided by D. Bindi
 from openquake.hazardlib.gsim.bindi_2017 import (BindiEtAl2017Rjb,
                                                  BindiEtAl2017Rhypo)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

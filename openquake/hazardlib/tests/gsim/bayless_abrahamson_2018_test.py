@@ -16,7 +16,7 @@
 
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import \
         BaylessAbrahamson2018
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):

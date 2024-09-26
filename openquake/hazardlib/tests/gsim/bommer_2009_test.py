@@ -24,7 +24,7 @@ Test data generated from source code provided by Cecilia Nievas
 """
 from openquake.hazardlib.gsim.bommer_2009 import BommerEtAl2009RSD
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

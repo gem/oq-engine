@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     CampbellBozorgnia2014HighQJapanSite,
     CampbellBozorgnia2014LowQJapanSite)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):

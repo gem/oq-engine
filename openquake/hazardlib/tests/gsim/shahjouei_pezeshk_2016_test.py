@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.shahjouei_pezeshk_2016 import (
     ShahjoueiPezeshk2016)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class ShahjoueiPezeshk2016TestCase(BaseGSIMTestCase):

@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013, Bradley2013Volc
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class Bradley2013TestCase(BaseGSIMTestCase):

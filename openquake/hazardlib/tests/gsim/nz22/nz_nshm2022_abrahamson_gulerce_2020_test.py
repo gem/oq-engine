@@ -20,7 +20,7 @@
 Test suite for the NZ NSHM 2022 modification of Abrahamson & Gulerce (2020) NGA Subduction GMPEs. 
 """
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.nz22.nz_nshm2022_abrahamson_gulerce_2020 import (
     NZNSHM2022_AbrahamsonGulerce2020SInter,
     NZNSHM2022_AbrahamsonGulerce2020SSlab,

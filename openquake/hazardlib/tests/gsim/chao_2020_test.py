@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.chao_2020 import (
     ChaoEtAl2020SInter, ChaoEtAl2020SSlab, ChaoEtAl2020Asc)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Tests developed using MATLAB code from Shu-Hsien Chao
 # Received 9 October 2020.

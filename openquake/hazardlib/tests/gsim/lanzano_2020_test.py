@@ -22,7 +22,7 @@
 from openquake.hazardlib.gsim.lanzano_2020 import LanzanoEtAl2020_ref
 from openquake.hazardlib.gsim.lanzano_2020 import LanzanoEtAl2020_EC8
 from openquake.hazardlib.gsim.lanzano_2020 import LanzanoEtAl2020_Cluster
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class LanzanoEtAl2020_ref_TestCase(BaseGSIMTestCase):

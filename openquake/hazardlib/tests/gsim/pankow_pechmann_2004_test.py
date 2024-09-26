@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.pankow_pechmann_2004 import PankowPechmann2004
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data obtained from Table 2 of Pankow and Pechmann (2004)
 

@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.campbell_1997 import (
     Campbell1997,
 )
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Test data generated from OpenSHA implementation.

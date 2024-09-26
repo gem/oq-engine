@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.campbell_bozorgnia_2008 import (
     CampbellBozorgnia2008, CampbellBozorgnia2008Arbitrary)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data have been generated from the Fortran implementation provided by
 # K. Campbell and Y. Bozorgnia, available as a supplement to the NGA documents

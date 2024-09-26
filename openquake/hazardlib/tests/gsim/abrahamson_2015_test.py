@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SSlab,
     AbrahamsonEtAl2015SSlabHigh,
     AbrahamsonEtAl2015SSlabLow)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class AbrahamsonEtAl2015SInterTestCase(BaseGSIMTestCase):

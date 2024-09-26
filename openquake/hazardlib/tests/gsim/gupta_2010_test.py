@@ -23,7 +23,7 @@ defines :class:`Gupta2010SSlabTestCase`
 for testing of :class:`openquake.hazardlib.gsim.gupta_2010.Gupta2010SSlab`.
 """
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.gupta_2010 import Gupta2010SSlab
 
 

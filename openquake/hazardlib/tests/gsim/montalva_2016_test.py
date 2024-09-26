@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.montalva_2016 import (
     MontalvaEtAl2016SInter,
     MontalvaEtAl2016SSlab)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class MontalvaEtAl2016SInterTestCase(BaseGSIMTestCase):

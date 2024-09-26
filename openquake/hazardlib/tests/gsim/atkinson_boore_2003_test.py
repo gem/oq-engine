@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     AtkinsonBoore2003SSlabNSHMP2008,
     AtkinsonBoore2003SSlabCascadiaNSHMP2008,
     AtkinsonBoore2003SSlabJapanNSHMP2008)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from OpenSHA implementation
 

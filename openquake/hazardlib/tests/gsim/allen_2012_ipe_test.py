@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.allen_2012_ipe import (AllenEtAl2012,
                                                      AllenEtAl2012Rhypo)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from independent Matlab implementation
 

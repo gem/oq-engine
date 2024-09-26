@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.fukushima_tanaka_1990 import (
     FukushimaTanaka1990, FukushimaTanakaSite1990)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class FukushimaTanaka1990TestCase(BaseGSIMTestCase):

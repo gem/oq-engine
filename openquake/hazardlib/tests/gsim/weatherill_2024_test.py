@@ -21,7 +21,7 @@
 from openquake.hazardlib.gsim.weatherill_2024 import (
     Weatherill2024ESHM20AvgSA, Weatherill2024ESHM20SlopeGeologyAvgSA,
     Weatherill2024ESHM20AvgSAHomoskedastic)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 MAX_DISCREP = 0.01

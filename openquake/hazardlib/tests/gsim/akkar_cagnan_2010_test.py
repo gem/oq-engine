@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.akkar_cagnan_2010 import AkkarCagnan2010
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class AkkarCagnan2010TestCase(BaseGSIMTestCase):

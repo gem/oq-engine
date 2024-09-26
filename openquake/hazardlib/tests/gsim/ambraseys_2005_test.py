@@ -16,7 +16,7 @@
 
 from openquake.hazardlib.gsim.ambraseys_2005 import (AmbraseysEtAl2005,
                                                    AmbraseysEtAl2005Vertical)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class AmbraseysEtAl2005TestCase(BaseGSIMTestCase):

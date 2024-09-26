@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.somerville_2001 import (
     SomervilleEtAl2001NSHMP2008)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getSomer' in hazgridXnga2.f
 

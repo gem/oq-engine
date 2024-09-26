@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.bora_2019 import BoraEtAl2019, BoraEtAl2019Drvt
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class Boraetal2019FASTestCase(BaseGSIMTestCase):

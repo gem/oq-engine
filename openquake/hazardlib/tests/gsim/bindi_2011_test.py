@@ -23,7 +23,7 @@
 #
 
 from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.bindi_2011 import \
     BindiEtAl2011Ita19Low, BindiEtAl2011Ita19Upp
 

@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.abrahamson_2018 import (
     AbrahamsonEtAl2018SSlab,
     AbrahamsonEtAl2018SSlabHigh,
     AbrahamsonEtAl2018SSlabLow)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Interface

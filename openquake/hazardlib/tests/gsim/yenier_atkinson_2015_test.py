@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.yenier_atkinson_2015 import (
     YenierAtkinson2015BSSA)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import get_mean_stds
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class YenierAtkinson2015BSSA(BaseGSIMTestCase):

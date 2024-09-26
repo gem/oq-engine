@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.campbell_bozorgnia_2003 import (
     CampbellBozorgnia2003NSHMP2007
 )
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine getCamp2000 in hazFXv7.f fotran code
 # availble from http://earthquake.usgs.gov/hazards/products/ak/2007/software/

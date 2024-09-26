@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.geomatrix_1993 import Geomatrix1993SSlabNSHMP2008
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getGeom' in hazgridXnga2.f
 

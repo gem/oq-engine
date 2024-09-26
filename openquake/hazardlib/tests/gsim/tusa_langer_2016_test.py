@@ -25,7 +25,7 @@ from openquake.hazardlib.gsim.tusa_langer_2016 import (
     TusaLanger2016RepiBA08SE, TusaLanger2016RepiBA08DE,
     TusaLanger2016RepiSP87SE, TusaLanger2016RepiSP87DE,
     TusaLanger2016Rhypo)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepancy percentages to be applied to all tests
 MEAN_DISCREP = 0.1

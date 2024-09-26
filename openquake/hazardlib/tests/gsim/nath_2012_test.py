@@ -27,7 +27,7 @@ for testing of
 and subclasses of same.
 """
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.nath_2012 import (
     NathEtAl2012Lower, NathEtAl2012Upper)
 

@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.idini_2017 import (
     IdiniEtAl2017SInter,
     IdiniEtAl2017SSlab)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class IdiniEtAl2017SInterTestCase(BaseGSIMTestCase):

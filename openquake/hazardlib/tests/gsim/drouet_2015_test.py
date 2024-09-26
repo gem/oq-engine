@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.drouet_2015_brazil import (
     DrouetBrazil2015, DrouetBrazil2015withDepth)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class DrouetEtAl2015TestCase(BaseGSIMTestCase):

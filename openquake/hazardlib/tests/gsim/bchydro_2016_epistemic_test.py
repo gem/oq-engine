@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.bchydro_2016_epistemic import (
     BCHydroESHM20SSlab, BCHydroESHM20SSlabHigh, BCHydroESHM20SSlabLow,
     FABATaperGaussian, FABATaperStep, FABATaperLinear, FABATaperSFunc,
     FABATaperSigmoid)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 MAX_DISCREP = 0.01

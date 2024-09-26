@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.abrahamson_silva_1997 import (AbrahamsonSilva1997,
                                                             AbrahamsonSilva1997Vertical)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data have been generated from Fortran implementation
 # (subroutine getAS in HazFXv.f code) available from

@@ -24,7 +24,7 @@
 
 from openquake.hazardlib.gsim.lanzano_2016 import LanzanoEtAl2016_RJB
 from openquake.hazardlib.gsim.lanzano_2016 import LanzanoEtAl2016_Rhypo
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class LanzanoEtAl2016_RJB_TestCase(BaseGSIMTestCase):

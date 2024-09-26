@@ -25,7 +25,7 @@ An independent set of test tables to exercise the complete site amplification
 and aleatory uncertainty models is provided from the US NSHMP implementation
 courtesy of Eric Thompson (USGS)
 """
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 import openquake.hazardlib.gsim.usgs_ceus_2019 as ceus
 
 # Standard Deviation Models Test Case

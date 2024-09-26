@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.toro_1997 import (
     ToroEtAl1997MwNSHMP2008
 )
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getToro' in hazgridXnga2.f
 

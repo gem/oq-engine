@@ -25,7 +25,7 @@ platform
 """
 from openquake.hazardlib.gsim.afshari_stewart_2016 import AfshariStewart2016,\
     AfshariStewart2016Japan
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Discrepency percentages to be applied to tests

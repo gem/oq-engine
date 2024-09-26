@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.lin_lee_2008 import LinLee2008SInter
 from openquake.hazardlib.gsim.lin_lee_2008 import LinLee2008SSlab
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # test data generated from OpenSHA implementation
 

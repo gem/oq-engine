@@ -22,7 +22,7 @@ Test data created using the Fortran implementation provided by
 Ben Edwards
 """
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.rietbrock_2013 import (
     RietbrockEtAl2013SelfSimilar,
     RietbrockEtAl2013MagDependent)

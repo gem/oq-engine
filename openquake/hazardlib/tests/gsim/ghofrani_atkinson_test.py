@@ -30,7 +30,7 @@ from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014Lower,
     GhofraniAtkinson2014CascadiaUpper,
     GhofraniAtkinson2014CascadiaLower)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Discrepency percentages to be applied to all tests

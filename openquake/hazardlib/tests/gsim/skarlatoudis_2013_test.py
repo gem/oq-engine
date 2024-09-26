@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.skarlatoudis_2013 import (
     SkarlatoudisEtAlSSlab2013, SkarlatoudisEtAlSSlab2013_scaled)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class SkarlatoudisEtAlSSlab2013TestCase(BaseGSIMTestCase):

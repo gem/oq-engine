@@ -25,7 +25,7 @@ from openquake.hazardlib.gsim.mcverry_2006 import (
     McVerry2006SInterSC,
     McVerry2006SSlabSC,
     McVerry2006VolcSC)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from MS Excel implementation from G. McVerry
 # filename: NZSAallTmagwgtcorrected.xls (supplied 11 September 2014)

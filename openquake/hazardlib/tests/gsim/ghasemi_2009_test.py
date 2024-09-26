@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.ghasemi_2009 import (GhasemiEtAl2009)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class Ghasemi2009TestCase(BaseGSIMTestCase):

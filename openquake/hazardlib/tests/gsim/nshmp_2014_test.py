@@ -40,7 +40,7 @@ from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Discrepency percentages to be applied to all tests

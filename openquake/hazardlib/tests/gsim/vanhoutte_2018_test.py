@@ -24,7 +24,7 @@ Test data generated from R source code provided by the paper author
 """
 from openquake.hazardlib.gsim.vanhoutte_2018 import VanHoutteEtAl2018RSD
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 0.1

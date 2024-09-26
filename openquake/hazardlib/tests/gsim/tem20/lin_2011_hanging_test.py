@@ -18,7 +18,7 @@
 
 import os
 from openquake.hazardlib.gsim.tem20.lin_2011 import Lin2011hanging
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data provided by Jia-Cian Gao (TEM) on June 9, 2021 - Revised and
 # updated by M. Pagani on July 16, 2021

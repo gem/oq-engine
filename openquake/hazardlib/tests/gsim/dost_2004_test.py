@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.dost_2004 import (DostEtAl2004,
                                                 DostEtAl2004BommerAdaptation)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class DostEtAl2004TestCase(BaseGSIMTestCase):

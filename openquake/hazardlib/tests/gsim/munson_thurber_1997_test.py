@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.munson_thurber_1997 import (
                                                   MunsonThurber1997,
                                                   MunsonThurber1997Hawaii)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class MunsonThurber1997TestCase(BaseGSIMTestCase):

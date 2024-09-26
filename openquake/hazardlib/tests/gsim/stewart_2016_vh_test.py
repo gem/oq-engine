@@ -29,7 +29,7 @@ Bozorgnia and Campbell for V/H standard deviations.
 Input test cases based on SBSA15 GMPE tests
 """
 import openquake.hazardlib.gsim.stewart_2016_vh as SBSAb
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test Case A:
 #   Every combination of the following is asserted for the test suite:

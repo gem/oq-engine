@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.kotha_2020 import (
     KothaEtAl2020, KothaEtAl2020ESHM20, KothaEtAl2020Site,
     KothaEtAl2020Slope, KothaEtAl2020ESHM20SlopeGeology, KothaEtAl2020regional)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.kotha_2020 import get_distance_coefficients_3, get_dl2l
 
 MAX_DISCREP = 0.01

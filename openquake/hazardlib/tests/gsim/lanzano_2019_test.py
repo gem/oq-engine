@@ -25,7 +25,7 @@
 from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RJB_OMO
 from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RUP_OMO
 from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RJB_OMOscaled
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class LanzanoEtAl2019_RJB_OMO_TestCase(BaseGSIMTestCase):

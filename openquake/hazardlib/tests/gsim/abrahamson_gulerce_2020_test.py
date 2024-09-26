@@ -25,7 +25,7 @@ Professor Abrahamson
 
 from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     AbrahamsonGulerce2020SInter, AbrahamsonGulerce2020SSlab)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # Interface - Global

@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.phung_2020 import (
     PhungEtAl2020Asc, PhungEtAl2020SInter, PhungEtAl2020SSlab)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Tests developed using original MATLAB code
 # Received 3 November 2020.

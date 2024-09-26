@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.zhang_zhao_2005 import (
     Zhang_Zhao2005SInter,
     Zhang_Zhao2005SSlab,
     Zhang_Zhao2005Crust)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 

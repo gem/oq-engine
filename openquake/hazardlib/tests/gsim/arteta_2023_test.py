@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.arteta_2023 import (
     ArtetaEtAl2023_Vs30, ArtetaEtAl2023)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 """
 Module imports :class:`ArtetaEtAl2023_Vs30`,`ArtetaEtAl2023`

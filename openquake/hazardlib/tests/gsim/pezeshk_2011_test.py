@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.pezeshk_2011 import (PezeshkEtAl2011,
                                                    PezeshkEtAl2011NEHRPBC)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class Pezeshk2011EtAlTestCase(BaseGSIMTestCase):

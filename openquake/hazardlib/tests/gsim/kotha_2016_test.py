@@ -17,7 +17,7 @@
 from openquake.hazardlib.gsim.kotha_2016 import (KothaEtAl2016Italy,
                                                  KothaEtAl2016Other,
                                                  KothaEtAl2016Turkey)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 MAX_DISCREP = 0.1

@@ -18,7 +18,7 @@ from openquake.hazardlib.gsim.boore_1993 import (
     BooreEtAl1993GSCUpperLimit,
     BooreEtAl1993GSCLowerLimit,
 )
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data provided by Geological Survey of Canada
 

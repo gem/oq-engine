@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.gulerce_2017 import (
     GulerceEtAl2017, GulerceEtAl2017RegTWN, GulerceEtAl2017RegITA,
     GulerceEtAl2017RegMID, GulerceEtAl2017RegCHN, GulerceEtAl2017RegJPN)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data for verification have been generated from the excel file provided
 # as EQS supplementary material in Gulerce et al. (2017).

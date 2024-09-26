@@ -16,7 +16,7 @@
 
 from openquake.hazardlib.gsim.zalachoris_rathje_2019 import (
         ZalachorisRathje2019)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 class ZalachorisRathje2019TestCase(BaseGSIMTestCase):

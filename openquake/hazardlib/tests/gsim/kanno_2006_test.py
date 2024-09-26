@@ -26,7 +26,7 @@ for testing of
 :class:`openquake.hazardlib.gsim.kanno_2006.Kanno2006Shallow`
 and subclasses of same.
 """
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.kanno_2006 import Kanno2006Shallow, Kanno2006Deep
 
 

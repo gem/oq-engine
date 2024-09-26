@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.atkinson_boore_1995 import (
     AtkinsonBoore1995GSCBest,
     AtkinsonBoore1995GSCLowerLimit,
     AtkinsonBoore1995GSCUpperLimit)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Test data provided by Geological Survey of Canada
 

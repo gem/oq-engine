@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.zhao_2016 import (
     ZhaoEtAl2016SSlabSiteSigma)
 
 # Test data generated from Fortran implementation provided by John Zhao
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Set maximum discrepancy to 0.1%
 MAX_DISC = 0.1

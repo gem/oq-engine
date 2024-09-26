@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999Asc, \
     SiMidorikawa1999SSlabNorthEastCorrection, \
     SiMidorikawa1999SInterSouthWestCorrection, \
     SiMidorikawa1999SSlabSouthWestCorrection
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 # test data was generated using alternative implementation of GMPE.
 
 

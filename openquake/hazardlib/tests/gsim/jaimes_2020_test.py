@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.jaimes_2020 import (
     JaimesEtAl2020SSlab,
     JaimesEtAl2020SSlabVert,
     JaimesEtAl2020SSlabVHratio)
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 
 # The verification tables were generated using a the Matlab implementation 

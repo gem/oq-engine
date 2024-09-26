@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.parker_2020 import (
     ParkerEtAl2020SInter, ParkerEtAl2020SInterB,
     ParkerEtAl2020SSlab, ParkerEtAl2020SSlabB)
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Tests developed using R code from Grace Parker
 # Received 17 September 2020.

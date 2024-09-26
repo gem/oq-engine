@@ -23,7 +23,7 @@ Test data are generated from the Fortran implementation provided by
 David M. Boore (Jul, 2014)
 """
 import openquake.hazardlib.gsim.boore_2014 as bssa
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 2.0
