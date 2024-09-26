@@ -31,11 +31,7 @@ from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, IA, CAV
 
-#CONSTS = {"c8": 0.0, not constant in CB19
-CONSTS = {"h4": 1.0,
-          "c": 1.88,
-          "n": 1.18,
-          "philnAF": 0.3} # this is not constant in CB19
+CONSTS = {"h4": 1.0, "c": 1.88, "n": 1.18}
 
 
 def _get_alpha(C, vs30, pga_rock):
