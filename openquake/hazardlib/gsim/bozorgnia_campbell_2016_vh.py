@@ -199,7 +199,7 @@ class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
     Applies the average attenuation case (Dc20=0)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014JapanSite()
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014(SJ=1)
 
 
 class BozorgniaCampbell2016HighQJapanSiteVH(
@@ -215,7 +215,7 @@ class BozorgniaCampbell2016HighQJapanSiteVH(
     low attenuation (high quality factor, Q)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1, sgn=+1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014HighQJapanSite()
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014HighQ(SJ=1)
 
 
 class BozorgniaCampbell2016LowQJapanSiteVH(
@@ -231,4 +231,4 @@ class BozorgniaCampbell2016LowQJapanSiteVH(
     high attenuation (low quality factor, Q)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1, sgn=-1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014LowQJapanSite()
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014LowQ(SJ=1)
