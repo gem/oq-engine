@@ -29,22 +29,20 @@ https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
 #   * A1100 should refer to Z2.5 (VS30=1100) in Cell B48, not constant in A48.
 """
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    CampbellBozorgnia2014,
-    CampbellBozorgnia2014HighQ,
-    CampbellBozorgnia2014LowQ)
+    CampbellBozorgnia2014, CampbellBozorgnia2014HighQ, CampbellBozorgnia2014LowQ,
+    CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
+    classes = [CampbellBozorgnia2014, CampbellBozorgnia2014HighQ, CampbellBozorgnia2014LowQ]
     MEAN_FILE = 'CB14/CB2014%s_MEAN.csv'
     STD_INTRA_FILE = 'CB14/CB2014%s_STD_INTRA.csv'
     STD_INTER_FILE = 'CB14/CB2014%s_STD_INTER.csv'
     STD_TOTAL_FILE = 'CB14/CB2014%s_STD_TOTAL.csv'
 
     def test_all(self):
-        for name, cls in zip(
-                ['', '_HIGHQ', '_LOWQ'],
-                [CampbellBozorgnia2014, CampbellBozorgnia2014HighQ, CampbellBozorgnia2014LowQ]):
+        for name, cls in zip(['', '_HIGHQ', '_LOWQ'], self.classes):
             self.GSIM_CLASS = cls
             for SJ in [0, 1]:
                 tag = name + ('_JAPAN' if SJ else '')
@@ -57,6 +55,7 @@ class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
 
 
 class CampbellBozorgnia2019_IA_CAV_TestCase(CampbellBozorgnia2014TestCase):
+    classes = [CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ]
     MEAN_FILE = 'CB19/CB2019%s_MEAN.csv'
     STD_INTRA_FILE = 'CB19/CB2019%s_STD_INTRA.csv'
     STD_INTER_FILE = 'CB19/CB2019%s_STD_INTER.csv'

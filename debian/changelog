@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added classes CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ
   * Reduced the size of the large CSV files in hazardlib and added a check
     to forbid files larger than 600k
   * Added a check on the signatures of `get_std_dev_mag` and `get_median_area`
