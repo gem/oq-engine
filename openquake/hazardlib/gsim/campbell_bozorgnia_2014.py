@@ -365,6 +365,7 @@ def _update_ctx(gsim, ctx):
                 np.log(0.9 * (zbor[mask] - ctx.ztor[mask]))))
         ctx.hypo_depth = ctx.ztor + dz
 
+
 def _get_rholnpga(C, mag):
     """
     Returns the magnitude-dependent correlation coefficient (rho) —
@@ -374,6 +375,7 @@ def _get_rholnpga(C, mag):
     rho_ln_pga[mag <= 4.5] = C["rho1pga"]
     rho_ln_pga[mag >= 5.5] = C["rho2pga"]
     return rho_ln_pga
+
 
 class CampbellBozorgnia2014(GMPE):
     """
@@ -413,13 +415,12 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
-        self.kwargs = kwargs
-        self.estimate_ztor = int(kwargs.get('estimate_ztor', 0))
-        self.estimate_width = int(kwargs.get('estimate_width', 0))
-        self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
+    def __init__(self, sigma_mu_epsilon=0.0, estimate_ztor=0,
+                 estimate_width=0, estimate_hypo_depth=0):
         self.sigma_mu_epsilon = sigma_mu_epsilon
-
+        self.estimate_ztor = estimate_ztor
+        self.estimate_width = estimate_width
+        self.estimate_hypo_depth = estimate_hypo_depth
         if self.estimate_width:
             # To estimate a width, the GMPE needs Zbot
             self.REQUIRES_RUPTURE_PARAMETERS |= {"zbot"}
