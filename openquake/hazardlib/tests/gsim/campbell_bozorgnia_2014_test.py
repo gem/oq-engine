@@ -36,69 +36,29 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CampbellBozorgnia2014
     MEAN_FILE = 'CB14/CB2014%s_MEAN.csv'
     STD_INTRA_FILE = 'CB14/CB2014%s_STD_INTRA.csv'
     STD_INTER_FILE = 'CB14/CB2014%s_STD_INTER.csv'
     STD_TOTAL_FILE = 'CB14/CB2014%s_STD_TOTAL.csv'
 
     def test_all(self):
-        for SJ in [0, 1]:
-            jap = '_JAPAN' if SJ else ''
-            self.check(self.MEAN_FILE % jap,
-                       self.STD_INTRA_FILE % jap,
-                       self.STD_INTER_FILE % jap,
-                       self.STD_TOTAL_FILE % jap,
-                       max_discrep_percentage=0.1,
-                       SJ=SJ)
+        for name, cls in zip(
+                ['', '_HIGHQ', '_LOWQ'],
+                [CampbellBozorgnia2014, CampbellBozorgnia2014HighQ, CampbellBozorgnia2014LowQ]):
+            self.GSIM_CLASS = cls
+            for SJ in [0, 1]:
+                tag = name + ('_JAPAN' if SJ else '')
+                self.check(self.MEAN_FILE % tag,
+                           self.STD_INTRA_FILE % tag,
+                           self.STD_INTER_FILE % tag,
+                           self.STD_TOTAL_FILE % tag,
+                           max_discrep_percentage=0.1,
+                           SJ=SJ)
 
 
-class CampbellBozorgnia2014HighQTestCase(CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014HighQ
-    MEAN_FILE = 'CB14/CB2014_HIGHQ%s_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_HIGHQ%s_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_HIGHQ%s_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_HIGHQ%s_STD_TOTAL.csv'
-
-
-class CampbellBozorgnia2014LowQTestCase(CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014LowQ
-    MEAN_FILE = 'CB14/CB2014_LOWQ%s_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_LOWQ%s_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_LOWQ%s_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_LOWQ%s_STD_TOTAL.csv'
-
-
-class CampbellBozorgnia2019_IA_CAV_TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CampbellBozorgnia2014
+class CampbellBozorgnia2019_IA_CAV_TestCase(CampbellBozorgnia2014TestCase):
     MEAN_FILE = 'CB19/CB2019%s_MEAN.csv'
     STD_INTRA_FILE = 'CB19/CB2019%s_STD_INTRA.csv'
     STD_INTER_FILE = 'CB19/CB2019%s_STD_INTER.csv'
     STD_TOTAL_FILE = 'CB19/CB2019%s_STD_TOTAL.csv'
 
-
-    def test_all(self):
-        for SJ in [0, 1]:
-            jap = '_JAPAN' if SJ else ''
-            self.check(self.MEAN_FILE % jap,
-                       self.STD_INTRA_FILE % jap,
-                       self.STD_INTER_FILE % jap,
-                       self.STD_TOTAL_FILE % jap,
-                       max_discrep_percentage=0.1,
-                       SJ=SJ)
-
-
-class CampbellBozorgnia2019_IA_CAV_HighQ_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014HighQ
-    MEAN_FILE = 'CB19/CB2019_HIGHQ%s_MEAN.csv'
-    STD_INTRA_FILE = 'CB19/CB2019_HIGHQ%s_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB19/CB2019_HIGHQ%s_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB19/CB2019_HIGHQ%s_STD_TOTAL.csv'
-
-
-class CampbellBozorgnia2019_IA_CAV_LowQ_TestCase(CampbellBozorgnia2019_IA_CAV_TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014LowQ
-    MEAN_FILE = 'CB19/CB2019_LOWQ%s_MEAN.csv'
-    STD_INTRA_FILE = 'CB19/CB2019_LOWQ%s_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB19/CB2019_LOWQ%s_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB19/CB2019_LOWQ%s_STD_TOTAL.csv'
