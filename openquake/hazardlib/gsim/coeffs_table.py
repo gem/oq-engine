@@ -159,6 +159,7 @@ class CoeffsTable(object):
             imts = list(self._coeffs)
             periods = np.array([imt.period for imt in imts])
             idxs = np.argsort(periods)
+            # regular array, if you want a composite one use .to_array()
             self.cmtx = np.array([self._coeffs[imts[i]].tolist() for i in idxs])
             self.periods = periods[idxs]
 
