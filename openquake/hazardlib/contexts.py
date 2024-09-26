@@ -1156,7 +1156,7 @@ class ContextMaker(object):
                     yield poes, mea, sig, ctxt[slc], invs
             else:  # collapse
                 poes = numpy.concatenate([p[0] for p in self._gen_poes(kctx)])
-                yield poes, 0, 0, ctxt, invs
+                yield poes, 0, 0, ctxt, invs  # FIXME: 0, 0 is wrong but not used
 
     # used in source_disagg
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
