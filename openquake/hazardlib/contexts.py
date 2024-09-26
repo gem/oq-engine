@@ -2015,5 +2015,5 @@ def read_ctx_by_grp(dstore):
         if par != 'sids':
             ctx[par] = sitecol[par][ctx.sids]
     grp_ids = numpy.unique(ctx.grp_id)
-    ctx.sort(order='mag')  # NB: the sort is crucial for performance
+    ctx = ctx[numpy.argsort(ctx.mag)]  # NB: crucial for performance
     return {grp_id: ctx[ctx.grp_id == grp_id] for grp_id in grp_ids}
