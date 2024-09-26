@@ -1170,7 +1170,7 @@ class ContextMaker(object):
                 poes = numpy.concatenate([p[0] for p in self._gen_poes(kctx)])
                 yield poes, 0, 0, ctxt, invs  # FIXME: 0, 0 is wrong but not used
 
-    # used in source_disagg
+    # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
