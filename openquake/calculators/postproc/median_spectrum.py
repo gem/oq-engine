@@ -90,12 +90,13 @@ def main(dstore, csm):
     :param csm: CompositeRiskModel
     """
     # consistency checks
-    oqp = dstore["oqparam"]
+    oq = dstore["oqparam"]
+    periods = [imt.period for imt in oq.imt_periods()]
     N = len(dstore["sitecol"])
-    M = len(oqp.imtls)
-    assert oqp.investigation_time == 1, oqp.investigation_time
-    assert "PGV" not in oqp.imtls
-    assert N <= oqp.max_sites_disagg, N
+    M = len(oq.imtls)
+    assert oq.investigation_time == 1, oq.investigation_time
+    assert len(periods) == M, 'IMTs different from PGA, SA'
+    assert N <= oq.max_sites_disagg, N
     logging.warning("Median spectrum calculations are still " "experimental")
 
     # read the precomputed mean hazard spectrum
@@ -105,7 +106,7 @@ def main(dstore, csm):
     G = {cm.grp_id: len(cm.gsims) for cm in cmakers}
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
-    blocksize = totsize / (oqp.concurrent_tasks or 1)
+    blocksize = totsize / (oq.concurrent_tasks or 1)
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
@@ -117,17 +118,13 @@ def main(dstore, csm):
 
     # save the median_spectrum
     Gr = len(csm.src_groups)  # number of groups
-    P = len(oqp.poes)
+    P = len(oq.poes)
     median_spectra = np.zeros((Gr, N, M, P), np.float32)
     for (grp_id, site_id), ms in res.items():
         median_spectra[grp_id, site_id] = ms
     dstore.create_dset("log_median_spectra", median_spectra)
-    dstore.set_shape_descr(
-        "log_median_spectra",
-        grp_id=Gr,
-        site_id=N,
-        period=[imt.period for imt in oqp.imt_periods()],
-        poe=oqp.poes)
+    dstore.set_shape_descr("log_median_spectra", grp_id=Gr,
+                           site_id=N, period=periods, poe=oq.poes)
 
 
 if __name__ == "__main__":
