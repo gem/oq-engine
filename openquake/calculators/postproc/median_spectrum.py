@@ -64,11 +64,7 @@ def compute_median_spectrum(cmaker, context, monitor):
             slc = slice(start, start + C)
             mean[:, :, slc] = mea
             start += C
-            if np.isfinite(ctxt[0].occurrence_rate):
-                ocr = ctxt.occurrence_rate
-            else:
-                probs = [rup.probs_occur[0] for rup in ctxt]
-                ocr = -np.log(probs) / cmaker.investigation_time
+            ocr = cmaker.get_occ_rates(ctxt)
             for g, w in enumerate(cmaker.wei):
                 poes_g = poes[:, :, g].reshape(C, M, P)
                 # NB: vectorizing the loops on M, P improves nothing;
