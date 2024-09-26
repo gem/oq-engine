@@ -56,11 +56,13 @@ def compute_median_spectrum(cmaker, context, monitor):
     G = len(cmaker.gsims)
     for site_id in np.unique(context.sids):
         ctx = context[context.sids == site_id]
-        wei = np.zeros((len(ctx), M, G, P), np.float32)
+        wei = np.empty((len(ctx), M, G, P), np.float32)
+        mean = np.empty((G, M, len(ctx)), np.float32)
         start = 0
-        for poes, ctxt, _inv in cmaker.gen_poes(ctx):
+        for poes, mea, sig, ctxt, _inv in cmaker.gen_poes(ctx):
             C, _, G = poes.shape  # L = M * P
             slc = slice(start, start + C)
+            mean[:, :, slc] = mea
             start += C
             if np.isfinite(ctxt[0].occurrence_rate):
                 ocr = ctxt.occurrence_rate
@@ -75,8 +77,7 @@ def compute_median_spectrum(cmaker, context, monitor):
                 for p, poe in enumerate(cmaker.poes):
                     for m, imt in enumerate(cmaker.imtls):
                         wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w
-        mea, _, _, _ = cmaker.get_mean_stds([ctx])  # shape (G, M, U)
-        median_spectrum = np.einsum("umgp,gmu->mp", wei, mea)
+        median_spectrum = np.einsum("umgp,gmu->mp", wei, mean)
         yield {(cmaker.grp_id, site_id): median_spectrum}
 
 

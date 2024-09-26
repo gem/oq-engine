@@ -1136,7 +1136,7 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
-            yield poes, slc
+            yield poes, mean_stdt[0, :, :, slc], mean_stdt[1, :, :, slc], slc
         #cs, ms, ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
         #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
 
@@ -1144,19 +1144,19 @@ class ContextMaker(object):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
-        :yields: poes, ctxt, invs with poes of shape (N, L, G)
+        :yields: poes, mea_sig, ctxt, invs with poes of shape (N, L, G)
         """
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
             if invs is None:  # no collapse
-                for poes, slc in self._gen_poes(ctxt):
+                for poes, mea, sig, slc in self._gen_poes(ctxt):
                     invs = numpy.arange(len(poes), dtype=U32)
-                    yield poes, ctxt[slc], invs
+                    yield poes, mea, sig, ctxt[slc], invs
             else:  # collapse
-                poes = numpy.concatenate([p for p, s in self._gen_poes(kctx)])
-                yield poes, ctxt, invs
+                poes = numpy.concatenate([p[0] for p in self._gen_poes(kctx)])
+                yield poes, 0, 0, ctxt, invs
 
     # used in source_disagg
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1169,11 +1169,12 @@ class ContextMaker(object):
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        ptom = PoissonTOM(self.investigation_time)
         for ctx in ctxs:
             if rup_mutex:
-                self.update_mutex(pmap, ctx, tom or PoissonTOM(self.investigation_time), rup_mutex)
+                self.update_mutex(pmap, ctx, tom or ptom, rup_mutex)
             else:
-                self.update_indep(pmap, ctx, tom or PoissonTOM(self.investigation_time))
+                self.update_indep(pmap, ctx, tom or ptom)
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1192,7 +1193,7 @@ class ContextMaker(object):
         :param pmap: probability map to update
         :param ctxs: a list of context arrays with 0 or 1 element
         """
-        for poes, ctxt, invs in self.gen_poes(ctx):
+        for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
             if isinstance(tom, FatedTOM):
                 for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
                     pmap.array[sidx] *= 1. - poes[inv]
@@ -1205,7 +1206,7 @@ class ContextMaker(object):
         :param ctxs: a list of context arrays
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
-        for poes, ctxt, invs in self.gen_poes(ctx):
+        for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
             pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
@@ -1442,7 +1443,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         cm.poe_mon = Monitor()  # avoid double counts
         cm.gsims = gsim.gsims
         avgs = []
-        for poes, ctxt, invs in cm.gen_poes(ctx[slc]):
+        for poes, _mea, _sig, _ctxt, _invs in cm.gen_poes(ctx[slc]):
             # poes has shape N, L, G
             avgs.append(poes @ gsim.weights)
         out[:] = numpy.concatenate(avgs)
