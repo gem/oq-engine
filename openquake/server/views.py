@@ -1566,7 +1566,8 @@ def web_engine_get_outputs_aristotle(request, calc_id):
                        time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
-                       avg_gmf=avg_gmf, assets=assets, warnings=warnings))
+                       avg_gmf=avg_gmf, assets=assets,
+                       warnings=warnings))
 
 
 @cross_domain_ajax

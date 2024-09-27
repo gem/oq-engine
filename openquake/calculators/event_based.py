@@ -315,8 +315,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     set_mags(oq, dstore)
     rups = dstore['ruptures'][:]
     logging.info('Reading {:_d} ruptures'.format(len(rups)))
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f', rups['nsites'].mean(),
-                 rups['nsites'].max())
+    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+                 rups['nsites'].mean(), rups['nsites'].max())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
@@ -764,8 +764,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # make avg_gmf plots only if running via the webui
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             imts = list(self.oqparam.imtls)
+            ex = Extractor(self.datastore.calc_id)
             for imt in imts:
-                plt = plot_avg_gmf(Extractor(self.datastore.calc_id), imt)
+                plt = plot_avg_gmf(ex, imt)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
                 fig_path = f'png/avg_gmf-{imt}.png'
