@@ -94,13 +94,29 @@ def plot_avg_gmf(ex, imt):
     return plt
 
 
+def plot_surface(ax, surface, label):
+    ax.fill(*surface.get_surface_boundaries(), alpha=.5, edgecolor='grey',
+            label=label)
+    return surface.get_bounding_box()
+
+
 def add_rupture(ax, dstore, rup_id=0):
     ebr = get_ebrupture(dstore, rup_id)
     rup = ebr.rupture
-    poly = rup.surface.mesh.get_convex_hull()
-    min_x, min_y, max_x, max_y = poly.get_bbox()
-    ax.fill(poly.lons, poly.lats, alpha=.5, color='purple',
-            label='Rupture')
+    if hasattr(rup.surface, 'surfaces'):
+        min_x = 180
+        max_x = -180
+        min_y = 90
+        max_y = -90
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            min_x_, max_x_, max_y_, min_y_ = plot_surface(
+                ax, surface, 'Surface %d' % surf_idx)
+            min_x = min(min_x, min_x_)
+            max_x = max(max_x, max_x_)
+            min_y = min(min_y, min_y_)
+            max_y = max(max_y, max_y_)
+    else:
+        min_x, max_x, max_y, min_y = plot_surface(ax, rup.surface, 'Surface')
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
@@ -123,6 +139,14 @@ def plot_rupture(dstore):
     return plt
 
 
+def plot_surface_3d(ax, surface, label):
+    lon, lat, depth = surface.get_surface_boundaries_3d()
+    lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
+    lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
+    depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
+    ax.plot_surface(lon_grid, lat_grid, depth_grid, alpha=0.5, label=label)
+
+
 def plot_rupture_3d(dstore):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
@@ -130,13 +154,11 @@ def plot_rupture_3d(dstore):
     ax = fig.add_subplot(111, projection='3d')
     ebr = get_ebrupture(dstore, rup_id=0)
     rup = ebr.rupture
-    for surf_idx, surface in enumerate(rup.surface.surfaces):
-        lon, lat, depth = surface.get_surface_boundaries_3d()
-        lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
-        lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
-        depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
-        ax.plot_surface(lon_grid, lat_grid, depth_grid, alpha=0.6,
-                        label='Surface %d' % surf_idx)
+    if hasattr(rup.surface, 'surfaces'):
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            plot_surface_3d(ax, surface, 'Surface %d' % surf_idx)
+    else:
+        plot_surface_3d(ax, rup.surface, 'Surface')
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
