@@ -94,7 +94,7 @@ def plot_avg_gmf(ex, imt):
     return plt
 
 
-def plot_surface(ax, surface, label):
+def add_surface(ax, surface, label):
     ax.fill(*surface.get_surface_boundaries(), alpha=.5, edgecolor='grey',
             label=label)
     return surface.get_bounding_box()
@@ -109,14 +109,14 @@ def add_rupture(ax, dstore, rup_id=0):
         min_y = 90
         max_y = -90
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            min_x_, max_x_, max_y_, min_y_ = plot_surface(
+            min_x_, max_x_, max_y_, min_y_ = add_surface(
                 ax, surface, 'Surface %d' % surf_idx)
             min_x = min(min_x, min_x_)
             max_x = max(max_x, max_x_)
             min_y = min(min_y, min_y_)
             max_y = max(max_y, max_y_)
     else:
-        min_x, max_x, max_y, min_y = plot_surface(ax, rup.surface, 'Surface')
+        min_x, max_x, max_y, min_y = add_surface(ax, rup.surface, 'Surface')
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
@@ -139,7 +139,7 @@ def plot_rupture(dstore):
     return plt
 
 
-def plot_surface_3d(ax, surface, label):
+def add_surface_3d(ax, surface, label):
     lon, lat, depth = surface.get_surface_boundaries_3d()
     lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
     lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
@@ -156,9 +156,9 @@ def plot_rupture_3d(dstore):
     rup = ebr.rupture
     if hasattr(rup.surface, 'surfaces'):
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            plot_surface_3d(ax, surface, 'Surface %d' % surf_idx)
+            add_surface_3d(ax, surface, 'Surface %d' % surf_idx)
     else:
-        plot_surface_3d(ax, rup.surface, 'Surface')
+        add_surface_3d(ax, rup.surface, 'Surface')
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
