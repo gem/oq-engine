@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders, plot_rupture)
+    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
 
@@ -1037,10 +1037,18 @@ def make_figure_rupture(extractors, what):
     """
     $ oq plot "rupture?"
     """
-    # NB: matplotlib is imported inside since it is a costly import
     [ex] = extractors
     dstore = ex.dstore
     return plot_rupture(dstore)
+
+
+def make_figure_rupture_3d(extractors, what):
+    """
+    $ oq plot "rupture_3d?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    return plot_rupture_3d(dstore)
 
 
 def plot_wkt(wkt_string):

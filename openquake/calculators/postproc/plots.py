@@ -108,6 +108,7 @@ def add_rupture(ax, dstore, rup_id=0):
 
 
 def plot_rupture(dstore):
+    # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
@@ -119,6 +120,30 @@ def plot_rupture(dstore):
     ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
     ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
     ax.legend()
+    return plt
+
+
+def plot_rupture_3d(dstore):
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ebr = get_ebrupture(dstore, rup_id=0)
+    rup = ebr.rupture
+    lon, lat, depth = rup.surface.get_surface_boundaries_3d()
+    lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
+    lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
+    depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
+    ax.plot_surface(lon_grid, lat_grid, depth_grid, color='b', alpha=0.6,
+                    label='Rupture')
+    ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
+            color='orange', label='Hypocenter', alpha=.5,
+            linestyle='', markersize=8)
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    ax.set_zlabel('Depth')
+    ax.legend()
+    plt.show()
     return plt
 
 
