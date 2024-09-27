@@ -28,7 +28,7 @@ limitations on the number of available nodes, so if you set a number
 of nodes which is too large you can have one of the following:
 
 1. an error "You can use at most N nodes"; N depends on the
-   configuration chosen your system administrator and can be inferred from
+   configuration chosen by your system administrator and can be inferred from
    the parameters in the openquake.cfg file as `max_cores / num_cores`;
    for instance for `max_cores=1024` and `num_cores=128` you would have `N=8`
 
