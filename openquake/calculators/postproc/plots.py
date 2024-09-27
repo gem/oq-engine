@@ -130,12 +130,13 @@ def plot_rupture_3d(dstore):
     ax = fig.add_subplot(111, projection='3d')
     ebr = get_ebrupture(dstore, rup_id=0)
     rup = ebr.rupture
-    lon, lat, depth = rup.surface.get_surface_boundaries_3d()
-    lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
-    lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
-    depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
-    ax.plot_surface(lon_grid, lat_grid, depth_grid, color='b', alpha=0.6,
-                    label='Rupture')
+    for surf_idx, surface in enumerate(rup.surface.surfaces):
+        lon, lat, depth = surface.get_surface_boundaries_3d()
+        lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
+        lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
+        depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
+        ax.plot_surface(lon_grid, lat_grid, depth_grid, alpha=0.6,
+                        label='Surface %d' % surf_idx)
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
