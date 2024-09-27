@@ -1203,7 +1203,8 @@ class ContextMaker(object):
     def update_indep(self, pmap, ctx, tom):
         """
         :param pmap: probability map to update
-        :param ctxs: a list of context arrays with 0 or 1 element
+        :param ctx: a context array
+        :param: a temporal occurrence model (can be FatedTOM)
         """
         for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
             if isinstance(tom, FatedTOM):
