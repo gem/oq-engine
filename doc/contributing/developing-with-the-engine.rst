@@ -119,6 +119,7 @@ different values of the strike angle (0, 90 and 180 degrees).
 The relevant code is something like this:
 
 .. python:
+
   """Sensitivity of the risk from the strike parameter"""
   import os
   from openquake.engine import engine
@@ -156,7 +157,7 @@ The relevant code is something like this:
 
 Notice that this documentation can get out of sync with the code. The version
 which is tested and guaranteed to run is the one at https://github.com/gem/oq-engine/blob/master/demos/risk/ScenarioRisk/sensitivity.py, which also sets the environment
-variable OQ_DISTRIBUTE to 'zmq'. This is the easiest way to parallelize the jobs,
+variable OQ_DISTRIBUTE to ``zmq``. This is the easiest way to parallelize the jobs,
 which makes sense since in this case the jobs are small.
 
 After running the script you will have 3 calculations and you can see the effect
