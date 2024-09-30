@@ -55,7 +55,7 @@ U32 = numpy.uint32
 F16 = numpy.float16
 F32 = numpy.float32
 F64 = numpy.float64
-TWO20 = 2**20  # used when collapsing
+TWO20 = 2**20
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
@@ -281,21 +281,10 @@ class Collapser(object):
         :param collapse_level: if None, use .collapse_level
         :returns: the collapsed array and the inverting indices
         """
-        clevel = (collapse_level if collapse_level is not None
-                  else self.collapse_level)
-        if not rup_indep or clevel < 0:
-            # no collapse
-            self.cfactor[0] += len(ctx)
-            self.cfactor[1] += len(ctx)
-            self.cfactor[2] += 1
-            return ctx, None
-        with mon:
-            krounded = kround[clevel](ctx, self.kfields)
-            out, inv = numpy.unique(krounded, return_inverse=True)
-        self.cfactor[0] += len(out)
+        self.cfactor[0] += len(ctx)
         self.cfactor[1] += len(ctx)
         self.cfactor[2] += 1
-        return out.view(numpy.recarray), inv.astype(U32)
+        return ctx, None
 
 
 class FarAwayRupture(Exception):
@@ -1161,14 +1150,10 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
-            if invs is None:  # no collapse
-                for poes, mea, sig, slc in self._gen_poes(ctxt):
-                    invs = numpy.arange(len(poes), dtype=U32)
-                    yield poes, mea, sig, ctxt[slc], invs
-            else:  # collapse
-                poes = numpy.concatenate([p[0] for p in self._gen_poes(kctx)])
-                yield poes, 0, 0, ctxt, invs  # FIXME: 0, 0 is wrong but not used
+            self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
+            for poes, mea, sig, slc in self._gen_poes(ctxt):
+                invs = numpy.arange(len(poes), dtype=U32)
+                yield poes, mea, sig, ctxt[slc], invs
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):

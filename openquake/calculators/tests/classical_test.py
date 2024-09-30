@@ -229,9 +229,8 @@ class ClassicalTestCase(CalculatorTestCase):
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [502, 1560, 5])
-        # test that the number of ruptures is at max 1/3 of the the total
-        # due to the collapsing of the hypocenters (rjb is depth-independent)
+        numpy.testing.assert_equal(self.calc.cfactor, [1560, 1560, 5])
+        # (rjb is depth-independent, there should be collapsing of the hypocenters
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
