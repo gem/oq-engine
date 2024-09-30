@@ -223,7 +223,7 @@ def scratch_dir(job_id):
     tmp = config.directory.custom_tmp or tempfile.gettempdir()
     dirname = os.path.join(tmp, f'calc_{job_id}')
     try:
-        os.mkdir(dirname)
+        os.makedirs(dirname)
     except FileExistsError:  # already created
         pass
     return dirname

@@ -17,7 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+import shutil
 import getpass
+from openquake.baselib import config
 from openquake.baselib.general import humansize
 from openquake.commonlib import logs, datastore
 
@@ -51,6 +53,10 @@ def purge_all(user=None):
             if mo is not None:
                 calc_id = int(mo.group(1))
                 purge_one(calc_id, user, force=True)
+    custom_tmp = config.directory.custom_tmp
+    if custom_tmp and os.path.exists(custom_tmp):
+        shutil.rmtree(custom_tmp)
+        print(f'Removed {custom_tmp}')
 
 
 def purge(status, days, force):
