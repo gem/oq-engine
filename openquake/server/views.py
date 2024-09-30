@@ -132,7 +132,7 @@ ARISTOTLE_FORM_LABELS = {
     'truncation_level': 'Level of truncation',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
-    'ses_seed': 'Random seed',
+    'ses_seed': 'Random seed (ses_seed)',
     'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
