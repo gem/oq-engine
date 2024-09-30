@@ -1116,15 +1116,14 @@ class ContextMaker(object):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
-        :yields: poes, mea_sig, ctxt, invs with poes of shape (N, L, G)
+        :yields: poes, mea_sig, ctxt with poes of shape (N, L, G)
         """
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
-                invs = numpy.arange(len(poes), dtype=U32)
-                yield poes, mea, sig, ctxt[slc], invs
+                yield poes, mea, sig, ctxt[slc]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1162,12 +1161,12 @@ class ContextMaker(object):
         :param ctx: a context array
         :param: a temporal occurrence model (can be FatedTOM)
         """
-        for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
+        for poes, mea, sig, ctxt in self.gen_poes(ctx):
             if isinstance(tom, FatedTOM):
-                for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
-                    pmap.array[sidx] *= 1. - poes[inv]
+                for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
+                    pmap.array[sidx] *= 1. - poe
             else:
-                pmap.update_indep(poes, invs, ctxt, tom.time_span)
+                pmap.update_indep(poes, ctxt, tom.time_span)
 
     def update_mutex(self, pmap, ctx, tom, rup_mutex):
         """
@@ -1175,8 +1174,8 @@ class ContextMaker(object):
         :param ctxs: a list of context arrays
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
-        for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
-            pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
+        for poes, mea, sig, ctxt in self.gen_poes(ctx):
+            pmap.update_mutex(poes, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1412,7 +1411,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         cm.poe_mon = Monitor()  # avoid double counts
         cm.gsims = gsim.gsims
         avgs = []
-        for poes, _mea, _sig, _ctxt, _invs in cm.gen_poes(ctx[slc]):
+        for poes, _mea, _sig, _ctxt in cm.gen_poes(ctx[slc]):
             # poes has shape N, L, G
             avgs.append(poes @ gsim.weights)
         out[:] = numpy.concatenate(avgs)

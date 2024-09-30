@@ -59,7 +59,7 @@ def compute_median_spectrum(cmaker, context, monitor):
         wei = np.empty((len(ctx), M, G, P), np.float32)
         mean = np.empty((G, M, len(ctx)), np.float32)
         start = 0
-        for poes, mea, sig, ctxt, _inv in cmaker.gen_poes(ctx):
+        for poes, mea, sig, ctxt in cmaker.gen_poes(ctx):
             C, _, G = poes.shape  # L = M * P
             slc = slice(start, start + C)
             mean[:, :, slc] = mea
