@@ -384,6 +384,8 @@ We extended `oq info` to .csv files, for pretty-printing purposes.
 
 We improved the command `oq plot_assets`.
 
+We added the commands `oq plot "rupture?"` and `oq plot "rupture_3d?"`.
+
 We added add command `oq compare oqparam` and we improved `oq compare sitecol`
 and `oq compare assetcol`.
 
