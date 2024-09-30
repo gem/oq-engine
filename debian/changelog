@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Added commands `oq plot "rupture?"` and `oq plot "rupture_3d?"`
+
   [Michele Simionato]
   * Added classes CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ
   * Reduced the size of the large CSV files in hazardlib and added a check
