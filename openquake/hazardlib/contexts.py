@@ -263,30 +263,6 @@ def kround2(ctx, kfields):
 kround = {0: kround0, 1: kround1, 2: kround2}
 
 
-class Collapser(object):
-    """
-    Class managing the collapsing logic.
-    """
-    def __init__(self, collapse_level, kfields):
-        self.collapse_level = collapse_level
-        self.kfields = sorted(kfields)
-        self.cfactor = numpy.zeros(3)
-
-    def collapse(self, ctx, mon, rup_indep, collapse_level=None):
-        """
-        Collapse a context recarray if possible.
-
-        :param ctx: a recarray with "sids"
-        :param rup_indep: False if the ruptures are mutually exclusive
-        :param collapse_level: if None, use .collapse_level
-        :returns: the collapsed array and the inverting indices
-        """
-        self.cfactor[0] += len(ctx)
-        self.cfactor[1] += len(ctx)
-        self.cfactor[2] += 1
-        return ctx, None
-
-
 class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
@@ -684,10 +660,7 @@ class ContextMaker(object):
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
-        kfields = (self.REQUIRES_DISTANCES |
-                   self.REQUIRES_RUPTURE_PARAMETERS |
-                   self.REQUIRES_SITES_PARAMETERS)
-        self.collapser = Collapser(self.collapse_level, kfields)
+        self.cfactor = numpy.zeros(3)
 
     def restrict(self, imts):
         """
@@ -1110,10 +1083,8 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        self.collapser.cfactor = numpy.zeros(3)
         ctxs = self.from_srcs(srcs, sitecol)
-        with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs, tom, rup_mutex).array
+        return self.get_pmap(ctxs, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
@@ -1150,7 +1121,7 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
+            self.cfactor += [len(ctxt), len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
                 invs = numpy.arange(len(poes), dtype=U32)
                 yield poes, mea, sig, ctxt[slc], invs
@@ -1632,7 +1603,7 @@ class PmapMaker(object):
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
-        dic['cfactor'] = self.cmaker.collapser.cfactor
+        dic['cfactor'] = self.cmaker.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
