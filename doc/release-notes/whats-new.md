@@ -186,20 +186,30 @@ world vulnerability functions, world taxonomy mappings and world site
 model, and a rupture file, an Aristotle calculation is able to compute the
 seismic risk in any place in the world, apart from the oceans.
 
-In this release the procedure to generated the `exposure.hdf5` file
+In this release the procedure to generate the `exposure.hdf5` file
 from the global risk mosaic has been improved and the taxonomy
 mappings for Canada and USA, which were missing, have been added.
 
 Moreover the Aristotle Web interface has been much improved. It is
 possible for the user to download from the USGS site not only rupture
 files but also station files, thus taking advantage of the Conditioned
-GMFs calculator. Custom station files can also be uploaded if the user
+GMFs calculator. Custom rupture files or station files can also be uploaded if the user
 has them locally. Errors in the station files are properly notified,
 just as errors in the rupture geometries (not all USGS ruptures can be
 converted to OpenQuake ruptures yet).
 
-We also investigated using the finite-fault data from the USGS site,
-when the rupture data is not available.
+When the rupture data is not available in the USGS site, the software
+checks if at least the finite-fault data is available and it loads
+the relevant information from it instead. Also this fallback approach may
+not be successful, especially in the early stage right after an event,
+when not enough information has been uploaded to the USGS website yet.
+In this case, in order to proceed, the user needs to upload the rupture
+data via the corresponding web form.
+
+We improved the procedure for generating hazardlib ruptures, automatically setting
+the `dip` and `strike` parameters when possible. In case of errors in
+the geometry a planar rupture with the given magnitude, hypocenter dip
+and strike is automatically generated.
 
 The visualization of the input form and the output tables has improved.
 
@@ -207,14 +217,18 @@ It is now possible to specify the parameter `maximum_distance_stations`,
 either from command line or from the WebUi. The `maximum_distance` was
 already there, but now has a default of 100 km to ensure faster calculations.
 
-We improved the procedure for generating hazardlib ruptures, automatically setting
-the `dip` and `strike` parameters when possible. In case of errors in
-the geometry a planar rupture with the given magnitude, hypocenter dip
-and strike is automatically generated.
-
 We added a dropdown menu so that the user can override the
 `time_event` parameter, which by default is automatically set
 depending on the time the earthquake happened.
+The page displaying the outputs of a calculation now includes some additional
+information. On top of the page, the local time of the event is displayed,
+together with the indication of how much time passed between the event itself
+and the moment the calculation was started. This is useful for instance to
+compare results obtained before and after rupture or station data become
+available in the USGS site.
+The plots showing the average ground motion fields and the assets have been
+improved. In particular, the latter now also display the boundaries of the
+rupture.
 
 We added a method `GsimLogicTree.to_node`, useful to produce an XML
 representation of the gsim logic tree used by an Aristotle calculation.
