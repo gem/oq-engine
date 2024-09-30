@@ -551,8 +551,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         except KeyError:
             raise MissingLink(
                 'There is no shakemap nor finite-fault info for %s' % usgs_id)
-        else:
-            shakemap = []
+        return load_rupdic_from_finite_fault(usgs_id, mag, products)
     for shakemap in reversed(shakemap):
         contents = shakemap['contents']
         if 'download/rupture.json' in contents:
