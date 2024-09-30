@@ -35,8 +35,8 @@ of the arrays when computing the mean and standard deviations from the
 GMPEs, or optimizing the procedure updating the probabilities of no
 exceedency, now 3x faster, the performance of classical calculations
 improved substantially. For instance, the model for EUR is nearly 2x
-faster than before and the model for Canada is 1.4x faster, while the
-model for USA is 3x faster on a machine with 128 cores.
+faster than before, the model for Canada is 1.4x faster, while the
+model for USA is 1.25x faster on a machine with 128 cores.
 
 We added a `tiling` flag in the job.ini file to make it possible to specify
 which version of the classical calculator to use (tiling or regular);
