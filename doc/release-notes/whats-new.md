@@ -1,5 +1,5 @@
 Version 3.21 is the culmination of 4 months of work involving over 240 pull requests.
-It is the release featuring the greatest performance improvements of the latest years.
+It is the release featuring the greatest performance improvements of the last few years.
 It is aimed at users wanting the latest features, bug fixes and maximum performance.
 Users valuing stability may want to stay with the LTS release instead
 (currently at version 3.16.8).
@@ -28,7 +28,7 @@ from about 3 GB per core to just 1.2 GB per core.
 
 Moreover, CollapsedPointSources have been extended to collect
 sources with different magnitude-scaling-relationships, which also makes
-the engine faster, however the change affects only few models with minor differences.
+the engine faster, however the change affects only a few models with minor differences.
 
 Thanks to the memory reduction and other optimizations, like refining the size
 of the arrays when computing the mean and standard deviations from the
@@ -47,17 +47,17 @@ than in the past.
 We optimized the logic tree processor so that it is now possible
 to compute mean rates exactly (if `use_rates` is set) even with
 millions of realizations. In particular we managed to run the EUR model
-with 302,990,625 realizations, but it required over 100 GB or RAM.
+with 302,990,625 realizations, but it required over 100 GB of RAM.
 
 The splitting of the sources in groups now works slightly differently and more
-groups can be generated sometimes, by there is an additional guarantee: the sources in a
+groups can be generated sometimes, but there is an additional guarantee: the sources in a
 same group will all have the same temporal occurrence model. This allowed some
 internal simplification.
 
 The --sample-sources feature now works differently (by tiling)
 and it is faster (measured 4x faster for the USA model) and more reliable than before.
 
-Finally, logging the progress of the calculation now works much better (before
+Finally, logging the progress of the calculation now works much better (previously
 often the progress went from 0 to 50% abruptly and then from 50% to 100%
 equally abruptly).
 
@@ -66,14 +66,14 @@ Event based/scenario calculations
 
 In event based calculations we were able to spectacularly reduce the
 memory consumption in situations with millions of sites. For instance,
-while before a calculation with 6 million sites required over 80G per
-core before and it ran out of memory, now it requires less than 2G per core
+whereas previously a calculation with 6 million sites required over 80 GB per
+core and it inevitable ran out of memory, now it requires less than 2 GB per core
 and it completes correctly.
 
 Moreover, the performance improved tremendously in the case of many GMPEs, like
 for EUR, where there are up to 19 GMPEs per tectonic region type. The
-reason is that calculations were needlessy repeated in the GmfComputer. Now
-generating the GMFs in the EUR model is 13 times faster than
+reason is that some calculations were needlessly repeated in the GmfComputer.
+Now generating the GMFs in the EUR model is 13 times faster than
 before. In models with only 2 or 3 GMPEs the improvement is
 less visible, but still there.
 
@@ -95,7 +95,7 @@ mea_tau_phi = true
 
 in the job.ini file. Please notice that setting the flag will double
 the disk space occupation and make the calculation slower, so you are
-adviced to enable this feature only for small calculations for
+advised to enable this feature only for small calculations for
 debugging purposes. It will work both for scenarios and event based
 calculations.
 
@@ -104,7 +104,7 @@ distance from the rupture, for consistency with the event based calculator
 and for consistency with the algorithm used in Aristotle calculations.
 
 hazardlib
-----------------------
+---------
 
 Enrico Abcede and Francis Bernales extended the Campbell and Bozorgnia (2014)
 GMPEs to work with the intensity measure types IA and CAV.
@@ -121,7 +121,7 @@ Eric Thompson pointed a typo in the aliases for the Kuehn et al GMPE
 ("KuehnEtAl2021SInter" in place of "KuehnEtAl2020SInter") and missing
 aliases for "KuehnEtAl2020SSlab". It has been fixed now.
 
-Kyle Smith contributed the Arias Intensity and Cumulative Absoloute
+Kyle Smith contributed the Arias Intensity and Cumulative Absolute
 Velocity ground motion models from Sandikkaya and Akkar (2017).
 
 Nicolas Schmid fixed an incorrect formula used in ShakeMap calculations
@@ -130,7 +130,7 @@ Nicolas Schmid fixed an incorrect formula used in ShakeMap calculations
 Marco Pagani extended the Chiou Youngs (2014) GMPEs to optionally
 include the modifications by Boore Et Al. (2022).
 
-We added a helper function `valid.modified_gsim` to instantiated ModifiableGMPE
+We added a helper function `valid.modified_gsim` to instantiate ModifiableGMPE
 objects with less effort, for usage in the GEESE project, You can see an example in
 https://docs.openquake.org/oq-engine/master/manual/user-guide/inputs/ground-motion-models-inputs.html#modifiablegmpe.
 
@@ -140,7 +140,7 @@ by the GMPE tests to store the expected mean and standard deviations
 computed from a set of input parameters like magnitude, distance and vs30.
 
 Unfortunately people tended to be liberal with the size of the CSV
-files, including files larger than needed, and we ended up with 480M
+files, including files larger than needed, and we ended up with 480 MB
 of expected data. The sheer amount of data slows down the download of
 the repository, even with the shallow clone, and makes the tests
 slower than needed.
@@ -160,7 +160,7 @@ the ASCE7-22 parameters (see https://github.com/gem/oq-engine/pull/9648).
 
 At the level of the Web Interface it is now possible to choose
 the desired `asce_version` between ASCE 16 and ASCE 41. The version
-use to perform the calculation is then displayed in the outputs page.
+used to perform the calculation is then displayed in the outputs page.
 
 We began the work for supporting vs30 values different from 760 m/s by implementing
 the ASCE soil classes.
@@ -176,30 +176,40 @@ As a consequence, a point exactly in the middle of two mosaic models
 can be associated differently than before.
 
 Aristotle project
-------------------------------
+-----------------
 
 We continued the work on the
 [Aristotle project](https://www.globalquakemodel.org/proj/aristotle).
 
-Given a single file `exposure.hdf5` containing the world exposure,
-world vulnerability functions, world taxonomy mappings and world site
-model, and a rupture file, an Aristotle calculation is able to compute the
-seismic risk in any place in the world, apart from the oceans.
+Given a single file `exposure.hdf5` containing the global exposure,
+global vulnerability functions, global taxonomy mappings and global site
+model, and a rupture file or ShakeMap event id, an Aristotle calculation 
+is able to compute the seismic risk in any place in the world, apart from the oceans.
 
-In this release the procedure to generated the `exposure.hdf5` file
+In this release, the procedure to generate the `exposure.hdf5` file
 from the global risk mosaic has been improved and the taxonomy
 mappings for Canada and USA, which were missing, have been added.
 
-Moreover the Aristotle Web interface has been much improved. It is
+Moreover the Aristotle web interface has been much improved. It is
 possible for the user to download from the USGS site not only rupture
 files but also station files, thus taking advantage of the Conditioned
-GMFs calculator. Custom station files can also be uploaded if the user
+GMFs calculator. Custom rupture files or station files can also be uploaded if the user
 has them locally. Errors in the station files are properly notified,
 just as errors in the rupture geometries (not all USGS ruptures can be
 converted to OpenQuake ruptures yet).
 
-We also investigated using the finite-fault data from the USGS site,
-when the rupture data is not available.
+When the rupture.json file is not available on the USGS page for an event,
+the software checks if the finite-fault rupture is available and it loads
+the relevant information from it instead. Note that this fallback approach may
+also fail, especially in the early stage right after an event,
+when not enough information has been uploaded to the USGS website yet.
+In this case, in order to proceed, the user needs to upload the rupture
+data via the corresponding web form.
+
+We improved the procedure for generating hazardlib ruptures, automatically setting
+the `dip` and `strike` parameters when possible. In case of errors in
+the geometry a planar rupture with the given magnitude, hypocenter dip
+and strike is automatically generated.
 
 The visualization of the input form and the output tables has improved.
 
@@ -207,22 +217,28 @@ It is now possible to specify the parameter `maximum_distance_stations`,
 either from command line or from the WebUi. The `maximum_distance` was
 already there, but now has a default of 100 km to ensure faster calculations.
 
-We improved the procedure for generating hazardlib ruptures, automatically setting
-the `dip` and `strike` parameters when possible. In case of errors in
-the geometry a planar rupture with the given magnitude, hypocenter dip
-and strike is automatically generated.
-
 We added a dropdown menu so that the user can override the
 `time_event` parameter, which by default is automatically set
-depending on the time the earthquake happened.
+depending on the local time of occurrence of the earthquake.
+
+The page displaying the outputs of a calculation now includes some additional
+information. On top of the page, the local time of the event is displayed,
+together with the indication of how much time passed between the event itself
+and the moment the calculation was started. This is useful for instance to
+compare results obtained before and after rupture or station data become
+available in the USGS site.
+
+The plots showing the average ground motion fields and the assets have been
+improved. In particular, the latter now also display the boundaries of the
+rupture.
 
 We added a method `GsimLogicTree.to_node`, useful to produce an XML
 representation of the gsim logic tree used by an Aristotle calculation.
 
 Secondary perils
------------------------
+----------------
 
-Lana Torodovich implemented the Nowicki Jessee et al. (2018) landslide
+Lana Torodović implemented the Nowicki Jessee et al. (2018) landslide
 model, which is part of the USGS Ground Failure Product. It is documented here: 
 https://docs.openquake.org/oq-engine/3.21/manual/underlying-science/secondary-perils.html#nowicki-jessee-et-al-2018
 
@@ -232,18 +248,18 @@ but it is convenient to keep them in the `gmf_data` table, also for visualizatio
 purposes via the QGIS plugin.
 
 Bug fixes
-------------------
+----------
 
 There were various fixes to the conditioned GMFs calculator:
 
-- we changed the Cholesky decomposition algorith to reduce the issue of
+- we changed the Cholesky decomposition algorithm to reduce the issue of
   small negative eigenvalues
 - we fixed an error when using a `region_grid_spacing` by extending the site
   collection to include the stations
 - we fixed a couple of bugs in the association of the site parameters to the sites
-- we added an uniqueness check for the station coordinates.
+- we added an uniqueness check for the station coordinates
 
-We fixed a bug with the conditional spectrum in the case of calculations
+We fixed a bug with the conditional spectrum calculator in the case of calculations
 with non-contributing tectonic region types, i.e. when all the sources of a
 given tectonic region type are outside the integration distance.
 
@@ -254,13 +270,13 @@ when exporting the ruptures. It has been fixed now.
 The new Japan model was failing with an error in event based calculations due
 to an excessive check (a leftover from the past). It has been fixed now.
 
-The `avg_gmf` was failing sometimes in presence of a filtered site collection.
+The `avg_gmf` was failing sometimes in the presence of a filtered site collection.
 It has been fixed now.
 
 In situations with more than ~90 realizations, exporting the realizations CSV
 was causing an encoding error. It has been fixed now.
 
-In presence of multifault sources far away from the sites (i.e. over the integration
+In presence of multi-fault sources far away from the sites (i.e. over the integration
 distance) an error "object has no attribute msparams" was raised. It has been fixed now.
 
 We improved the error message displayed when the user forgets to specify the exposure file
@@ -293,7 +309,7 @@ On non-Windows platforms nothing changes, i.e. the default is still to
 use all available threads. The reason is that Apple silicon does not
 use hyperthreading (i.e. it uses half the memory compared to
 processors with hyperthreading) while Linux is mostly used for servers
-than normally have more memory than a consumer machine, so there is no
+that typically have more memory than a consumer machine, so there is no
 pressing need to save memory.
 
 HPC support via SLURM
@@ -314,7 +330,7 @@ Notice that supporting thousands of cores required substantial work on the calcu
 
 For instance, now classical calculations make use of the `custom_tmp`
 directory in `openquake.cfg` (mandatory in SLURM mode) to store the
-PoEs in small temporary files, one per tasks. In tiling calculations
+PoEs in small temporary files, one per task. In tiling calculations
 that reduces the data transfer effectively to zero, while in
 non-tiling calculations it only reduce it, more or less depending on
 the calculation. That required to change the postclassical phase of
