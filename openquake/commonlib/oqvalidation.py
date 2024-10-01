@@ -19,6 +19,7 @@
 import os
 import re
 import ast
+import sys
 import json
 import inspect
 import logging
@@ -1286,6 +1287,7 @@ class OqParam(valid.ParamSet):
         self.check_hazard(job_ini)
         self.check_gsim_lt(job_ini)
         self.check_risk(job_ini)
+        self.check_ebrisk(job_ini)
 
     def raise_invalid(self, msg):
         """
@@ -1379,6 +1381,15 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and not self.hazard_calculation_id:
                 self.raise_invalid('missing investigation_time')
 
+    def check_ebrisk(self, job_ini):
+        # check specific to ebrisk
+        if self.calculation_mode == 'ebrisk':
+            if self.ground_motion_fields:
+                print('ground_motion_fields overridden to false', file=sys.stderr)
+                self.ground_motion_fields = False
+            if self.hazard_curves_from_gmfs:
+                self.raise_invalid('hazard_curves_from_gmfs=true is invalid in ebrisk')
+            
     def check_hazard(self, job_ini):
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
