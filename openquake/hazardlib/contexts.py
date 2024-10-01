@@ -1151,21 +1151,20 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
-    def update(self, pmap, ctx, tom, rup_mutex=None):
+    def update(self, pmap, ctx, rup_mutex=None):
         """
         :param pmap: probability map to update
         :param ctx: a context array
-        :param tom: a temporal occurrence model (can be FatedTOM)
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
         for poes, mea, sig, ctxt in self.gen_poes(ctx):
             if rup_mutex:
-                pmap.update_mutex(poes, ctxt, tom.time_span, rup_mutex)
+                pmap.update_mutex(poes, ctxt, self.tom.time_span, rup_mutex)
             elif self.cluster:
                 for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
                     pmap.array[sidx] *= 1. - poe
             else:
-                pmap.update_indep(poes, ctxt, tom.time_span)
+                pmap.update_indep(poes, ctxt, self.tom.time_span)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1500,13 +1499,13 @@ class PmapMaker(object):
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     for ctx in concat(allctxs):
-                        cm.update(pnemap, ctx, self.tom)
+                        cm.update(pnemap, ctx)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
             for ctx in concat(allctxs):
-                cm.update(pnemap, ctx, self.tom)
+                cm.update(pnemap, ctx)
             allctxs.clear()
 
         dt = time.time() - t0
@@ -1546,9 +1545,9 @@ class PmapMaker(object):
             esites += src.esites
             for ctx in ctxs:
                 if self.rup_mutex:
-                    cm.update(pm, ctx, self.tom, self.rup_mutex)
+                    cm.update(pm, ctx, self.rup_mutex)
                 else:
-                    cm.update(pm, ctx, self.tom)
+                    cm.update(pm, ctx)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
