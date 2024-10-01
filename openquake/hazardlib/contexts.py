@@ -1441,10 +1441,11 @@ class PmapMaker(object):
         self.grp_probability = getattr(group, 'grp_probability', 1.)
         self.cluster = self.cmaker.cluster = getattr(group, 'cluster', 0)
         if self.cluster:
-            self.tom = group.temporal_occurrence_model
+            tom = group.temporal_occurrence_model
         else:
-            self.tom = getattr(self.sources[0], 'temporal_occurrence_model',
-                               PoissonTOM(self.cmaker.investigation_time))
+            tom = getattr(self.sources[0], 'temporal_occurrence_model',
+                          PoissonTOM(self.cmaker.investigation_time))
+        self.cmaker.tom = self.tom = tom
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
         self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
 
