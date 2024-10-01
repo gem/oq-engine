@@ -1411,7 +1411,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         cm.poe_mon = Monitor()  # avoid double counts
         cm.gsims = gsim.gsims
         avgs = []
-        for poes, _mea, _sig, _ctxt in cm.gen_poes(ctx[slc]):
+        for poes, _mea, _sig, _ctx in cm.gen_poes(ctx[slc]):
             # poes has shape N, L, G
             avgs.append(poes @ gsim.weights)
         out[:] = numpy.concatenate(avgs)
