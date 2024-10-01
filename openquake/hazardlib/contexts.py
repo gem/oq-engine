@@ -1138,10 +1138,7 @@ class ContextMaker(object):
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
         ptom = PoissonTOM(self.investigation_time)
         for ctx in ctxs:
-            if rup_mutex:
-                self.update_mutex(pmap, ctx, tom or ptom, rup_mutex)
-            else:
-                self.update_indep(pmap, ctx, tom or ptom)
+            self.update(pmap, ctx, tom or ptom, rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1155,27 +1152,21 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
-    def update_indep(self, pmap, ctx, tom):
+    def update(self, pmap, ctx, tom, rup_mutex=None):
         """
         :param pmap: probability map to update
         :param ctx: a context array
-        :param: a temporal occurrence model (can be FatedTOM)
+        :param tom: a temporal occurrence model (can be FatedTOM)
+        :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
         for poes, mea, sig, ctxt in self.gen_poes(ctx):
-            if isinstance(tom, FatedTOM):
+            if rup_mutex:
+                pmap.update_mutex(poes, ctxt, tom.time_span, rup_mutex)
+            elif isinstance(tom, FatedTOM):
                 for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
                     pmap.array[sidx] *= 1. - poe
             else:
                 pmap.update_indep(poes, ctxt, tom.time_span)
-
-    def update_mutex(self, pmap, ctx, tom, rup_mutex):
-        """
-        :param pmap: probability map to update
-        :param ctxs: a list of context arrays
-        :param rup_mutex: dictionary (src_id, rup_id) -> weight
-        """
-        for poes, mea, sig, ctxt in self.gen_poes(ctx):
-            pmap.update_mutex(poes, ctxt, tom.time_span, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1513,13 +1504,13 @@ class PmapMaker(object):
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     for ctx in concat(allctxs):
-                        cm.update_indep(pnemap, ctx, tom)
+                        cm.update(pnemap, ctx, tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
             for ctx in concat(allctxs):
-                cm.update_indep(pnemap, ctx, tom)
+                cm.update(pnemap, ctx, tom)
             allctxs.clear()
 
         dt = time.time() - t0
@@ -1561,9 +1552,9 @@ class PmapMaker(object):
             esites += src.esites
             for ctx in ctxs:
                 if self.rup_mutex:
-                    cm.update_mutex(pm, ctx, tom, self.rup_mutex)
+                    cm.update(pm, ctx, tom, self.rup_mutex)
                 else:
-                    cm.update_indep(pm, ctx, tom)
+                    cm.update(pm, ctx, tom)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
