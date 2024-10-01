@@ -1225,7 +1225,6 @@ class OqParam(valid.ParamSet):
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
-        job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
             self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:

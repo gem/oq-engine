@@ -228,6 +228,7 @@ def scratch_dir(job_id):
         pass
     return dirname
 
+
 @submit.add('no')
 def no_submit(self, func, args, monitor):
     safely_call(func, args, self.task_no, monitor)
