@@ -177,7 +177,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
             if len(tilegetters) > 1:
                 del result['source_data']
-            if cmaker.custom_tmp:
+            if config.directory.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
             else:
@@ -199,7 +199,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
         sitecol = dstore['sitecol'].complete  # super-fast
     result = hazclassical(sources, tilegetter(sitecol), cmaker)
     rmap = result.pop('rmap').remove_zeros()
-    if cmaker.custom_tmp:
+    if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
         _store(rates, cmaker.num_chunks, None, monitor)
     else:
