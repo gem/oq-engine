@@ -24,7 +24,6 @@ import warnings
 import itertools
 import operator
 import collections
-from unittest.mock import patch
 import numpy
 import shapely
 from scipy.interpolate import interp1d
@@ -37,7 +36,7 @@ from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
+from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -1162,7 +1161,7 @@ class ContextMaker(object):
         for poes, mea, sig, ctxt in self.gen_poes(ctx):
             if rup_mutex:
                 pmap.update_mutex(poes, ctxt, tom.time_span, rup_mutex)
-            elif isinstance(tom, FatedTOM):
+            elif self.cluster:
                 for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
                     pmap.array[sidx] *= 1. - poe
             else:
@@ -1441,13 +1440,12 @@ class PmapMaker(object):
                     self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.grp_probability = getattr(group, 'grp_probability', 1.)
-        self.cluster = getattr(group, 'cluster', 0)
+        self.cluster = self.cmaker.cluster = getattr(group, 'cluster', 0)
         if self.cluster:
             self.tom = group.temporal_occurrence_model
-            # set the proper TOM in case of a cluster
-            for src in self.sources:
-                src.temporal_occurrence_model = FatedTOM(time_span=1)
-
+        else:
+            self.tom = getattr(self.sources[0], 'temporal_occurrence_model',
+                               PoissonTOM(self.cmaker.investigation_time))
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
         self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
 
@@ -1494,8 +1492,6 @@ class PmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
-            tom = getattr(src, 'temporal_occurrence_model',
-                          PoissonTOM(self.cmaker.investigation_time))
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
@@ -1504,13 +1500,13 @@ class PmapMaker(object):
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     for ctx in concat(allctxs):
-                        cm.update(pnemap, ctx, tom)
+                        cm.update(pnemap, ctx, self.tom)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
             for ctx in concat(allctxs):
-                cm.update(pnemap, ctx, tom)
+                cm.update(pnemap, ctx, self.tom)
             allctxs.clear()
 
         dt = time.time() - t0
@@ -1539,8 +1535,6 @@ class PmapMaker(object):
         pmap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
-            tom = getattr(src, 'temporal_occurrence_model',
-                          PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
             pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
@@ -1552,9 +1546,9 @@ class PmapMaker(object):
             esites += src.esites
             for ctx in ctxs:
                 if self.rup_mutex:
-                    cm.update(pm, ctx, tom, self.rup_mutex)
+                    cm.update(pm, ctx, self.tom, self.rup_mutex)
                 else:
-                    cm.update(pm, ctx, tom)
+                    cm.update(pm, ctx, self.tom)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
