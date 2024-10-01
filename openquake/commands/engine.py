@@ -37,9 +37,13 @@ MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
 def get_job_id(job_id, username):
+    # limit to the current user only if -1 is passed
     job = logs.dbcmd('get_job', job_id, username if job_id == -1 else None)
     if not job:
-        sys.exit('Job %s not found' % job_id)
+        if job_id == -1:
+            sys.exit('No jobs for user %s!' % username)
+        else:
+            sys.exit('Job %s not found' % job_id)
     return job.id
 
 
