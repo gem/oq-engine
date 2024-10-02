@@ -305,7 +305,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
                      limit_states=' '.join(oq.limit_states),
                      units=units, ep_fields=ep_fields)
 
-    
+
 # aggcurves are built in parallel, aggrisk sequentially
 def build_store_agg(dstore, oq, rbe_df, num_events):
     """

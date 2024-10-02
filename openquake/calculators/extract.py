@@ -121,6 +121,7 @@ def parse(query_string, info={}):
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
     """
+    parse_qs(query_string.replace('+', '%2B'))
     qdic = parse_qs(query_string)
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
@@ -751,6 +752,9 @@ def extract_agg_curves(dstore, what):
     Returns an array of shape (#periods, #stats) or (#periods, #rlzs)
     """
     info = get_info(dstore)
+    # NOTE: in loss types like structural+nonstructural the '+' needs to be
+    # encoded, otherwise it is interpreted as a space by parse_qs
+    what = what.replace('+', '%2B')
     qdic = parse(what, info)
     try:
         tagnames = dstore['oqparam'].aggregate_by[0]
