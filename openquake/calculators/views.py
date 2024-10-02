@@ -38,7 +38,7 @@ from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
-from openquake.hazardlib.contexts import KNOWN_DISTANCES, ContextMaker
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (

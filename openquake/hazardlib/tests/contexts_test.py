@@ -21,7 +21,7 @@ import unittest
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
-from openquake.hazardlib import read_input, calc, site
+from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
