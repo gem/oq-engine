@@ -428,7 +428,7 @@ class Result(object):
                                     engine_version()))
             if mon.dbserver_host != config.dbserver.host:
                 raise RuntimeError(
-                    'The master has dbserver.host=%s while the worker has %s'
+                    'The worker has dbserver.host=%s while the master has %s'
                     % (mon.dbserver_host, config.dbserver.host))
             with mon:
                 val = func(*args)
