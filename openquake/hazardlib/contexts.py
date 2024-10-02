@@ -659,7 +659,7 @@ class ContextMaker(object):
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
-        self.cfactor = numpy.zeros(3)
+        self.cfactor = numpy.zeros(2)
 
     def restrict(self, imts):
         """
@@ -1120,7 +1120,7 @@ class ContextMaker(object):
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            self.cfactor += [len(ctxt), len(ctxt), 1]
+            self.cfactor += [len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
                 yield poes, mea, sig, ctxt[slc]
 
