@@ -38,8 +38,7 @@ from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.shakemap.parsers import download_rupture_dict
-from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, ContextMaker, Collapser)
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
@@ -1602,30 +1601,6 @@ def view_usgs_rupture(token, dstore):
     except IndexError:
         return 'Example: oq show usgs_rupture:us70006sj8'
     return download_rupture_dict(usgs_id)
-
-
-@view.add('collapsible')
-def view_collapsible(token, dstore):
-    """
-    Show how much the ruptures are collapsed for each site
-    """
-    if ':' in token:
-        collapse_level = int(token.split(':')[1])
-    else:
-        collapse_level = 0
-    dist_types = [dt for dt in dstore['rup'] if dt in KNOWN_DISTANCES]
-    vs30 = dstore['sitecol'].vs30
-    ctx_df = dstore.read_df('rup')
-    ctx_df['vs30'] = vs30[ctx_df.sids]
-    has_vs30 = len(numpy.unique(vs30)) > 1
-    c = Collapser(collapse_level, dist_types, has_vs30)
-    ctx_df['mdbin'] = c.calc_mdbin(ctx_df)
-    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdbin'].unique())))
-    out = []
-    for sid, df in ctx_df.groupby('sids'):
-        n, u = len(df), len(df.mdbin.unique())
-        out.append((sid, u, n, n / u))
-    return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
 
 
 # tested in oq-risk-tests etna
