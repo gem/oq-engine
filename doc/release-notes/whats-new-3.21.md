@@ -1,4 +1,4 @@
-Release notes v3.20
+Release notes v3.21
 ===================
 
 Version 3.21 is the culmination of 4 months of work involving over 240 pull requests.
