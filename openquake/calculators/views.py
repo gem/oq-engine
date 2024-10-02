@@ -1342,10 +1342,10 @@ def view_delta_loss(token, dstore):
     K = dstore['risk_by_event'].attrs.get('K', 0)
     df = dstore.read_df('risk_by_event', 'event_id',
                         dict(agg_id=K, loss_id=li))
-    if len(df) == 0:  # for instance no fatalities
+    if len(df) < 10:  # for instance for fatalities
         return {'delta': numpy.zeros(1),
                 'loss_types': view_loss_ids(token, dstore),
-                'error': f"There are no relevant events for {loss_type=}"}
+                'error': f"There are only {len(df)} events for {loss_type=}"}
     if oq.calculation_mode == 'scenario_risk':
         if oq.number_of_ground_motion_fields == 1:
             return {'delta': numpy.zeros(1),
