@@ -19,6 +19,7 @@
 import os
 import re
 import ast
+import sys
 import json
 import inspect
 import logging
@@ -1224,7 +1225,6 @@ class OqParam(valid.ParamSet):
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
-        job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
             self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:
@@ -1283,9 +1283,10 @@ class OqParam(valid.ParamSet):
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
 
-        self.check_hazard(job_ini)
-        self.check_gsim_lt(job_ini)
-        self.check_risk(job_ini)
+        self.check_hazard()
+        self.check_gsim_lt()
+        self.check_risk()
+        self.check_ebrisk()
 
     def raise_invalid(self, msg):
         """
@@ -1293,7 +1294,7 @@ class OqParam(valid.ParamSet):
         """
         raise InvalidFile('%s: %s' % (self.inputs['job_ini'], msg))
 
-    def check_gsim_lt(self, job_ini):
+    def check_gsim_lt(self):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
         if self.inputs.get('gsim_logic_tree'):
@@ -1318,7 +1319,7 @@ class OqParam(valid.ParamSet):
             self.req_site_params.add('ampcode')
         self.req_site_params = sorted(self.req_site_params)
 
-    def check_risk(self, job_ini):
+    def check_risk(self):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if (self.job_type == 'risk' and not
@@ -1363,7 +1364,7 @@ class OqParam(valid.ParamSet):
         unknown = set(self.inputs) - self.KNOWN_INPUTS
         if unknown:
             raise ValueError('Unknown key %s_file in %s' %
-                             (unknown.pop(), job_ini))
+                             (unknown.pop(), self.inputs['job_ini']))
 
         # check return_periods vs poes
         if self.return_periods and not self.poes and self.investigation_time:
@@ -1379,7 +1380,16 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and not self.hazard_calculation_id:
                 self.raise_invalid('missing investigation_time')
 
-    def check_hazard(self, job_ini):
+    def check_ebrisk(self):
+        # check specific to ebrisk
+        if self.calculation_mode == 'ebrisk':
+            if self.ground_motion_fields:
+                print('ground_motion_fields overridden to false', file=sys.stderr)
+                self.ground_motion_fields = False
+            if self.hazard_curves_from_gmfs:
+                self.raise_invalid('hazard_curves_from_gmfs=true is invalid in ebrisk')
+            
+    def check_hazard(self):
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
@@ -2282,7 +2292,7 @@ def to_ini(key, val):
         return f'{key} = {", ".join(c for c in coords[:-1])}'
     elif key == 'hazard_imtls':
         return f"intensity_measure_types_and_levels = {val}"
-    elif key in ('reqv_ignore_sources', 'poes', 'quantiles',
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
                  'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
     else:

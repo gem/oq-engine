@@ -1,4 +1,10 @@
+python3-oq-engine (3.21.0-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene]
+  * Added commands `oq plot "rupture?"` and `oq plot "rupture_3d?"`
+
   [Michele Simionato]
+  * Extended `oq reset` to also remove the `custom_tmp` directory, if any
   * Added classes CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ
   * Reduced the size of the large CSV files in hazardlib and added a check
     to forbid files larger than 600k
@@ -145,6 +151,8 @@
   [Michele Simionato]
   * Changed the GMF-based calculators to always set a `custom_site_id`
   * Internal: added variable OQ_SITE_DEBUG
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 01 Oct 2024 15:20:20 +0000
 
 python3-oq-engine (3.20.1-1~xenial01) xenial; urgency=low
 

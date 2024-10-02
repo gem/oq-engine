@@ -36,10 +36,14 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
-def get_job_id(job_id, username=None):
-    job = logs.dbcmd('get_job', job_id, username)
+def get_job_id(job_id, username):
+    # limit to the current user only if -1 is passed
+    job = logs.dbcmd('get_job', job_id, username if job_id == -1 else None)
     if not job:
-        sys.exit('Job %s not found' % job_id)
+        if job_id == -1:
+            sys.exit('No jobs for user %s!' % username)
+        else:
+            sys.exit('Job %s not found' % job_id)
     return job.id
 
 
@@ -158,12 +162,8 @@ def main(
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id == -1:
-        # get the latest calculation of the current user
+    if hazard_calculation_id:
         hc_id = get_job_id(hazard_calculation_id, user_name)
-    elif hazard_calculation_id:
-        # make it possible to use calculations made by another user
-        hc_id = get_job_id(hazard_calculation_id)
     else:
         hc_id = None
     if run:
@@ -197,11 +197,11 @@ def main(
         sys.exit(0)
 
     elif list_outputs is not None:
-        hc_id = get_job_id(list_outputs)
+        hc_id = get_job_id(list_outputs, user_name)
         for line in logs.dbcmd('list_outputs', hc_id):
             safeprint(line)
     elif show_log is not None:
-        hc_id = get_job_id(show_log)
+        hc_id = get_job_id(show_log, user_name)
         for line in logs.dbcmd('get_log', hc_id):
             safeprint(line)
 
@@ -215,7 +215,7 @@ def main(
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
-        hc_id = get_job_id(job_id)
+        hc_id = get_job_id(job_id, user_name)
         for line in core.export_outputs(
                 hc_id, os.path.expanduser(target_dir),
                 exports or DEFAULT_EXPORTS):

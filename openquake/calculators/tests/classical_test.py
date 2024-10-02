@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import gzip
 import tempfile
@@ -172,10 +173,12 @@ class ClassicalTestCase(CalculatorTestCase):
         return self.calc.datastore['hcurves-stats'][3, 0]
 
     def test_case_22(self):
-        # crossing date line calculation for Alaska
-        # this also tests the splitting in tiles
+        # crossing date line calculation for Alaska testing full tiling
+        # NB: requires disabling the parallelization otherwise the
+        # workers would read the real custom_tmp and not the mocked one
         tmp = tempfile.gettempdir()
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
+             mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
@@ -193,7 +196,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22_bis(self):
         # crossing date line calculation for Alaska
-        # this also tests the splitting in tiles
+        # this also tests full tiling without custom_dir
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': ''}):
             self.assert_curves_ok([

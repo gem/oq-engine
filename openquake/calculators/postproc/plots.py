@@ -94,13 +94,29 @@ def plot_avg_gmf(ex, imt):
     return plt
 
 
+def add_surface(ax, surface, label):
+    ax.fill(*surface.get_surface_boundaries(), alpha=.5, edgecolor='grey',
+            label=label)
+    return surface.get_bounding_box()
+
+
 def add_rupture(ax, dstore, rup_id=0):
     ebr = get_ebrupture(dstore, rup_id)
     rup = ebr.rupture
-    poly = rup.surface.mesh.get_convex_hull()
-    min_x, min_y, max_x, max_y = poly.get_bbox()
-    ax.fill(poly.lons, poly.lats, alpha=.5, color='purple',
-            label='Rupture')
+    if hasattr(rup.surface, 'surfaces'):
+        min_x = 180
+        max_x = -180
+        min_y = 90
+        max_y = -90
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            min_x_, max_x_, max_y_, min_y_ = add_surface(
+                ax, surface, 'Surface %d' % surf_idx)
+            min_x = min(min_x, min_x_)
+            max_x = max(max_x, max_x_)
+            min_y = min(min_y, min_y_)
+            max_y = max(max_y, max_y_)
+    else:
+        min_x, max_x, max_y, min_y = add_surface(ax, rup.surface, 'Surface')
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
@@ -108,6 +124,7 @@ def add_rupture(ax, dstore, rup_id=0):
 
 
 def plot_rupture(dstore):
+    # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
@@ -119,6 +136,37 @@ def plot_rupture(dstore):
     ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
     ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
     ax.legend()
+    return plt
+
+
+def add_surface_3d(ax, surface, label):
+    lon, lat, depth = surface.get_surface_boundaries_3d()
+    lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
+    lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
+    depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
+    ax.plot_surface(lon_grid, lat_grid, depth_grid, alpha=0.5, label=label)
+
+
+def plot_rupture_3d(dstore):
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ebr = get_ebrupture(dstore, rup_id=0)
+    rup = ebr.rupture
+    if hasattr(rup.surface, 'surfaces'):
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            add_surface_3d(ax, surface, 'Surface %d' % surf_idx)
+    else:
+        add_surface_3d(ax, rup.surface, 'Surface')
+    ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
+            color='orange', label='Hypocenter', alpha=.5,
+            linestyle='', markersize=8)
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    ax.set_zlabel('Depth')
+    ax.legend()
+    plt.show()
     return plt
 
 

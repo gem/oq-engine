@@ -730,7 +730,6 @@ class CompositeSourceModel:
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
             cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cmaker.custom_tmp = config.directory.custom_tmp
             cmaker.num_chunks = num_chunks
             cmaker.blocks = len(blocks)
             cmaker.weight = sg.weight
