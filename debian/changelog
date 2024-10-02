@@ -1,3 +1,7 @@
+  [Ilaria Oliveti]
+  * Fixed the GMPE Tusa-Langer-Azzaro (2019) table of coefficients, the
+    IMTs were incorrectly using Hz instead of seconds
+
   [Michele Simionato]
   * Fixed the `assert(losses)` error in the view delta_loss in the case of few events
 
