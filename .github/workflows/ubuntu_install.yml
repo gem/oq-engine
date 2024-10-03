@@ -72,7 +72,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         pip install pytest
-        oq dbserver upgrade
+        oq engine --upgrade-db
         cd ~/work/oq-engine/oq-engine
         #
         export MPLBACKEND=Agg

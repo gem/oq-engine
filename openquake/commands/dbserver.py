@@ -20,8 +20,8 @@ import sys
 import signal
 import getpass
 from openquake.baselib import config
-from openquake.commonlib import logs, dbapi
-from openquake.server import dbserver, db
+from openquake.commonlib import logs
+from openquake.server import dbserver
 
 
 def main(cmd,
@@ -39,13 +39,7 @@ def main(cmd,
                      f'but you are {user}')
 
     if cmd == 'upgrade':
-        applied = db.actions.upgrade_db(dbapi.db)
-        if applied:
-            print('Applied upgrades', applied)
-        else:
-            print('Already upgraded')
-        dbapi.db.close()
-        return
+        sys.exit('Use oq engine --upgrade-db instead')
 
     if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
         and getpass.getuser() != 'openquake'):
