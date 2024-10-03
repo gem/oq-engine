@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Made `scientific_format` resilient against encoding errors
+
+  [Ilaria Oliveti]
+  * Fixed the GMPE Tusa-Langer-Azzaro (2019) table of coefficients, the
+    IMTs were incorrectly using Hz instead of seconds
+
+  [Michele Simionato]
   * Fixed the `assert(losses)` error in the view delta_loss in the case of few events
 
 python3-oq-engine (3.21.0-1~xenial01) xenial; urgency=low

@@ -24,7 +24,6 @@ import warnings
 import itertools
 import operator
 import collections
-from unittest.mock import patch
 import numpy
 import shapely
 from scipy.interpolate import interp1d
@@ -37,7 +36,7 @@ from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
-from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
+from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
@@ -55,7 +54,7 @@ U32 = numpy.uint32
 F16 = numpy.float16
 F32 = numpy.float32
 F64 = numpy.float64
-TWO20 = 2**20  # used when collapsing
+TWO20 = 2**20
 TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
@@ -261,41 +260,6 @@ def kround2(ctx, kfields):
 
 
 kround = {0: kround0, 1: kround1, 2: kround2}
-
-
-class Collapser(object):
-    """
-    Class managing the collapsing logic.
-    """
-    def __init__(self, collapse_level, kfields):
-        self.collapse_level = collapse_level
-        self.kfields = sorted(kfields)
-        self.cfactor = numpy.zeros(3)
-
-    def collapse(self, ctx, mon, rup_indep, collapse_level=None):
-        """
-        Collapse a context recarray if possible.
-
-        :param ctx: a recarray with "sids"
-        :param rup_indep: False if the ruptures are mutually exclusive
-        :param collapse_level: if None, use .collapse_level
-        :returns: the collapsed array and the inverting indices
-        """
-        clevel = (collapse_level if collapse_level is not None
-                  else self.collapse_level)
-        if not rup_indep or clevel < 0:
-            # no collapse
-            self.cfactor[0] += len(ctx)
-            self.cfactor[1] += len(ctx)
-            self.cfactor[2] += 1
-            return ctx, None
-        with mon:
-            krounded = kround[clevel](ctx, self.kfields)
-            out, inv = numpy.unique(krounded, return_inverse=True)
-        self.cfactor[0] += len(out)
-        self.cfactor[1] += len(ctx)
-        self.cfactor[2] += 1
-        return out.view(numpy.recarray), inv.astype(U32)
 
 
 class FarAwayRupture(Exception):
@@ -695,10 +659,7 @@ class ContextMaker(object):
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
-        kfields = (self.REQUIRES_DISTANCES |
-                   self.REQUIRES_RUPTURE_PARAMETERS |
-                   self.REQUIRES_SITES_PARAMETERS)
-        self.collapser = Collapser(self.collapse_level, kfields)
+        self.cfactor = numpy.zeros(2)
 
     def restrict(self, imts):
         """
@@ -1121,10 +1082,8 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        self.collapser.cfactor = numpy.zeros(3)
         ctxs = self.from_srcs(srcs, sitecol)
-        with patch.object(self.collapser, 'collapse_level', collapse_level):
-            return self.get_pmap(ctxs, tom, rup_mutex).array
+        return self.get_pmap(ctxs, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
@@ -1156,19 +1115,14 @@ class ContextMaker(object):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
-        :yields: poes, mea_sig, ctxt, invs with poes of shape (N, L, G)
+        :yields: poes, mea_sig, ctxt with poes of shape (N, L, G)
         """
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
-            kctx, invs = self.collapser.collapse(ctxt, self.col_mon, rup_indep=True)
-            if invs is None:  # no collapse
-                for poes, mea, sig, slc in self._gen_poes(ctxt):
-                    invs = numpy.arange(len(poes), dtype=U32)
-                    yield poes, mea, sig, ctxt[slc], invs
-            else:  # collapse
-                poes = numpy.concatenate([p[0] for p in self._gen_poes(kctx)])
-                yield poes, 0, 0, ctxt, invs  # FIXME: 0, 0 is wrong but not used
+            self.cfactor += [len(ctxt), 1]
+            for poes, mea, sig, slc in self._gen_poes(ctxt):
+                yield poes, mea, sig, ctxt[slc]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1183,10 +1137,7 @@ class ContextMaker(object):
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
         ptom = PoissonTOM(self.investigation_time)
         for ctx in ctxs:
-            if rup_mutex:
-                self.update_mutex(pmap, ctx, tom or ptom, rup_mutex)
-            else:
-                self.update_indep(pmap, ctx, tom or ptom)
+            self.update(pmap, ctx, tom or ptom, rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1200,27 +1151,20 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
-    def update_indep(self, pmap, ctx, tom):
+    def update(self, pmap, ctx, rup_mutex=None):
         """
         :param pmap: probability map to update
         :param ctx: a context array
-        :param: a temporal occurrence model (can be FatedTOM)
-        """
-        for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
-            if isinstance(tom, FatedTOM):
-                for inv, sidx in zip(invs, pmap.sidx[ctxt.sids]):
-                    pmap.array[sidx] *= 1. - poes[inv]
-            else:
-                pmap.update_indep(poes, invs, ctxt, tom.time_span)
-
-    def update_mutex(self, pmap, ctx, tom, rup_mutex):
-        """
-        :param pmap: probability map to update
-        :param ctxs: a list of context arrays
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
-        for poes, mea, sig, ctxt, invs in self.gen_poes(ctx):
-            pmap.update_mutex(poes, invs, ctxt, tom.time_span, rup_mutex)
+        for poes, mea, sig, ctxt in self.gen_poes(ctx):
+            if rup_mutex:
+                pmap.update_mutex(poes, ctxt, self.tom.time_span, rup_mutex)
+            elif self.cluster:
+                for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
+                    pmap.array[sidx] *= 1. - poe
+            else:
+                pmap.update_indep(poes, ctxt, self.tom.time_span)
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1456,7 +1400,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         cm.poe_mon = Monitor()  # avoid double counts
         cm.gsims = gsim.gsims
         avgs = []
-        for poes, _mea, _sig, _ctxt, _invs in cm.gen_poes(ctx[slc]):
+        for poes, _mea, _sig, _ctx in cm.gen_poes(ctx[slc]):
             # poes has shape N, L, G
             avgs.append(poes @ gsim.weights)
         out[:] = numpy.concatenate(avgs)
@@ -1495,13 +1439,13 @@ class PmapMaker(object):
                     self.rup_mutex[src.id, i] = rup.weight
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.grp_probability = getattr(group, 'grp_probability', 1.)
-        self.cluster = getattr(group, 'cluster', 0)
+        self.cluster = self.cmaker.cluster = getattr(group, 'cluster', 0)
         if self.cluster:
-            self.tom = group.temporal_occurrence_model
-            # set the proper TOM in case of a cluster
-            for src in self.sources:
-                src.temporal_occurrence_model = FatedTOM(time_span=1)
-
+            tom = group.temporal_occurrence_model
+        else:
+            tom = getattr(self.sources[0], 'temporal_occurrence_model',
+                          PoissonTOM(self.cmaker.investigation_time))
+        self.cmaker.tom = self.tom = tom
         M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
         self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
 
@@ -1548,8 +1492,6 @@ class PmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
-            tom = getattr(src, 'temporal_occurrence_model',
-                          PoissonTOM(self.cmaker.investigation_time))
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
@@ -1558,13 +1500,13 @@ class PmapMaker(object):
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     for ctx in concat(allctxs):
-                        cm.update_indep(pnemap, ctx, tom)
+                        cm.update(pnemap, ctx)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
             for ctx in concat(allctxs):
-                cm.update_indep(pnemap, ctx, tom)
+                cm.update(pnemap, ctx)
             allctxs.clear()
 
         dt = time.time() - t0
@@ -1593,8 +1535,6 @@ class PmapMaker(object):
         pmap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
-            tom = getattr(src, 'temporal_occurrence_model',
-                          PoissonTOM(self.cmaker.investigation_time))
             t0 = time.time()
             pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
@@ -1606,9 +1546,9 @@ class PmapMaker(object):
             esites += src.esites
             for ctx in ctxs:
                 if self.rup_mutex:
-                    cm.update_mutex(pm, ctx, tom, self.rup_mutex)
+                    cm.update(pm, ctx, self.rup_mutex)
                 else:
-                    cm.update_indep(pm, ctx, tom)
+                    cm.update(pm, ctx)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
@@ -1647,7 +1587,7 @@ class PmapMaker(object):
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
-        dic['cfactor'] = self.cmaker.collapser.cfactor
+        dic['cfactor'] = self.cmaker.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no

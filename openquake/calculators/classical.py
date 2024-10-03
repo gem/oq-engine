@@ -401,11 +401,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if sdata is not None:
             self.source_data += sdata
             self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
-        cfactor = dic.pop('cfactor')
-        if cfactor[1] != cfactor[0]:
-            print('ctxs_per_mag = {:.0f}, cfactor_per_task = {:.1f}'.format(
-                cfactor[1] / cfactor[2], cfactor[1] / cfactor[0]))
-        self.cfactor += cfactor
+        self.cfactor += dic.pop('cfactor')
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
@@ -466,7 +462,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 preclassical.store_tiles(
                     self.datastore, self.csm, self.sitecol, self.cmakers))
 
-        self.cfactor = numpy.zeros(3)
+        self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if oq.disagg_by_src:
             M = len(oq.imtls)
@@ -545,9 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
         else:
-            logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-                int(self.cfactor[1]), int(self.cfactor[0]),
-                self.cfactor[1] / self.cfactor[0]))
+            logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
         self.store_info()
         self.build_curves_maps()
         return True

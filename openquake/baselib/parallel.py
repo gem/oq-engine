@@ -186,6 +186,7 @@ import time
 import socket
 import signal
 import pickle
+import getpass
 import inspect
 import logging
 import operator
@@ -221,7 +222,7 @@ def scratch_dir(job_id):
     :returns: scratch directory associated to the given job_id
     """
     tmp = config.directory.custom_tmp or tempfile.gettempdir()
-    dirname = os.path.join(tmp, f'calc_{job_id}')
+    dirname = os.path.join(tmp, getpass.getuser(), f'calc_{job_id}')
     try:
         os.makedirs(dirname)
     except FileExistsError:  # already created
@@ -428,7 +429,7 @@ class Result(object):
                                     engine_version()))
             if mon.dbserver_host != config.dbserver.host:
                 raise RuntimeError(
-                    'The master has dbserver.host=%s while the worker has %s'
+                    'The worker has dbserver.host=%s while the master has %s'
                     % (mon.dbserver_host, config.dbserver.host))
             with mon:
                 val = func(*args)

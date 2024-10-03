@@ -51,7 +51,6 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.tom import PoissonTOM
 
 
 def classical(group, sitecol, cmaker):
@@ -74,10 +73,6 @@ def classical(group, sitecol, cmaker):
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    cmaker.tom = getattr(group, 'temporal_occurrence_model', None)
-    if cmaker.tom is None:
-        time_span = cmaker.investigation_time  # None for nonparametric
-        cmaker.tom = PoissonTOM(time_span) if time_span else None
     dic = PmapMaker(cmaker, src_filter, group).make()
     return dic
 

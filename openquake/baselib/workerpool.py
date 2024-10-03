@@ -117,7 +117,7 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send('stop')
+                print(sock.send('stop'))
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
@@ -291,14 +291,8 @@ class WorkerPool(object):
         self.hostname = socket.gethostname()
         if self.job_id:
             # save the hostname in calc_XXX/hostcores
-            calc_dir = os.path.join(
-                config.directory.custom_tmp, 'calc_%s' % self.job_id)
-            try:
-                os.mkdir(calc_dir)
-            except FileExistsError:  # somebody else created it
-                pass
             if parallel.oq_distribute() == 'slurm':
-                fname = os.path.join(calc_dir, 'hostcores')
+                fname = os.path.join(self.scratch, 'hostcores')
                 line = f'{self.hostname} {self.num_workers}'
                 print(f'Writing {line} on {fname}')
                 with open(fname, 'a') as f:
