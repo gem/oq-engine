@@ -291,14 +291,8 @@ class WorkerPool(object):
         self.hostname = socket.gethostname()
         if self.job_id:
             # save the hostname in calc_XXX/hostcores
-            calc_dir = os.path.join(
-                config.directory.custom_tmp, 'calc_%s' % self.job_id)
-            try:
-                os.mkdir(calc_dir)
-            except FileExistsError:  # somebody else created it
-                pass
             if parallel.oq_distribute() == 'slurm':
-                fname = os.path.join(calc_dir, 'hostcores')
+                fname = os.path.join(self.scratch, 'hostcores')
                 line = f'{self.hostname} {self.num_workers}'
                 print(f'Writing {line} on {fname}')
                 with open(fname, 'a') as f:
