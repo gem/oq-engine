@@ -20,8 +20,8 @@ import sys
 import signal
 import getpass
 from openquake.baselib import config
-from openquake.commonlib import logs, dbapi
-from openquake.server import dbserver, db
+from openquake.commonlib import logs
+from openquake.server import dbserver
 
 
 def main(cmd,
