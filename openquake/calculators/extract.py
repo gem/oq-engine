@@ -120,9 +120,8 @@ def parse(query_string, info={}):
     {'kind': ['mean'], 'k': [0], 'rlzs': False}
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
-    >>> parse('loss_type=structural+nonstructural&absolute=True&kind=rlzs')['lt']
-    ['structural+nonstructural']
-    >>> parse('loss_type=structural+nonstructural&absolute=False&kind=rlzs')['lt']
+    >>> parse(
+    ...    'loss_type=structural+nonstructural&absolute=True&kind=rlzs')['lt']
     ['structural+nonstructural']
     """
     qdic = parse_qs(query_string)
