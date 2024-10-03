@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote_plus
 from functools import lru_cache
 import operator
 import logging
@@ -120,12 +120,17 @@ def parse(query_string, info={}):
     {'kind': ['mean'], 'k': [0], 'rlzs': False}
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
+    >>> parse('loss_type=structural%2Bnonstructural&absolute=True&kind=rlzs')
+    {'loss_type': [8], 'absolute': [True], 'kind': ['rlz-000'],
+     'lt': ['structural+nonstructural'], 'k': [0], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
-            qdic[key] = [LOSSID[k] for k in val]
+            # NOTE: loss types such as 'structural+nonstructural' need to be
+            # quoted, otherwise the plus would turn into a space
+            qdic[key] = [LOSSID[quote_plus(k)] for k in val]
             qdic['lt'] = val
         else:
             qdic[key] = [lit_eval(v) for v in val]
@@ -751,9 +756,6 @@ def extract_agg_curves(dstore, what):
     Returns an array of shape (#periods, #stats) or (#periods, #rlzs)
     """
     info = get_info(dstore)
-    # NOTE: in loss types like structural+nonstructural the '+' needs to be
-    # encoded, otherwise it is interpreted as a space by parse_qs
-    what = what.replace('+', '%2B')
     qdic = parse(what, info)
     try:
         tagnames = dstore['oqparam'].aggregate_by[0]
