@@ -142,7 +142,11 @@ class CoeffsTable(object):
         firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
         self.rb = RecordBuilder(**firstdic)
-        self._coeffs = {imt: self.rb(**dic) for imt, dic in ddic.items()}
+        self._coeffs = {}
+        for imt, dic in ddic.items():
+            if isinstance(imt, str):
+                imt = from_string(imt)
+            self._coeffs[imt] = self.rb(**dic) 
         self.logratio = logratio
         self.opt = opt
         return self
@@ -280,6 +284,15 @@ class CoeffsTable(object):
         :returns: a composite array with the coefficient names as columns
         """
         return np.array([self[imt] for imt in self._coeffs])
+
+    def to_ddic(self):
+        """
+        :returns: a double dictionary imt -> coeff -> value
+        """
+        ddic = {}
+        for imt, rec in self._coeffs.items():
+            ddic[imt.string] = dict(zip(rec.dtype.names, rec))
+        return ddic
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, ' '.join(self.rb.names))
