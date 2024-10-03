@@ -110,17 +110,16 @@ After installing the engine, the sysadmin has to edit the file
 ```
 [distribution]
 oq_distribute = slurm
+num_cores = 128
+max_cores = 1024
 serialize_jobs = 2
-python = /apps/openquake/3.21/bin/python
+slurm_time = 12:00:00
+submit_cmd = sbatch --account=myaccount oq run
 
 [directory]
-# optionally set it to something like /mnt/large_shared_disk
-shared_dir =
-
-[dbserver]
-host = local
+shared_dir = /home
+custom_tmp = /scratch
 ```
 With `serialize_jobs = 2` at most two jobs per user can be run concurrently. You may want to
 increase or reduce this number. Each user will have its own database located in
-`$HOME/oqdata/db.sqlite3`. The database will be created automatically
-the first time the user runs a calculation.
+`<shared_dir>/<username>/oqdata/db.sqlite3`. The database will be created automatically the first time the user runs a calculation, or manually with the command `oq engine --upgrade-db`.
