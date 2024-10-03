@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Made `scientific_format` resilient against encoding errors
+
   [Ilaria Oliveti]
   * Fixed the GMPE Tusa-Langer-Azzaro (2019) table of coefficients, the
     IMTs were incorrectly using Hz instead of seconds
