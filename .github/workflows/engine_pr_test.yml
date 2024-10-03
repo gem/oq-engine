@@ -96,6 +96,7 @@ jobs:
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
+        oq engine --upgrade-db
         # -v 2 also logs the test names
         ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
@@ -125,6 +126,7 @@ jobs:
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
+        oq engine --upgrade-db
         # -v 2 also logs the test names
         ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
 
@@ -155,6 +157,7 @@ jobs:
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
+        oq engine --upgrade-db
         ./openquake/server/manage.py migrate
         ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
         ./openquake/server/manage.py collectstatic --noinput
