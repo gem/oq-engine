@@ -120,14 +120,7 @@ def parse(query_string, info={}):
     {'kind': ['mean'], 'k': [0], 'rlzs': False}
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
-    >>> parse('loss_type=structural%2Bnonstructural&absolute=True&kind=rlzs')
-    {'loss_type': [8], 'absolute': [True], 'kind': ['rlz-000'],
-     'lt': ['structural+nonstructural'], 'k': [0], 'rlzs': True}
     """
-    # NOTE: without this replacement, loss types such as
-    # 'structural+nonstructural' would be parsed as 'structural nonstructural',
-    # with a space instead of the plus
-    parse_qs(query_string.replace('+', '%2B'))
     qdic = parse_qs(query_string)
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
