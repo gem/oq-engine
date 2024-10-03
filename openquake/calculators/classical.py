@@ -595,7 +595,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        smap.expected_outputs = sum(n_out)
+        if not self.oqparam.disagg_by_src:
+            smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_regular(acc)
 
