@@ -244,6 +244,19 @@ def gen_outputs(df, crmodel, rng, monitor):
             yield out
 
 
+def check_tot_loss_unit_consistency(units, total_losses, loss_types):
+    total_losses_units = set()
+    for separate_lt in total_losses.split('+'):
+        assert separate_lt in loss_types
+        for unit, lt in zip(units, loss_types):
+            if separate_lt == lt:
+                total_losses_units.add(unit)
+    if len(total_losses_units) != 1:
+        logging.warning(
+            'The units of the single components of the total losses'
+            ' are not homogeneous: %s" ' % total_losses_units)
+
+
 def set_oqparam(oq, assetcol, dstore):
     """
     Set the attributes .M, .K, .A, .ideduc, ._sec_losses
@@ -264,6 +277,9 @@ def set_oqparam(oq, assetcol, dstore):
 
     ideduc = assetcol['ideductible'].any()
     if oq.total_losses:
+        units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
+        check_tot_loss_unit_consistency(
+            units.split(), oq.total_losses, oq.loss_types)
         sec_losses.append(
             partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
     elif ideduc:

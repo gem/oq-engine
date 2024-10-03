@@ -35,6 +35,7 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 
+
 class FakeBuilder:
     eff_time = 0.
     pla_factor = None
@@ -385,10 +386,11 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
                         agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
-    dstore.create_df('aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
+    dstore.create_df('aggrisk', aggrisk,
+                     limit_states=' '.join(oq.limit_states))
     if oq.investigation_time and loss_cols:
-        store_aggcurves(
-            oq, agg_ids, rbe_df, builder, loss_cols, events, num_events, dstore)
+        store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols, events,
+                        num_events, dstore)
     return aggrisk
 
 
