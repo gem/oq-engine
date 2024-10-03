@@ -117,7 +117,7 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send('stop')
+                print(sock.send('stop'))
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
