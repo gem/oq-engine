@@ -131,7 +131,8 @@ def parse(query_string, info={}):
         if key == 'loss_type':
             # NOTE: loss types such as 'structural+nonstructural' need to be
             # quoted, otherwise the plus would turn into a space
-            qdic[key] = [LOSSID[quote_plus(k)] for k in val]
+            val = [quote_plus(lt) for lt in val]
+            qdic[key] = [LOSSID[k] for k in val]
             qdic['lt'] = val
         else:
             qdic[key] = [lit_eval(v) for v in val]
