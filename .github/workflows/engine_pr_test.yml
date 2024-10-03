@@ -34,7 +34,7 @@ jobs:
         set -e
         source ~/openquake/bin/activate
         pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-        oq dbserver upgrade
+        oq engine --upgrade-db
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage'
 
   hazardlib:
@@ -64,7 +64,7 @@ jobs:
         set -e
         source ~/openquake/bin/activate
         pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-        oq dbserver upgrade
+        oq engine --upgrade-db
         cd openquake
         ruff check --preview .
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
