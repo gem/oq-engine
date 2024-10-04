@@ -126,10 +126,11 @@ def check_memory(N, Z, shape8D):
     """
     avail_gb = psutil.virtual_memory().available / 1024**3
     req_gb = numpy.prod(shape8D) * N * Z * 8 / 1024**3
-    if avail_gb < req_gb:
+    if avail_gb < req_gb*2:
+        # req_gb*2 because when storing the outputs a lot more memory will be used
         raise MemoryError('You have %.1f GB available but %.1f GB are required. '
                           'The solution is to reduce the number of bins' %
-                          (avail_gb, req_gb))
+                          (avail_gb, req_gb*2))
     logging.info('The AccumDict will require %.1f GB', req_gb)
 
 
