@@ -21,6 +21,7 @@ Disaggregation calculator core functionality
 """
 
 import logging
+import psutil
 import numpy
 
 from openquake.baselib import parallel
@@ -117,6 +118,19 @@ def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
     smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
+
+
+def check_memory(N, Z, shape8D):
+    """
+    Raise an error if the calculation will require too much memory
+    """
+    avail_gb = psutil.virtual_memory().available / 1024**3
+    req_gb = numpy.prod(shape8D) * N * Z * 8 / 1024**3
+    if avail_gb < req_gb:
+        raise MemoryError('You have %.1f GB available but %.1f GB are required. '
+                          'The solution is to reduce the number of bins' %
+                          (avail_gb, req_gb))
+    logging.info('The AccumDict will require %.1f GB', req_gb)
 
 
 @base.calculators.add('disaggregation')
@@ -306,6 +320,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
+        check_memory(self.N, self.Z, shape8D)
         acc = AccumDict(accum=numpy.zeros(shape8D))
         # NB: a lot of memory can go in this AccumDict, please reduce the bins
         results = smap.reduce(self.agg_result, acc)
