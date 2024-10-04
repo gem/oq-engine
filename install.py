@@ -451,8 +451,7 @@ def install(inst, version, from_fork):
     subprocess.run([oqreal, '--version'])  # compile numba
 
     if inst in (user, devel):  # create/upgrade the db in the default location
-        # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
-        subprocess.run([oqreal, 'dbserver', 'upgrade'])
+        subprocess.run([oqreal, 'engine', '--upgrade-db'])
 
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
