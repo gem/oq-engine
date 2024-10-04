@@ -240,7 +240,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for grp_id, df in gb}
         else:
             src_mutex_by_grp = {}
-        ctx_by_grp = read_ctx_by_grp(dstore)
+        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
         totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(totctxs))
         self.datastore.swmr_on()
@@ -307,6 +307,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
         acc = AccumDict(accum=numpy.zeros(shape8D))
+        # NB: a lot of memory can go in this AccumDict, please reduce the bins
         results = smap.reduce(self.agg_result, acc)
         return results  # s, r -> array 8D
 
