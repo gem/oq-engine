@@ -279,6 +279,27 @@ class CoeffsTable(object):
             self._coeffs[imt] = c = self.rb(*vals)
         return c
 
+    def update_coeff(self, coeff_name, value_by_imt):
+        """
+        Update a coefficient in the table.
+
+        :param coeff_name: name of the coefficient
+        :param value_by_imt: dictionary imt -> coeff_value
+        """
+        for imt, coeff_value in value_by_imt.items():
+            self._coeffs[imt][coeff_name] = coeff_value
+
+    def __ior__(self, other):
+        """
+        Update self with a smaller table
+        """
+        for imt in other._coeffs:
+            assert imt in self._coeffs, imt
+        for name in other.rb.names:
+            by_imt = {imt: rec[name] for imt, rec in other._coeffs.items()}
+            self.update_coeff(name, by_imt)
+        return self
+
     def to_array(self):
         """
         :returns: a composite array with the coefficient names as columns
@@ -291,7 +312,7 @@ class CoeffsTable(object):
         """
         ddic = {}
         for imt, rec in self._coeffs.items():
-            ddic[imt.string] = dict(zip(rec.dtype.names, rec))
+            ddic[imt.string] = dict(zip(rec.dtype.names, map(float, rec)))
         return ddic
 
     def __repr__(self):
