@@ -18,6 +18,8 @@
 
 import re
 import math
+import copy
+import toml
 import scipy
 import numpy as np
 from openquake.baselib.general import RecordBuilder
@@ -151,6 +153,13 @@ class CoeffsTable(object):
         self.opt = opt
         return self
 
+    @classmethod
+    def fromtoml(cls, string):
+        """
+        Builds a CoeffsTable from a TOML string
+        """
+        return cls.fromdict(toml.loads(string))
+
     def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
         self.opt = kwargs.pop('opt', 0)
@@ -279,6 +288,36 @@ class CoeffsTable(object):
             self._coeffs[imt] = c = self.rb(*vals)
         return c
 
+    def update_coeff(self, coeff_name, value_by_imt):
+        """
+        Update a coefficient in the table.
+
+        :param coeff_name: name of the coefficient
+        :param value_by_imt: dictionary imt -> coeff_value
+        """
+        for imt, coeff_value in value_by_imt.items():
+            self._coeffs[imt][coeff_name] = coeff_value
+
+    def __or__(self, other):
+        """
+        :param other: a subtable of self
+        :returns: a new table obtained by overriding self with other
+        """
+        for imt in other._coeffs:
+            assert imt in self._coeffs, imt
+        new = copy.deepcopy(self)
+        for name in other.rb.names:
+            by_imt = {imt: rec[name] for imt, rec in other._coeffs.items()}
+            new.update_coeff(name, by_imt)
+        return new
+
+    def __ior__(self, other):
+        """
+        :param other: a subtable of self
+        :returns: a new table obtained by overriding self with other
+        """
+        return self | other
+
     def to_array(self):
         """
         :returns: a composite array with the coefficient names as columns
@@ -291,7 +330,7 @@ class CoeffsTable(object):
         """
         ddic = {}
         for imt, rec in self._coeffs.items():
-            ddic[imt.string] = dict(zip(rec.dtype.names, rec))
+            ddic[imt.string] = dict(zip(rec.dtype.names, map(float, rec)))
         return ddic
 
     def __repr__(self):
