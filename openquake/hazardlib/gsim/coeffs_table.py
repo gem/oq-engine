@@ -311,6 +311,13 @@ class CoeffsTable(object):
             new.update_coeff(name, by_imt)
         return new
 
+    def __ior__(self, other):
+        """
+        :param other: a subtable of self
+        :returns: a new table obtained by overriding self with other
+        """
+        return self | other
+
     def to_array(self):
         """
         :returns: a composite array with the coefficient names as columns
