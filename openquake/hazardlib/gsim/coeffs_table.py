@@ -19,6 +19,7 @@
 import re
 import math
 import copy
+import toml
 import scipy
 import numpy as np
 from openquake.baselib.general import RecordBuilder
@@ -151,6 +152,13 @@ class CoeffsTable(object):
         self.logratio = logratio
         self.opt = opt
         return self
+
+    @classmethod
+    def fromtoml(cls, string):
+        """
+        Builds a CoeffsTable from a TOML string
+        """
+        return cls.fromdict(toml.loads(string))
 
     def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
@@ -292,7 +300,8 @@ class CoeffsTable(object):
 
     def __or__(self, other):
         """
-        Returns a new table obtained by overriding self with other
+        :param other: a subtable of self
+        :returns: a new table obtained by overriding self with other
         """
         for imt in other._coeffs:
             assert imt in self._coeffs, imt

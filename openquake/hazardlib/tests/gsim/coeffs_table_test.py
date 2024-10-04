@@ -69,9 +69,7 @@ a3 = 0.9
         self.ctab.fromdict(ddic)
 
     def test_update_coeff(self):
-        ddic = toml.loads('["SA(0.01)"]\na1 = 0.11')
-        newtab = CoeffsTable.fromdict(ddic)
-        ctab = self.ctab | newtab
+        ctab = self.ctab | CoeffsTable.fromtoml('["SA(0.01)"]\na1 = 0.11')
         coeffs = ctab[SA(0.01)]
         np.testing.assert_array_equal(list(coeffs), [0.11, 0.5, 0.6])
 
