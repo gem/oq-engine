@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote_plus
 from functools import lru_cache
 import operator
 import logging
@@ -120,11 +120,17 @@ def parse(query_string, info={}):
     {'kind': ['mean'], 'k': [0], 'rlzs': False}
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
+    >>> parse(
+    ...    'loss_type=structural+nonstructural&absolute=True&kind=rlzs')['lt']
+    ['structural+nonstructural']
     """
     qdic = parse_qs(query_string)
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
+            # NOTE: loss types such as 'structural+nonstructural' need to be
+            # quoted, otherwise the plus would turn into a space
+            val = [quote_plus(lt) for lt in val]
             qdic[key] = [LOSSID[k] for k in val]
             qdic['lt'] = val
         else:
@@ -793,8 +799,11 @@ def extract_agg_curves(dstore, what):
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][agg_id][lts]
-        arr /= evalue
+        evalue_sum = 0
+        for lts_item in lts:
+            for lt in lts_item.split('+'):
+                evalue_sum += dstore['agg_values'][agg_id][lt]
+        arr /= evalue_sum
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['kind', 'return_period', 'ep_field'] + tagnames)
