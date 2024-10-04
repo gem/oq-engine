@@ -18,6 +18,7 @@
 
 import re
 import math
+import copy
 import scipy
 import numpy as np
 from openquake.baselib.general import RecordBuilder
@@ -289,16 +290,17 @@ class CoeffsTable(object):
         for imt, coeff_value in value_by_imt.items():
             self._coeffs[imt][coeff_name] = coeff_value
 
-    def __ior__(self, other):
+    def __or__(self, other):
         """
-        Update self with a smaller table
+        Returns a new table obtained by overriding self with other
         """
         for imt in other._coeffs:
             assert imt in self._coeffs, imt
+        new = copy.deepcopy(self)
         for name in other.rb.names:
             by_imt = {imt: rec[name] for imt, rec in other._coeffs.items()}
-            self.update_coeff(name, by_imt)
-        return self
+            new.update_coeff(name, by_imt)
+        return new
 
     def to_array(self):
         """
