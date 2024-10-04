@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import copy
 import toml
 import numpy as np
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
