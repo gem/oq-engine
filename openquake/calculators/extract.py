@@ -800,8 +800,9 @@ def extract_agg_curves(dstore, what):
         pass
     elif qdic['absolute'] == [0]:
         evalue_sum = 0
-        for lt in lts[0].split('+'):
-            evalue_sum += dstore['agg_values'][agg_id][lt]
+        for lts_item in lts:
+            for lt in lts_item.split('+'):
+                evalue_sum += dstore['agg_values'][agg_id][lt]
         arr /= evalue_sum
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
