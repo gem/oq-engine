@@ -451,7 +451,7 @@ class CampbellBozorgnia2014(GMPE):
                 pga = get_mean_values(self.SJ, C_PGA, ctx, pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
-                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
+                mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
@@ -473,9 +473,8 @@ class CampbellBozorgnia2014(GMPE):
 
                 p = np.sqrt(
                 phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b
-                )
-            
+                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b)
+
             else:
                 # Use formula in CB14 supplementary spreadsheet
                 t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
@@ -557,6 +556,10 @@ class CampbellBozorgnia2019(CampbellBozorgnia2014):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
 
+add_alias('CampbellBozorgnia2014HighQ', CampbellBozorgnia2014,
+          coeffs=coeffs_high)
+add_alias('CampbellBozorgnia2014LowQ', CampbellBozorgnia2014,
+          coeffs=coeffs_low)
 add_alias('CampbellBozorgnia2014JapanSite', CampbellBozorgnia2014,
           SJ=True)
 add_alias('CampbellBozorgnia2014HighQJapanSite', CampbellBozorgnia2014,
@@ -564,6 +567,10 @@ add_alias('CampbellBozorgnia2014HighQJapanSite', CampbellBozorgnia2014,
 add_alias('CampbellBozorgnia2014LowQJapanSite', CampbellBozorgnia2014,
           coeffs=coeffs_low, SJ=True)
 
+add_alias('CampbellBozorgnia2019HighQ', CampbellBozorgnia2019,
+          coeffs=coeffs_high)
+add_alias('CampbellBozorgnia2019LowQ', CampbellBozorgnia2019,
+          coeffs=coeffs_low)
 add_alias('CampbellBozorgnia2019JapanSite', CampbellBozorgnia2019,
           SJ=True)
 add_alias('CampbellBozorgnia2019HighQJapanSite', CampbellBozorgnia2019,
