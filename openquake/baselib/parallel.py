@@ -835,6 +835,7 @@ class Starmap(object):
             self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, self.task_no, queued)
             self.prev_percent = percent
+        assert percent <= 100, percent  # sanity check
         return done
 
     def init_slurm(self):
