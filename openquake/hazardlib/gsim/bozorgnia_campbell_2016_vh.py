@@ -173,7 +173,8 @@ class BozorgniaCampbell2016HighQVH(BozorgniaCampbell2016VH):
     low attenuation (high quality factor, Q) (e.g. eastern China)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(sgn=+1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014HighQ()
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014(
+        coeffs=campbell_bozorgnia_2014.coeffs_high)
 
 
 class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
@@ -185,7 +186,8 @@ class BozorgniaCampbell2016LowQVH(BozorgniaCampbell2016VH):
     high attenuation (low quality factor, Q) (e.g. Japan and Italy)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(sgn=-1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014LowQ()
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014(
+        coeffs=campbell_bozorgnia_2014.coeffs_low)
 
 
 class BozorgniaCampbell2016AveQJapanSiteVH(BozorgniaCampbell2016VH):
@@ -215,7 +217,8 @@ class BozorgniaCampbell2016HighQJapanSiteVH(
     low attenuation (high quality factor, Q)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1, sgn=+1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014HighQ(SJ=1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014(
+        coeffs=campbell_bozorgnia_2014.coeffs_high, SJ=1)
 
 
 class BozorgniaCampbell2016LowQJapanSiteVH(
@@ -231,4 +234,5 @@ class BozorgniaCampbell2016LowQJapanSiteVH(
     high attenuation (low quality factor, Q)
     """
     VGMPE = bozorgnia_campbell_2016.BozorgniaCampbell2016(SJ=1, sgn=-1)
-    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014LowQ(SJ=1)
+    HGMPE = campbell_bozorgnia_2014.CampbellBozorgnia2014(
+        coeffs=campbell_bozorgnia_2014.coeffs_low, SJ=1)
