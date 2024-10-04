@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a memory check in disaggregation calculations
   * Made `scientific_format` resilient against encoding errors
 
   [Ilaria Oliveti]
