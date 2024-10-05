@@ -18,9 +18,6 @@
 
 """
 Module exports :class:`ChiouYoungs2014`
-               :class:`ChiouYoungs2014Japan`
-               :class:`ChiouYoungs2014Italy`
-               :class:`ChiouYoungs2014Wenchuan`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
 """
@@ -29,7 +26,7 @@ import pathlib
 import numpy as np
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -294,20 +291,6 @@ def get_linear_site_term(region, C, ctx):
         return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
     return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
 
-
-def get_region(clsname):
-    """
-    Returns the region parameter
-    """
-    if clsname.endswith("Italy"):
-        return "ITA"
-    elif clsname.endswith("Japan"):
-        return "JPN"
-    elif clsname.endswith("Wenchuan"):
-        return "WEN"
-    else:
-        return "CAL"
-    
     
 def get_delta_c1(rrup, imt, mag):
     """
@@ -634,7 +617,7 @@ class ChiouYoungs2014(GMPE):
                  stress_par_target=None, delta_gamma_tab=None):
 
         # set region
-        self.region = get_region(self.__class__.__name__)
+        self.region = region
 
         # set sigma_mu_epsilon 
         self.sigma_mu_epsilon = sigma_mu_epsilon
@@ -743,28 +726,20 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 """)
 
 
-class ChiouYoungs2014Japan(ChiouYoungs2014):
-    """
-    Regionalisation of the Chiou & Youngs (2014) GMPE for use with the
-    Japan far-field distance attuation scaling and site model
-    """
+# Regionalisation of the Chiou & Youngs (2014) GMPE for use with the
+# Japan far-field distance attuation scaling and site model
+add_alias('ChiouYoungs2014Japan', ChiouYoungs2014, region='JPN')
 
+# Adaption of the Chiou & Youngs (2014) GMPE for the the Italy far-field
+# attenuation scaling, but assuming the California site amplification model
+add_alias('ChiouYoungs2014Italy', ChiouYoungs2014, region='ITA')
 
-class ChiouYoungs2014Italy(ChiouYoungs2014):
-    """
-    Adaption of the Chiou & Youngs (2014) GMPE for the the Italy far-field
-    attenuation scaling, but assuming the California site amplification model
-    """
-
-
-class ChiouYoungs2014Wenchuan(ChiouYoungs2014):
-    """
-    Adaption of the Chiou & Youngs (2014) GMPE for the Wenchuan far-field
-    attenuation scaling, but assuming the California site amplification model.
-    It should be note that according to Chiou & Youngs (2014) this adjustment
-    is calibrated only for the M7.9 Wenchuan earthquake, so application to
-    other scenarios is at the user's own risk
-    """
+# Adaption of the Chiou & Youngs (2014) GMPE for the Wenchuan far-field
+# attenuation scaling, but assuming the California site amplification model.
+# It should be note that according to Chiou & Youngs (2014) this adjustment
+# is calibrated only for the M7.9 Wenchuan earthquake, so application to
+#  other scenarios is at the user's own risk
+add_alias('ChiouYoungs2014Wenchuan', ChiouYoungs2014, region='WEN')
 
 
 class ChiouYoungs2014PEER(ChiouYoungs2014):
@@ -807,7 +782,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
-            ln_y_ref = _get_ln_y_ref(get_region(self.__class__.__name__), ctx, C)
+            ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
             exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
