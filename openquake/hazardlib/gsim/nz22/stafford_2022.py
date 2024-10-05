@@ -347,7 +347,7 @@ def get_ln_y_ref(
         + get_far_field_distance_scaling(
             T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
         )
-        + get_directivity("Stafford2022", C, ctx)
+        + get_directivity(C, ctx)
     )
 
 
