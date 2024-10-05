@@ -324,7 +324,7 @@ class CoeffsTable(object):
         """
         return np.array([self[imt] for imt in self._coeffs])
 
-    def to_ddic(self):
+    def to_dict(self):
         """
         :returns: a double dictionary imt -> coeff -> value
         """

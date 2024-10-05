@@ -409,11 +409,11 @@ class CampbellBozorgnia2014(GMPE):
     #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
-    def __init__(self, coeffs=None, SJ=False, sigma_mu_epsilon=0.0, estimate_ztor=False,
+    def __init__(self, coeffs={}, SJ=False, sigma_mu_epsilon=0.0, estimate_ztor=False,
                  estimate_width=False, estimate_hypo_depth=False):
         # tested in logictree/case_71
         if coeffs:  # extra coefficients by IMT
-            self.COEFFS |= coeffs
+            self.COEFFS |= CoeffsTable.fromdict(coeffs)
         self.SJ = SJ  # flag for Japan
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.estimate_ztor = estimate_ztor
@@ -532,7 +532,7 @@ coeffs_high = CoeffsTable.fromtoml('''
 ["SA(0.5)"]\nDc20 = 0.0025
 ["SA(0.75)"]\nDc20 = 0.0016
 ["SA(1.0)"]\nDc20 = 0.0006
-''')
+''').to_dict()
 
 coeffs_low = CoeffsTable.fromtoml('''
 ["SA(0.01)"]\nDc20 = 0.0035
@@ -549,7 +549,7 @@ coeffs_low = CoeffsTable.fromtoml('''
 ["SA(0.5)"]\nDc20 = 0.0030
 ["SA(0.75)"]\nDc20 = 0.0019
 ["SA(1.0)"]\nDc20 = 0.0005
-''')
+''').to_dict()
 
 
 class CampbellBozorgnia2019(CampbellBozorgnia2014):
