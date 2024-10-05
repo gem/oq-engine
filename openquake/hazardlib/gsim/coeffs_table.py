@@ -231,6 +231,9 @@ class CoeffsTable(object):
         coeffs = coeffs[idx, :]
         return pof, coeffs
 
+    def __iter__(self):
+        return iter(self._coeffs)
+
     def __getitem__(self, imt):
         """
         Return a dictionary of coefficients corresponding to ``imt``
@@ -317,6 +320,19 @@ class CoeffsTable(object):
         :returns: a new table obtained by overriding self with other
         """
         return self | other
+
+    def assert_equal(self, other):
+        """
+        Compare two tables of coefficients
+        """
+        assert sorted(self) == sorted(other), (sorted(self), sorted(other))
+        for imt in self:
+            rec0 = self[imt]
+            rec1 = other[imt]
+            names = rec0.dtype.names
+            assert rec1.dtype.names == names, (rec1.dtype.names, names)
+            for name in names:
+                assert rec0[name] == rec1[name], (name, rec0[name], rec1[name])
 
     def to_array(self):
         """
