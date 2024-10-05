@@ -162,19 +162,19 @@ def shm6_site_correction(C, mean, ctx, imt):
     mean[vs30_ge1100] = factor + cy14_760 + mean[vs30_ge1100]
 
 
-def get_mean_stddevs_cy14(name, C, ctx, conf):
+def get_mean_stddevs_cy14(region, C, ctx, conf):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = CY14.get_ln_y_ref(name, C, ctx, conf)
+    ln_y_ref = CY14.get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
     # Set basin depth to 0
     f_z1pt0 = 0.0
 
     # Get linear amplification term
-    f_lin = CY14.get_linear_site_term(name, C, ctx)
+    f_lin = CY14.get_linear_site_term(region, C, ctx)
 
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
@@ -184,7 +184,7 @@ def get_mean_stddevs_cy14(name, C, ctx, conf):
 
     # Get standard deviations
     sig, tau, phi = CY14.get_stddevs(
-        name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+        conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     return mean, sig, tau, phi
 
@@ -215,14 +215,13 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
         Notes:
             - Centered cdpp already defaulted to 0
         """
-        name = self.__class__.__name__
 
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
         # Reference to page 1144, PSA might need PGA value
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs_cy14(
-            name, self.COEFFS[PGA()], ctx, self.conf)
+            self.region, self.COEFFS[PGA()], ctx, self.conf)
 
         # Processing IMTs
         for m, imt in enumerate(imts):
@@ -234,8 +233,8 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
-                imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_mean_stddevs_cy14(name, self.COEFFS[imt], ctx, self.conf)
+                imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs_cy14(
+                    self.region, self.COEFFS[imt], ctx, self.conf)
                 # reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
@@ -245,7 +244,6 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
                 # Site term correction fos SHM6
                 shm6_site_correction(self.COEFFS[imt], mean[m], ctx, imt)
-
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
 # =============================================================================
