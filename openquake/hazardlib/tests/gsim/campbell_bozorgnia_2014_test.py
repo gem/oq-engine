@@ -28,36 +28,39 @@ https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
 #     (Basin Response Term) should refer to the Sj flag instead of the Sji flag
 #   * A1100 should refer to Z2.5 (VS30=1100) in Cell B48, not constant in A48.
 """
+import pytest
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    CampbellBozorgnia2014, CampbellBozorgnia2014HighQ, CampbellBozorgnia2014LowQ,
-    CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ)
+    CampbellBozorgnia2014, CampbellBozorgnia2019, coeffs_high, coeffs_low)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
-    classes = [CampbellBozorgnia2014, CampbellBozorgnia2014HighQ, CampbellBozorgnia2014LowQ]
+    GSIM_CLASS = CampbellBozorgnia2014
     MEAN_FILE = 'CB14/CB2014%s_MEAN.csv'
     STD_INTRA_FILE = 'CB14/CB2014%s_STD_INTRA.csv'
     STD_INTER_FILE = 'CB14/CB2014%s_STD_INTER.csv'
     STD_TOTAL_FILE = 'CB14/CB2014%s_STD_TOTAL.csv'
 
-    def test_all(self):
-        for name, cls in zip(['', '_HIGHQ', '_LOWQ'], self.classes):
-            self.GSIM_CLASS = cls
-            for SJ in [0, 1]:
-                tag = name + ('_JAPAN' if SJ else '')
-                self.check(self.MEAN_FILE % tag,
-                           self.STD_INTRA_FILE % tag,
-                           self.STD_INTER_FILE % tag,
-                           self.STD_TOTAL_FILE % tag,
-                           max_discrep_percentage=0.1,
-                           SJ=SJ)
 
-
-class CampbellBozorgnia2019_IA_CAV_TestCase(CampbellBozorgnia2014TestCase):
-    classes = [CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ]
+class CampbellBozorgnia2019TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = CampbellBozorgnia2019
     MEAN_FILE = 'CB19/CB2019%s_MEAN.csv'
     STD_INTRA_FILE = 'CB19/CB2019%s_STD_INTRA.csv'
     STD_INTER_FILE = 'CB19/CB2019%s_STD_INTER.csv'
     STD_TOTAL_FILE = 'CB19/CB2019%s_STD_TOTAL.csv'
 
+
+coeffs = {'': None, '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
+params = [(cls, name, SJ)
+          for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]
+          for cls in [CampbellBozorgnia2014TestCase, CampbellBozorgnia2019TestCase]]
+@pytest.mark.parametrize('cls, name, SJ', params)
+def test_all(cls, name, SJ):
+    self = cls()
+    tag = name + ('_JAPAN' if SJ else '')
+    self.check(self.MEAN_FILE % tag,
+               self.STD_INTRA_FILE % tag,
+               self.STD_INTER_FILE % tag,
+               self.STD_TOTAL_FILE % tag,
+               max_discrep_percentage=0.1,
+               coeffs=coeffs[name], SJ=SJ)

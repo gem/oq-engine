@@ -47,8 +47,8 @@ class TestGetCoefficient(unittest.TestCase):
                            """)
         self.ctab_eas = ctab
 
-    def test_ddic(self):
-        ddic = self.ctab.to_ddic()
+    def test_to_dict(self):
+        ddic = self.ctab.to_dict()
         self.assertEqual(toml.dumps(ddic), '''\
 [PGA]
 a1 = 0.1

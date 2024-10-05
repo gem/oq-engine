@@ -231,6 +231,9 @@ class CoeffsTable(object):
         coeffs = coeffs[idx, :]
         return pof, coeffs
 
+    def __iter__(self):
+        return iter(self._coeffs)
+
     def __getitem__(self, imt):
         """
         Return a dictionary of coefficients corresponding to ``imt``
@@ -318,13 +321,42 @@ class CoeffsTable(object):
         """
         return self | other
 
+    def assert_equal(self, other):
+        """
+        Compare two tables of coefficients
+        """
+        assert sorted(self) == sorted(other), (sorted(self), sorted(other))
+        for imt in self:
+            rec0 = self[imt]
+            rec1 = other[imt]
+            names = rec0.dtype.names
+            assert rec1.dtype.names == names, (rec1.dtype.names, names)
+            for name in names:
+                assert rec0[name] == rec1[name], (name, rec0[name], rec1[name])
+
+    def get_diffs(self, other):
+        """
+        :returns: a list of tuples [(imt, field, value_self, value_other), ...]
+        """
+        assert sorted(self) == sorted(other), (sorted(self), sorted(other))
+        diffs = []
+        for imt in self:
+            rec0 = self[imt]
+            rec1 = other[imt]
+            names = rec0.dtype.names
+            assert rec1.dtype.names == names, (rec1.dtype.names, names)
+            for name in names:
+                if rec0[name] != rec1[name]:
+                    diffs.append((imt.string, name, rec0[name], rec1[name]))
+        return diffs
+
     def to_array(self):
         """
         :returns: a composite array with the coefficient names as columns
         """
         return np.array([self[imt] for imt in self._coeffs])
 
-    def to_ddic(self):
+    def to_dict(self):
         """
         :returns: a double dictionary imt -> coeff -> value
         """
