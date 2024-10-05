@@ -64,4 +64,3 @@ def test_all(cls, name, SJ):
                self.STD_TOTAL_FILE % tag,
                max_discrep_percentage=0.1,
                coeffs=coeffs[name], SJ=SJ)
-    
