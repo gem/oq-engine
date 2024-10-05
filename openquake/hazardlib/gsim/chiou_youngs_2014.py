@@ -37,14 +37,6 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
-def _get_centered_cdpp(clsname, ctx):
-    """
-    Returns the centred dpp term (zero by default)
-    """
-    if clsname.endswith("NearFaultEffect"):
-        return ctx.rcdpp
-    return np.zeros(ctx.rrup.shape)
-
 
 def _get_centered_z1pt0(clsname, ctx):
     """
@@ -162,19 +154,20 @@ def get_basin_depth_term(clsname, C, centered_z1pt0):
                                      CONSTANTS["phi6"]))
 
 
-def get_directivity(clsname, C, ctx):
+def get_directivity(C, ctx):
     """
-    Returns the directivity term.
+    Returns the directivity term, if any.
 
     The directivity prediction parameter is centered on the average
     directivity prediction parameter. Here we set the centered_dpp
     equal to zero, since the near fault directivity effect prediction is
     off by default in our calculation.
-    """
-    cdpp = _get_centered_cdpp(clsname, ctx)
-    if not np.any(cdpp > 0.0):
+    """    
+    try:
+        cdpp =  ctx.rcdpp
+    except AttributeError:
         # No directivity term
-        return 0.0
+        return 0.
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
     f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
     rrup_max = ctx.rrup - 40.
@@ -434,7 +427,7 @@ def get_ln_y_ref(clsname, C, ctx, conf):
            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
            get_far_field_distance_scaling(
                region, C, ctx.mag, ctx.rrup, delta_g) +
-           get_directivity(clsname, C, ctx))
+           get_directivity(C, ctx))
 
     # Adjust ground-motion for the hanging wall effect
     if use_hw:
