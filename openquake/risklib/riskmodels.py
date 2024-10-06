@@ -824,12 +824,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dictionary keyed by extended loss type
         """
         if hasattr(asset_df, 'ID_0'):
-            out = AccumDict()
-            for country in asset_df.ID_0.unique():
-                adf = asset_df[asset_df.ID_0 == country]
-                out += scientific.RiskComputer(self, adf).output(
-                    haz, sec_losses, rndgen)
-            return out
+            countries = asset_df.ID_0.unique()
+            if len(countries) > 1:
+                out = AccumDict()
+                for country in countries:
+                    adf = asset_df[asset_df.ID_0 == country]
+                    out += scientific.RiskComputer(self, adf).output(
+                        haz, sec_losses, rndgen)
+                return out
         # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
