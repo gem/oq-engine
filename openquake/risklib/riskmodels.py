@@ -823,13 +823,20 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param rndgen: a MultiEventRNG instance
         :returns: a dictionary keyed by extended loss type
         """
-        rc = scientific.RiskComputer(self, asset_df)
+        if hasattr(asset_df, 'ID_0'):
+            out = AccumDict()
+            for country in asset_df.ID_0.unique():
+                adf = asset_df[asset_df.ID_0 == country]
+                out += scientific.RiskComputer(self, adf).output(
+                    haz, sec_losses, rndgen)
+            return out
         # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()
         # _assert_equal(dic, dic2)
-        return rc.output(haz, sec_losses, rndgen)
+        return scientific.RiskComputer(self, asset_df).output(
+            haz, sec_losses, rndgen)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
