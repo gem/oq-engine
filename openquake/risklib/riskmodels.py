@@ -451,10 +451,9 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
+# used only in riskmodels_test
 def get_riskcomputer(dic):
-    """
-    Builds a RiskComputer instance from a suitable dictionary
-    """
+    # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     rc.asset_df = pandas.DataFrame(dic['asset_df'])
     rc.wdic = {}
