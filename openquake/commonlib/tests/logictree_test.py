@@ -2111,7 +2111,7 @@ class ReduceLtTestCase(unittest.TestCase):
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
-    taxonomies = {1: 'taxo1', 2: 'taxo2', 3: 'taxo3', 4: 'taxo4'}
+    taxidx = {'taxo1': 1, 'taxo2': 2, 'taxo3': 3, 'taxo4': 4}
 
     def test_missing_taxo(self):
         xml = '''taxonomy,conversion,weight
@@ -2123,7 +2123,7 @@ taxo3,taxo3,1
             inp = dict(taxonomy_mapping=gettemp(xml))
             oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                     aristotle=False)
-            readinput.taxonomy_mapping(oq, self.taxonomies)
+            readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
 
@@ -2139,7 +2139,7 @@ taxo4,taxo2,.4
             inp = dict(taxonomy_mapping=gettemp(xml))
             oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                     aristotle=False)
-            readinput.taxonomy_mapping(oq, self.taxonomies)
+            readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
 
@@ -2154,7 +2154,7 @@ taxo4,taxo1,.5
         inp = dict(taxonomy_mapping=gettemp(xml))
         oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                 aristotle=False)
-        dic = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
+        dic = readinput.taxonomy_mapping(oq, self.taxidx)['structural']
         self.assertEqual(dic, {0: [('?', 1)],
                                1: [('taxo1', 1.0)],
                                2: [('taxo2', 1.0)],
