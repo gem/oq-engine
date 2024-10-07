@@ -36,7 +36,7 @@ import configparser
 import collections
 
 from openquake.commands.plot_assets import main as plot_assets
-from openquake.baselib import general, hdf5, python3compat, config
+from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
