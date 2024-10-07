@@ -939,8 +939,8 @@ class HazardCalculator(BaseCalculator):
                 oq.raise_invalid('missing exposure')
 
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxdic = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
-                      if taxi in numpy.unique(self.assetcol['taxonomy'])}
+            taxo_by_idx = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
+                           if taxi in numpy.unique(self.assetcol['taxonomy'])}
             if 'ID_0' in self.assetcol.array.dtype.names:
                 # in qa_tests_data/scenario_risk/scenario_risk/conditioned
                 allcountries = numpy.array(self.assetcol.tagcol.ID_0)
@@ -948,7 +948,7 @@ class HazardCalculator(BaseCalculator):
                 countries = allcountries[id0s]
             else:
                 countries = ()
-            tmap = readinput.taxonomy_mapping(oq, taxdic, countries)
+            tmap = readinput.taxonomy_mapping(oq, taxo_by_idx, countries)
             self.crmodel.set_tmap(tmap)
 
             taxonomies = set()
@@ -1144,9 +1144,9 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxdic = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
+            taxo_by_idx = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
             self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam,
-                                                           taxdic)
+                                                           taxo_by_idx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
