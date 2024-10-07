@@ -954,26 +954,24 @@ class HazardCalculator(BaseCalculator):
             tmap = readinput.taxonomy_mapping(oq, taxidx, countries)
             self.crmodel.set_tmap(tmap)
 
-            taxonomies = set()
+            risk_ids = set()
             for ln in oq.loss_types:
-                taxonomies.update(self.crmodel.tmap[ln].risk_id)
+                risk_ids.update(self.crmodel.tmap[ln].risk_id)
 
             # check that we are covering all the taxonomies in the exposure
-            # (exercised in test_missing_taxonomy)
-            missing = taxonomies - set(self.crmodel.taxonomies)
+            # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
+            missing = risk_ids - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
                 raise RuntimeError(
-                    'The exposure contains the taxonomy strings '
-                    '%s which are not in the fragility/vulnerability/'
-                    'consequence model' % missing)
-
+                    'The risk IDs %s are not in the exposure nor in the '
+                    'taxonomy mapping' % missing)
             self.crmodel.check_risk_ids(oq.inputs)
 
-            if len(self.crmodel.taxonomies) > len(taxonomies):
+            if len(self.crmodel.taxonomies) > len(risk_ids):
                 logging.info(
                     'Reducing risk model from %d to %d taxonomy strings',
-                    len(self.crmodel.taxonomies), len(taxonomies))
-                self.crmodel = self.crmodel.reduce(taxonomies)
+                    len(self.crmodel.taxonomies), len(risk_ids))
+                self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap = tmap
 
     def _read_risk3(self):
