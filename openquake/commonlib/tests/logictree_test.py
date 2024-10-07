@@ -2111,7 +2111,7 @@ class ReduceLtTestCase(unittest.TestCase):
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
-    taxonomies = {1: 'taxo1', 2: 'taxo2', 3: 'taxo3', 4: 'taxo4'}
+    taxonomies = {'taxo1': 1, 'taxo2': 2, 'taxo3': 3, 'taxo4': 4}
 
     def test_missing_taxo(self):
         xml = '''taxonomy,conversion,weight
