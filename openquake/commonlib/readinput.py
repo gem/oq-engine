@@ -1253,7 +1253,6 @@ def taxonomy_mapping(oqparam, taxidx, countries=()):
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         df = pandas.DataFrame(dict(weight=numpy.ones(len(taxidx)),
                                    taxi=taxidx.values(),
-                                   taxonomy=list(taxidx),
                                    risk_id=list(taxidx)))
         return {lt: df for lt in oqparam.loss_types}
     fname = oqparam.inputs['taxonomy_mapping']
@@ -1286,6 +1285,8 @@ def _taxonomy_mapping(filename, taxidx):
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping file %s' % (missing, filename))
     tmap_df['taxi'] = [taxidx.get(taxo, -1) for taxo in tmap_df.taxonomy]
+    del tmap_df['taxonomy']
+    # NB: there are -1s in EventBasedRiskTestCase::test_case_5 
     return tmap_df[tmap_df.taxi != -1]
 
 
