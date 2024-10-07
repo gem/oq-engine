@@ -1625,7 +1625,9 @@ class RiskComputer(dict):
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
         for lt in self.minimum_asset_loss:
-            for riskid, weight in crm.tmap[lt][taxidx]:
+            tmap = crm.tmap[lt]
+            tm = tmap[tmap.taxi == taxidx]
+            for riskid, weight in zip(tm.risk_id, tm.weight):
                 self[riskid, lt] = crm._riskmodels[riskid]
                 self.wdic[riskid, lt] = weight
 

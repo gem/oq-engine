@@ -835,6 +835,9 @@ class HazardCalculator(BaseCalculator):
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
+            for lt in getattr(self.crmodel, 'tmap', {}):
+                self.datastore.create_df(
+                    f'tmap/{lt}', self.crmodel.tmap[lt], 'gzip')
 
     def _plot_assets(self):
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
@@ -953,10 +956,8 @@ class HazardCalculator(BaseCalculator):
 
             taxonomies = set()
             for ln in oq.loss_types:
-                for values in self.crmodel.tmap[ln].values():
-                    for taxo, weight in values:
-                        if taxo != '?':
-                            taxonomies.add(taxo)
+                taxonomies.update(self.crmodel.tmap[ln].risk_id)
+
             # check that we are covering all the taxonomies in the exposure
             # (exercised in test_missing_taxonomy)
             missing = taxonomies - set(self.crmodel.taxonomies)

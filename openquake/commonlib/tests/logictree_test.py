@@ -24,6 +24,7 @@ import collections
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
 import numpy
+import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
@@ -2154,12 +2155,12 @@ taxo4,taxo1,.5
         inp = dict(taxonomy_mapping=gettemp(xml))
         oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                 aristotle=False)
-        dic = readinput.taxonomy_mapping(oq, self.taxidx)['structural']
-        self.assertEqual(dic, {0: [('?', 1)],
-                               1: [('taxo1', 1.0)],
-                               2: [('taxo2', 1.0)],
-                               3: [('taxo3', 1.0)],
-                               4: [('taxo2', 0.5), ('taxo1', 0.5)]})
+        got = readinput.taxonomy_mapping(oq, self.taxidx)['structural']
+        exp = pandas.DataFrame(dict(taxonomy='taxo1 taxo2 taxo4 taxo3 taxo4'.split(),
+                                    risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
+                                    weight=[1., 1., .5, 1., .5],
+                                    taxi=[1, 2, 4, 3, 4]))
+        pandas.testing.assert_frame_equal(got, exp)
 
 
 def teardown_module():
