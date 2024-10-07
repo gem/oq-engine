@@ -1251,8 +1251,11 @@ def taxonomy_mapping(oqparam, taxidx, countries=()):
         out = aristotle_tmap(oqparam, taxidx, countries)
         return {lt: out for lt in oqparam.loss_types}
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        out = {taxi: [(taxo, 1)] for taxo, taxi in taxidx.items()}
-        return {lt: out for lt in oqparam.loss_types}
+        df = pandas.DataFrame(dict(weight=numpy.ones(len(taxidx)),
+                                   taxi=taxidx.values(),
+                                   taxonomy=list(taxidx),
+                                   risk_id=list(taxidx)))
+        return {lt: df for lt in oqparam.loss_types}
     fname = oqparam.inputs['taxonomy_mapping']
     if isinstance(fname, str):  # same file for all loss_types
         fname = {lt: fname for lt in oqparam.loss_types}
@@ -1273,19 +1276,17 @@ def _taxonomy_mapping(filename, taxidx):
     assert set(tmap_df) == {'taxonomy', 'risk_id', 'weight'}
 
     dic = {k: v for k, v in tmap_df.groupby('taxonomy')}
+    for taxo, df in dic.items():
+        if abs(df.weight.sum() - 1.) > pmf.PRECISION:
+            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
+                              (filename, taxo))
     missing = set(taxidx) - set(dic)
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping file %s' % (missing, filename))
-    out = {0: [("?", 1)]}
-    for taxo, taxi in taxidx.items():
-        recs = dic[taxo]
-        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
-            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
-                              (filename, taxo))
-        out[taxi] = [(rec['risk_id'], rec['weight']) for _, rec in recs.iterrows()]
-    return out
+    tmap_df['taxi'] = [taxidx.get(taxo, -1) for taxo in tmap_df.taxonomy]
+    return tmap_df[tmap_df.taxi != -1]
 
 
 def assert_probabilities(array, fname):

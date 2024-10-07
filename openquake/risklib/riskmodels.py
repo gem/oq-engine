@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import re
-import ast
 import json
 import copy
 import logging
@@ -533,7 +532,11 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = tmap or ast.literal_eval(dstore.get_attr('crm', 'tmap'))
+        if 'tmap' in dstore:
+            crm.tmap = tmap or {lt: dstore.read_df('tmap/' +lt)
+                                for lt in dstore['tmap']}
+        else:
+            crm.tmap = tmap or {}
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -558,19 +561,19 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq_files.append(fnames)
         cfs = '\n'.join(csq_files)
         for loss_type in tmap:
+            df = tmap[loss_type]
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
                 if len(coeffs):
                     # the taxonomy map is a dictionary loss_type ->
                     # [[(risk_taxon, weight]),...] for each asset taxonomy
-                    for pairs in tmap[loss_type].values():
-                        for risk_t, weight in pairs:
-                            if risk_t != '?':
-                                try:
-                                    coeffs[risk_t][loss_type]
-                                except KeyError as err:
-                                    raise InvalidFile(
-                                        'Missing %s in\n%s' % (err, cfs))
+                    for risk_t, weight in zip(df.risk_id, df.weight):
+                        if risk_t != '?':
+                            try:
+                                coeffs[risk_t][loss_type]
+                            except KeyError as err:
+                                raise InvalidFile(
+                                    'Missing %s in\n%s' % (err, cfs))
 
     def check_risk_ids(self, inputs):
         """
@@ -597,10 +600,8 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 rms = []
                 if self.tmap:
-                    for pairs in self.tmap[lt].values():
-                        for risk_id, weight in pairs:
-                            if risk_id != '?':
-                                rms.append(self._riskmodels[risk_id])
+                    for risk_id in self.tmap[lt].risk_id.unique():
+                        rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
@@ -629,7 +630,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 consequence, _tagname = byname.split('_by_')
                 # the taxonomy map is a dictionary loss_type ->
                 # [[(risk_taxon, weight]),...] for each asset taxonomy
-                for risk_t, weight in self.tmap[loss_type][asset['taxonomy']]:
+                df = self.tmap[loss_type]
+                df = df[df.taxi == asset['taxonomy']]
+                for risk_t, weight in zip(df.risk_id, df.weight):
                     # for instance risk_t = 'W_LFM-DUM_H6'
                     cs = coeffs[risk_t][loss_type]
                     csq[consequence] += scientific.consequence(
@@ -865,8 +868,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                                           if self.damage_states else [])
         attrs = dict(covs=self.covs, loss_types=loss_types,
                      limit_states=limit_states,
-                     consequences=self.get_consequences(),
-                     tmap=repr(getattr(self, 'tmap', [])))
+                     consequences=self.get_consequences())
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
