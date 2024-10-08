@@ -1274,7 +1274,8 @@ def _taxonomy_mapping(filename, taxidx):
             'the taxonomy mapping file %s' % (missing, filename))
     tmap_df['taxi'] = [taxidx.get(taxo, -1) for taxo in tmap_df.taxonomy]
     del tmap_df['taxonomy']
-    # NB: there are -1s in EventBasedRiskTestCase::test_case_5
+    # NB: we are ignoring the taxonomies in the mapping but not in the exposure
+    # for instance in EventBasedRiskTestCase::test_case_5
     return tmap_df[tmap_df.taxi != -1]
 
 
