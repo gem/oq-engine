@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Added the possibility to export the asset collection via command line,
+    keeping it private from the webui
   [Michele Simionato]
   * Modernized the regionalization of Chiou Youngs (2014)
   * Modernized the regionalization of Campbell Bozorgnia (2014)
