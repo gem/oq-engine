@@ -72,7 +72,6 @@ DISPLAY_NAME = {
     'infra-event_pcl': 'Partial Connectivity Loss By Event',
     'infra-event_wcl': 'Weighted Connectivity Loss By Event',
     'infra-event_efl': 'Efficiency Loss by Event',
-    'assetcol': 'Asset Collection',
 }
 
 

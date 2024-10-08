@@ -654,8 +654,7 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
-# NOTE: without the decorator it does not become visible as an output
-# @export.add(('assetcol', 'csv'))
+@export.add(('assetcol', 'csv'))
 def export_assetcol_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
