@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed median_spectrum with multiple sites
   * Extended taxonomy_mapping.csv with a loss_type field
   * Modernized the regionalization of Chiou Youngs (2014)
   * Modernized the regionalization of Campbell Bozorgnia (2014)
