@@ -835,7 +835,7 @@ class HazardCalculator(BaseCalculator):
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
-            if hasattr(self.crmodel, 'tmap'):
+            if len(self.crmodel.tmap):
                 self.datastore.create_df('taxmap', self.crmodel.tmap, 'gzip')
 
     def _plot_assets(self):
@@ -1137,7 +1137,7 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtset)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if not hasattr(self.crmodel, 'tmap'):
+        if len(self.crmodel.tmap) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
             self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxidx)
