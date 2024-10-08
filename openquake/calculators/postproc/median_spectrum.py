@@ -43,36 +43,39 @@ def set_imls(cmaker, uhs):
     return cmaker
 
 
-def get_mea_wei(cmaker, ctx, uhs):
+def get_mea_sig_wei(cmaker, ctx, uhs):
     """
     :param cmaker: a ContextMaker instance with G gsims and M imts
     :param ctx: a context array of size C
     :param uhs: an array of shape (M, P)
-    :returns: mean[G, M, C], weights[C, M, G, P]
+    :returns: mean[G, M, C], sigma[G, M, C], weights[G, M, C, P]
     """
     M = len(cmaker.imts)
     P = len(cmaker.poes)
     G = len(cmaker.gsims)
+    C = len(ctx)
     # reduce the levels to P levels per IMT
     cmaker = set_imls(cmaker, uhs)
-    wei = np.empty((len(ctx), M, G, P), np.float32)
-    mean = np.empty((G, M, len(ctx)), np.float32)
+    wei = np.empty((G, M, C, P), np.float32)
+    mean = np.empty((G, M, C), np.float32)
+    sigma = np.empty((G, M, C), np.float32)
     start = 0
     for poes, mea, sig, ctxt in cmaker.gen_poes(ctx):
-        C, _, G = poes.shape  # L = M * P
-        slc = slice(start, start + C)
+        c, _, _ = poes.shape  # L = M * P
+        slc = slice(start, start + c)
         mean[:, :, slc] = mea
-        start += C
+        sigma[:, :, slc] = sig
+        start += c
         ocr = cmaker.get_occ_rates(ctxt)
         for g, w in enumerate(cmaker.wei):
-            poes_g = poes[:, :, g].reshape(C, M, P)
+            poes_g = poes[:, :, g].reshape(c, M, P)
             # NB: vectorizing the loops on M, P improves nothing;
             # the important loop is the one on C (up to 6000 elements
             # for Canada) which is vectorized
             for p, poe in enumerate(cmaker.poes):
                 for m, imt in enumerate(cmaker.imtls):
-                    wei[slc, m, g, p] = ocr * poes_g[:, m, p] / poe * w
-    return mean, wei
+                    wei[g, m, slc, p] = ocr * poes_g[:, m, p] / poe * w
+    return mean, sigma, wei
 
 
 # NB: we are ignoring IMT-dependent weight
@@ -88,8 +91,8 @@ def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor())
     """
     for site_id in np.unique(context.sids):
         ctx = context[context.sids == site_id]
-        mea, wei = get_mea_wei(cmaker, ctx, uhs[site_id])
-        yield {(cmaker.grp_id, site_id): np.einsum("umgp,gmu->mp", wei, mea)}
+        mea, _, wei = get_mea_sig_wei(cmaker, ctx, uhs[site_id])
+        yield {(cmaker.grp_id, site_id): np.einsum("gmup,gmu->mp", wei, mea)}
 
 
 # NB: we are ignoring IMT-dependent weights
