@@ -220,6 +220,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname)
+        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/assetcol.csv', fname)
 
     def test_case_10(self):
         # missing occupants in the exposure
@@ -234,6 +236,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles(
             'expected/avg_losses-rlz-000_443.csv', fname)
+        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/assetcol.csv', fname)
 
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')
