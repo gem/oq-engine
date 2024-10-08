@@ -16,8 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        #os: [m1]
-        os: [macos-14]
+        os: [m1]
         python-version: ["3.11.8"]
     steps:
       # This Checkout use git-ref keyword from dispatch
