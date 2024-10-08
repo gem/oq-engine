@@ -832,7 +832,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 out = AccumDict()
                 for country in countries:
                     adf = asset_df[asset_df.ID_0 == country]
-                    out += scientific.RiskComputer(self, adf).output(
+                    out += scientific.RiskComputer(self, adf, country).output(
                         haz, sec_losses, rndgen)
                 return out
         # rc.pprint()

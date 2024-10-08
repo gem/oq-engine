@@ -1053,8 +1053,7 @@ def get_exposure(oqparam, h5=None):
         if oqparam.aristotle:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = asset.Exposure.read_around(
-                fnames[0], gh3, oqparam.countries)
+            exposure = asset.Exposure.read_around(fnames[0], gh3)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
