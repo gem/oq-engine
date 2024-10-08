@@ -1219,10 +1219,11 @@ def aristotle_tmap(oqparam, taxidx, countries):
     [(key, df)] = items
     acc = AccumDict(accum=[])  # loss_type, taxi, risk_id, weight
     for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
-        acc['loss_type'].append('*')
-        acc['taxi'].append(taxidx[taxo])
-        acc['risk_id'].append(risk_id)
-        acc['weight'].append(weight)
+        if taxo in taxidx:
+            acc['loss_type'].append('*')
+            acc['taxi'].append(taxidx[taxo])
+            acc['risk_id'].append(risk_id)
+            acc['weight'].append(weight)
     return pandas.DataFrame(acc)
 
 
