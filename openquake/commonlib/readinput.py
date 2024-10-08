@@ -1239,7 +1239,7 @@ def taxonomy_mapping(oqparam, taxidx):
                                    taxi=taxidx.values(),
                                    risk_id=list(taxidx),
                                    loss_type=['*']*nt,
-                                   country=['*']*nt))
+                                   country=['?']*nt))
         return df
     fname = oqparam.inputs['taxonomy_mapping']
     return _taxonomy_mapping(fname, taxidx)
@@ -1255,7 +1255,7 @@ def _taxonomy_mapping(filename, taxidx):
     if 'loss_type' not in tmap_df:
         tmap_df['loss_type'] = '*'
     if 'country' not in tmap_df:
-        tmap_df['country'] = '*'
+        tmap_df['country'] = '?'
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})

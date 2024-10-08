@@ -231,8 +231,10 @@ def gen_outputs(df, crmodel, rng, monitor):
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for taxo in assets.taxonomy.unique():
-            adf = assets[assets.taxonomy == taxo]
+        if 'ID_0' not in assets.columns:
+            assets['ID_0'] = 0
+        for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
+            adf.country = crmodel.countries[id0]
             with fil_mon:
                 # *crucial* for the performance of the next step
                 gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
@@ -337,6 +339,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers in chunks of at most 1 million elements
+        if 'ID_0' in self.assetcol.tagnames:
+            self.crmodel.countries = self.assetcol.tagcol.ID_0
+        else:
+            self.crmodel.countries = ['?']
         monitor.save('start-stop', compactify3(tss))
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
