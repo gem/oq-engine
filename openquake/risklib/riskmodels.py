@@ -504,9 +504,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     :param consdict:
         a dictionary riskid -> loss_type -> consequence functions
     """
+    tmap = ()  # to be set
+
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam, tmap=None):
+    def read(cls, dstore, oqparam):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
@@ -532,10 +534,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        if 'tmap' in dstore:
-            crm.tmap = tmap or dstore.read_df('taxmap')
-        else:
-            crm.tmap = tmap or ()
+        if 'taxmap' in dstore:
+            crm.tmap = dstore.read_df('taxmap')
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):

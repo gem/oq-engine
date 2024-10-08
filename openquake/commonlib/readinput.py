@@ -15,6 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Utilities to read the input files recognized by the OpenQuake engine.
+"""
+
 import os
 import re
 import ast
@@ -41,7 +46,7 @@ import fiona
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp)
+    random_filter, countby, group_array, get_duplicates, gettemp, AccumDict)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -979,8 +984,7 @@ def get_crmodel(oqparam):
     if oqparam.aristotle:
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
-                crm = riskmodels.CompositeRiskModel.read(
-                    exp, oqparam, tmap='set_later')
+                crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
             except KeyError:
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:
@@ -1203,33 +1207,24 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxo_by_idx, countries):
+def aristotle_tmap(oqparam, taxidx, countries):
     # returns a taxonomy mapping dframe
     items = []
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
         for key in exp['tmap']:
+            # tmap has fields conversion, taxonomy, weight
             if set(key.split('_')) & countries:
                 df = exp.read_df('tmap/' + key)
                 items.append((key, df))
-    assert items, 'Could not find any taxonomy mapping for %s' % countries
-    n = len(items)
-    if n > 1:
-        cs = [code2country.get(code, code) for code in countries]
-        raise ValueError('Found %d taxonomy mappings for %s' % (n, cs))
-
-    out = {0: [("?", 1)]}
-    df = items[0][1]
-    dic = dict(list(df.groupby('taxonomy')))
-    missing = set(taxo_by_idx.values()) - set(dic)
-    if missing:
-        raise InvalidFile(
-            'The taxonomy strings %s are in the exposure but not in '
-            'the taxonomy mapping' % missing)
-    risk_id = 'risk_id' if 'risk_id' in df.columns else 'conversion'
-    for taxi, taxo in taxo_by_idx.items():
-        out[taxi] = [(rec[risk_id], rec['weight'])
-                     for r, rec in dic[taxo].iterrows()]
-    return out
+    [(key, df)] = items
+    acc = AccumDict(accum=[])  # loss_type, taxi, risk_id, weight
+    for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
+        if taxo in taxidx:
+            acc['loss_type'].append('*')
+            acc['taxi'].append(taxidx[taxo])
+            acc['risk_id'].append(risk_id)
+            acc['weight'].append(weight)
+    return pandas.DataFrame(acc)
 
 
 # tested in TaxonomyMappingTestCase
