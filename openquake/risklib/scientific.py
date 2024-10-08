@@ -1624,12 +1624,13 @@ class RiskComputer(dict):
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
+        tm = crm.tmap[crm.tmap.taxi == taxidx]
         for lt in self.minimum_asset_loss:
-            tmap = crm.tmap[lt]
-            tm = tmap[tmap.taxi == taxidx]
-            for riskid, weight in zip(tm.risk_id, tm.weight):
-                self[riskid, lt] = crm._riskmodels[riskid]
-                self.wdic[riskid, lt] = weight
+            for loss_type, riskid, weight in zip(
+                    tm.loss_type, tm.risk_id, tm.weight):
+                if loss_type == '*' or loss_type == lt:
+                    self[riskid, lt] = crm._riskmodels[riskid]
+                    self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
