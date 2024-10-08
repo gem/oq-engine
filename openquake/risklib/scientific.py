@@ -1626,12 +1626,13 @@ class RiskComputer(dict):
         self.wdic = {}
         tm = crm.tmap[crm.tmap.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
-        for lt in self.minimum_asset_loss:
-            for country, loss_type, riskid, weight in zip(
-                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
-                if country_str in country and loss_type in ('*', lt):
-                    self[riskid, lt] = crm._riskmodels[riskid]
-                    self.wdic[riskid, lt] = weight
+        for country, loss_type, riskid, weight in zip(
+                tm.country, tm.loss_type, tm.risk_id, tm.weight):
+            for lt in self.minimum_asset_loss:
+                if loss_type in ('*', lt):
+                    if country == '?' or country_str in country:
+                        self[riskid, lt] = crm._riskmodels[riskid]
+                        self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
