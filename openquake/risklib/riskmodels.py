@@ -820,7 +820,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def get_output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
-        :param asset_df: a DataFrame of assets with the same taxonomy
+        :param asset_df: a DataFrame of assets with the same taxonomy and country
         :param haz: a DataFrame of GMVs on the sites of the assets
         :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance

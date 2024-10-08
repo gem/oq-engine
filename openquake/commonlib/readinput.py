@@ -61,7 +61,6 @@ from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
-from openquake.risklib.countries import code2country
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -1053,8 +1052,7 @@ def get_exposure(oqparam, h5=None):
         if oqparam.aristotle:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = asset.Exposure.read_around(
-                fnames[0], gh3, oqparam.countries)
+            exposure = asset.Exposure.read_around(fnames[0], gh3)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1207,50 +1205,41 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxidx, countries):
-    # returns a taxonomy mapping dframe
-    items = []
+def aristotle_tmap(oqparam, taxidx):
+    """
+    :returns: a taxonomy mapping dframe
+    """
+    acc = AccumDict(accum=[])  # loss_type, taxi, risk_id, weight
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
         for key in exp['tmap']:
             # tmap has fields conversion, taxonomy, weight
-            if set(key.split('_')) & countries:
-                df = exp.read_df('tmap/' + key)
-                items.append((key, df))
-    [(key, df)] = items
-    acc = AccumDict(accum=[])  # loss_type, taxi, risk_id, weight
-    for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
-        if taxo in taxidx:
-            acc['loss_type'].append('*')
-            acc['taxi'].append(taxidx[taxo])
-            acc['risk_id'].append(risk_id)
-            acc['weight'].append(weight)
+            df = exp.read_df('tmap/' + key)
+            for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
+                if taxo in taxidx:
+                    acc['country'].append(key)
+                    acc['loss_type'].append('*')
+                    acc['taxi'].append(taxidx[taxo])
+                    acc['risk_id'].append(risk_id)
+                    acc['weight'].append(weight)
     return pandas.DataFrame(acc)
 
 
 # tested in TaxonomyMappingTestCase
-def taxonomy_mapping(oqparam, taxidx, countries=()):
+def taxonomy_mapping(oqparam, taxidx):
     """
     :param oqparam: OqParam instance
     :param taxidx: dictionary taxo:str -> taxi:int
-    :param countries: array of country codes (possibly empty)
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
     if oqparam.aristotle:
-        cs = [code2country.get(code, code) for code in countries]
-        logging.warning('Reading the taxonomy mapping for %s', cs)
-        if oqparam.countries:
-            # filter down to countries with the same tmap
-            countries = set(countries) & set(oqparam.countries)
-        else:
-            countries = set(countries)
-        df = aristotle_tmap(oqparam, taxidx, countries)
-        return df
+        return aristotle_tmap(oqparam, taxidx)
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         nt = len(taxidx)  # number of taxonomies
         df = pandas.DataFrame(dict(weight=numpy.ones(nt),
                                    taxi=taxidx.values(),
                                    risk_id=list(taxidx),
-                                   loss_type=['*']*nt))
+                                   loss_type=['*']*nt,
+                                   country=['?']*nt))
         return df
     fname = oqparam.inputs['taxonomy_mapping']
     return _taxonomy_mapping(fname, taxidx)
@@ -1265,10 +1254,12 @@ def _taxonomy_mapping(filename, taxidx):
         tmap_df['weight'] = 1.
     if 'loss_type' not in tmap_df:
         tmap_df['loss_type'] = '*'
+    if 'country' not in tmap_df:
+        tmap_df['country'] = '?'
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'loss_type', 'taxonomy', 'risk_id', 'weight'}
+    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'}
 
     taxos = set()
     for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
