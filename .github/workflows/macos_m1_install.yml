@@ -1,5 +1,5 @@
 name: MacOS M1
-'on':
+"on":
   workflow_dispatch:
     inputs:
       git-ref:
@@ -12,15 +12,15 @@ name: MacOS M1
     branches: [macos_test]
 
 jobs:
-
   install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [m1]
+        #os: [m1]
+        os: [macos-14]
         python-version: ["3.11.8"]
     steps:
-    # This Checkout use git-ref keyword from dispatch
+      # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
