@@ -336,13 +336,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # causing different losses
         del adf['id']
         monitor.save('assets', adf)
-        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
-        # storing start-stop indices in a smart way, so that the assets are
-        # read from the workers in chunks of at most 1 million elements
         if 'ID_0' in self.assetcol.tagnames:
             self.crmodel.countries = self.assetcol.tagcol.ID_0
         else:
             self.crmodel.countries = ['?']
+
+        # storing start-stop indices in a smart way, so that the assets are
+        # read from the workers in chunks of at most 1 million elements
+        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
         monitor.save('start-stop', compactify3(tss))
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
