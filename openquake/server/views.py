@@ -1148,7 +1148,7 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def process_export_kinds(oes):
+def get_public_outputs(oes):
     return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
 
 
@@ -1178,7 +1178,7 @@ def calc_results(request, calc_id):
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
-                           process_export_kinds)
+                           get_public_outputs)
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
