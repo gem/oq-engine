@@ -533,10 +533,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
         if 'tmap' in dstore:
-            crm.tmap = tmap or {lt: dstore.read_df('tmap/' +lt)
-                                for lt in dstore['tmap']}
+            crm.tmap = tmap or dstore.read_df('taxmap')
         else:
-            crm.tmap = tmap or {}
+            crm.tmap = tmap or ()
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -560,17 +559,16 @@ class CompositeRiskModel(collections.abc.Mapping):
             else:
                 csq_files.append(fnames)
         cfs = '\n'.join(csq_files)
-        for loss_type in tmap:
-            df = tmap[loss_type]
+        df = self.tmap
+        for loss_type in self.oqparam.loss_types:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
                 if len(coeffs):
-                    # the taxonomy map is a dictionary loss_type ->
-                    # [[(risk_taxon, weight]),...] for each asset taxonomy
-                    for risk_t, weight in zip(df.risk_id, df.weight):
-                        if risk_t != '?':
+                    for lt, risk_id, weight in zip(
+                            df.loss_type, df.risk_id, df.weight):
+                        if (lt == '*' or lt == loss_type) and risk_id != '?':
                             try:
-                                coeffs[risk_t][loss_type]
+                                coeffs[risk_id][loss_type]
                             except KeyError as err:
                                 raise InvalidFile(
                                     'Missing %s in\n%s' % (err, cfs))
@@ -599,8 +597,12 @@ class CompositeRiskModel(collections.abc.Mapping):
             missing = AccumDict(accum=[])
             for lt in self.loss_types:
                 rms = []
-                if self.tmap:
-                    for risk_id in self.tmap[lt].risk_id.unique():
+                if len(self.tmap):
+                    if len(self.tmap.loss_type.unique()) == 1:
+                        risk_ids = self.tmap.risk_id
+                    else:
+                        risk_ids = self.tmap[self.tmap.loss_type==lt].risk_id
+                    for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
@@ -628,16 +630,14 @@ class CompositeRiskModel(collections.abc.Mapping):
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
-                # the taxonomy map is a dictionary loss_type ->
-                # [[(risk_taxon, weight]),...] for each asset taxonomy
-                df = self.tmap[loss_type]
-                df = df[df.taxi == asset['taxonomy']]
-                for risk_t, weight in zip(df.risk_id, df.weight):
-                    # for instance risk_t = 'W_LFM-DUM_H6'
-                    cs = coeffs[risk_t][loss_type]
-                    csq[consequence] += scientific.consequence(
-                        consequence, cs, asset, fractions[:, 1:], loss_type,
-                        time_event) * weight
+                df = self.tmap[self.tmap.taxi == asset['taxonomy']]
+                for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
+                    if lt == '*' or lt == loss_type:
+                        # for instance risk_id = 'W_LFM-DUM_H6'
+                        cs = coeffs[risk_id][loss_type]
+                        csq[consequence] += scientific.consequence(
+                            consequence, cs, asset, fractions[:, 1:], loss_type,
+                            time_event) * weight
         return csq
 
     def init(self):

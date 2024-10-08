@@ -1204,7 +1204,7 @@ def levels_from(header):
 
 
 def aristotle_tmap(oqparam, taxo_by_idx, countries):
-    # returns a taxonomy mapping list
+    # returns a taxonomy mapping dframe
     items = []
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
         for key in exp['tmap']:
@@ -1248,18 +1248,17 @@ def taxonomy_mapping(oqparam, taxidx, countries=()):
             countries = set(countries) & set(oqparam.countries)
         else:
             countries = set(countries)
-        out = aristotle_tmap(oqparam, taxidx, countries)
-        return {lt: out for lt in oqparam.loss_types}
+        df = aristotle_tmap(oqparam, taxidx, countries)
+        return df
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        df = pandas.DataFrame(dict(weight=numpy.ones(len(taxidx)),
+        nt = len(taxidx)  # number of taxonomies
+        df = pandas.DataFrame(dict(weight=numpy.ones(nt),
                                    taxi=taxidx.values(),
-                                   risk_id=list(taxidx)))
-        return {lt: df for lt in oqparam.loss_types}
+                                   risk_id=list(taxidx),
+                                   loss_type=['*']*nt))
+        return df
     fname = oqparam.inputs['taxonomy_mapping']
-    if isinstance(fname, str):  # same file for all loss_types
-        fname = {lt: fname for lt in oqparam.loss_types}
-    return {lt: _taxonomy_mapping(fname[lt], taxidx)
-            for lt in oqparam.loss_types}
+    return _taxonomy_mapping(fname, taxidx)
 
 
 def _taxonomy_mapping(filename, taxidx):
@@ -1269,24 +1268,27 @@ def _taxonomy_mapping(filename, taxidx):
         raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
+    if 'loss_type' not in tmap_df:
+        tmap_df['loss_type'] = '*'
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'taxonomy', 'risk_id', 'weight'}
+    assert set(tmap_df) == {'loss_type', 'taxonomy', 'risk_id', 'weight'}
 
-    dic = {k: v for k, v in tmap_df.groupby('taxonomy')}
-    for taxo, df in dic.items():
+    taxos = set()
+    for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
+        taxos.add(taxo)
         if abs(df.weight.sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-    missing = set(taxidx) - set(dic)
+    missing = set(taxidx) - taxos
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping file %s' % (missing, filename))
     tmap_df['taxi'] = [taxidx.get(taxo, -1) for taxo in tmap_df.taxonomy]
     del tmap_df['taxonomy']
-    # NB: there are -1s in EventBasedRiskTestCase::test_case_5 
+    # NB: there are -1s in EventBasedRiskTestCase::test_case_5
     return tmap_df[tmap_df.taxi != -1]
 
 

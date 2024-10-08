@@ -2155,11 +2155,12 @@ taxo4,taxo1,.5
         inp = dict(taxonomy_mapping=gettemp(xml))
         oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                 aristotle=False)
-        got = readinput.taxonomy_mapping(oq, self.taxidx)['structural']
-        exp = pandas.DataFrame(dict(taxonomy='taxo1 taxo2 taxo4 taxo3 taxo4'.split(),
-                                    risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
-                                    weight=[1., 1., .5, 1., .5],
-                                    taxi=[1, 2, 4, 3, 4]))
+        got = readinput.taxonomy_mapping(oq, self.taxidx)
+        exp = pandas.DataFrame(
+            dict(risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
+                 weight=[1., 1., .5, 1., .5],
+                 loss_type=['*'] * 5,
+                 taxi=[1, 2, 4, 3, 4]))
         pandas.testing.assert_frame_equal(got, exp)
 
 
