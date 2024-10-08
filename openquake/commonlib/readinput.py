@@ -61,7 +61,6 @@ from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
-from openquake.risklib.countries import code2country
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
