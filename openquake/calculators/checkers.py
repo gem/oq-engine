@@ -29,18 +29,21 @@ from openquake.calculators import base
 from openquake.calculators.extract import extract
 from openquake.calculators.views import view, text_table
 
-cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
 
 
 def get_calc_log(job_ini, hc_id=None):
+    """
+    :returns: (Calculator instance, LogContext instance)
+    """
     log = logs.init("job", job_ini)
     if hc_id:
         log.params['hazard_calculation_id'] = hc_id
     return base.calculators(log.get_oqparam(), log.calc_id), log
 
 
-def data2rows(data):
+def _data2rows(data):
+    # used in assert_close to compare tables
     header, *lines = data.splitlines()
     rows = []
     for line in lines:
@@ -56,6 +59,9 @@ def data2rows(data):
 
 
 def assert_close(tbl, fname):
+    """
+    Compare a text table with a filename containing the expected table
+    """
     txt = tbl if isinstance(tbl, str) else text_table(tbl, ext='org')
     if os.environ.get('OQ_OVERWRITE'):
         with open(fname, 'w') as f:
@@ -65,10 +71,14 @@ def assert_close(tbl, fname):
             f.write(txt)
         with open(fname) as f:
             exp = f.read()
-        aac(data2rows(exp), data2rows(txt), atol=1E-5, rtol=1E-3)
+        aac(_data2rows(exp), _data2rows(txt), atol=1E-5, rtol=1E-3)
 
 
 def check(ini, hc_id=None, exports='', what='', prefix=''):
+    """
+    Perform a calculation and compare a view ("what") with the content of
+    a corrisponding file (.txt or .org).
+    """
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
     calc, log = get_calc_log(ini, hc_id)
