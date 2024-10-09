@@ -68,7 +68,7 @@ jobs:
         cd openquake
         ruff check --preview .
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
-        pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+        pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
@@ -95,8 +95,10 @@ jobs:
         fi
     - name: Server 'PUBLIC' mode tests
       run: |
+        curl -O https://downloads.openquake.org/test_data/exposure.hdf5
         source ~/openquake/bin/activate
         oq engine --upgrade-db
+        pytest -xs --doctest-modules --disable-warnings --color=yes commands engine
         # -v 2 also logs the test names
         ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
