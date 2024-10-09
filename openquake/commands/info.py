@@ -244,6 +244,11 @@ def main(what, report=False):
         for param in params:
             print(param)
             print(docs[param])
+    elif what == 'loss_types':
+        ltypes = [lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt]
+        for lt in sorted(ltypes):
+            print(lt)
     elif what.startswith('mfd'):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):
