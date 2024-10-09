@@ -44,7 +44,7 @@ def get_calc_log(job_ini, hc_id=None):
 
 def _data2rows(data):
     # used in assert_close to compare tables
-    header, *lines = data.splitlines()
+    _header, *lines = data.splitlines()
     rows = []
     for line in lines:
         row = []

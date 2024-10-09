@@ -33,7 +33,7 @@ jobs:
       run: |
         set -e
         source ~/openquake/bin/activate
-        pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+        pip install pytest
         oq engine --upgrade-db
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage'
 
@@ -93,6 +93,7 @@ jobs:
         else
           python install.py devel --version=$GITHUB_HEAD_REF
         fi
+        pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
     - name: Server 'PUBLIC' mode tests
       run: |
         curl -O https://downloads.openquake.org/test_data/exposure.hdf5
