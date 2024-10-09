@@ -599,9 +599,16 @@ class Mesh(object):
             # create the shapely polygon object from the stripe
             # coordinates and simplify it (remove redundant points,
             # if there are any lying on the straight line).
-            stripe = shapely.geometry.LineString(coords) \
-                                     .simplify(self.DIST_TOLERANCE) \
-                                     .buffer(self.DIST_TOLERANCE, 2)
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", RuntimeWarning)
+                try:
+                    stripe = shapely.geometry.LineString(coords) \
+                                            .simplify(self.DIST_TOLERANCE) \
+                                            .buffer(self.DIST_TOLERANCE, 2)
+                except RuntimeWarning as e:
+                    print(f"Caught RuntimeWarning: {e}")
+                    __import__('pdb').set_trace()
             polygons.append(shapely.geometry.Polygon(stripe.exterior))
             prev_line = line[::-1]
         # create a final polygon as the union of all the stripe ones
