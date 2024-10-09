@@ -99,7 +99,7 @@ jobs:
         curl -O https://downloads.openquake.org/test_data/exposure.hdf5
         source ~/openquake/bin/activate
         oq engine --upgrade-db
-        pytest -xs --doctest-modules --disable-warnings --color=yes commands engine
+        pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
         # -v 2 also logs the test names
         ./openquake/server/manage.py test -v 2 tests.test_public_mode
 

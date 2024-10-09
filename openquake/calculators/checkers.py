@@ -81,7 +81,7 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
     """
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
-    calc, log = get_calc_log(ini, hc_id)
+    calc, _log = get_calc_log(ini, hc_id)
     calc.run(export_dir='/tmp', close=False)
     if exports:
         calc.export(exports)
