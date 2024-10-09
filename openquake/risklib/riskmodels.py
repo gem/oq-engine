@@ -98,7 +98,7 @@ def build_vf_node(vf):
 
 def group_by_lt(funclist):
     """
-    Converts a list of objects with attribute .loss_type in to a dictionary
+    Converts a list of objects with attribute .loss_type into a dictionary
     loss_type -> risk_function
     """
     d = AccumDict(accum=[])
@@ -108,6 +108,7 @@ def group_by_lt(funclist):
         if len(lst) == 1:
             d[lt] = lst[0]
         elif lst[1].kind == 'fragility':
+            # EventBasedDamageTestCase.test_case_11
             cf, ffl = lst
             ffl.cf = cf
             d[lt] = ffl
