@@ -860,6 +860,8 @@ def check_levels(imls, imt, min_iml=1E-10):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
+    if imls == [0]:  # corresponds to intensity_measure_levels
+        return
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
