@@ -1223,6 +1223,10 @@ class OqParam(valid.ParamSet):
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
+        hc0 = ('hazard_calculation_id' in names_vals and
+               names_vals['hazard_calculation_id'] == 0)
+        if hc0:
+            self.hazard_calculation_id = 0  # fake calculation_id
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
         if 'calculation_mode' not in names_vals:
@@ -1347,7 +1351,7 @@ class OqParam(valid.ParamSet):
                 and 'multi_peril' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
-                and not self.hazard_calculation_id):
+                and self.hazard_calculation_id is None):
             if not hasattr(self, 'truncation_level'):
                 self.raise_invalid("Missing truncation_level")
 
@@ -1377,7 +1381,7 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid(
                     'conditional_loss_poes are not defined '
                     'for classical_damage calculations')
-            if not self.investigation_time and not self.hazard_calculation_id:
+            if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
 
     def check_ebrisk(self):
@@ -2180,7 +2184,7 @@ class OqParam(valid.ParamSet):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
-                not self.hazard_calculation_id):
+                self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
@@ -2226,7 +2230,7 @@ class OqParam(valid.ParamSet):
         del dic['base_path']
         del dic['req_site_params']
         #dic.pop('export_dir', None)
-        dic.pop('all_cost_types')
+        dic.pop('all_cost_types', None)
         ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
         return ini
 

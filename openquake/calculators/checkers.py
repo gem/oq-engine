@@ -110,7 +110,7 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
 def check_ini(path, hc):
     dic = readinput.get_params(path)
     if hc:  # disable hazard checks by setting a fake hazard_calculation_id
-        dic['hazard_calculation_id'] = 1
+        dic['hazard_calculation_id'] = 0
     oq = readinput.get_oqparam(dic)
     ini = oq.to_ini()
     tmp_ini = path[:-3] + 'tmp.ini'
