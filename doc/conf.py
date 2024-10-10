@@ -126,7 +126,7 @@ html_theme_options = {
         {
             "name": "X/Twitter",
             "url": "https://x.com/GEMwrld",
-            "icon": "fa-brands fa-square-twitter",
+            "icon": "fa-brands fa-square-x-twitter",
             "type": "fontawesome",
         },
         {
