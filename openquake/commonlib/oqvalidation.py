@@ -2233,6 +2233,9 @@ class OqParam(valid.ParamSet):
         dic.pop('all_cost_types', None)
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'aggregate_by' in dic:
+            dic['aggregate_by'] = '; '.join(
+                ','.join(keys) for keys in dic['aggregate_by'])
         ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
         return ini
 
