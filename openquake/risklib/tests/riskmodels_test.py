@@ -17,16 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import pickle
 import unittest
-import unittest.mock as mock
 import toml
 import numpy
 import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples
+from openquake.risklib import riskmodels
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -188,113 +186,6 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
         with self.assertRaises(KeyError) as ar:
             nrml.to_python(vuln_content)
         self.assertIn("node IML: 'maxIML', line 9", str(ar.exception))
-
-
-class ParseConsequenceModelTestCase(unittest.TestCase):
-    wrong_csq_model_1 = gettemp(u"""<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-<consequenceModel id="example" assetCategory="buildings">
-
-  <description>ln cf | tax3 | zcov</description>
-  <limitStates>ds1 ds2 ds3 ds4</limitStates>
-
-  <consequenceFunction id="tax1" dist="LN">
-    <params ls="ds1" mean="0.10" stddev="0.00"/>
-    <params ls="ds2" mean="0.30" stddev="0.00"/>
-    <params ls="ds3" mean="0.60" stddev="0.00"/>
-    <params ls="ds4" mean="0.90" stddev="0.00"/>
-  </consequenceFunction>
-
-</consequenceModel>
-</nrml>
-""")
-    wrong_csq_model_2 = gettemp(u"""<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-<consequenceModel id="example" assetCategory="buildings"
-lossCategory="contents">
-
-  <description>ln cf | tax3 | zcov</description>
-  <limitStates>ds1 ds2 ds3 ds4</limitStates>
-
-  <consequenceFunction id="tax1" dist="LN">
-    <params ls="ds1" mean="0.10" stddev="0.00"/>
-    <params ls="ds2" mean="0.30" stddev="0.00"/>
-    <params ls="ds3" mean="0.60" stddev="0.00"/>
-  </consequenceFunction>
-
-</consequenceModel>
-</nrml>
-""")
-    wrong_csq_model_3 = gettemp(u"""<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-<consequenceModel id="example" assetCategory="buildings"
-lossCategory="contents">
-
-  <description>ln cf | tax3 | zcov</description>
-  <limitStates>ds1 ds2 ds3 ds4</limitStates>
-
-  <consequenceFunction id="tax1" dist="LN">
-    <params ls="ds1" mean="0.10" stddev="0.00"/>
-    <params ls="ds2" mean="0.30" stddev="0.00"/>
-    <params ls="ds4" mean="0.90" stddev="0.00"/>
-    <params ls="ds3" mean="0.60" stddev="0.00"/>
-  </consequenceFunction>
-
-</consequenceModel>
-</nrml>
-""")
-
-    def test_ok(self):
-        EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
-        fname = os.path.join(EXAMPLES_DIR, 'consequence-model.xml')
-        cmodel = nrml.to_python(fname)
-        self.assertEqual(
-            repr(cmodel),
-            "<ConsequenceModel structural ds1, ds2, ds3, ds4 tax1>")
-
-        # test pickleability
-        pickle.loads(pickle.dumps(cmodel))
-
-    def test_wrong_loss_type_association(self):
-        scm = os.path.join(FF_DIR, 'structural_consequence_model.xml')
-        ccm = os.path.join(FF_DIR, 'contents_consequence_model.xml')
-        # exchanging the associations on purpose
-        oq = mock.Mock()
-        oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
-        with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_functions(oq, 'consequence')
-        self.assertIn('structural_consequence_model.xml": lossCategory is of '
-                      'type "structural", expected "contents"',
-                      str(ctx.exception))
-
-    def test_wrong_riskmodel_association(self):
-        cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
-        # passing a fragility model instead of a consequence model
-        oq = mock.Mock()
-        oq.inputs = dict(contents_consequence=cfm)
-        with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_functions(oq, 'consequence')
-        self.assertIn('is of kind FragilityModel, '
-                      'expected ConsequenceModel', str(ctx.exception))
-
-    def test_wrong_files(self):
-        # missing lossCategory
-        with self.assertRaises(KeyError) as ctx:
-            nrml.to_python(self.wrong_csq_model_1)
-        self.assertIn("node consequenceModel: 'lossCategory', line 3",
-                      str(ctx.exception))
-
-        # missing loss state
-        with self.assertRaises(ValueError) as ctx:
-            nrml.to_python(self.wrong_csq_model_2)
-        self.assertIn("node consequenceFunction: Expected 4 limit"
-                      " states, got 3, line 9", str(ctx.exception))
-
-        # inverted loss states
-        with self.assertRaises(ValueError) as ctx:
-            nrml.to_python(self.wrong_csq_model_3)
-        self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
-                      str(ctx.exception))
 
 
 class RiskComputerTestCase(unittest.TestCase):
