@@ -3,7 +3,7 @@
 # GEM Mirror
 #
 pandas==2.2.3
-numba==0.59.1
+numba==0.60.0
 onnxruntime==1.17.3
 pyzmq==26.2.0
 charset_normalizer==3.3.2
