@@ -195,6 +195,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 rlist.append(ffl)
         elif kind == 'consequence':
             for riskid, cf in sorted(rm.items()):
+                breakpoint()
                 rf = hdf5.ArrayWrapper(
                     cf, dict(id=riskid, loss_type=loss_type, kind=kind))
                 rlist.append(rf)
