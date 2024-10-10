@@ -20,11 +20,12 @@ Helpers for testing the calculators, used in oq-risk-tests
 """
 import os
 import re
+import sys
 import time
 import pathlib
 import numpy
 from openquake.baselib import hdf5
-from openquake.commonlib import logs
+from openquake.commonlib import logs, readinput
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 from openquake.calculators.views import view, text_table
@@ -104,3 +105,34 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
         assert_close(tbl, outdir / bname)
     return calc
+
+
+def check_ini(path, hc):
+    dic = readinput.get_params(path)
+    if hc:  # disable hazard checks by setting a fake hazard_calculation_id
+        dic['hazard_calculation_id'] = 1
+    oq = readinput.get_oqparam(dic)
+    ini = oq.to_ini()
+    tmp_ini = path[:-3] + 'tmp.ini'
+    with open(tmp_ini, 'w') as f:
+        f.write(ini)
+    dic2 = readinput.get_params(tmp_ini)
+    missing = set(dic) - set(dic2) - {'intensity_measure_types'}
+    if missing:
+        breakpoint()
+
+
+def check_inis(demo_dir):
+    """
+    Check that oqparam.to_ini() works on all the .ini files in demo_dir
+    """
+    for cwd, dirs, files in os.walk(demo_dir):
+        for f in files:
+            if f.endswith('.ini') and not f.endswith('.tmp.ini'):
+                path = os.path.join(cwd, f)
+                print(path)
+                check_ini(path, hc='risk' in f)
+
+
+if __name__ == '__main__':
+    check_inis(sys.argv[1])

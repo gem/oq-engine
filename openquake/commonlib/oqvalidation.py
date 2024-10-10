@@ -2225,8 +2225,10 @@ class OqParam(valid.ParamSet):
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         del dic['base_path']
         del dic['req_site_params']
-        del dic['export_dir']
-        return '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+        #dic.pop('export_dir', None)
+        dic.pop('all_cost_types')
+        ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+        return ini
 
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
