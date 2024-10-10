@@ -1,5 +1,4 @@
 #!/bin/bash
-export OQ_DATABASE=localhost
 set -e
 if [ ! -d "$1" ]; then
     echo "Please specify the location of the folder containing the demos. Aborting." >&2
@@ -62,8 +61,7 @@ oq engine --list-outputs -1
 oq shell $1/risk/ScenarioRisk/sensitivity.py
 
 #echo "Testing csm2rup"
-#commented because missing export_outputs and breaking QGIS
-#OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
 
 # display the calculations
 oq db find %
