@@ -21,7 +21,7 @@ import unittest.mock as mock
 import unittest
 import tempfile
 import pytest
-from openquake.qa_tests_data import classical
+from openquake.qa_tests_data import event_based
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib import readinput
@@ -359,7 +359,7 @@ class OqParamTestCase(unittest.TestCase):
 
 ###################### test conversion to .ini format #####################
 inis = []
-base = os.path.dirname(classical.__file__)
+base = os.path.dirname(event_based.__file__)
 for case in os.listdir(base):
     job_ini = os.path.os.path.join(base, case, 'job.ini')
     if os.path.exists(job_ini):
