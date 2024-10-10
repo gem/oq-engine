@@ -722,7 +722,7 @@ def aristotle_get_rupture_data(request):
     if isinstance(res, HttpResponse):  # error
         return res
     rupdic, station_data_file = res
-    if not os.path.isfile(station_data_file):
+    if station_data_file is None or not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
             'Unable to collect station data: %s' % station_data_file)
         station_data_file = None
