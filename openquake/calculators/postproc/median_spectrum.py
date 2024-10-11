@@ -56,7 +56,7 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
     C = len(ctx)
     # reduce the levels to P levels per IMT
     cmaker = set_imls(cmaker, uhs)
-    wei = np.empty((G, M, C, P), np.float32)
+    weight = np.empty((G, M, C, P), np.float32)
     mean = np.empty((G, M, C), np.float32)
     sigma = np.empty((G, M, C), np.float32)
     start = 0
@@ -74,8 +74,8 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
             # for Canada) which is vectorized
             for p, poe in enumerate(cmaker.poes):
                 for m, imt in enumerate(cmaker.imtls):
-                    wei[g, m, slc, p] = ocr * poes_g[:, m, p] / poe * w
-    return mean, sigma, wei
+                    weight[g, m, slc, p] = ocr * poes_g[:, m, p] / poe * w
+    return mean, sigma, weight
 
 
 # NB: we are ignoring IMT-dependent weight
