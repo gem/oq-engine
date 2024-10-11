@@ -325,13 +325,20 @@ def export_median_spectra(ekey, dstore):
     fnames = []
     for n in sitecol.sids:
         aw = extract(dstore, f'median_spectra?site_id={n}')
-        df = aw.to_dframe().sort_values(['poe', 'period'])
+        num_groups = len(aw.array)
+        df = aw.to_dframe().sort_values(['grp_id', 'poe', 'period'])
         comment = dstore.metadata.copy()
         comment['site_id'] = n
         comment['lon'] = sitecol.lons[n]
         comment['lat'] = sitecol.lats[n]
+        if num_groups > 1:
+            fname = dstore.export_path('median_spectra-%d.csv' % n)
+            writer.save(df, fname, comment=comment)
+            fnames.append(fname)
         fname = dstore.export_path('median_spectrum-%d.csv' % n)
-        writer.save(df, fname, comment=comment)
+        aggdf = df.groupby(['poe', 'period']).prod().reset_index()
+        del aggdf['grp_id']
+        writer.save(aggdf, fname, comment=comment)
         fnames.append(fname)
     return fnames
 
