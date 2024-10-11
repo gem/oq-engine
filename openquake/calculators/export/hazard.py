@@ -327,7 +327,7 @@ def export_median_spectra(ekey, dstore):
     for n in sitecol.sids:
         for p, poe in enumerate(oq.poes):
             aw = extract(dstore, f'median_spectra?site_id={n}&poe_id={p}')
-            Gt, _3, P = aw.shape
+            Gt = len(aw.array)
             aggr = aw.array.sum(axis=0) # shape (3, P)
             df = aw.to_dframe().sort_values(['grp_id', 'period'])
             comment = dstore.metadata.copy()
