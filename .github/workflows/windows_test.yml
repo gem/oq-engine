@@ -10,20 +10,20 @@ on:
   schedule:
     - cron: "00 19 * * *"
   push:
-    branches: [ windows-all-tests ]
+    branches: [windows-all-tests]
 
 jobs:
-
   install:
     runs-on: ${{ matrix.os }}
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      GITHUB_REF:  ${{ github.ref }}
-      GITHUB_HD_REF:  ${{ github.head_ref }}
-      GITHUB_BS_REF:  ${{ github.base_ref }}
+      GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_HD_REF: ${{ github.head_ref }}
+      GITHUB_BS_REF: ${{ github.base_ref }}
       BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-2022, windows-2019]
         python-version: ["3.11", "3.12"]
@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
-    # This Checkout use git-ref keyword from dispatch
+      # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
@@ -44,7 +44,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-    # You can test your matrix by printing the current Python version
+      # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       - name: Echo env var
@@ -145,4 +145,3 @@ jobs:
               oq engine --run $jobRiskPath --exports csv,hdf5 --hc -1
             }
           }
-
