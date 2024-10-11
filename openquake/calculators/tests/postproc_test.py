@@ -234,4 +234,5 @@ class PostProcTestCase(CalculatorTestCase):
         self.run_calc(case_median_spectrum.__file__, 'job2.ini')
         fnames = export(('median_spectra', 'csv'), self.calc.datastore)
         for fname in fnames:
+            print(fname)
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

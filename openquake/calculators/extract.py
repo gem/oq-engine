@@ -506,18 +506,19 @@ def extract_uhs(dstore, what):
 def extract_median_spectra(dstore, what):
     """
     Extracts median spectra per site and group.
-    Use it as /extract/median_spectra?site_id=0
+    Use it as /extract/median_spectra?site_id=0&poe_id=1
     """
     qdict = parse(what)
     [site_id] = qdict['site_id']
+    [poe_id] = qdict['poe_id']
     dset = dstore['log_median_spectra']
     dic = json.loads(dset.attrs['json'])
-    spectra = numpy.exp(dset[:, site_id])  # (Gt, M, P)
+    spectra = dset[:, site_id, :, :, poe_id]  # (Gt, 3, M)
     return ArrayWrapper(spectra, dict(
-        shape_descr=['grp_id', 'period', 'poe'],
+        shape_descr=['grp_id', 'kind', 'period'],
         grp_id=numpy.arange(dic['grp_id']),
-        period=dic['period'],
-        poe=dic['poe']))
+        kind=['mea', 'sig', 'wei'],
+        period=dic['period']))
 
 
 @extract.add('median_spectrum_disagg')

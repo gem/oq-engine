@@ -320,26 +320,31 @@ def export_cond_spectra(ekey, dstore):
 
 @export.add(('median_spectra', 'csv'))
 def export_median_spectra(ekey, dstore):
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
     for n in sitecol.sids:
-        aw = extract(dstore, f'median_spectra?site_id={n}')
-        num_groups = len(aw.array)
-        df = aw.to_dframe().sort_values(['grp_id', 'poe', 'period'])
-        comment = dstore.metadata.copy()
-        comment['site_id'] = n
-        comment['lon'] = sitecol.lons[n]
-        comment['lat'] = sitecol.lats[n]
-        if num_groups > 1:
-            fname = dstore.export_path('median_spectra-%d.csv' % n)
-            writer.save(df, fname, comment=comment)
+        for p, poe in enumerate(oq.poes):
+            aw = extract(dstore, f'median_spectra?site_id={n}&poe_id={p}')
+            Gt, _3, P = aw.shape
+            aggr = aw.array.sum(axis=0) # shape (3, P)
+            df = aw.to_dframe().sort_values(['grp_id', 'period'])
+            comment = dstore.metadata.copy()
+            comment['site_id'] = n
+            comment['lon'] = sitecol.lons[n]
+            comment['lat'] = sitecol.lats[n]
+            comment['poe'] = poe
+            if Gt > 1:
+                fname = dstore.export_path('median_spectra-%d-%d.csv' % (n, p))
+                writer.save(df, fname, comment=comment)
+                fnames.append(fname)
+            fname = dstore.export_path('median_spectrum-%d-%d.csv' % (n, p))
+            aggdf = pandas.DataFrame(dict(
+                period=aw.period, spec=numpy.exp(aggr[0]),
+                mea=aggr[0], sig=aggr[1], wei=aggr[2]))
+            writer.save(aggdf, fname, comment=comment)
             fnames.append(fname)
-        fname = dstore.export_path('median_spectrum-%d.csv' % n)
-        aggdf = df.groupby(['poe', 'period']).prod().reset_index()
-        del aggdf['grp_id']
-        writer.save(aggdf, fname, comment=comment)
-        fnames.append(fname)
     return fnames
 
 
