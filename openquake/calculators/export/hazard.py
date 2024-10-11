@@ -336,6 +336,27 @@ def export_median_spectra(ekey, dstore):
     return fnames
 
 
+
+@export.add(('median_spectrum_disagg', 'csv'))
+def export_median_spectrum_disagg(ekey, dstore):
+    # oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    aw = extract(dstore, 'median_spectrum_disagg?site_id=0&poe_id=0')
+    fnames = []
+    for key, arr in aw.to_dict().items():
+        if key == 'extra':
+            continue
+        comment = dstore.metadata.copy()
+        comment['site_id'] = 0
+        comment['lon'] = sitecol.lons[0]
+        comment['lat'] = sitecol.lats[0]
+        fname = dstore.export_path('median_spectrum_disagg-%s.csv' % key)
+        writer.save(arr, fname, comment=comment)
+        fnames.append(fname)
+    return fnames
+
+
 # TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0

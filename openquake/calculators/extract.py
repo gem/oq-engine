@@ -33,7 +33,6 @@ from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree
 from openquake.hazardlib.contexts import (
@@ -45,6 +44,7 @@ from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
 from openquake.calculators import getters
+from openquake.calculators.postproc.median_spectrum import get_mea_sig_wei
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -518,6 +518,33 @@ def extract_median_spectra(dstore, what):
         poe=dic['poe']))
 
 
+@extract.add('median_spectrum_disagg')
+def extract_median_spectrum_disagg(dstore, what):
+    """
+    Median spectrum disaggregation by group and rupture.
+    Use it as /extract/median_spectrum?site_id=0_poe_id=0
+    """
+    qdict = parse(what)
+    [site_id] = qdict['site_id']
+    [poe_id] = qdict['poe_id']
+    imts = list(dstore['oqparam'].imtls)
+    cmakers = read_cmakers(dstore)
+    ctx_by_grp = read_ctx_by_grp(dstore)
+    ref_uhs = dstore.sel("hmaps-stats", site_id=site_id, stat="mean")[0, 0]
+    for grp_id, ctx in ctx_by_grp.items():
+        cmaker = cmakers[grp_id]
+        mea, sig, wei = get_mea_sig_wei(cmaker, ctx, ref_uhs)  # (G, M, C)
+        for m, imt in enumerate(imts):
+            tag = f'grp{grp_id}-{imt}'
+            ws = wei[:, m, :, poe_id]
+            ok = (ws > 0).any(axis=0)
+            arr = general.compose_arrays(
+                rup_id=ctx.rup_id[ok], mag=ctx.mag[ok], rrup=ctx.rrup[ok],
+                mea=mea[:, m, ok].T, sig=sig[:, m, ok].T,
+                wei=ws[:, ok].T)
+            yield tag, arr
+
+
 @extract.add('effect')
 def extract_effect(dstore, what):
     """
@@ -664,7 +691,7 @@ def extract_task_info(dstore, what):
     """
     Extracts the task distribution. Use it as /extract/task_info?kind=classical
     """
-    dic = group_array(dstore['task_info'][()], 'taskname')
+    dic = general.group_array(dstore['task_info'][()], 'taskname')
     if 'kind' in what:
         name = parse(what)['kind'][0]
         yield name, dic[encode(name)]
@@ -1672,7 +1699,7 @@ class WebExtractor(Extractor):
             for chunk in resp.iter_content(CHUNKSIZE):
                 f.write(chunk)
                 down += len(chunk)
-                println('Downloaded {:,} bytes'.format(down))
+                general.println('Downloaded {:,} bytes'.format(down))
         print()
 
     def close(self):
