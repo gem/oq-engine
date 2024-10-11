@@ -14,7 +14,7 @@ https://wheelhouse.openquake.org/v3/macos/py312/llvmlite-0.43.0-cp312-cp312-maco
 https://wheelhouse.openquake.org/v3/macos/py312/matplotlib-3.8.2-cp312-cp312-macosx_10_12_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/numba-0.60.0-cp312-cp312-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py312/pandas-2.2.3-cp313-cp313-macosx_10_13_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py312/pandas-2.2.3-cp312-cp312-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/Pillow-10.1.0-cp312-cp312-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/pyzmq-26.2.0-cp312-cp312-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/scipy-1.13.1-cp312-cp312-macosx_10_9_x86_64.whl
