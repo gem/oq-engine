@@ -25,7 +25,7 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
 from openquake.calculators.views import view, text_table
@@ -351,16 +351,26 @@ def export_median_spectrum_disagg(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     aw = extract(dstore, 'median_spectrum_disagg?site_id=0&poe_id=0')
     fnames = []
-    for key, arr in aw.to_dict().items():
-        if key == 'extra':
+    totw = AccumDict(accum=0)
+    for tag, arr in aw.to_dict().items():
+        if tag == 'extra':
             continue
+        _grp, imt = tag.split('-')
+        for col in arr.dtype.names:
+            if col.startswith('wei'):
+                totw[imt] += arr[col].sum()        
         comment = dstore.metadata.copy()
         comment['site_id'] = 0
         comment['lon'] = sitecol.lons[0]
         comment['lat'] = sitecol.lats[0]
-        fname = dstore.export_path('median_spectrum_disagg-%s.csv' % key)
+        fname = dstore.export_path('median_spectrum_disagg-%s.csv' % tag)
         writer.save(arr, fname, comment=comment)
         fnames.append(fname)
+
+    # sanity check on the weights
+    for imt in totw:
+        print('tot weight for', imt, totw[imt])
+        assert abs(totw[imt] - 1) < .01, (imt, totw[imt])
     return fnames
 
 
