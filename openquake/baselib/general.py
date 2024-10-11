@@ -1738,6 +1738,39 @@ def around(vec, value, delta):
     return (vec <= value + delta) & (vec >= value - delta)
 
 
+def compose_arrays(**kwarrays):
+    """
+    Compose multiple 1D and 2D arrays into a single composite array.
+    For instance
+
+    >>> mag = numpy.array([5.5, 5.6])
+    >>> mea = numpy.array([[-4.5, -4.6], [-4.45, -4.55]])
+    >>> compose_arrays(mag=mag, mea=mea)
+    array([(5.5, -4.5 , -4.6 ), (5.6, -4.45, -4.55)],
+          dtype=[('mag', '<f8'), ('mea0', '<f8'), ('mea1', '<f8')])
+    """
+    dic = {}
+    dtlist = []
+    nrows = set()
+    for key, array in kwarrays.items():
+        shape = array.shape
+        nrows.add(shape[0])
+        if len(shape) > 2:
+            raise ValueError('Array %s has shape %s' % (key, shape))
+        elif len(shape) == 2:
+            for k in range(shape[1]):
+                dic[f'{key}{k}'] = array[:, k]
+                dtlist.append((f'{key}{k}', array.dtype))
+        elif len(shape) == 1:
+            dic[key] = array
+            dtlist.append((key, array.dtype))
+    [R] = nrows  # all arrays must have the same number of rows
+    array = numpy.empty(R, dtlist)
+    for key, _ in dtlist:
+        array[key] = dic[key]
+    return array
+
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
@@ -1748,7 +1781,6 @@ def around(vec, value, delta):
 # size a lot (say one order of magnitude).
 # Therefore by losing a bit of speed (say 3%) you can convert a failing
 # calculation into a successful one.
-
 
 def compress(obj):
     """
