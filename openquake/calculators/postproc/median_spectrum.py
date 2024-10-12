@@ -85,6 +85,19 @@ def tr(arr):
     return arr.transpose(2, 0, 1)
 
 
+def check_rup_unique(spec_disagg):
+    """
+    Make sure the rupture IDs are unique
+    """
+    rupids = []
+    for dset in spec_disagg.values():
+        rupids.append(dset['rup_id'])
+    rupids = np.concatenate(rupids)
+    U = len(np.unique(rupids))
+    if U < len(rupids):
+        raise RuntimeError('The rupture IDs are not unique!')
+
+
 # NB: we are ignoring IMT-dependent weight
 def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor()):
     """
@@ -154,19 +167,23 @@ def main(dstore, csm):
     P = len(oq.poes)
     log_median_spectra = np.zeros((Gr, N, 3, M, P), np.float32)
     tot_w = np.zeros((N, M, P))
-    for cm in cmakers:
-        G = len(cm.gsims)
-        dtlist = [('rup_id', U32), ('mag', F32), ('rrup', F32)]
-        dt = (F32, (M,))
-        for g in range(G):
-            dtlist.append((f'mea{g}', dt))
-        for g in range(G):
-            dtlist.append((f'sig{g}', dt))
-        for g in range(G):
-            dtlist.append((f'wei{g}', dt))
-        name = f"median_spectrum_disagg/grp{cm.grp_id}"
-        logging.info('Creating %s', name)
-        dstore.create_dset(name, dtlist, fillvalue=None)
+
+    # create median_spectrum_disagg datasets
+    if N == 1 and P == 1:
+        for cm in cmakers:
+            G = len(cm.gsims)
+            dtlist = [('rup_id', U32), ('mag', F32), ('rrup', F32)]
+            dt = (F32, (M,))
+            for g in range(G):
+                dtlist.append((f'mea{g}', dt))
+            for g in range(G):
+                dtlist.append((f'sig{g}', dt))
+            for g in range(G):
+                dtlist.append((f'wei{g}', dt))
+            name = f"median_spectrum_disagg/grp{cm.grp_id}"
+            logging.info('Creating %s', name)
+            dstore.create_dset(name, dtlist, fillvalue=None)
+
     for (grp_id, site_id), out in res.items():
         if site_id == -1:  # median_spectrum_disagg
             for arr in out:
@@ -181,6 +198,9 @@ def main(dstore, csm):
     # sanity check on the weights
     # np.testing.assert_allclose(tot_w, 1, rtol=.01)
 
+    # sanity check on the rup_ids
+    if N == 1 and P == 1:
+        check_rup_unique(dstore['median_spectrum_disagg'])
 
 if __name__ == "__main__":
     sap.run(main)
