@@ -1755,13 +1755,11 @@ def compose_arrays(**kwarrays):
     for key, array in kwarrays.items():
         shape = array.shape
         nrows.add(shape[0])
-        if len(shape) > 2:
-            raise ValueError('Array %s has shape %s' % (key, shape))
-        elif len(shape) == 2:
+        if len(shape) >= 2:
             for k in range(shape[1]):
                 dic[f'{key}{k}'] = array[:, k]
-                dtlist.append((f'{key}{k}', array.dtype))
-        elif len(shape) == 1:
+                dtlist.append((f'{key}{k}', (array.dtype, shape[2:])))
+        else:
             dic[key] = array
             dtlist.append((key, array.dtype))
     [R] = nrows  # all arrays must have the same number of rows
