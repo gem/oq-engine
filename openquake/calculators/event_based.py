@@ -592,13 +592,6 @@ class EventBasedCalculator(base.HazardCalculator):
         gsim_lt = readinput.get_gsim_lt(oq)
         if oq.aristotle:
             # the gsim_lt is read from the exposure.hdf5 file
-            mosaic_df = readinput.read_mosaic_df(buffer=1)
-            if oq.rupture_dict:
-                lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
-            elif oq.rupture_xml:
-                hypo = readinput.get_rupture(oq).hypocenter
-                lonlat = [[hypo.x, hypo.y]]
-            [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
             [expo_hdf5] = oq.inputs['exposure']
             if oq.mosaic_model == '???':
                 raise ValueError(

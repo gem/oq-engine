@@ -61,7 +61,8 @@ from openquake.engine.aelo import (
 from openquake.engine.export.core import DataStoreExportError
 from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
-    get_trts_around, get_aristotle_allparams, get_rupture_dict)
+    get_close_mosaic_models, get_trts_around, get_aristotle_allparams,
+    get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings
@@ -128,6 +129,7 @@ ARISTOTLE_FORM_LABELS = {
     'dip': 'Dip (degrees)',
     'strike': 'Strike (degrees)',
     'maximum_distance': 'Maximum source-to-site distance (km)',
+    'mosaic_model': 'Mosaic model',
     'trt': 'Tectonic region type',
     'truncation_level': 'Level of truncation',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
@@ -152,6 +154,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'dip': '0 ≤ float ≤ 90',
     'strike': '0 ≤ float ≤ 360',
     'maximum_distance': 'float ≥ 0',
+    'mosaic_model': 'Mosaic model',
     'trt': 'Tectonic region type',
     'truncation_level': 'float ≥ 0',
     'number_of_ground_motion_fields': 'float ≥ 1',
@@ -722,13 +725,21 @@ def aristotle_get_rupture_data(request):
     if isinstance(res, HttpResponse):  # error
         return res
     rupdic, station_data_file = res
-    if station_data_file is None or not os.path.isfile(station_data_file):
+    trts = {}
+    if station_data_file is None:
+        station_data_file = None
+    elif not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
-            'Unable to collect station data: %s' % station_data_file)
+            'Unable to collect station data for rupture'
+            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
         station_data_file = None
     try:
-        trts, mosaic_model = get_trts_around(
-            rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
+        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'])
+        for mosaic_model in mosaic_models:
+            trts[mosaic_model] = get_trts_around(
+                mosaic_model,
+                os.path.join(config.directory.mosaic_dir,
+                             'exposure.hdf5'))
     except Exception as exc:
         usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
@@ -744,7 +755,7 @@ def aristotle_get_rupture_data(request):
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
-    rupdic['mosaic_model'] = mosaic_model
+    rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
@@ -799,6 +810,7 @@ def aristotle_validate(request):
         # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
         'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
+        'mosaic_model': valid.utf8,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
         'number_of_ground_motion_fields': valid.positiveint,
@@ -909,7 +921,7 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupdic, local_timestamp, time_event, maximum_distance, trt,
+    (rupdic, local_timestamp, time_event, maximum_distance, mosaic_model, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
@@ -922,7 +934,7 @@ def aristotle_run(request):
         allparams = get_aristotle_allparams(
             rupdic,
             time_event,
-            maximum_distance, trt, truncation_level,
+            maximum_distance, mosaic_model, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
             local_timestamp,

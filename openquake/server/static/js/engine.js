@@ -424,6 +424,18 @@
 
     var refresh_calcs;
 
+    function populateTrtSelector(selected_trt) {
+        $('#trt').empty();
+        var trts = $('#mosaic_model').find(':selected').data('value').split(',');
+        $.each(trts, function(index, trt) {
+            var selected = '';
+            if (selected_trt && trt == selected_trt) {
+                selected = ' selected';
+            }
+            $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
+        });
+    }
+
     function setTimer() {
         refresh_calcs = setInterval(function () { calculations.fetch({reset: true}) }, 3000);
     }
@@ -533,7 +545,6 @@
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
-                $('#mosaic_model').text('');
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
@@ -592,15 +603,16 @@
                         $('#dip').val('');
                         $('#strike').val('');
                     }
-                    $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
-                    $('#trt').empty();
-                    $.each(data.trts, function(index, trt) {
+                    $('#mosaic_model').empty();
+                    $.each(data.mosaic_models, function(index, mosaic_model) {
                         var selected = '';
-                        if ('trt' in data && trt == data.trt) {
+                        if ('mosaic_model' in data && mosaic_model == data.mosaic_model) {
                             selected = ' selected';
                         }
-                        $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
+                        var mosaic_model_trts = data.trts[mosaic_model];
+                        $('#mosaic_model').append('<option value="' + mosaic_model + '" data-value=\'' + mosaic_model_trts + '\'' + selected + '>' + mosaic_model + '</option>');
                     });
+                    populateTrtSelector(data.trt);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -616,6 +628,9 @@
                     $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
                 });
                 event.preventDefault();
+            });
+            $('#mosaic_model').change(function() {
+                populateTrtSelector();
             });
             $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
@@ -653,6 +668,7 @@
                 formData.append('is_point_rup', $("#is_point_rup").val());
                 formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
+                formData.append('mosaic_model', $('#mosaic_model').val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());
                 formData.append('number_of_ground_motion_fields',

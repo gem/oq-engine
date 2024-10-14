@@ -280,6 +280,7 @@ def callback(job_id, params, exc=None):
 def aristotle(exposure_hdf5=None, *,
               rupfname: str=FAMOUS,
               stations: str=None,
+              mosaic_model: str=None,
               maximum_distance: float=300.,
               maximum_distance_stations: float=None,
               asset_hazard_distance: float=15.,
@@ -311,6 +312,7 @@ def aristotle(exposure_hdf5=None, *,
             main_cmd(
                 usgs_id, rupture_file, rupdic, callback,
                 maximum_distance=maximum_distance,
+                mosaic_model=mosaic_model,
                 trt=trt, truncation_level=truncation_level,
                 number_of_ground_motion_fields=number_of_ground_motion_fields,
                 asset_hazard_distance=asset_hazard_distance,
@@ -320,6 +322,7 @@ def aristotle(exposure_hdf5=None, *,
     else:  # assume .xml
         main_cmd('WithRuptureFile', rupfname, None, callback,
                  maximum_distance=maximum_distance,
+                 mosaic_model=mosaic_model,
                  trt=trt, truncation_level=truncation_level,
                  number_of_ground_motion_fields=number_of_ground_motion_fields,
                  asset_hazard_distance=asset_hazard_distance,
@@ -338,6 +341,7 @@ aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
 aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
 aristotle.stations = 'Path to a csv file with the station data'
+aristotle.mosaic_model = 'Mosaic model 3-characters code'
 aristotle.maximum_distance = 'Maximum distance in km'
 aristotle.maximum_distance_stations = "Maximum distance from stations in km"
 aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
