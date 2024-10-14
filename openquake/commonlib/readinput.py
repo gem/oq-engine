@@ -41,7 +41,6 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
-import fiona
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -50,6 +49,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
