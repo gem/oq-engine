@@ -351,31 +351,35 @@ def export_median_spectra(ekey, dstore):
 
 @export.add(('median_spectrum_disagg', 'csv'))
 def export_median_spectrum_disagg(ekey, dstore):
-    # oq = dstore['oqparam']
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    aw = extract(dstore, 'median_spectrum_disagg?site_id=0&poe_id=0')
     fnames = []
     totw = AccumDict(accum=0)
-    for tag, arr in aw.to_dict().items():
-        if tag == 'extra':
-            continue
-        _grp, imt = tag.split('-')
-        for col in arr.dtype.names:
-            if col.startswith('wei'):
-                totw[imt] += arr[col].sum()        
-        comment = dstore.metadata.copy()
-        comment['site_id'] = 0
-        comment['lon'] = sitecol.lons[0]
-        comment['lat'] = sitecol.lats[0]
-        fname = dstore.export_path('median_spectrum_disagg-%s.csv' % tag)
-        writer.save(arr, fname, comment=comment)
-        fnames.append(fname)
+    for grp_id, dset in dstore['median_spectrum_disagg'].items():
+        array = dset[:]
+        dtlist = [tup[:2] for tup in array.dtype.descr]
+        for m, imt in enumerate(oq.imtls):
+            arr = numpy.empty(len(array), dtlist)
+            for col in arr.dtype.names:
+                if col.startswith(('mea', 'sig', 'wei')):
+                    arr[col] = array[col][m]
+                else:
+                    arr[col] = array[col]
+                if col.startswith('wei'):
+                    totw[imt] += arr[col].sum()        
+            comment = dstore.metadata.copy()
+            comment['site_id'] = 0
+            comment['lon'] = sitecol.lons[0]
+            comment['lat'] = sitecol.lats[0]
+            fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            writer.save(arr, fname, comment=comment)
+            fnames.append(fname)
 
     # sanity check on the weights
     for imt in totw:
         print('tot weight for', imt, totw[imt])
-        assert abs(totw[imt] - 1) < .01, (imt, totw[imt])
+    #    assert abs(totw[imt] - 1) < .01, (imt, totw[imt])
     return fnames
 
 

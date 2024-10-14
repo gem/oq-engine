@@ -21,8 +21,12 @@ Median spectrum post-processor
 
 import logging
 import numpy as np
-from openquake.baselib import sap, parallel, general, performance
+from openquake.baselib import hdf5, sap, parallel, general, performance
 from openquake.hazardlib import contexts
+
+U32 = np.uint32
+I64 = np.int64
+F32 = np.float32
 
 
 def set_imls(cmaker, uhs):
@@ -78,8 +82,24 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
     return mean, sigma, weight
 
 
+def tr(arr):
+    return arr.transpose(2, 0, 1)
+
+
+def check_rup_unique(spec_disagg):
+    """
+    Make sure the rupture IDs are unique
+    """
+    rupids = []
+    for dset in spec_disagg.values():
+        rupids.append(dset['rup_id'])
+    rupids = np.concatenate(rupids)
+    U = len(np.unique(rupids))
+    if U < len(rupids):
+        raise RuntimeError('The rupture IDs are not unique!')
+
+
 # NB: we are ignoring IMT-dependent weight
-    
 def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor()):
     """
     For a given group, computes the median hazard spectrum using a weighted
@@ -90,7 +110,9 @@ def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor())
     :param uhs: array of Uniform Hazard Spectra of shape (N, M, P)
     """
     _N, M, P = uhs.shape
-    for site_id in np.unique(context.sids):
+    sids = np.unique(context.sids)
+    one_site_poe = len(sids) == 1 and P == 1
+    for site_id in sids:
         ctx = context[context.sids == site_id]
         mea, sig, wei = get_mea_sig_wei(cmaker, ctx, uhs[site_id])
         out = np.empty((3, M, P))  # <mea>, <sig>, tot_w
@@ -98,6 +120,12 @@ def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor())
         out[1] = np.einsum("gmup,gmu->mp", wei, sig)
         out[2] = wei.sum(axis=(0, 2))
         yield {(cmaker.grp_id, site_id): out}
+        if one_site_poe:
+            ok = wei.sum(axis=(0, 1, 3)) > 0
+            arr = general.compose_arrays(
+                rup_id=ctx.rup_id, mag=ctx.mag, rrup=ctx.rrup,
+                mea=tr(mea), sig=tr(sig), wei=tr(wei[:, :, :, 0]))
+            yield {(cmaker.grp_id, -1): [arr[ok]]}
 
 
 # NB: we are ignoring IMT-dependent weights
@@ -124,6 +152,7 @@ def main(dstore, csm):
     cmakers = contexts.read_cmakers(dstore)
     G = {cm.grp_id: len(cm.gsims) for cm in cmakers}
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
+    # check_rup_unique(ctx_by_grp)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
     blocksize = totsize / (oq.concurrent_tasks or 1)
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
@@ -140,9 +169,30 @@ def main(dstore, csm):
     P = len(oq.poes)
     log_median_spectra = np.zeros((Gr, N, 3, M, P), np.float32)
     tot_w = np.zeros((N, M, P))
+
+    # create median_spectrum_disagg datasets
+    if N == 1 and P == 1:
+        for cm in cmakers:
+            G = len(cm.gsims)
+            dtlist = [('rup_id', I64), ('mag', F32), ('rrup', F32)]
+            dt = (F32, (M,))
+            for g in range(G):
+                dtlist.append((f'mea{g}', dt))
+            for g in range(G):
+                dtlist.append((f'sig{g}', dt))
+            for g in range(G):
+                dtlist.append((f'wei{g}', dt))
+            name = f"median_spectrum_disagg/grp{cm.grp_id}"
+            logging.info('Creating %s', name)
+            dstore.create_dset(name, dtlist, fillvalue=None)
+
     for (grp_id, site_id), out in res.items():
-        log_median_spectra[grp_id, site_id] = out
-        tot_w[site_id] += out[2]
+        if site_id == -1:  # median_spectrum_disagg
+            for arr in out:
+                hdf5.extend(dstore[f'median_spectrum_disagg/grp{grp_id}'], arr)
+        else:
+            log_median_spectra[grp_id, site_id] = out
+            tot_w[site_id] += out[2]
     dstore.create_dset("log_median_spectra", log_median_spectra)
     dstore.set_shape_descr("log_median_spectra", grp_id=Gr,
                            site_id=N, kind=['mea', 'sig', 'wei'],
@@ -150,6 +200,9 @@ def main(dstore, csm):
     # sanity check on the weights
     # np.testing.assert_allclose(tot_w, 1, rtol=.01)
 
+    # sanity check on the rup_ids
+    if N == 1 and P == 1:
+        check_rup_unique(dstore['median_spectrum_disagg'])
 
 if __name__ == "__main__":
     sap.run(main)
