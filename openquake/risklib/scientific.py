@@ -70,7 +70,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
-liquefaction
+liquefaction landslide
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
