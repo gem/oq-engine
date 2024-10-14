@@ -971,6 +971,8 @@ class OqParam(valid.ParamSet):
         'number_vulnerability',
         'liquefaction_fragility',
         'liquefaction_vulnerability',
+        'landslide_fragility',
+        'landslide_vulnerability',
         'post_loss_amplification',
     }
     # old name => new name

@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -36,8 +36,10 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents|liquefaction'
-RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
+
+LTYPE_REGEX = '|'.join(lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt)
+RISK_TYPE_REGEX = re.compile(r'(%s)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
