@@ -197,8 +197,11 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_22_bis(self):
         # crossing date line calculation for Alaska
         # this also tests full tiling without custom_dir
+        # NB: requires disabling the parallelization otherwise the
+        # workers would read the real custom_tmp and not the mocked one
         with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': ''}):
+             mock.patch.dict(config.directory, {'custom_tmp': ''}), \
+             mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',

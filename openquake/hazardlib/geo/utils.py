@@ -490,6 +490,7 @@ def get_bounding_box(obj, maxdist):
         an object with method .get_bounding_box, or with an attribute .polygon
         or a list of locations
     :param maxdist: maximum distance in km
+    :returns: (minlon, minlat, maxlon, maxlat)
     """
     if hasattr(obj, 'get_bounding_box'):
         return obj.get_bounding_box(maxdist)

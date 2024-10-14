@@ -909,7 +909,7 @@ def get_multiplanar(multipolygon_coords, mag, rake, trt):
     coords = numpy.array(multipolygon_coords, float)[:, :-1, :]
     P, vertices, _ = coords.shape
     if vertices != 4:
-        raise ValueError('Expecting 4 vertices, got %d', vertices)
+        raise ValueError('Expecting 4 vertices, got %d' % vertices)
     for p, array43 in enumerate(coords):
         coords[p] = fix_vertices_order(array43)
     if P == 1:

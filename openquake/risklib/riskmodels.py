@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import re
-import ast
 import json
 import copy
-import logging
 import functools
 import collections
 import numpy
@@ -28,7 +26,7 @@ import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -38,9 +36,10 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
-RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)'
-                             % LTYPE_REGEX)
+
+LTYPE_REGEX = '|'.join(lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt)
+RISK_TYPE_REGEX = re.compile(r'(%s)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
@@ -68,9 +67,9 @@ def get_risk_files(inputs):
             rfs['fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
-        elif key.endswith(('_fragility', '_vulnerability', '_consequence')):
+        elif key.endswith(('_fragility', '_vulnerability')):
             match = RISK_TYPE_REGEX.match(key)
-            if match and 'retrofitted' not in key and 'consequence' not in key:
+            if match and 'retrofitted' not in key:
                 rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
             elif match is None:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
@@ -99,7 +98,7 @@ def build_vf_node(vf):
 
 def group_by_lt(funclist):
     """
-    Converts a list of objects with attribute .loss_type in to a dictionary
+    Converts a list of objects with attribute .loss_type into a dictionary
     loss_type -> risk_function
     """
     d = AccumDict(accum=[])
@@ -109,6 +108,7 @@ def group_by_lt(funclist):
         if len(lst) == 1:
             d[lt] = lst[0]
         elif lst[1].kind == 'fragility':
+            # EventBasedDamageTestCase.test_case_11
             cf, ffl = lst
             ffl.cf = cf
             d[lt] = ffl
@@ -135,7 +135,7 @@ class RiskFuncList(list):
         return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
 
 
-def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
+def get_risk_functions(oqparam, kind='vulnerability fragility '
                        'vulnerability_retrofitted'):
     """
     :param oqparam:
@@ -154,10 +154,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
                 rmodel = nrml.to_python(oqparam.inputs[key])
-                if kind == 'consequence':
-                    logging.warning('Consequence models in XML format are '
-                                    'deprecated, please replace %s with a CSV',
-                                    oqparam.inputs[key])
                 if len(rmodel) == 0:
                     raise InvalidFile('%s is empty!' % oqparam.inputs[key])
                 rmodels[loss_type, kind] = rmodel
@@ -193,11 +189,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 ffl.loss_type = loss_type
                 ffl.kind = kind
                 rlist.append(ffl)
-        elif kind == 'consequence':
-            for riskid, cf in sorted(rm.items()):
-                rf = hdf5.ArrayWrapper(
-                    cf, dict(id=riskid, loss_type=loss_type, kind=kind))
-                rlist.append(rf)
         else:  # vulnerability, vulnerability_retrofitted
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
@@ -505,9 +496,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     :param consdict:
         a dictionary riskid -> loss_type -> consequence functions
     """
+    tmap = ()  # to be set
+
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam, tmap=None):
+    def read(cls, dstore, oqparam):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
@@ -533,7 +526,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = tmap or ast.literal_eval(dstore.get_attr('crm', 'tmap'))
+        if 'taxmap' in dstore:
+            crm.tmap = dstore.read_df('taxmap')
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -557,20 +551,19 @@ class CompositeRiskModel(collections.abc.Mapping):
             else:
                 csq_files.append(fnames)
         cfs = '\n'.join(csq_files)
-        for loss_type in tmap:
+        df = self.tmap
+        for loss_type in self.oqparam.loss_types:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
                 if len(coeffs):
-                    # the taxonomy map is a dictionary loss_type ->
-                    # [[(risk_taxon, weight]),...] for each asset taxonomy
-                    for pairs in tmap[loss_type].values():
-                        for risk_t, weight in pairs:
-                            if risk_t != '?':
-                                try:
-                                    coeffs[risk_t][loss_type]
-                                except KeyError as err:
-                                    raise InvalidFile(
-                                        'Missing %s in\n%s' % (err, cfs))
+                    for lt, risk_id, weight in zip(
+                            df.loss_type, df.risk_id, df.weight):
+                        if (lt == '*' or lt == loss_type) and risk_id != '?':
+                            try:
+                                coeffs[risk_id][loss_type]
+                            except KeyError as err:
+                                raise InvalidFile(
+                                    'Missing %s in\n%s' % (err, cfs))
 
     def check_risk_ids(self, inputs):
         """
@@ -596,11 +589,13 @@ class CompositeRiskModel(collections.abc.Mapping):
             missing = AccumDict(accum=[])
             for lt in self.loss_types:
                 rms = []
-                if self.tmap:
-                    for pairs in self.tmap[lt].values():
-                        for risk_id, weight in pairs:
-                            if risk_id != '?':
-                                rms.append(self._riskmodels[risk_id])
+                if len(self.tmap):
+                    if len(self.tmap.loss_type.unique()) == 1:
+                        risk_ids = self.tmap.risk_id
+                    else:
+                        risk_ids = self.tmap[self.tmap.loss_type==lt].risk_id
+                    for risk_id in risk_ids.unique():
+                        rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
@@ -627,35 +622,20 @@ class CompositeRiskModel(collections.abc.Mapping):
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
-                # the taxonomy map is a dictionary loss_type ->
-                # [[(risk_taxon, weight]),...] for each asset taxonomy
-                for risk_t, weight in self.tmap[loss_type][asset['taxonomy']]:
-                    # for instance risk_t = 'W_LFM-DUM_H6'
-                    cs = coeffs[risk_t][loss_type]
-                    csq[consequence] += scientific.consequence(
-                        consequence, cs, asset, fractions[:, 1:], loss_type,
-                        time_event) * weight
+                df = self.tmap[self.tmap.taxi == asset['taxonomy']]
+                for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
+                    if lt == '*' or lt == loss_type:
+                        # for instance risk_id = 'W_LFM-DUM_H6'
+                        cs = coeffs[risk_id][loss_type]
+                        csq[consequence] += scientific.consequence(
+                            consequence, cs, asset, fractions[:, 1:], loss_type,
+                            time_event) * weight
         return csq
 
     def init(self):
         oq = self.oqparam
         if self.risklist:
             oq.set_risk_imts(self.risklist)
-        # LEGACY: extract the consequences from the risk models, if any
-        if 'losses_by_taxonomy' not in self.consdict:
-            self.consdict['losses_by_taxonomy'] = {}
-        riskdict = self.risklist.groupby_id()
-        for riskid, rf_by_lt in riskdict.items():
-            cons_by_lt = {lt: rf.cf for lt, rf in rf_by_lt.items()
-                          if hasattr(rf, 'cf')}
-            if cons_by_lt:
-                # this happens for consequence models in XML format,
-                # see EventBasedDamageTestCase.test_case_11
-                dtlist = [(lt, F32) for lt in cons_by_lt]
-                coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
-                for lt, cf in cons_by_lt.items():
-                    coeffs[lt] = cf.array
-                self.consdict['losses_by_taxonomy'][riskid] = coeffs
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
         if oq.calculation_mode.endswith('_bcr'):
@@ -817,21 +797,12 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def get_output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
-        :param asset_df: a DataFrame of assets with the same taxonomy
+        :param asset_df: a DataFrame of assets with the same taxonomy and country
         :param haz: a DataFrame of GMVs on the sites of the assets
         :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance
         :returns: a dictionary keyed by extended loss type
         """
-        if hasattr(asset_df, 'ID_0'):
-            countries = asset_df.ID_0.unique()
-            if len(countries) > 1:
-                out = AccumDict()
-                for country in countries:
-                    adf = asset_df[asset_df.ID_0 == country]
-                    out += scientific.RiskComputer(self, adf).output(
-                        haz, sec_losses, rndgen)
-                return out
         # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
@@ -865,8 +836,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                                           if self.damage_states else [])
         attrs = dict(covs=self.covs, loss_types=loss_types,
                      limit_states=limit_states,
-                     consequences=self.get_consequences(),
-                     tmap=repr(getattr(self, 'tmap', [])))
+                     consequences=self.get_consequences())
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:

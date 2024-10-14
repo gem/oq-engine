@@ -162,6 +162,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'maximum_distance_stations': 'float ≥ 0',
 }
 
+HIDDEN_OUTPUTS = ['assetcol']
+
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
 
@@ -720,7 +722,7 @@ def aristotle_get_rupture_data(request):
     if isinstance(res, HttpResponse):  # error
         return res
     rupdic, station_data_file = res
-    if not os.path.isfile(station_data_file):
+    if station_data_file is None or not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
             'Unable to collect station data: %s' % station_data_file)
         station_data_file = None
@@ -1146,6 +1148,10 @@ def save_pik(job, dirname):
     return pathpik
 
 
+def get_public_outputs(oes):
+    return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+
+
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc_results(request, calc_id):
@@ -1172,7 +1178,7 @@ def calc_results(request, calc_id):
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
-                           lambda oes: [e for o, e in oes])
+                           get_public_outputs)
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1237,6 +1243,8 @@ def calc_result(request, result_id):
     try:
         job_id, _job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
+        if ds_key in HIDDEN_OUTPUTS:
+            return HttpResponseForbidden()
         if not utils.user_has_permission(request, job_user):
             return HttpResponseForbidden()
     except dbapi.NotFound:

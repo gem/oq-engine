@@ -835,6 +835,8 @@ class HazardCalculator(BaseCalculator):
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
+            if len(self.crmodel.tmap):
+                self.datastore.create_df('taxmap', self.crmodel.tmap, 'gzip')
 
     def _plot_assets(self):
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
@@ -939,40 +941,28 @@ class HazardCalculator(BaseCalculator):
                 oq.raise_invalid('missing exposure')
 
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxo_by_idx = {taxi: taxo for taxi, taxo in enumerate(taxonomies, 1)
-                           if taxi in numpy.unique(self.assetcol['taxonomy'])}
-            if 'ID_0' in self.assetcol.array.dtype.names:
-                # in qa_tests_data/scenario_risk/scenario_risk/conditioned
-                allcountries = numpy.array(self.assetcol.tagcol.ID_0)
-                id0s = numpy.unique(self.assetcol['ID_0'])
-                countries = allcountries[id0s]
-            else:
-                countries = ()
-            tmap = readinput.taxonomy_mapping(oq, taxo_by_idx, countries)
+            taxidx = {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
+                      if taxi in numpy.unique(self.assetcol['taxonomy'])}
+            tmap = readinput.taxonomy_mapping(oq, taxidx)
             self.crmodel.set_tmap(tmap)
+            risk_ids = set(tmap.risk_id)
 
-            taxonomies = set()
-            for ln in oq.loss_types:
-                for values in self.crmodel.tmap[ln].values():
-                    for taxo, weight in values:
-                        if taxo != '?':
-                            taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
-            # (exercised in test_missing_taxonomy)
-            missing = taxonomies - set(self.crmodel.taxonomies)
+            # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
+            missing = risk_ids - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
+                # in scenario_damage/case_14 the fragility model contains
+                # 'CR+PC/LDUAL/HBET:8.19/m ' with a trailing space while
+                # tmap.risk_id is extracted from the exposure and has no space
                 raise RuntimeError(
-                    'The exposure contains the taxonomy strings '
-                    '%s which are not in the fragility/vulnerability/'
-                    'consequence model' % missing)
-
+                    'The tmap.risk_id %s are not in the CompositeRiskModel' % missing)
             self.crmodel.check_risk_ids(oq.inputs)
 
-            if len(self.crmodel.taxonomies) > len(taxonomies):
+            if len(self.crmodel.taxonomies) > len(risk_ids):
                 logging.info(
                     'Reducing risk model from %d to %d taxonomy strings',
-                    len(self.crmodel.taxonomies), len(taxonomies))
-                self.crmodel = self.crmodel.reduce(taxonomies)
+                    len(self.crmodel.taxonomies), len(risk_ids))
+                self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap = tmap
 
     def _read_risk3(self):
@@ -1142,11 +1132,10 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtset)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if not hasattr(self.crmodel, 'tmap'):
+        if len(self.crmodel.tmap) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxo_by_idx = {i: taxo for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam,
-                                                           taxo_by_idx)
+            taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
+            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxidx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

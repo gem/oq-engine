@@ -15,6 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Utilities to read the input files recognized by the OpenQuake engine.
+"""
+
 import os
 import re
 import ast
@@ -36,15 +41,15 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
-import fiona
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp)
+    random_filter, countby, group_array, get_duplicates, gettemp, AccumDict)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -56,7 +61,6 @@ from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
-from openquake.risklib.countries import code2country
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -979,8 +983,7 @@ def get_crmodel(oqparam):
     if oqparam.aristotle:
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
-                crm = riskmodels.CompositeRiskModel.read(
-                    exp, oqparam, tmap='set_later')
+                crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
             except KeyError:
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:
@@ -1049,8 +1052,7 @@ def get_exposure(oqparam, h5=None):
         if oqparam.aristotle:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = asset.Exposure.read_around(
-                fnames[0], gh3, oqparam.countries)
+            exposure = asset.Exposure.read_around(fnames[0], gh3)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1203,90 +1205,78 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxo_by_idx, countries):
-    # returns a taxonomy mapping list
-    items = []
+def aristotle_tmap(oqparam, taxidx):
+    """
+    :returns: a taxonomy mapping dframe
+    """
+    acc = AccumDict(accum=[])  # loss_type, taxi, risk_id, weight
     with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
         for key in exp['tmap']:
-            if set(key.split('_')) & countries:
-                df = exp.read_df('tmap/' + key)
-                items.append((key, df))
-    assert items, 'Could not find any taxonomy mapping for %s' % countries
-    n = len(items)
-    if n > 1:
-        cs = [code2country.get(code, code) for code in countries]
-        raise ValueError('Found %d taxonomy mappings for %s' % (n, cs))
-
-    out = {0: [("?", 1)]}
-    df = items[0][1]
-    dic = dict(list(df.groupby('taxonomy')))
-    missing = set(taxo_by_idx.values()) - set(dic)
-    if missing:
-        raise InvalidFile(
-            'The taxonomy strings %s are in the exposure but not in '
-            'the taxonomy mapping' % missing)
-    risk_id = 'risk_id' if 'risk_id' in df.columns else 'conversion'
-    for taxi, taxo in taxo_by_idx.items():
-        out[taxi] = [(rec[risk_id], rec['weight'])
-                     for r, rec in dic[taxo].iterrows()]
-    return out
+            # tmap has fields conversion, taxonomy, weight
+            df = exp.read_df('tmap/' + key)
+            for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
+                if taxo in taxidx:
+                    acc['country'].append(key)
+                    acc['loss_type'].append('*')
+                    acc['taxi'].append(taxidx[taxo])
+                    acc['risk_id'].append(risk_id)
+                    acc['weight'].append(weight)
+    return pandas.DataFrame(acc)
 
 
 # tested in TaxonomyMappingTestCase
-def taxonomy_mapping(oqparam, taxo_by_idx, countries=()):
+def taxonomy_mapping(oqparam, taxidx):
     """
     :param oqparam: OqParam instance
-    :param taxo_by_idx: dictionary taxi (integer) -> taxo (string)
-    :param countries: array of country codes (possibly empty)
+    :param taxidx: dictionary taxo:str -> taxi:int
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
     if oqparam.aristotle:
-        cs = [code2country.get(code, code) for code in countries]
-        logging.warning('Reading the taxonomy mapping for %s', cs)
-        if oqparam.countries:
-            # filter down to countries with the same tmap
-            countries = set(countries) & set(oqparam.countries)
-        else:
-            countries = set(countries)
-        out = aristotle_tmap(oqparam, taxo_by_idx, countries)
-        return {lt: out for lt in oqparam.loss_types}
+        return aristotle_tmap(oqparam, taxidx)
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        out = {taxi: [(taxo, 1)] for taxi, taxo in taxo_by_idx.items()}
-        return {lt: out for lt in oqparam.loss_types}
+        nt = len(taxidx)  # number of taxonomies
+        df = pandas.DataFrame(dict(weight=numpy.ones(nt),
+                                   taxi=taxidx.values(),
+                                   risk_id=list(taxidx),
+                                   loss_type=['*']*nt,
+                                   country=['?']*nt))
+        return df
     fname = oqparam.inputs['taxonomy_mapping']
-    if isinstance(fname, str):  # same file for all loss_types
-        fname = {lt: fname for lt in oqparam.loss_types}
-    return {lt: _taxonomy_mapping(fname[lt], taxo_by_idx)
-            for lt in oqparam.loss_types}
+    return _taxonomy_mapping(fname, taxidx)
 
 
-def _taxonomy_mapping(filename, taxo_by_idx):
+def _taxonomy_mapping(filename, taxidx):
     try:
         tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
     except Exception as e:
         raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
+    if 'loss_type' not in tmap_df:
+        tmap_df['loss_type'] = '*'
+    if 'country' not in tmap_df:
+        tmap_df['country'] = '?'
+    if 'conversion' in tmap_df.columns:
+        # conversion was the old name in the header for engine <= 3.12
+        tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
+    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'}
 
-    assert set(tmap_df) in ({'taxonomy', 'conversion', 'weight'},
-                            {'taxonomy', 'risk_id', 'weight'})
-    # NB: conversion was the old name in the header for engine <= 3.12
-    risk_id = 'risk_id' if 'risk_id' in tmap_df.columns else 'conversion'
-    dic = {k: v for k, v in tmap_df.groupby('taxonomy')}
-    missing = set(taxo_by_idx.values()) - set(dic)
+    taxos = set()
+    for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
+        taxos.add(taxo)
+        if abs(df.weight.sum() - 1.) > pmf.PRECISION:
+            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
+                              (filename, taxo))
+    missing = set(taxidx) - taxos
     if missing:
         raise InvalidFile(
             'The taxonomy strings %s are in the exposure but not in '
             'the taxonomy mapping file %s' % (missing, filename))
-    out = {0: [("?", 1)]}
-    for taxi, taxo in taxo_by_idx.items():
-        recs = dic[taxo]
-        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
-            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
-                              (filename, taxo))
-        out[taxi] = [(rec[risk_id], rec['weight'])
-                     for r, rec in recs.iterrows()]
-    return out
+    tmap_df['taxi'] = [taxidx.get(taxo, -1) for taxo in tmap_df.taxonomy]
+    del tmap_df['taxonomy']
+    # NB: we are ignoring the taxonomies in the mapping but not in the exposure
+    # for instance in EventBasedRiskTestCase::test_case_5
+    return tmap_df[tmap_df.taxi != -1]
 
 
 def assert_probabilities(array, fname):

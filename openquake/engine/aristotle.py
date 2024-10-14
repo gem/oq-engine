@@ -159,17 +159,10 @@ def get_aristotle_allparams(rupture_dict, time_event,
     if not tmap_keys:
         raise LookupError(f'No taxonomy mapping was found for {countries}')
     logging.root.handlers = []  # avoid breaking the logs
-    allparams = []
-    for key in tmap_keys:
-        print('Using taxonomy mapping for %s' % key)
-        params['countries'] = key.replace('_', ' ')
-        countries_per_tmap = ', '.join(
-            [country for country in key.split('_') if country in countries])
-        params['description'] = (
-            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
-            f' M{rupdic["mag"]} {countries_per_tmap}')
-        allparams.append(params.copy())
-    return allparams
+    params['description'] = (
+        f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+        f' M{rupdic["mag"]}')
+    return [params]
 
 
 def main_web(allparams, jobctxs,

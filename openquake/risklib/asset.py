@@ -860,7 +860,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
 
 
 # used in aristotle calculations
-def aristotle_read_assets(h5, countries, start, stop):
+def aristotle_read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -877,8 +877,6 @@ def aristotle_read_assets(h5, countries, start, stop):
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
     df = pandas.DataFrame(dic)
-    if countries:
-        df = df[numpy.isin(df.ID_0, countries)]
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
                            df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
@@ -926,7 +924,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s, countries=()):
+    def read_around(exposure_hdf5, gh3s):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -939,7 +937,7 @@ class Exposure(object):
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                aristotle_read_assets(f, countries, start, stop)
+                aristotle_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
             # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']

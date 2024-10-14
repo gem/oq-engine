@@ -654,6 +654,33 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
+@export.add(('assetcol', 'csv'))
+def export_assetcol_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    assetcol = dstore['assetcol'].array
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    df = pandas.DataFrame(assetcol)
+    tagcol = dstore['assetcol'].tagcol
+    tagnames = tagcol.tagnames
+    sorted_cols = sorted([col for col in tagnames if col in df.columns])
+    unsorted_cols = [col for col in df.columns if col not in tagnames]
+    df = df[unsorted_cols + sorted_cols]
+    for asset_idx in range(len(assetcol)):
+        for tagname in tagnames:
+            tag_id = df[tagname][asset_idx]
+            tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
+            df.loc[asset_idx, tagname] = tag_str
+    df.drop(columns=['ordinal', 'site_id'], inplace=True)
+    df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
+    dest = dstore.export_path('%s.%s' % ekey)
+    md = dstore.metadata
+    writer.save(df, dest, comment=md)
+    return [dest]
+
+
 @export.add(('reinsurance-risk_by_event', 'csv'),
             ('reinsurance-aggcurves', 'csv'),
             ('reinsurance-avg_portfolio', 'csv'),

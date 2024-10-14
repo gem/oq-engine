@@ -45,6 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
 TWO24 = 2 ** 24
+TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 GZIP = 'gzip'
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
@@ -115,7 +116,10 @@ def store_ctxs(dstore, rupdata_list, grp_id):
         nr = len(rupdata)
         known = set(rupdata.dtype.names)
         for par in dstore['rup']:
-            if par == 'grp_id':
+            if par == 'rup_id':
+                rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
+                hdf5.extend(dstore['rup/rup_id'], rup_id)
+            elif par == 'grp_id':
                 hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
             elif par == 'probs_occur':
                 dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
@@ -441,8 +445,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param in ('src_id', 'rup_id'):
+                elif param == 'src_id':
                     dt = U32
+                elif param == 'rup_id':
+                    dt = I64
                 elif param == 'grp_id':
                     dt = U16
                 else:

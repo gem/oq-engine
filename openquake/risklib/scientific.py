@@ -70,6 +70,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+liquefaction landslide
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -1624,10 +1625,15 @@ class RiskComputer(dict):
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
+        tm = crm.tmap[crm.tmap.taxi == taxidx]
+        country_str = getattr(asset_df, 'country', '?')
         for lt in self.minimum_asset_loss:
-            for riskid, weight in crm.tmap[lt][taxidx]:
-                self[riskid, lt] = crm._riskmodels[riskid]
-                self.wdic[riskid, lt] = weight
+            for country, loss_type, riskid, weight in zip(
+                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
+                if loss_type in ('*', lt):
+                    if country == '?' or country_str in country:
+                        self[riskid, lt] = crm._riskmodels[riskid]
+                        self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
@@ -1751,30 +1757,6 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
         return aval[xltype]
     else:
         raise NotImplementedError(consequence)
-
-
-# ########################### u64_to_eal ################################# #
-
-def u64_to_eal(u64):
-    """
-    Convert an unit64 into a triple (eid, aid, lid)
-
-    >>> u64_to_eal(42949673216001)
-    (10000, 1000, 1)
-    """
-    eid, x = divmod(u64, TWO32)
-    aid, lid = divmod(x, 256)
-    return eid, aid, lid
-
-
-def eal_to_u64(eid, aid, lid):
-    """
-    Convert a triple (eid, aid, lid) into an uint64:
-
-    >>> eal_to_u64(10000, 1000, 1)
-    42949673216001
-    """
-    return U64(eid * TWO32) + U64(aid * 256) + U64(lid)
 
 
 if __name__ == '__main__':

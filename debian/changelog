@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Added loss types liquefaction and landslide
+  * Removed support for XML consequences, after 3 years of deprecation
+  * Fixed the stored calculation_mode in `oq sensitivity_analysis`
+  * Added command `oq info loss_types`
+
+  [Paolo Tormene]
+  * Added the possibility to export the asset collection via command line,
+    keeping it private from the webui
+
+  [Michele Simionato]
+  * Fixed median_spectrum with multiple sites
+  * Extended Aristotle calculation to manage multiple countries at once
+  * Extended taxonomy_mapping.csv with a loss_type field
   * Modernized the regionalization of Chiou Youngs (2014)
   * Modernized the regionalization of Campbell Bozorgnia (2014)
   * Internal: made it possible to override CoeffsTable
