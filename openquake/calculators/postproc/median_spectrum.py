@@ -25,6 +25,7 @@ from openquake.baselib import hdf5, sap, parallel, general, performance
 from openquake.hazardlib import contexts
 
 U32 = np.uint32
+I64 = np.int64
 F32 = np.float32
 
 
@@ -151,6 +152,7 @@ def main(dstore, csm):
     cmakers = contexts.read_cmakers(dstore)
     G = {cm.grp_id: len(cm.gsims) for cm in cmakers}
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
+    # check_rup_unique(ctx_by_grp)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
     blocksize = totsize / (oq.concurrent_tasks or 1)
     smap = parallel.Starmap(compute_median_spectrum, h5=dstore)
@@ -172,7 +174,7 @@ def main(dstore, csm):
     if N == 1 and P == 1:
         for cm in cmakers:
             G = len(cm.gsims)
-            dtlist = [('rup_id', U32), ('mag', F32), ('rrup', F32)]
+            dtlist = [('rup_id', I64), ('mag', F32), ('rrup', F32)]
             dt = (F32, (M,))
             for g in range(G):
                 dtlist.append((f'mea{g}', dt))
