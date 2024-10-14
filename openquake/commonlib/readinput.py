@@ -1259,8 +1259,8 @@ def _taxonomy_mapping(filename, taxidx):
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'}
-
+    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'
+                            }, set(tmap_df)
     taxos = set()
     for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
         taxos.add(taxo)
