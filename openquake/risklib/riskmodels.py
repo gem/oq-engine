@@ -36,9 +36,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
-RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)'
-                             % LTYPE_REGEX)
+LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents|liquefaction'
+RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
