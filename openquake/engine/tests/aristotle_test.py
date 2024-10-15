@@ -23,6 +23,6 @@ from openquake.calculators.checkers import check
 cd = pathlib.Path(__file__).parent
 
 
-@pytest.mark.parametrize('n', [1, 2])
+@pytest.mark.parametrize('n', [1, 2, 3])
 def test_aristotle(n):
     check(cd / f'aristotle{n}/job.ini', what='aggrisk')
