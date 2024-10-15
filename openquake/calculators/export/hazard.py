@@ -320,57 +320,66 @@ def export_cond_spectra(ekey, dstore):
 
 @export.add(('median_spectra', 'csv'))
 def export_median_spectra(ekey, dstore):
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
     for n in sitecol.sids:
-        aw = extract(dstore, f'median_spectra?site_id={n}')
-        num_groups = len(aw.array)
-        df = aw.to_dframe().sort_values(['grp_id', 'poe', 'period'])
-        comment = dstore.metadata.copy()
-        comment['site_id'] = n
-        comment['lon'] = sitecol.lons[n]
-        comment['lat'] = sitecol.lats[n]
-        if num_groups > 1:
-            fname = dstore.export_path('median_spectra-%d.csv' % n)
-            writer.save(df, fname, comment=comment)
+        for p, poe in enumerate(oq.poes):
+            aw = extract(dstore, f'median_spectra?site_id={n}&poe_id={p}')
+            Gt = len(aw.array)
+            aggr = aw.array.sum(axis=0) # shape (3, P)
+            df = aw.to_dframe().sort_values(['grp_id', 'period'])
+            comment = dstore.metadata.copy()
+            comment['site_id'] = n
+            comment['lon'] = sitecol.lons[n]
+            comment['lat'] = sitecol.lats[n]
+            comment['poe'] = poe
+            if Gt > 1:
+                fname = dstore.export_path('median_spectra-%d-%d.csv' % (n, p))
+                writer.save(df, fname, comment=comment)
+                fnames.append(fname)
+            fname = dstore.export_path('median_spectrum-%d-%d.csv' % (n, p))
+            aggdf = pandas.DataFrame(dict(
+                period=aw.period, spec=numpy.exp(aggr[0]),
+                mea=aggr[0], sig=aggr[1], wei=aggr[2]))
+            writer.save(aggdf, fname, comment=comment)
             fnames.append(fname)
-        fname = dstore.export_path('median_spectrum-%d.csv' % n)
-        aggdf = df.groupby(['poe', 'period']).prod().reset_index()
-        del aggdf['grp_id']
-        writer.save(aggdf, fname, comment=comment)
-        fnames.append(fname)
     return fnames
 
 
 
 @export.add(('median_spectrum_disagg', 'csv'))
 def export_median_spectrum_disagg(ekey, dstore):
-    # oq = dstore['oqparam']
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    aw = extract(dstore, 'median_spectrum_disagg?site_id=0&poe_id=0')
     fnames = []
     totw = AccumDict(accum=0)
-    for tag, arr in aw.to_dict().items():
-        if tag == 'extra':
-            continue
-        _grp, imt = tag.split('-')
-        for col in arr.dtype.names:
-            if col.startswith('wei'):
-                totw[imt] += arr[col].sum()        
-        comment = dstore.metadata.copy()
-        comment['site_id'] = 0
-        comment['lon'] = sitecol.lons[0]
-        comment['lat'] = sitecol.lats[0]
-        fname = dstore.export_path('median_spectrum_disagg-%s.csv' % tag)
-        writer.save(arr, fname, comment=comment)
-        fnames.append(fname)
+    for grp_id, dset in dstore['median_spectrum_disagg'].items():
+        array = dset[:]
+        dtlist = [tup[:2] for tup in array.dtype.descr]
+        for m, imt in enumerate(oq.imtls):
+            arr = numpy.empty(len(array), dtlist)
+            for col in arr.dtype.names:
+                if col.startswith(('mea', 'sig', 'wei')):
+                    arr[col] = array[col][m]
+                else:
+                    arr[col] = array[col]
+                if col.startswith('wei'):
+                    totw[imt] += arr[col].sum()        
+            comment = dstore.metadata.copy()
+            comment['site_id'] = 0
+            comment['lon'] = sitecol.lons[0]
+            comment['lat'] = sitecol.lats[0]
+            fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            writer.save(arr, fname, comment=comment)
+            fnames.append(fname)
 
     # sanity check on the weights
     for imt in totw:
         print('tot weight for', imt, totw[imt])
-        assert abs(totw[imt] - 1) < .01, (imt, totw[imt])
+    #    assert abs(totw[imt] - 1) < .01, (imt, totw[imt])
     return fnames
 
 

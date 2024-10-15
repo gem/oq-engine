@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added loss types liquefaction and landslide
   * Removed support for XML consequences, after 3 years of deprecation
   * Fixed the stored calculation_mode in `oq sensitivity_analysis`
   * Added command `oq info loss_types`

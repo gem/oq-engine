@@ -1852,7 +1852,7 @@ def view_log_median_spectrum(token, dstore):
         sid = int(token.split(':')[1])
     else:
         sid = 0
-    dset = dstore['log_median_spectra']
+    dset = dstore['median_spectra']
     periods = [imt.period for imt in dstore['oqparam'].imt_periods()]
     res = numpy.zeros(len(periods), dt('period value'))
     res['period'] = periods

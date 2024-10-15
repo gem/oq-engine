@@ -44,7 +44,6 @@ from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
 from openquake.calculators import getters
-from openquake.calculators.postproc.median_spectrum import get_mea_sig_wei
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -506,45 +505,19 @@ def extract_uhs(dstore, what):
 def extract_median_spectra(dstore, what):
     """
     Extracts median spectra per site and group.
-    Use it as /extract/median_spectra?site_id=0
-    """
-    qdict = parse(what)
-    [site_id] = qdict['site_id']
-    dset = dstore['log_median_spectra']
-    dic = json.loads(dset.attrs['json'])
-    spectra = numpy.exp(dset[:, site_id])  # (Gt, M, P)
-    return ArrayWrapper(spectra, dict(
-        shape_descr=['grp_id', 'period', 'poe'],
-        grp_id=numpy.arange(dic['grp_id']),
-        period=dic['period'],
-        poe=dic['poe']))
-
-
-@extract.add('median_spectrum_disagg')
-def extract_median_spectrum_disagg(dstore, what):
-    """
-    Median spectrum disaggregation by group and rupture.
-    Use it as /extract/median_spectrum?site_id=0_poe_id=0
+    Use it as /extract/median_spectra?site_id=0&poe_id=1
     """
     qdict = parse(what)
     [site_id] = qdict['site_id']
     [poe_id] = qdict['poe_id']
-    imts = list(dstore['oqparam'].imtls)
-    cmakers = read_cmakers(dstore)
-    ctx_by_grp = read_ctx_by_grp(dstore)
-    ref_uhs = dstore.sel("hmaps-stats", site_id=site_id, stat="mean")[0, 0]
-    for grp_id, ctx in ctx_by_grp.items():
-        cmaker = cmakers[grp_id]
-        mea, sig, wei = get_mea_sig_wei(cmaker, ctx, ref_uhs)  # (G, M, C)
-        for m, imt in enumerate(imts):
-            tag = f'grp{grp_id}-{imt}'
-            ws = wei[:, m, :, poe_id]
-            ok = (ws > 0).any(axis=0)
-            arr = general.compose_arrays(
-                rup_id=ctx.rup_id[ok], mag=ctx.mag[ok], rrup=ctx.rrup[ok],
-                mea=mea[:, m, ok].T, sig=sig[:, m, ok].T,
-                wei=ws[:, ok].T)
-            yield tag, arr
+    dset = dstore['median_spectra']
+    dic = json.loads(dset.attrs['json'])
+    spectra = dset[:, site_id, :, :, poe_id]  # (Gt, 3, M)
+    return ArrayWrapper(spectra, dict(
+        shape_descr=['grp_id', 'kind', 'period'],
+        grp_id=numpy.arange(dic['grp_id']),
+        kind=['mea', 'sig', 'wei'],
+        period=dic['period']))
 
 
 @extract.add('effect')

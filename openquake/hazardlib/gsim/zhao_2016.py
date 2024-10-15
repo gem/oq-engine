@@ -29,10 +29,10 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 import copy
 import numpy as np
 import pandas as pd
-import fiona
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point

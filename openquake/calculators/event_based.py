@@ -24,11 +24,11 @@ import logging
 import operator
 import numpy
 import pandas
-import fiona
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
