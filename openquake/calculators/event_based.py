@@ -28,6 +28,7 @@ from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
+from openquake.engine.aristotle import get_close_mosaic_models
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -38,6 +39,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -593,6 +595,18 @@ class EventBasedCalculator(base.HazardCalculator):
         gsim_lt = readinput.get_gsim_lt(oq)
         if oq.aristotle:
             # the gsim_lt is read from the exposure.hdf5 file
+            if not oq.mosaic_model:
+                mosaic_df = readinput.read_mosaic_df(buffer=1)
+                if oq.rupture_dict:
+                    lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+                elif oq.rupture_xml:
+                    hypo = readinput.get_rupture(oq).hypocenter
+                    lonlat = [[hypo.x, hypo.y]]
+                [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
+                if oq.mosaic_model == '???':
+                    lon, lat = lonlat[0]
+                    # NOTE: using the first mosaic model
+                    oq.mosaic_model = get_close_mosaic_models(lon, lat)[0]
             [expo_hdf5] = oq.inputs['exposure']
             if oq.mosaic_model == '???':
                 raise ValueError(
