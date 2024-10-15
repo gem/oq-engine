@@ -38,7 +38,6 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -218,7 +217,8 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], max_iml, mmon, cmon, umon)
+                df = computer.compute_all(
+                    [mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, max_iml, mmon, cmon, umon)
             if oq.mea_tau_phi:
@@ -262,7 +262,8 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             sitecol = dstore['sitecol']
             if 'complete' in dstore:
                 sitecol.complete = dstore['complete']
-        srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance(cmaker.trt))
+        srcfilter = SourceFilter(
+            sitecol.complete, oq.maximum_distance(cmaker.trt))
         dset = dstore['rupgeoms']
         for proxy in proxies:
             proxy.geom = dset[proxy['geom_id']]
@@ -710,7 +711,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        smap = starmap_from_rups(event_based, oq, self.full_lt, self.sitecol, dstore)
+        smap = starmap_from_rups(
+            event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc
