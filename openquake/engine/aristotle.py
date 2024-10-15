@@ -56,6 +56,10 @@ def get_close_mosaic_models(lon, lat, max_dist=300):
         raise ValueError(
             f'({lon}, {lat}) is farther than {max_dist}km'
             f' from any mosaic model!')
+    else:
+        logging.info(
+            '(%s, %s) is closer than %skm with respect to the following'
+            ' mosaic models: %s' % (lon, lat, max_dist, close_mosaic_models))
     return close_mosaic_models
 
 
@@ -154,6 +158,7 @@ def get_aristotle_allparams(rupture_dict, time_event,
         if mosaic_model == '???':
             # NOTE: using the first mosaic model
             mosaic_model = get_close_mosaic_models(lon, lat)[0]
+            logging.info('Using "%s" model' % mosaic_model)
     if trt is None:
         # NOTE: using the first tectonic region type
         trt = get_trts_around(mosaic_model, exposure_hdf5)[0]
