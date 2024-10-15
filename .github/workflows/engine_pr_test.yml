@@ -30,18 +30,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Calculators and documentation tests
-        run: |
-          set -e
-          source ~/openquake/bin/activate
-          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-          oq engine --upgrade-db
-          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage'
       - name: Calculators hazard tests
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install pytest
+          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
