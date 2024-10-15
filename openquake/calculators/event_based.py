@@ -607,7 +607,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     lon, lat = lonlat[0]
                     # NOTE: using the first mosaic model
                     oq.mosaic_model = get_close_mosaic_models(lon, lat)[0]
-                    logging.info('Using "%s" model' % oq.mosaic_model)
+                    logging.info('Using the "%s" model' % oq.mosaic_model)
             [expo_hdf5] = oq.inputs['exposure']
             if oq.mosaic_model == '???':
                 raise ValueError(
