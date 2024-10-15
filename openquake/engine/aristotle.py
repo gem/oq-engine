@@ -50,11 +50,11 @@ def get_close_mosaic_models(lon, lat, max_dist=300):
         lonlats = numpy.array([vertex[0], vertex[1]])
         [mosaic_model] = geo.utils.geolocate([lonlats], mosaic_df)
         mosaic_models.add(mosaic_model)
-    if len(mosaic_models) == 1:  # only '???':
+    if len(mosaic_models) == 1 and mosaic_models[0] == '???':
         raise ValueError(
             f'({lon}, {lat}) is farther than {max_dist}km'
             f' from any mosaic model!')
-    return [model for model in mosaic_models if model != '???']
+    return sorted([model for model in mosaic_models if model != '???'])
 
 
 def get_trts_around(mosaic_model, exposure_hdf5):
