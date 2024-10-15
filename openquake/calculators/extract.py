@@ -510,7 +510,7 @@ def extract_median_spectra(dstore, what):
     qdict = parse(what)
     [site_id] = qdict['site_id']
     [poe_id] = qdict['poe_id']
-    dset = dstore['log_median_spectra']
+    dset = dstore['median_spectra']
     dic = json.loads(dset.attrs['json'])
     spectra = dset[:, site_id, :, :, poe_id]  # (Gt, 3, M)
     return ArrayWrapper(spectra, dict(

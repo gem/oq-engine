@@ -167,7 +167,7 @@ def main(dstore, csm):
     # save the median_spectrum
     Gr = len(csm.src_groups)  # number of groups
     P = len(oq.poes)
-    log_median_spectra = np.zeros((Gr, N, 3, M, P), np.float32)
+    median_spectra = np.zeros((Gr, N, 3, M, P), np.float32)
     tot_w = np.zeros((N, M, P))
 
     # create median_spectrum_disagg datasets
@@ -191,9 +191,9 @@ def main(dstore, csm):
             for arr in out:
                 hdf5.extend(dstore[f'median_spectrum_disagg/grp{grp_id}'], arr)
         else:
-            log_median_spectra[grp_id, site_id] = out
+            median_spectra[grp_id, site_id] = out
             tot_w[site_id] += out[2]
-    dstore.create_dset("median_spectra", log_median_spectra)
+    dstore.create_dset("median_spectra", median_spectra)
     dstore.set_shape_descr("median_spectra", grp_id=Gr,
                            site_id=N, kind=['mea', 'sig', 'wei'],
                            period=periods, poe=oq.poes)
