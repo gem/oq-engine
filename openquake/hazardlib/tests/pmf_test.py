@@ -25,7 +25,7 @@ class PMFTestCase(unittest.TestCase):
 
     def test_wrong_sum(self):
         data = [(0.1, i) for i in range(10)]
-        self.assertRaises(ValueError, PMF, data, 1E-16)
+        self.assertRaises(ValueError, PMF, data, 1E-17)
 
     def test_empty_data(self):
         self.assertRaises(ValueError, PMF, [])
