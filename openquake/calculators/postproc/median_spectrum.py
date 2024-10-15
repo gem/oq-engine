@@ -193,8 +193,8 @@ def main(dstore, csm):
         else:
             log_median_spectra[grp_id, site_id] = out
             tot_w[site_id] += out[2]
-    dstore.create_dset("log_median_spectra", log_median_spectra)
-    dstore.set_shape_descr("log_median_spectra", grp_id=Gr,
+    dstore.create_dset("median_spectra", log_median_spectra)
+    dstore.set_shape_descr("median_spectra", grp_id=Gr,
                            site_id=N, kind=['mea', 'sig', 'wei'],
                            period=periods, poe=oq.poes)
     # sanity check on the weights
