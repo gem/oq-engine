@@ -44,17 +44,19 @@ def get_close_mosaic_models(lon, lat, max_dist=300):
     mosaic_df = readinput.read_mosaic_df(buffer=1)
     hypocenter = geo.Point(lon, lat)
     minx, miny, maxx, maxy = geo.utils.get_bounding_box([hypocenter], max_dist)
-    mosaic_models = set()
+    close_mosaic_models = set()
     bbox_vertices = [(minx, maxy), (maxx, maxy), (maxx, miny), (minx, miny)]
     for vertex in bbox_vertices:
         lonlats = numpy.array([vertex[0], vertex[1]])
         [mosaic_model] = geo.utils.geolocate([lonlats], mosaic_df)
-        mosaic_models.add(mosaic_model)
-    if len(mosaic_models) == 1 and mosaic_models[0] == '???':
+        close_mosaic_models.add(mosaic_model)
+    close_mosaic_models = sorted([model for model in close_mosaic_models
+                                  if model != '???'])
+    if len(close_mosaic_models) == 1 and close_mosaic_models[0] == '???':
         raise ValueError(
             f'({lon}, {lat}) is farther than {max_dist}km'
             f' from any mosaic model!')
-    return sorted([model for model in mosaic_models if model != '???'])
+    return close_mosaic_models
 
 
 def get_trts_around(mosaic_model, exposure_hdf5):
