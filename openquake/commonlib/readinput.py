@@ -464,7 +464,10 @@ def filter_site_array_around(array, rup, dist):
 
     # first raw filtering
     tree = cKDTree(xyz_all)
+    # NB: on macOS query_ball returns the indices in a different order
+    # than on linux and windows, hence the need to sort
     idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    idxs.sort()
 
     # then fine filtering
     array = array[idxs]
