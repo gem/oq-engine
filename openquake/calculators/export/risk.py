@@ -753,3 +753,37 @@ def export_vulnerability_xml(ekey, dstore):
             nrml.write([nodeobj], out)
         fnames.append(dest)
     return fnames
+
+
+@export.add(('job', 'zip'))
+def export_job_zip(ekey, dstore):
+    """
+    Exports:
+    - job.ini
+    - rupture.csv
+    - gsim_lt.xml
+    - site_model.csv
+    - exposure.xml and exposure.csv
+    - vulnerability functions.xml
+    - taxonomy_mapping.csv
+    """
+    oq = dstore['oqparam']
+    job_ini = dstore.export_path('job.ini')
+    with open(job_ini, 'w') as out:
+        out.write(oq.to_ini())
+    fnames = [job_ini]
+    # fnames.extend(export(('ruptures', 'csv'), dstore)) TODO
+    gsim_lt = dstore['full_lt'].gsim_lt
+    dest = dstore.export_path('gsim_logic_tree.xml')
+    with open(dest, 'wb') as out:
+        nrml.write([gsim_lt.to_node()], out)
+    fnames.append(dest)
+    fnames.extend(export(('vulnerability', 'xml'), dstore))
+
+    dest = dstore.export_path('taxonomy_mapping.csv')
+    taxmap = dstore.read_df('taxmap')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    del taxmap['taxi']
+    writer.save(taxmap, dest)
+    fnames.append(dest)
+    return fnames
