@@ -152,7 +152,7 @@ def get_aristotle_params(arist):
     if arist.station_data_file is None:
         # NOTE: giving precedence to the station_data_file uploaded via form
         try:
-            station_data_file = download_station_data_file(
+            arist.station_data_file = download_station_data_file(
                 arist.rupture_dict['usgs_id'])
         except HTTPError as exc:
             logging.info(f'Station data is not available: {exc}')
@@ -162,26 +162,26 @@ def get_aristotle_params(arist):
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
-    if station_data_file:
-        inputs['station_data'] = station_data_file
+    if arist.station_data_file:
+        inputs['station_data'] = arist.station_data_file
     if not arist.mosaic_model:
         lon, lat = rupdic['lon'], rupdic['lat']
         mosaic_models = get_close_mosaic_models(lon, lat, 100)
         if len(mosaic_models) > 1:
             # NOTE: using the first mosaic model
-            mosaic_model = mosaic_models[0]
-            logging.info('Using the "%s" model' % mosaic_model)
+            arist.mosaic_model = mosaic_models[0]
+            logging.info('Using the "%s" model' % arist.mosaic_model)
 
     if arist.trt is None:
         # NOTE: using the first tectonic region type
-        trt = get_trts_around(mosaic_model, exposure_hdf5)[0]
+        arist.trt = get_trts_around(arist.mosaic_model, exposure_hdf5)[0]
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
         time_event=arist.time_event,
         maximum_distance=str(arist.maximum_distance),
-        mosaic_model=mosaic_model,
-        tectonic_region_type=trt,
+        mosaic_model=arist.mosaic_model,
+        tectonic_region_type=arist.trt,
         truncation_level=str(arist.truncation_level),
         number_of_ground_motion_fields=str(arist.number_of_ground_motion_fields),
         asset_hazard_distance=str(arist.asset_hazard_distance),
