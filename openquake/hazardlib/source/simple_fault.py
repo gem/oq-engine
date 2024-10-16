@@ -119,6 +119,11 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.hypo_list = ()
             self.slip_list = ()
 
+        if (len(self.hypo_list) and not len(self.slip_list) or
+           not len(self.hypo_list) and len(self.slip_list)):
+            raise ValueError('hypo_list and slip_list have to be both given '
+                             'or neither given')
+
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
