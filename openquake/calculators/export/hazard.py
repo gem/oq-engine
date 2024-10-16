@@ -456,6 +456,16 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, f]
 
 
+@export.add(('site_model', 'csv'))
+def export_site_model_csv(ekey, dstore):
+    sitecol = dstore['sitecol']
+    fname = dstore.build_fname(ekey[0], '', ekey[1])
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+        sitecol.array, fname, comment=dstore.metadata)
+    return [fname]
+
+
+
 @export.add(('gmf_data', 'hdf5'))
 def export_gmf_data_hdf5(ekey, dstore):
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
