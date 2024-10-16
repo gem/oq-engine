@@ -19,6 +19,7 @@ seismic sources.
 """
 import abc
 import zlib
+from dataclasses import dataclass
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
@@ -31,6 +32,18 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
+
+
+@dataclass
+class SourceParam:
+    source_id: str
+    name: str
+    tectonic_region_type: str
+    mfd: object
+    rupture_mesh_spacing: float
+    magnitude_scaling_relationship: object
+    rupture_aspect_ratio: float
+    temporal_occurrence_model: object
 
 
 def get_code2cls():
