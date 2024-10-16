@@ -514,6 +514,8 @@ def extract_dependencies(lines):
             pkg = 'django'
         elif pkg == 'pyshp':
             pkg = 'shapefile'
+        elif pkg == 'django_appconf':
+            pkg = 'appconf'
         yield pkg, version
 
 
