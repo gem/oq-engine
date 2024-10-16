@@ -57,7 +57,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __init__(self, source_id, name, tectonic_region_type, data,
                  weights=None):
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id = source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
         self.data = data
         if weights is not None:
             assert len(weights) == len(data), (len(weights), len(data))
