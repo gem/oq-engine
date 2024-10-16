@@ -234,6 +234,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     else:
         lines = [sepline]
     for tup in body:
+        lines.append(templ % tup)
         if ext == 'rst':
             lines.append(sepline)
     return '\n'.join(lines)

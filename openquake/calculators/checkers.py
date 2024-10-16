@@ -71,8 +71,9 @@ def assert_close(tbl, fname):
         with open(str(fname) + '~', 'w') as f:
             f.write(txt)
         with open(fname) as f:
-            exp = f.read()
-        aac(_data2rows(exp), _data2rows(txt), atol=1E-5, rtol=1E-3)
+            expected = f.read()
+        for exp, got in zip(_data2rows(expected), _data2rows(txt)):
+            aac(exp, got, atol=1E-5, rtol=1E-3)
 
 
 def check(ini, hc_id=None, exports='', what='', prefix=''):
