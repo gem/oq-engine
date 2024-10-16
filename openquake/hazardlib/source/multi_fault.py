@@ -93,7 +93,9 @@ class MultiFaultSource(BaseSeismicSource):
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id =source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
 
     @property
     def occur_rates(self):
