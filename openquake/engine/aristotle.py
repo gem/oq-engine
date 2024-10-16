@@ -167,9 +167,9 @@ def get_aristotle_params(arist):
     if not arist.mosaic_model:
         lon, lat = rupdic['lon'], rupdic['lat']
         mosaic_models = get_close_mosaic_models(lon, lat, 100)
+        # NOTE: using the first mosaic model
+        arist.mosaic_model = mosaic_models[0]
         if len(mosaic_models) > 1:
-            # NOTE: using the first mosaic model
-            arist.mosaic_model = mosaic_models[0]
             logging.info('Using the "%s" model' % arist.mosaic_model)
 
     if arist.trt is None:
