@@ -54,11 +54,12 @@ class AristotleParam:
     ignore_shakemap: bool = False
 
 
-def get_close_mosaic_models(lon, lat, max_dist=300):
+def get_close_mosaic_models(lon, lat, max_dist):
     """
     :param lon: longitude
     :param lat: latitude
     :param max_dist: max dist with respect to a model to consider it relevant
+    :returns: list of mosaic models with the max_dist distance
     """
     mosaic_df = readinput.read_mosaic_df(buffer=1)
     hypocenter = geo.Point(lon, lat)
@@ -71,11 +72,11 @@ def get_close_mosaic_models(lon, lat, max_dist=300):
         close_mosaic_models.add(mosaic_model)
     close_mosaic_models = sorted([model for model in close_mosaic_models
                                   if model != '???'])
-    if len(close_mosaic_models) == 1 and close_mosaic_models[0] == '???':
+    if not close_mosaic_models:
         raise ValueError(
             f'({lon}, {lat}) is farther than {max_dist}km'
             f' from any mosaic model!')
-    else:
+    elif len(close_mosaic_models) > 1:
         logging.info(
             '(%s, %s) is closer than %skm with respect to the following'
             ' mosaic models: %s' % (lon, lat, max_dist, close_mosaic_models))
@@ -165,13 +166,12 @@ def get_aristotle_params(arist):
         inputs['station_data'] = station_data_file
     if not arist.mosaic_model:
         lon, lat = rupdic['lon'], rupdic['lat']
-        lonlats = numpy.array([[lon, lat]])
-        mosaic_df = readinput.read_mosaic_df(buffer=1)
-        [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
-        if mosaic_model == '???':
+        mosaic_models = get_close_mosaic_models(lon, lat, 100)
+        if len(mosaic_models) > 1:
             # NOTE: using the first mosaic model
-            mosaic_model = get_close_mosaic_models(lon, lat)[0]
+            mosaic_model = mosaic_models[0]
             logging.info('Using the "%s" model' % mosaic_model)
+
     if arist.trt is None:
         # NOTE: using the first tectonic region type
         trt = get_trts_around(mosaic_model, exposure_hdf5)[0]

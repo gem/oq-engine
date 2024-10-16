@@ -734,7 +734,7 @@ def aristotle_get_rupture_data(request):
             ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
         station_data_file = None
     try:
-        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'])
+        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 100)
         for mosaic_model in mosaic_models:
             trts[mosaic_model] = get_trts_around(
                 mosaic_model,

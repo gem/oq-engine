@@ -39,7 +39,6 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -596,17 +595,15 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.aristotle:
             # the gsim_lt is read from the exposure.hdf5 file
             if not oq.mosaic_model:
-                mosaic_df = readinput.read_mosaic_df(buffer=1)
                 if oq.rupture_dict:
-                    lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
+                    lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
                 elif oq.rupture_xml:
                     hypo = readinput.get_rupture(oq).hypocenter
-                    lonlat = [[hypo.x, hypo.y]]
-                [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
-                if oq.mosaic_model == '???':
-                    lon, lat = lonlat[0]
-                    # NOTE: using the first mosaic model
-                    oq.mosaic_model = get_close_mosaic_models(lon, lat)[0]
+                    lon, lat = [hypo.x, hypo.y]
+                mosaic_models = get_close_mosaic_models(lon, lat, 100)
+                # NOTE: using the first mosaic model
+                oq.mosaic_model = mosaic_models[0]
+                if len(mosaic_models) > 1:
                     logging.info('Using the "%s" model' % oq.mosaic_model)
             [expo_hdf5] = oq.inputs['exposure']
             if oq.mosaic_model == '???':
