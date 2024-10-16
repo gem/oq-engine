@@ -165,6 +165,10 @@ class HtmlTable(object):
         yield '</table>\n'
 
 
+def fix_newlines(row):
+    return tuple(col.replace('\n', '\\n') for col in row)
+
+
 def text_table(data, header=None, fmt=None, ext='rst'):
     """
     Build a .rst (or .org) table from a matrix or a DataFrame
@@ -204,6 +208,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     fmt = functools.partial(scientificformat, fmt=fmt) if fmt else form
     for row in data:
         tup = tuple(fmt(c) for c in row)
+        if ext in 'rst org':
+            tup = fix_newlines(tup)
         for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
         if len(tup) != len(col_sizes):
@@ -227,8 +233,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
         lines = [','.join(header)]
     else:
         lines = [sepline]
-    for row in body:
-        lines.append(templ % row)
+    for tup in body:
+        lines.append(templ % tup)
         if ext == 'rst':
             lines.append(sepline)
     return '\n'.join(lines)

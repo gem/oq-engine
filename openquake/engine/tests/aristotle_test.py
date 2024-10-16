@@ -25,7 +25,7 @@ from openquake.calculators.checkers import check
 cd = pathlib.Path(__file__).parent
 
 
-@pytest.mark.parametrize('n', [1, 2])
+@pytest.mark.parametrize('n', [1, 2, 3])
 def test_aristotle(n):
     if not os.path.exists(cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest('Please download exposure.hdf5')
