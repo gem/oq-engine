@@ -22,6 +22,7 @@ import sys
 import os
 import getpass
 import logging
+from dataclasses import dataclass
 import numpy
 from json.decoder import JSONDecodeError
 from urllib.error import HTTPError
@@ -33,6 +34,24 @@ from openquake.commonlib import readinput
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
+
+
+@dataclass
+class AristotleParam:
+    rupture_dict: dict
+    time_event: str
+    maximum_distance: float
+    mosaic_model: str
+    trt: str
+    truncation_level: float
+    number_of_ground_motion_fields: int
+    asset_hazard_distance: float
+    ses_seed: int
+    local_timestamp: str = None
+    exposure_hdf5: str = None
+    station_data_file: str = None
+    maximum_distance_stations: float = None
+    ignore_shakemap: bool = False
 
 
 def get_close_mosaic_models(lon, lat, max_dist=300):
@@ -118,28 +137,22 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     return rupdic
 
 
-def get_aristotle_allparams(rupture_dict, time_event,
-                            maximum_distance, mosaic_model, trt,
-                            truncation_level, number_of_ground_motion_fields,
-                            asset_hazard_distance, ses_seed,
-                            local_timestamp=None,
-                            exposure_hdf5=None, station_data_file=None,
-                            maximum_distance_stations=None,
-                            ignore_shakemap=False):
+def get_aristotle_params(arist):
     """
+    :param arist: an instance of AristotleParam
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
-    if exposure_hdf5 is None:
+    if arist.exposure_hdf5 is None:
         exposure_hdf5 = os.path.join(
             config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [exposure_hdf5],
               'job_ini': '<in-memory>'}
-    rupdic = get_rupture_dict(rupture_dict, ignore_shakemap)
-    if station_data_file is None:
+    rupdic = get_rupture_dict(arist.rupture_dict, arist.ignore_shakemap)
+    if arist.station_data_file is None:
         # NOTE: giving precedence to the station_data_file uploaded via form
         try:
             station_data_file = download_station_data_file(
-                rupture_dict['usgs_id'])
+                arist.rupture_dict['usgs_id'])
         except HTTPError as exc:
             logging.info(f'Station data is not available: {exc}')
         except (KeyError, LookupError, UnicodeDecodeError,
@@ -150,7 +163,7 @@ def get_aristotle_allparams(rupture_dict, time_event,
         inputs['rupture_model'] = rupture_file
     if station_data_file:
         inputs['station_data'] = station_data_file
-    if not mosaic_model:
+    if not arist.mosaic_model:
         lon, lat = rupdic['lon'], rupdic['lat']
         lonlats = numpy.array([[lon, lat]])
         mosaic_df = readinput.read_mosaic_df(buffer=1)
@@ -159,25 +172,25 @@ def get_aristotle_allparams(rupture_dict, time_event,
             # NOTE: using the first mosaic model
             mosaic_model = get_close_mosaic_models(lon, lat)[0]
             logging.info('Using the "%s" model' % mosaic_model)
-    if trt is None:
+    if arist.trt is None:
         # NOTE: using the first tectonic region type
         trt = get_trts_around(mosaic_model, exposure_hdf5)[0]
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
-        time_event=time_event,
-        maximum_distance=str(maximum_distance),
+        time_event=arist.time_event,
+        maximum_distance=str(arist.maximum_distance),
         mosaic_model=mosaic_model,
         tectonic_region_type=trt,
-        truncation_level=str(truncation_level),
-        number_of_ground_motion_fields=str(number_of_ground_motion_fields),
-        asset_hazard_distance=str(asset_hazard_distance),
-        ses_seed=str(ses_seed),
+        truncation_level=str(arist.truncation_level),
+        number_of_ground_motion_fields=str(arist.number_of_ground_motion_fields),
+        asset_hazard_distance=str(arist.asset_hazard_distance),
+        ses_seed=str(arist.ses_seed),
         inputs=inputs)
-    if local_timestamp is not None:
-        params['local_timestamp'] = local_timestamp
-    if maximum_distance_stations is not None:
-        params['maximum_distance_stations'] = str(maximum_distance_stations)
+    if arist.local_timestamp is not None:
+        params['local_timestamp'] = arist.local_timestamp
+    if arist.maximum_distance_stations is not None:
+        params['maximum_distance_stations'] = str(arist.maximum_distance_stations)
     oq = readinput.get_oqparam(params)
     # NB: fake h5 to cache `get_site_model` and avoid multiple associations
     _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
@@ -191,7 +204,7 @@ def get_aristotle_allparams(rupture_dict, time_event,
     params['description'] = (
         f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
         f' M{rupdic["mag"]}')
-    return [params]
+    return params
 
 
 def main_web(allparams, jobctxs,
@@ -225,25 +238,25 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
     if rupture_dict is None:
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
-        allparams = get_aristotle_allparams(
-            rupture_dict, time_event, maximum_distance, mosaic_model, trt,
-            truncation_level,
+        arist = AristotleParam(
+            rupture_dict, time_event, maximum_distance, mosaic_model,
+            trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, local_timestamp, exposure_hdf5, station_data_file,
             maximum_distance_stations, ignore_shakemap)
+        oqparams = get_aristotle_params(arist)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    jobctxs = engine.create_jobs(allparams, 'warn', None, user, None)
-    for params, job in zip(allparams, jobctxs):
-        try:
-            engine.run_jobs([job])
-        except Exception as exc:
-            callback(job.calc_id, params, exc=exc)
-        else:
-            callback(job.calc_id, params, exc=None)
+    [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
+    try:
+        engine.run_jobs([job])
+    except Exception as exc:
+        callback(job.calc_id, oqparams, exc=exc)
+    else:
+        callback(job.calc_id, oqparams, exc=None)
 
 
 main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
