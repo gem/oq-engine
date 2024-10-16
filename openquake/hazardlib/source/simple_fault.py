@@ -93,7 +93,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 fault_trace, dip, rake, hypo_list=(), slip_list=()):
+                 fault_trace, dip, rake, hypo_slip_list=()):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -112,13 +112,12 @@ class SimpleFaultSource(ParametricSeismicSource):
         min_mag, _max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
-        self.slip_list = slip_list
-        self.hypo_list = hypo_list
-
-        if (len(self.hypo_list) and not len(self.slip_list) or
-           not len(self.hypo_list) and len(self.slip_list)):
-            raise ValueError('hypo_list and slip_list have to be both given '
-                             'or neither given')
+        if hypo_slip_list:
+            self.hypo_list = hypo_slip_list[0]
+            self.slip_list = hypo_slip_list[1]
+        else:
+            self.hypo_list = ()
+            self.slip_list = ()
 
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
