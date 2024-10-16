@@ -21,8 +21,9 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers, general
+from openquake.baselib import hdf5, writers, general, node
 from openquake.baselib.python3compat import decode
+from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -654,6 +655,7 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
+# TODO: rename to exposure and export both exposure.csv and exposure.xml
 @export.add(('assetcol', 'csv'))
 def export_assetcol_csv(ekey, dstore):
     """
@@ -720,3 +722,34 @@ def export_node_el(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, dest, comment=dstore.metadata)
     return writer.getsaved()
+
+
+def convert_df_to_vulnerability(loss_type, df):
+    N = node.Node
+    root = N('vulnerabilityModel', {'id': "vulnerability_model",
+                                    'assetCategory': "buildings",
+                                    "lossCategory": loss_type})
+    descr = N('description', {}, f"{loss_type} vulnerability model")
+    root.append(descr)
+    for riskfunc in df.riskfunc:
+        rfunc = json.loads(riskfunc)['openquake.risklib.scientific.VulnerabilityFunction']
+        vfunc = N('vulnerabilityFunction',
+                  {'id': rfunc['id'], 'dist': rfunc['distribution_name']})
+        imls = N('imls', {'imt': rfunc['imt']}, rfunc['imls'])
+        vfunc.append(imls)
+        vfunc.append(N('meanLRs', {}, rfunc['mean_loss_ratios']))
+        vfunc.append(N('covLRs', {}, rfunc['covs']))
+        root.append(vfunc)
+    return root
+
+    
+@export.add(('vulnerability', 'xml'))
+def export_vulnerability_xml(ekey, dstore):
+    fnames = []
+    for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
+        nodeobj = convert_df_to_vulnerability(loss_type, df)
+        dest = dstore.export_path('%s_%s.%s' % ((loss_type,) + ekey))
+        with open(dest, 'wb') as out:
+            nrml.write([nodeobj], out)
+        fnames.append(dest)
+    return fnames
