@@ -144,9 +144,9 @@ def get_aristotle_params(arist):
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
     if arist.exposure_hdf5 is None:
-        exposure_hdf5 = os.path.join(
+        arist.exposure_hdf5 = os.path.join(
             config.directory.mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [exposure_hdf5],
+    inputs = {'exposure': [arist.exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(arist.rupture_dict, arist.ignore_shakemap)
     if arist.station_data_file is None:
@@ -174,7 +174,7 @@ def get_aristotle_params(arist):
 
     if arist.trt is None:
         # NOTE: using the first tectonic region type
-        arist.trt = get_trts_around(arist.mosaic_model, exposure_hdf5)[0]
+        arist.trt = get_trts_around(arist.mosaic_model, arist.exposure_hdf5)[0]
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
@@ -197,7 +197,7 @@ def get_aristotle_params(arist):
         oq, h5={'performance_data': hdf5.FakeDataset()})
     id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = get_tmap_keys(exposure_hdf5, countries)
+    tmap_keys = get_tmap_keys(arist.exposure_hdf5, countries)
     if not tmap_keys:
         raise LookupError(f'No taxonomy mapping was found for {countries}')
     logging.root.handlers = []  # avoid breaking the logs
