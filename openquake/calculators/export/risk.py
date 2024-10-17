@@ -772,7 +772,10 @@ def export_job_zip(ekey, dstore):
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini())
     fnames = [job_ini]
-    # fnames.extend(export(('ruptures', 'csv'), dstore)) TODO
+    csv = extract(dstore, 'ruptures?slice=0&slice=1').array
+    with open('rupture.csv', 'w') as out:
+        out.write(csv)
+    fnames.append('rupture.csv')
     gsim_lt = dstore['full_lt'].gsim_lt
     dest = dstore.export_path('gsim_logic_tree.xml')
     with open(dest, 'wb') as out:
