@@ -33,7 +33,7 @@ import itertools
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import DictArray, AccumDict, cached_property
-from openquake.hazardlib.imt import from_string, sort_by_imt
+from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
@@ -1671,6 +1671,11 @@ class OqParam(valid.ParamSet):
                 and self.ground_motion_fields):
             raise ValueError('Please define intensity_measure_types in %s' %
                              self.inputs['job_ini'])
+
+        # check secondary imts
+        for imt in self.get_primary_imtls():
+            if imt in sec_imts:
+                self.raise_invalid('you forgot to set secondary_perils =')
 
     def get_primary_imtls(self):
         """
