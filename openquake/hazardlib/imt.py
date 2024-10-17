@@ -23,7 +23,6 @@ types.
 import re
 import collections
 import numpy
-from openquake.baselib.general import CallableDict
 
 FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
