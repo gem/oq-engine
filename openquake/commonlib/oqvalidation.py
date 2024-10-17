@@ -2272,7 +2272,7 @@ class OqParam(valid.ParamSet):
 
 
 def _rel_fnames(obj, base):
-    # strip the first P characters and convert to relative paths
+    # convert to relative paths
     if isinstance(obj, str):
         *b, n = pathlib.Path(obj).parts
         offset = len(base) - len(b)
