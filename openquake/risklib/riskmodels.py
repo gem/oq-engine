@@ -18,7 +18,6 @@
 import re
 import json
 import copy
-import logging
 import functools
 import collections
 import numpy
@@ -27,7 +26,7 @@ import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -37,9 +36,10 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
-RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)'
-                             % LTYPE_REGEX)
+
+LTYPE_REGEX = '|'.join(lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt)
+RISK_TYPE_REGEX = re.compile(r'(%s)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
@@ -67,9 +67,9 @@ def get_risk_files(inputs):
             rfs['fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
-        elif key.endswith(('_fragility', '_vulnerability', '_consequence')):
+        elif key.endswith(('_fragility', '_vulnerability')):
             match = RISK_TYPE_REGEX.match(key)
-            if match and 'retrofitted' not in key and 'consequence' not in key:
+            if match and 'retrofitted' not in key:
                 rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
             elif match is None:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
@@ -98,7 +98,7 @@ def build_vf_node(vf):
 
 def group_by_lt(funclist):
     """
-    Converts a list of objects with attribute .loss_type in to a dictionary
+    Converts a list of objects with attribute .loss_type into a dictionary
     loss_type -> risk_function
     """
     d = AccumDict(accum=[])
@@ -108,6 +108,7 @@ def group_by_lt(funclist):
         if len(lst) == 1:
             d[lt] = lst[0]
         elif lst[1].kind == 'fragility':
+            # EventBasedDamageTestCase.test_case_11
             cf, ffl = lst
             ffl.cf = cf
             d[lt] = ffl
@@ -134,7 +135,7 @@ class RiskFuncList(list):
         return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
 
 
-def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
+def get_risk_functions(oqparam, kind='vulnerability fragility '
                        'vulnerability_retrofitted'):
     """
     :param oqparam:
@@ -153,10 +154,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
                 rmodel = nrml.to_python(oqparam.inputs[key])
-                if kind == 'consequence':
-                    logging.warning('Consequence models in XML format are '
-                                    'deprecated, please replace %s with a CSV',
-                                    oqparam.inputs[key])
                 if len(rmodel) == 0:
                     raise InvalidFile('%s is empty!' % oqparam.inputs[key])
                 rmodels[loss_type, kind] = rmodel
@@ -192,11 +189,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 ffl.loss_type = loss_type
                 ffl.kind = kind
                 rlist.append(ffl)
-        elif kind == 'consequence':
-            for riskid, cf in sorted(rm.items()):
-                rf = hdf5.ArrayWrapper(
-                    cf, dict(id=riskid, loss_type=loss_type, kind=kind))
-                rlist.append(rf)
         else:  # vulnerability, vulnerability_retrofitted
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
@@ -644,21 +636,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         oq = self.oqparam
         if self.risklist:
             oq.set_risk_imts(self.risklist)
-        # LEGACY: extract the consequences from the risk models, if any
-        if 'losses_by_taxonomy' not in self.consdict:
-            self.consdict['losses_by_taxonomy'] = {}
-        riskdict = self.risklist.groupby_id()
-        for riskid, rf_by_lt in riskdict.items():
-            cons_by_lt = {lt: rf.cf for lt, rf in rf_by_lt.items()
-                          if hasattr(rf, 'cf')}
-            if cons_by_lt:
-                # this happens for consequence models in XML format,
-                # see EventBasedDamageTestCase.test_case_11
-                dtlist = [(lt, F32) for lt in cons_by_lt]
-                coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
-                for lt, cf in cons_by_lt.items():
-                    coeffs[lt] = cf.array
-                self.consdict['losses_by_taxonomy'][riskid] = coeffs
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
         if oq.calculation_mode.endswith('_bcr'):

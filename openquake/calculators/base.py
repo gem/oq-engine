@@ -951,9 +951,11 @@ class HazardCalculator(BaseCalculator):
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
             missing = risk_ids - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
+                # in scenario_damage/case_14 the fragility model contains
+                # 'CR+PC/LDUAL/HBET:8.19/m ' with a trailing space while
+                # tmap.risk_id is extracted from the exposure and has no space
                 raise RuntimeError(
-                    'The risk IDs %s are not in the exposure nor in the '
-                    'taxonomy mapping' % missing)
+                    'The tmap.risk_id %s are not in the CompositeRiskModel' % missing)
             self.crmodel.check_risk_ids(oq.inputs)
 
             if len(self.crmodel.taxonomies) > len(risk_ids):

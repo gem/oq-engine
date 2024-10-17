@@ -23,6 +23,7 @@ import sys
 import json
 import inspect
 import logging
+import pathlib
 import functools
 import collections
 import numpy
@@ -969,6 +970,10 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
+        'liquefaction_fragility',
+        'liquefaction_vulnerability',
+        'landslide_fragility',
+        'landslide_vulnerability',
         'post_loss_amplification',
     }
     # old name => new name
@@ -1223,6 +1228,10 @@ class OqParam(valid.ParamSet):
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
+        hc0 = ('hazard_calculation_id' in names_vals and
+               names_vals['hazard_calculation_id'] == 0)
+        if hc0:
+            self.hazard_calculation_id = 0  # fake calculation_id
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
         if 'calculation_mode' not in names_vals:
@@ -1347,7 +1356,7 @@ class OqParam(valid.ParamSet):
                 and 'multi_peril' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
-                and not self.hazard_calculation_id):
+                and self.hazard_calculation_id is None):
             if not hasattr(self, 'truncation_level'):
                 self.raise_invalid("Missing truncation_level")
 
@@ -1377,7 +1386,7 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid(
                     'conditional_loss_poes are not defined '
                     'for classical_damage calculations')
-            if not self.investigation_time and not self.hazard_calculation_id:
+            if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
 
     def check_ebrisk(self):
@@ -2180,7 +2189,7 @@ class OqParam(valid.ParamSet):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
-                not self.hazard_calculation_id):
+                self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
@@ -2217,7 +2226,7 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    # tested in geese; expected to work for the hazard mosaic
+    # tested in run-demos.sh
     def to_ini(self):
         """
         Converts the parameters into a string in .ini format
@@ -2225,8 +2234,15 @@ class OqParam(valid.ParamSet):
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         del dic['base_path']
         del dic['req_site_params']
-        del dic['export_dir']
-        return '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+        dic.pop('export_dir', None)
+        dic.pop('all_cost_types', None)
+        if 'secondary_perils' in dic:
+            dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'aggregate_by' in dic:
+            dic['aggregate_by'] = '; '.join(
+                ','.join(keys) for keys in dic['aggregate_by'])
+        ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+        return ini
 
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
@@ -2255,14 +2271,20 @@ class OqParam(valid.ParamSet):
             self.maximum_distance = Idist(**self.maximum_distance)
 
 
-def _rel_fnames(obj, P):
-    # strip the first P characters and convert to relative paths
+def _rel_fnames(obj, base):
+    # convert to relative paths
     if isinstance(obj, str):
-        return obj[P:]
+        *b, n = pathlib.Path(obj).parts
+        offset = len(base) - len(b)
+        if offset > 0:
+            relpath = ['..'] * offset + [n]
+        else:
+            relpath = b[len(base):] + [n]
+        return '/'.join(relpath)
     elif isinstance(obj, list):
-        return '\n  '.join(s[P:] for s in obj)
+        return '\n  '.join(_rel_fnames(s, base) for s in obj)
     else:  # assume dict
-        dic = {k: v[P:] for k, v in obj.items()}
+        dic = {k: _rel_fnames(v, base) for k, v in obj.items()}
         return str(dic)
 
 
@@ -2271,6 +2293,7 @@ def to_ini(key, val):
     Converts key, val into .ini format
     """
     if key == 'inputs':
+        *base, _name = pathlib.Path(val.pop('job_ini')).parts
         fnames = []
         for v in val.values():
             if isinstance(v, str):
@@ -2279,9 +2302,7 @@ def to_ini(key, val):
                 fnames.extend(v)
             elif isinstance(v, dict):
                 fnames.extend(v.values())
-        del val['job_ini']
-        P = len(os.path.commonprefix(fnames))
-        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, base)}'
                          for k, v in val.items()
                          if not k.startswith('_'))
     elif key == 'sites':

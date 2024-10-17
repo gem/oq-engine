@@ -27,7 +27,6 @@ import collections
 
 import numpy
 import pandas
-import fiona
 from shapely.geometry import shape
 from decorator import FunctionMaker
 
@@ -35,6 +34,7 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import nrml, imt, logictree, site, geo
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
@@ -244,6 +244,11 @@ def main(what, report=False):
         for param in params:
             print(param)
             print(docs[param])
+    elif what == 'loss_types':
+        ltypes = [lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt]
+        for lt in sorted(ltypes):
+            print(lt)
     elif what.startswith('mfd'):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):

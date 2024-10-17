@@ -8,7 +8,7 @@ on:
       - "hazardlib + engine + server tests"
       - "MacOS Intel install and test"
       - "MacOS M1"
-      - "RockyLinux OS test of OpenQuake Engine"
+      - "Test WebUI on RH based OS"
       - "Ubuntu test of OpenQuake Engine"
       - "Upgrade procedure for engine from 3.16 to Latest Release"
       - "Windows amd64 full tests of OpenQuake Engine"

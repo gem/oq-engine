@@ -249,7 +249,7 @@ def make_figure_uhs(extractors, what):
         uhs = ex.get(what)
         for kind in uhs.kind:
             got[ex.calc_id, kind] = uhs[kind][0]  # 1 site
-        if 'log_median_spectra' in ex.dstore:
+        if 'median_spectra' in ex.dstore:
             spec[ex.calc_id] = ex.get(
                 f'median_spectra?site_id={uhs.site_id[0]}')[:]  # (M, P)
     oq = ex.oqparam

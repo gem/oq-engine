@@ -756,10 +756,11 @@ def probabilities(value, rows=0, cols=0):
     [1.0]
     >>> probabilities('0.1 0.2')
     [0.1, 0.2]
-    >>> probabilities('0.1, 0.2')  # commas are ignored
+    >>> probabilities('[0.1, 0.2]')  # commas and brackets are ignored
     [0.1, 0.2]
     """
-    probs = list(map(probability, value.replace(',', ' ').split()))
+    val = value.replace('[', '').replace(']', '').replace(',', ' ')
+    probs = list(map(probability, val.split()))
     if rows and cols:
         probs = numpy.array(probs).reshape((len(rows), len(cols)))
     return probs
@@ -859,6 +860,8 @@ def check_levels(imls, imt, min_iml=1E-10):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
+    if imls == [0]:  # corresponds to intensity_measure_levels
+        return
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):

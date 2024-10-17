@@ -24,11 +24,12 @@ import logging
 import operator
 import numpy
 import pandas
-import fiona
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
+from openquake.engine.aristotle import get_close_mosaic_models
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -38,7 +39,6 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -218,7 +218,8 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], max_iml, mmon, cmon, umon)
+                df = computer.compute_all(
+                    [mea, tau, phi], max_iml, mmon, cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, max_iml, mmon, cmon, umon)
             if oq.mea_tau_phi:
@@ -262,7 +263,8 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             sitecol = dstore['sitecol']
             if 'complete' in dstore:
                 sitecol.complete = dstore['complete']
-        srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance(cmaker.trt))
+        srcfilter = SourceFilter(
+            sitecol.complete, oq.maximum_distance(cmaker.trt))
         dset = dstore['rupgeoms']
         for proxy in proxies:
             proxy.geom = dset[proxy['geom_id']]
@@ -592,13 +594,17 @@ class EventBasedCalculator(base.HazardCalculator):
         gsim_lt = readinput.get_gsim_lt(oq)
         if oq.aristotle:
             # the gsim_lt is read from the exposure.hdf5 file
-            mosaic_df = readinput.read_mosaic_df(buffer=1)
-            if oq.rupture_dict:
-                lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
-            elif oq.rupture_xml:
-                hypo = readinput.get_rupture(oq).hypocenter
-                lonlat = [[hypo.x, hypo.y]]
-            [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
+            if not oq.mosaic_model:
+                if oq.rupture_dict:
+                    lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
+                elif oq.rupture_xml:
+                    hypo = readinput.get_rupture(oq).hypocenter
+                    lon, lat = [hypo.x, hypo.y]
+                mosaic_models = get_close_mosaic_models(lon, lat, 100)
+                # NOTE: using the first mosaic model
+                oq.mosaic_model = mosaic_models[0]
+                if len(mosaic_models) > 1:
+                    logging.info('Using the "%s" model' % oq.mosaic_model)
             [expo_hdf5] = oq.inputs['exposure']
             if oq.mosaic_model == '???':
                 raise ValueError(
@@ -717,7 +723,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        smap = starmap_from_rups(event_based, oq, self.full_lt, self.sitecol, dstore)
+        smap = starmap_from_rups(
+            event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc

@@ -70,6 +70,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+liquefaction landslide
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -1756,30 +1757,6 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
         return aval[xltype]
     else:
         raise NotImplementedError(consequence)
-
-
-# ########################### u64_to_eal ################################# #
-
-def u64_to_eal(u64):
-    """
-    Convert an unit64 into a triple (eid, aid, lid)
-
-    >>> u64_to_eal(42949673216001)
-    (10000, 1000, 1)
-    """
-    eid, x = divmod(u64, TWO32)
-    aid, lid = divmod(x, 256)
-    return eid, aid, lid
-
-
-def eal_to_u64(eid, aid, lid):
-    """
-    Convert a triple (eid, aid, lid) into an uint64:
-
-    >>> eal_to_u64(10000, 1000, 1)
-    42949673216001
-    """
-    return U64(eid * TWO32) + U64(aid * 256) + U64(lid)
 
 
 if __name__ == '__main__':

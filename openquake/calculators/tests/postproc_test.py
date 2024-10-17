@@ -30,7 +30,8 @@ from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
-from openquake.qa_tests_data.postproc import case_mrd, case_rtgm, case_median_spectrum
+from openquake.qa_tests_data.postproc import (
+    case_mrd, case_rtgm, case_median_spectrum)
 
 PLOT = False
 

@@ -22,6 +22,7 @@ import sys
 import os
 import getpass
 import logging
+from dataclasses import dataclass
 import numpy
 from json.decoder import JSONDecodeError
 from urllib.error import HTTPError
@@ -35,24 +36,62 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_trts_around(rupdic, exposure_hdf5):
+@dataclass
+class AristotleParam:
+    rupture_dict: dict
+    time_event: str
+    maximum_distance: float
+    mosaic_model: str
+    trt: str
+    truncation_level: float
+    number_of_ground_motion_fields: int
+    asset_hazard_distance: float
+    ses_seed: int
+    local_timestamp: str = None
+    exposure_hdf5: str = None
+    station_data_file: str = None
+    maximum_distance_stations: float = None
+    ignore_shakemap: bool = False
+
+
+def get_close_mosaic_models(lon, lat, max_dist):
     """
-    :returns: list of TRTs for the mosaic model covering lon, lat
+    :param lon: longitude
+    :param lat: latitude
+    :param max_dist: max dist with respect to a model to consider it relevant
+    :returns: list of mosaic models with the max_dist distance
     """
-    lon, lat = rupdic['lon'], rupdic['lat']
-    usgs_id = rupdic.get('usgs_id', '')
-    lonlats = numpy.array([[lon, lat]])
     mosaic_df = readinput.read_mosaic_df(buffer=1)
-    [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
-    if mosaic_model == '???':
-        raise ValueError(f'({lon}, {lat}) is not covered by the mosaic!')
+    hypocenter = geo.Point(lon, lat)
+    minx, miny, maxx, maxy = geo.utils.get_bounding_box([hypocenter], max_dist)
+    close_mosaic_models = set()
+    bbox_vertices = [(minx, maxy), (maxx, maxy), (maxx, miny), (minx, miny)]
+    for vertex in bbox_vertices:
+        lonlats = numpy.array([vertex[0], vertex[1]])
+        [mosaic_model] = geo.utils.geolocate([lonlats], mosaic_df)
+        close_mosaic_models.add(mosaic_model)
+    close_mosaic_models = sorted([model for model in close_mosaic_models
+                                  if model != '???'])
+    if not close_mosaic_models:
+        raise ValueError(
+            f'({lon}, {lat}) is farther than {max_dist}km'
+            f' from any mosaic model!')
+    elif len(close_mosaic_models) > 1:
+        logging.info(
+            '(%s, %s) is closer than %skm with respect to the following'
+            ' mosaic models: %s' % (lon, lat, max_dist, close_mosaic_models))
+    return close_mosaic_models
+
+
+def get_trts_around(mosaic_model, exposure_hdf5):
+    """
+    :returns: list of TRTs for the given mosaic model
+    """
     with hdf5.File(exposure_hdf5) as f:
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
-    logging.info('Considering %s[%s]: (%s, %s)',
-                 usgs_id, mosaic_model, lon, lat)
     trts = [trt.decode('utf8') for trt in df.trt.unique()]
-    return trts, mosaic_model
+    return trts
 
 
 def get_tmap_keys(exposure_hdf5, countries):
@@ -99,28 +138,22 @@ def get_rupture_dict(dic, ignore_shakemap=False):
     return rupdic
 
 
-def get_aristotle_allparams(rupture_dict, time_event,
-                            maximum_distance, trt,
-                            truncation_level, number_of_ground_motion_fields,
-                            asset_hazard_distance, ses_seed,
-                            local_timestamp=None,
-                            exposure_hdf5=None, station_data_file=None,
-                            maximum_distance_stations=None,
-                            ignore_shakemap=False):
+def get_aristotle_params(arist):
     """
+    :param arist: an instance of AristotleParam
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
-    if exposure_hdf5 is None:
-        exposure_hdf5 = os.path.join(
+    if arist.exposure_hdf5 is None:
+        arist.exposure_hdf5 = os.path.join(
             config.directory.mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [exposure_hdf5],
+    inputs = {'exposure': [arist.exposure_hdf5],
               'job_ini': '<in-memory>'}
-    rupdic = get_rupture_dict(rupture_dict, ignore_shakemap)
-    if station_data_file is None:
+    rupdic = get_rupture_dict(arist.rupture_dict, arist.ignore_shakemap)
+    if arist.station_data_file is None:
         # NOTE: giving precedence to the station_data_file uploaded via form
         try:
-            station_data_file = download_station_data_file(
-                rupture_dict['usgs_id'])
+            arist.station_data_file = download_station_data_file(
+                arist.rupture_dict['usgs_id'])
         except HTTPError as exc:
             logging.info(f'Station data is not available: {exc}')
         except (KeyError, LookupError, UnicodeDecodeError,
@@ -129,40 +162,49 @@ def get_aristotle_allparams(rupture_dict, time_event,
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
-    if station_data_file:
-        inputs['station_data'] = station_data_file
-    if trt is None:
-        trts, _ = get_trts_around(rupdic, exposure_hdf5)
-        trt = trts[0]
+    if arist.station_data_file:
+        inputs['station_data'] = arist.station_data_file
+    if not arist.mosaic_model:
+        lon, lat = rupdic['lon'], rupdic['lat']
+        mosaic_models = get_close_mosaic_models(lon, lat, 100)
+        # NOTE: using the first mosaic model
+        arist.mosaic_model = mosaic_models[0]
+        if len(mosaic_models) > 1:
+            logging.info('Using the "%s" model' % arist.mosaic_model)
+
+    if arist.trt is None:
+        # NOTE: using the first tectonic region type
+        arist.trt = get_trts_around(arist.mosaic_model, arist.exposure_hdf5)[0]
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
-        time_event=time_event,
-        maximum_distance=str(maximum_distance),
-        tectonic_region_type=trt,
-        truncation_level=str(truncation_level),
-        number_of_ground_motion_fields=str(number_of_ground_motion_fields),
-        asset_hazard_distance=str(asset_hazard_distance),
-        ses_seed=str(ses_seed),
+        time_event=arist.time_event,
+        maximum_distance=str(arist.maximum_distance),
+        mosaic_model=arist.mosaic_model,
+        tectonic_region_type=arist.trt,
+        truncation_level=str(arist.truncation_level),
+        number_of_ground_motion_fields=str(arist.number_of_ground_motion_fields),
+        asset_hazard_distance=str(arist.asset_hazard_distance),
+        ses_seed=str(arist.ses_seed),
         inputs=inputs)
-    if local_timestamp is not None:
-        params['local_timestamp'] = local_timestamp
-    if maximum_distance_stations is not None:
-        params['maximum_distance_stations'] = str(maximum_distance_stations)
+    if arist.local_timestamp is not None:
+        params['local_timestamp'] = arist.local_timestamp
+    if arist.maximum_distance_stations is not None:
+        params['maximum_distance_stations'] = str(arist.maximum_distance_stations)
     oq = readinput.get_oqparam(params)
     # NB: fake h5 to cache `get_site_model` and avoid multiple associations
     _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
         oq, h5={'performance_data': hdf5.FakeDataset()})
     id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = get_tmap_keys(exposure_hdf5, countries)
+    tmap_keys = get_tmap_keys(arist.exposure_hdf5, countries)
     if not tmap_keys:
         raise LookupError(f'No taxonomy mapping was found for {countries}')
     logging.root.handlers = []  # avoid breaking the logs
     params['description'] = (
         f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
         f' M{rupdic["mag"]}')
-    return [params]
+    return params
 
 
 def main_web(allparams, jobctxs,
@@ -184,7 +226,8 @@ def main_web(allparams, jobctxs,
 def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
              time_event='day',
-             maximum_distance='300', trt=None, truncation_level='3',
+             maximum_distance='300', mosaic_model=None, trt=None,
+             truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42',
              local_timestamp=None, exposure_hdf5=None, station_data_file=None,
@@ -195,25 +238,25 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
     if rupture_dict is None:
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
-        allparams = get_aristotle_allparams(
-            rupture_dict, time_event, maximum_distance, trt,
-            truncation_level,
+        arist = AristotleParam(
+            rupture_dict, time_event, maximum_distance, mosaic_model,
+            trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, local_timestamp, exposure_hdf5, station_data_file,
             maximum_distance_stations, ignore_shakemap)
+        oqparams = get_aristotle_params(arist)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    jobctxs = engine.create_jobs(allparams, 'warn', None, user, None)
-    for params, job in zip(allparams, jobctxs):
-        try:
-            engine.run_jobs([job])
-        except Exception as exc:
-            callback(job.calc_id, params, exc=exc)
-        else:
-            callback(job.calc_id, params, exc=None)
+    [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
+    try:
+        engine.run_jobs([job])
+    except Exception as exc:
+        callback(job.calc_id, oqparams, exc=exc)
+    else:
+        callback(job.calc_id, oqparams, exc=None)
 
 
 main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
@@ -222,6 +265,7 @@ main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
 main_cmd.callback = ''
 main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
+main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
 main_cmd.trt = 'Tectonic region type'
 main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'

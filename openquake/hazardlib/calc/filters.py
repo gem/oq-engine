@@ -439,7 +439,7 @@ class SourceFilter(object):
             self.kdt = cKDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
         sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
-        sids.sort()
+        sids.sort()  # for cross-platform consistency
         return sids
 
     def filter(self, sources):

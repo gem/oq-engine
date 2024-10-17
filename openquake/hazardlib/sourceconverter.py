@@ -1003,21 +1003,13 @@ class SourceConverter(RuptureConverter):
             except AttributeError:
                 slip_list = ()
             simple = source.SimpleFaultSource(
-                source_id=node['id'],
-                name=node['name'],
-                tectonic_region_type=node.attrib.get('tectonicRegion'),
-                mfd=mfd,
-                rupture_mesh_spacing=self.rupture_mesh_spacing,
-                magnitude_scaling_relationship=msr,
-                rupture_aspect_ratio=~node.ruptAspectRatio,
-                upper_seismogenic_depth=~geom.upperSeismoDepth,
-                lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                fault_trace=fault_trace,
-                dip=~geom.dip,
-                rake=~node.rake,
-                temporal_occurrence_model=self.get_tom(node),
-                hypo_list=hypo_list,
-                slip_list=slip_list)
+                node['id'], node['name'],
+                node.attrib.get('tectonicRegion'),
+                mfd, self.rupture_mesh_spacing,
+                msr, ~node.ruptAspectRatio, self.get_tom(node),
+                ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+                fault_trace, ~geom.dip, ~node.rake,
+                [hypo_list, slip_list])
         return simple
 
     def convert_kiteFaultSource(self, node):
@@ -1062,22 +1054,16 @@ class SourceConverter(RuptureConverter):
                     profiles_sampling=None
                     )
             else:
+                param = source.base.SourceParam(
+                    node['id'], node['name'],
+                    node.attrib.get('tectonicRegion'),
+                    mfd, self.rupture_mesh_spacing,
+                    msr, ~node.ruptAspectRatio, self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
-                    source_id=node['id'],
-                    name=node['name'],
-                    tectonic_region_type=node.attrib.get('tectonicRegion'),
-                    mfd=mfd,
-                    rupture_mesh_spacing=self.rupture_mesh_spacing,
-                    magnitude_scaling_relationship=msr,
-                    rupture_aspect_ratio=~node.ruptAspectRatio,
-                    upper_seismogenic_depth=~geom.upperSeismoDepth,
-                    lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                    fault_trace=fault_trace,
-                    dip=~geom.dip,
-                    rake=~node.rake,
-                    temporal_occurrence_model=self.get_tom(node),
-                    floating_x_step=xstep,
-                    floating_y_step=ystep)
+                    param,
+                    ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+                    fault_trace, ~geom.dip, ~node.rake,
+                    xstep, ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):

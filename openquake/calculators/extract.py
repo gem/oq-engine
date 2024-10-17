@@ -33,7 +33,6 @@ from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree
 from openquake.hazardlib.contexts import (
@@ -505,17 +504,20 @@ def extract_uhs(dstore, what):
 @extract.add('median_spectra')
 def extract_median_spectra(dstore, what):
     """
-    Extracts median spectra. Use it as /extract/median_spectra?site_id=0
+    Extracts median spectra per site and group.
+    Use it as /extract/median_spectra?site_id=0&poe_id=1
     """
     qdict = parse(what)
     [site_id] = qdict['site_id']
-    dset = dstore['log_median_spectra']
+    [poe_id] = qdict['poe_id']
+    dset = dstore['median_spectra']
     dic = json.loads(dset.attrs['json'])
-    spectra = numpy.exp(dset[:, site_id].sum(axis=0))  # (M, P)
+    spectra = dset[:, site_id, :, :, poe_id]  # (Gt, 3, M)
     return ArrayWrapper(spectra, dict(
-        shape_descr=['period', 'poe'],
-        period=dic['period'],
-        poe=dic['poe']))
+        shape_descr=['grp_id', 'kind', 'period'],
+        grp_id=numpy.arange(dic['grp_id']),
+        kind=['mea', 'sig', 'wei'],
+        period=dic['period']))
 
 
 @extract.add('effect')
@@ -664,7 +666,7 @@ def extract_task_info(dstore, what):
     """
     Extracts the task distribution. Use it as /extract/task_info?kind=classical
     """
-    dic = group_array(dstore['task_info'][()], 'taskname')
+    dic = general.group_array(dstore['task_info'][()], 'taskname')
     if 'kind' in what:
         name = parse(what)['kind'][0]
         yield name, dic[encode(name)]
@@ -1672,7 +1674,7 @@ class WebExtractor(Extractor):
             for chunk in resp.iter_content(CHUNKSIZE):
                 f.write(chunk)
                 down += len(chunk)
-                println('Downloaded {:,} bytes'.format(down))
+                general.println('Downloaded {:,} bytes'.format(down))
         print()
 
     def close(self):

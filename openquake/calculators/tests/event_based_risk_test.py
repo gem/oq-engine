@@ -275,7 +275,7 @@ agg_id
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the exposure nor in the taxonomy mapping',
+        self.assertIn("{'RM'} are not in the CompositeRiskModel",
                       str(ctx.exception))
 
     def test_case_3(self):

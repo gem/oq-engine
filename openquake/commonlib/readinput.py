@@ -41,7 +41,6 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
-import fiona
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -50,6 +49,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -464,7 +464,10 @@ def filter_site_array_around(array, rup, dist):
 
     # first raw filtering
     tree = cKDTree(xyz_all)
+    # NB: on macOS query_ball returns the indices in a different order
+    # than on linux and windows, hence the need to sort
     idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    idxs.sort()
 
     # then fine filtering
     array = array[idxs]
@@ -1259,8 +1262,8 @@ def _taxonomy_mapping(filename, taxidx):
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'}
-
+    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'
+                            }, set(tmap_df)
     taxos = set()
     for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
         taxos.add(taxo)

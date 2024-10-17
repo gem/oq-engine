@@ -61,7 +61,8 @@ from openquake.engine.aelo import (
 from openquake.engine.export.core import DataStoreExportError
 from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
-    get_trts_around, get_aristotle_allparams, get_rupture_dict)
+    get_close_mosaic_models, get_trts_around, get_aristotle_params,
+    get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings
@@ -128,6 +129,7 @@ ARISTOTLE_FORM_LABELS = {
     'dip': 'Dip (degrees)',
     'strike': 'Strike (degrees)',
     'maximum_distance': 'Maximum source-to-site distance (km)',
+    'mosaic_model': 'Mosaic model',
     'trt': 'Tectonic region type',
     'truncation_level': 'Level of truncation',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
@@ -152,6 +154,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'dip': '0 ≤ float ≤ 90',
     'strike': '0 ≤ float ≤ 360',
     'maximum_distance': 'float ≥ 0',
+    'mosaic_model': 'Mosaic model',
     'trt': 'Tectonic region type',
     'truncation_level': 'float ≥ 0',
     'number_of_ground_motion_fields': 'float ≥ 1',
@@ -722,13 +725,21 @@ def aristotle_get_rupture_data(request):
     if isinstance(res, HttpResponse):  # error
         return res
     rupdic, station_data_file = res
-    if not os.path.isfile(station_data_file):
+    trts = {}
+    if station_data_file is None:
+        station_data_file = None
+    elif not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
-            'Unable to collect station data: %s' % station_data_file)
+            'Unable to collect station data for rupture'
+            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
         station_data_file = None
     try:
-        trts, mosaic_model = get_trts_around(
-            rupdic, os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
+        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 100)
+        for mosaic_model in mosaic_models:
+            trts[mosaic_model] = get_trts_around(
+                mosaic_model,
+                os.path.join(config.directory.mosaic_dir,
+                             'exposure.hdf5'))
     except Exception as exc:
         usgs_id = rupdic['usgs_id']
         if '404: Not Found' in str(exc):
@@ -744,7 +755,7 @@ def aristotle_get_rupture_data(request):
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
-    rupdic['mosaic_model'] = mosaic_model
+    rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
@@ -799,6 +810,7 @@ def aristotle_validate(request):
         # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
         'time_event': valid.Choice('day', 'night', 'transit'),
         'maximum_distance': valid.positivefloat,
+        'mosaic_model': valid.utf8,
         'trt': valid.utf8,
         'truncation_level': valid.positivefloat,
         'number_of_ground_motion_fields': valid.positiveint,
@@ -909,7 +921,7 @@ def aristotle_run(request):
     res = aristotle_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    (rupdic, local_timestamp, time_event, maximum_distance, trt,
+    (rupdic, local_timestamp, time_event, maximum_distance, mosaic_model, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
      station_data_file) = res
@@ -919,15 +931,16 @@ def aristotle_run(request):
     if station_data_file is None or not os.path.isfile(station_data_file):
         station_data_file = None
     try:
-        allparams = get_aristotle_allparams(
+        arist = aristotle.AristotleParam(
             rupdic,
             time_event,
-            maximum_distance, trt, truncation_level,
+            maximum_distance, mosaic_model, trt, truncation_level,
             number_of_ground_motion_fields,
             asset_hazard_distance, ses_seed,
             local_timestamp,
             station_data_file=station_data_file,
             maximum_distance_stations=maximum_distance_stations)
+        params = get_aristotle_params(arist)
     except Exception as exc:
 
         response_data = {"status": "failed", "error_msg": str(exc),
@@ -936,39 +949,39 @@ def aristotle_run(request):
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=500)
     user = utils.get_user(request)
-    jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, user, None)
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, None, user, None)
 
     job_owner_email = request.user.email
     response_data = dict()
-    for jobctx in jobctxs:
-        job_id = jobctx.calc_id
-        outputs_uri_web = request.build_absolute_uri(
-            reverse('outputs_aristotle', args=[job_id]))
-        outputs_uri_api = request.build_absolute_uri(
-            reverse('results', args=[job_id]))
-        log_uri = request.build_absolute_uri(
-            reverse('log', args=[job_id, '0', '']))
-        traceback_uri = request.build_absolute_uri(
-            reverse('traceback', args=[job_id]))
-        response_data[job_id] = dict(
-            status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-            log_uri=log_uri, traceback_uri=traceback_uri)
-        if not job_owner_email:
-            response_data[job_id]['WARNING'] = (
-                'No email address is speficied for your user account,'
-                ' therefore email notifications will be disabled. As soon as'
-                ' the job completes, you can access its outputs at the'
-                ' following link: %s. If the job fails, the error traceback'
-                ' will be accessible at the following link: %s'
-                % (outputs_uri_api, traceback_uri))
 
-        # spawn the Aristotle main process
-        proc = mp.Process(
-            target=aristotle.main_web,
-            args=(allparams, [jobctx], job_owner_email, outputs_uri_web,
-                  aristotle_callback))
-        proc.start()
+    job_id = jobctx.calc_id
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_aristotle', args=[job_id]))
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+    response_data[job_id] = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data[job_id]['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the'
+            ' following link: %s. If the job fails, the error traceback'
+            ' will be accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the Aristotle main process
+    proc = mp.Process(
+        target=aristotle.main_web,
+        args=([params], [jobctx], job_owner_email, outputs_uri_web,
+              aristotle_callback))
+    proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
