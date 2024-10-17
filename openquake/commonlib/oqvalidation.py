@@ -23,6 +23,7 @@ import sys
 import json
 import inspect
 import logging
+import pathlib
 import functools
 import collections
 import numpy
@@ -2225,7 +2226,7 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    # tested in geese; expected to work for the hazard mosaic
+    # tested in run-demos.sh
     def to_ini(self):
         """
         Converts the parameters into a string in .ini format
@@ -2233,7 +2234,7 @@ class OqParam(valid.ParamSet):
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         del dic['base_path']
         del dic['req_site_params']
-        #dic.pop('export_dir', None)
+        dic.pop('export_dir', None)
         dic.pop('all_cost_types', None)
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
@@ -2270,14 +2271,20 @@ class OqParam(valid.ParamSet):
             self.maximum_distance = Idist(**self.maximum_distance)
 
 
-def _rel_fnames(obj, P):
+def _rel_fnames(obj, base):
     # strip the first P characters and convert to relative paths
     if isinstance(obj, str):
-        return obj[P:]
+        *b, n = pathlib.Path(obj).parts
+        offset = len(base) - len(b)
+        if offset > 0:
+            relpath = ['..'] * offset + [n]
+        else:
+            relpath = b[len(base):] + [n]
+        return '/'.join(relpath)
     elif isinstance(obj, list):
-        return '\n  '.join(s[P:] for s in obj)
+        return '\n  '.join(_rel_fnames(s, base) for s in obj)
     else:  # assume dict
-        dic = {k: v[P:] for k, v in obj.items()}
+        dic = {k: _rel_fnames(v, base) for k, v in obj.items()}
         return str(dic)
 
 
@@ -2286,6 +2293,7 @@ def to_ini(key, val):
     Converts key, val into .ini format
     """
     if key == 'inputs':
+        *base, name = pathlib.Path(val.pop('job_ini')).parts
         fnames = []
         for v in val.values():
             if isinstance(v, str):
@@ -2294,9 +2302,7 @@ def to_ini(key, val):
                 fnames.extend(v)
             elif isinstance(v, dict):
                 fnames.extend(v.values())
-        del val['job_ini']
-        P = len(os.path.commonprefix(fnames))
-        return '\n'.join(f'{k}_file = {_rel_fnames(v, P)}'
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, base)}'
                          for k, v in val.items()
                          if not k.startswith('_'))
     elif key == 'sites':
