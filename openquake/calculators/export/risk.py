@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import json
 import itertools
 import collections
@@ -743,12 +745,11 @@ def convert_df_to_vulnerability(loss_type, df):
     return root
 
     
-@export.add(('vulnerability', 'xml'))
 def export_vulnerability_xml(ekey, dstore):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
         nodeobj = convert_df_to_vulnerability(loss_type, df)
-        dest = dstore.export_path('%s_%s.%s' % ((loss_type,) + ekey))
+        dest = os.path.join(dstore.export_dir, '%s_%s.%s' % ((loss_type,) + ekey))
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)
         fnames.append(dest)
@@ -767,23 +768,25 @@ def export_job_zip(ekey, dstore):
     - vulnerability functions.xml
     - taxonomy_mapping.csv
     """
+    edir = dstore.export_dir
     oq = dstore['oqparam']
-    job_ini = dstore.export_path('job.ini')
+    job_ini = os.path.join(edir, 'job.ini')
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini())
     fnames = [job_ini]
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
-    with open('rupture.csv', 'w') as out:
+    dest = os.path.join(edir, 'rupture.csv')
+    with open(dest, 'w') as out:
         out.write(csv)
-    fnames.append('rupture.csv')
+    fnames.append(dest)
     gsim_lt = dstore['full_lt'].gsim_lt
-    dest = dstore.export_path('gsim_logic_tree.xml')
+    dest = os.path.join(edir, 'gsim_logic_tree.xml')
     with open(dest, 'wb') as out:
         nrml.write([gsim_lt.to_node()], out)
     fnames.append(dest)
-    fnames.extend(export(('vulnerability', 'xml'), dstore))
+    fnames.extend(export_vulnerability_xml(('vulnerability', 'xml'), dstore))
 
-    dest = dstore.export_path('taxonomy_mapping.csv')
+    dest = os.path.join(edir, 'taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     del taxmap['taxi']

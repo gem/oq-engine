@@ -21,12 +21,31 @@ import pathlib
 import unittest
 import pytest
 from openquake.calculators.checkers import check
+from openquake.calculators.export import export
+
 
 cd = pathlib.Path(__file__).parent
+
+def check_export_job(dstore):
+    fnames = export(('job', 'zip'), dstore)
+    fnames = [os.path.basename(f) for f in fnames]
+    assert fnames == ['job.ini',
+                      'rupture.csv',
+                      'gsim_logic_tree.xml',
+                      'area_vulnerability.xml',
+                      'contents_vulnerability.xml',
+                      'nonstructural_vulnerability.xml',
+                      'number_vulnerability.xml',
+                      'occupants_vulnerability.xml',
+                      'residents_vulnerability.xml',
+                      'structural_vulnerability.xml',
+                      'taxonomy_mapping.csv']
 
 
 @pytest.mark.parametrize('n', [1, 2, 3])
 def test_aristotle(n):
     if not os.path.exists(cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest('Please download exposure.hdf5')
-    check(cd / f'aristotle{n}/job.ini', what='aggrisk')
+    calc = check(cd / f'aristotle{n}/job.ini', what='aggrisk')
+    if n == 1:
+        check_export_job(calc.datastore)
