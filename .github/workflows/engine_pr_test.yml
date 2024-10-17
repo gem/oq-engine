@@ -207,4 +207,4 @@ jobs:
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           # -v 2 also logs the test names
-          OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode.EngineServerAristotleModeTestCase
+          OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode
