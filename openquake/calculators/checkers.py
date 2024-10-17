@@ -115,10 +115,11 @@ def check_ini(path, hc):
     oq = readinput.get_oqparam(dic)
     ini = oq.to_ini()
     tmp_ini = path[:-3] + 'tmp.ini'
+    print('Saving', tmp_ini)
     with open(tmp_ini, 'w') as f:
         f.write(ini)
     dic2 = readinput.get_params(tmp_ini)
-    missing = set(dic) - set(dic2) - {'intensity_measure_types'}
+    missing = set(dic) - set(dic2) - {'intensity_measure_types', 'export_dir'}
     if missing:
         breakpoint()
 
@@ -136,4 +137,5 @@ def check_inis(demo_dir):
 
 
 if __name__ == '__main__':
+    # called by run-demos.sh
     check_inis(sys.argv[1])

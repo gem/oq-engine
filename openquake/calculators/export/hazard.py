@@ -363,7 +363,7 @@ def export_median_spectrum_disagg(ekey, dstore):
             arr = numpy.empty(len(array), dtlist)
             for col in arr.dtype.names:
                 if col.startswith(('mea', 'sig', 'wei')):
-                    arr[col] = array[col][m]
+                    arr[col] = array[col][:, m]
                 else:
                     arr[col] = array[col]
                 if col.startswith('wei'):
