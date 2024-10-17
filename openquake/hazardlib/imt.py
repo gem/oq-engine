@@ -268,7 +268,8 @@ def ASH():
     return IMT('ASH')
 
 
-# secondary perils
+# secondary IMTs
+sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
 
 def Disp():
     """
@@ -332,4 +333,3 @@ def LsProb():
     Probability of landsliding.
     """
     return IMT('LsProb')
-
