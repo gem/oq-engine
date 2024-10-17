@@ -2293,7 +2293,7 @@ def to_ini(key, val):
     Converts key, val into .ini format
     """
     if key == 'inputs':
-        *base, name = pathlib.Path(val.pop('job_ini')).parts
+        *base, _name = pathlib.Path(val.pop('job_ini')).parts
         fnames = []
         for v in val.values():
             if isinstance(v, str):
