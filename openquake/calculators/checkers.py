@@ -119,7 +119,7 @@ def check_ini(path, hc):
     with open(tmp_ini, 'w') as f:
         f.write(ini)
     dic2 = readinput.get_params(tmp_ini)
-    missing = set(dic) - set(dic2) - {'intensity_measure_types'}
+    missing = set(dic) - set(dic2) - {'intensity_measure_types', 'export_dir'}
     if missing:
         breakpoint()
 
