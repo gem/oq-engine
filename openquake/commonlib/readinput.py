@@ -1340,7 +1340,7 @@ tag2code = {'multiFaultSource': b'F',
             'pointSource': b'P',
             'simpleFaultSource': b'S',
             'complexFaultSource': b'C',
-            'characteristicSource': b'X',
+            'characteristicFaultSource': b'X',
             'nonParametricSeismicSource': b'N'}
 
 
