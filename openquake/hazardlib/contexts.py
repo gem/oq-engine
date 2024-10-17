@@ -198,6 +198,10 @@ class Oq(object):
     def __init__(self, **hparams):
         vars(self).update(hparams)
 
+    @property
+    def min_iml(self):
+        return numpy.array([1E-10 for imt in self.imtls])
+
     def get_reqv(self):
         if 'reqv' not in self.inputs:
             return
@@ -533,7 +537,6 @@ class ContextMaker(object):
         else:  # OqParam
             param = vars(oq)
             param['split_sources'] = oq.split_sources
-            param['min_iml'] = oq.min_iml
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
@@ -617,10 +620,7 @@ class ContextMaker(object):
                         reqset.add('ch_phiss03')
                         reqset.add('ch_phiss06')
             setattr(self, 'REQUIRES_' + req, reqset)
-        try:
-            self.min_iml = param['min_iml']
-        except KeyError:
-            self.min_iml = numpy.array([0. for imt in self.imtls])
+        self.min_iml = self.oq.min_iml
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
