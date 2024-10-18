@@ -29,11 +29,11 @@ cd = pathlib.Path(__file__).parent
 def check_export_job(dstore):
     fnames = export(('job', 'zip'), dstore)
     fnames = [os.path.basename(f) for f in fnames]
-    assert fnames == ['job.ini',
+    assert fnames == ['exposure.xml',
+                      'assetcol.csv',
+                      'job.ini',
                       'rupture.csv',
                       'gsim_logic_tree.xml',
-                      'exposure.xml',
-                      'assetcol.csv',
                       'area_vulnerability.xml',
                       'contents_vulnerability.xml',
                       'nonstructural_vulnerability.xml',

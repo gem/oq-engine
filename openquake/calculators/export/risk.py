@@ -17,8 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import json
+import shutil
 import tempfile
 import itertools
 import collections
@@ -719,11 +719,11 @@ def convert_df_to_vulnerability(loss_type, df):
     return root
 
     
-def export_vulnerability_xml(ekey, dstore):
+def export_vulnerability_xml(dstore, edir):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
         nodeobj = convert_df_to_vulnerability(loss_type, df)
-        dest = os.path.join(dstore.export_dir, '%s_%s.%s' % ((loss_type,) + ekey))
+        dest = os.path.join(edir, '%s_vulnerability.xml' % loss_type)
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)
         fnames.append(dest)
@@ -753,12 +753,13 @@ def export_assetcol_csv(ekey, dstore):
     return [dest_csv]
 
 
-def export_exposure(dstore):
+def export_exposure(dstore, edir):
     """
     :param dstore: datastore object
     """
-    [dest_csv] = export(('assetcol', 'csv'), dstore)
-    dest_csv = re.sub(r'_\d+', '', os.path.basename(dest_csv))
+    [dest] = export(('assetcol', 'csv'), dstore)
+    assetcol_csv = os.path.join(edir, 'assetcol.csv')
+    shutil.move(dest, assetcol_csv)
     tagnames = dstore['assetcol/tagcol'].tagnames
     cost_types = dstore.getitem('exposure')  # cost_type, area_type, unit
     N = node.Node
@@ -775,11 +776,11 @@ def export_exposure(dstore):
     root.append(conversions)
     root.append(N('occupancyPeriods', {}, 'night'))
     root.append(N('tagNames', {}, tagnames))
-    root.append(N('assets', {}, os.path.basename(dest_csv)))
-    dest_xml = os.path.join(dstore.export_dir, 'exposure.xml')
-    with open(dest_xml, 'wb') as out:
+    root.append(N('assets', {}, 'assetcol.csv'))
+    exposure_xml = os.path.join(edir, 'exposure.xml')
+    with open(exposure_xml, 'wb') as out:
         nrml.write([root], out)
-    return [dest_xml, dest_csv]
+    return [exposure_xml, assetcol_csv]
 
 
 @export.add(('job', 'zip'))
@@ -790,16 +791,17 @@ def export_job_zip(ekey, dstore):
     - rupture.csv
     - gsim_lt.xml
     - site_model.csv
-    - exposure.xml and exposure.csv
+    - exposure.xml and assetcol.csv
     - vulnerability functions.xml
     - taxonomy_mapping.csv
     """
-    edir = config.directory.custom_tmp or tempfile.gettempdir()
     oq = dstore['oqparam']
+    edir = tempfile.mkdtemp(dir=config.directory.custom_tmp or tempfile.gettempdir())
+    fnames = export_exposure(dstore, edir)
     job_ini = os.path.join(edir, 'job.ini')
     with open(job_ini, 'w') as out:
-        out.write(oq.to_ini())
-    fnames = [job_ini]
+        out.write(oq.to_ini(exposure='exposure.xml'))
+    fnames.append(job_ini)
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
     dest = os.path.join(edir, 'rupture.csv')
     with open(dest, 'w') as out:
@@ -810,8 +812,7 @@ def export_job_zip(ekey, dstore):
     with open(dest, 'wb') as out:
         nrml.write([gsim_lt.to_node()], out)
     fnames.append(dest)
-    fnames.extend(export_exposure(dstore))
-    fnames.extend(export_vulnerability_xml(('vulnerability', 'xml'), dstore))
+    fnames.extend(export_vulnerability_xml(dstore, edir))
 
     dest = os.path.join(edir, 'taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')

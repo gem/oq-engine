@@ -2228,11 +2228,12 @@ class OqParam(valid.ParamSet):
         return dic
 
     # tested in run-demos.sh
-    def to_ini(self):
+    def to_ini(self, **inputs):
         """
         Converts the parameters into a string in .ini format
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        dic['inputs'].update(inputs)
         del dic['base_path']
         del dic['req_site_params']
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
