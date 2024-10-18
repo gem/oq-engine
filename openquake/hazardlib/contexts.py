@@ -193,10 +193,18 @@ def trivial(ctx, name):
 
 
 class Oq(object):
+    """
+    A mock for OqParam
+    """
     mea_tau_phi = False
+    split_sources = True
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
+
+    @property
+    def min_iml(self):
+        return numpy.array([1E-10 for imt in self.imtls])
 
     def get_reqv(self):
         if 'reqv' not in self.inputs:
@@ -532,8 +540,6 @@ class ContextMaker(object):
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
-            param['split_sources'] = oq.split_sources
-            param['min_iml'] = oq.min_iml
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
             self.cross_correl = oq.cross_correl
@@ -587,7 +593,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
-        self.split_sources = param.get('split_sources')
+        self.split_sources = self.oq.split_sources
 
     def _init2(self, param, extraparams):
         for gsim in self.gsims:
@@ -617,10 +623,7 @@ class ContextMaker(object):
                         reqset.add('ch_phiss03')
                         reqset.add('ch_phiss06')
             setattr(self, 'REQUIRES_' + req, reqset)
-        try:
-            self.min_iml = param['min_iml']
-        except KeyError:
-            self.min_iml = numpy.array([0. for imt in self.imtls])
+        self.min_iml = self.oq.min_iml
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
