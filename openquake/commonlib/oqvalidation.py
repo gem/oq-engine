@@ -33,7 +33,7 @@ import itertools
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import DictArray, AccumDict, cached_property
-from openquake.hazardlib.imt import from_string, sort_by_imt
+from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
@@ -262,9 +262,6 @@ distance_bin_width:
   In km, used in disaggregation calculations to specify the distance bins.
   Example: *distance_bin_width = 20*.
   Default: no default
-
-ebrisk_maxsize:
-  INTERNAL
 
 epsilon_star:
   A boolean controlling the typology of disaggregation output to be provided.
@@ -1149,7 +1146,6 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_by_gsim = valid.Param(valid.positiveint, 0)
     outs_per_task = valid.Param(valid.positiveint, 4)
-    ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
@@ -1671,6 +1667,11 @@ class OqParam(valid.ParamSet):
                 and self.ground_motion_fields):
             raise ValueError('Please define intensity_measure_types in %s' %
                              self.inputs['job_ini'])
+
+        # check secondary imts
+        for imt in self.get_primary_imtls():
+            if imt in sec_imts:
+                self.raise_invalid('you forgot to set secondary_perils =')
 
     def get_primary_imtls(self):
         """
@@ -2227,15 +2228,17 @@ class OqParam(valid.ParamSet):
         return dic
 
     # tested in run-demos.sh
-    def to_ini(self):
+    def to_ini(self, **inputs):
         """
         Converts the parameters into a string in .ini format
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        dic['inputs'].update(inputs)
         del dic['base_path']
         del dic['req_site_params']
-        dic.pop('export_dir', None)
-        dic.pop('all_cost_types', None)
+        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
+            dic.pop(k, None)
+        
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
         if 'aggregate_by' in dic:

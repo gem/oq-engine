@@ -1504,8 +1504,13 @@ def extract_ruptures(dstore, what):
         for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
             ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
                           for proxy in rgetter.get_proxies(min_mag))
+    if 'slice' in qdict:
+        s0, s1 = qdict['slice']
+        slc = slice(s0, s1)
+    else:
+        slc = slice(None)
     bio = io.StringIO()
-    arr = rupture.to_csv_array(ebrups)
+    arr = rupture.to_csv_array(ebrups[slc])
     writers.write_csv(bio, arr, comment=comment)
     return bio.getvalue()
 
