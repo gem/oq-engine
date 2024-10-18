@@ -773,8 +773,8 @@ def export_exposure(dstore):
             'unit': ct['unit']}))
     conversions.append(costtypes)
     root.append(conversions)
-    root.append(N('occupancyPeriods'), {}, 'night')
-    root.append(N('tagNames'), {}, tagnames)
+    root.append(N('occupancyPeriods', {}, 'night'))
+    root.append(N('tagNames', {}, tagnames))
     root.append(N('assets', {}, os.path.basename(dest_csv)))
     dest_xml = os.path.join(dstore.export_dir, 'exposure.xml')
     with open(dest_xml, 'wb') as out:

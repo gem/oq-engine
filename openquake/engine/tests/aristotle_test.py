@@ -32,6 +32,8 @@ def check_export_job(dstore):
     assert fnames == ['job.ini',
                       'rupture.csv',
                       'gsim_logic_tree.xml',
+                      'exposure.xml',
+                      'assetcol.csv',
                       'area_vulnerability.xml',
                       'contents_vulnerability.xml',
                       'nonstructural_vulnerability.xml',
