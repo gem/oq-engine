@@ -147,7 +147,6 @@ class CostCalculator(object):
                 return cost * area
             elif area_type == "per_asset":
                 return cost * area * number
-        breakpoint()
         # this should never happen
         raise RuntimeError('Unable to compute cost for %r' % loss_type)
 
