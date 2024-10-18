@@ -870,8 +870,10 @@ class Exposure(object):
     def __toh5__(self):
         cc = self.cost_calculator
         loss_types = sorted(cc.cost_types)
-        dt = numpy.dtype([('cost_type', hdf5.vstr), ('unit', hdf5.vstr)])
+        dt = numpy.dtype([('loss_type', hdf5.vstr), ('cost_type', hdf5.vstr),
+                          ('unit', hdf5.vstr)])
         array = numpy.zeros(len(loss_types), dt)
+        array['loss_type'] = loss_types
         array['cost_type'] = [cc.cost_types[lt] for lt in loss_types]
         array['unit'] = [cc.units[lt] for lt in loss_types]
         attrs = dict(
@@ -1087,8 +1089,8 @@ class Exposure(object):
                 missing = expected_header - header - {'exposure'}
                 if len(header) < len(fields):
                     raise InvalidFile(
-                        '%s: The header %s contains a duplicated field' %
-                        (fname, header))
+                        '%s: expected %d fields in %s, got %d' %
+                        (fname, len(fields), header, len(header)))
                 elif missing:
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
@@ -1136,5 +1138,8 @@ class Exposure(object):
             haz_sitecol).assoc2(self, haz_distance, region, 'filter')
 
     def __repr__(self):
-        return '<%s with %s assets>' % (self.__class__.__name__,
-                                        len(self.assets))
+        try:
+            num_assets = len(self.assets)
+        except AttributeError:
+            num_assets = '?'
+        return '<%s with %s assets>' % (self.__class__.__name__, num_assets)
