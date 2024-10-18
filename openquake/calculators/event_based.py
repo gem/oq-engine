@@ -600,7 +600,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 elif oq.rupture_xml:
                     hypo = readinput.get_rupture(oq).hypocenter
                     lon, lat = [hypo.x, hypo.y]
-                mosaic_models = get_close_mosaic_models(lon, lat, 100)
+                mosaic_models = get_close_mosaic_models(lon, lat, 5)
                 # NOTE: using the first mosaic model
                 oq.mosaic_model = mosaic_models[0]
                 if len(mosaic_models) > 1:
