@@ -19,12 +19,13 @@
 import os
 import re
 import json
+import tempfile
 import itertools
 import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers, general, node
+from openquake.baselib import hdf5, writers, general, node, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
@@ -793,7 +794,7 @@ def export_job_zip(ekey, dstore):
     - vulnerability functions.xml
     - taxonomy_mapping.csv
     """
-    edir = dstore.export_dir
+    edir = config.directory.custom_tmp or tempfile.gettempdir()
     oq = dstore['oqparam']
     job_ini = os.path.join(edir, 'job.ini')
     with open(job_ini, 'w') as out:

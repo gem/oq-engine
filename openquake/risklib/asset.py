@@ -888,8 +888,9 @@ class Exposure(object):
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         cc = self.cost_calculator = object.__new__(CostCalculator)
-        cc.cost_types = dict(zip(decode(array['loss_type']),
-                                 decode(array['cost_type'])))
+        # in exposure.hdf5 `loss_types` is an attribute
+        loss_types = attrs.get('loss_types') or decode(array['loss_type'])
+        cc.cost_types = dict(zip(loss_types, decode(array['cost_type'])))
         cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     @staticmethod
