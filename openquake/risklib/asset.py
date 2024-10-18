@@ -147,6 +147,7 @@ class CostCalculator(object):
                 return cost * area
             elif area_type == "per_asset":
                 return cost * area * number
+        breakpoint()
         # this should never happen
         raise RuntimeError('Unable to compute cost for %r' % loss_type)
 
@@ -587,14 +588,7 @@ def get_other_fields(fields):
 
 
 def _get_exposure(fname, stop=None):
-    """
-    :param fname:
-        path of the XML file containing the exposure
-    :param stop:
-        node at which to stop parsing (or None)
-    :returns:
-        a pair (Exposure instance, list of asset nodes)
-    """
+    # returns Exposure instance, list of asset nodes
     [xml] = nrml.read(fname, stop=stop)
     if not xml.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
