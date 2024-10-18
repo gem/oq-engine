@@ -657,8 +657,6 @@ def export_aggcurves_csv(ekey, dstore):
     return fnames
 
 
-# TODO: rename to exposure and export both exposure.csv and exposure.xml
-@export.add(('assetcol', 'csv'))
 def export_assetcol_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -679,10 +677,35 @@ def export_assetcol_csv(ekey, dstore):
             df.loc[asset_idx, tagname] = tag_str
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
-    dest = dstore.export_path('%s.%s' % ekey)
+    dest_csv = dstore.export_path('%s.%s' % ekey)
     md = dstore.metadata
-    writer.save(df, dest, comment=md)
-    return [dest]
+    writer.save(df, dest_csv, comment=md)
+
+    expo = dstore['exposure'][:]  # cost_type, area_type, unit
+    N = node.Node
+    root = N('exposureModel', {'id': 'exposure', 'category': 'buildings'})
+    root.append(N('description', {}, 'Generated exposure'))
+    conversions = N('conversions', {})
+    costtypes = N('costTypes', {})
+    for row in expo:
+        costtypes.nodes.append(N('costType', {
+            'name': expo['cost'],
+            'type': expo['per_area'],
+            'unit': expo['unit']}))
+    conversions.append(N('area', {'type': 'per_asset', 'unit': 'SQM'}))
+    conversions.append(costtypes)
+    expfields = N('exposureFields', {})
+    for f in fs:
+        expfields.append(N('field', {'input': inp, 'oq': name}))
+    root.append(conversions)
+    root.append(expfields)
+    root.append(N('occupancyPeriods'), {}, 'night')
+    root.append(N('tagNames'), {}, tagnames)
+    root.append(N('assets', {}, os.path.basename(dest_csv)))
+    dest_xml = dstore.export_path('%s.xml' % ekey[0])
+    with open(dest_xml, 'wb') as out:
+        nrml.write([root], out)
+    return [dest_xml, dest_csv]
 
 
 @export.add(('reinsurance-risk_by_event', 'csv'),
