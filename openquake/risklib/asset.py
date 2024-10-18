@@ -559,12 +559,6 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('type', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
-def get_area_type(cost_types):
-    ct = cost_types[cost_types['name'] == 'area']
-    if len(ct) == 0:
-        return '?'
-    return ct['type'][0]
-
 
 # The fields in the exposure are complicated. For the global
 # risk model you will have things like the following:
@@ -587,7 +581,7 @@ def get_other_fields(fields):
 
 
 def _get_exposure(fname, stop=None):
-    # returns Exposure instance, list of asset nodes
+    # returns (Exposure instance, asset nodes)
     [xml] = nrml.read(fname, stop=stop)
     if not xml.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
