@@ -565,6 +565,12 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('type', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
+def get_area_type(cost_types):
+    ct = cost_types[cost_types['name'] == 'area']
+    if len(ct) == 0:
+        return '?'
+    return ct['type'][0]
+
 
 # The fields in the exposure are complicated. For the global
 # risk model you will have things like the following:
@@ -613,11 +619,7 @@ def _get_exposure(fname, stop=None):
     try:
         area = conversions.area
     except AttributeError:
-        # NB: the area type cannot be an empty string because when sending
-        # around the CostCalculator object we would run into this numpy bug
-        # about pickling dictionaries with empty strings:
-        # https://github.com/numpy/numpy/pull/5475
-        area = Node('area', dict(type='?'))
+        area = Node('area', dict(type=''))
     try:
         occupancy_periods = xml.occupancyPeriods.text.split()
     except AttributeError:
@@ -663,7 +665,7 @@ def _get_exposure(fname, stop=None):
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = area['type']
+        cc.area_types[name] = area['type'] or get_area_type(cost_types)
         cc.units[name] = ct['unit']
     exp = Exposure(occupancy_periods, area.attrib, [], cc,
                    TagCollection(tagnames), pairs)
