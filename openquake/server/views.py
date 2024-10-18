@@ -165,7 +165,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'maximum_distance_stations': 'float ≥ 0',
 }
 
-HIDDEN_OUTPUTS = ['job']
+HIDDEN_OUTPUTS = ['assetcol', 'job']
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True

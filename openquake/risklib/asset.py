@@ -867,6 +867,10 @@ class Exposure(object):
     fields = ['occupancy_periods', 'assets',
               'cost_calculator', 'tagcol', 'pairs']
 
+    @property
+    def loss_types(self):
+        return sorted(self.cost_calculator.cost_types)
+
     def __toh5__(self):
         cc = self.cost_calculator
         loss_types = sorted(cc.cost_types)
@@ -877,7 +881,6 @@ class Exposure(object):
         array['cost_type'] = [cc.cost_types[lt] for lt in loss_types]
         array['unit'] = [cc.units[lt] for lt in loss_types]
         attrs = dict(
-            loss_types=hdf5.array_of_vstr(loss_types),
             occupancy_periods=hdf5.array_of_vstr(self.occupancy_periods),
             pairs=self.pairs)
         return array, attrs
@@ -885,7 +888,8 @@ class Exposure(object):
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         cc = self.cost_calculator = object.__new__(CostCalculator)
-        cc.cost_types = dict(zip(self.loss_types, decode(array['cost_type'])))
+        cc.cost_types = dict(zip(decode(array['loss_type']),
+                                 decode(array['cost_type'])))
         cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     @staticmethod
@@ -1033,7 +1037,7 @@ class Exposure(object):
         self.cost_calculator.update(array)
         self.mesh = mesh
         self.assets = array
-        self.loss_types = vfields
+        #self.loss_types = vfields
         self.occupancy_periods = ofields
 
     def _csv_header(self, value='value-', occupants='occupants_'):
