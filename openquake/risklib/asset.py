@@ -617,10 +617,6 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         pass  # no fieldmap
     try:
-        area = conversions.area
-    except AttributeError:
-        area = Node('area', dict(type=''))
-    try:
         occupancy_periods = xml.occupancyPeriods.text.split()
     except AttributeError:
         occupancy_periods = []
@@ -665,10 +661,9 @@ def _get_exposure(fname, stop=None):
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = area['type'] or get_area_type(cost_types)
+        cc.area_types[name] = get_area_type(cost_types)
         cc.units[name] = ct['unit']
-    exp = Exposure(occupancy_periods, area.attrib, [], cc,
-                   TagCollection(tagnames), pairs)
+    exp = Exposure(occupancy_periods, [], cc, TagCollection(tagnames), pairs)
     assets_text = xml.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -882,7 +877,7 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['occupancy_periods', 'area', 'assets',
+    fields = ['occupancy_periods', 'assets',
               'cost_calculator', 'tagcol', 'pairs']
 
     def __toh5__(self):
