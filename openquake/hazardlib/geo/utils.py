@@ -929,6 +929,7 @@ def geolocate(lonlats, geom_df, exclude=()):
     """
     :param lonlats: array of shape (N, 2) of (lon, lat)
     :param geom_df: DataFrame of geometries with a "code" field
+    :param exclude: List of codes to exclude from the results
     :returns: codes associated to the points
 
     NB: if the "code" field is not a primary key, i.e. there are
@@ -936,11 +937,31 @@ def geolocate(lonlats, geom_df, exclude=()):
     associates the code if at least one of the geometries matches
     """
     codes = numpy.array(['???'] * len(lonlats))
-    for code, df in geom_df.groupby('code'):
-        if code in exclude:
-            continue
+    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
+    for code, df in filtered_geom_df.groupby('code'):
         ok = numpy.zeros(len(lonlats), bool)
         for geom in df.geom:
             ok |= contains_xy(geom, lonlats)
         codes[ok] = code
     return codes
+
+
+def geolocate_geometries(geometries, geom_df, exclude=(), no_match_code='???'):
+    """
+    :param geometries: NumPy array of Shapely geometries to check
+    :param geom_df: DataFrame of geometries with a "code" field
+    :param exclude: List of codes to exclude from the results
+    :param no_match_code: Code to assign if no intersections are found (default is '???')
+    :returns: NumPy array where each element contains a list of codes
+        of geometries that intersect each input geometry
+    """
+    result_codes = numpy.empty(len(geometries), dtype=object)
+    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
+    for i, input_geom in enumerate(geometries):
+        intersecting_codes = []  # to store intersecting codes for current geometry
+        for code, df in filtered_geom_df.groupby('code'):
+            target_geoms = df['geom'].values  # geometries associated with this code
+            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
+                intersecting_codes.append(code)
+        result_codes[i] = intersecting_codes if intersecting_codes else [no_match_code]
+    return result_codes
