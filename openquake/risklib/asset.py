@@ -889,7 +889,10 @@ class Exposure(object):
         vars(self).update(attrs)
         cc = self.cost_calculator = object.__new__(CostCalculator)
         # in exposure.hdf5 `loss_types` is an attribute
-        loss_types = attrs.get('loss_types') or decode(array['loss_type'])
+        loss_types = attrs.get('loss_types')
+        if loss_types is None:
+            # for engine version >= 3.22
+            loss_types = decode(array['loss_type'])
         cc.cost_types = dict(zip(loss_types, decode(array['cost_type'])))
         cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
