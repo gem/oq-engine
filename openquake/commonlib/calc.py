@@ -50,6 +50,7 @@ code2cls = rupture.BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
+
 # used only in the view global_hcurves
 def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     """
@@ -219,7 +220,7 @@ class RuptureImporter(object):
                              ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
-        oq  = self.oqparam
+        oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         events = numpy.zeros(E, rupture.events_dt)
@@ -431,7 +432,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
     dstore.swmr_on()
-    maxw = slices['weight'].sum()/ (oq.concurrent_tasks or 1) or 1.
+    maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
