@@ -982,14 +982,14 @@ def dictionary(value):
     for key, val in dic.items():
         try:
             has_logscale = (val[0] == 'logscale')
-        except Exception:  # no val[0]
+        except IndexError:  # no val[0]
             continue
         if has_logscale:
             dic[key] = list(logscale(*val[1:]))
 
         try:
             has_linscale = (val[0] == 'linscale')
-        except Exception:  # no val[0]
+        except IndexError:  # no val[0]
             continue
         if has_linscale:
             dic[key] = list(linscale(*val[1:]))
