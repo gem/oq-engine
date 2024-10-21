@@ -966,7 +966,6 @@ class Exposure(object):
                 cc = exposure.cost_calculator
                 ae(cc.cost_types, exp.cost_calculator.cost_types)
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
-                ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         assets_df = pandas.concat(dfs)
