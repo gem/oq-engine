@@ -980,20 +980,11 @@ def dictionary(value):
         raise ValueError('%r is not a valid Python dictionary' % value)
 
     for key, val in dic.items():
-        try:
-            has_logscale = (val[0] == 'logscale')
-        except IndexError:  # no val[0]
-            continue
-        if has_logscale:
-            dic[key] = list(logscale(*val[1:]))
-
-        try:
-            has_linscale = (val[0] == 'linscale')
-        except IndexError:  # no val[0]
-            continue
-        if has_linscale:
-            dic[key] = list(linscale(*val[1:]))
-
+        if isinstance(val, tuple):
+            if val[0] == 'logscale':
+                dic[key] = list(logscale(*val[1:]))
+            elif val[0] == 'linscale':
+                dic[key] = list(linscale(*val[1:]))
     return dic
 
 
