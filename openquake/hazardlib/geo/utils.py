@@ -946,12 +946,11 @@ def geolocate(lonlats, geom_df, exclude=()):
     return codes
 
 
-def geolocate_geometries(geometries, geom_df, exclude=(), no_match_code='???'):
+def geolocate_geometries(geometries, geom_df, exclude=()):
     """
     :param geometries: NumPy array of Shapely geometries to check
     :param geom_df: DataFrame of geometries with a "code" field
     :param exclude: List of codes to exclude from the results
-    :param no_match_code: Code to assign if no intersections are found (default is '???')
     :returns: NumPy array where each element contains a list of codes
         of geometries that intersect each input geometry
     """
@@ -963,5 +962,5 @@ def geolocate_geometries(geometries, geom_df, exclude=(), no_match_code='???'):
             target_geoms = df['geom'].values  # geometries associated with this code
             if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
                 intersecting_codes.append(code)
-        result_codes[i] = intersecting_codes if intersecting_codes else [no_match_code]
+        result_codes[i] = intersecting_codes
     return result_codes
