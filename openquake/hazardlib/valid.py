@@ -929,6 +929,23 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
+def linscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min <= 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    return numpy.linspace(x_min, x_max, num=n)
+
+
 def dictionary(value):
     """
     :param value:
@@ -951,11 +968,17 @@ def dictionary(value):
     """
     if not value:
         return {}
-    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+
+    if 'logscale' in value:
+        value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+    if 'linscale' in value:
+        value = value.replace('linscale(', '("linscale", ')  # dirty but quick
+
     try:
         dic = dict(ast.literal_eval(value))
     except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
+
     for key, val in dic.items():
         try:
             has_logscale = (val[0] == 'logscale')
@@ -963,6 +986,14 @@ def dictionary(value):
             continue
         if has_logscale:
             dic[key] = list(logscale(*val[1:]))
+
+        try:
+            has_linscale = (val[0] == 'linscale')
+        except Exception:  # no val[0]
+            continue
+        if has_linscale:
+            dic[key] = list(linscale(*val[1:]))
+
     return dic
 
 
