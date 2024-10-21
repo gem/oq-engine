@@ -260,8 +260,17 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         self.assertEqual(ret_dict['local_timestamp'],
                          '2023-02-06 04:17:34+03:00')
         self.assertEqual(ret_dict['time_event'], 'night')
-        self.assertEqual(ret_dict['mosaic_models'], ['MIE'])
+        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
         self.assertEqual(ret_dict['trts'], {
+            'ARB': ['TECTONIC_REGION_1',
+                    'TECTONIC_REGION_2',
+                    'TECTONIC_REGION_3',
+                    'TECTONIC_REGION_4',
+                    'Active Shallow Crust EMME',
+                    'Stable Shallow Crust EMME',
+                    'Subduction Interface EMME',
+                    'Subduction Inslab EMME',
+                    'Deep Seismicity EMME'],
             'MIE': ['Active Shallow Crust',
                     'Stable Shallow Crust',
                     'Subduction Interface',
@@ -347,7 +356,22 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
-        self.assertEqual(ret_dict['mosaic_models'], ['MIE'])
+        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
+        self.assertEqual(ret_dict['trts'], {
+            'ARB': ['TECTONIC_REGION_1',
+                    'TECTONIC_REGION_2',
+                    'TECTONIC_REGION_3',
+                    'TECTONIC_REGION_4',
+                    'Active Shallow Crust EMME',
+                    'Stable Shallow Crust EMME',
+                    'Subduction Interface EMME',
+                    'Subduction Inslab EMME',
+                    'Deep Seismicity EMME'],
+            'MIE': ['Active Shallow Crust',
+                    'Stable Shallow Crust',
+                    'Subduction Interface',
+                    'Subduction Inslab',
+                    'Deep Seismicity']})
 
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',

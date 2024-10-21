@@ -24,6 +24,7 @@ import getpass
 import logging
 from dataclasses import dataclass
 import numpy
+from shapely.geometry import Point
 from json.decoder import JSONDecodeError
 from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
@@ -54,32 +55,31 @@ class AristotleParam:
     ignore_shakemap: bool = False
 
 
-def get_close_mosaic_models(lon, lat, max_dist):
+def get_close_mosaic_models(lon, lat, buffer_radius):
     """
     :param lon: longitude
     :param lat: latitude
-    :param max_dist: max dist with respect to a model to consider it relevant
-    :returns: list of mosaic models with the max_dist distance
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point
+    :returns: list of mosaic models intersecting the circle
+        centered on the given coordinates having the specified radius
     """
     mosaic_df = readinput.read_mosaic_df(buffer=1)
-    hypocenter = geo.Point(lon, lat)
-    minx, miny, maxx, maxy = geo.utils.get_bounding_box([hypocenter], max_dist)
-    close_mosaic_models = set()
-    bbox_vertices = [(minx, maxy), (maxx, maxy), (maxx, miny), (minx, miny)]
-    for vertex in bbox_vertices:
-        lonlats = numpy.array([vertex[0], vertex[1]])
-        [mosaic_model] = geo.utils.geolocate([lonlats], mosaic_df)
-        close_mosaic_models.add(mosaic_model)
-    close_mosaic_models = sorted([model for model in close_mosaic_models
-                                  if model != '???'])
+    hypocenter = Point(lon, lat)
+    hypo_buffer = hypocenter.buffer(buffer_radius)
+    geoms = numpy.array([hypo_buffer])
+    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
     if not close_mosaic_models:
         raise ValueError(
-            f'({lon}, {lat}) is farther than {max_dist}km'
+            f'({lon}, {lat}) is farther than {buffer_radius} deg'
             f' from any mosaic model!')
     elif len(close_mosaic_models) > 1:
         logging.info(
-            '(%s, %s) is closer than %skm with respect to the following'
-            ' mosaic models: %s' % (lon, lat, max_dist, close_mosaic_models))
+            '(%s, %s) is closer than %s deg with respect to the following'
+            ' mosaic models: %s' % (lon, lat, buffer_radius, close_mosaic_models))
     return close_mosaic_models
 
 
@@ -166,7 +166,7 @@ def get_aristotle_params(arist):
         inputs['station_data'] = arist.station_data_file
     if not arist.mosaic_model:
         lon, lat = rupdic['lon'], rupdic['lat']
-        mosaic_models = get_close_mosaic_models(lon, lat, 100)
+        mosaic_models = get_close_mosaic_models(lon, lat, 5)
         # NOTE: using the first mosaic model
         arist.mosaic_model = mosaic_models[0]
         if len(mosaic_models) > 1:
