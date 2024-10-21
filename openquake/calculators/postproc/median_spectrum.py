@@ -201,7 +201,7 @@ def main(dstore, csm):
     for p, poe in enumerate(oq.poes):
         if (np.abs(tot_w[:, :, p] - 1) > .2).any():
             maxw = tot_w[:, :, p].max()
-            raise ValueError(f'The weights sum up to {maxw} != 1: perhaps the '
+            raise ValueError(f'The weights sum up to {maxw:.3f} != 1: perhaps the '
                              f'hazard curve is not invertible around {poe=}')
 
     # sanity check on the rup_ids
