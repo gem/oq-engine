@@ -28,7 +28,6 @@ from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
-from openquake.engine.aristotle import get_close_mosaic_models
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -45,7 +44,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
