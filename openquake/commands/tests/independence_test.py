@@ -50,6 +50,7 @@ class IndependenceTestCase(unittest.TestCase):
 
     def test_engine(self):
         assert_independent('openquake.engine', 'openquake.server')
+        assert_independent('openquake.calculators', 'openquake.engine')
 
 
 class CaseConsistencyTestCase(unittest.TestCase):
