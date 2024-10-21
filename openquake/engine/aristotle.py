@@ -71,8 +71,7 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     hypocenter = Point(lon, lat)
     hypo_buffer = hypocenter.buffer(buffer_radius)
     geoms = numpy.array([hypo_buffer])
-    close_mosaic_models = geo.utils.geolocate_geometries(geoms, mosaic_df)
-    close_mosaic_models = sorted([model for model in close_mosaic_models[0]])
+    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
     if not close_mosaic_models:
         raise ValueError(
             f'({lon}, {lat}) is farther than {buffer_radius} deg'

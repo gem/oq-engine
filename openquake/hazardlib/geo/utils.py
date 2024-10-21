@@ -957,10 +957,10 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
     result_codes = numpy.empty(len(geometries), dtype=object)
     filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
     for i, input_geom in enumerate(geometries):
-        intersecting_codes = []  # to store intersecting codes for current geometry
+        intersecting_codes = set()  # to store intersecting codes for current geometry
         for code, df in filtered_geom_df.groupby('code'):
             target_geoms = df['geom'].values  # geometries associated with this code
             if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
-                intersecting_codes.append(code)
-        result_codes[i] = intersecting_codes
+                intersecting_codes.add(code)
+        result_codes[i] = sorted(intersecting_codes)
     return result_codes
