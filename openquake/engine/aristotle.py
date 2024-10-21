@@ -31,6 +31,7 @@ from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.shakemap.parsers import (
     download_rupture_dict, download_station_data_file)
 from openquake.commonlib import readinput
+from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
