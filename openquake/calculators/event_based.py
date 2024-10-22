@@ -51,7 +51,7 @@ from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
-from openquake.engine import engine
+from openquake.calculators.base import expose_outputs
 from PIL import Image
 
 U8 = numpy.uint8
@@ -808,7 +808,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     # source model, however usually this is quite fast and
                     # does not dominate the computation
                     self.cl.run()
-                    engine.expose_outputs(self.cl.datastore)
+                    expose_outputs(self.cl.datastore)
                     all = slice(None)
                     for imt in oq.imtls:
                         cl_mean_curves = get_mean_curve(

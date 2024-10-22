@@ -46,7 +46,8 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib import parallel, general, config, slurm, workerpool as w
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
-from openquake.calculators import base, export
+from openquake.calculators import base
+from openquake.calculators.base import expose_outputs
 
 
 USER = getpass.getuser()
@@ -89,72 +90,6 @@ def set_concurrent_tasks_default(calc):
     else:
         num_workers = parallel.Starmap.num_cores
     logging.warning('Using %d %s workers', num_workers, dist)
-
-
-def expose_outputs(dstore, owner=USER, status='complete'):
-    """
-    Build a correspondence between the outputs in the datastore and the
-    ones in the database.
-
-    :param dstore: datastore
-    """
-    oq = dstore['oqparam']
-    exportable = set(ekey[0] for ekey in export.export)
-    calcmode = oq.calculation_mode
-    dskeys = set(dstore) & exportable  # exportable datastore keys
-    dskeys.add('fullreport')
-    if 'avg_gmf' in dskeys:
-        dskeys.remove('avg_gmf')  # hide
-    rlzs = dstore['full_lt'].rlzs
-    if len(rlzs) > 1:
-        dskeys.add('realizations')
-    hdf5 = dstore.hdf5
-    if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
-        if oq.hazard_stats() or oq.individual_rlzs or len(rlzs) == 1:
-            dskeys.add('hcurves')
-        if oq.uniform_hazard_spectra:
-            dskeys.add('uhs')  # export them
-        if oq.hazard_maps:
-            dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.collect_rlzs:
-        if 'aggrisk' in dstore:
-            dskeys.add('aggrisk-stats')
-        if 'aggcurves' in dstore:
-            dskeys.add('aggcurves-stats')
-        if not oq.individual_rlzs:
-            for out in ['avg_losses-rlzs', 'aggrisk', 'aggcurves']:
-                if out in dskeys:
-                    dskeys.remove(out)
-    if 'curves-rlzs' in dstore and len(rlzs) == 1:
-        dskeys.add('loss_curves-rlzs')
-    if 'curves-stats' in dstore and len(rlzs) > 1:
-        dskeys.add('loss_curves-stats')
-    if oq.conditional_loss_poes:  # expose loss_maps outputs
-        if 'loss_curves-stats' in dstore:
-            dskeys.add('loss_maps-stats')
-    if 'ruptures' in dskeys:
-        if 'scenario' in calcmode or len(dstore['ruptures']) == 0:
-            # do not export, as requested by Vitor
-            exportable.remove('ruptures')
-        else:
-            dskeys.add('event_based_mfd')
-    if 'hmaps' in dskeys and not oq.hazard_maps:
-        dskeys.remove('hmaps')  # do not export the hazard maps
-    if logs.dbcmd('get_job', dstore.calc_id) is None:
-        # the calculation has not been imported in the db yet
-        logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
-                   oq.description + ' [parent]', owner, status,
-                   oq.hazard_calculation_id, dstore.datadir)
-    keysize = []
-    for key in sorted(dskeys & exportable):
-        try:
-            size_mb = dstore.getsize(key) / MB
-        except (KeyError, AttributeError):
-            size_mb = -1
-        if size_mb:
-            keysize.append((key, size_mb))
-    ds_size = dstore.getsize() / MB
-    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -326,7 +261,7 @@ def stop_workers(job_id):
     """
     print(w.WorkerMaster(job_id).stop())
 
-    
+
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
     """
     Run jobs using the specified config file and other options.
@@ -385,7 +320,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if dist in ('zmq', 'slurm') and  w.WorkerMaster(job_id).status() == []:
+        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
 
         # run the jobs sequentially or in parallel, with slurm or without
