@@ -623,19 +623,15 @@ class CompositeRiskModel(collections.abc.Mapping):
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
-                number = assets['value-number']
                 # by construction all assets have the same taxonomy
                 df = self.tmap_df[self.tmap_df.taxi == assets[0]['taxonomy']]
-                for a, asset in enumerate(assets):
-                    frac = fractions[a, :, 1:] / number[a]
-                    for lt, risk_id, weight in zip(df.loss_type, df.risk_id,
-                                                   df.weight):
-                        if lt == '*' or lt == loss_type:
-                            # for instance risk_id = 'W_LFM-DUM_H6'
-                            cs = coeffs[risk_id][loss_type]
-                            csq[consequence][a] += scientific.consequence(
-                                consequence, cs, asset, frac,
-                                loss_type, time_event) * weight
+                for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
+                    if lt == '*' or lt == loss_type:
+                        # for instance risk_id = 'W_LFM-DUM_H6'
+                        cs = coeffs[risk_id][loss_type]
+                        csq[consequence] += scientific.consequence(
+                            consequence, cs, assets, fractions[:, :, 1:],
+                            loss_type, time_event) * weight
         return csq
 
     def init(self):
