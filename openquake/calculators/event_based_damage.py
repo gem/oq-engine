@@ -18,6 +18,7 @@
 
 import os.path
 import logging
+from dataclasses import dataclass
 import numpy
 import pandas
 
@@ -35,6 +36,18 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+
+@dataclass
+class Dparam:
+    """
+    Parameters for a damage calculation
+    """
+    aggids: U32
+    allrlzs: U32
+    sec_sims: list
+    ci: dict
+    R: int
+    Dc: int
 
 
 def zero_dmgcsq(A, R, crmodel):
@@ -66,17 +79,16 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
-            crmodel, ci, R, Dc, dmgcsq, dddict):
+def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
     oq = crmodel.oqparam
     loss_types = oq.loss_types
     eids = gmf_df.eid.to_numpy()
-    if R > 1:
-        rlzs = allrlzs[eids]
-    if sec_sims or not oq.float_dmg_dist:
+    if dparam.R > 1:
+        rlzs = dparam.allrlzs[eids]
+    if dparam.sec_sims or not oq.float_dmg_dist:
         rng = scientific.MultiEventRNG(
             oq.master_seed, numpy.unique(eids))
-    for prob_field, num_sims in sec_sims:
+    for prob_field, num_sims in dparam.sec_sims:
         probs = gmf_df[prob_field].to_numpy()   # LiqProb
         if not oq.float_dmg_dist:
             dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
@@ -92,7 +104,7 @@ def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
             fractions = out[lt]
             Asid, E, D = fractions.shape
             assert len(eids) == E
-            d3 = numpy.zeros((Asid, E, Dc), F32)
+            d3 = numpy.zeros((Asid, E, dparam.Dc), F32)
             if oq.float_dmg_dist:
                 d3[:, :, :D] = fractions
                 for a in range(Asid):
@@ -106,7 +118,7 @@ def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
 
             # secondary perils and consequences
             for a, asset in enumerate(assets):
-                if sec_sims:
+                if dparam.sec_sims:
                     for d in range(1, D):
                         # doing the mean on the secondary simulations
                         if oq.float_dmg_dist:
@@ -118,8 +130,8 @@ def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
                     asset, d3[a, :, :D] / number[a], lt,
                     oq.time_event)
                 for name, values in csq.items():
-                    d3[a, :, ci[name]] = values
-            if R == 1:
+                    d3[a, :, dparam.ci[name]] = values
+            if dparam.R == 1:
                 dmgcsq[aids, 0, lti] += d3.sum(axis=1)
             else:
                 for e, rlz in enumerate(rlzs):
@@ -128,7 +140,7 @@ def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
             for e, eid in enumerate(eids):
                 dddict[eid, oq.K][lti] += tot[e]
                 if oq.K:
-                    for kids in aggids:
+                    for kids in dparam.aggids:
                         for a, aid in enumerate(aids):
                             dddict[eid, kids[aid]][lti] += d3[a, e]
 
@@ -164,8 +176,9 @@ def event_based_damage(df, oq, dstore, monitor):
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     else:
-        allrlzs = [0]
+        allrlzs = U32([0])
     assert len(oq.loss_types) == L
+    dparam = Dparam(aggids, allrlzs, sec_sims, ci, R, Dc)
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -173,8 +186,7 @@ def event_based_damage(df, oq, dstore, monitor):
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
                 continue
-            _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
-                    crmodel, ci, R, Dc, dmgcsq, dddict)
+            _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict)
     return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
 
