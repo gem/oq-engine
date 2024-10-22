@@ -80,8 +80,8 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _gen_d4(asset_df, gmf_df, crmodel, dparam):
-    # yields (aids, d4) triples
+def _gen_d3(asset_df, gmf_df, crmodel, dparam):
+    # yields (aids, d3) triples
     oq = crmodel.oqparam
     sec_sims = oq.secondary_simulations.items()
     for prob_field, num_sims in sec_sims:
@@ -124,12 +124,12 @@ def _gen_d4(asset_df, gmf_df, crmodel, dparam):
                         else:
                             d4[lti, a, :, d] *= dprobs
 
+        total_loss_types = {lt: li for li, lt in enumerate(oq.loss_types)
+                            if lt in oq.total_loss_types}
         df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
         csq = crmodel.compute_csq(
-            assets, d4[:, :, :, :D], df, oq.loss_types, oq.time_event)
-        for name, values in csq.items():
-            d4[:, :, :, dparam.csqidx[name]] = values
-        yield aids, d4  # d4 has shape (L, A, E, Dc)
+            assets, d4[:, :, :, :D], df, total_loss_types, oq.time_event)
+        yield aids, csq
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -178,7 +178,7 @@ def event_based_damage(df, oq, dstore, monitor):
             else:
                 rng = None
             dparam = Dparam(eids, aggids, rlzs, csqidx, D, Dc, rng)
-            for aids, d4 in _gen_d4(asset_df, gmf_df, crmodel, dparam):
+            for aids, d4 in _gen_d3(asset_df, gmf_df, crmodel, dparam):
                 for lti, d3 in enumerate(d4):
                     if R == 1:
                         dmgcsq[aids, 0, lti] += d3.sum(axis=1)

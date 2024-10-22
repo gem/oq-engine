@@ -412,6 +412,15 @@ class RiskModel(object):
     event_based_damage = scenario_damage
 
 
+def get_wdic(df, loss_types):
+    wdic = {}
+    for loss_type in loss_types:
+        for lt, weight in zip(df.loss_type, df.weight):
+            if lt == loss_type or lt == '*':
+                wdic[loss_type] = weight
+    return wdic
+
+
 # NB: the approach used here relies on the convention of having the
 # names of the arguments of the RiskModel class to be equal to the
 # names of the parameter in the oqparam object. This is seen as a
@@ -610,12 +619,12 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, tmap_df, loss_types, time_event):
+    def compute_csq(self, assets, fractions, tmap_df, total_loss_types, time_event):
         """
         :param assets: asset array
         :param fractions: array of probabilies of shape (L, A, E, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
-        :param loss_types: loss types as a strings
+        :param total_loss_types: dictionary loss_type -> li
         :returns: a dict consequence_name -> array of shape (L, A, E)
         """
         L, A, E, _D = fractions.shape
@@ -625,15 +634,13 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
-                for li, loss_type in enumerate(loss_types):
-                    for lt, risk_id, weight in zip(
-                            tmap_df.loss_type, tmap_df.risk_id, tmap_df.weight):
-                        if lt == '*' or lt == loss_type:
-                            # for instance risk_id = 'W_LFM-DUM_H6'
-                            cs = fractions[li, :, :, 1:] @ coeffs[risk_id][loss_type]
-                            csq[consequence][li] += scientific.consequence(
-                                consequence, assets, cs, loss_type, time_event
-                            ) * weight
+                for risk_id, df in tmap_df.groupby('risk_id'):
+                    coeff = coeffs[risk_id]
+                    wdic = get_wdic(df, total_loss_types)
+                    cdic = {lt: fractions[total_loss_types[lt], :, :, 1:] @
+                            coeff[lt] * wdic[lt] for lt in total_loss_types}
+                    csq[consequence] += scientific.consequence(
+                        consequence, assets, cdic, time_event)
         return csq
 
     def init(self):
