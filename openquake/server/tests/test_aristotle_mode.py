@@ -329,7 +329,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         # values
         expected_keys = [
             'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
+            'dep', 'mag', 'rake', 'usgs_id', 'intensity_map',
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_file_from_usgs', 'trts',
             'mosaic_models']
