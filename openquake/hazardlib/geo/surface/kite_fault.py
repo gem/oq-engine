@@ -301,6 +301,8 @@ class KiteSurface(BaseSurface):
 
         # Check strike
         if found:
+
+            # Get the azimuth direction for the strike and dip
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
                                  self.mesh.lons[irow, icol + 1],
@@ -314,27 +316,29 @@ class KiteSurface(BaseSurface):
             coo[0, 0] = self.mesh.lons[irow, icol]
             coo[0, 1] = self.mesh.lats[irow, icol]
             coo[0, 1] = self.mesh.depths[irow, icol]
-            coo[1, 0] = self.mesh.lons[irow+1, icol]
-            coo[1, 1] = self.mesh.lats[irow+1, icol]
-            coo[1, 2] = self.mesh.depths[irow+1, icol]
-            coo[2, 0] = self.mesh.lons[irow+1, icol+1]
-            coo[2, 1] = self.mesh.lats[irow+1, icol+1]
-            coo[2, 2] = self.mesh.depths[irow+1, icol+1]
-            coo[3, 0] = self.mesh.lons[irow, icol+1]
-            coo[3, 1] = self.mesh.lats[irow, icol+1]
-            coo[3, 2] = self.mesh.depths[irow, icol+1]
+            coo[1, 0] = self.mesh.lons[irow + 1, icol]
+            coo[1, 1] = self.mesh.lats[irow + 1, icol]
+            coo[1, 2] = self.mesh.depths[irow + 1, icol]
+            coo[2, 0] = self.mesh.lons[irow + 1, icol + 1]
+            coo[2, 1] = self.mesh.lats[irow + 1, icol + 1]
+            coo[2, 2] = self.mesh.depths[irow + 1, icol + 1]
+            coo[3, 0] = self.mesh.lons[irow, icol + 1]
+            coo[3, 1] = self.mesh.lats[irow, icol + 1]
+            coo[3, 2] = self.mesh.depths[irow, icol + 1]
 
             from openquake.hazardlib.geo.utils import (
                 plane_fit, get_strike_from_plane_normal)
-            pnt_plane, nrml_plane = plane_fit(coo)
+            _, nrml_plane = plane_fit(coo)
             tmp_strike = get_strike_from_plane_normal(nrml_plane)
+
+            breakpoint()
 
             # Compare the dip direction from the strike against the one from
             # the quadrilateral
-            tmp = geo_utils._angles_diff(azi_strike, 90)
-            if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
-            #tmp = (azi_strike + 90.0) % 360
-            #if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
+            # tmp = geo_utils._angles_diff(azi_strike, 90)
+            #if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
+            tmp = (azi_strike + 90) % 360
+            if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -811,7 +815,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     msh = _fix_right_hand(msh)
 
     # INFO: this is just for debugging
-    # _dbg_plot_mesh(msh)
+    _dbg_plot_mesh(msh)
 
     return msh
 
@@ -851,11 +855,14 @@ def _dbg_plot_mesh(mesh):
     ax.plot(mesh[:, :, 0].flatten(),
             mesh[:, :, 1].flatten(),
             mesh[:, :, 2].flatten() * scl, '.')
-    ax.invert_zaxis()
+    ax.plot(mesh[0, 0, 0].flatten(),
+            mesh[0, 0, 1].flatten(),
+            mesh[0, 0, 2].flatten() * scl, 'or')
     set_axes_equal(ax)
+    ax.invert_zaxis()
     plt.show()
 
-    
+
 def _fix_right_hand(msh):
     # This function checks that the array describing the surface complies with
     # the right hand rule and, if required, flips the mesh to make it compliant
@@ -871,7 +878,7 @@ def _fix_right_hand(msh):
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.empty_like(msh)
         nmsh[:, :, :] = msh[:, ::-1, :]
-        
+
         #chk_flip = ((msh[:, 0, 0] == nmsh[:, -1, 0]) &
         #            (msh[:, 0, 2] == nmsh[:, -1, 2]))
 

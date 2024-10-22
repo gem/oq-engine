@@ -155,6 +155,8 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
     """
 
     def setUp(self):
+        # The surface dips toward north. It doesn't comply with the right hand
+        # rule and must be flipped
         lons = [[np.nan, 0.05, 0.1, 0.15, 0.20],
                 [0.00, 0.05, 0.1, 0.15, 0.20],
                 [0.00, 0.05, 0.1, 0.15, 0.20],
@@ -288,6 +290,8 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             plot_prf_2d(ax, self.prf)
             ax.plot(coo[:, 0], coo[:, 1], '-g', lw=4)
             plt.show()
+
+        breakpoint()
 
         aae(elo, coo[:, 0])
         aae(ela, coo[:, 1])
