@@ -46,6 +46,7 @@ class Dparam:
     aggids: U16
     rlzs: U32
     ci: dict
+    D: int
     Dc: int
     rng: scientific.MultiEventRNG
 
@@ -98,9 +99,9 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
         else:
             number = U32(assets['value-number'])
         d3_by_lt = {}
+        D = dparam.D
         for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
-            _A, _E, D = fractions.shape
             d3 = numpy.zeros((A, E, dparam.Dc), F32)
             if oq.float_dmg_dist:
                 d3[:, :, :D] = fractions
@@ -153,6 +154,7 @@ def event_based_damage(df, oq, dstore, monitor):
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
     _A, R, L, Dc = dmgcsq.shape
+    D = Dc - len(crmodel.get_consequences())
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     else:
@@ -176,7 +178,7 @@ def event_based_damage(df, oq, dstore, monitor):
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
-            dparam = Dparam(eids, aggids, rlzs, ci, Dc, rng)
+            dparam = Dparam(eids, aggids, rlzs, ci, D, Dc, rng)
             for aids, d3_by_lt in _gen_d3(asset_df, gmf_df, crmodel, dparam):
                 for lti, lt in enumerate(oq.loss_types):
                     d3 = d3_by_lt[lt]
