@@ -20,12 +20,13 @@ import logging
 import operator
 import functools
 import numpy
+from shapely.geometry import Point
 
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array
+from openquake.hazardlib import map_array, geo
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util
+from openquake.commonlib import util, readinput
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -48,6 +49,7 @@ F64 = numpy.float64
 code2cls = rupture.BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
+
 
 # used only in the view global_hcurves
 def convert_to_array(pmap, nsites, imtls, inner_idx=0):
@@ -218,7 +220,7 @@ class RuptureImporter(object):
                              ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
-        oq  = self.oqparam
+        oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         events = numpy.zeros(E, rupture.events_dt)
@@ -430,7 +432,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
     dstore.swmr_on()
-    maxw = slices['weight'].sum()/ (oq.concurrent_tasks or 1) or 1.
+    maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
@@ -439,3 +441,31 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap
+
+
+def get_close_mosaic_models(lon, lat, buffer_radius):
+    """
+    :param lon: longitude
+    :param lat: latitude
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point
+    :returns: list of mosaic models intersecting the circle
+        centered on the given coordinates having the specified radius
+    """
+    mosaic_df = readinput.read_mosaic_df(buffer=1)
+    hypocenter = Point(lon, lat)
+    hypo_buffer = hypocenter.buffer(buffer_radius)
+    geoms = numpy.array([hypo_buffer])
+    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
+    if not close_mosaic_models:
+        raise ValueError(
+            f'({lon}, {lat}) is farther than {buffer_radius} deg'
+            f' from any mosaic model!')
+    elif len(close_mosaic_models) > 1:
+        logging.info(
+            '(%s, %s) is closer than %s deg with respect to the following'
+            ' mosaic models: %s' % (lon, lat, buffer_radius, close_mosaic_models))
+    return close_mosaic_models

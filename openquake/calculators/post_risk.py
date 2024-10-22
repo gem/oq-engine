@@ -26,8 +26,8 @@ import pandas
 from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
-from openquake.engine import engine
 from openquake.calculators import base, views
+from openquake.calculators.base import expose_outputs
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -659,4 +659,4 @@ def post_aggregate(calc_id: int, aggregate_by):
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
         prc.run(aggregate_by=[aggby])
-        engine.expose_outputs(prc.datastore)
+        expose_outputs(prc.datastore)

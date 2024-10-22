@@ -1625,7 +1625,7 @@ class RiskComputer(dict):
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
-        tm = crm.tmap[crm.tmap.taxi == taxidx]
+        tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
         for lt in self.minimum_asset_loss:
             for country, loss_type, riskid, weight in zip(
@@ -1710,30 +1710,31 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
+def consequence(consequence, assets, coeffs, loss_type, time_event):
     """
     :param consequence: kind of consequence
-    :param coeffs: coefficients per damage state
-    :param asset: asset record
-    :param dmgdist: an array of probabilies of shape (E, D - 1)
+    :param assets: asset array (shape A)
+    :param coeffs: an array of multiplicative coefficients of shape (A, E)
     :param loss_type: loss type string
-    :returns: array of shape E
+    :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    if consequence.startswith(('loss', 'losses')):
+    if consequence.startswith('losses'):
         try:
-            value = asset['value-' + loss_type]
+            values = assets['value-' + loss_type] / assets['value-number']
         except ValueError:  # landslide, liquefaction
             return 0
-        return dmgdist @ coeffs * value
+        return values.reshape(-1, 1) * coeffs
     elif consequence in ['collapsed', 'non_operational']:
-        return dmgdist @ coeffs * asset['value-number']
+        return coeffs
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
-        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
+        values = assets[f'occupants_{time_event}'] / assets['value-number']
+        return values.reshape(-1, 1) * coeffs
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['value-residents']
+        values = assets['value-residents'] / assets['value-number']
+        return values.reshape(-1, 1) * coeffs
     else:
         raise NotImplementedError(consequence)
 

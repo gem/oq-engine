@@ -131,3 +131,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqual(
             list(dic),
             ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', 'extra'])
+
+        # check risk_by_event
+        [f] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
