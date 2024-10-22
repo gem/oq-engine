@@ -858,7 +858,7 @@ def _dbg_plot_mesh(mesh):
 
 def _fix_right_hand(msh):
     # This function checks that the array describing the surface complies with
-    # the right hand rule and, it required, flips the mesh to make it compliant
+    # the right hand rule and, if required, flips the mesh to make it compliant
     #
     # :param msh:
     #   A :class:`numpy.ndarray` instance describing the mesh
