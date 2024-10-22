@@ -835,8 +835,8 @@ class HazardCalculator(BaseCalculator):
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
-            if len(self.crmodel.tmap):
-                self.datastore.create_df('taxmap', self.crmodel.tmap, 'gzip')
+            if len(self.crmodel.tmap_df):
+                self.datastore.create_df('taxmap', self.crmodel.tmap_df, 'gzip')
 
     def _plot_assets(self):
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
@@ -943,9 +943,9 @@ class HazardCalculator(BaseCalculator):
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
                       if taxi in numpy.unique(self.assetcol['taxonomy'])}
-            tmap = readinput.taxonomy_mapping(oq, taxidx)
-            self.crmodel.set_tmap(tmap)
-            risk_ids = set(tmap.risk_id)
+            tmap_df = readinput.taxonomy_mapping(oq, taxidx)
+            self.crmodel.set_tmap(tmap_df)
+            risk_ids = set(tmap_df.risk_id)
 
             # check that we are covering all the taxonomies in the exposure
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
@@ -963,7 +963,7 @@ class HazardCalculator(BaseCalculator):
                     'Reducing risk model from %d to %d taxonomy strings',
                     len(self.crmodel.taxonomies), len(risk_ids))
                 self.crmodel = self.crmodel.reduce(risk_ids)
-                self.crmodel.tmap = tmap
+                self.crmodel.tmap_df = tmap_df
 
     def _read_risk3(self):
         oq = self.oqparam
@@ -1132,10 +1132,10 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtset)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if len(self.crmodel.tmap) == 0:
+        if len(self.crmodel.tmap_df) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap = readinput.taxonomy_mapping(self.oqparam, taxidx)
+            self.crmodel.tmap_df = readinput.taxonomy_mapping(self.oqparam, taxidx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

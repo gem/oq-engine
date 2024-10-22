@@ -45,7 +45,7 @@ class Dparam:
     eids: U32
     aggids: U16
     rlzs: U32
-    ci: dict
+    csqidx: dict
     D: int
     Dc: int
     rng: scientific.MultiEventRNG
@@ -98,7 +98,7 @@ def _gen_d4(asset_df, gmf_df, crmodel, dparam):
         if oq.float_dmg_dist:
             number = assets['value-number']
         else:
-            number = U32(assets['value-number'])
+            number = assets['value-number'] = U32(assets['value-number'])
         d4 = numpy.zeros((L, A, E, dparam.Dc), F32)
         D = dparam.D
         for lti, lt in enumerate(oq.loss_types):
@@ -124,11 +124,10 @@ def _gen_d4(asset_df, gmf_df, crmodel, dparam):
                         else:
                             d4[lti, a, :, d] *= dprobs
 
-                csq = crmodel.compute_csq(
-                    asset, d4[lti, a, :, :D] / number[a], lt,
-                    oq.time_event)
-                for name, values in csq.items():
-                    d4[lti, a, :, dparam.ci[name]] = values
+            csq = crmodel.compute_csq(
+                assets, d4[lti, :, :, :D], lt, oq.time_event)
+            for name, values in csq.items():
+                d4[lti, :, :, dparam.csqidx[name]] = values
         yield aids, d4  # d4 has shape (L, A, E, Dc)
 
 
@@ -150,7 +149,7 @@ def event_based_damage(df, oq, dstore, monitor):
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
     dmg_csq = crmodel.get_dmg_csq()
-    ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
+    csqidx = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
     _A, R, L, Dc = dmgcsq.shape
     D = Dc - len(crmodel.get_consequences())
@@ -177,7 +176,7 @@ def event_based_damage(df, oq, dstore, monitor):
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
-            dparam = Dparam(eids, aggids, rlzs, ci, D, Dc, rng)
+            dparam = Dparam(eids, aggids, rlzs, csqidx, D, Dc, rng)
             for aids, d4 in _gen_d4(asset_df, gmf_df, crmodel, dparam):
                 for lti, d3 in enumerate(d4):
                     if R == 1:
@@ -193,10 +192,10 @@ def event_based_damage(df, oq, dstore, monitor):
                                 for a, aid in enumerate(aids):
                                     dddict[eid, kids[aid]][lti] += d3[a, e]
 
-    return _dframe(dddict, ci, oq.loss_types), dmgcsq
+    return _dframe(dddict, csqidx, oq.loss_types), dmgcsq
 
 
-def _dframe(adic, ci, loss_types):
+def _dframe(adic, csqidx, loss_types):
     # convert {eid, kid: dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in sorted(adic.items()):
@@ -204,7 +203,7 @@ def _dframe(adic, ci, loss_types):
             dic['agg_id'].append(kid)
             dic['event_id'].append(eid)
             dic['loss_id'].append(scientific.LOSSID[lt])
-            for sname, si in ci.items():
+            for sname, si in csqidx.items():
                 dic[sname].append(dd[li, si])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
