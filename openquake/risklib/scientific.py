@@ -1722,7 +1722,11 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     if consequence.startswith(('loss', 'losses')):
-        return dmgdist @ coeffs * asset['value-' + loss_type]
+        try:
+            value = asset['value-' + loss_type]
+        except ValueError:  # landslide, liquefaction
+            return 0
+        return dmgdist @ coeffs * value
     elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
     elif consequence in ['injured', 'fatalities']:
@@ -1754,7 +1758,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
-        return aval[xltype]
+        try:
+            return aval[xltype]
+        except ValueError:  # liquefaction, landslide
+            return 0
     else:
         raise NotImplementedError(consequence)
 

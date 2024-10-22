@@ -18,6 +18,7 @@
 
 import os.path
 import logging
+from dataclasses import dataclass
 import numpy
 import pandas
 
@@ -35,6 +36,19 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+
+@dataclass
+class Dparam:
+    """
+    Parameters for a damage calculation
+    """
+    eids: U32
+    aggids: U16
+    rlzs: U32
+    ci: dict
+    D: int
+    Dc: int
+    rng: scientific.MultiEventRNG
 
 
 def zero_dmgcsq(A, R, crmodel):
@@ -66,43 +80,39 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
-            crmodel, ci, R, Dc, dmgcsq, dddict):
+def _gen_d4(asset_df, gmf_df, crmodel, dparam):
+    # yields (aids, d4) triples
     oq = crmodel.oqparam
-    loss_types = oq.loss_types
-    eids = gmf_df.eid.to_numpy()
-    if R > 1:
-        rlzs = allrlzs[eids]
-    if sec_sims or not oq.float_dmg_dist:
-        rng = scientific.MultiEventRNG(
-            oq.master_seed, numpy.unique(eids))
+    sec_sims = oq.secondary_simulations.items()
     for prob_field, num_sims in sec_sims:
         probs = gmf_df[prob_field].to_numpy()   # LiqProb
         if not oq.float_dmg_dist:
-            dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
+            dprobs = dparam.rng.boolean_dist(probs, num_sims).mean(axis=1)
+    E = len(dparam.eids)
+    L = len(oq.loss_types)
     for taxo, adf in asset_df.groupby('taxonomy'):
         out = crmodel.get_output(adf, gmf_df)
         aids = adf.index.to_numpy()
+        A = len(aids)
         assets = adf.to_records()
         if oq.float_dmg_dist:
             number = assets['value-number']
         else:
             number = U32(assets['value-number'])
-        for lti, lt in enumerate(loss_types):
+        d4 = numpy.zeros((L, A, E, dparam.Dc), F32)
+        D = dparam.D
+        for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
-            Asid, E, D = fractions.shape
-            assert len(eids) == E
-            d3 = numpy.zeros((Asid, E, Dc), F32)
             if oq.float_dmg_dist:
-                d3[:, :, :D] = fractions
-                for a in range(Asid):
-                    d3[a] *= number[a]
+                d4[lti, :, :, :D] = fractions
+                for a in range(A):
+                    d4[lti, a] *= number[a]
             else:
                 # this is a performance distaster; for instance
                 # the Messina test in oq-risk-tests becomes 12x
                 # slower even if it has only 25_736 assets
-                d3[:, :, :D] = rng.discrete_dmg_dist(
-                    eids, fractions, number)
+                d4[lti, :, :, :D] = dparam.rng.discrete_dmg_dist(
+                    dparam.eids, fractions, number)
 
             # secondary perils and consequences
             for a, asset in enumerate(assets):
@@ -110,27 +120,16 @@ def _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
                     for d in range(1, D):
                         # doing the mean on the secondary simulations
                         if oq.float_dmg_dist:
-                            d3[a, :, d] *= probs
+                            d4[lti, a, :, d] *= probs
                         else:
-                            d3[a, :, d] *= dprobs
+                            d4[lti, a, :, d] *= dprobs
 
                 csq = crmodel.compute_csq(
-                    asset, d3[a, :, :D] / number[a], lt,
+                    asset, d4[lti, a, :, :D] / number[a], lt,
                     oq.time_event)
                 for name, values in csq.items():
-                    d3[a, :, ci[name]] = values
-            if R == 1:
-                dmgcsq[aids, 0, lti] += d3.sum(axis=1)
-            else:
-                for e, rlz in enumerate(rlzs):
-                    dmgcsq[aids, rlz, lti] += d3[:, e]
-            tot = d3.sum(axis=0)  # sum on the assets
-            for e, eid in enumerate(eids):
-                dddict[eid, oq.K][lti] += tot[e]
-                if oq.K:
-                    for kids in aggids:
-                        for a, aid in enumerate(aids):
-                            dddict[eid, kids[aid]][lti] += d3[a, e]
+                    d4[lti, a, :, dparam.ci[name]] = values
+        yield aids, d4  # d4 has shape (L, A, E, Dc)
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -144,27 +143,21 @@ def event_based_damage(df, oq, dstore, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     with monitor('reading gmf_data'):
         if oq.parentdir:
-            dstore = datastore.read(
-                oq.hdf5path, parentdir=oq.parentdir)
+            dstore = datastore.read(oq.hdf5path, parentdir=oq.parentdir)
         else:
             dstore.open('r')
         assetcol = dstore['assetcol']
-        if oq.K:
-            # TODO: move this in the controller!
-            aggids, _ = assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
-        else:
-            aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
-    sec_sims = oq.secondary_simulations.items()
+        aggids = monitor.read('aggids')
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
     _A, R, L, Dc = dmgcsq.shape
+    D = Dc - len(crmodel.get_consequences())
     if R > 1:
         allrlzs = dstore['events']['rlz_id']
     else:
-        allrlzs = [0]
+        allrlzs = U32([0])
     assert len(oq.loss_types) == L
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
@@ -173,8 +166,33 @@ def event_based_damage(df, oq, dstore, monitor):
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
                 continue
-            _update(asset_df, gmf_df, aggids, allrlzs, sec_sims,
-                    crmodel, ci, R, Dc, dmgcsq, dddict)
+            oq = crmodel.oqparam
+            eids = gmf_df.eid.to_numpy()
+            if R > 1:
+                rlzs = allrlzs[eids]
+            else:
+                rlzs = allrlzs
+            if oq.secondary_simulations or not oq.float_dmg_dist:
+                rng = scientific.MultiEventRNG(
+                    oq.master_seed, numpy.unique(eids))
+            else:
+                rng = None
+            dparam = Dparam(eids, aggids, rlzs, ci, D, Dc, rng)
+            for aids, d4 in _gen_d4(asset_df, gmf_df, crmodel, dparam):
+                for lti, d3 in enumerate(d4):
+                    if R == 1:
+                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
+                    else:
+                        for e, rlz in enumerate(dparam.rlzs):
+                            dmgcsq[aids, rlz, lti] += d3[:, e]
+                    tot = d3.sum(axis=0)  # sum on the assets
+                    for e, eid in enumerate(eids):
+                        dddict[eid, oq.K][lti] += tot[e]
+                        if oq.K:
+                            for kids in dparam.aggids:
+                                for a, aid in enumerate(aids):
+                                    dddict[eid, kids[aid]][lti] += d3[a, e]
+
     return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
 
@@ -226,8 +244,14 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore,
-                                      self._monitor)
+        if oq.K:
+            aggids, _ = self.assetcol.build_aggids(
+                oq.aggregate_by, oq.max_aggregations)
+        else:
+            aggids = 0
+        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq,
+                                      self.datastore, self._monitor)
+        smap.monitor.save('aggids', aggids)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
