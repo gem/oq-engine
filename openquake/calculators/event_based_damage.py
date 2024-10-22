@@ -49,7 +49,6 @@ class Dparam:
     ci: dict
     R: int
     Dc: int
-    loss_types: list
     rng: scientific.MultiEventRNG
 
 
@@ -96,7 +95,7 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
             number = assets['value-number']
         else:
             number = U32(assets['value-number'])
-        for lti, lt in enumerate(dparam.loss_types):
+        for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
             Asid, E, D = fractions.shape
             assert len(dparam.eids) == E
@@ -187,8 +186,7 @@ def event_based_damage(df, oq, dstore, monitor):
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
-            dparam = Dparam(eids, aggids, rlzs, sec_sims, ci, R, Dc,
-                            oq.loss_types, rng)
+            dparam = Dparam(eids, aggids, rlzs, sec_sims, ci, R, Dc, rng)
             _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict)
     return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
