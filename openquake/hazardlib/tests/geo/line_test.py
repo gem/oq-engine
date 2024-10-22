@@ -24,7 +24,7 @@ PLOTTING = False
 
 def _plott(rtra_prj, txy):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1)
+    _fig, ax = plt.subplots(1, 1)
     tt = np.array(rtra_prj)
     plt.plot(txy[:, 0], txy[:, 1], '-')
     plt.plot(txy[:, 0], txy[:, 1], 'x', ms=2.0)
@@ -242,7 +242,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tuw(mesh)
+        tupp, uupp, _wei = line.get_tuw(mesh)
         expected_t = geo.geodetic.distance(0.2, 0.0, 0.0,
                                            coo[0, 0], coo[0, 1], 0.0)
         expected_u = geo.geodetic.distance(0.0, 0.0, 0.0,
@@ -265,7 +265,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, u_upp, wei = line.get_tuw(mesh)
+        _tupp, _u_upp, _wei = line.get_tuw(mesh)
 
         # TODO add test
 
@@ -281,7 +281,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tuw(mesh)
+        tupp, uupp, _wei = line.get_tuw(mesh)
 
         # Plotting results
         if PLOTTING:
@@ -302,7 +302,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.6, 0.6, -1.0, 0.4, 0.01)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tuw(mesh)
+        tupp, uupp, _wei = line.get_tuw(mesh)
 
         if PLOTTING:
             num = 10
@@ -335,7 +335,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.sut_hat
+        _slen, uhat, that = line.sut_hat
         np.testing.assert_almost_equal(np.array([[1, 0, 0]]), uhat, decimal=5)
 
         # Now computing ui and ti
@@ -357,7 +357,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.4, 0.6, -0.2, 0.3, 0.005)
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.sut_hat
+        _slen, uhat, that = line.sut_hat
 
         # Now computing ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -397,7 +397,7 @@ class ComputeWeightsTest(unittest.TestCase):
         ui[0, :] = np.array([-0.1, 30.0, 20.1, 10.0, 30.0])
         ti[0, :] = np.array([5.0, 0.0, -5.0, -10.0, 5.0])
         segl = np.array([20.0])
-        wei, iot = geo.line.get_ti_weights(ui, ti, segl)
+        wei, _iot = geo.line.get_ti_weights(ui, ti, segl)
 
         # Compute weight for site 1
         i = 0
@@ -434,7 +434,7 @@ class ComputeWeightsTest(unittest.TestCase):
         ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # Compute weights
-        wei, iot = geo.line.get_ti_weights(ui, ti, slen)
+        wei, _iot = geo.line.get_ti_weights(ui, ti, slen)
 
         # TODO add test
 
@@ -459,7 +459,7 @@ class ComputeWeightsTest(unittest.TestCase):
         ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # Compute weights
-        wei, iot = geo.line.get_ti_weights(ui, ti, slen)
+        wei, _iot = geo.line.get_ti_weights(ui, ti, slen)
 
         # Total weights
         weit = np.sum(wei, axis=0)
@@ -575,6 +575,3 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     if show:
         plt.show()
     return ax
-
-
-

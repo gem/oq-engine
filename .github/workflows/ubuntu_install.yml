@@ -9,72 +9,73 @@ on:
         required: true
       debug_enabled:
         type: boolean
-        description: 'Run the build with tmate debugging enabled'
+        description: "Run the build with tmate debugging enabled"
         required: false
         default: false
 
 jobs:
-
   install_and_test:
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      GITHUB_REF:  ${{ github.ref }}
-      GITHUB_HD_REF:  ${{ github.head_ref }}
-      GITHUB_BS_REF:  ${{ github.base_ref }}
+      GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_HD_REF: ${{ github.head_ref }}
+      GITHUB_BS_REF:
+        ${{ github.base_ref }}
         #more $GITHUB_EVENT_PATH
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [3.9, "3.10", "3.11"]
+        python-version: [3.9, "3.10", "3.11", "3.12"]
 
     steps:
-  # This Checkout use git-ref keyword from dispatch
-    - name: Clone Repository (Master)
-      uses: actions/checkout@v4
-      if: github.event.inputs.git-ref == ''
-    - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v4
-      if: github.event.inputs.git-ref != ''
-      with:
-        ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    # You can test your matrix by printing the current Python version
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
-    - name: Install engine with install script
-      env:
-        BRANCH: ${{ github.event.inputs.git-ref }}
-      run: |
-        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
-        #echo $PY_VER
-        #https://pip.pypa.io/en/stable/user_guide/
-        export PIP_DEFAULT_TIMEOUT=100
-        #
-        pip3 install --default-timeout=100 -U pip wheel setuptools
-        #pip3 install -r requirements-$PY_VER-linux64.txt
-        #pip3 install -e .\[osgeo\]
-        echo "branch to test: ${BRANCH}"
-        if [[ "$BRANCH" != "" ]]
-        then
-          python install.py devel --version ${BRANCH}
-        else
-          python install.py devel
-        fi
-    - name: Setup debugging session
-      uses: mxschmitt/action-tmate@v3
-      timeout-minutes: 15
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-    - name: Run a small subset of tests checking fiona/gdal
-      run: |
-        source ~/openquake/bin/activate
-        pip install pytest
-        oq dbserver upgrade
-        cd ~/work/oq-engine/oq-engine
-        #
-        export MPLBACKEND=Agg
-        pytest -vs --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py openquake/sep/tests/test_utils.py openquake/sep
-        oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install engine with install script
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
+          #echo $PY_VER
+          #https://pip.pypa.io/en/stable/user_guide/
+          export PIP_DEFAULT_TIMEOUT=100
+          #
+          pip3 install --default-timeout=100 -U pip wheel setuptools
+          #pip3 install -r requirements-$PY_VER-linux64.txt
+          #pip3 install -e .\[osgeo\]
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel
+          fi
+      - name: Setup debugging session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 15
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      - name: Run a small subset of tests checking fiona/gdal
+        run: |
+          source ~/openquake/bin/activate
+          pip install pytest
+          oq engine --upgrade-db
+          cd ~/work/oq-engine/oq-engine
+          #
+          export MPLBACKEND=Agg
+          pytest -vs --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py openquake/sep/tests/test_utils.py openquake/sep
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip

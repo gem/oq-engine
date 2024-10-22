@@ -28,6 +28,17 @@ sudo mkdir /var/www
 sudo chown -R openquake /var/www/
 ```
 
+#### Configure the engine temporary folder
+
+By default, the engine stores temporary files into the system temporary directory. In case you want to use a different directory, you can customize it through the `/opt/openquake/openquake.cfg` configuration file. For instance, after creating the folder `/opt/openquake/tmp`, add to `/opt/openquake/openquake/cfg`:
+
+```yaml
+[directory]
+    custom_tmp = /opt/openquake/tmp
+```
+
+You can also setup a cron job in order to automatically delete old temporary files.
+
 #### Configure the directory to store the server user access log
 
 By default, user access information is logged through the standard Django logger.
@@ -42,26 +53,48 @@ sudo mkdir /var/log/oq-engine
 sudo chown -R openquake /var/log/oq-engine
 ```
 
-Upgrade the database to host users and sessions:
+#### Upgrade the database to host users and sessions
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui migrate
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
-Add a new local superuser:
+
+#### Install fixtures for cookie consent
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui createsuperuser
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
 ```
+
+If the current installation requires Google Analytics, please add the `GOOGLE_ANALYTICS_TOKEN` to `local_settings.py` and install another optional fixture:
+
+```console
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py loaddata ./fixtures/0002_cookie_consent_analytics.json
+```
+
+Required or optional cookies or groups of them can be added, removed or edited via the Django Admin interface.
+New custom cookies can be managed similarly to what is done in `openquake/server/templates/engine/includes/cookie_analytics.html`.
+Please refer to `https://django-cookie-consent.readthedocs.io/en/latest/` for further details on how to customize cookies in Django.
+
+#### Add a new local superuser
+
+```console
+cd /opt/openquake/src/oq-engine/openquake/server
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py createsuperuser
+```
+
+#### Setup static files
+
 To setup static files in Django, issue the following commands, making sure to refer to the actual folder where the engine was installed or cloned (see above):
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui collectstatic
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py collectstatic
 ```
-The `oq` commands must be run as the `openquake` user and the installation must be of kind `server` or `devel_server`.
-if, for any reason, the `oq` command isn't available in the path, you can use the following syntax:
+The commands must be run as the `openquake` user and the installation must be of kind `server` or `devel_server`.
+If, for any reason, the commands are not available in the path, you can use the following syntax:
 
 ```console
 python3 -m openquake.server.manage <subcommand>
@@ -82,7 +115,7 @@ Authentication can rely on system users through `PAM`, the [Pluggable Authentica
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
-sudo -u openquake oq webui migrate
+sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
 
 Then restart the `WebUI` service.
@@ -106,6 +139,14 @@ pip install gunicorn
 deactivate
 ```
 
+*gunicorn* is usually managed by the OS init system.
+
+Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
+```console
+WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
+```
+
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
 ```console
@@ -114,12 +155,6 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
-*gunicorn* is usually managed by the OS init system.
-
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
-```console
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
-```
 
 ### nginx
 

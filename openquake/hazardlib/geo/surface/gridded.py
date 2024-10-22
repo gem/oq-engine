@@ -177,7 +177,7 @@ class GriddedSurface(BaseSurface):
         coo[:, 1] = tmp[:, 1]
         coo[:, 2] = self.mesh.depths.flatten()
         coo[:, 2] *= -1
-        pnt0, vers = geo_utils.plane_fit(coo)
+        _pnt0, vers = geo_utils.plane_fit(coo)
 
         # Find the angle between the surface projection of the unit vector and
         # the north direction

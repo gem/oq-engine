@@ -424,6 +424,18 @@
 
     var refresh_calcs;
 
+    function populateTrtSelector(selected_trt) {
+        $('#trt').empty();
+        var trts = $('#mosaic_model').find(':selected').data('value').split(',');
+        $.each(trts, function(index, trt) {
+            var selected = '';
+            if (selected_trt && trt == selected_trt) {
+                selected = ' selected';
+            }
+            $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
+        });
+    }
+
     function setTimer() {
         refresh_calcs = setInterval(function () { calculations.fetch({reset: true}) }, 3000);
     }
@@ -533,7 +545,6 @@
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
-                $('#mosaic_model').text('');
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
@@ -551,11 +562,57 @@
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
-                    $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
-                    $('#trt').empty();
-                    $.each(data.trts, function(index, trt) {
-                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                    $('#dip').val('dip' in data ? data.dip : '90');
+                    $('#strike').val('strike' in data ? data.strike : '0');
+                    $('#local_timestamp').val(data.local_timestamp);
+                    $('#time_event').val(data.time_event);
+                    $('#is_point_rup').val(data.is_point_rup);
+                    // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
+                    //       set a specific file in an HTML file input element using JavaScript or jQuery,
+                    //       therefore we can not pre-populate the rupture_file_input with the rupture_file
+                    //       obtained converting the USGS rupture.json, and we use a separate field referencing it
+                    $('#rupture_file_from_usgs').val(data.rupture_file_from_usgs);
+                    $('#rupture_file_from_usgs_loaded').val(data.rupture_file_from_usgs ? 'Loaded' : 'N.A.');
+                    var errors = '';
+                    if ('error' in data) {
+                        errors += '<p>' + data.error + '</p>';
+                        $('#rupture_file_from_usgs_loaded').val('N.A. (conversion error)');
+                    }
+                    $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
+                    if (data.station_data_error) {
+                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion error)');
+                        errors += '<p>' + data.station_data_error + '</p>';
+                    } else {
+                        $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                    }
+                    if (errors != '') {
+                        diaerror.show(false, "Error", errors);
+                    }
+                    if ($('#rupture_file_input')[0].files.length == 1) {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                    }
+                    else if (data.is_point_rup) {
+                        $('#dip').prop('disabled', false);
+                        $('#strike').prop('disabled', false);
+                        $('#dip').val('90');
+                        $('#strike').val('0');
+                    } else {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                        $('#dip').val('');
+                        $('#strike').val('');
+                    }
+                    $('#mosaic_model').empty();
+                    $.each(data.mosaic_models, function(index, mosaic_model) {
+                        var selected = '';
+                        if ('mosaic_model' in data && mosaic_model == data.mosaic_model) {
+                            selected = ' selected';
+                        }
+                        var mosaic_model_trts = data.trts[mosaic_model];
+                        $('#mosaic_model').append('<option value="' + mosaic_model + '" data-value=\'' + mosaic_model_trts + '\'' + selected + '>' + mosaic_model + '</option>');
                     });
+                    populateTrtSelector(data.trt);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -572,8 +629,24 @@
                 });
                 event.preventDefault();
             });
-            $('#clearFile').click(function() {
+            $('#mosaic_model').change(function() {
+                populateTrtSelector();
+            });
+            $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
+                $('#dip').prop('disabled', false);
+                $('#strike').prop('disabled', false);
+                $('#dip').val('90');
+                $('#strike').val('0');
+            });
+            $('#rupture_file_input').on('change', function() {
+                $('#dip').prop('disabled', $(this).val() != '');
+                $('#strike').prop('disabled', $(this).val() != '');
+            });
+            $('#clearStationDataFile').click(function() {
+                $('#station_data_file_input').val('');
+                $('#maximum_distance_stations').val('');
+                $('#maximum_distance_stations').prop('disabled', true);
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
@@ -582,6 +655,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = new FormData();
+                formData.append('rupture_file_from_usgs', $('#rupture_file_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
                 formData.append('lon', $("#lon").val());
@@ -591,13 +665,20 @@
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
+                formData.append('is_point_rup', $("#is_point_rup").val());
+                formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
+                formData.append('mosaic_model', $('#mosaic_model').val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());
                 formData.append('number_of_ground_motion_fields',
                                 $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
+                formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
+                formData.append('local_timestamp', $("#local_timestamp").val());
+                formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
+                formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",
@@ -625,6 +706,13 @@
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
+            });
+            $('#station_data_file_input').on('change', function() {
+                if ($(this).get(0).files.length > 0) {
+                    $('#maximum_distance_stations').prop('disabled', false);
+                } else {
+                    $('#maximum_distance_stations').prop('disabled', true);
+                }
             });
         });
 })($, Backbone, _, gem_oq_server_url);

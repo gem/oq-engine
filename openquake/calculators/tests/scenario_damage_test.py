@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14, case_16, case_17, case_18)
+    case_14, case_16, case_17, case_18, case_19, case_20, case_21)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -249,10 +249,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_14(self):
         # inconsistent IDs between fragility and consequence
-        with self.assertRaises(NameError) as ctx:
+        with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_14.__file__, 'job.ini')
         self.assertIn(
-            "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
+            "{'CR+PC/LDUAL/HBET:8.19/m'} are not in the CompositeRiskModel",
             str(ctx.exception))
 
     def test_case_16(self):
@@ -285,6 +285,24 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', fname)
 
+    def test_case_19(self):
+        # conditioned GMFs with assets on top of a station
+        out = self.run_calc(case_19.__file__, 'job.ini', exports='csv')
+        [fname] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+
+    def test_case_20(self):
+        # conditioned GMFs with nontrivial site parameter associations
+        out = self.run_calc(case_20.__file__, 'job.ini', exports='csv')
+        [fname] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+
+    def test_case_21(self):
+        # infrastructure risk for structural and liquefaction loss types
+        out = self.run_calc(case_21.__file__, 'job.ini', exports='csv')
+        [agg_csv, aggparent_csv] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
+        self.assertEqualFiles('expected/aggrisk-parent.csv', aggparent_csv)
 
 
 def losses(aid, alt):

@@ -215,7 +215,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     """
     For the "core" NGA East set the table is provided in the code in a
     subdirectory fixed to the path of the present file. The GMPE table option
-    is therefore no longer needed if a GSIM alias is used. 
+    is therefore no longer needed if a GSIM alias is used.
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
@@ -241,7 +241,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         """
         [mag] = np.unique(np.round(ctx.mag, 2))
         for m, imt in enumerate(imts):
-            imean, site_amp, pga_r = get_mean_amp(self, mag, ctx, imt)
+            imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt)
 
             # Get the coefficients for the IMT
             C_LIN = self.COEFFS_LINEAR[imt]

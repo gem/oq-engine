@@ -215,7 +215,6 @@ class TruncatedGRMFD(BaseMFD):
         :param value:
             A float value to add to ``max_mag``.
         """
-        tmr = self._get_total_moment_rate()
         self.max_mag += value
 
 

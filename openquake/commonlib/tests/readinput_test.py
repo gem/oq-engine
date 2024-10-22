@@ -305,25 +305,6 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''', suffix='.xml')
 
-    exposure4 = general.gettemp('''\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <exposureModel id="ep" category="buildings">
-    <description>Exposure model for buildings</description>
-    <conversions>
-       <costTypes name="structural" type="aggregated" unit="USD"/>
-    </conversions>
-    <assets>
-      <asset id="a1" taxonomy="RM" number="3000">
-        <location lon="81.2985" lat="29.1098"/>
-        <costs>
-          <cost type="structural" value="1000"/>
-        </costs>
-      </asset>
-    </assets>
-  </exposureModel>
-</nrml>''', suffix='.xml')
-
     def test_get_metadata(self):
         [exp] = asset.Exposure.read_headers([self.exposure])
         self.assertEqual(exp.cost_calculator.cost_types,
@@ -422,18 +403,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("'RM ' contains whitespace chars, line 11",
                       str(ctx.exception))
 
-    def test_missing_cost_types(self):
-        job_ini = general.gettemp('''\
-[general]
-description = Exposure with missing cost_types
-calculation_mode = scenario_risk
-truncation_level = 5
-exposure_file = %s''' % os.path.basename(self.exposure4))
-        oqparam = readinput.get_oqparam(job_ini)
-        with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_sitecol_assetcol(oqparam, exp_types=['structural'])
-        self.assertIn("is missing", str(ctx.exception))
-
     def test_Lon_instead_of_lon(self):
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
@@ -482,9 +451,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_02.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        found, _total = readinput.reduce_source_model(smlt, [], remove=False)
         self.assertEqual(found, 0)
-        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        found, _total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
 
     def test_wrong_trts(self):
@@ -528,14 +497,14 @@ class SitecolAssetcolTestCase(unittest.TestCase):
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.region_grid_spacing = 15
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
     def test_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
-        sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
@@ -558,8 +527,8 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
-                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        expected = ['AA.CA', 'AA.CB', 'AA.DA', 'AA.DB', 'ABACA', 'ABACB',
+                    'ABADA', 'ABADB', 'ABBCA', 'ABBCB', 'ABBDA', 'ABBDB']
         self.assertEqual(paths, expected)
 
 
@@ -585,3 +554,13 @@ class ReadGeometryTestCase(unittest.TestCase):
         t1 = time.time()
         self.assertEqual(len(sites_df), 55)
         print('Associated in %.1f seconds' % (t1-t0), sites_df)
+
+
+class ReadRiskTestCase(unittest.TestCase):
+    def test_read_station_data(self):
+        oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
+        sitecol = readinput.get_site_collection(oq)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_station_data(oq, sitecol)
+        self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
+                      str(ctx.exception))

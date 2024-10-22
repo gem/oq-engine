@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -82,7 +82,7 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
         Test the Gruenthal Distance-Time window
         """
         mag = np.array([5.0, 6.6])
-        sw_space, sw_time = self.gruenthal_window.calc(mag)
+        _sw_space, _sw_time = self.gruenthal_window.calc(mag)
         # self.assertAlmostEqual(sw_space[0], 39.99447, places=5)
         # self.assertAlmostEqual(sw_time[0], 143.71430/364.75, places=5)
         # self.assertAlmostEqual(sw_space[1], 63.10736, places=5)
@@ -90,7 +90,7 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
 
     def test_uhrhammer_window(self):
         mag = np.array([5.0, 6.6])
-        sw_space, sw_time = self.uhrhammer_window.calc(mag)
+        _sw_space, _sw_time = self.uhrhammer_window.calc(mag)
         # self.assertAlmostEqual(sw_space[0], 39.99447, places=5)
         # self.assertAlmostEqual(sw_time[0], 143.71430/364.75, places=5)
         # self.assertAlmostEqual(sw_space[1], 63.10736, places=5)

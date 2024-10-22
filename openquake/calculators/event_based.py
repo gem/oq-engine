@@ -24,11 +24,12 @@ import logging
 import operator
 import numpy
 import pandas
-import fiona
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
+from openquake.engine.aristotle import get_close_mosaic_models
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -38,7 +39,6 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -50,8 +50,9 @@ from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.extract import Extractor
+from openquake.calculators.postproc.plots import plot_avg_gmf
 from openquake.engine import engine
-from openquake.commands.plot import plot_avg_gmf
 from PIL import Image
 
 U8 = numpy.uint8
@@ -162,8 +163,7 @@ def count_ruptures(src):
     return {src.source_id: src.count_ruptures()}
 
 
-def get_computer(cmaker, proxy, rupgeoms, srcfilter,
-                 station_data, station_sitecol):
+def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
@@ -171,68 +171,90 @@ def get_computer(cmaker, proxy, rupgeoms, srcfilter,
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
-    complete = srcfilter.sitecol.complete
-    proxy.geom = rupgeoms[proxy['geom_id']]
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        assert stations.sum(), 'There are no stations??'
-        station_sids = sids[stations]
-        target_sids = sids[~stations]
-        return ConditionedGmfComputer(
-            ebr, complete.filtered(target_sids),
-            complete.filtered(station_sids),
-            station_data.loc[station_sids],
-            oq.observed_imts,
-            cmaker, oq.correl_model, oq.cross_correl,
-            oq.ground_motion_correlation_params,
-            oq.number_of_ground_motion_fields,
-            oq._amplifier, oq._sec_perils)
+        if stations.any():
+            station_sids = sids[stations]
+            return ConditionedGmfComputer(
+                ebr, srcfilter.sitecol.filtered(sids),
+                srcfilter.sitecol.filtered(station_sids),
+                station_data.loc[station_sids],
+                oq.observed_imts,
+                cmaker, oq.correl_model, oq.cross_correl,
+                oq.ground_motion_correlation_params,
+                oq.number_of_ground_motion_fields,
+                oq._amplifier, oq._sec_perils)
+        else:
+            logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, complete.filtered(sids), cmaker,
+        ebr, srcfilter.sitecol.filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
 
-def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
-    """
-    Launcher of event_based tasks
-    """
-    t0 = time.time()
-    n = 0
-    for proxies in block_splitter(allproxies, 10_000, rup_weight):
-        n += len(proxies)
-        yield event_based(proxies, cmaker, stations, dstore, monitor)
-        rem = allproxies[n:]  # remaining ruptures
+def _event_based(proxies, cmaker, stations, srcfilter, shr,
+                 fmon, cmon, umon, mmon):
+    oq = cmaker.oq
+    alldata = []
+    sig_eps = []
+    times = []
+    max_iml = oq.get_max_iml()
+    se_dt = sig_eps_dt(oq.imtls)
+    mea_tau_phi = []
+    for proxy in proxies:
+        t0 = time.time()
+        with fmon:
+            if proxy['mag'] < cmaker.min_mag:
+                continue
+            try:
+                computer = get_computer(cmaker, proxy, srcfilter, *stations)
+            except FarAwayRupture:
+                # skip this rupture
+                continue
+        if stations and stations[0] is not None:  # conditioned GMFs
+            assert cmaker.scenario
+            with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
+                df = computer.compute_all(
+                    [mea, tau, phi], max_iml, mmon, cmon, umon)
+        else:  # regular GMFs
+            df = computer.compute_all(None, max_iml, mmon, cmon, umon)
+            if oq.mea_tau_phi:
+                mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
+                mea_tau_phi.append(mtp)
+        sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
-        if dt > cmaker.oq.time_per_task and sum(
-                rup_weight(r) for r in rem) > 12_000:
-            half = len(rem) // 2
-            yield gen_event_based, rem[:half], cmaker, stations, dstore
-            yield gen_event_based, rem[half:], cmaker, stations, dstore
-            return
+        times.append((proxy['id'], computer.ctx.rrup.min(), dt))
+        alldata.append(df)
+    times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
+    times.sort(order='rup_id')
+    if sum(len(df) for df in alldata) == 0:
+        return dict(gmfdata={}, times=times, sig_eps=())
+
+    gmfdata = pandas.concat(alldata)  # ~40 MB
+    dic = dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+               times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
+    if oq.mea_tau_phi:
+        mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
+        dic['mea_tau_phi'] = {col: mtpdata[col] for col in mtpdata.dtype.names}
+    return dic
 
 
 def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    shr = monitor.shared
     oq = cmaker.oq
-    alldata = []
-    se_dt = sig_eps_dt(oq.imtls)
-    sig_eps = []
-    times = []  # rup_id, nsites, dt
+    rmon = monitor('reading sites and ruptures', measuremem=True)
     fmon = monitor('instantiating GmfComputer', measuremem=False)
     mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    max_iml = oq.get_max_iml()
     cmaker.scenario = 'scenario' in oq.calculation_mode
-    with dstore:
+    with dstore, rmon:
         if dstore.parent:
             sitecol = dstore['sitecol']
             if 'complete' in dstore.parent:
@@ -241,48 +263,14 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             sitecol = dstore['sitecol']
             if 'complete' in dstore:
                 sitecol.complete = dstore['complete']
-        maxdist = oq.maximum_distance(cmaker.trt)
-        srcfilter = SourceFilter(sitecol.complete, maxdist)
-        rupgeoms = dstore['rupgeoms']
+        srcfilter = SourceFilter(
+            sitecol.complete, oq.maximum_distance(cmaker.trt))
+        dset = dstore['rupgeoms']
         for proxy in proxies:
-            t0 = time.time()
-            with fmon:
-                if proxy['mag'] < cmaker.min_mag:
-                    continue
-                try:
-                    computer = get_computer(
-                        cmaker, proxy, rupgeoms, srcfilter, *stations)
-                except FarAwayRupture:
-                    # skip this rupture
-                    continue
-            if hasattr(computer, 'station_data'):  # conditioned GMFs
-                assert cmaker.scenario
-                with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                    df = computer.compute_all([mea, tau, phi], cmon, umon)
-            else:  # regular GMFs
-                with mmon:
-                    mean_stds = cmaker.get_mean_stds(
-                        [computer.ctx], split_by_mag=False)
-                    # avoid numba type error
-                    computer.ctx.flags.writeable = True
-
-                df = computer.compute_all(mean_stds, max_iml, cmon, umon)
-            sig_eps.append(computer.build_sig_eps(se_dt))
-            dt = time.time() - t0
-            times.append((proxy['id'], computer.ctx.rrup.min(), dt))
-            alldata.append(df)
-    if sum(len(df) for df in alldata):
-        gmfdata = pandas.concat(alldata)
-    else:
-        gmfdata = {}
-    times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
-    times.sort(order='rup_id')
-    if not oq.ground_motion_fields:
-        gmfdata = {}
-    if len(gmfdata) == 0:
-        return dict(gmfdata={}, times=times, sig_eps=())
-    return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
-                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
+            proxy.geom = dset[proxy['geom_id']]
+    for block in block_splitter(proxies, 20_000, rup_weight):
+        yield _event_based(block, cmaker, stations, srcfilter,
+                           monitor.shared, fmon, cmon, umon, mmon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -305,6 +293,8 @@ def filter_stations(station_df, complete, rup, maxdist):
     else:
         station_data = station_df[
             numpy.isin(station_df.index, station_sites.sids)]
+        assert len(station_data) == len(station_sites), (
+            len(station_data), len(station_sites))
         if len(station_data) < ns:
             logging.info('Discarded %d/%d stations more distant than %d km',
                          ns - len(station_data), ns, maxdist)
@@ -327,13 +317,13 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     set_mags(oq, dstore)
     rups = dstore['ruptures'][:]
     logging.info('Reading {:_d} ruptures'.format(len(rups)))
-    logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
+    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+                 rups['nsites'].mean(), rups['nsites'].max())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
-        rupgeoms = dstore['rupgeoms'][:]
         trt = full_lt.trts[0]
         proxy = allproxies[0]
-        proxy.geom = rupgeoms[proxy['geom_id']]
+        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rup = proxy.to_ebr(trt).rupture
         station_df = dstore.read_df('station_data', 'site_id')
         maxdist = (oq.maximum_distance_stations or
@@ -344,19 +334,19 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         station_data, station_sites = None, None
 
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
-    totw = sum(rup_weight(p) for p in allproxies) / (
+    maxw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
-    logging.info('totw = {:_d}'.format(round(totw)))
+    logging.info('maxw = {:_d}'.format(round(maxw)))
     if station_data is not None:
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         computer = get_computer(
-            cmaker, proxy, rupgeoms, srcfilter,
-            station_data, station_sites)
+            cmaker, proxy, srcfilter, station_data, station_sites)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
@@ -377,20 +367,26 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         save_tmp(smap.monitor)
 
     # NB: for conditioned scenarios we are looping on a single trt
+    toml_gsims = []
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
+        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        for gsim in rlzs_by_gsim:
+            toml_gsims.append(gsim._toml)
         if station_data is not None:
-            if parallel.oq_distribute() == 'zmq':
+            if parallel.oq_distribute() in ('zmq', 'slurm'):
                 logging.error('Conditioned scenarios are not meant to be run'
                               ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
-        for block in block_splitter(proxies, totw, rup_weight):
+        # producing slightly less than concurrent_tasks thanks to the 1.02
+        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
             smap.submit(args)
+    dstore['gsims'] = numpy.array(toml_gsims)
     return smap
 
 
@@ -498,11 +494,14 @@ class EventBasedCalculator(base.HazardCalculator):
             mosaic_df = readinput.read_mosaic_df(buffer=.1).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
-        for sg in self.csm.src_groups:
+        g_index = 0
+        for sg_id, sg in enumerate(self.csm.src_groups):
             if not sg.sources:
                 continue
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
+            cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
+            g_index += len(rgb)
             if oq.mosaic_model or 'geometry' in oq.inputs:
                 cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
@@ -582,32 +581,45 @@ class EventBasedCalculator(base.HazardCalculator):
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
+
+            # optionally save mea_tau_phi
+            mtp = result.pop('mea_tau_phi', None)
+            if mtp:
+                for col, arr in mtp.items():
+                    hdf5.extend(self.datastore[f'mea_tau_phi/{col}'], arr)
         return acc
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
-        if oq.rupture_dict:
-            # the gsim_lt is read from the site_model.hdf5 file
-            mosaic_df = readinput.read_mosaic_df(buffer=1)
-            lonlat = [[oq.rupture_dict['lon'], oq.rupture_dict['lat']]]
-            [oq.mosaic_model] = geolocate(F32(lonlat), mosaic_df)
-            sitemodel = oq.inputs.get('site_model', [''])[0]
-            if sitemodel.endswith('.hdf5'):
-                if oq.mosaic_model == '???':
-                    raise ValueError(
-                        '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
-                        oq.rupture_dict)
-                if oq.gsim != '[FromFile]':
-                    raise ValueError(
-                        'In Aristotle mode the gsim can not be specified in'
-                        ' the job.ini: %s' % oq.gsim)
-                if oq.tectonic_region_type == '*':
-                    raise ValueError(
-                        'The tectonic_region_type parameter must be specified')
-                gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                    sitemodel, oq.mosaic_model,
-                    oq.tectonic_region_type.encode('utf8'))
+        if oq.aristotle:
+            # the gsim_lt is read from the exposure.hdf5 file
+            if not oq.mosaic_model:
+                if oq.rupture_dict:
+                    lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
+                elif oq.rupture_xml:
+                    hypo = readinput.get_rupture(oq).hypocenter
+                    lon, lat = [hypo.x, hypo.y]
+                mosaic_models = get_close_mosaic_models(lon, lat, 5)
+                # NOTE: using the first mosaic model
+                oq.mosaic_model = mosaic_models[0]
+                if len(mosaic_models) > 1:
+                    logging.info('Using the "%s" model' % oq.mosaic_model)
+            [expo_hdf5] = oq.inputs['exposure']
+            if oq.mosaic_model == '???':
+                raise ValueError(
+                    '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                    oq.rupture_dict)
+            if oq.gsim != '[FromFile]':
+                raise ValueError(
+                    'In Aristotle mode the gsim can not be specified in'
+                    ' the job.ini: %s' % oq.gsim)
+            if oq.tectonic_region_type == '*':
+                raise ValueError(
+                    'The tectonic_region_type parameter must be specified')
+            gsim_lt = logictree.GsimLogicTree.from_hdf5(
+                expo_hdf5, oq.mosaic_model,
+                oq.tectonic_region_type.encode('utf8'))
         elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
@@ -626,6 +638,7 @@ class EventBasedCalculator(base.HazardCalculator):
             rup = readinput.get_rupture(oq)
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+            self.cmaker.gid = numpy.arange(len(rlzs_by_gsim))
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
                 for i in range(ngmfs):
@@ -660,7 +673,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     rup.tectonic_region_type)(rup.mag))
 
         fake = logictree.FullLogicTree.fake(gsim_lt)
-        self.realizations = fake.get_realizations()
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
@@ -711,10 +723,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = (event_based if ('station_data' in oq.inputs or
-                              parallel.oq_distribute() == 'slurm')
-              else gen_event_based)
-        smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
+        smap = starmap_from_rups(
+            event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc
@@ -761,8 +771,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # make avg_gmf plots only if running via the webui
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             imts = list(self.oqparam.imtls)
+            ex = Extractor(self.datastore.calc_id)
             for imt in imts:
-                plt = plot_avg_gmf(self.datastore.calc_id, imt)
+                plt = plot_avg_gmf(ex, imt)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
                 fig_path = f'png/avg_gmf-{imt}.png'

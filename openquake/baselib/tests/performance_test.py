@@ -80,7 +80,7 @@ class KollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(sids, expected_sids)
 
         # now test kollapse with an aggregate field afield='sids'
-        out, allsids = kollapse(arr, ['mdbin'], afield='sids')
+        _out, allsids = kollapse(arr, ['mdbin'], afield='sids')
         numpy.testing.assert_equal(allsids, expected_sids)
 
     def test_big(self):

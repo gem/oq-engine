@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote_plus
 from functools import lru_cache
 import operator
 import logging
@@ -33,7 +33,6 @@ from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree
 from openquake.hazardlib.contexts import (
@@ -120,11 +119,17 @@ def parse(query_string, info={}):
     {'kind': ['mean'], 'k': [0], 'rlzs': False}
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
+    >>> parse(
+    ...    'loss_type=structural+nonstructural&absolute=True&kind=rlzs')['lt']
+    ['structural+nonstructural']
     """
     qdic = parse_qs(query_string)
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
+            # NOTE: loss types such as 'structural+nonstructural' need to be
+            # quoted, otherwise the plus would turn into a space
+            val = [quote_plus(lt) for lt in val]
             qdic[key] = [LOSSID[k] for k in val]
             qdic['lt'] = val
         else:
@@ -229,13 +234,15 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
-    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
     full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
+    bpaths = encode(rlzs['branch_path'])
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
+    bplen = max(len(bp) for bp in bpaths)
+    dt = [('rlz_id', U32), ('branch_path', '<S%d' % bplen), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
@@ -247,7 +254,7 @@ def extract_realizations(dstore, dummy):
         arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:  # use the compact representation for the branch paths
-        arr['branch_path'] = encode(rlzs['branch_path'])
+        arr['branch_path'] = bpaths
     return arr
 
 
@@ -494,6 +501,25 @@ def extract_uhs(dstore, what):
             yield k, v
 
 
+@extract.add('median_spectra')
+def extract_median_spectra(dstore, what):
+    """
+    Extracts median spectra per site and group.
+    Use it as /extract/median_spectra?site_id=0&poe_id=1
+    """
+    qdict = parse(what)
+    [site_id] = qdict['site_id']
+    [poe_id] = qdict['poe_id']
+    dset = dstore['median_spectra']
+    dic = json.loads(dset.attrs['json'])
+    spectra = dset[:, site_id, :, :, poe_id]  # (Gt, 3, M)
+    return ArrayWrapper(spectra, dict(
+        shape_descr=['grp_id', 'kind', 'period'],
+        grp_id=numpy.arange(dic['grp_id']),
+        kind=['mea', 'sig', 'wei'],
+        period=dic['period']))
+
+
 @extract.add('effect')
 def extract_effect(dstore, what):
     """
@@ -590,7 +616,6 @@ def extract_sources(dstore, what):
         codes = [code.encode('utf8') for code in codes]
     fields = 'source_id code num_sites num_ruptures'
     info = dstore['source_info'][()][fields.split()]
-    wkt = decode(dstore['source_wkt'][()])
     arrays = []
     if source_ids is not None:
         logging.info('Extracting sources with ids: %s', source_ids)
@@ -612,14 +637,13 @@ def extract_sources(dstore, what):
     if not arrays:
         raise ValueError('There  no sources')
     info = numpy.concatenate(arrays)
-    wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(decode(info['source_id'])).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
                if name != 'source_id']
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
-    return ArrayWrapper(arr, {'wkt_gz': wkt_gz, 'src_gz': src_gz})
+    return ArrayWrapper(arr, {'src_gz': src_gz})
 
 
 @extract.add('gridded_sources')
@@ -642,7 +666,7 @@ def extract_task_info(dstore, what):
     """
     Extracts the task distribution. Use it as /extract/task_info?kind=classical
     """
-    dic = group_array(dstore['task_info'][()], 'taskname')
+    dic = general.group_array(dstore['task_info'][()], 'taskname')
     if 'kind' in what:
         name = parse(what)['kind'][0]
         yield name, dic[encode(name)]
@@ -777,8 +801,11 @@ def extract_agg_curves(dstore, what):
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue, = dstore['agg_values'][agg_id][lts]
-        arr /= evalue
+        evalue_sum = 0
+        for lts_item in lts:
+            for lt in lts_item.split('+'):
+                evalue_sum += dstore['agg_values'][agg_id][lt]
+        arr /= evalue_sum
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['kind', 'return_period', 'ep_field'] + tagnames)
@@ -846,7 +873,7 @@ def extract_aggregate(dstore, what):
     /extract/aggregate/avg_losses?
     kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
     """
-    name, qstring = what.split('?', 1)
+    _name, qstring = what.split('?', 1)
     info = get_info(dstore)
     qdic = parse(qstring, info)
     suffix = '-rlzs' if qdic['rlzs'] else '-stats'
@@ -897,11 +924,11 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
-def _gmf(df, num_sites, imts):
+def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
-    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts])
-    for m, imt in enumerate(imts):
-        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}']
+    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
+    for m, imt in enumerate(imts + sec_imts):
+        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}'] if imt in imts else df[imt]
     return gmfa
 
 
@@ -952,7 +979,9 @@ def extract_gmf_npz(dstore, what):
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
-        gmfa = _gmf(df, n, oq.imtls)
+        imts = list(oq.imtls)
+        sec_imts = oq.sec_imts
+        gmfa = _gmf(df, n, imts, sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
@@ -1046,7 +1075,7 @@ def build_damage_array(data, damage_dt):
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, L, D = data.shape
+    A, _L, _D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for li, lt in enumerate(damage_dt.names):
@@ -1163,7 +1192,8 @@ def extract_disagg(dstore, what):
     else:
         poei = slice(None)
     if 'traditional' in spec:
-        spec = spec[:4]  # rlzs or stats
+        spec = spec.split('-')[0]
+        assert spec in {'rlzs', 'stats'}, spec
         traditional = True
     else:
         traditional = False
@@ -1208,8 +1238,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weight = dstore['full_lt'].init().rlzs['weight']
-        weights = weight[rlzs]
+        weights = dstore['weights'][:][rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
@@ -1255,7 +1284,7 @@ def extract_mean_rates_by_src(dstore, what):
     site_id = int(site_id)
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id]
-    L1, Ns = rates.shape
+    _L1, Ns = rates.shape
     arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
     arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
@@ -1375,7 +1404,10 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        if 'source_mags' not in dstore:  # ruptures import from CSV
+            mags = numpy.unique(dstore['ruptures']['mag'])
+        else:
+            mags = dstore[f'source_mags/{rgetter.trt}'][:]
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:
@@ -1472,8 +1504,13 @@ def extract_ruptures(dstore, what):
         for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
             ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
                           for proxy in rgetter.get_proxies(min_mag))
+    if 'slice' in qdict:
+        s0, s1 = qdict['slice']
+        slc = slice(s0, s1)
+    else:
+        slc = slice(None)
     bio = io.StringIO()
-    arr = rupture.to_csv_array(ebrups)
+    arr = rupture.to_csv_array(ebrups[slc])
     writers.write_csv(bio, arr, comment=comment)
     return bio.getvalue()
 
@@ -1518,8 +1555,19 @@ def extract_med_gmv(dstore, what):
     """
     return extract_(dstore, 'med_gmv/' + what)
 
-# #####################  extraction from the WebAPI ###################### #
 
+@extract.add('high_sites')
+def extract_high_sites(dstore, what):
+    """
+    Returns an array of boolean with the high hazard sites (max_poe > .2)
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/high_sites
+    """
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    return (max_hazard > .2).all(axis=1)  # shape N
+
+
+# #####################  extraction from the WebAPI ###################### #
 
 class WebAPIError(RuntimeError):
     """
@@ -1631,7 +1679,7 @@ class WebExtractor(Extractor):
             for chunk in resp.iter_content(CHUNKSIZE):
                 f.write(chunk)
                 down += len(chunk)
-                println('Downloaded {:,} bytes'.format(down))
+                general.println('Downloaded {:,} bytes'.format(down))
         print()
 
     def close(self):

@@ -109,10 +109,12 @@ class ValidationTestCase(unittest.TestCase):
             valid.probability('-0.1')
 
     def test_IMTstr(self):
-        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5))
-        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5))
-        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5))
-        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5))
+        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5, None))
+        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5, None))
+        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5, None))
+        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5, None))
+        self.assertEqual(imt.from_string('SDi(1.,2.)'),
+                         ('SDi(1.0,2.0)', 1, 5, 2))
         with self.assertRaises(KeyError):
             imt.from_string('S(1)')
 
@@ -156,3 +158,9 @@ class ValidationTestCase(unittest.TestCase):
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
         finally:
             del registry['FakeGsim']
+
+    def test_modifiable_gmpe(self):
+        gsim = valid.gsim('Lin2011foot')
+        gmpe = valid.modified_gsim(
+            gsim, add_between_within_stds={'with_betw_ratio':1.5})
+        valid.gsim(gmpe._toml)  # make sure the generated _toml is valid

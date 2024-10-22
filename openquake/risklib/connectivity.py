@@ -31,7 +31,10 @@
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
-import networkx as nx
+try:
+    import networkx as nx
+except ImportError:
+    nx = None
 import logging
 
 

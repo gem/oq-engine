@@ -22,35 +22,76 @@ import sys
 import os
 import getpass
 import logging
+from dataclasses import dataclass
 import numpy
+from shapely.geometry import Point
+from json.decoder import JSONDecodeError
+from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import geo, nrml, sourceconverter
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
+from openquake.hazardlib.shakemap.parsers import (
+    download_rupture_dict, download_station_data_file)
 from openquake.commonlib import readinput
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_trts_around(rupdic, mosaic_dir):
+@dataclass
+class AristotleParam:
+    rupture_dict: dict
+    time_event: str
+    maximum_distance: float
+    mosaic_model: str
+    trt: str
+    truncation_level: float
+    number_of_ground_motion_fields: int
+    asset_hazard_distance: float
+    ses_seed: int
+    local_timestamp: str = None
+    exposure_hdf5: str = None
+    station_data_file: str = None
+    maximum_distance_stations: float = None
+    ignore_shakemap: bool = False
+
+
+def get_close_mosaic_models(lon, lat, buffer_radius):
     """
-    :returns: list of TRTs for the mosaic model covering lon, lat
+    :param lon: longitude
+    :param lat: latitude
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point
+    :returns: list of mosaic models intersecting the circle
+        centered on the given coordinates having the specified radius
     """
-    lon, lat = rupdic['lon'], rupdic['lat']
-    usgs_id = rupdic.get('usgs_id', '')
-    lonlats = numpy.array([[lon, lat]])
     mosaic_df = readinput.read_mosaic_df(buffer=1)
-    [mosaic_model] = geo.utils.geolocate(lonlats, mosaic_df)
-    if mosaic_model == '???':
-        raise ValueError(f'({lon}, {lat}) is not covered by the mosaic!')
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    with hdf5.File(smodel) as f:
+    hypocenter = Point(lon, lat)
+    hypo_buffer = hypocenter.buffer(buffer_radius)
+    geoms = numpy.array([hypo_buffer])
+    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
+    if not close_mosaic_models:
+        raise ValueError(
+            f'({lon}, {lat}) is farther than {buffer_radius} deg'
+            f' from any mosaic model!')
+    elif len(close_mosaic_models) > 1:
+        logging.info(
+            '(%s, %s) is closer than %s deg with respect to the following'
+            ' mosaic models: %s' % (lon, lat, buffer_radius, close_mosaic_models))
+    return close_mosaic_models
+
+
+def get_trts_around(mosaic_model, exposure_hdf5):
+    """
+    :returns: list of TRTs for the given mosaic model
+    """
+    with hdf5.File(exposure_hdf5) as f:
         df = f.read_df('model_trt_gsim_weight',
                        sel={'model': mosaic_model.encode()})
-    logging.info('Considering %s[%s]: (%s, %s)',
-                 usgs_id, mosaic_model, lon, lat)
     trts = [trt.decode('utf8') for trt in df.trt.unique()]
-    return trts, mosaic_model
+    return trts
 
 
 def get_tmap_keys(exposure_hdf5, countries):
@@ -73,7 +114,7 @@ def trivial_callback(
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
-def get_rupture_dict(dic):
+def get_rupture_dict(dic, ignore_shakemap=False):
     """
     :param dic: a dictionary with keys usgs_id and rupture_file
     :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
@@ -92,58 +133,78 @@ def get_rupture_dict(dic):
                       dip=rup.surface.get_dip(),
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
-    elif dic.get('lon') is not None:  # when called from `oq mosaic aristotle`
-        rupdic = dic
     else:
-        rupdic = download_rupture_dict(usgs_id)
+        rupdic = download_rupture_dict(usgs_id, ignore_shakemap)
     return rupdic
 
 
-def get_aristotle_allparams(rupture_dict, maximum_distance, trt,
-                            truncation_level, number_of_ground_motion_fields,
-                            asset_hazard_distance, ses_seed, mosaic_dir):
+def get_aristotle_params(arist):
     """
+    :param arist: an instance of AristotleParam
     :returns: a list of dictionaries suitable for an Aristotle calculation
     """
-    smodel = os.path.join(mosaic_dir, 'site_model.hdf5')
-    expo = os.path.join(mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [expo],
-              'site_model': [smodel],
+    if arist.exposure_hdf5 is None:
+        arist.exposure_hdf5 = os.path.join(
+            config.directory.mosaic_dir, 'exposure.hdf5')
+    inputs = {'exposure': [arist.exposure_hdf5],
               'job_ini': '<in-memory>'}
-    rupdic = get_rupture_dict(rupture_dict)
+    rupdic = get_rupture_dict(arist.rupture_dict, arist.ignore_shakemap)
+    if arist.station_data_file is None:
+        # NOTE: giving precedence to the station_data_file uploaded via form
+        try:
+            arist.station_data_file = download_station_data_file(
+                arist.rupture_dict['usgs_id'])
+        except HTTPError as exc:
+            logging.info(f'Station data is not available: {exc}')
+        except (KeyError, LookupError, UnicodeDecodeError,
+                JSONDecodeError) as exc:
+            logging.info(str(exc))
     rupture_file = rupdic.pop('rupture_file')
-    if trt is None:
-        trts, _ = get_trts_around(rupdic, mosaic_dir)
-        trt = trts[0]
+    if rupture_file:
+        inputs['rupture_model'] = rupture_file
+    if arist.station_data_file:
+        inputs['station_data'] = arist.station_data_file
+    if not arist.mosaic_model:
+        lon, lat = rupdic['lon'], rupdic['lat']
+        mosaic_models = get_close_mosaic_models(lon, lat, 5)
+        # NOTE: using the first mosaic model
+        arist.mosaic_model = mosaic_models[0]
+        if len(mosaic_models) > 1:
+            logging.info('Using the "%s" model' % arist.mosaic_model)
+
+    if arist.trt is None:
+        # NOTE: using the first tectonic region type
+        arist.trt = get_trts_around(arist.mosaic_model, arist.exposure_hdf5)[0]
     params = dict(
         calculation_mode='scenario_risk',
         rupture_dict=str(rupdic),
-        maximum_distance=str(maximum_distance),
-        tectonic_region_type=trt,
-        truncation_level=str(truncation_level),
-        number_of_ground_motion_fields=str(number_of_ground_motion_fields),
-        asset_hazard_distance=str(asset_hazard_distance),
-        ses_seed=str(ses_seed),
+        time_event=arist.time_event,
+        maximum_distance=str(arist.maximum_distance),
+        mosaic_model=arist.mosaic_model,
+        tectonic_region_type=arist.trt,
+        truncation_level=str(arist.truncation_level),
+        number_of_ground_motion_fields=str(arist.number_of_ground_motion_fields),
+        asset_hazard_distance=str(arist.asset_hazard_distance),
+        ses_seed=str(arist.ses_seed),
         inputs=inputs)
-    if rupture_file:
-        inputs['rupture_model'] = rupture_file
+    if arist.local_timestamp is not None:
+        params['local_timestamp'] = arist.local_timestamp
+    if arist.maximum_distance_stations is not None:
+        params['maximum_distance_stations'] = str(arist.maximum_distance_stations)
     oq = readinput.get_oqparam(params)
-    sitecol, assetcol, discarded, exp = readinput.get_sitecol_assetcol(oq)
-    id0s, counts = numpy.unique(assetcol['ID_0'], return_counts=1)
+    # NB: fake h5 to cache `get_site_model` and avoid multiple associations
+    _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
+        oq, h5={'performance_data': hdf5.FakeDataset()})
+    id0s = numpy.unique(assetcol['ID_0'])
     countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = get_tmap_keys(expo, countries)
+    tmap_keys = get_tmap_keys(arist.exposure_hdf5, countries)
+    if not tmap_keys:
+        raise LookupError(f'No taxonomy mapping was found for {countries}')
     logging.root.handlers = []  # avoid breaking the logs
-    allparams = []
-    for key in tmap_keys:
-        print('Using taxonomy mapping for %s' % key)
-        params['countries'] = key.replace('_', ' ')
-        countries_per_tmap = ', '.join(
-            [country for country in key.split('_') if country in countries])
-        params['description'] = (
-            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
-            f' M{rupdic["mag"]} {countries_per_tmap}')
-        allparams.append(params.copy())
-    return allparams
+    params['description'] = (
+        f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+        f' M{rupdic["mag"]}')
+    return params
 
 
 def main_web(allparams, jobctxs,
@@ -164,45 +225,59 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              callback=trivial_callback, *,
-             maximum_distance='300', trt=None, truncation_level='3',
+             time_event='day',
+             maximum_distance='300', mosaic_model=None, trt=None,
+             truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42', mosaic_dir=config.directory.mosaic_dir):
+             ses_seed='42',
+             local_timestamp=None, exposure_hdf5=None, station_data_file=None,
+             maximum_distance_stations=None, ignore_shakemap=False):
     """
     This script is meant to be called from the command-line
     """
     if rupture_dict is None:
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
-        allparams = get_aristotle_allparams(
-            rupture_dict, maximum_distance, trt, truncation_level,
+        arist = AristotleParam(
+            rupture_dict, time_event, maximum_distance, mosaic_model,
+            trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, mosaic_dir)
+            ses_seed, local_timestamp, exposure_hdf5, station_data_file,
+            maximum_distance_stations, ignore_shakemap)
+        oqparams = get_aristotle_params(arist)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    jobctxs = engine.create_jobs(
-        allparams, config.distribution.log_level, None, user, None)
-    for params, job in zip(allparams, jobctxs):
-        try:
-            engine.run_jobs([job])
-        except Exception as exc:
-            callback(job.calc_id, params, exc=exc)
-        else:
-            callback(job.calc_id, params, exc=None)
+    [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
+    try:
+        engine.run_jobs([job])
+    except Exception as exc:
+        callback(job.calc_id, oqparams, exc=exc)
+    else:
+        callback(job.calc_id, oqparams, exc=None)
 
 
 main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
 main_cmd.callback = ''
+main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
+main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
 main_cmd.trt = 'Tectonic region type'
 main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
+main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
+main_cmd.station_data_file = 'CSV file with the station data'
+main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
+main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
+                          'and vulnerability functions')
+main_cmd.ignore_shakemap = (
+    'Used to test retrieving rupture data from finite-fault info')
 
 if __name__ == '__main__':
     sap.run(main_cmd)

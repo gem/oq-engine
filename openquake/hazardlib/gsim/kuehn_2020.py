@@ -563,7 +563,7 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     if imt.string in "PGA PGV":
         # Linear interpolation
         interp = RegularGridInterpolator(
-            (model_m, model_r), sigma_mu_model, bounds_error=True,)
+            (model_m, model_r), sigma_mu_model, bounds_error=False, fill_value=None)
         sigma_mu = interp(np.stack((mag, rrup), axis=1))
     else:
         model_t = model["periods"]
@@ -573,17 +573,17 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
             sigma_mu_model = np.concatenate(
                 (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
                 axis=2)
-            model_t = np.concatenate((model_t, [imt.period.max()]), axis=0)
+            model_t = np.concatenate((model_t, [imt.period]), axis=0)
         if np.any(imt.period < model["periods"][0]):
             sigma_mu_model = np.concatenate(
                 (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
                 axis=2)
-            model_t = np.concatenate(([imt.period.min()], model_t), axis=0)
+            model_t = np.concatenate(([imt.period], model_t), axis=0)
 
         # Linear interpolation
         interp = RegularGridInterpolator(
             (model_m, model_r, np.log(model_t)), sigma_mu_model,
-            bounds_error=True,)
+            bounds_error=False, fill_value=None)
         sigma_mu = interp(
             np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)),
                      axis=1))
@@ -793,5 +793,9 @@ REGION_ALIASES = {
 
 
 for region in SUPPORTED_REGIONS[1:]:
-    add_alias("KuehnEtAl2021SInter" + REGION_ALIASES[region],
+    add_alias("KuehnEtAl2020SInter" + REGION_ALIASES[region],
               KuehnEtAl2020SInter, region=region)
+
+for region in SUPPORTED_REGIONS[1:]:
+    add_alias("KuehnEtAl2020SSlab" + REGION_ALIASES[region],
+              KuehnEtAl2020SSlab, region=region)

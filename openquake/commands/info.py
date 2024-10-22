@@ -25,15 +25,16 @@ import logging
 import operator
 import collections
 
-import fiona
-from shapely.geometry import shape
 import numpy
+import pandas
+from shapely.geometry import shape
 from decorator import FunctionMaker
 
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import nrml, imt, logictree, site, geo
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
@@ -50,6 +51,7 @@ from openquake.calculators.export import DISPLAY_NAME
 
 F32 = numpy.float32
 U8 = numpy.uint8
+
 
 def print_features(fiona_file):
     rows = []
@@ -242,6 +244,11 @@ def main(what, report=False):
         for param in params:
             print(param)
             print(docs[param])
+    elif what == 'loss_types':
+        ltypes = [lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt]
+        for lt in sorted(ltypes):
+            print(lt)
     elif what.startswith('mfd'):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):
@@ -283,15 +290,23 @@ def main(what, report=False):
             with mock.patch.object(logging.root, 'info'):  # reduce logging
                 do_build_reports(what)
         print(mon)
+    elif what.endswith('.csv'):
+        [rec] = hdf5.sniff([what])
+        df = pandas.read_csv(what, skiprows=rec.skip)
+        if len(df) > 25:
+            dots = pandas.DataFrame({col: ['...'] for col in df.columns})
+            df = pandas.concat([df[:10], dots, df[-10:]])
+        print(text_table(df, ext='org'))
     elif what.endswith('.xml'):
         node = nrml.read(what)
         tag = node[0].tag
         if tag.endswith('sourceModel'):
             print(source_model_info([node]))
         elif tag.endswith('exposureModel'):
-            exp, df = asset.read_exp_df(what)
+            _exp, df = asset.read_exp_df(what)
             print(node.to_str())
-            print(df.set_index('id')[['lon', 'lat', 'taxonomy', 'value-structural']])
+            print(df.set_index('id')[[
+                'lon', 'lat', 'taxonomy', 'value-structural']])
         elif tag.endswith('logicTree'):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):

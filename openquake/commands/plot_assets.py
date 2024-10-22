@@ -16,14 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import numpy
 import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
-from openquake.commands.plot import (
+from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes)
-
+from openquake.calculators.postproc.plots import add_rupture
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -44,12 +45,12 @@ def main(calc_id: int = -1, site_model=False,
         region = None
     sitecol = dstore['sitecol']
     assetcol = get_assetcol(calc_id)
-    fig = p.figure()
-    ax = fig.add_subplot(111)
+    _fig, ax = p.subplots(figsize=(10, 10))
     if region:
         region_geom = shapely.wkt.loads(region)
         pp = PolygonPatch(region_geom, alpha=0.1)
         ax.add_patch(pp)
+    ax.set_aspect('equal')
     ax.grid(True)
     if assets_only:
         markersize_site_model = markersize_assets = 5
@@ -76,11 +77,17 @@ def main(calc_id: int = -1, site_model=False,
                       label='discarded', s=markersize_discarded)
     if oq.rupture_xml or oq.rupture_dict:
         rec = dstore['ruptures'][0]
-        lon, lat, dep = rec['hypo']
+        lon, lat, _dep = rec['hypo']
         xlon, xlat = [lon], [lat]
         dist = sitecol.get_cdist(rec)
         print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
-        p.scatter(xlon, xlat, marker='o', color='red', label='rupture')
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+            # assuming there is only 1 rupture, so rup_id=0
+            ax, _min_x, _min_y, _max_x, _max_y = add_rupture(
+                ax, dstore, rup_id=0)
+        else:
+            p.scatter(xlon, xlat, marker='*', color='orange',
+                      label='hypocenter', alpha=.5)
     else:
         xlon, xlat = [], []
 
@@ -91,9 +98,9 @@ def main(calc_id: int = -1, site_model=False,
     else:
         minx, miny, maxx, maxy = get_bbox(
             assetcol['lon'], assetcol['lat'], xlon, xlat)
-    w, h = maxx - minx, maxy - miny
-    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
-    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
+    BUF_ANGLE = 1
+    ax.set_xlim(minx - BUF_ANGLE, maxx + BUF_ANGLE)
+    ax.set_ylim(miny - BUF_ANGLE, maxy + BUF_ANGLE)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
     if country_iso_codes is not None:

@@ -22,10 +22,12 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
-    'asce07': 'ASCE 7-16 Parameters',
-    'asce41': 'ASCE 41-17 Parameters',
+    'asce07': 'ASCE 7 Parameters',
+    'asce41': 'ASCE 41 Parameters',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
+    'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
+    'assetcol': 'Exposure CSV',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
@@ -49,6 +51,8 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
+    'median_spectra': 'Median Spectra per Site and PoE',
+    'median_spectrum_disagg': 'Median Spectrum Disaggregation',
     'reinsurance-avg_policy': 'Average Reinsurance By Policy',
     'reinsurance-avg_portfolio': 'Average Reinsurance',
     'reinsurance-risk_by_event': 'Reinsurance By Event',

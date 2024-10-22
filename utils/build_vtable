@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pandas
 from itertools import product
-from openquake.hazardlib import imt, valid, contexts
+from openquake.hazardlib import valid, contexts
 
 RES_INDEX = dict(MEAN=0, TOTAL_STDDEV=1,
                  INTER_EVENT_STDDEV=2, INTRA_EVENT_STDDEV=3)

@@ -407,6 +407,56 @@ Choosing reasonable cutoff thresholds with these parameters can significantly re
 there are a large number of small magnitude ruptures or low intensity GMFs being generated, which may have a negligible 
 impact on the damage or losses, and thus could be safely discarded.
 
+For instance, at the time of this writing (summer 2024) the hazard model for
+South America (SAM) contains 539,831 sites and a full realistic simulation
+for 100,000 years without setting ``minimum_magnitude`` and ``minimum_intensity``
+would be impossible, generating an estimated 3.5 TB of ground motion fields.
+In order to give this estimate, the trick is to reduce the effective investigation
+time to something manageable (say 1000 years), run the calculation and measure
+the size of the generated GMFs. The numbers are as follows::
+
+ eff_time = 1000
+ num_events = 159_559
+ num_ruptures = 151_119
+ mean mag = 4.50
+ gmf_data = 35.04 GB
+ time(event_based) = 3_725
+
+It is clear that the calculation is dominated by the small magnitude ruptures which
+however are expected to have a minimum impact on the damage. Usually we consider
+a ``minimum_magnitude`` of 5; with this setting the situation improves drastically::
+
+ eff_time = 1000
+ minimum_magnitude = 5
+ num_events = 20_514
+ num_ruptures = 20_381
+ mean mag = 5.68
+ gmf_data = 4.39 GB
+ time(event_based) = 467
+
+We produce 8x less events and 8x less GMFs in 8x less time. Most sites, however, are affected
+by very small shaking values, so setting ``minimum_intensity`` will reduce a lot
+more the size of the GMFs (6.5x)::
+
+ eff_time = 1000
+ minimum_magnitude = 5
+ minimum_intensity = .05
+ num_events = 20_514
+ num_ruptures = 20_381
+ mean mag = 5.68
+ gmf_data = 0.67 GB
+ time(event_based) = 439
+
+In this example with 1000 years setting ``minimum_magnitude`` and
+``minimum_intensity`` reduced the size of the generated GMFs by 8 *
+6.5 = 52 times (!) In the realistic case of 100,000 years the saving
+will be even larger, i.e. you can easily gain two orders of magnitude
+in the size of the generated GMFs. It is not only that: setting those
+parameters can make the difference between being able to run the
+calculation and running out of memory.
+This is why, starting from engine v1.21, such parameters are mandatory except
+in toy calculations.
+
 *******************
 region_grid_spacing
 *******************

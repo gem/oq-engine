@@ -45,8 +45,8 @@ def _long_funcs(module, maxlen):
         if isinstance(node, ast.FunctionDef):
             dotname = '%s.%s' % (module.__name__, node.name)
             args = node.args.args
-            if len(args) > 16:
-                raise SyntaxError('%s has more than 16 arguments: %s'
+            if len(args) > 15:
+                raise SyntaxError('%s has more than 15 arguments: %s'
                                   % (dotname, [a.arg for a in args]))
             doc = ast.get_docstring(node)
             doclines = 0 if doc is None else doc.count('\n') + 1

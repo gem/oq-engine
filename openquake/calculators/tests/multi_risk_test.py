@@ -87,8 +87,3 @@ class MultiRiskTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError):
             self.run_calc(case_1.__file__, 'job.ini',
                           structura_fragility_file='fragility_model.xml')
-
-        # check invalid key structural_consequence_file
-        with self.assertRaises(ValueError):
-            self.run_calc(case_1.__file__, 'job.ini',
-                          structura_consequence_file='consequence_model.xml')

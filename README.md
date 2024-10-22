@@ -34,7 +34,7 @@ The code name for version 3.16 is **Angela**, in memory of the Italian science j
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.20**.* [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.20.html)
+Latest stable version is the **OpenQuake Engine 3.21**.* [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.21.html)
 
 <!-- GEM END -->
 
@@ -49,7 +49,7 @@ https://docs.openquake.org/oq-engine/master/manual/
 * [Underlying Science](https://docs.openquake.org/oq-engine/master/manual/underlying-science/)
 * [Release Notes](https://docs.openquake.org/oq-engine/master/manual/release-notes/)
 * [Contributing](https://docs.openquake.org/oq-engine/master/manual/contributing/)
-* [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq)
+* [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq.html)
 
 
 ## Mirrors

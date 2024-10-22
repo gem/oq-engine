@@ -33,10 +33,7 @@ from decorator import decorator
 import psutil
 import numpy
 import pandas
-try:
-    import numba
-except ImportError:
-    numba = None
+import numba
 
 from openquake.baselib.general import humansize, fast_agg
 from openquake.baselib import hdf5
@@ -70,6 +67,15 @@ def perf_stat():
     time.sleep(0.5)
     yield
     p.send_signal(signal.SIGINT)
+
+
+def print_stats(pr, fname):
+    """
+    Print the stats of a Profile instance
+    """
+    with open(fname, 'w') as f:
+        ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
+        ps.print_stats()
 
 
 def get_pstats(pstatfile, n):
@@ -169,6 +175,14 @@ def memory_rss(pid):
         return 0
 
 
+def memory_gb(pids=()):
+    """
+    :params pids: a list or PIDs running on the same machine
+    :returns: the total memory allocated by the current process and all the PIDs
+    """
+    return sum(map(memory_rss, [os.getpid()] + list(pids))) / 1024**3
+
+
 # this is not thread-safe
 class Monitor(object):
     """
@@ -200,9 +214,10 @@ class Monitor(object):
     authkey = None
     calc_id = None
     inject = None
+    #config = config
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None, version=None):
+                 h5=None, version=None, dbserver_host='127.0.0.1'):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
@@ -216,11 +231,7 @@ class Monitor(object):
         self.address = None
         self.username = getpass.getuser()
         self.task_no = -1  # overridden in parallel
-
-    @property
-    def calc_dir(self):
-        """Calculation directory $HOME/oqdata/calc_XXX"""
-        return self.filename.rsplit('.', 1)[0]
+        self.dbserver_host = dbserver_host
 
     @property
     def mem(self):
@@ -423,31 +434,19 @@ def vectorize_arg(idx):
 
 
 # numba helpers
-if numba:
-    # NB: without cache=True the tests would take hours!!
+# NB: without cache=True the tests would take hours!!
 
-    def jittable(func):
-        """Calls numba.njit with a cache"""
-        jitfunc = numba.njit(func, error_model='numpy', cache=True)
-        jitfunc.jittable = True
-        return jitfunc
+def jittable(func):
+    """Calls numba.njit with a cache"""
+    jitfunc = numba.njit(func, error_model='numpy', cache=True)
+    jitfunc.jittable = True
+    return jitfunc
 
-    def compile(sigstr):
-        """
-        Compile a function Ahead-Of-Time using the given signature string
-        """
-        return numba.njit(sigstr, error_model='numpy', cache=True)
-
-else:
-
-    def jittable(func):
-        """Do nothing decorator, used if numba is missing"""
-        func.jittable = True
-        return func
-
-    def compile(sigstr):
-        """Do nothing decorator, used if numba is missing"""
-        return lambda func: func
+def compile(sigstr):
+    """
+    Compile a function Ahead-Of-Time using the given signature string
+    """
+    return numba.njit(sigstr, error_model='numpy', cache=True)
 
 
 # used when reading _rates/sid

@@ -26,7 +26,7 @@ import shapely.geometry
 import shapely.ops
 
 from alpha_shapes import Alpha_Shaper
-from openquake.baselib.general import cached_property
+from openquake.baselib.general import cached_property, gen_slices
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
@@ -34,9 +34,52 @@ from openquake.hazardlib.geo import utils as geo_utils
 F32 = numpy.float32
 
 
+def reduce1d(array, n):
+    """
+    Reduce a 1-dimensional array by `n` times (approximately). For instance
+
+    >>> arr = numpy.arange(0, 1, .1)
+    >>> reduce1d(arr, 2)
+    array([0. , 0.1, 0.3, 0.5, 0.7, 0.9])
+    >>> reduce1d(arr, 5)
+    array([0. , 0.1, 0.6, 0.9])
+    >>> reduce1d(arr, 9)
+    array([0. , 0.1, 0.9])
+    """
+    size, = array.shape
+    if size <= 3:
+        return array
+    reduced = array[1:-1:n]
+    res = numpy.empty(len(reduced) + 2, array.dtype)
+    res[0] = array[0]
+    res[1:-1] = reduced
+    res[-1] = array[-1]
+    return res
+
+
+def reduce2d(array, n):
+    """
+    Reduce a 2-dimensional array by `n^2` times (approximately). For instance
+
+    >>> arr = numpy.array([numpy.arange(0, 1, .1) for _ in range(5)])
+    >>> arr.shape
+    (5, 10)
+    >>> reduce2d(arr, 5)
+    array([[0. , 0.1, 0.6, 0.9],
+           [0. , 0.1, 0.6, 0.9],
+           [0. , 0.1, 0.6, 0.9]])
+    """
+    size0, _ = array.shape
+    rows = []
+    idxs = numpy.arange(size0, dtype=int)
+    for idx in reduce1d(idxs, n):
+        rows.append(reduce1d(array[idx], n))
+    return numpy.array(rows)
+
+
 def debug_plot(polygons):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     pp = geo_utils.PolygonPlotter(ax)
     for i, polygon in enumerate(polygons, 1):
         pp.add(polygon, alpha=i * .1)
@@ -350,7 +393,12 @@ class Mesh(object):
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
-        return cdist(self.xyz, mesh.xyz).min(axis=0)
+        # mesh.xyz has shape (N, 3); we split in slices to avoid running out of memory
+        # in the large array of shape len(self)*N
+        dists = []
+        for slc in gen_slices(0, len(mesh), 10_000):
+            dists.append(cdist(self.xyz, mesh.xyz[slc]).min(axis=0))
+        return numpy.concatenate(dists)
 
     def get_closest_points(self, mesh):
         """
@@ -416,7 +464,8 @@ class Mesh(object):
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flatten(), self.lats.flatten()))
+        coords = numpy.transpose(
+            proj(self.lons.flatten(), self.lats.flatten()))
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
@@ -493,7 +542,7 @@ class Mesh(object):
             sfc_xx, sfc_yy = proj(self.lons, self.lats)
             points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
             shaper = Alpha_Shaper(points)
-            alpha_opt, polygon = shaper.optimize()
+            _alpha_opt, polygon = shaper.optimize()
 
         else:
             proj, polygon = self._get_proj_enclosing_polygon()
@@ -585,6 +634,13 @@ class Mesh(object):
         # avoid circular imports
         from openquake.hazardlib.geo.polygon import Polygon
         return Polygon._from_2d(polygon2d, proj)
+
+    def reduce(self, n):
+        """
+        Reduce the mesh by `n` times
+        """
+        return Mesh(reduce1d(self.lons, n), reduce1d(self.lats, n),
+                    reduce1d(self.depths, n))
 
 
 class RectangularMesh(Mesh):
@@ -830,3 +886,11 @@ class RectangularMesh(Mesh):
         # compute and return weighted mean
         return numpy.sum(widths * mean_cell_lengths) / \
             numpy.sum(mean_cell_lengths)
+
+    def reduce(self, n):
+        """
+        Reduce the mesh by `n^2` times
+        """
+        return RectangularMesh(reduce2d(self.lons, n),
+                               reduce2d(self.lats, n),
+                               reduce2d(self.depths, n))

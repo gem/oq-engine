@@ -231,8 +231,11 @@ def gen_outputs(df, crmodel, rng, monitor):
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for taxo in assets.taxonomy.unique():
-            adf = assets[assets.taxonomy == taxo]
+        if 'ID_0' not in assets.columns:
+            assets['ID_0'] = 0
+        for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
+            # multiple countries are tested in aristotle/case_02
+            adf.country = crmodel.countries[id0]
             with fil_mon:
                 # *crucial* for the performance of the next step
                 gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
@@ -242,6 +245,19 @@ def gen_outputs(df, crmodel, rng, monitor):
                 out = crmodel.get_output(
                     adf, gmf_df, crmodel.oqparam._sec_losses, rng)
             yield out
+
+
+def check_tot_loss_unit_consistency(units, total_losses, loss_types):
+    total_losses_units = set()
+    for separate_lt in total_losses.split('+'):
+        assert separate_lt in loss_types
+        for unit, lt in zip(units, loss_types):
+            if separate_lt == lt:
+                total_losses_units.add(unit)
+    if len(total_losses_units) != 1:
+        logging.warning(
+            'The units of the single components of the total losses'
+            ' are not homogeneous: %s" ' % total_losses_units)
 
 
 def set_oqparam(oq, assetcol, dstore):
@@ -264,6 +280,9 @@ def set_oqparam(oq, assetcol, dstore):
 
     ideduc = assetcol['ideductible'].any()
     if oq.total_losses:
+        units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
+        check_tot_loss_unit_consistency(
+            units.split(), oq.total_losses, oq.loss_types)
         sec_losses.append(
             partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
     elif ideduc:
@@ -289,10 +308,10 @@ def ebrisk(proxies, cmaker, stations, dstore, monitor):
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        dic = event_based.event_based(block, cmaker, stations, dstore, monitor)
-        if len(dic['gmfdata']):
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
-            yield event_based_risk(gmf_df, cmaker.oq, monitor)
+        for dic in event_based.event_based(block, cmaker, stations, dstore, monitor):
+            if len(dic['gmfdata']):
+                gmf_df = pandas.DataFrame(dic['gmfdata'])
+                yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -318,9 +337,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # causing different losses
         del adf['id']
         monitor.save('assets', adf)
-        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
+        if 'ID_0' in self.assetcol.tagnames:
+            self.crmodel.countries = self.assetcol.tagcol.ID_0
+        else:
+            self.crmodel.countries = ['?']
+
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers in chunks of at most 1 million elements
+        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
         monitor.save('start-stop', compactify3(tss))
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
@@ -356,8 +380,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         set_oqparam(oq, self.assetcol, self.datastore)
-        ct = oq.concurrent_tasks or 1
-        oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         ELT = len(oq.ext_loss_types)
@@ -503,12 +525,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     (len(arr) - len(uni), dupl[0, 2]))
 
         if oq.avg_losses:
-            logging.info('Storing avg_losses-rlzs')
             for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]
                 name = 'avg_losses-rlzs/' + lt
+                logging.info(f'Storing {name}')
                 self.datastore[name][:] = al
                 stats.set_rlzs_stats(self.datastore, name,
                                      asset_id=self.assetcol['id'])

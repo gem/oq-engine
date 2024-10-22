@@ -275,7 +275,7 @@ agg_id
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the fragility/vulnerability/consequence model',
+        self.assertIn("{'RM'} are not in the CompositeRiskModel",
                       str(ctx.exception))
 
     def test_case_3(self):
@@ -610,6 +610,9 @@ agg_id
         [_total, fname] = export(('aggrisk', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
+
+        # test that imported ruptures can be exported
+        export(('ruptures', 'csv'), self.calc.datastore)
 
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario

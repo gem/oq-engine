@@ -56,10 +56,11 @@ def dbcmd(action, *args):
     :param tuple args: arguments
     """
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if dbhost == 'local':
+    if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
+        # access the database directly
         if action.startswith('workers_'):
-            master = w.WorkerMaster()  # zworkers
-            return getattr(master, action[8:])()
+            master = w.WorkerMaster(-1)  # current job
+            return getattr(master, action[8:])()  # workers_(stop|kill)
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -67,6 +68,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
+
+    # send a command to the database
     tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
     sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
@@ -188,24 +191,22 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    multi = False
     oqparam = None
 
-    def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
+    def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, tag=''):
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
-        if isinstance(job_ini, dict):  # dictionary of parameters
-            self.params = job_ini
-        else:  # path to job.ini file
-            self.params = readinput.get_params(job_ini)
+        self.params = params
         if 'inputs' not in self.params:  # for reaggregate
             self.tag = tag
         else:
-            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
+            inputs = self.params['inputs']
+            self.tag = tag or get_tag(inputs.get('job_ini', '<in-memory>'))
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
+        calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
             datadir = get_datadir()
             self.calc_id = dbcmd(
@@ -298,5 +299,7 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     """
     if job_ini in ('job', 'calc'):  # backward compatibility
         job_ini = dummy
-    return LogContext(job_ini, 0, log_level, log_file,
+    if not isinstance(job_ini, dict):
+        job_ini = readinput.get_params(job_ini)
+    return LogContext(job_ini, log_level, log_file,
                       user_name, hc_id, host, tag)

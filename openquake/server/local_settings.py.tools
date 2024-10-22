@@ -1,7 +1,5 @@
 APPLICATION_MODE = 'TOOLS_ONLY'
 
-# Enable authentication
-LOCKDOWN = False
 # Disable sharing of results across users
 ACL_ON = True
 
@@ -21,13 +19,6 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # To avoid Origin checking failed
 CSRF_TRUSTED_ORIGINS = ['https://*.openquake.org']
-
-# to install fixtures for cookie_consent
-USE_TZ = True
-
-# cors-headers
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_URLS_REGEX = r'^/taxtweb/explanation/.*$'
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name

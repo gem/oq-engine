@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchSet uncertaintyType="sourceModel"
+                        branchSetID="bs1">
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>ssm1.xml</uncertaintyModel>
+        <uncertaintyWeight>0.75</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b2">
+        <uncertaintyModel>ssm2.xml</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

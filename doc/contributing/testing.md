@@ -9,7 +9,7 @@ The OpenQuake code is automatically tested by Continuous integration systems (Gi
 The full suite of tests for the OpenQuake Engine can be run using `pytest` from [**source code**](../getting-started/installation-instructions/development.rst):
 
 ```bash
-$ oq dbserver upgrade
+$ oq engine --upgrade-db
 $ pytest -v openquake
 ```
 

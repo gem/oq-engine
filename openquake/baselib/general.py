@@ -41,7 +41,7 @@ import subprocess
 import collections
 import multiprocessing
 from contextlib import contextmanager
-from collections.abc import Mapping, Container, MutableSequence
+from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
 from decorator import decorator
@@ -57,7 +57,9 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
-
+BASE33489 = []  # built in 0.003 seconds
+for a, b in itertools.product(BASE183, BASE183):
+    BASE33489.append(a + b)
 mp = multiprocessing.get_context('spawn')
 
 
@@ -234,19 +236,11 @@ def distinct(keys):
     return outlist
 
 
-def ceil(a, b):
+def ceil(x):
     """
-    Divide a / b and return the biggest integer close to the quotient.
-
-    :param a:
-        a number
-    :param b:
-        a positive number
-    :returns:
-        the biggest integer close to the quotient
+    Converts the result of math.ceil into an integer
     """
-    assert b > 0, b
-    return int(math.ceil(float(a) / b))
+    return int(math.ceil(x))
 
 
 def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
@@ -360,7 +354,12 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
-    if isinstance(sequence, int):
+    if isinstance(sequence, pandas.DataFrame):
+        num_elements = len(sequence)
+        out = numpy.array_split(
+            sequence, num_elements if num_elements < hint else hint)
+        return out
+    elif isinstance(sequence, int):
         return split_in_slices(sequence, hint)
     elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
@@ -493,11 +492,12 @@ def extract_dependencies(lines):
     for line in lines:
         longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
         try:
-            pkg, version, *other = longname.split('-')
+            pkg, version, _other = longname.split('-', 2)
         except ValueError:  # for instance a comment
             continue
         if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
-                   'python_pam', 'django_cors_headers', 'django_cookie_consent'):
+                   'python_pam', 'django_cors_headers',
+                   'django_cookie_consent'):
             # not importable
             continue
         if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
@@ -514,6 +514,8 @@ def extract_dependencies(lines):
             pkg = 'django'
         elif pkg == 'pyshp':
             pkg = 'shapefile'
+        elif pkg == 'django_appconf':
+            pkg = 'appconf'
         yield pkg, version
 
 
@@ -595,7 +597,7 @@ def import_all(module_or_package):
             # the current working directory is not a subpackage
             continue
         for f in files:
-            if f.endswith('.py'):
+            if f.endswith('.py') and not f.startswith('__init__'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
@@ -1144,6 +1146,17 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     return res
 
 
+def idxs_by_tag(tags):
+    """
+    >>> idxs_by_tag([2, 1, 1, 2])
+    {2: array([0, 3], dtype=uint32), 1: array([1, 2], dtype=uint32)}
+    """
+    dic = AccumDict(accum=[])
+    for i, tag in enumerate(tags):
+        dic[tag].append(i)
+    return {tag: numpy.uint32(dic[tag]) for tag in dic}
+
+
 def count(groupiter):
     return sum(1 for row in groupiter)
 
@@ -1268,12 +1281,10 @@ def random_filter(objects, reduction_factor, seed=42):
         return objects
     rnd = random.Random(seed)
     if isinstance(objects, pandas.DataFrame):
-        name = objects.index.name
-        df = objects.reset_index()
         df = pandas.DataFrame({
-            col: random_filter(df[col], reduction_factor, seed)
-            for col in df.columns})
-        return df.set_index(name)
+            col: random_filter(objects[col], reduction_factor, seed)
+            for col in objects.columns})
+        return df
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
@@ -1471,6 +1482,8 @@ def getsizeof(o, ids=None):
 
     if hasattr(o, 'nbytes'):
         return o.nbytes
+    elif hasattr(o, 'array'):
+        return o.array.nbytes
 
     nbytes = sys.getsizeof(o)
     ids.add(id(o))
@@ -1687,7 +1700,8 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
-# NB: there is something like this in contextlib in Python 3.11
+# NB: this is present in contextlib in Python 3.11, but
+# we still support Python 3.9, so it cannot be removed yet
 @contextmanager
 def chdir(path):
     """
@@ -1716,6 +1730,47 @@ def smart_concat(arrays):
     return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
 
 
+def around(vec, value, delta):
+    """
+    :param vec: a numpy vector or pandas column
+    :param value: a float value
+    :param delta: a positive float
+    :returns: array of booleans for the range [value-delta, value+delta]
+    """
+    return (vec <= value + delta) & (vec >= value - delta)
+
+
+def compose_arrays(**kwarrays):
+    """
+    Compose multiple 1D and 2D arrays into a single composite array.
+    For instance
+
+    >>> mag = numpy.array([5.5, 5.6])
+    >>> mea = numpy.array([[-4.5, -4.6], [-4.45, -4.55]])
+    >>> compose_arrays(mag=mag, mea=mea)
+    array([(5.5, -4.5 , -4.6 ), (5.6, -4.45, -4.55)],
+          dtype=[('mag', '<f8'), ('mea0', '<f8'), ('mea1', '<f8')])
+    """
+    dic = {}
+    dtlist = []
+    nrows = set()
+    for key, array in kwarrays.items():
+        shape = array.shape
+        nrows.add(shape[0])
+        if len(shape) >= 2:
+            for k in range(shape[1]):
+                dic[f'{key}{k}'] = array[:, k]
+                dtlist.append((f'{key}{k}', (array.dtype, shape[2:])))
+        else:
+            dic[key] = array
+            dtlist.append((key, array.dtype))
+    [R] = nrows  # all arrays must have the same number of rows
+    array = numpy.empty(R, dtlist)
+    for key, _ in dtlist:
+        array[key] = dic[key]
+    return array
+
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
@@ -1726,7 +1781,6 @@ def smart_concat(arrays):
 # size a lot (say one order of magnitude).
 # Therefore by losing a bit of speed (say 3%) you can convert a failing
 # calculation into a successful one.
-
 
 def compress(obj):
     """
@@ -1753,6 +1807,7 @@ def decompress(cbytes):
 # with monitor.shared['arr'] as arr:
 #      big_object = loada(arr)
 
+
 def dumpa(obj):
     """
     Dump a Python object as an array of uint8:
@@ -1773,3 +1828,25 @@ def loada(arr):
     """
     return pickle.loads(bytes(arr))
 
+
+class Deduplicate(Sequence):
+    """
+    Deduplicate lists containing duplicated objects
+    """
+    def __init__(self, objects, check_one=False):
+        pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                   for obj in objects]
+        uni, self.inv = numpy.unique(pickles, return_inverse=True)
+        self.uni = [pickle.loads(pik) for pik in uni]
+        if check_one:
+            assert len(self.uni) == 1, self.uni
+
+    def __getitem__(self, i):
+        return self.uni[self.inv[i]]
+
+    def __repr__(self):
+        name = self[0].__class__.__name__
+        return '<Deduplicated %s %d/%d>' % (name, len(self.uni), len(self.inv))
+
+    def __len__(self):
+        return len(self.inv)

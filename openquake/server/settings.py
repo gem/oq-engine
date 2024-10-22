@@ -89,6 +89,22 @@ AUTHENTICATION_BACKENDS = ()
 # system time zone.
 TIME_ZONE = 'UTC'
 
+# USE_TZ = True is the default for Django >= 5.0. From Django documentation:
+# "
+# When support for time zones is enabled, Django stores datetime information
+# in UTC in the database, uses time-zone-aware datetime objects internally,
+# and translates them to the end user’s time zone in templates and forms.
+# This is handy if your users live in more than one time zone and you want
+# to display datetime information according to each user’s wall clock.
+# Even if your website is available in only one time zone, it’s still good
+# practice to store data in UTC in your database. The main reason is daylight
+# saving time (DST). Many countries have a system of DST, where clocks are
+# moved forward in spring and backward in autumn. If you’re working in local
+# time, you’re likely to encounter errors twice a year, when the transitions
+# happen.
+# "
+USE_TZ = True
+
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = 'en-us'
@@ -169,6 +185,7 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 
 # A server name can be specified to customize the WebUI in case of
 # multiple installations of the Engine are available. This helps avoiding
@@ -179,6 +196,15 @@ APPLICATION_MODES = [
     'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
 
 APPLICATION_MODE = 'PUBLIC'
+
+ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
+# ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
+
+
+try:
+    EXTERNAL_TOOLS = True if os.environ['EXTERNAL_TOOLS'] == 'True' else False
+except KeyError:
+    EXTERNAL_TOOLS = False
 
 # If False, a warning is displayed in case a newer version of the engine has
 # been released
@@ -194,17 +220,27 @@ WEBUI = True
 
 MAX_AELO_SITE_NAME_LEN = 256
 
+GOOGLE_ANALYTICS_TOKEN = None
+
+CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
-        'openquakeplatform',
+        'openquakeplatform', 'corsheaders',
     )
 
     INSTALLED_APPS += STANDALONE_APPS
 
+    # cors-headers configuration
+    corsheader_middleware = 'corsheaders.middleware.CorsMiddleware'
+    if corsheader_middleware not in MIDDLEWARE:
+        MIDDLEWARE += (corsheader_middleware,)
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_URLS_REGEX = r'^/taxtweb/explanation/.*$'
+
     FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
-    CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
     CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
 
@@ -227,20 +263,16 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE in ('TOOLS_ONLY',):
-    # add installed_apps for cookie-consent and corsheader
+if APPLICATION_MODE not in ('PUBLIC',):
+    # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent', 'corsheaders',):
+                'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
-    # add middleware for corsheader
-    for app_cors in ('corsheaders.middleware.CorsMiddleware',):
-        if app_cors not in MIDDLEWARE:
-            MIDDLEWARE += (app_cors,)
-
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
-        CONTEXT_PROCESSORS.append('django.template.context_processors.request')
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.template.context_processors.request')
     COOKIE_CONSENT_NAME = "cookie_consent"
     COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
     COOKIE_CONSENT_LOG_ENABLED = False
@@ -332,7 +364,7 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
     LOGIN_EXEMPT_URLS = (
         '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
-        'reset_password', 'reset/',
+        'reset_password', 'reset/', 'cookies/',
     )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 

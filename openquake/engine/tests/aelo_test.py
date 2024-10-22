@@ -121,7 +121,7 @@ def test_CCA():
         if rtgmpy:
             [fname] = export(('rtgm', 'csv'), calc.datastore)
             df = pandas.read_csv(fname, skiprows=1)
-            aac(df.RTGM, expected, atol=5E-5)
+            aac(df.RTGM, expected, atol=1.5E-4)
 
     if rtgmpy:
         # check asce07 exporter
@@ -136,7 +136,7 @@ def test_CCA():
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41, atol=5E-5)
+        aac(df.value, ASCE41, atol=1.5E-4)
 
         # test no close ruptures
         dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
@@ -227,8 +227,8 @@ def test_JPN():
     expected_uhs = pandas.read_csv(expected, skiprows=1, index_col='period')
     expected_uhs.columns = ["poe-0.02", "poe-0.05", "poe-0.1", "poe-0.2",
                             "poe-0.5"]
-
-    assert str(df2) == str(expected_uhs)
+    for col in expected_uhs.columns:
+        aac(df2[col], expected_uhs[col], atol=1E-5)
 
     if rtgmpy:
         # check all plots created

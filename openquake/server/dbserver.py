@@ -134,7 +134,8 @@ def ensure_on():
     """
     Start the DbServer if it is off
     """
-    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
+    if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
+        and getpass.getuser() != 'openquake'):
         print('Using local database')
         actions.upgrade_db(db)
         return
@@ -171,7 +172,7 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.listen, config.dbserver.port)
+        addr = (config.dbserver.host, config.dbserver.port)
 
     # create the db directory if needed
     dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))

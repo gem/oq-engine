@@ -10,6 +10,10 @@
   <link href="{{ STATIC_URL }}css/engine.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}lib/outdatedbrowser/outdatedbrowser.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}css/cookie_consent.css" rel="stylesheet"/>
+  {% if application_mode != 'PUBLIC' and google_analytics_token is not None %}
+  {% include "./includes/cookie_analytics.html" %}
+  {% endif %}
 </head>
 <body>
   {% block header %}
@@ -123,5 +127,8 @@
     })
   </script>
   {% endblock extra_script %}
+  {% if application_mode != 'PUBLIC' %}
+  {% include "./includes/cookie_bar.html" %}
+  {% endif %}
 </body>
 </html>

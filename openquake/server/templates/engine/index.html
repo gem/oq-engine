@@ -1,7 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
-                {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
+                {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -79,12 +79,17 @@
               {% csrf_token %}
               <div class="aristotle_form_row">
                 <label for"usgs_id">{{ aristotle_form_labels.usgs_id }}</label>
-                <input class="aristotle-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ aristotle_form_placeholders.usgs_id }}" value="us6000jllz"/>
+                <input class="aristotle-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ aristotle_form_placeholders.usgs_id }}" value="{{ aristotle_default_usgs_id }}"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"rupture_file_from_usgs">{{ aristotle_form_labels.rupture_file_from_usgs }}</label>
+                <input class="aristotle-input" type="hidden" id="rupture_file_from_usgs" name="rupture_data_file_from_usgs" placeholder="{{ aristotle_form_placeholders.rupture_file_from_usgs }}" disabled />
+                <input class="aristotle-input" type="text" id="rupture_file_from_usgs_loaded" name="rupture_file_from_usgs_loaded" disabled />
               </div>
               <div class="aristotle_form_row">
                 <label for"rupture_file">{{ aristotle_form_labels.rupture_file }}</label>
                 <input class="aristotle-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ aristotle_form_placeholders.rupture_file }}" >
-                <button type="button" id="clearFile">Clear File</button>
+                <button type="button" id="clearRuptureFile">Clear File</button>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
@@ -113,6 +118,12 @@
                 <label for"rake">{{ aristotle_form_labels.rake }}</label>
                 <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}" disabled />
               </div>
+              <input class="aristotle-input" type="hidden" id="is_point_rup" name="is_point_rup"/>
+              <div class="aristotle_form_row">
+                <label for="mosaic_model">{{ aristotle_form_labels.mosaic_model }}</label>
+                <select name="mosaic_model" id="mosaic_model" class="aristotle-select">
+                </select>
+              </div>
               <div class="aristotle_form_row">
                 <label for="trt">{{ aristotle_form_labels.trt }}</label>
                 <select name="trt" id="trt" class="aristotle-select">
@@ -127,8 +138,20 @@
                 <input class="aristotle-input" type="text" id="strike" name="strike" placeholder="{{ aristotle_form_placeholders.strike }}" value="0"/>
               </div>
               <div class="aristotle_form_row">
+                <label for"local_timestamp">{{ aristotle_form_labels.local_timestamp }}</label>
+                <input class="aristotle-input" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ aristotle_form_placeholders.local_timestamp }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"time_event">{{ aristotle_form_labels.time_event }}</label>
+                <select id="time_event" name="time_event" class="aristotle-select">
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                    <option value="transit">Transit</option>
+                </select>
+              </div>
+              <div class="aristotle_form_row">
                 <label for"maximum_distance">{{ aristotle_form_labels.maximum_distance }}</label>
-                <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="300"/>
+                <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="100"/>
               </div>
               <div class="aristotle_form_row">
                 <label for"truncation_level">{{ aristotle_form_labels.truncation_level }}</label>
@@ -145,6 +168,20 @@
               <div class="aristotle_form_row">
                 <label for"ses_seed">{{ aristotle_form_labels.ses_seed }}</label>
                 <input class="aristotle-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ aristotle_form_placeholders.ses_seed }}" value="42"/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"station_data_file_from_usgs">{{ aristotle_form_labels.station_data_file_from_usgs }}</label>
+                <input class="aristotle-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ aristotle_form_placeholders.station_data_file_from_usgs }}" disabled />
+                <input class="aristotle-input" type="text" id="station_data_file_from_usgs_loaded" name="station_data_file_from_usgs_loaded" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"station_data_file">{{ aristotle_form_labels.station_data_file }}</label>
+                <input class="aristotle-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ aristotle_form_placeholders.station_data_file }}" >
+                <button type="button" id="clearStationDataFile">Clear File</button>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"maximum_distance_stations">{{ aristotle_form_labels.maximum_distance_stations }}</label>
+                <input class="aristotle-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ aristotle_form_placeholders.maximum_distance_stations }}" value="" disabled/>
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>

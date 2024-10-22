@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -259,8 +259,8 @@ class TestFaultAncilliaries(unittest.TestCase):
 
 class TestRecurrenceBranch(unittest.TestCase):
     """
-    Test the :class: openquake.hmtk.faults.fault_models.RecurrenceBranch - the class
-    to control the recurrence calculation for a given model
+    Test the :class: openquake.hmtk.faults.fault_models.RecurrenceBranch - the
+    class to control the recurrence calculation for a given model
     """
 
     def setUp(self):
@@ -317,8 +317,8 @@ class TestRecurrenceBranch(unittest.TestCase):
 
         self.model = RecurrenceBranch(8500.0, 5.0, WC1994(), 0.0, 30.0)
         self.model.get_recurrence(self.mfd_config)
-        # Test the same process using just the openquake.hmtk.faults.mfd.characteristic
-        # Implementation
+        # Test the same process using just the
+        # openquake.hmtk.faults.mfd.characteristic Implementation
         test_model = Characteristic()
         test_model.setUp(self.mfd_config)
         test_model.get_mmax(self.mfd_config, WC1994(), 0.0, 8500.0)
@@ -335,7 +335,8 @@ class TestRecurrenceBranch(unittest.TestCase):
 
 class TestmtkActiveFault(unittest.TestCase):
     """
-    Tests the main active fault class openquake.hmtk.faults.fault_model.mtkActiveFault
+    Tests the main active fault class
+    openquake.hmtk.faults.fault_model.mtkActiveFault
     """
 
     def setUp(self):
@@ -667,7 +668,7 @@ class TestmtkActiveFault(unittest.TestCase):
             expected_rates,
             mmin,
             mmax,
-            weights,
+            _weights,
         ) = self._build_mock_recurrence_branches()
         test_mfd = test_fault.collapse_branches(mmin, 0.1, mmax)
         np.testing.assert_array_almost_equal(

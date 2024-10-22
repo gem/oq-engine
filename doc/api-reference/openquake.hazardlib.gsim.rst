@@ -126,10 +126,26 @@ allen_2022
     :undoc-members:
     :show-inheritance:
 
+ambraseys_2005
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ambraseys_2005
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ameri_2017
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.ameri_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+aristeidou_2023
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.aristeidou_2023
     :members:
     :undoc-members:
     :show-inheritance:
@@ -1018,6 +1034,15 @@ rietbrock_edwards_2019
     :undoc-members:
     :show-inheritance:
 
+sandikkaya_akkar_2017
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sandikkaya_akkar_2017
+
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 sadigh_1997
 -------------------------------------------
 
@@ -1262,6 +1287,14 @@ yu_2013
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.yu_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+zafarani_2018
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zafarani_2018
     :members:
     :undoc-members:
     :show-inheritance:

@@ -85,8 +85,7 @@ LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,
 IFS='
 '
 for contr in $LIST_CONTRIB; do
-    grep -q "^${contr}[ \t]\+" CONTRIBUTORS.txt
-    if [ $? -ne 0 ]; then
+    if ! grep -q "^${contr}[ \t]\+" CONTRIBUTORS.txt; then
         echo "Contributor '$contr' not found in CONTRIBUTORS.txt"
         exit 1
     fi

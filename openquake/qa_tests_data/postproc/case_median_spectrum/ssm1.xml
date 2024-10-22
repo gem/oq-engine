@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel investigation_time="1.0" name="ssm">
+
+        <!-- STABLE SHALLOW CRUST -->
+        <sourceGroup rup_interdep="indep" src_interdep="indep" tectonicRegion="Stable Shallow Crust" >
+            <nonParametricSeismicSource id="ssc" name="ssc">
+
+                <singlePlaneRupture probs_occur="0.99 0.01" >
+                    <magnitude> 5.5 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="0.6" lat="0.0" lon="0.1"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.1"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.1"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.1"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.1"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+                <singlePlaneRupture probs_occur="0.995 0.005" >
+                    <magnitude> 6.0 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="0.6" lat="0.0" lon="0.1"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.1"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.1"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.1"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.1"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+                <singlePlaneRupture probs_occur="0.999 0.001" >
+                    <magnitude> 6.5 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="0.6" lat="0.0" lon="0.1"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.1"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.1"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.1"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.1"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+            </nonParametricSeismicSource>
+        </sourceGroup>
+
+        <!-- ACTIVE SHALLOW CRUST -->
+        <sourceGroup rup_interdep="indep" src_interdep="indep" tectonicRegion="Active Shallow Crust" >
+            <nonParametricSeismicSource id="asc" name="ssc">
+
+                <singlePlaneRupture probs_occur="0.99 0.01" >
+                    <magnitude> 5.5 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="0.6" lat="0.0" lon="0.05"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.05"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.05"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.05"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.05"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+                <singlePlaneRupture probs_occur="0.995 0.005" >
+                    <magnitude> 6.0 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="0.6" lat="0.0" lon="0.05"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.05"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.05"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.05"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.05"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+                <singlePlaneRupture probs_occur="0.999 0.001" >
+                    <magnitude> 6.5 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="0.6" lat="0.0" lon="0.05"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.05"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.05"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.05"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.05"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+            </nonParametricSeismicSource>
+        </sourceGroup>
+
+    </sourceModel>
+</nrml>

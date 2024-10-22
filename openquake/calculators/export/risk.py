@@ -15,14 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import json
+import shutil
+import tempfile
 import itertools
 import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers, general
+from openquake.baselib import hdf5, writers, general, node, config
 from openquake.baselib.python3compat import decode
+from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -375,7 +380,7 @@ def export_loss_maps_npz(ekey, dstore):
 
 def modal_damage_array(data, damage_dt):
     # determine the damage state with the highest probability
-    A, L, D = data.shape
+    A, _L, _D = data.shape
     dmgstate = damage_dt['structural'].names
     arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
                           for lt in damage_dt.names])
@@ -413,7 +418,7 @@ def export_damages_csv(ekey, dstore):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i] * rate
-            A, L, Dc = data.shape
+            A, _L, Dc = data.shape
             if Dc == D:  # no consequences, export nothing
                 return []
             csq_dt = build_csq_dt(dstore)
@@ -446,7 +451,7 @@ def indices(*sizes):
 
 def _to_loss_maps(array, loss_maps_dt):
     # convert a 4D array into a 2D array of dtype loss_maps_dt
-    A, R, C, LI = array.shape
+    A, R, _C, _LI = array.shape
     lm = numpy.zeros((A, R), loss_maps_dt)
     for li, name in enumerate(loss_maps_dt.names):
         for p, poe in enumerate(loss_maps_dt[name].names):
@@ -495,7 +500,7 @@ def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
     assets = get_assets(dstore)
     bcr_data = dstore[ekey[0]]
-    N, R = bcr_data.shape
+    _N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
     else:
@@ -516,7 +521,7 @@ def export_aggregate_by_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    token, what = ekey[0].split('/', 1)
+    _token, what = ekey[0].split('/', 1)
     aw = extract(dstore, 'aggregate/' + what)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -693,3 +698,126 @@ def export_node_el(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, dest, comment=dstore.metadata)
     return writer.getsaved()
+
+
+def convert_df_to_vulnerability(loss_type, df):
+    N = node.Node
+    root = N('vulnerabilityModel', {'id': "vulnerability_model",
+                                    'assetCategory': "buildings",
+                                    "lossCategory": loss_type})
+    descr = N('description', {}, f"{loss_type} vulnerability model")
+    root.append(descr)
+    for riskfunc in df.riskfunc:
+        rfunc = json.loads(riskfunc)['openquake.risklib.scientific.VulnerabilityFunction']
+        vfunc = N('vulnerabilityFunction',
+                  {'id': rfunc['id'], 'dist': rfunc['distribution_name']})
+        imls = N('imls', {'imt': rfunc['imt']}, rfunc['imls'])
+        vfunc.append(imls)
+        vfunc.append(N('meanLRs', {}, rfunc['mean_loss_ratios']))
+        vfunc.append(N('covLRs', {}, rfunc['covs']))
+        root.append(vfunc)
+    return root
+
+    
+def export_vulnerability_xml(dstore, edir):
+    fnames = []
+    for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
+        nodeobj = convert_df_to_vulnerability(loss_type, df)
+        dest = os.path.join(edir, '%s_vulnerability.xml' % loss_type)
+        with open(dest, 'wb') as out:
+            nrml.write([nodeobj], out)
+        fnames.append(dest)
+    return fnames
+
+
+
+@export.add(('assetcol', 'csv'))
+def export_assetcol_csv(ekey, dstore):
+    assetcol = dstore['assetcol'].array
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    df = pandas.DataFrame(assetcol)
+    tagcol = dstore['assetcol'].tagcol
+    tagnames = tagcol.tagnames
+    sorted_cols = sorted([col for col in tagnames if col in df.columns])
+    unsorted_cols = [col for col in df.columns if col not in tagnames]
+    df = df[unsorted_cols + sorted_cols]
+    for asset_idx in range(len(assetcol)):
+        for tagname in tagnames:
+            tag_id = df[tagname][asset_idx]
+            tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
+            df.loc[asset_idx, tagname] = tag_str
+    df.drop(columns=['ordinal', 'site_id'], inplace=True)
+    df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
+    dest_csv = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, dest_csv)
+    return [dest_csv]
+
+
+def export_exposure(dstore, edir):
+    """
+    :param dstore: datastore object
+    """
+    [dest] = export(('assetcol', 'csv'), dstore)
+    assetcol_csv = os.path.join(edir, 'assetcol.csv')
+    shutil.move(dest, assetcol_csv)
+    tagnames = dstore['assetcol/tagcol'].tagnames
+    cost_types = dstore.getitem('exposure')  # cost_type, area_type, unit
+    N = node.Node
+    root = N('exposureModel', {'id': 'exposure', 'category': 'buildings'})
+    root.append(N('description', {}, 'Generated exposure'))
+    conversions = N('conversions', {})
+    costtypes = N('costTypes', {})
+    for ct in cost_types:
+        costtypes.append(N('costType', {
+            'name': ct['loss_type'],
+            'type': ct['cost_type'],
+            'unit': ct['unit']}))
+    conversions.append(costtypes)
+    root.append(conversions)
+    root.append(N('occupancyPeriods', {}, 'night'))
+    root.append(N('tagNames', {}, tagnames))
+    root.append(N('assets', {}, 'assetcol.csv'))
+    exposure_xml = os.path.join(edir, 'exposure.xml')
+    with open(exposure_xml, 'wb') as out:
+        nrml.write([root], out)
+    return [exposure_xml, assetcol_csv]
+
+
+@export.add(('job', 'zip'))
+def export_job_zip(ekey, dstore):
+    """
+    Exports:
+    - job.ini
+    - rupture.csv
+    - gsim_lt.xml
+    - site_model.csv
+    - exposure.xml and assetcol.csv
+    - vulnerability functions.xml
+    - taxonomy_mapping.csv
+    """
+    oq = dstore['oqparam']
+    edir = tempfile.mkdtemp(dir=config.directory.custom_tmp or tempfile.gettempdir())
+    fnames = export_exposure(dstore, edir)
+    job_ini = os.path.join(edir, 'job.ini')
+    with open(job_ini, 'w') as out:
+        out.write(oq.to_ini(exposure='exposure.xml'))
+    fnames.append(job_ini)
+    csv = extract(dstore, 'ruptures?slice=0&slice=1').array
+    dest = os.path.join(edir, 'rupture.csv')
+    with open(dest, 'w') as out:
+        out.write(csv)
+    fnames.append(dest)
+    gsim_lt = dstore['full_lt'].gsim_lt
+    dest = os.path.join(edir, 'gsim_logic_tree.xml')
+    with open(dest, 'wb') as out:
+        nrml.write([gsim_lt.to_node()], out)
+    fnames.append(dest)
+    fnames.extend(export_vulnerability_xml(dstore, edir))
+
+    dest = os.path.join(edir, 'taxonomy_mapping.csv')
+    taxmap = dstore.read_df('taxmap')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    del taxmap['taxi']
+    writer.save(taxmap, dest)
+    fnames.append(dest)
+    return fnames
