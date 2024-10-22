@@ -51,18 +51,19 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
         peril_df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
+            fracs = numpy.zeros((L, len(assets), 1, D), F32)
             for li, loss_type in enumerate(crm.loss_types):
                 # NB: assuming trivial taxonomy mapping for multi_risk
                 df = crm.tmap_df[crm.tmap_df.taxi == taxonomy]
                 [rm] = [crm._riskmodels[k]
                         for k, w in zip(df.risk_id, df.weight)]
                 # NB: risk logic trees are not yet supported in multi_risk
-                fracs = rm.scenario_damage(loss_type, assets, peril_df, 'peril')
-                csq = crm.compute_csq(assets, fracs, loss_type, time_event)
-                number = assets['value-number']
-                for a, o in enumerate(assets['ordinal']):
-                    out[o, li, 0, :D] = number[a] * fracs[a]
-                    out[o, li, 0, [D]] = csq['losses'][a]
+                fracs[li] = rm.scenario_damage(loss_type, assets, peril_df, 'peril')
+            csq = crm.compute_csq(assets, fracs, crm.loss_types, time_event)
+            number = assets['value-number']
+            for a, o in enumerate(assets['ordinal']):
+                out[o, :, 0, :D] = number[a] * fracs[:, a]
+                out[o, :, 0, [D]] = csq['losses'][:, a]
     return out
 
 

@@ -610,27 +610,30 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, loss_type, time_event):
+    def compute_csq(self, assets, fractions, loss_types, time_event):
         """
         :param assets: asset array
-        :param fractions: array of probabilies of shape (A, E, D)
-        :param loss_type: loss type as a string
-        :returns: a dict consequence_name -> array of length A, E
+        :param fractions: array of probabilies of shape (L, A, E, D)
+        :param loss_types: loss types as a strings
+        :returns: a dict consequence_name -> array of shape (L, A, E)
         """
-        A, E, _D = fractions.shape
-        csq = AccumDict(accum=numpy.zeros((A, E)))
+        L, A, E, _D = fractions.shape
+        csq = AccumDict(accum=numpy.zeros((L, A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
                 df = self.tmap_df[self.tmap_df.taxi == assets[0]['taxonomy']]
-                for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
-                    if lt == '*' or lt == loss_type:
-                        # for instance risk_id = 'W_LFM-DUM_H6'
-                        cs = fractions[:, :, 1:] @ coeffs[risk_id][loss_type]  #(A,E)
-                        csq[consequence] += scientific.consequence(
-                            consequence, assets, cs, loss_type, time_event) * weight
+                for li, loss_type in enumerate(loss_types):
+                    for lt, risk_id, weight in zip(
+                            df.loss_type, df.risk_id, df.weight):
+                        if lt == '*' or lt == loss_type:
+                            # for instance risk_id = 'W_LFM-DUM_H6'
+                            cs = fractions[li, :, :, 1:] @ coeffs[risk_id][loss_type]
+                            csq[consequence][li] += scientific.consequence(
+                                consequence, assets, cs, loss_type, time_event
+                            ) * weight
         return csq
 
     def init(self):
