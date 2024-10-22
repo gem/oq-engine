@@ -80,8 +80,8 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _gen_d3(asset_df, gmf_df, crmodel, dparam):
-    # yields (aids, lti, d3) triples
+def _gen_d4(asset_df, gmf_df, crmodel, dparam):
+    # yields (aids, d4) triples
     oq = crmodel.oqparam
     sec_sims = oq.secondary_simulations.items()
     for prob_field, num_sims in sec_sims:
@@ -89,6 +89,7 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
         if not oq.float_dmg_dist:
             dprobs = dparam.rng.boolean_dist(probs, num_sims).mean(axis=1)
     E = len(dparam.eids)
+    L = len(oq.loss_types)
     for taxo, adf in asset_df.groupby('taxonomy'):
         out = crmodel.get_output(adf, gmf_df)
         aids = adf.index.to_numpy()
@@ -98,20 +99,19 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
             number = assets['value-number']
         else:
             number = U32(assets['value-number'])
-        d3_by_lt = {}
+        d4 = numpy.zeros((L, A, E, dparam.Dc), F32)
         D = dparam.D
         for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
-            d3 = numpy.zeros((A, E, dparam.Dc), F32)
             if oq.float_dmg_dist:
-                d3[:, :, :D] = fractions
+                d4[lti, :, :, :D] = fractions
                 for a in range(A):
-                    d3[a] *= number[a]
+                    d4[lti, a] *= number[a]
             else:
                 # this is a performance distaster; for instance
                 # the Messina test in oq-risk-tests becomes 12x
                 # slower even if it has only 25_736 assets
-                d3[:, :, :D] = dparam.rng.discrete_dmg_dist(
+                d4[lti, :, :, :D] = dparam.rng.discrete_dmg_dist(
                     dparam.eids, fractions, number)
 
             # secondary perils and consequences
@@ -120,17 +120,16 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
                     for d in range(1, D):
                         # doing the mean on the secondary simulations
                         if oq.float_dmg_dist:
-                            d3[a, :, d] *= probs
+                            d4[lti, a, :, d] *= probs
                         else:
-                            d3[a, :, d] *= dprobs
+                            d4[lti, a, :, d] *= dprobs
 
                 csq = crmodel.compute_csq(
-                    asset, d3[a, :, :D] / number[a], lt,
+                    asset, d4[lti, a, :, :D] / number[a], lt,
                     oq.time_event)
                 for name, values in csq.items():
-                    d3[a, :, dparam.ci[name]] = values
-            d3_by_lt[lt] = d3
-        yield aids, d3_by_lt  # d3 has shape (A, E, Dc)
+                    d4[lti, a, :, dparam.ci[name]] = values
+        yield aids, d4  # d4 has shape (L, A, E, Dc)
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -179,9 +178,8 @@ def event_based_damage(df, oq, dstore, monitor):
             else:
                 rng = None
             dparam = Dparam(eids, aggids, rlzs, ci, D, Dc, rng)
-            for aids, d3_by_lt in _gen_d3(asset_df, gmf_df, crmodel, dparam):
-                for lti, lt in enumerate(oq.loss_types):
-                    d3 = d3_by_lt[lt]
+            for aids, d4 in _gen_d4(asset_df, gmf_df, crmodel, dparam):
+                for lti, d3 in enumerate(d4):
                     if R == 1:
                         dmgcsq[aids, 0, lti] += d3.sum(axis=1)
                     else:
