@@ -613,6 +613,14 @@
                         $('#mosaic_model').append('<option value="' + mosaic_model + '" data-value=\'' + mosaic_model_trts + '\'' + selected + '>' + mosaic_model + '</option>');
                     });
                     populateTrtSelector(data.trt);
+                    if (data.intensity_map) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.intensity_map}" alt="Intensity Map">`;
+                        $('#intensity-map').html(imgElement);
+                        $('#intensity-map').show();
+                    }
+                    else {
+                        $('#intensity-map').html('<p>No intensity map</p>');
+                    }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -623,6 +631,7 @@
                     }
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
+                    $('#intensity-map').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
                     $('#submit_aristotle_get_rupture').text('Retrieve rupture data');

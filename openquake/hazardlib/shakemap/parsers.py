@@ -33,6 +33,7 @@ import logging
 import json
 import zipfile
 import pytz
+import base64
 import pandas as pd
 from datetime import datetime
 from shapely.geometry import Polygon
@@ -523,6 +524,47 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
               'local_timestamp': str(local_time), 'time_event': time_event,
               'is_point_rup': True, 'usgs_id': usgs_id, 'rupture_file': None}
     return rupdic
+
+
+def get_shakemap_version(usgs_id):
+    # USGS event page to get ShakeMap details
+    product_url = US_GOV + f"/earthquakes/feed/v1.0/detail/{usgs_id}.geojson"
+    # Get the JSON data for the earthquake event
+    try:
+        with urlopen(product_url) as response:
+            event_data = json.loads(response.read().decode())
+    except Exception as e:
+        print(f"Error: Unable to fetch data for event {usgs_id} - {e}")
+        return None
+    if ("properties" in event_data and "products" in event_data["properties"] and
+            "shakemap" in event_data["properties"]["products"]):
+        shakemap_data = event_data["properties"]["products"]["shakemap"][0]
+        # e.g.: 'https://earthquake.usgs.gov/product/shakemap/'
+        #       'us7000n7n8/us/1726699735514/download/intensity.jpg'
+        version_id = shakemap_data["contents"]["download/intensity.jpg"]["url"].split(
+            '/')[-3]
+        return version_id
+    else:
+        print(f"No ShakeMap found for event {usgs_id}")
+        return None
+
+
+def download_intensity_map(usgs_id):
+    version_id = get_shakemap_version(usgs_id)
+    if version_id:
+        intensity_url = (US_GOV + '/product/shakemap/' + usgs_id + '/us/'
+                         + version_id + '/download/intensity.jpg')
+        try:
+            with urlopen(intensity_url) as img_response:
+                img_data = img_response.read()
+                img_base64 = base64.b64encode(img_data).decode('utf-8')
+                return img_base64
+        except Exception as e:
+            print(f"Error: Unable to download the intensity map - {e}")
+            return None
+    else:
+        print("Error: Could not retrieve the ShakeMap version ID.")
+        return None
 
 
 def download_rupture_dict(usgs_id, ignore_shakemap=False):
