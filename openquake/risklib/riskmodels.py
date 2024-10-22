@@ -610,10 +610,11 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, loss_types, time_event):
+    def compute_csq(self, assets, fractions, tmap_df, loss_types, time_event):
         """
         :param assets: asset array
         :param fractions: array of probabilies of shape (L, A, E, D)
+        :param tmap_df: DataFrame corresponding to the given taxonomy
         :param loss_types: loss types as a strings
         :returns: a dict consequence_name -> array of shape (L, A, E)
         """
@@ -624,10 +625,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
-                df = self.tmap_df[self.tmap_df.taxi == assets[0]['taxonomy']]
                 for li, loss_type in enumerate(loss_types):
                     for lt, risk_id, weight in zip(
-                            df.loss_type, df.risk_id, df.weight):
+                            tmap_df.loss_type, tmap_df.risk_id, tmap_df.weight):
                         if lt == '*' or lt == loss_type:
                             # for instance risk_id = 'W_LFM-DUM_H6'
                             cs = fractions[li, :, :, 1:] @ coeffs[risk_id][loss_type]
