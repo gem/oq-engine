@@ -247,7 +247,7 @@ def gen_outputs(df, crmodel, rng, monitor):
             yield out
 
 
-def check_tot_loss_unit_consistency(units, total_losses, loss_types):
+def _tot_loss_unit_consistency(units, total_losses, loss_types):
     total_losses_units = set()
     for separate_lt in total_losses.split('+'):
         assert separate_lt in loss_types
@@ -279,10 +279,12 @@ def set_oqparam(oq, assetcol, dstore):
                 partial(insurance_losses, policy_df=policy_df))
 
     ideduc = assetcol['ideductible'].any()
-    if oq.total_losses:
-        units = dstore['exposure'].cost_calculator.get_units(oq.loss_types)
-        check_tot_loss_unit_consistency(
-            units.split(), oq.total_losses, oq.loss_types)
+    cc = dstore['exposure'].cost_calculator
+    if oq.total_losses and cc.cost_types:
+        # cc.cost_types is empty in scenario_damage/case_21 (consequences)
+        units = cc.get_units(oq.total_loss_types)
+        _tot_loss_unit_consistency(
+            units.split(), oq.total_losses, oq.total_loss_types)
         sec_losses.append(
             partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
     elif ideduc:
