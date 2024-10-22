@@ -38,7 +38,7 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.geo.surface.gridded import GriddedSurface
+#from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
 TOL = 0.4
 SMALL = 1e-5
@@ -331,10 +331,10 @@ class KiteSurface(BaseSurface):
 
             # Compare the dip direction from the strike against the one from
             # the quadrilateral
-            # tmp = geo_utils._angles_diff(azi_strike, 90)
-            # if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
-            tmp = (azi_strike + 90.0) % 360
-            if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
+            tmp = geo_utils._angles_diff(azi_strike, 90)
+            if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
+            #tmp = (azi_strike + 90.0) % 360
+            #if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -855,7 +855,7 @@ def _dbg_plot_mesh(mesh):
     set_axes_equal(ax)
     plt.show()
 
-
+    
 def _fix_right_hand(msh):
     # This function checks that the array describing the surface complies with
     # the right hand rule and, if required, flips the mesh to make it compliant
@@ -871,8 +871,9 @@ def _fix_right_hand(msh):
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.empty_like(msh)
         nmsh[:, :, :] = msh[:, ::-1, :]
-        chk_flip = ((msh[:, 0, 0] == nmsh[:, -1, 0]) &
-                    (msh[:, 0, 2] == nmsh[:, -1, 2]))
+        
+        #chk_flip = ((msh[:, 0, 0] == nmsh[:, -1, 0]) &
+        #            (msh[:, 0, 2] == nmsh[:, -1, 2]))
 
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
