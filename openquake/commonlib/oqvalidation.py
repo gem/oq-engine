@@ -1745,6 +1745,18 @@ class OqParam(valid.ParamSet):
             etypes = self.loss_types + itypes
         return etypes
 
+    @property
+    def total_loss_types(self):
+        """
+        :returns: the loss types in total_losses or the single loss type
+        """
+        if self.total_losses:
+            return self.total_losses.split('+')
+        elif len(self.loss_types) == 1:
+            return self.loss_types
+        else:
+            self.raise_invalid('please specify total_losses')
+
     def loss_dt(self, dtype=F64):
         """
         :returns: a composite dtype based on the loss types including occupants
