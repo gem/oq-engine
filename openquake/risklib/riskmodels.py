@@ -624,9 +624,10 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 number = assets['value-number']
+                # by construction all assets have the same taxonomy
+                df = self.tmap_df[self.tmap_df.taxi == assets[0]['taxonomy']]
                 for a, asset in enumerate(assets):
                     frac = fractions[a, :, 1:] / number[a]
-                    df = self.tmap_df[self.tmap_df.taxi == asset['taxonomy']]
                     for lt, risk_id, weight in zip(df.loss_type, df.risk_id,
                                                    df.weight):
                         if lt == '*' or lt == loss_type:
