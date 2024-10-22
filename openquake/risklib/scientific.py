@@ -1710,14 +1710,13 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, assets, dmgdist, loss_type, time_event):
+def consequence(consequence, assets, dmgdist, loss_type, time_event):
     """
     :param consequence: kind of consequence
-    :param coeffs: coefficients per damage state (shape D-1)
     :param assets: asset array (shape A)
-    :param dmgdist: an array of probabilies of shape (A, E, D-1)
+    :param dmgdist: an array of probabilies of shape (A, E)
     :param loss_type: loss type string
-    :returns: array of shape A, E
+    :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
@@ -1726,16 +1725,16 @@ def consequence(consequence, coeffs, assets, dmgdist, loss_type, time_event):
             values = assets['value-' + loss_type] / assets['value-number']
         except ValueError:  # landslide, liquefaction
             return 0
-        return values.reshape(-1, 1) * (dmgdist @ coeffs)
+        return values.reshape(-1, 1) * dmgdist
     elif consequence in ['collapsed', 'non_operational']:
-        return dmgdist @ coeffs
+        return dmgdist
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         values = assets[f'occupants_{time_event}'] / assets['value-number']
-        return values.reshape(-1, 1) * (dmgdist @ coeffs)
+        return values.reshape(-1, 1) * dmgdist
     elif consequence == 'homeless':
         values = assets['value-residents'] / assets['value-number']
-        return values.reshape(-1, 1) * (dmgdist @ coeffs)
+        return values.reshape(-1, 1) * dmgdist
     else:
         raise NotImplementedError(consequence)
 
