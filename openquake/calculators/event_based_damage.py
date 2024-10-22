@@ -124,10 +124,11 @@ def _gen_d4(asset_df, gmf_df, crmodel, dparam):
                         else:
                             d4[lti, a, :, d] *= dprobs
 
-            csq = crmodel.compute_csq(
-                assets, d4[lti, :, :, :D], lt, oq.time_event)
-            for name, values in csq.items():
-                d4[lti, :, :, dparam.csqidx[name]] = values
+        df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
+        csq = crmodel.compute_csq(
+            assets, d4[:, :, :, :D], df, oq.loss_types, oq.time_event)
+        for name, values in csq.items():
+            d4[:, :, :, dparam.csqidx[name]] = values
         yield aids, d4  # d4 has shape (L, A, E, Dc)
 
 

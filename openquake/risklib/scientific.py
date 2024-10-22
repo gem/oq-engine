@@ -1720,7 +1720,7 @@ def consequence(consequence, assets, coeffs, loss_type, time_event):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    if consequence.startswith(('loss', 'losses')):
+    if consequence.startswith('losses'):
         try:
             values = assets['value-' + loss_type] / assets['value-number']
         except ValueError:  # landslide, liquefaction
