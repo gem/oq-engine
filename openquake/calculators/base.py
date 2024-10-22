@@ -1558,7 +1558,7 @@ def expose_outputs(dstore, owner=USER, status='complete'):
     :param dstore: datastore
     """
     oq = dstore['oqparam']
-    exportable = set(ekey[0] for ekey in exp.export)
+    exportable = set(ekey[0] for ekey in exp)
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
