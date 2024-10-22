@@ -46,7 +46,6 @@ class Dparam:
     aggids: U16
     rlzs: U32
     ci: dict
-    R: int
     Dc: int
     rng: scientific.MultiEventRNG
 
@@ -80,7 +79,8 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq):
+def _gen_d3(asset_df, gmf_df, crmodel, dparam):
+    # yields (aids, lti, d3) triples
     oq = crmodel.oqparam
     sec_sims = oq.secondary_simulations.items()
     for prob_field, num_sims in sec_sims:
@@ -126,12 +126,7 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq):
                     oq.time_event)
                 for name, values in csq.items():
                     d3[a, :, dparam.ci[name]] = values
-            if dparam.R == 1:
-                dmgcsq[aids, 0, lti] += d3.sum(axis=1)
-            else:
-                for e, rlz in enumerate(dparam.rlzs):
-                    dmgcsq[aids, rlz, lti] += d3[:, e]
-            yield aids, lti, d3
+            yield aids, lti, d3  # d3 has shape (A, E, Dc)
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -178,9 +173,13 @@ def event_based_damage(df, oq, dstore, monitor):
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
-            dparam = Dparam(eids, aggids, rlzs, ci, R, Dc, rng)
-            for aids, lti, d3 in _update(asset_df, gmf_df, crmodel, dparam,
-                                         dmgcsq):
+            dparam = Dparam(eids, aggids, rlzs, ci, Dc, rng)
+            for aids, lti, d3 in _gen_d3(asset_df, gmf_df, crmodel, dparam):
+                if R == 1:
+                    dmgcsq[aids, 0, lti] += d3.sum(axis=1)
+                else:
+                    for e, rlz in enumerate(dparam.rlzs):
+                        dmgcsq[aids, rlz, lti] += d3[:, e]
                 tot = d3.sum(axis=0)  # sum on the assets
                 for e, eid in enumerate(eids):
                     dddict[eid, oq.K][lti] += tot[e]
