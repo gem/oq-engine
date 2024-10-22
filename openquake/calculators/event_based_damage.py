@@ -203,8 +203,8 @@ def _dframe(adic, csqidx, loss_types):
             dic['agg_id'].append(kid)
             dic['event_id'].append(eid)
             dic['loss_id'].append(scientific.LOSSID[lt])
-            for sname, si in csqidx.items():
-                dic[sname].append(dd[li, si])
+            for cname, ci in csqidx.items():
+                dic[cname].append(dd[li, ci])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
 
