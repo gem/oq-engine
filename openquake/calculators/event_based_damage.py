@@ -43,7 +43,7 @@ class Dparam:
     Parameters for a damage calculation
     """
     eids: U32
-    aggids: U32
+    aggids: U16
     rlzs: U32
     sec_sims: list
     ci: dict
@@ -157,13 +157,8 @@ def event_based_damage(df, oq, dstore, monitor):
         else:
             dstore.open('r')
         assetcol = dstore['assetcol']
-        if oq.K:
-            # TODO: move this in the controller!
-            aggids, _ = assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
-        else:
-            aggids = numpy.zeros(len(assetcol), U16)
         crmodel = monitor.read('crmodel')
+        aggids = monitor.read('aggids')
     sec_sims = oq.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
@@ -246,8 +241,14 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore,
-                                      self._monitor)
+        if oq.K:
+            aggids, _ = self.assetcol.build_aggids(
+                oq.aggregate_by, oq.max_aggregations)
+        else:
+            aggids = 0
+        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq,
+                                      self.datastore, self._monitor)
+        smap.monitor.save('aggids', aggids)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
