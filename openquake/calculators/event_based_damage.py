@@ -87,9 +87,11 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
         probs = gmf_df[prob_field].to_numpy()   # LiqProb
         if not oq.float_dmg_dist:
             dprobs = dparam.rng.boolean_dist(probs, num_sims).mean(axis=1)
+    E = len(dparam.eids)
     for taxo, adf in asset_df.groupby('taxonomy'):
         out = crmodel.get_output(adf, gmf_df)
         aids = adf.index.to_numpy()
+        A = len(aids)
         assets = adf.to_records()
         if oq.float_dmg_dist:
             number = assets['value-number']
@@ -98,12 +100,11 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
         d3_by_lt = {}
         for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
-            Asid, E, D = fractions.shape
-            assert len(dparam.eids) == E
-            d3 = numpy.zeros((Asid, E, dparam.Dc), F32)
+            _A, _E, D = fractions.shape
+            d3 = numpy.zeros((A, E, dparam.Dc), F32)
             if oq.float_dmg_dist:
                 d3[:, :, :D] = fractions
-                for a in range(Asid):
+                for a in range(A):
                     d3[a] *= number[a]
             else:
                 # this is a performance distaster; for instance
