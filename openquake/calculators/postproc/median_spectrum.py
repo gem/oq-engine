@@ -198,7 +198,12 @@ def main(dstore, csm):
                            site_id=N, kind=['mea', 'sig', 'wei'],
                            period=periods, poe=oq.poes)
     # sanity check on the weights
-    # np.testing.assert_allclose(tot_w, 1, rtol=.01)
+    for p, poe in enumerate(oq.poes):
+        maxw = tot_w[:, :, p].max()
+        logging.info(f'{poe=} {maxw=}')
+        if (np.abs(tot_w[:, :, p] - 1) > .01).any():
+            raise ValueError(f'The weights sum up to {maxw:.3f} != 1: perhaps the '
+                             f'hazard curve is not invertible around {poe=}')
 
     # sanity check on the rup_ids
     if N == 1 and P == 1:
