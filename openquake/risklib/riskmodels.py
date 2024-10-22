@@ -628,9 +628,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
                     if lt == '*' or lt == loss_type:
                         # for instance risk_id = 'W_LFM-DUM_H6'
-                        dmgdist = fractions[:, :, 1:] @ coeffs[risk_id][loss_type]
+                        cs = fractions[:, :, 1:] @ coeffs[risk_id][loss_type]
                         csq[consequence] += scientific.consequence(
-                            consequence, assets,  dmgdist, loss_type, time_event
+                            consequence, assets, cs, loss_type, time_event
                         ) * weight
         return csq
 
