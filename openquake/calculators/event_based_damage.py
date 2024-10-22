@@ -45,7 +45,6 @@ class Dparam:
     eids: U32
     aggids: U16
     rlzs: U32
-    sec_sims: list
     ci: dict
     R: int
     Dc: int
@@ -81,9 +80,10 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
+def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq):
     oq = crmodel.oqparam
-    for prob_field, num_sims in dparam.sec_sims:
+    sec_sims = oq.secondary_simulations.items()
+    for prob_field, num_sims in sec_sims:
         probs = gmf_df[prob_field].to_numpy()   # LiqProb
         if not oq.float_dmg_dist:
             dprobs = dparam.rng.boolean_dist(probs, num_sims).mean(axis=1)
@@ -113,7 +113,7 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
 
             # secondary perils and consequences
             for a, asset in enumerate(assets):
-                if dparam.sec_sims:
+                if sec_sims:
                     for d in range(1, D):
                         # doing the mean on the secondary simulations
                         if oq.float_dmg_dist:
@@ -131,13 +131,7 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
             else:
                 for e, rlz in enumerate(dparam.rlzs):
                     dmgcsq[aids, rlz, lti] += d3[:, e]
-            tot = d3.sum(axis=0)  # sum on the assets
-            for e, eid in enumerate(dparam.eids):
-                dddict[eid, oq.K][lti] += tot[e]
-                if oq.K:
-                    for kids in dparam.aggids:
-                        for a, aid in enumerate(aids):
-                            dddict[eid, kids[aid]][lti] += d3[a, e]
+            yield aids, lti, d3
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -151,14 +145,12 @@ def event_based_damage(df, oq, dstore, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     with monitor('reading gmf_data'):
         if oq.parentdir:
-            dstore = datastore.read(
-                oq.hdf5path, parentdir=oq.parentdir)
+            dstore = datastore.read(oq.hdf5path, parentdir=oq.parentdir)
         else:
             dstore.open('r')
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
-    sec_sims = oq.secondary_simulations.items()
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
@@ -181,13 +173,22 @@ def event_based_damage(df, oq, dstore, monitor):
                 rlzs = allrlzs[eids]
             else:
                 rlzs = allrlzs
-            if sec_sims or not oq.float_dmg_dist:
+            if oq.secondary_simulations or not oq.float_dmg_dist:
                 rng = scientific.MultiEventRNG(
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
-            dparam = Dparam(eids, aggids, rlzs, sec_sims, ci, R, Dc, rng)
-            _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict)
+            dparam = Dparam(eids, aggids, rlzs, ci, R, Dc, rng)
+            for aids, lti, d3 in _update(asset_df, gmf_df, crmodel, dparam,
+                                         dmgcsq):
+                tot = d3.sum(axis=0)  # sum on the assets
+                for e, eid in enumerate(eids):
+                    dddict[eid, oq.K][lti] += tot[e]
+                    if oq.K:
+                        for kids in dparam.aggids:
+                            for a, aid in enumerate(aids):
+                                dddict[eid, kids[aid]][lti] += d3[a, e]
+
     return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
 
