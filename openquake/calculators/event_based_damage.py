@@ -98,7 +98,7 @@ def _gen_d4(asset_df, gmf_df, crmodel, dparam):
         if oq.float_dmg_dist:
             number = assets['value-number']
         else:
-            number = U32(assets['value-number'])
+            number = assets['value-number'] = U32(assets['value-number'])
         d4 = numpy.zeros((L, A, E, dparam.Dc), F32)
         D = dparam.D
         for lti, lt in enumerate(oq.loss_types):
@@ -125,7 +125,7 @@ def _gen_d4(asset_df, gmf_df, crmodel, dparam):
                             d4[lti, a, :, d] *= dprobs
 
             csq = crmodel.compute_csq(
-                assets, number, d4[lti, :, :, :D], lt, oq.time_event)
+                assets, d4[lti, :, :, :D], lt, oq.time_event)
             for name, values in csq.items():
                 d4[lti, :, :, dparam.ci[name]] = values
         yield aids, d4  # d4 has shape (L, A, E, Dc)

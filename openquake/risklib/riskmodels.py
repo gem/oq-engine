@@ -610,10 +610,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, assets, number, fractions, loss_type, time_event):
+    def compute_csq(self, assets, fractions, loss_type, time_event):
         """
         :param assets: asset array
-        :param number: number of buildings per asset
         :param fractions: array of probabilies of shape (A, E, D)
         :param loss_type: loss type as a string
         :returns: a dict consequence_name -> array of length A, E
@@ -624,6 +623,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
+                number = assets['value-number']
                 for a, asset in enumerate(assets):
                     frac = fractions[a, :, 1:] / number[a]
                     df = self.tmap_df[self.tmap_df.taxi == asset['taxonomy']]

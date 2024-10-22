@@ -58,8 +58,8 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
                         for k, w in zip(df.risk_id, df.weight)]
                 # NB: risk logic trees are not yet supported in multi_risk
                 fracs = rm.scenario_damage(loss_type, assets, peril_df, 'peril')
+                csq = crm.compute_csq(assets, fracs, loss_type, time_event)
                 number = assets['value-number']
-                csq = crm.compute_csq(assets, number, fracs, loss_type, time_event)
                 for a, o in enumerate(assets['ordinal']):
                     out[o, li, 0, :D] = number[a] * fracs[a]
                     out[o, li, 0, [D]] = csq['losses'][a]
