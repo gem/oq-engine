@@ -496,7 +496,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     :param consdict:
         a dictionary riskid -> loss_type -> consequence functions
     """
-    tmap = ()  # to be set
+    tmap_df = ()  # to be set
 
     @classmethod
     # TODO: reading new-style consequences is missing
@@ -527,7 +527,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
         if 'taxmap' in dstore:
-            crm.tmap = dstore.read_df('taxmap')
+            crm.tmap_df = dstore.read_df('taxmap')
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -536,12 +536,12 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
-    def set_tmap(self, tmap):
+    def set_tmap(self, tmap_df):
         """
-        Set the attribute .tmap if the risk IDs in the
+        Set the attribute .tmap_df if the risk IDs in the
         taxonomy mapping are consistent with the fragility functions.
         """
-        self.tmap = tmap
+        self.tmap_df = tmap_df
         if 'consequence' not in self.oqparam.inputs:
             return
         csq_files = []
@@ -551,7 +551,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             else:
                 csq_files.append(fnames)
         cfs = '\n'.join(csq_files)
-        df = self.tmap
+        df = self.tmap_df
         for loss_type in self.oqparam.loss_types:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
@@ -589,11 +589,11 @@ class CompositeRiskModel(collections.abc.Mapping):
             missing = AccumDict(accum=[])
             for lt in self.loss_types:
                 rms = []
-                if len(self.tmap):
-                    if len(self.tmap.loss_type.unique()) == 1:
-                        risk_ids = self.tmap.risk_id
+                if len(self.tmap_df):
+                    if len(self.tmap_df.loss_type.unique()) == 1:
+                        risk_ids = self.tmap_df.risk_id
                     else:
-                        risk_ids = self.tmap[self.tmap.loss_type==lt].risk_id
+                        risk_ids = self.tmap_df[self.tmap_df.loss_type==lt].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
@@ -626,7 +626,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 consequence, _tagname = byname.split('_by_')
                 for a, asset in enumerate(assets):
                     frac = fractions[a, :, 1:] / number[a]
-                    df = self.tmap[self.tmap.taxi == asset['taxonomy']]
+                    df = self.tmap_df[self.tmap_df.taxi == asset['taxonomy']]
                     for lt, risk_id, weight in zip(df.loss_type, df.risk_id,
                                                    df.weight):
                         if lt == '*' or lt == loss_type:

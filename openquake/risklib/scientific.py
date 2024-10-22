@@ -1625,7 +1625,7 @@ class RiskComputer(dict):
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
-        tm = crm.tmap[crm.tmap.taxi == taxidx]
+        tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
         for lt in self.minimum_asset_loss:
             for country, loss_type, riskid, weight in zip(
