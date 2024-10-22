@@ -42,12 +42,15 @@ class Dparam:
     """
     Parameters for a damage calculation
     """
+    eids: U32
     aggids: U32
-    allrlzs: U32
+    rlzs: U32
     sec_sims: list
     ci: dict
     R: int
     Dc: int
+    loss_types: list
+    rng: scientific.MultiEventRNG
 
 
 def zero_dmgcsq(A, R, crmodel):
@@ -81,17 +84,10 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
 
 def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
     oq = crmodel.oqparam
-    loss_types = oq.loss_types
-    eids = gmf_df.eid.to_numpy()
-    if dparam.R > 1:
-        rlzs = dparam.allrlzs[eids]
-    if dparam.sec_sims or not oq.float_dmg_dist:
-        rng = scientific.MultiEventRNG(
-            oq.master_seed, numpy.unique(eids))
     for prob_field, num_sims in dparam.sec_sims:
         probs = gmf_df[prob_field].to_numpy()   # LiqProb
         if not oq.float_dmg_dist:
-            dprobs = rng.boolean_dist(probs, num_sims).mean(axis=1)
+            dprobs = dparam.rng.boolean_dist(probs, num_sims).mean(axis=1)
     for taxo, adf in asset_df.groupby('taxonomy'):
         out = crmodel.get_output(adf, gmf_df)
         aids = adf.index.to_numpy()
@@ -100,10 +96,10 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
             number = assets['value-number']
         else:
             number = U32(assets['value-number'])
-        for lti, lt in enumerate(loss_types):
+        for lti, lt in enumerate(dparam.loss_types):
             fractions = out[lt]
             Asid, E, D = fractions.shape
-            assert len(eids) == E
+            assert len(dparam.eids) == E
             d3 = numpy.zeros((Asid, E, dparam.Dc), F32)
             if oq.float_dmg_dist:
                 d3[:, :, :D] = fractions
@@ -113,8 +109,8 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
                 # this is a performance distaster; for instance
                 # the Messina test in oq-risk-tests becomes 12x
                 # slower even if it has only 25_736 assets
-                d3[:, :, :D] = rng.discrete_dmg_dist(
-                    eids, fractions, number)
+                d3[:, :, :D] = dparam.rng.discrete_dmg_dist(
+                    dparam.eids, fractions, number)
 
             # secondary perils and consequences
             for a, asset in enumerate(assets):
@@ -134,10 +130,10 @@ def _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict):
             if dparam.R == 1:
                 dmgcsq[aids, 0, lti] += d3.sum(axis=1)
             else:
-                for e, rlz in enumerate(rlzs):
+                for e, rlz in enumerate(dparam.rlzs):
                     dmgcsq[aids, rlz, lti] += d3[:, e]
             tot = d3.sum(axis=0)  # sum on the assets
-            for e, eid in enumerate(eids):
+            for e, eid in enumerate(dparam.eids):
                 dddict[eid, oq.K][lti] += tot[e]
                 if oq.K:
                     for kids in dparam.aggids:
@@ -178,7 +174,6 @@ def event_based_damage(df, oq, dstore, monitor):
     else:
         allrlzs = U32([0])
     assert len(oq.loss_types) == L
-    dparam = Dparam(aggids, allrlzs, sec_sims, ci, R, Dc)
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -186,6 +181,19 @@ def event_based_damage(df, oq, dstore, monitor):
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
                 continue
+            oq = crmodel.oqparam
+            eids = gmf_df.eid.to_numpy()
+            if R > 1:
+                rlzs = allrlzs[eids]
+            else:
+                rlzs = allrlzs
+            if sec_sims or not oq.float_dmg_dist:
+                rng = scientific.MultiEventRNG(
+                    oq.master_seed, numpy.unique(eids))
+            else:
+                rng = None
+            dparam = Dparam(eids, aggids, rlzs, sec_sims, ci, R, Dc,
+                            oq.loss_types, rng)
             _update(asset_df, gmf_df, crmodel, dparam, dmgcsq, dddict)
     return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
