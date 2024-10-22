@@ -95,6 +95,7 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
             number = assets['value-number']
         else:
             number = U32(assets['value-number'])
+        d3_by_lt = {}
         for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
             Asid, E, D = fractions.shape
@@ -126,7 +127,8 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
                     oq.time_event)
                 for name, values in csq.items():
                     d3[a, :, dparam.ci[name]] = values
-            yield aids, lti, d3  # d3 has shape (A, E, Dc)
+            d3_by_lt[lt] = d3
+        yield aids, d3_by_lt  # d3 has shape (A, E, Dc)
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -174,19 +176,21 @@ def event_based_damage(df, oq, dstore, monitor):
             else:
                 rng = None
             dparam = Dparam(eids, aggids, rlzs, ci, Dc, rng)
-            for aids, lti, d3 in _gen_d3(asset_df, gmf_df, crmodel, dparam):
-                if R == 1:
-                    dmgcsq[aids, 0, lti] += d3.sum(axis=1)
-                else:
-                    for e, rlz in enumerate(dparam.rlzs):
-                        dmgcsq[aids, rlz, lti] += d3[:, e]
-                tot = d3.sum(axis=0)  # sum on the assets
-                for e, eid in enumerate(eids):
-                    dddict[eid, oq.K][lti] += tot[e]
-                    if oq.K:
-                        for kids in dparam.aggids:
-                            for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]][lti] += d3[a, e]
+            for aids, d3_by_lt in _gen_d3(asset_df, gmf_df, crmodel, dparam):
+                for lti, lt in enumerate(oq.loss_types):
+                    d3 = d3_by_lt[lt]
+                    if R == 1:
+                        dmgcsq[aids, 0, lti] += d3.sum(axis=1)
+                    else:
+                        for e, rlz in enumerate(dparam.rlzs):
+                            dmgcsq[aids, rlz, lti] += d3[:, e]
+                    tot = d3.sum(axis=0)  # sum on the assets
+                    for e, eid in enumerate(eids):
+                        dddict[eid, oq.K][lti] += tot[e]
+                        if oq.K:
+                            for kids in dparam.aggids:
+                                for a, aid in enumerate(aids):
+                                    dddict[eid, kids[aid]][lti] += d3[a, e]
 
     return _dframe(dddict, ci, oq.loss_types), dmgcsq
 
