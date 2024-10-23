@@ -616,10 +616,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param fractions: array of probabilies of shape (L, A, E, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
         :param loss_types: loss types as a strings
-        :returns: a dict consequence_name -> array of shape (L, A, E)
+        :returns: a dict consequence_name -> array of shape (A, E)
         """
         L, A, E, _D = fractions.shape
-        csq = AccumDict(accum=numpy.zeros((L, A, E)))
+        csq = AccumDict(accum=numpy.zeros((A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
@@ -631,7 +631,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                         if lt == '*' or lt == loss_type:
                             # for instance risk_id = 'W_LFM-DUM_H6'
                             cs = fractions[li, :, :, 1:] @ coeffs[risk_id][loss_type]
-                            csq[consequence][li] += scientific.consequence(
+                            csq[consequence] += scientific.consequence(
                                 consequence, assets, cs, loss_type, time_event
                             ) * weight
         return csq
