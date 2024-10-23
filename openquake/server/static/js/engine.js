@@ -616,18 +616,20 @@
                     if (data.intensity_map) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.intensity_map}" alt="Intensity Map">`;
                         $('#intensity-map').html(imgElement);
+                        $('shakemap-image-row').show();
                         $('#intensity-map').show();
                     }
                     else {
                         $('#intensity-map').html('<p>No intensity map available</p>');
                     }
                     if (data.pga) {
-                        const imgElement = `<img src="data:image/jpeg;base64,${data.pga}" alt="PGA">`;
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.pga}" alt="PGA Map">`;
                         $('#pga').html(imgElement);
+                        $('#shakemap-image-row').show();
                         $('#pga').show();
                     }
                     else {
-                        $('#pga').html('<p>No PGA available</p>');
+                        $('#pga').html('<p>No PGA map available</p>');
                     }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
@@ -641,6 +643,7 @@
                     diaerror.show(false, "Error", err_msg);
                     $('#intensity-map').hide();
                     $('#pga').hide();
+                    $('#shakemap-image-row').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
                     $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
