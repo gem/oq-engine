@@ -642,7 +642,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df,
                                       total_loss_types)
                     csq[consequence] += scientific.consequence(
-                        consequence, assets, cdict, total_loss_types, time_event)
+                        consequence, assets, cdict, time_event)
         return csq
 
     def init(self):

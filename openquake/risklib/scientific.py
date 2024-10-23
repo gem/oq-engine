@@ -1718,19 +1718,19 @@ def _sum(dic):
     return res
 
 
-def consequence(consequence, assets, coeffs, loss_types, time_event):
+def consequence(consequence, assets, coeffs, time_event):
     """
     :param consequence: kind of consequence
     :param assets: asset array (shape A)
     :param coeffs: an array of multiplicative coefficients of shape (A, E)
-    :param loss_types: loss type strings
+    :param time_event: time event string
     :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     if consequence.startswith('losses'):
         res = _sum({lt: assets['value-' + lt].reshape(-1, 1) * coeffs[lt]
-                    for lt in loss_types}) / assets['value-number'].reshape(-1, 1)
+                    for lt in coeffs}) / assets['value-number'].reshape(-1, 1)
         return res
     elif consequence in ['collapsed', 'non_operational']:
         return _sum(coeffs)
