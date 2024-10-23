@@ -552,6 +552,7 @@ def view_portfolio_loss(token, dstore):
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
+# used in the oq-risk-tests
 @view.add('portfolio_dmgdist')
 def portfolio_dmgdist(token, dstore):
     """
