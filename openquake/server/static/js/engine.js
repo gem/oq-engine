@@ -619,7 +619,15 @@
                         $('#intensity-map').show();
                     }
                     else {
-                        $('#intensity-map').html('<p>No intensity map</p>');
+                        $('#intensity-map').html('<p>No intensity map available</p>');
+                    }
+                    if (data.pga) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.pga}" alt="PGA">`;
+                        $('#pga').html(imgElement);
+                        $('#pga').show();
+                    }
+                    else {
+                        $('#pga').html('<p>No PGA available</p>');
                     }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);

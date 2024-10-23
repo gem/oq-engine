@@ -549,18 +549,18 @@ def get_shakemap_version(usgs_id):
         return None
 
 
-def download_intensity_map(usgs_id):
+def download_jpg(usgs_id, what):
     version_id = get_shakemap_version(usgs_id)
     if version_id:
-        intensity_url = (US_GOV + '/product/shakemap/' + usgs_id + '/us/'
-                         + version_id + '/download/intensity.jpg')
+        intensity_url = (f'{US_GOV}/product/shakemap/{usgs_id}/us/'
+                         f'{version_id}/download/{what}.jpg')
         try:
             with urlopen(intensity_url) as img_response:
                 img_data = img_response.read()
                 img_base64 = base64.b64encode(img_data).decode('utf-8')
                 return img_base64
         except Exception as e:
-            print(f"Error: Unable to download the intensity map - {e}")
+            print(f"Error: Unable to download the {what} image - {e}")
             return None
     else:
         print("Error: Could not retrieve the ShakeMap version ID.")
