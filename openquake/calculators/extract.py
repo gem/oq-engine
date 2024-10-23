@@ -716,17 +716,6 @@ def _filter_agg(assetcol, losses, selected, stats=''):
             dict(selected=encode(selected), tags=encode(tags), stats=stats))
 
 
-def _loss_type_tags(what):
-    if '/' in what:
-        loss_type, query_string = what.rsplit('/', 1)
-    elif '?' in what:
-        loss_type, query_string = what.rsplit('?', 1)
-    else:
-        loss_type, query_string = what, ''
-    tags = query_string.split('&') if query_string else []
-    return loss_type, tags
-
-
 # probably not used
 @extract.add('csq_curves')
 def extract_csq_curves(dstore, what):
@@ -834,7 +823,11 @@ def extract_agg_losses(dstore, what):
         an array of shape (R,), being R the number of realizations
         an array of length 0 if there is no data for the given tags
     """
-    loss_type, tags = _loss_type_tags(what)
+    if '?' in what:
+        loss_type, query_string = what.rsplit('?', 1)
+    else:
+        loss_type, query_string = what, ''
+    tags = query_string.split('&') if query_string else []
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     if 'avg_losses-stats/' + loss_type in dstore:
@@ -859,8 +852,7 @@ def extract_agg_damages(dstore, what):
         number of damage states, or an array of length 0 if there is no data
         for the given tags
     """
-    loss_type, tags = _loss_type_tags(what)
-    assert loss_type == '', loss_type
+    tags = what.split('&') if what else []
     if 'damages-rlzs' in dstore:
         damages = dstore['damages-rlzs'][:, :]
     else:
