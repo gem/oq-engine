@@ -1386,8 +1386,12 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    dtlist = [('rup_id', I64), ('multiplicity', U32), ('mag', F32),
-              ('centroid_lon', F32), ('centroid_lat', F32),
+    try:
+        source_id = dstore['source_info']['source_id']
+    except KeyError:  # scenario
+        source_id = None
+    dtlist = [('rup_id', I64), ('source_id', hdf5.vstr), ('multiplicity', U32),
+              ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
@@ -1401,6 +1405,10 @@ def extract_rupture_info(dstore, what):
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:
+            if source_id is None:
+                srcid = 'no-source'
+            else:
+                srcid = source_id[r['source_id']]
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
             if len(coordset) < 4:   # degenerate to line
@@ -1408,8 +1416,8 @@ def extract_rupture_info(dstore, what):
             else:  # good polygon
                 boundaries.append('POLYGON((%s))' % ', '.join(coords))
             rows.append(
-                (r['rup_id'], r['multiplicity'], r['mag'],
-                 r['lon'], r['lat'], r['depth'],
+                (r['rup_id'], srcid, r['multiplicity'],
+                 r['mag'], r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
