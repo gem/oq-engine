@@ -623,12 +623,12 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, tmap_df, total_loss_types, time_event):
+    def compute_csq(self, assets, fractions, tmap_df, loss_types, time_event):
         """
         :param assets: asset array
         :param fractions: array of probabilies of shape (L, A, E, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
-        :param total_loss_types: dictionary loss type -> index
+        :param loss_types: dictionary loss type -> index
         :returns: a dict consequence_name -> array of shape (A, E)
         """
         _L, A, E, _D = fractions.shape
@@ -639,8 +639,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
-                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df,
-                                      total_loss_types)
+                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, loss_types)
                     csq[consequence] += scientific.consequence(
                         consequence, assets, cdict, time_event)
         return csq
