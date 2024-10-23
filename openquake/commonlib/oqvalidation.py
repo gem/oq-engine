@@ -1385,6 +1385,11 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
 
+        # check total_losses
+        if ('damage' in self.calculation_mode and len(self.loss_types) > 1
+                and not self.total_losses):
+            self.raise_invalid('you forgot to specify total_losses =')
+
     def check_ebrisk(self):
         # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':

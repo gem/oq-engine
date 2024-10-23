@@ -196,14 +196,17 @@ def event_based_damage(df, oq, dstore, monitor):
                         for kids in dparam.aggids:
                             for a, aid in enumerate(aids):
                                 dddict[eid, kids[aid]] += d3[a, e]
+    try:
+        [lt] = oq.loss_types
+    except ValueError:
+        lt = oq.total_losses
+    return _dframe(dddict, csqidx, [lt]), dmgcsq
 
-    return _dframe(dddict, csqidx, oq.loss_types), dmgcsq
 
-
-def _dframe(adic, csqidx, loss_types):
-    # convert {eid, kid: dd} into a DataFrame (agg_id, event_id, loss_id)
+def _dframe(dddic, csqidx, loss_types):
+    # convert {(eid, kid): dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
-    for (eid, kid), dd in sorted(adic.items()):
+    for (eid, kid), dd in sorted(dddic.items()):
         for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
             dic['event_id'].append(eid)

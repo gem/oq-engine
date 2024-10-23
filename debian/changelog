@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Specifying total_losses is now mandatory in damage calculations with
-    multiple loss types
+    consequences and multiple loss types
   * Added support for consequence=losses for liquefaction and landslides
   * Added a check for missing secondary perils
   * Added loss types liquefaction and landslide
