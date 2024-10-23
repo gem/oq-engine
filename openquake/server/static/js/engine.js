@@ -640,6 +640,7 @@
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                     $('#intensity-map').hide();
+                    $('#pga').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
                     $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
