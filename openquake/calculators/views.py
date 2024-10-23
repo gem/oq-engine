@@ -562,7 +562,7 @@ def portfolio_dmgdist(token, dstore):
     dstates = ['no_damage'] + oq.limit_states
     D = len(dstates)
     arr = dstore['damages-rlzs'][:, 0, :D].sum(axis=0)  # shape D
-    tbl = numpy.zeros(len(arr), dt(['total'] + dstates))
+    tbl = numpy.zeros(1, dt(['total'] + dstates))
     tbl['total'] = arr.sum()
     for dsi, ds in enumerate(dstates):
         tbl[ds] = arr[dsi]
