@@ -380,13 +380,10 @@ def export_loss_maps_npz(ekey, dstore):
 
 def modal_damage_array(data, damage_dt):
     # determine the damage state with the highest probability
-    A, _L, _D = data.shape
-    dmgstate = damage_dt['structural'].names
-    arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
-                          for lt in damage_dt.names])
-    for li, loss_type in enumerate(damage_dt.names):
-        arr['modal-ds-' + loss_type] = [dmgstate[data[a, li].argmax()]
-                                        for a in range(A)]
+    A, _D = data.shape
+    dmgstate = damage_dt.names
+    arr = numpy.zeros(A, [('modal-ds', hdf5.vstr)])
+    arr['modal-ds'] = [dmgstate[data[a].argmax()] for a in range(A)]
     return arr
 
 
@@ -397,7 +394,7 @@ def export_damages_csv(ekey, dstore):
     ebd = oq.calculation_mode == 'event_based_damage'
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    orig = dstore[ekey[0]][:]  # shape (A, R, L, D)
+    orig = dstore[ekey[0]][:]  # shape (A, R, D)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
@@ -418,14 +415,13 @@ def export_damages_csv(ekey, dstore):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i] * rate
-            A, _L, Dc = data.shape
+            A, Dc = data.shape
             if Dc == D:  # no consequences, export nothing
                 return []
             csq_dt = build_csq_dt(dstore)
             damages = numpy.zeros(A, csq_dt)
             for a in range(A):
-                for li, lt in enumerate(csq_dt.names):
-                    damages[lt][a] = tuple(data[a, li, D:Dc])
+                damages[a] = tuple(data[a, D:Dc])
             fname = dstore.build_fname('avg_risk', ros, ekey[1])
         else:  # scenario_damage, classical_damage
             if oq.modal_damage_state:
