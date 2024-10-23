@@ -487,14 +487,12 @@ def get_cdict(fractions, coeffs, df, loss_types):
     """
     :returns: a dict loss_type -> array of shape (A, E)
     """
-    L, A, E, D1 = fractions.shape
     cdict = {}
     for loss_type, li in loss_types.items():
         for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
             cs = coeffs[risk_id]
             if lt == loss_type or lt == '*':
                 cdict[loss_type] = fractions[li] @ cs[loss_type] * weight
-                assert cdict[loss_type].shape == (A, E)
     return cdict
 
 
@@ -633,7 +631,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param total_loss_types: dictionary loss type -> index
         :returns: a dict consequence_name -> array of shape (A, E)
         """
-        L, A, E, _D = fractions.shape
+        _L, A, E, _D = fractions.shape
         csq = AccumDict(accum=numpy.zeros((A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
