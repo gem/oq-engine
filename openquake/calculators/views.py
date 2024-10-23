@@ -560,9 +560,8 @@ def portfolio_dmgdist(token, dstore):
     oq = dstore['oqparam']
     dstates = ['no_damage'] + oq.limit_states
     D = len(dstates)
-    arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
-    tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
-    tbl['loss_type'] = oq.loss_types
+    arr = dstore['damages-rlzs'][:, 0, :D].sum(axis=0)  # shape D
+    tbl = numpy.zeros(len(arr), dt(['total'] + dstates))
     tbl['total'] = arr.sum(axis=1)
     for dsi, ds in enumerate(dstates):
         tbl[ds] = arr[:, dsi]
@@ -584,15 +583,14 @@ def view_portfolio_damage(token, dstore):
         del df['agg_id']
         del df['return_period']
         return df.set_index('loss_type')
-    # dimensions assets, stat, loss_types, dmg_state
+    # dimensions assets, stat, dmg_state
     if 'damages-stats' in dstore:
         attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
         arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
     else:
         attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
-        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
-    rows = [(lt,) + tuple(row) for lt, row in zip(attrs['loss_type'], arr)]
-    return numpy.array(rows, dt(['loss_type'] + list(attrs['dmg_state'])))
+        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))  # shape D
+    return numpy.array(arr, dt(list(attrs['dmg_state'])))
 
 
 def sum_table(records):
