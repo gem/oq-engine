@@ -437,3 +437,17 @@ table#aristotle-losses th td {
 .changelog td:nth-child(3), .changelog th:nth-child(3) {
     width: 70%;
 }
+
+.shakemap-image-container {
+    float: left;
+    width: 50%;
+}
+
+.shakemap-image-container img{
+    width: 600px;
+}
+
+.shakemap-clear-float {
+    clear: both;
+    margin-bottom: 30px;
+}
