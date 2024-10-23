@@ -722,7 +722,7 @@ def _loss_type_tags(what):
     elif '?' in what:
         loss_type, query_string = what.rsplit('?', 1)
     else:
-        loss_type, query_string = '', what
+        loss_type, query_string = what, ''
     tags = query_string.split('&') if query_string else []
     return loss_type, tags
 
