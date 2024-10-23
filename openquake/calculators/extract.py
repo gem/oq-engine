@@ -1037,7 +1037,6 @@ def build_damage_dt(dstore):
     :returns:
        a composite dtype loss_type -> (ds1, ds2, ...)
     """
-    oq = dstore['oqparam']
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
