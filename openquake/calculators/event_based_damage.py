@@ -125,7 +125,7 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
 
         df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
         csq = crmodel.compute_csq(
-            assets, d4[:, :, :, :D], df, oq.loss_types, oq.time_event)
+            assets, d4[:, :, :, :D], df, oq.total_loss_types, oq.time_event)
         d3 = numpy.zeros((A, E, dparam.Dc), F32)
         for li, lt in enumerate(oq.loss_types):
             d3[:] += d4[li]

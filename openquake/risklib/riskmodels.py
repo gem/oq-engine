@@ -489,7 +489,7 @@ def get_cdict(fractions, coeffs, df, loss_types):
     """
     L, A, E, D1 = fractions.shape
     cdict = {}
-    for li, loss_type in enumerate(loss_types):
+    for loss_type, li in loss_types.items():
         for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
             cs = coeffs[risk_id]
             if lt == loss_type or lt == '*':
@@ -625,12 +625,12 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, tmap_df, loss_types, time_event):
+    def compute_csq(self, assets, fractions, tmap_df, total_loss_types, time_event):
         """
         :param assets: asset array
         :param fractions: array of probabilies of shape (L, A, E, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
-        :param loss_types: loss types as a strings
+        :param total_loss_types: dictionary loss type -> index
         :returns: a dict consequence_name -> array of shape (A, E)
         """
         L, A, E, _D = fractions.shape
@@ -641,9 +641,10 @@ class CompositeRiskModel(collections.abc.Mapping):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
-                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, loss_types)
+                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df,
+                                      total_loss_types)
                     csq[consequence] += scientific.consequence(
-                        consequence, assets, cdict, loss_types, time_event)
+                        consequence, assets, cdict, total_loss_types, time_event)
         return csq
 
     def init(self):

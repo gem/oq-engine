@@ -1748,14 +1748,15 @@ class OqParam(valid.ParamSet):
     @property
     def total_loss_types(self):
         """
-        :returns: the loss types in total_losses or the single loss type
+        :returns: a dictionary loss_type -> index
         """
         if self.total_losses:
-            return self.total_losses.split('+')
+            total = self.total_losses.split('+')
         elif len(self.loss_types) == 1:
-            return self.loss_types
+            total = self.loss_types
         else:
             self.raise_invalid('please specify total_losses')
+        return {lt: li for li, lt in enumerate(self.loss_types) if lt in total}
 
     def loss_dt(self, dtype=F64):
         """
