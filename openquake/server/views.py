@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import csv
 import shutil
 import json
@@ -31,6 +32,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
+import base64
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus
 from urllib.error import HTTPError
@@ -54,6 +56,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
+from openquake.calculators.postproc.plots import plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, aristotle
@@ -764,6 +767,15 @@ def aristotle_get_rupture_data(request):
     response_data = rupdic
     response_data['intensity_map'] = intensity_map_jpg
     response_data['pga'] = pga_jpg
+    # if not intensity_map_jpg and not pga_jpg and 'oq_rup' in rupdic:
+    if 'oq_rup' in rupdic:
+        plt = plot_rupture(rupdic['oq_rup'])
+        del rupdic['oq_rup']
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        bio.seek(0)
+        img_base64 = base64.b64encode(bio.getvalue()).decode('utf-8')
+        response_data['rupture_png'] = img_base64
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 

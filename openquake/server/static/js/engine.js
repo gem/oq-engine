@@ -631,6 +631,15 @@
                     else {
                         $('#pga').html('<p>No PGA map available</p>');
                     }
+                    if (data.rupture_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
+                        $('#rupture_png').html(imgElement);
+                        $('#shakemap-image-row').show();
+                        $('#rupture_png').show();
+                    }
+                    else {
+                        $('#pga').html('<p>No PGA map available</p>');
+                    }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {

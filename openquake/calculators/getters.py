@@ -419,6 +419,11 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     return get_ebr(rec, geom, trt)
 
 
+def get_rupture_from_dstore(dstore, rup_id=0):
+    ebr = get_ebrupture(dstore, rup_id)
+    return ebr.rupture
+
+
 # this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """

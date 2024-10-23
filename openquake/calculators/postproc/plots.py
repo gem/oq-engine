@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2024, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -21,7 +21,6 @@ import numpy
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
-from openquake.calculators.getters import get_ebrupture
 
 
 def import_plt():
@@ -100,9 +99,7 @@ def add_surface(ax, surface, label):
     return surface.get_bounding_box()
 
 
-def add_rupture(ax, dstore, rup_id=0):
-    ebr = get_ebrupture(dstore, rup_id)
-    rup = ebr.rupture
+def add_rupture(ax, rup):
     if hasattr(rup.surface, 'surfaces'):
         min_x = 180
         max_x = -180
@@ -123,14 +120,13 @@ def add_rupture(ax, dstore, rup_id=0):
     return ax, min_x, min_y, max_x, max_y
 
 
-def plot_rupture(dstore):
+def plot_rupture(rup):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
     ax.grid(True)
-    # assuming there is only 1 rupture, so rup_id=0
-    ax, min_x, min_y, max_x, max_y = add_rupture(ax, dstore, rup_id=0)
+    ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
     ax = add_borders(ax)
     BUF_ANGLE = 4
     ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
@@ -147,13 +143,11 @@ def add_surface_3d(ax, surface, label):
     ax.plot_surface(lon_grid, lat_grid, depth_grid, alpha=0.5, label=label)
 
 
-def plot_rupture_3d(dstore):
+def plot_rupture_3d(rup):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ebr = get_ebrupture(dstore, rup_id=0)
-    rup = ebr.rupture
     if hasattr(rup.surface, 'surfaces'):
         for surf_idx, surface in enumerate(rup.surface.surfaces):
             add_surface_3d(ax, surface, 'Surface %d' % surf_idx)
