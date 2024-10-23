@@ -55,7 +55,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         view('num_units', self.calc.datastore)
 
         # test agg_damages, 1 realization x 3 damage states
-        [dmg] = extract(self.calc.datastore, 'agg_damages?taxonomy=RC&CRESTA=01.1')
+        # checking that passing a fake loss type works,
+        # for compatibility with the past
+        [dmg] = extract(self.calc.datastore,
+                        'agg_damages/dummy?taxonomy=RC&CRESTA=01.1')
         aac([1482., 489., 29.], dmg, atol=1E-4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages?taxonomy=RM&CRESTA=01.1')

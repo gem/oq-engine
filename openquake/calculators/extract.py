@@ -852,6 +852,8 @@ def extract_agg_damages(dstore, what):
         number of damage states, or an array of length 0 if there is no data
         for the given tags
     """
+    if '?' in what:  # strip the loss type for backward compatibility
+        _, what = what.rsplit('?', 1)
     tags = what.split('&') if what else []
     if 'damages-rlzs' in dstore:
         damages = dstore['damages-rlzs'][:, :]
