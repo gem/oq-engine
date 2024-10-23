@@ -717,9 +717,11 @@ def _filter_agg(assetcol, losses, selected, stats=''):
 
 
 def _loss_type_tags(what):
-    try:
+    if '/' in what:
+        loss_type, query_string = what.rsplit('/', 1)
+    elif '?' in what:
         loss_type, query_string = what.rsplit('?', 1)
-    except ValueError:  # no question mark
+    else:
         loss_type, query_string = '', what
     tags = query_string.split('&') if query_string else []
     return loss_type, tags
