@@ -483,6 +483,19 @@ class ValidationError(Exception):
     pass
 
 
+def get_cdict(fractions, coeffs, df, loss_types):
+    """
+    :returns: a dict loss_type -> array of shape (A, E)
+    """
+    cdict = {}
+    for loss_type, li in loss_types.items():
+        for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
+            cs = coeffs[risk_id]
+            if lt == loss_type or lt == '*':
+                cdict[loss_type] = fractions[li] @ cs[loss_type] * weight
+    return cdict
+
+
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -615,25 +628,20 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param assets: asset array
         :param fractions: array of probabilies of shape (L, A, E, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
-        :param loss_types: loss types as a strings
-        :returns: a dict consequence_name -> array of shape (L, A, E)
+        :param loss_types: dictionary loss type -> index
+        :returns: a dict consequence_name -> array of shape (A, E)
         """
-        L, A, E, _D = fractions.shape
-        csq = AccumDict(accum=numpy.zeros((L, A, E)))
+        _L, A, E, _D = fractions.shape
+        csq = AccumDict(accum=numpy.zeros((A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
-                for li, loss_type in enumerate(loss_types):
-                    for lt, risk_id, weight in zip(
-                            tmap_df.loss_type, tmap_df.risk_id, tmap_df.weight):
-                        if lt == '*' or lt == loss_type:
-                            # for instance risk_id = 'W_LFM-DUM_H6'
-                            cs = fractions[li, :, :, 1:] @ coeffs[risk_id][loss_type]
-                            csq[consequence][li] += scientific.consequence(
-                                consequence, assets, cs, loss_type, time_event
-                            ) * weight
+                for risk_id, df in tmap_df.groupby('risk_id'):
+                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, loss_types)
+                    csq[consequence] += scientific.consequence(
+                        consequence, assets, cdict, time_event)
         return csq
 
     def init(self):

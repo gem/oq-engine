@@ -552,6 +552,7 @@ def view_portfolio_loss(token, dstore):
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
+# used in the oq-risk-tests
 @view.add('portfolio_dmgdist')
 def portfolio_dmgdist(token, dstore):
     """
@@ -561,10 +562,10 @@ def portfolio_dmgdist(token, dstore):
     dstates = ['no_damage'] + oq.limit_states
     D = len(dstates)
     arr = dstore['damages-rlzs'][:, 0, :D].sum(axis=0)  # shape D
-    tbl = numpy.zeros(len(arr), dt(['total'] + dstates))
-    tbl['total'] = arr.sum(axis=1)
+    tbl = numpy.zeros(1, dt(['total'] + dstates))
+    tbl['total'] = arr.sum()
     for dsi, ds in enumerate(dstates):
-        tbl[ds] = arr[:, dsi]
+        tbl[ds] = arr[dsi]
     return tbl
 
 
