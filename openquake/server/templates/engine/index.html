@@ -69,7 +69,7 @@
           </div>
           {% elif application_mode == 'ARISTOTLE' %}
           <div class="span12">
-            <h2>Run an ARISTOTLE calculation</h2>
+            <h2>Run an earthquake impact assessment</h2>
             {% if not user.email %}
             <h3>
               WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
@@ -92,7 +92,7 @@
                 <button type="button" id="clearRuptureFile">Clear File</button>
               </div>
               <div class="aristotle_form_row">
-                <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
+                <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve shakemap data</button>
                 <!-- <input type="submit"> -->
               </div>
             </form>
@@ -189,7 +189,7 @@
                 <input class="aristotle-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ aristotle_form_placeholders.maximum_distance_stations }}" value="" disabled/>
               </div>
               <div class="aristotle_form_row">
-                <button id="submit_aristotle_calc" type="submit" class="btn">Submit</button>
+                <button id="submit_aristotle_calc" type="submit" class="btn">Launch impact calculations</button>
                 <!-- <input type="submit"> -->
               </div>
             </form>
