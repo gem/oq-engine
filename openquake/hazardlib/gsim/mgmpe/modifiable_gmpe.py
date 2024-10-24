@@ -68,6 +68,18 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     me[:] = np.log(exp_mean * fa)
 
 
+def stewart2020_site_term(ctx, imt, me, si, ta, ph, kind):
+    """
+    This function adds the Stewart et al. (2020; EQS) site term that uses as
+    a reference 760 m/s.
+    """
+    # From the original GMM
+    exp_mean = np.exp(me)
+
+    # Final mean
+    me[:] = np.log(exp_mean * fa)
+
+
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CY14 site term to GMMs requiring it
