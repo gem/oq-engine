@@ -613,24 +613,24 @@
                         $('#mosaic_model').append('<option value="' + mosaic_model + '" data-value=\'' + mosaic_model_trts + '\'' + selected + '>' + mosaic_model + '</option>');
                     });
                     populateTrtSelector(data.trt);
-                    if (data.intensity_map) {
-                        const imgElement = `<img src="data:image/jpeg;base64,${data.intensity_map}" alt="Intensity Map">`;
-                        $('#intensity-map').html(imgElement);
-                        $('shakemap-image-row').show();
-                        $('#intensity-map').show();
-                    }
-                    else {
-                        $('#intensity-map').html('<p>No intensity map available</p>');
-                    }
-                    if (data.pga) {
-                        const imgElement = `<img src="data:image/jpeg;base64,${data.pga}" alt="PGA Map">`;
-                        $('#pga').html(imgElement);
-                        $('#shakemap-image-row').show();
-                        $('#pga').show();
-                    }
-                    else {
-                        $('#pga').html('<p>No PGA map available</p>');
-                    }
+                    // if (data.intensity_map) {
+                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.intensity_map}" alt="Intensity Map">`;
+                    //     $('#intensity-map').html(imgElement);
+                    //     $('shakemap-image-row').show();
+                    //     $('#intensity-map').show();
+                    // }
+                    // else {
+                    //     $('#intensity-map').html('<p>No intensity map available</p>');
+                    // }
+                    // if (data.pga) {
+                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.pga}" alt="PGA Map">`;
+                    //     $('#pga').html(imgElement);
+                    //     $('#shakemap-image-row').show();
+                    //     $('#pga').show();
+                    // }
+                    // else {
+                    //     $('#pga').html('<p>No PGA map available</p>');
+                    // }
                     if (data.rupture_png) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
                         $('#rupture_png').html(imgElement);

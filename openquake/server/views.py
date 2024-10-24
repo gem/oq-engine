@@ -758,15 +758,15 @@ def aristotle_get_rupture_data(request):
         logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    intensity_map_jpg = download_jpg(rupdic['usgs_id'], 'intensity')
-    pga_jpg = download_jpg(rupdic['usgs_id'], 'pga')
+    # intensity_map_jpg = download_jpg(rupdic['usgs_id'], 'intensity')
+    # pga_jpg = download_jpg(rupdic['usgs_id'], 'pga')
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
-    response_data['intensity_map'] = intensity_map_jpg
-    response_data['pga'] = pga_jpg
+    # response_data['intensity_map'] = intensity_map_jpg
+    # response_data['pga'] = pga_jpg
     # if not intensity_map_jpg and not pga_jpg and 'oq_rup' in rupdic:
     if 'oq_rup' in rupdic:
         plt = plot_rupture(rupdic['oq_rup'], 'Agg')  # non-interactive backend
