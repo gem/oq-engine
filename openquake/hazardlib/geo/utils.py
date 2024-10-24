@@ -835,6 +835,30 @@ def plane_fit(points):
     return ctr, numpy.linalg.svd(M)[0][:, -1]
 
 
+def get_strike_from_plane_normal(nrml):
+    """
+    Computes the strike direction using the vector defining the normal to the
+    plane. The positive z-direction is pointing upwards.
+
+    :param nrml:
+        A vector with 3 elements defining the normal to the plane
+    :returns:
+        A float defining the strike direction
+    """
+
+    # Make sure the vector normal to the plane points upwards
+    if nrml[2] < 0:
+        nrml *= -1
+
+    # Get the strike
+    if nrml[1] >= 0:
+        tmp = (numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) + 90.0) % 360.0
+    else:
+        tmp = (numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) + 270.0) % 360.0
+
+    return tmp
+
+
 def bbox2poly(bbox):
     """
     :param bbox: a geographic bounding box West-East-North-South
@@ -945,6 +969,11 @@ def geolocate(lonlats, geom_df, exclude=()):
         codes[ok] = code
     return codes
 
+def _angles_diff(ang_a, ang_b):
+    # Computes the difference between the first and the second angle. Both are
+    # in decimal degrees.
+    dff = ang_a - ang_b
+    return (dff + 180.0) % 360.0 - 180.0
 
 def geolocate_geometries(geometries, geom_df, exclude=()):
     """
@@ -964,3 +993,20 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
                 intersecting_codes.add(code)
         result_codes[i] = sorted(intersecting_codes)
     return result_codes
+
+
+def angles_within(a_first, a_second, angle):
+    """
+    Check is 'angle' is within 'a_first' and 'a_second'. The interval
+    starts at 'a_first' and in clockwise direction goes to 'a_second'
+
+    :param a_first:
+    :param a_second:
+    :param angle:
+    """
+    out = numpy.zeros_like(angle)
+    if a_first < a_second:
+        out = (a_first <= angle) & (angle <= a_second)
+    else:
+        out = (a_first >= angle) & (angle >= a_second)
+    return out
