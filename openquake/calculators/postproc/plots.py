@@ -120,9 +120,13 @@ def add_rupture(ax, rup):
     return ax, min_x, min_y, max_x, max_y
 
 
-def plot_rupture(rup):
+def plot_rupture(rup, backend=None):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
+    if backend is not None:
+        # we may need to use a non-interactive backend
+        import matplotlib
+        matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
     ax.grid(True)

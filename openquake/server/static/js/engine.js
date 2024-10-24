@@ -638,7 +638,7 @@
                         $('#rupture_png').show();
                     }
                     else {
-                        $('#pga').html('<p>No PGA map available</p>');
+                        $('#rupture_png').html('<p>No rupture image available</p>');
                     }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
@@ -650,8 +650,9 @@
                     }
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
-                    $('#intensity-map').hide();
-                    $('#pga').hide();
+                    // $('#intensity-map').hide();
+                    // $('#pga').hide();
+                    $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);

@@ -769,7 +769,7 @@ def aristotle_get_rupture_data(request):
     response_data['pga'] = pga_jpg
     # if not intensity_map_jpg and not pga_jpg and 'oq_rup' in rupdic:
     if 'oq_rup' in rupdic:
-        plt = plot_rupture(rupdic['oq_rup'])
+        plt = plot_rupture(rupdic['oq_rup'], 'Agg')  # non-interactive backend
         del rupdic['oq_rup']
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
