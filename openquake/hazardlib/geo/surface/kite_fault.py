@@ -303,10 +303,6 @@ class KiteSurface(BaseSurface):
         if found:
 
             # Get the azimuth direction for the strike and dip
-            azi_strike = azimuth(self.mesh.lons[irow, icol],
-                                 self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow, icol + 1],
-                                 self.mesh.lats[irow, icol + 1])
             azi_dip = azimuth(self.mesh.lons[irow, icol],
                               self.mesh.lats[irow, icol],
                               self.mesh.lons[irow + 1, icol],

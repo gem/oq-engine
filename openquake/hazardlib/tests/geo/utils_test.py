@@ -446,7 +446,7 @@ class PlaneStrikeTest(unittest.TestCase):
         coo[3, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
 
         # Fit plane (without projecting the points)
-        ppnt, pnrm = plane_fit(coo)
+        _, pnrm = plane_fit(coo)
 
         # Find strike
         strike = get_strike_from_plane_normal(pnrm)
@@ -462,7 +462,7 @@ class PlaneStrikeTest(unittest.TestCase):
         coo = _get_coo_poly(10., 45.0, expected)
 
         # Fit plane (without projecting the points)
-        ppnt, pnrm = plane_fit(coo)
+        _, pnrm = plane_fit(coo)
 
         # Find strike
         strike = get_strike_from_plane_normal(pnrm)
@@ -477,7 +477,7 @@ class PlaneStrikeTest(unittest.TestCase):
         coo = _get_coo_poly(10., 45.0, expected, True)
 
         # Fit plane (without projecting the points)
-        ppnt, pnrm = plane_fit(coo)
+        _, pnrm = plane_fit(coo)
 
         # Find strike
         strike = get_strike_from_plane_normal(pnrm)

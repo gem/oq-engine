@@ -724,7 +724,6 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         idl = False
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
-        smsh = srfc.mesh
 
         expected = 270.002023
         strike = srfc.get_strike()
