@@ -140,26 +140,30 @@ def compute_hmaps(curvesNML, imtls, poes):
     return iml3
 
 
-def get_lvl(hcurve, imls, poe):
+def check_hmaps(hcurves, imtls, poes, delta):
     """
-    :param hcurve: a hazard curve, i.e. array of L1 PoEs
-    :param imls: L1 intensity measure levels
-    :returns: index of the intensity measure level associated to the poe
-
-    >>> imls = numpy.array([.1, .2, .3, .4])
-    >>> hcurve = numpy.array([1., .99, .90, .8])
-    >>> get_lvl(hcurve, imls, 1)
-    0
-    >>> get_lvl(hcurve, imls, .99)
-    1
-    >>> get_lvl(hcurve, imls, .91)
-    2
-    >>> get_lvl(hcurve, imls, .8)
-    3
+    :param hcurves: hazard curves of shape (N, M, L1)
+    :param imtls: a dictionary imt -> imls
+    :param poes: a list of poes
+    :param poes: P poes
+    :param delta: maximum absolute error on the intensity
     """
-    [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
-    iml -= 1E-10  # small buffer
-    return numpy.searchsorted(imls, iml)
+    N, M, _L1 = hcurves.shape
+    assert M == len(imtls), (M, len(imtls))
+    all_poes = []
+    for poe in poes:
+        all_poes.extend([poe, poe * .99])
+    for m, (imt, imls) in enumerate(imtls.items()):
+        hmaps = compute_hazard_maps(hcurves[:, m], imls, all_poes)  # (N, 2*P)
+        for sid in range(N):
+            for p, poe in enumerate(poes):
+                iml = hmaps[sid, p*2]
+                iml99 = hmaps[sid, p*2+1]
+                print(imt, sid, poe, iml)
+                print(imt, sid, poe, iml99)
+                if abs(iml - iml99) / abs(iml + iml99) > delta:
+                    raise ValueError(f'The {imt} hazard curve for {sid=} cannot be '
+                                     f'inverted reliably around {poe=}')
 
 
 # ############################# probability maps ##############################
