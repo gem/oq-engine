@@ -226,9 +226,12 @@ class Mesh(object):
     Mesh object can also be created from a collection of points, see
     :meth:`from_points_list`.
     """
-    #: Tolerance level to be used in various spatial operations when
-    #: approximation is required -- set to 5 meters.
-    DIST_TOLERANCE = 0.005
+    # Tolerance level to be used in various spatial operations when
+    # approximation is required -- set to 5.1 meters.
+    # NB: DIST_TOLERANCE = 0.005 causes a RuntimeWarning
+    # shapely/constructive.py:180: divide by zero encountered in buffer
+    # see 
+    DIST_TOLERANCE = 0.0051
 
     @property
     def lons(self):
