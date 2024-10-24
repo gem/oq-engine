@@ -230,7 +230,7 @@ class Mesh(object):
     # approximation is required -- set to 5.1 meters.
     # NB: DIST_TOLERANCE = 0.005 causes a RuntimeWarning
     # shapely/constructive.py:180: divide by zero encountered in buffer
-    # see 
+    # see https://github.com/gem/oq-engine/pull/10085
     DIST_TOLERANCE = 0.0051
 
     @property
