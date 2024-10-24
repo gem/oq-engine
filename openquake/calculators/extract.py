@@ -1390,7 +1390,7 @@ def extract_rupture_info(dstore, what):
         source_id = dstore['source_info']['source_id']
     except KeyError:  # scenario
         source_id = None
-    dtlist = [('rup_id', I64), ('source_id', hdf5.vstr), ('multiplicity', U32),
+    dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
