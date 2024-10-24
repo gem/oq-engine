@@ -315,7 +315,7 @@ class KiteSurface(BaseSurface):
             coo = np.empty((4, 3))
             coo[0, 0] = self.mesh.lons[irow, icol]
             coo[0, 1] = self.mesh.lats[irow, icol]
-            coo[0, 1] = self.mesh.depths[irow, icol]
+            coo[0, 2] = self.mesh.depths[irow, icol]
             coo[1, 0] = self.mesh.lons[irow + 1, icol]
             coo[1, 1] = self.mesh.lats[irow + 1, icol]
             coo[1, 2] = self.mesh.depths[irow + 1, icol]
@@ -329,16 +329,20 @@ class KiteSurface(BaseSurface):
             from openquake.hazardlib.geo.utils import (
                 plane_fit, get_strike_from_plane_normal)
             _, nrml_plane = plane_fit(coo)
-            tmp_strike = get_strike_from_plane_normal(nrml_plane)
 
-            breakpoint()
+            tmp_strike = get_strike_from_plane_normal(nrml_plane)
+            a_low = (tmp_strike + 10) % 360
+            a_upp = (tmp_strike + 80) % 360
+
+            tmp = geo_utils.angles_within(a_low, a_upp, azi_dip)
 
             # Compare the dip direction from the strike against the one from
             # the quadrilateral
             # tmp = geo_utils._angles_diff(azi_strike, 90)
-            #if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
-            tmp = (azi_strike + 90) % 360
-            if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
+            # if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
+            # tmp = (azi_strike + 90) % 360
+            #if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
+            if not tmp:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -597,7 +601,9 @@ def geom_to_kite(geom):
     """
     shape_y, shape_z = int(geom[1]), int(geom[2])
     array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
-    return KiteSurface(RectangularMesh(*array))
+    sfc = KiteSurface(RectangularMesh(*array))
+    sfc._fix_right_hand()
+    return sfc
 
 
 def get_profiles_from_simple_fault_data(
@@ -815,7 +821,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     msh = _fix_right_hand(msh)
 
     # INFO: this is just for debugging
-    _dbg_plot_mesh(msh)
+    # _dbg_plot_mesh(msh)
 
     return msh
 

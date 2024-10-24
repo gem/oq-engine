@@ -993,3 +993,20 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
                 intersecting_codes.add(code)
         result_codes[i] = sorted(intersecting_codes)
     return result_codes
+
+
+def angles_within(a_first, a_second, angle):
+    """
+    Check is 'angle' is within 'a_first' and 'a_second'. The interval
+    starts at 'a_first' and in clockwise direction goes to 'a_second'
+
+    :param a_first:
+    :param a_second:
+    :param angle:
+    """
+    out = numpy.zeros_like(angle)
+    if a_first < a_second:
+        out = (a_first <= angle) & (angle <= a_second)
+    else:
+        out = (a_first >= angle) & (angle >= a_second)
+    return out
