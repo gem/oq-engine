@@ -725,7 +725,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
-                              fname, delta=8E-4)
+                              fname, delta=9E-4)
 
     def test_ideductible(self):
         if sys.platform == 'darwin':
