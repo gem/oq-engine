@@ -226,9 +226,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_13.__file__, 'job.ini')
 
     def test_case_14(self):
-        # check split_by_mag with NGAEastUSGS, see bug
-        # https://github.com/gem/oq-engine/issues/8780
-        self.run_calc(case_14.__file__, 'job.ini')
+        # check non-invertible hazard curve
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(case_14.__file__, 'job.ini')
+        self.assertIn('The PGA hazard curve for site_id=0 cannot be inverted',
+                      str(ctx.exception))
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular it has very different values between 2 and 16 cores(!)
