@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import logging
 import warnings
 import numpy
 import pandas
@@ -140,13 +141,12 @@ def compute_hmaps(curvesNML, imtls, poes):
     return iml3
 
 
-def check_hmaps(hcurves, imtls, poes, delta):
+def check_hmaps(hcurves, imtls, poes):
     """
     :param hcurves: hazard curves of shape (N, M, L1)
     :param imtls: a dictionary imt -> imls
     :param poes: a list of poes
     :param poes: P poes
-    :param delta: maximum absolute error on the intensity
     """
     N, M, _L1 = hcurves.shape
     assert M == len(imtls), (M, len(imtls))
@@ -155,16 +155,22 @@ def check_hmaps(hcurves, imtls, poes, delta):
         all_poes.extend([poe, poe * .99])
     for m, (imt, imls) in enumerate(imtls.items()):
         hmaps = compute_hazard_maps(hcurves[:, m], imls, all_poes)  # (N, 2*P)
-        for sid in range(N):
+        for site_id in range(N):
             for p, poe in enumerate(poes):
-                iml = hmaps[sid, p*2]
-                iml99 = hmaps[sid, p*2+1]
-                print(imt, sid, poe, iml)
-                print(imt, sid, poe, iml99)
-                if abs(iml - iml99) / abs(iml + iml99) > delta:
-                    raise ValueError(f'The {imt} hazard curve for {sid=} cannot be '
-                                     f'inverted reliably around {poe=}')
-
+                iml = hmaps[site_id, p*2]
+                iml99 = hmaps[site_id, p*2+1]
+                if iml + iml99 == 0:  # zero curve
+                    logging.error(f'The {imt} hazard curve for {site_id=} cannot '
+                                  f'be inverted around {poe=}')
+                    continue
+                rel_err = abs(iml - iml99) / abs(iml + iml99)
+                if  rel_err > .05:
+                    raise ValueError(f'The {imt} hazard curve for {site_id=} cannot '
+                                     f'be inverted reliably around {poe=}')
+                elif rel_err > .01:
+                    logging.warning(
+                        f'The {imt} hazard curve for {site_id=} cannot be '
+                        f'inverted reliably around {poe=}: {iml=}, {iml99=}')
 
 # ############################# probability maps ##############################
 

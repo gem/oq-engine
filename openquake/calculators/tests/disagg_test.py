@@ -229,7 +229,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # check non-invertible hazard curve
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_14.__file__, 'job.ini')
-        self.assertIn('The PGA hazard curve for sid=0 cannot be inverted reliably',
+        self.assertIn('The PGA hazard curve for site_id=0 cannot be inverted',
                       str(ctx.exception))
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
