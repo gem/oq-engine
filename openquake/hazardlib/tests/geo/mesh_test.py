@@ -304,8 +304,8 @@ class MeshConvexHullTestCase(unittest.TestCase):
     def test_one_point(self):
         mesh = Mesh.from_points_list([Point(7, 7)])
         polygon = mesh.get_convex_hull()
-        elons = [7.0000453, 7., 6.9999547, 7]
-        elats = [7., 6.99995503, 7., 7.00004497]
+        elons = [7.000046, 7., 6.999954, 7]
+        elats = [7., 6.999954, 7., 7.000046]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
 
@@ -436,10 +436,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats)
         dist = mesh.get_joyner_boore_distance(
             Mesh.from_points_list([Point(-121.76, 37.23)]))
-        dist_ubuntu_12_04 = 36.61260128
-        dist_ubuntu_14_04 = 36.61389245
-        self.assertTrue(numpy.allclose(dist, dist_ubuntu_12_04) or
-                        numpy.allclose(dist, dist_ubuntu_14_04))
+        self.assertTrue(numpy.allclose(dist, 36.61139107))
 
 
 class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
@@ -800,7 +797,8 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         ext_array = numpy.array(polygon.exterior.coords)
         coords = numpy.array(proj(*ext_array.T, reverse=True)).T
         print(numpy.round(coords, 2).tolist())
-        numpy.testing.assert_almost_equal(coords, expected_coords, decimal=4)
+        numpy.testing.assert_almost_equal(
+            coords, expected_coords, decimal=4)
         return polygon
 
     def test_simple(self):
@@ -852,7 +850,10 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         lons = numpy.array([[-0.2, -0.1, 0., 0.1, 0.2]] * 5)
         depths = numpy.array([[9] * 5, [11] * 5, [12] * 5, [13] * 5, [14] * 5])
         lats = numpy.zeros_like(lons)
-        expected_coords = [(-0.2, 0), (0.2, 0), (0.2, 0), (-0.2, 0),
+        expected_coords = [(-0.2, 0),
+                           (-0.2, 4.58654019e-05),
+                           (0.2, 0),
+                           (0, -4.58654019e-05),
                            (-0.2, 0)]
         self._test(lons, lats, depths, expected_coords)
 
@@ -861,7 +862,7 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         lats = numpy.array([[0.2, 0.3, 0.4]] * 2)
         depths = numpy.array([[1., 1., 1.], [2., 2., 2.]])
         expected_coords = [(22.3, 0.2), (22.3, 0.4), (22.4, 0.4), (22.3, 0.3),
-                           (22.3, 0.2), (22.3, 0.2)]
+                           (22.3, 0.2), (22.3, 0.2), (22.3, 0.2)]
         self._test(lons, lats, depths, expected_coords)
 
     def test_bowtie_mesh(self):

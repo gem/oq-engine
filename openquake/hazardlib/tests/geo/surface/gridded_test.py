@@ -246,10 +246,10 @@ class GriddedSurfaceRetrace(unittest.TestCase):
 
         mesh = Mesh(np.array([13.06]), np.array([42.615]), np.array([0.0]))
         dists = self.surf.get_joyner_boore_distance(mesh)
-        aae(dists, [0.5105325])
+        aae(dists, [0.5104325])
 
         mesh = Mesh(np.array([13.14]), np.array([42.53867]), np.array([0.0]))
         dists = self.surf.get_joyner_boore_distance(mesh)
         # Very close value obtained using the `distance` method in the
         # `geodetic` module
-        aae(dists, [2.1006229])
+        aae(dists, [2.1005229])

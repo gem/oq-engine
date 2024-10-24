@@ -219,8 +219,8 @@ class PostProcTestCase(CalculatorTestCase):
         assert dic41 == {'BSE2N_Ss': 1.5, 'BSE2E_Ss': 1.22049,
                          'Ss_5_50': 1.22049, 'BSE1N_Ss': 1.0,
                          'BSE1E_Ss': 0.72663, 'Ss_20_50': 0.72663,
-                         'BSE2N_S1': 0.42968, 'BSE2E_S1': 0.34593,
-                         'S1_5_50': 0.34593, 'BSE1N_S1': 0.28645,
+                         'BSE2N_S1': 0.42968, 'BSE2E_S1': 0.34594,
+                         'S1_5_50': 0.34594, 'BSE1N_S1': 0.28645,
                          'BSE1E_S1': 0.18822, 'S1_20_50': 0.18822}
 
     def test_median_spectrum1(self):
