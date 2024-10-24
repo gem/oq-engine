@@ -1,3 +1,6 @@
+  [Manuela Villani]
+  * Improved the "Governing MCE" plot
+
   [Michele Simionato]
   * Raised an error in case of non-invertible hazard curves, affecting
     disaggregation and site-specific hazard spectrum calculations
