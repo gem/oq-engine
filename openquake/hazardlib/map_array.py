@@ -172,6 +172,29 @@ def check_hmaps(hcurves, imtls, poes):
                         f'The {imt} hazard curve for {site_id=} cannot be '
                         f'inverted reliably around {poe=}: {iml=}, {iml99=}')
 
+
+# not used right now
+def get_lvl(hcurve, imls, poe):
+    """
+    :param hcurve: a hazard curve, i.e. array of L1 PoEs
+    :param imls: L1 intensity measure levels
+    :returns: index of the intensity measure level associated to the poe
+
+    >>> imls = numpy.array([.1, .2, .3, .4])
+    >>> hcurve = numpy.array([1., .99, .90, .8])
+    >>> get_lvl(hcurve, imls, 1)
+    0
+    >>> get_lvl(hcurve, imls, .99)
+    1
+    >>> get_lvl(hcurve, imls, .91)
+    2
+    >>> get_lvl(hcurve, imls, .8)
+    3
+    """
+    [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
+    iml -= 1E-10  # small buffer
+    return numpy.searchsorted(imls, iml)
+
 # ############################# probability maps ##############################
 
 t = numba.types
