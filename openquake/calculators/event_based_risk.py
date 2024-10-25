@@ -280,7 +280,7 @@ def set_oqparam(oq, assetcol, dstore):
 
     ideduc = assetcol['ideductible'].any()
     cc = dstore['exposure'].cost_calculator
-    if oq.total_loss_types and cc.cost_types:
+    if oq.total_losses and oq.total_loss_types and cc.cost_types:
         # cc.cost_types is empty in scenario_damage/case_21 (consequences)
         units = cc.get_units(oq.total_loss_types)
         _tot_loss_unit_consistency(
