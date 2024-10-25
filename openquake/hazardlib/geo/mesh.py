@@ -21,7 +21,7 @@ Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
 
-import warnings
+# import warnings
 import numpy
 from scipy.spatial.distance import cdist
 import shapely.geometry
