@@ -44,7 +44,6 @@ class Dparam:
     """
     eids: U32
     aggids: U16
-    rlzs: U32
     csqidx: dict
     D: int
     Dc: int
@@ -182,12 +181,12 @@ def event_based_damage(df, oq, dstore, monitor):
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
-            dparam = Dparam(eids, aggids, rlzs, csqidx, D, Dc, rng)
+            dparam = Dparam(eids, aggids, csqidx, D, Dc, rng)
             for aids, d3 in _gen_d3(asset_df, gmf_df, crmodel, dparam):
                 if R == 1:
                     dmgcsq[aids, 0] += d3.sum(axis=1)
                 else:
-                    for e, rlz in enumerate(dparam.rlzs):
+                    for e, rlz in enumerate(rlzs):
                         dmgcsq[aids, rlz] += d3[:, e]
                 tot = d3.sum(axis=0)  # sum on the assets
                 for e, eid in enumerate(eids):
