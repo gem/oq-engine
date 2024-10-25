@@ -131,8 +131,7 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
         csq = crmodel.compute_csq(
             assets, d4[:, :, :, :D], df, loss_types, oq.time_event)
         d3 = numpy.zeros((A, E, dparam.Dc), F32)
-        for li, lt in enumerate(oq.loss_types):
-            d3[:] += d4[li]
+        d3[:] = general.pprod(d4, axis=0)  # compose probabilities
         for name, values in csq.items():
             d3[:, :, dparam.csqidx[name]] = values
         yield aids, d3  # d3 has shape (A, E, Dc)
