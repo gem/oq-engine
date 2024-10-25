@@ -590,23 +590,19 @@ class Mesh(object):
         # around the stripe.
         prev_line = next(lines)[::-1]
         polygons = []
-        with warnings.catch_warnings():
-            # hide GEOS warnings like "divide by zero encountered in buffer"
-            # as pygeos did in https://github.com/pygeos/pygeos/pull/441
-            warnings.simplefilter("ignore", RuntimeWarning)
-            for i, line in enumerate(lines):
-                coords = numpy.concatenate((prev_line, line, prev_line[0:1]))
-                # create the shapely polygon object from the stripe
-                # coordinates and simplify it (remove redundant points,
-                # if there are any lying on the straight line).
-                stripe = shapely.geometry.LineString(coords) \
-                                         .simplify(self.DIST_TOLERANCE) \
-                                         .buffer(self.DIST_TOLERANCE, 2)
-                polygons.append(shapely.geometry.Polygon(stripe.exterior))
-                prev_line = line[::-1]
-            # create a final polygon as the union of all the stripe ones
-            polygon = shapely.ops.unary_union(polygons).simplify(
-                self.DIST_TOLERANCE)
+        for i, line in enumerate(lines):
+            coords = numpy.concatenate((prev_line, line, prev_line[0:1]))
+            # create the shapely polygon object from the stripe
+            # coordinates and simplify it (remove redundant points,
+            # if there are any lying on the straight line).
+            stripe = shapely.geometry.LineString(coords) \
+                                     .simplify(self.DIST_TOLERANCE) \
+                                     .buffer(self.DIST_TOLERANCE, 2)
+            polygons.append(shapely.geometry.Polygon(stripe.exterior))
+            prev_line = line[::-1]
+        # create a final polygon as the union of all the stripe ones
+        polygon = shapely.ops.unary_union(polygons).simplify(
+            self.DIST_TOLERANCE)
         # debug_plot(polygons)
         return proj, polygon
 
