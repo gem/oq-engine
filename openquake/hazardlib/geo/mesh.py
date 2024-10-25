@@ -227,11 +227,9 @@ class Mesh(object):
     :meth:`from_points_list`.
     """
     # Tolerance level to be used in various spatial operations when
-    # approximation is required -- set to 5.1 meters.
-    # NB: DIST_TOLERANCE = 0.005 causes a RuntimeWarning
-    # shapely/constructive.py:180: divide by zero encountered in buffer
-    # see https://github.com/gem/oq-engine/pull/10085
-    DIST_TOLERANCE = 0.0051
+    # approximation is required -- set to 5 meters.
+    # NB: it affects the rjb distance and therefore nearly every calculation
+    DIST_TOLERANCE = 0.005
 
     @property
     def lons(self):
@@ -580,16 +578,14 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        sbb = geo_utils.get_spherical_bounding_box(
-            self.lons.flatten(), self.lats.flatten())
-        proj = geo_utils.OrthographicProjection(*sbb)
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
             lats = self.lats.reshape(len(self.lats), 1)
         else:  # 2D mesh
             lons = self.lons.T
             lats = self.lats.T
-        mesh2d = numpy.array(proj(lons, lats)).T
+        proj = geo_utils.OrthographicProjection.from_lons_lats(lons, lats)
+        mesh2d = proj(lons, lats).T
         lines = iter(mesh2d)
         # we iterate over horizontal stripes, keeping the "previous"
         # line of points. we keep it reversed, such that together
