@@ -629,7 +629,7 @@ class OrthographicProjection(object):
     kilometers (error doesn't exceed 1 km up until then).
     """
     @classmethod
-    def from_lons_lats(cls, lons, lats):
+    def from_(cls, lons, lats):
         idx = numpy.isfinite(lons)
         return cls(*get_spherical_bounding_box(lons[idx], lats[idx]))
 
