@@ -172,7 +172,7 @@ class MultiLine(object):
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
         self.ends = np.array([ln.coo[[0, -1], 0:2] for ln in lines])  # (L,2,2)
-        proj = utils.OrthographicProjection.from_lons_lats(
+        proj = utils.OrthographicProjection.from_(
             self.ends[:, :, 0], self.ends[:, :, 1])
         self.flipped, self.soidx, self.shift = _build3(
             llenghts, azimuths, proj.lam0, proj.phi0, self.ends)

@@ -500,7 +500,7 @@ def get_figure04_line():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Prepare the section trace
     px = np.array([0.0, 0.0, 12.68, 35.66])
