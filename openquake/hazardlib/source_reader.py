@@ -310,7 +310,7 @@ def get_csm(oq, full_lt, dstore=None):
                            fillvalue=None)
 
     # must be called *after* _fix_dupl_ids
-    fix_geometry_sections(smdict, csm, dstore)
+    fix_geometry_sections(smdict, csm.src_groups, dstore)
     return csm
 
 
@@ -377,7 +377,7 @@ def replace(lst, splitdic, key):
     lst[:] = new
 
 
-def fix_geometry_sections(smdict, csm, dstore):
+def fix_geometry_sections(smdict, src_groups, dstore):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
@@ -401,9 +401,10 @@ def fix_geometry_sections(smdict, csm, dstore):
         # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
+
         oq = dstore['oqparam']
         mfsources = []
-        for sg in csm.src_groups:
+        for sg in src_groups:
             for src in sg:
                 if src.code == b'F':
                     mfsources.append(src)
@@ -413,7 +414,7 @@ def fix_geometry_sections(smdict, csm, dstore):
         else:
             site1 = None
         split_dic = save_and_split(mfsources, sections, dstore.tempname, site1)
-        for sg in csm.src_groups:
+        for sg in src_groups:
             replace(sg.sources, split_dic, 'source_id')
 
 

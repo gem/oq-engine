@@ -1638,3 +1638,18 @@ def read_countries_df(buffer=0.1):
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)
+
+
+def read_source_models(fnames, dstore=None, **converterparams):
+    """
+    :param fnames: a list of source model files
+    :param converterparams: a dictionary of parameters like rupture_mesh_spacing
+    :returns: a list of SourceModel instances
+    """
+    converter = sourceconverter.SourceConverter()
+    vars(converter).update(converterparams)
+    smodels = list(nrml.read_source_models(fnames, converter))
+    smdict = dict(zip(fnames, smodels))
+    src_groups = [sg for sm in smdict.values() for sg in sm.src_groups]
+    source_reader.fix_geometry_sections(smdict, src_groups, dstore)
+    return smodels
