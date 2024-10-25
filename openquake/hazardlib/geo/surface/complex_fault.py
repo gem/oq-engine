@@ -293,7 +293,7 @@ class ComplexFaultSurface(BaseSurface):
         return self
 
     def check_proj_polygon(self):
-        # called in ComplexFaultSource.get_fault_surface_area
+        # called in ComplexFaultSource.iter_ruptures only in preclassical
         """
         A common user error is to create a ComplexFaultSourceSurface
         from invalid fault data (e.g. mixing the order of
