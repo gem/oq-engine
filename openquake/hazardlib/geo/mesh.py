@@ -227,11 +227,9 @@ class Mesh(object):
     :meth:`from_points_list`.
     """
     # Tolerance level to be used in various spatial operations when
-    # approximation is required -- set to 5.1 meters.
-    # NB: DIST_TOLERANCE = 0.005 causes a RuntimeWarning
-    # shapely/constructive.py:180: divide by zero encountered in buffer
-    # see https://github.com/gem/oq-engine/pull/10085
-    DIST_TOLERANCE = 0.0051
+    # approximation is required -- set to 5 meters.
+    # NB: it affects the rjb distance and therefore nearly every calculation
+    DIST_TOLERANCE = 0.005
 
     @property
     def lons(self):

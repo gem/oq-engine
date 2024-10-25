@@ -549,7 +549,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.6093, 324.64624, 203.63742, 129.7012])
+        aac(losses, [1356.6093, 324.64624, 203.63742, 129.6988])
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
@@ -725,7 +725,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
-                              fname, delta=9E-4)
+                              fname, delta=8E-4)
 
     def test_ideductible(self):
         if sys.platform == 'darwin':

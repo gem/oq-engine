@@ -243,8 +243,8 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
                  2.00003181]
         elats = [0.99996822, 0.99996819, 1.00003178, 2.0000318, 2.0000318,
                  1.9999682]
-        numpy.testing.assert_allclose(polygon.lons, elons, atol=1e-5)
-        numpy.testing.assert_allclose(polygon.lats, elats, atol=1e-5)
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
 
     def test_dip_90_self_intersection(self):
         polygon = SimpleFaultSurface.surface_projection_from_fault_data(
