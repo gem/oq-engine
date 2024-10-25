@@ -306,7 +306,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # losses with liquefaction and landslides
-        out = self.run_calc(case_22.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_22.__file__, 'job_h.ini')
+        hc_id = str(self.calc.datastore.calc_id)
+        out = self.run_calc(case_22.__file__, 'job_r.ini',
+                            hazard_calculation_id=hc_id, exports='csv')
         [agg_csv] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
 
