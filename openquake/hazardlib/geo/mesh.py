@@ -20,6 +20,8 @@
 Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
+
+import warnings
 import numpy
 from scipy.spatial.distance import cdist
 import shapely.geometry
@@ -546,7 +548,10 @@ class Mesh(object):
             _alpha_opt, polygon = shaper.optimize()
 
         else:
-            proj, polygon = self._get_proj_enclosing_polygon()
+            with warnings.catch_warnings():
+                # hide GEOS warnings like divide by zero encountered in buffer
+                warnings.simplefilter("ignore", RuntimeWarning)
+                proj, polygon = self._get_proj_enclosing_polygon()
 
         if not isinstance(polygon, shapely.geometry.Polygon):
             # either line or point is our enclosing polygon. draw
