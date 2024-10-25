@@ -1640,9 +1640,10 @@ def read_countries_df(buffer=0.1):
     return read_geometries(fname, 'shapeGroup', buffer)
 
 
-def read_source_models(fnames, dstore=None, **converterparams):
+def read_source_models(fnames, hdf5path='', **converterparams):
     """
     :param fnames: a list of source model files
+    :param hdf5path: auxiliary .hdf5 file used to store the multifault sources
     :param converterparams: a dictionary of parameters like rupture_mesh_spacing
     :returns: a list of SourceModel instances
     """
@@ -1651,5 +1652,5 @@ def read_source_models(fnames, dstore=None, **converterparams):
     smodels = list(nrml.read_source_models(fnames, converter))
     smdict = dict(zip(fnames, smodels))
     src_groups = [sg for sm in smdict.values() for sg in sm.src_groups]
-    source_reader.fix_geometry_sections(smdict, src_groups, dstore)
+    source_reader.fix_geometry_sections(smdict, src_groups, hdf5path)
     return smodels
