@@ -310,13 +310,11 @@ class DamageCalculator(EventBasedRiskCalculator):
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
-        L = len(oq.loss_types)
         for r in range(self.R):
             ne = prc.num_events[r]
             self.dmgcsq[:, r, 0] = (  # no damage
-                number * ne * L - self.dmgcsq[:, r, 1:D].sum(axis=1))
-            self.dmgcsq[:, r] /= (ne * L)
-        assert (self.dmgcsq >= 0).all()  # sanity check
+                number * ne  - self.dmgcsq[:, r, 1:D].sum(axis=1))
+            self.dmgcsq[:, r] /= ne
         for r in range(self.R):
             numpy.testing.assert_allclose(  # another sanity check
                 self.dmgcsq[:, r, :D].sum(axis=1), number, atol=1E-6)
