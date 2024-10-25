@@ -317,6 +317,9 @@ class DamageCalculator(EventBasedRiskCalculator):
                 number * ne * L - self.dmgcsq[:, r, 1:D].sum(axis=1))
             self.dmgcsq[:, r] /= (ne * L)
         assert (self.dmgcsq >= 0).all()  # sanity check
+        for r in range(self.R):
+            numpy.testing.assert_allclose(  # another sanity check
+                self.dmgcsq[:, r, :D].sum(axis=1), number, atol=1E-6)
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
                        'damages-rlzs',
