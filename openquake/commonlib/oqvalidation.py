@@ -1290,6 +1290,7 @@ class OqParam(valid.ParamSet):
 
         self.check_hazard()
         self.check_gsim_lt()
+        self.set_loss_types()
         self.check_risk()
         self.check_ebrisk()
 
@@ -1458,15 +1459,16 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('the IMTs PGA, SA(0.2), and SA(1.0)'
                                    ' are required to use compute_rtgm')
 
-
-    def validate(self):
+    def set_loss_types(self):
         """
-        Set self.loss_types
+        Set .all_cost_types and .total_losses from the parent calculation, if any
         """
         from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
+            if not self.total_losses:
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
@@ -1479,12 +1481,15 @@ class OqParam(valid.ParamSet):
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
         self.all_cost_types = sorted(costtypes)  # including occupants
-
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
             for ln in self.loss_types}
 
+    def validate(self):
+        """
+        Perform some checks
+        """
         super().validate()
         self.check_source_model()
         if 'post_loss_amplification' in self.inputs:
