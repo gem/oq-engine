@@ -128,10 +128,8 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam):
         else:
             loss_types = {lt: i for i, lt in enumerate(oq.loss_types)}
         if L > 1:
-            # compose probabilities
-            dd3 = numpy.zeros((A, E, dparam.Dc), F32)
-            for a in range(A):
-                dd3[a] = general.pprod(dd4[:, a] / number[a], axis=0) * number[a]
+            # compose damage distribution
+            dd3 = dd4.mean(axis=0)
         else:
             dd3 = dd4[0]
         csq = crmodel.compute_csq(
@@ -303,12 +301,10 @@ class DamageCalculator(EventBasedRiskCalculator):
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
-        L = len(oq.loss_types)
         for r in range(self.R):
-            ne = prc.num_events[r]
-            self.dmgcsq[:, r, 0] = (  # no damage
-                number * ne * L - self.dmgcsq[:, r, 1:D].sum(axis=1))
-            self.dmgcsq[:, r] /= (ne * L)
+            self.dmgcsq[:, r] /= prc.num_events[r]
+            self.dmgcsq[:, r, 0] = number - self.dmgcsq[:, r, 1:D].sum(axis=1)
+
         assert (self.dmgcsq >= 0).all()  # sanity check
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
