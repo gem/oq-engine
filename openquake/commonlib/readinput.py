@@ -1652,5 +1652,10 @@ def read_source_models(fnames, hdf5path='', **converterparams):
     smodels = list(nrml.read_source_models(fnames, converter))
     smdict = dict(zip(fnames, smodels))
     src_groups = [sg for sm in smdict.values() for sg in sm.src_groups]
-    source_reader.fix_geometry_sections(smdict, src_groups, hdf5path)
+    secparams = source_reader.fix_geometry_sections(smdict, src_groups, hdf5path)
+    for smodel in smodels:
+        for sg in smodel.src_groups:
+            for src in sg:
+                if src.code == b'F':  # multifault
+                    src.set_msparams(secparams)
     return smodels

@@ -416,6 +416,9 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
         split_dic = save_and_split(mfsources, sections, hdf5path, site1)
         for sg in src_groups:
             replace(sg.sources, split_dic, 'source_id')
+        with hdf5.File(hdf5path, 'r') as h5:
+            return h5['secparams'][:]
+    return ()
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
