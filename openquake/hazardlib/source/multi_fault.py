@@ -348,7 +348,7 @@ def load(hdf5path):
     srcs = []
     with hdf5.File(hdf5path, 'r') as h5:
         for key in list(h5):
-            if key == 'multi_fault_sections':
+            if key in ('multi_fault_sections', 'secparams'):
                 continue
             data = h5[key]
             name = data.attrs['name']
