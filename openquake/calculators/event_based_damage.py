@@ -78,8 +78,8 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _gen_d3(asset_df, gmf_df, crmodel, dparam):
-    # yields (aids, d3) triples
+def _gen_dd3(asset_df, gmf_df, crmodel, dparam):
+    # yields (aids, dd3) triples
     oq = crmodel.oqparam
     sec_sims = oq.secondary_simulations.items()
     for prob_field, num_sims in sec_sims:
@@ -97,19 +97,19 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
             number = assets['value-number']
         else:
             number = assets['value-number'] = U32(assets['value-number'])
-        d4 = numpy.zeros((L, A, E, dparam.Dc), F32)
+        dd4 = numpy.zeros((L, A, E, dparam.Dc), F32)
         D = dparam.D
         for lti, lt in enumerate(oq.loss_types):
             fractions = out[lt]
             if oq.float_dmg_dist:
-                d4[lti, :, :, :D] = fractions
+                dd4[lti, :, :, :D] = fractions
                 for a in range(A):
-                    d4[lti, a] *= number[a]
+                    dd4[lti, a] *= number[a]
             else:
                 # this is a performance distaster; for instance
                 # the Messina test in oq-risk-tests becomes 12x
                 # slower even if it has only 25_736 assets
-                d4[lti, :, :, :D] = dparam.rng.discrete_dmg_dist(
+                dd4[lti, :, :, :D] = dparam.rng.discrete_dmg_dist(
                     dparam.eids, fractions, number)
 
             # secondary perils and consequences
@@ -118,9 +118,9 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
                     for d in range(1, D):
                         # doing the mean on the secondary simulations
                         if oq.float_dmg_dist:
-                            d4[lti, a, :, d] *= probs
+                            dd4[lti, a, :, d] *= probs
                         else:
-                            d4[lti, a, :, d] *= dprobs
+                            dd4[lti, a, :, d] *= dprobs
 
         df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
         if 'losses' in crmodel.get_consequences():
@@ -128,13 +128,13 @@ def _gen_d3(asset_df, gmf_df, crmodel, dparam):
         else:
             loss_types = {lt: i for i, lt in enumerate(oq.loss_types)}
         csq = crmodel.compute_csq(
-            assets, d4[:, :, :, :D], df, loss_types, oq.time_event)
-        d3 = numpy.zeros((A, E, dparam.Dc), F32)
+            assets, dd4[:, :, :, :D], df, loss_types, oq.time_event)
+        dd3 = numpy.zeros((A, E, dparam.Dc), F32)
         for li, lt in enumerate(oq.loss_types):
-            d3[:] += d4[li]
+            dd3[:] += dd4[li]
         for name, values in csq.items():
-            d3[:, :, dparam.csqidx[name]] = values
-        yield aids, d3  # d3 has shape (A, E, Dc)
+            dd3[:, :, dparam.csqidx[name]] = values
+        yield aids, dd3  # dd3 has shape (A, E, Dc)
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -159,10 +159,7 @@ def event_based_damage(df, oq, dstore, monitor):
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
     _A, R, Dc = dmgcsq.shape
     D = Dc - len(crmodel.get_consequences())
-    if R > 1:
-        allrlzs = dstore['events']['rlz_id']
-    else:
-        allrlzs = U32([0])
+    rlzs = dstore['events']['rlz_id']
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros(Dc, F32))  # eid, kid
         for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -172,29 +169,22 @@ def event_based_damage(df, oq, dstore, monitor):
                 continue
             oq = crmodel.oqparam
             eids = gmf_df.eid.to_numpy()
-            if R > 1:
-                rlzs = allrlzs[eids]
-            else:
-                rlzs = allrlzs
             if oq.secondary_simulations or not oq.float_dmg_dist:
                 rng = scientific.MultiEventRNG(
                     oq.master_seed, numpy.unique(eids))
             else:
                 rng = None
             dparam = Dparam(eids, aggids, csqidx, D, Dc, rng)
-            for aids, d3 in _gen_d3(asset_df, gmf_df, crmodel, dparam):
-                if R == 1:
-                    dmgcsq[aids, 0] += d3.sum(axis=1)
-                else:
-                    for e, rlz in enumerate(rlzs):
-                        dmgcsq[aids, rlz] += d3[:, e]
-                tot = d3.sum(axis=0)  # sum on the assets
+            for aids, dd3 in _gen_dd3(asset_df, gmf_df, crmodel, dparam):
+                for e, rlz in enumerate(rlzs[eids]):
+                    dmgcsq[aids, rlz] += dd3[:, e]
+                tot = dd3.sum(axis=0)  # sum on the assets
                 for e, eid in enumerate(eids):
                     dddict[eid, oq.K] += tot[e]
                     if oq.K:
                         for kids in dparam.aggids:
                             for a, aid in enumerate(aids):
-                                dddict[eid, kids[aid]] += d3[a, e]
+                                dddict[eid, kids[aid]] += dd3[a, e]
     try:
         [lt] = oq.loss_types
     except ValueError:
