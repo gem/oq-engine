@@ -127,11 +127,15 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam):
             loss_types = oq.total_loss_types
         else:
             loss_types = {lt: i for i, lt in enumerate(oq.loss_types)}
+        if L > 1:
+            # compose probabilities
+            dd3 = numpy.zeros((A, E, dparam.Dc), F32)
+            for a in range(A):
+                dd3[a] = general.pprod(dd4[:, a] / number[a], axis=0) * number[a]
+        else:
+            dd3 = dd4[0]
         csq = crmodel.compute_csq(
             assets, dd4[:, :, :, :D], df, loss_types, oq.time_event)
-        dd3 = numpy.zeros((A, E, dparam.Dc), F32)
-        for li, lt in enumerate(oq.loss_types):
-            dd3[:] += dd4[li]
         for name, values in csq.items():
             dd3[:, :, dparam.csqidx[name]] = values
         yield aids, dd3  # dd3 has shape (A, E, Dc)
