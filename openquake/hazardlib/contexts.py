@@ -198,6 +198,7 @@ class Oq(object):
     """
     mea_tau_phi = False
     split_sources = True
+    use_rates = False
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
