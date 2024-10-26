@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Internal: added utility function readinput.read_source_models
+
   [Manuela Villani]
   * Improved the "Governing MCE" plot
 
