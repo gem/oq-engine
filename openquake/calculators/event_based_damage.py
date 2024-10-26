@@ -161,7 +161,7 @@ def event_based_damage(df, oq, dstore, monitor):
     dmg_csq = crmodel.get_dmg_csq()
     csqidx = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
-    _A, R, Dc = dmgcsq.shape
+    _A, _R, Dc = dmgcsq.shape
     D = Dc - len(crmodel.get_consequences())
     rlzs = dstore['events']['rlz_id']
     with mon_risk:
