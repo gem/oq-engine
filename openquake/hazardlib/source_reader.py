@@ -404,20 +404,20 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
 
     if sections:
-        # save in the temporary file
+        # save in the temporary file sources and sections
         assert hdf5path, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
-
         mfsources = []
         for sg in src_groups:
             for src in sg:
                 if src.code == b'F':
                     mfsources.append(src)
-        split_dic = save_and_split(mfsources, sections, hdf5path, site1)
-        for sg in src_groups:
-            replace(sg.sources, split_dic, 'source_id')
-        with hdf5.File(hdf5path, 'r') as h5:
-            return h5['secparams'][:]
+        if mfsources:
+            split_dic = save_and_split(mfsources, sections, hdf5path, site1)
+            for sg in src_groups:
+                replace(sg.sources, split_dic, 'source_id')
+            with hdf5.File(hdf5path, 'r') as h5:
+                return h5['secparams'][:]
     return ()
 
 

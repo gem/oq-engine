@@ -283,6 +283,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
     """
     Serialize MultiFaultSources
     """
+    assert mfsources
     assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_rids = []
@@ -307,6 +308,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
 
     # save split sources
     split_dic = general.AccumDict(accum=[])
+
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rids in zip(mfsources, all_rids):
             if hasattr(src, 'tags'):
