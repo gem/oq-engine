@@ -9,7 +9,7 @@ on:
         required: true
   push:
     # TODO: it would be better to point to ltr and latest
-    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21]
+    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21, engine-3.22 ]
 jobs:
   demos:
     runs-on: ubuntu-latest
@@ -33,17 +33,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Upgrade pip and install requirements
+      - name: Upgrade pip
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip install --default-timeout=100 -U pip
-          pip install pydata-sphinx-theme
       - name: Install OpenQuake engine
         run: |
+          set -x
           if ${{ github.event_name == 'pull_request' }}
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
               python install.py devel --version ${GITHUB_HD_REF}
+          elif ${{ github.event_name == 'push' }}
+          then
+              # split something like refs/heads/BRANCHNAME getting only BRANCHNAME
+              BRANCH=${GITHUB_REF##*\/}
+              echo "It is a push; use the corresponding branch: ${BRANCH}"
+              python install.py devel --version ${BRANCH}
           else
               echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
               python install.py devel --version ${GITHUB_INPUT_REF}
@@ -70,6 +76,12 @@ jobs:
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
               GITHUB_BR=${GITHUB_HD_REF}
+          elif ${{ github.event_name == 'push' }}
+          then
+              # split something like refs/heads/BRANCHNAME getting only BRANCHNAME
+              BRANCH=${GITHUB_REF##*\/}
+              echo "It is a push; use the corresponding branch: ${BRANCH}"
+              GITHUB_BR=${BRANCH}
           else
               echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
               GITHUB_BR=${GITHUB_INPUT_REF}
