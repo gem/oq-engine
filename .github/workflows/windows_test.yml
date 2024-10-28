@@ -13,7 +13,7 @@ on:
     branches: [windows-all-tests]
 
 jobs:
-  install:
+  install_oq:
     runs-on: ${{ matrix.os }}
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -45,7 +45,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       # You can test your matrix by printing the current Python version
-      - name: Display Python version and check OS
+      - name: Display Python version and check OS, after install OQ and test
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           @"
           import sys
@@ -55,23 +57,19 @@ jobs:
           os_version = platform.platform(terse=True)
           print (os_version)
           if py_version == "3.12" and os_version == "Windows-2019Server" :
-              print("We do not support windows-2019 and python3.12")
               sys.exit(0)
           "@ | Tee-Object -FilePath "check.py" -Append
           python check.py
-
-      - name: Echo env var
-        env:
-          BRANCH: ${{ github.event.inputs.git-ref }}
-        run: |
+          if ($Result.ExitCode -eq 0)
+          {
+            Write-Host "We do not support windows-2019 and python3.12"
+          }
+          else
+          {
           echo "${Env:environment}"
           Write-Host $Env:GITHUB_REF
           echo "Branch environment"
           Write-Host $Env:BRANCH
-      - name: Install engine on developer mode
-        env:
-          BRANCH: ${{ github.event.inputs.git-ref }}
-        run: |
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip --upgrade
           #echo Branch to test %BRANCH%
@@ -92,7 +90,7 @@ jobs:
           }
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           python -m pip install pytest pyshp flake8
-
+          }
       - name: Run tests for calculators
         if: always()
         run: |
