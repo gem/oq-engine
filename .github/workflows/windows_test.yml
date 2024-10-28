@@ -54,7 +54,7 @@ jobs:
           print(py_version)
           os_version = platform.platform(terse=True)
           print (os_version)
-          if py_version == 3.12 and os_version == Windows-2019Server :
+          if py_version == 3.12 and os_version == "Windows-2019Server" :
               print("We do not support windows-2019 and python3.12")
               sys.exit(0)
           "@ | Tee-Object -FilePath "check.py" -Append
