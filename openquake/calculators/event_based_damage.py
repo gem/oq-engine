@@ -178,7 +178,7 @@ def event_based_damage(df, oq, dstore, monitor):
                 rng = None
             dparam = Dparam(eids, aggids, csqidx, D, Dc, rng)
             for aids, dd3 in _gen_dd3(asset_df, gmf_df, crmodel, dparam):
-                if R == 1:
+                if R == 1:  # possibly because of collect_rlzs
                     dmgcsq[aids, 0] += dd3.sum(axis=1)
                 else:
                     for e, rlz in enumerate(rlzs[eids]):
