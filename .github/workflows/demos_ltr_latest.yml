@@ -44,6 +44,10 @@ jobs:
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
               python install.py devel --version ${GITHUB_HD_REF}
+          elif ${{ github.event_name == 'push' }}
+          then
+              echo "It is a push; use the corresponding branch: ${GITHUB_REF}"
+              python install.py devel --version ${GITHUB_REF}
           else
               echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
               python install.py devel --version ${GITHUB_INPUT_REF}
@@ -70,6 +74,10 @@ jobs:
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
               GITHUB_BR=${GITHUB_HD_REF}
+          elif ${{ github.event_name == 'push' }}
+          then
+              echo "It is a push; use the corresponding branch: ${GITHUB_REF}"
+              GITHUB_BR=${GITHUB_REF}
           else
               echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
               GITHUB_BR=${GITHUB_INPUT_REF}
