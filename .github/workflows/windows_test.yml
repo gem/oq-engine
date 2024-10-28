@@ -49,6 +49,7 @@ jobs:
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
+          $NEED_TO_RUN = 0
           @"
           import sys
           import platform
@@ -57,39 +58,40 @@ jobs:
           os_version = platform.platform(terse=True)
           print (os_version)
           if py_version == "3.12" and os_version == "Windows-2019Server" :
-              sys.exit(0)
+              print (1)
           "@ | Tee-Object -FilePath "check.py" -Append
-          python check.py
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "We do not support windows-2019 and python3.12"
+          $NEED_TO_RUN = python check.py
+          Write-Host "Check value: $NEED_to_RUN"
+          if ($NEED_TO_RUN -eq 1) {
+            Write-Host "We do not support this OS and python3.12"
             exit 0
           }
           else
           {
-          echo "${Env:environment}"
-          Write-Host $Env:GITHUB_REF
-          echo "Branch environment"
-          Write-Host $Env:BRANCH
-          set PIP_DEFAULT_TIMEOUT=100
-          python -m pip install pip --upgrade
-          #echo Branch to test %BRANCH%
-          #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          write-Host "Branch to test $($Env:BRANCH)"
-          #
-          if ($Env:BRANCH)
-          {
-            Write-Host "Install with workflow_dispatch"
-            Write-Host "python install.py devel --version ${env:BRANCH}"
-            python install.py devel --version ${env:BRANCH}
-          }
-          else
-          {
-            Write-Host "Install on user mode on scheduled task"
-            Write-Host "python install.py devel "
-            python install.py devel
-          }
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          python -m pip install pytest pyshp flake8
+            echo "${Env:environment}"
+            Write-Host $Env:GITHUB_REF
+            echo "Branch environment"
+            Write-Host $Env:BRANCH
+            set PIP_DEFAULT_TIMEOUT=100
+            python -m pip install pip --upgrade
+            #echo Branch to test %BRANCH%
+            #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
+            write-Host "Branch to test $($Env:BRANCH)"
+            #
+            if ($Env:BRANCH)
+            {
+              Write-Host "Install with workflow_dispatch"
+              Write-Host "python install.py devel --version ${env:BRANCH}"
+              python install.py devel --version ${env:BRANCH}
+            }
+            else
+            {
+              Write-Host "Install on user mode on scheduled task"
+              Write-Host "python install.py devel "
+              python install.py devel
+            }
+            C:\Users\runneradmin\openquake\Scripts\activate.ps1
+            python -m pip install pytest pyshp flake8
           }
       - name: Run tests for calculators
         if: always()
