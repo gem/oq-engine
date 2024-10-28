@@ -45,8 +45,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       # You can test your matrix by printing the current Python version
-      - name: Display Python version
-        run: python -c "import sys; print(sys.version)"
+      - name: Display Python version and check OS
+        run: |
+          @"
+          import sys
+          import platform
+          py_version = ".".join(map(str, sys.version_info[:2]))
+          print(py_version)
+          os_version = platform.platform(terse=True)
+          print (os_version)
+          if py_version == 3.12 and os_version == windows-2019:
+              print("We do not support windows-2019 and python3.12)
+              sys.exit(0)
+          "@ | Tee-Object -FilePath "check.py" -Append
+          ls check.py
+          python check.py
+
       - name: Echo env var
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
@@ -64,11 +78,6 @@ jobs:
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
           write-Host "Branch to test $($Env:BRANCH)"
-          if ( ${{ matrix.python-version }} -eq "3.12"  -and  ${{ matrix.os }} -eq "windows-2019" )
-          {
-            Write-Host "We do not support this OS and Python version"
-            exit 0
-          }
           #
           if ($Env:BRANCH)
           {
