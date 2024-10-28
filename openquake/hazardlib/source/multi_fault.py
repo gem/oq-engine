@@ -31,7 +31,8 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
-from openquake.hazardlib.geo.surface.multi import MultiSurface, build_msparams
+from openquake.hazardlib.geo.surface.multi import (
+    MultiSurface, build_msparams, build_secparams)
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -282,6 +283,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
     """
     Serialize MultiFaultSources
     """
+    assert mfsources
     assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_rids = []
@@ -306,6 +308,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
 
     # save split sources
     split_dic = general.AccumDict(accum=[])
+
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rids in zip(mfsources, all_rids):
             if hasattr(src, 'tags'):
@@ -335,6 +338,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 split_dic[src.source_id].append(split)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
+        h5['secparams'] = build_secparams(src.get_sections())
 
     return split_dic
 
@@ -346,7 +350,7 @@ def load(hdf5path):
     srcs = []
     with hdf5.File(hdf5path, 'r') as h5:
         for key in list(h5):
-            if key == 'multi_fault_sections':
+            if key in ('multi_fault_sections', 'secparams'):
                 continue
             data = h5[key]
             name = data.attrs['name']

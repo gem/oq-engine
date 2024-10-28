@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Internal: added utility function readinput.read_source_models
+
+  [Manuela Villani]
+  * Improved the "Governing MCE" plot
+
+  [Michele Simionato]
+  * Raised an error in case of non-invertible hazard curves, affecting
+    disaggregation and site-specific hazard spectrum calculations
+  * Changed the ruptures.csv exporter to also export the source IDs
+  * Specifying total_losses is now mandatory in damage calculations with
+    multiple loss types
   * Added support for consequence=losses for liquefaction and landslides
   * Added a check for missing secondary perils
   * Added loss types liquefaction and landslide

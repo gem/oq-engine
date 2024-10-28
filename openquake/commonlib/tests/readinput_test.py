@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
 from openquake.qa_tests_data.logictree import case_02, case_15, case_21
-from openquake.qa_tests_data.classical import case_34
+from openquake.qa_tests_data.classical import case_34, case_65
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
 from openquake.qa_tests_data import mosaic
@@ -564,3 +564,18 @@ class ReadRiskTestCase(unittest.TestCase):
             readinput.get_station_data(oq, sitecol)
         self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
                       str(ctx.exception))
+
+
+class ReadSourceModelsTestCase(unittest.TestCase):
+    def test(self):
+        base = os.path.dirname(case_65.__file__)
+        hdf5path = general.gettemp(suffix='.hdf5')
+        fnames = [os.path.join(base, 'ssm.xml'), os.path.join(base, 'sections.xml')]
+        smodels = readinput.read_source_models(fnames, hdf5path, investigation_time=1.)
+        nrups = 0
+        for smodel in smodels:
+            for sg in smodel.src_groups:
+                for src in sg:
+                    for rup in src.iter_ruptures():
+                        nrups += 1
+        self.assertEqual(nrups, 3)

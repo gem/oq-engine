@@ -1015,11 +1015,11 @@ def get_crmodel(oqparam):
             arrays = []
             for fname in fnames:
                 arr = hdf5.read_csv(fname, dtypedict).array
-                arrays.append(arr)
                 for no, row in enumerate(arr, 2):
                     if row['loss_type'] not in loss_types:
-                        msg = '%s: %s is not a recognized loss type, line=%d'
-                        raise InvalidFile(msg % (fname, row['loss_type'], no))
+                        msg = '%s: line=%d: there is not fragility function for %s'
+                        logging.warning(msg, fname, no, row['loss_type'])
+                arrays.append(arr[numpy.isin(arr['loss_type'], loss_types)])
 
             array = numpy.concatenate(arrays)
             dic = group_array(array, 'consequence')
@@ -1638,3 +1638,24 @@ def read_countries_df(buffer=0.1):
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)
+
+
+def read_source_models(fnames, hdf5path='', **converterparams):
+    """
+    :param fnames: a list of source model files
+    :param hdf5path: auxiliary .hdf5 file used to store the multifault sources
+    :param converterparams: a dictionary of parameters like rupture_mesh_spacing
+    :returns: a list of SourceModel instances
+    """
+    converter = sourceconverter.SourceConverter()
+    vars(converter).update(converterparams)
+    smodels = list(nrml.read_source_models(fnames, converter))
+    smdict = dict(zip(fnames, smodels))
+    src_groups = [sg for sm in smdict.values() for sg in sm.src_groups]
+    secparams = source_reader.fix_geometry_sections(smdict, src_groups, hdf5path)
+    for smodel in smodels:
+        for sg in smodel.src_groups:
+            for src in sg:
+                if src.code == b'F':  # multifault
+                    src.set_msparams(secparams)
+    return smodels

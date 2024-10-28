@@ -432,8 +432,7 @@ class SiteCollection(object):
         return cls.from_points(lons, lats, None, rup, req_site_params)
 
     def _set(self, param, value):
-        if param not in self.array.dtype.names:
-            self.add_col(param, site_param_dt[param])
+        self.add_col(param, site_param_dt[param])
         self.array[param] = value
 
     xyz = Mesh.xyz
@@ -483,17 +482,18 @@ class SiteCollection(object):
 
     def add_col(self, colname, dtype, values=None):
         """
-        Add a column to the underlying array
+        Add a column to the underlying array (if not already there)
         """
         names = self.array.dtype.names
-        dtlist = [(name, self.array.dtype[name]) for name in names]
-        dtlist.append((colname, dtype))
-        arr = numpy.zeros(len(self), dtlist)
-        for name in names:
-            arr[name] = self.array[name]
-        if values is not None:
-            arr[colname] = values
-        self.array = arr
+        if colname not in names:
+            dtlist = [(name, self.array.dtype[name]) for name in names]
+            dtlist.append((colname, dtype))
+            arr = numpy.zeros(len(self), dtlist)
+            for name in names:
+                arr[name] = self.array[name]
+            if values is not None:
+                arr[colname] = values
+            self.array = arr
 
     def make_complete(self):
         """

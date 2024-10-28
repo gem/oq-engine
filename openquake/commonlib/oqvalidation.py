@@ -1290,6 +1290,7 @@ class OqParam(valid.ParamSet):
 
         self.check_hazard()
         self.check_gsim_lt()
+        self.set_loss_types()
         self.check_risk()
         self.check_ebrisk()
 
@@ -1385,6 +1386,11 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
 
+        # check total_losses
+        if ('damage' in self.calculation_mode and len(self.loss_types) > 1
+                and not self.total_losses):
+            self.raise_invalid('you forgot to specify total_losses =')
+
     def check_ebrisk(self):
         # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':
@@ -1453,15 +1459,16 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('the IMTs PGA, SA(0.2), and SA(1.0)'
                                    ' are required to use compute_rtgm')
 
-
-    def validate(self):
+    def set_loss_types(self):
         """
-        Set self.loss_types
+        Set .all_cost_types and .total_losses from the parent calculation, if any
         """
         from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
+            if not self.total_losses:
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
@@ -1474,12 +1481,15 @@ class OqParam(valid.ParamSet):
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
         self.all_cost_types = sorted(costtypes)  # including occupants
-
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
             for ln in self.loss_types}
 
+    def validate(self):
+        """
+        Perform some checks
+        """
         super().validate()
         self.check_source_model()
         if 'post_loss_amplification' in self.inputs:
@@ -1748,14 +1758,15 @@ class OqParam(valid.ParamSet):
     @property
     def total_loss_types(self):
         """
-        :returns: the loss types in total_losses or the single loss type
+        :returns: a dictionary loss_type -> index
         """
         if self.total_losses:
-            return self.total_losses.split('+')
+            total = self.total_losses.split('+')
         elif len(self.loss_types) == 1:
-            return self.loss_types
+            total = self.loss_types
         else:
             self.raise_invalid('please specify total_losses')
+        return {lt: li for li, lt in enumerate(self.loss_types) if lt in total}
 
     def loss_dt(self, dtype=F64):
         """

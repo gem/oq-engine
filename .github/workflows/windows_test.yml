@@ -64,6 +64,12 @@ jobs:
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
           write-Host "Branch to test $($Env:BRANCH)"
+          if ( ${{ matrix.python-version }} -eq "3.12"  -and  ${{ matrix.os }} -eq "windows-2019" )
+          {
+            Write-Host "We do not support this OS and Python version"
+            exit 0
+          }
+          #
           if ($Env:BRANCH)
           {
             Write-Host "Install with workflow_dispatch"

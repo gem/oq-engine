@@ -1064,7 +1064,10 @@ def plot_wkt(wkt_string):
     from shapely import wkt
     plt = import_plt()
     poly = wkt.loads(wkt_string)
-    coo = numpy.array(poly.exterior.coords)
+    if hasattr(poly, 'exterior'):
+        coo = numpy.array(poly.exterior.coords)
+    else:  # LINESTRING
+        coo = numpy.array(poly.coords)
     plt.plot(coo[:, 0], coo[:, 1], '-')
     return plt
 
@@ -1108,7 +1111,7 @@ def main(what,
     if what.endswith('.csv'):
         plot_csv(what)
         return
-    if what.startswith('POLYGON'):
+    if what.startswith(('POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
         plt.show()
         return

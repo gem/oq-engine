@@ -1029,9 +1029,7 @@ class PlanarSurface(BaseSurface):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-
-        return geo_utils.get_spherical_bounding_box(self.corner_lons,
-                                                    self.corner_lats)
+        return geo_utils.get_spherical_bounding_box(self.corner_lons, self.corner_lats)
 
     def get_middle_point(self):
         """

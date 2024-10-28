@@ -165,9 +165,8 @@ class GriddedSurface(BaseSurface):
             return self.strike
 
         # Create a projection centered in the center of the cloud of points
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(
-                self.mesh.lons.flatten(), self.mesh.lats.flatten()))
+        proj = geo_utils.OrthographicProjection.from_(
+            self.mesh.lons.flatten(), self.mesh.lats.flatten())
 
         # Project the coordinates
         lons, lats = self.mesh.lons.flatten(), self.mesh.lats.flatten()
