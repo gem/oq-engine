@@ -60,9 +60,9 @@ jobs:
               sys.exit(0)
           "@ | Tee-Object -FilePath "check.py" -Append
           python check.py
-          if ($Result.ExitCode -eq 0)
-          {
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "We do not support windows-2019 and python3.12"
+            exit 0
           }
           else
           {
