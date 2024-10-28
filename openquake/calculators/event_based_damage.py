@@ -159,7 +159,7 @@ def event_based_damage(df, oq, dstore, monitor):
     dmg_csq = crmodel.get_dmg_csq()
     csqidx = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, crmodel)
-    _A, _R, Dc = dmgcsq.shape
+    _A, R, Dc = dmgcsq.shape
     D = Dc - len(crmodel.get_consequences())
     rlzs = dstore['events']['rlz_id']
     with mon_risk:
@@ -178,8 +178,11 @@ def event_based_damage(df, oq, dstore, monitor):
                 rng = None
             dparam = Dparam(eids, aggids, csqidx, D, Dc, rng)
             for aids, dd3 in _gen_dd3(asset_df, gmf_df, crmodel, dparam):
-                for e, rlz in enumerate(rlzs[eids]):
-                    dmgcsq[aids, rlz] += dd3[:, e]
+                if R == 1:  # possibly because of collect_rlzs
+                    dmgcsq[aids, 0] += dd3.sum(axis=1)
+                else:
+                    for e, rlz in enumerate(rlzs[eids]):
+                        dmgcsq[aids, rlz] += dd3[:, e]
                 tot = dd3.sum(axis=0)  # sum on the assets
                 for e, eid in enumerate(eids):
                     dddict[eid, oq.K] += tot[e]

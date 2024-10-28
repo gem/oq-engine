@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchingLevel branchingLevelID="bl1">
+    <logicTreeBranchSet uncertaintyType="gmpeModel" 
+                        branchSetID="bs1" 
+                        applyToTectonicRegionType="Active Shallow Crust">
+
+      <logicTreeBranch branchID="b11">
+        <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+        <uncertaintyWeight>0.75</uncertaintyWeight>
+      </logicTreeBranch>
+      
+      <logicTreeBranch branchID="b12">
+        <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+    
+  <logicTreeBranchingLevel branchingLevelID="bl2">
+    <logicTreeBranchSet uncertaintyType="gmpeModel" 
+                        branchSetID="bs2" 
+                        applyToTectonicRegionType="Stable Shallow Crust">
+
+      <logicTreeBranch branchID="b21">
+        <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+        <uncertaintyWeight>0.60</uncertaintyWeight>
+      </logicTreeBranch>
+      
+      <logicTreeBranch branchID="b22">
+        <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+        <uncertaintyWeight>0.40</uncertaintyWeight>
+      </logicTreeBranch>
+
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+  
+</logicTree>
+
+</nrml>
