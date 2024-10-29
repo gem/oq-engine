@@ -1748,6 +1748,14 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
+def _max(dic):
+    if len(dic) == 1:
+        res = dic[next(iter(dic))]
+    else:
+        res = numpy.array([dic[lt] for lt in dic]).max(axis=0)
+    return res
+
+
 def _sum(dic):
     if len(dic) == 1:
         res = dic[next(iter(dic))]
@@ -1767,7 +1775,7 @@ def consequence(consequence, assets, coeffs, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     if consequence.startswith('losses'):
-        res = _sum({lt: assets['value-' + lt].reshape(-1, 1) * coeffs[lt]
+        res = _max({lt: assets['value-' + lt].reshape(-1, 1) * coeffs[lt]
                     for lt in coeffs}) / assets['value-number'].reshape(-1, 1)
         return res
     elif consequence in ['collapsed', 'non_operational']:
