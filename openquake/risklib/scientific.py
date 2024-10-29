@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -1008,12 +1008,12 @@ def classical_damage(
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
     afoos = pairwise_diff(
         pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
-    poes_per_damage_state = []
+    poes_per_dmgstate = []
     for ff in fragility_functions:
         fx = afoos @ ff(imls)
-        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
-        poes_per_damage_state.append(poe_per_damage_state)
-    poos = pairwise_diff([1] + poes_per_damage_state + [0])
+        poe_per_dmgstate = 1. - numpy.exp(-fx * risk_investigation_time)
+        poes_per_dmgstate.append(poe_per_dmgstate)
+    poos = pairwise_diff([1] + poes_per_dmgstate + [0])
     return poos
 
 #
@@ -1282,13 +1282,42 @@ def pla_factor(df):
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
-    "Averages between a value and the next value in a sequence"
+    """
+    Averages between a value and the next value in a sequence
+    """
     return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
 def pairwise_diff(values):
-    "Differences between a value and the next value in a sequence"
+    """
+    Differences between a value and the next value in a sequence
+    """
     return numpy.array([x - y for x, y in pairwise(values)])
+
+
+def dds_to_poes(dmg_dists):
+    """
+    Convert an array of damage distributions into an array of PoEs
+
+    >>> dds_to_poes([[.7, .2, .1], [0., 0., 1.0]])
+    array([[0.3, 0.1],
+           [1. , 1. ]])
+    """
+    arr = numpy.array([dd[1:][::-1] for dd in dmg_dists]).cumsum(axis=1)
+    for i, poes in enumerate(arr):
+        arr[i] = poes[::-1]
+    return arr
+    
+    
+def compose_dds(dmg_dists):
+    """
+    Compose an array of N damage distributions:
+
+    >>> compose_dds([[.6, .2, .1, .1], [.5, .3 ,.1, .1]])
+    array([0.3 , 0.34, 0.17, 0.19])
+    """
+    poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
+    return pairwise_diff(numpy.concatenate([[1.], poes_per_dmgstate, [0.]]))
 
 
 def mean_std(fractions):
