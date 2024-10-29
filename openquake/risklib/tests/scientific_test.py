@@ -630,3 +630,15 @@ class PlaFactorTestCase(unittest.TestCase):
         # extrap
         self.assertAlmostEqual(pla_factor(0.9), 1.0)
         self.assertAlmostEqual(pla_factor(1001), 1.326)
+
+
+class ComposeDDSTestCase(unittest.TestCase):
+    def test_associative(self):
+        comp = scientific.compose_dds
+        dd1 = [.8, .1, .1]
+        dd2 = [.9, .05, .05]
+        dd3 = [.7, .2, .1]
+        exp = [0.504, 0.2655, 0.2305]
+        dd = comp([comp([dd1, dd2]), dd3])
+        aae(exp, dd)
+        aae(exp, comp([dd1, dd2, dd3]))
