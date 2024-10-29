@@ -1300,12 +1300,10 @@ def dds_to_poes(dmg_dists):
     Convert an array of damage distributions into an array of PoEs
 
     >>> dds_to_poes([[.7, .2, .1], [0., 0., 1.0]])
-    array([[0.3, 0.1],
-           [1. , 1. ]])
+    array([[1. , 0.3, 0.1],
+           [1. , 1. , 1. ]])
     """
-    arr = numpy.array([dd[1:][::-1] for dd in dmg_dists]).cumsum(axis=1)
-    for i, poes in enumerate(arr):
-        arr[i] = poes[::-1]
+    arr = numpy.flip(numpy.flip(dmg_dists, axis=1).cumsum(axis=1), axis=1)
     return arr
     
     
@@ -1317,7 +1315,7 @@ def compose_dds(dmg_dists):
     array([0.3 , 0.34, 0.17, 0.19])
     """
     poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
-    return pairwise_diff(numpy.concatenate([[1.], poes_per_dmgstate, [0.]]))
+    return pairwise_diff(numpy.concatenate([poes_per_dmgstate, [0.]]))
 
 
 def mean_std(fractions):
