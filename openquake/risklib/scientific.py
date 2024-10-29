@@ -1748,19 +1748,19 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def _max(dic):
-    if len(dic) == 1:
-        res = dic[next(iter(dic))]
+def _max(lossdic):
+    if len(lossdic) == 1:
+        res = lossdic[next(iter(lossdic))]
     else:
-        res = numpy.array([dic[lt] for lt in dic]).max(axis=0)
+        res = numpy.array([lossdic[lt] for lt in lossdic]).max(axis=0)
     return res
 
 
-def _sum(dic):
-    if len(dic) == 1:
-        res = dic[next(iter(dic))]
+def _sum(lossdic):
+    if len(lossdic) == 1:
+        res = lossdic[next(iter(lossdic))]
     else:
-        res = sum(dic[lt] for lt in dic)
+        res = sum(lossdic[lt] for lt in lossdic)
     return res
 
 
