@@ -1303,7 +1303,7 @@ def dds_to_poes(dmg_dists):
     array([[1. , 0.3, 0.1],
            [1. , 1. , 1. ]])
     """
-    arr = numpy.flip(numpy.flip(dmg_dists, axis=1).cumsum(axis=1), axis=1)
+    arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
     return arr
     
     
