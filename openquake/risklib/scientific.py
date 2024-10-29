@@ -93,8 +93,9 @@ def _reduce(nested_dic):
 
 def pairwise(iterable):
     """
+    :param iterable: a sequence of N values (s0, s1, ...)
     :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
-    For instance
+ 
     >>> list(pairwise('ABC'))
     [('A', 'B'), ('B', 'C')]
     """
