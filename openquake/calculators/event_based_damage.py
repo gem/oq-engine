@@ -128,6 +128,7 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam):
         else:
             loss_types = {lt: i for i, lt in enumerate(oq.loss_types)}
         if L > 1:
+            # compose damage distributions
             dd3 = numpy.empty(dd4.shape[1:])
             for a in range(A):
                 for e in range(E):
