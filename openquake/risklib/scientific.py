@@ -92,7 +92,12 @@ def _reduce(nested_dic):
 
 
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """
+    :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
+    For instance
+    >>> list(pairwise('ABC'))
+    [('A', 'B'), ('B', 'C')]
+    """
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
@@ -1288,11 +1293,16 @@ def pairwise_mean(values):
     return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
-def pairwise_diff(values):
+def pairwise_diff(values, addlast=False):
     """
-    Differences between a value and the next value in a sequence
+    Differences between a value and the next value in a sequence.
+    If addlast is set the last value is added to the difference,
+    i.e. N values are returned instead of N-1.
     """
-    return numpy.array([x - y for x, y in pairwise(values)])
+    diff = [x - y for x, y in pairwise(values)]
+    if addlast:
+        diff.append(values[-1])
+    return numpy.array(diff)
 
 
 def dds_to_poes(dmg_dists):
@@ -1315,7 +1325,7 @@ def compose_dds(dmg_dists):
     array([0.3 , 0.34, 0.17, 0.19])
     """
     poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
-    return pairwise_diff(numpy.concatenate([poes_per_dmgstate, [0.]]))
+    return pairwise_diff(poes_per_dmgstate, addlast=True)
 
 
 def mean_std(fractions):
