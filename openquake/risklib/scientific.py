@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -92,7 +92,13 @@ def _reduce(nested_dic):
 
 
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """
+    :param iterable: a sequence of N values (s0, s1, ...)
+    :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
+ 
+    >>> list(pairwise('ABC'))
+    [('A', 'B'), ('B', 'C')]
+    """
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
@@ -1008,12 +1014,12 @@ def classical_damage(
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
     afoos = pairwise_diff(
         pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
-    poes_per_damage_state = []
+    poes_per_dmgstate = []
     for ff in fragility_functions:
         fx = afoos @ ff(imls)
-        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
-        poes_per_damage_state.append(poe_per_damage_state)
-    poos = pairwise_diff([1] + poes_per_damage_state + [0])
+        poe_per_dmgstate = 1. - numpy.exp(-fx * risk_investigation_time)
+        poes_per_dmgstate.append(poe_per_dmgstate)
+    poos = pairwise_diff([1] + poes_per_dmgstate + [0])
     return poos
 
 #
@@ -1282,13 +1288,45 @@ def pla_factor(df):
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
-    "Averages between a value and the next value in a sequence"
+    """
+    Averages between a value and the next value in a sequence
+    """
     return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
-def pairwise_diff(values):
-    "Differences between a value and the next value in a sequence"
-    return numpy.array([x - y for x, y in pairwise(values)])
+def pairwise_diff(values, addlast=False):
+    """
+    Differences between a value and the next value in a sequence.
+    If addlast is set the last value is added to the difference,
+    i.e. N values are returned instead of N-1.
+    """
+    diff = [x - y for x, y in pairwise(values)]
+    if addlast:
+        diff.append(values[-1])
+    return numpy.array(diff)
+
+
+def dds_to_poes(dmg_dists):
+    """
+    Convert an array of damage distributions into an array of PoEs
+
+    >>> dds_to_poes([[.7, .2, .1], [0., 0., 1.0]])
+    array([[1. , 0.3, 0.1],
+           [1. , 1. , 1. ]])
+    """
+    arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
+    return arr
+    
+    
+def compose_dds(dmg_dists):
+    """
+    Compose an array of N damage distributions:
+
+    >>> compose_dds([[.6, .2, .1, .1], [.5, .3 ,.1, .1]])
+    array([0.3 , 0.34, 0.17, 0.19])
+    """
+    poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
+    return pairwise_diff(poes_per_dmgstate, addlast=True)
 
 
 def mean_std(fractions):
