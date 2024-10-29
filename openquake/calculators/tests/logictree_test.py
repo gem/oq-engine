@@ -712,3 +712,6 @@ hazard_uhs-std.csv
         self.run_calc(case_84.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
+
+        [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/trt_gsim.csv', f)
