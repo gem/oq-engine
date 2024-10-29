@@ -123,10 +123,6 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam):
                             dd4[lti, a, :, d] *= dprobs
 
         df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
-        if 'losses' in crmodel.get_consequences():
-            loss_types = oq.total_loss_types
-        else:
-            loss_types = {lt: i for i, lt in enumerate(oq.loss_types)}
         if L > 1:
             # compose damage distributions
             dd3 = numpy.empty(dd4.shape[1:])
@@ -135,8 +131,7 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam):
                     dd3[a, e] = scientific.compose_dds(dd4[:, a, e])
         else:
             dd3 = dd4[0]
-        csq = crmodel.compute_csq(
-            assets, dd4[:, :, :, :D], df, loss_types, oq.time_event)
+        csq = crmodel.compute_csq(assets, dd4[:, :, :, :D], df, oq)
         for name, values in csq.items():
             dd3[:, :, dparam.csqidx[name]] = values
         yield aids, dd3  # dd3 has shape (A, E, Dc)

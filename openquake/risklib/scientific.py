@@ -1764,7 +1764,7 @@ def _sum(dic):
     return res
 
 
-def consequence(consequence, assets, coeffs, time_event):
+def consequence(consequence, assets, coeffs, total_loss_types, time_event):
     """
     :param consequence: kind of consequence
     :param assets: asset array (shape A)
@@ -1776,7 +1776,7 @@ def consequence(consequence, assets, coeffs, time_event):
         raise NotImplementedError(consequence)
     if consequence.startswith('losses'):
         res = _max({lt: assets['value-' + lt].reshape(-1, 1) * coeffs[lt]
-                    for lt in coeffs}) / assets['value-number'].reshape(-1, 1)
+                    for lt in total_loss_types}) / assets['value-number'].reshape(-1, 1)
         return res
     elif consequence in ['collapsed', 'non_operational']:
         return _sum(coeffs)
