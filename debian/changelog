@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an exporter for trt_gsim
   * Internal: added utility function readinput.read_source_models
 
   [Manuela Villani]
