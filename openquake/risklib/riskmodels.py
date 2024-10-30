@@ -142,35 +142,31 @@ def get_risk_functions(oqparam):
     :returns:
         a list of risk functions
     """
+    job_ini = oqparam.inputs['job_ini']
     rmodels = AccumDict()
-    #for key, fname in get_risk_files(oqparam.inputs):
-    for kind in 'vulnerability fragility vulnerability_retrofitted'.split():
-        for key in sorted(oqparam.inputs):
-            mo = re.match('(%s)_%s$' % (LTYPE_REGEX, kind), key)
-            if mo:
-                loss_type = mo.group(1)  # the cost_type in the key
-                # can be occupants, structural, nonstructural, ...
-                rmodel = nrml.to_python(oqparam.inputs[key])
-                if len(rmodel) == 0:
-                    raise InvalidFile('%s is empty!' % oqparam.inputs[key])
-                rmodels[loss_type, kind] = rmodel
-                if rmodel.lossCategory is None:  # NRML 0.4
-                    continue
-                cost_type = str(rmodel.lossCategory)
-                rmodel_kind = rmodel.__class__.__name__
-                kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
-                if not rmodel_kind.lower().startswith(kind_):
-                    raise ValueError(
-                        'Error in the file "%s_file=%s": is '
-                        'of kind %s, expected %s' % (
-                            key, oqparam.inputs[key], rmodel_kind,
-                            kind.capitalize() + 'Model'))
-                if cost_type != loss_type:
-                    raise ValueError(
-                        'Error in the file "%s_file=%s": lossCategory is of '
-                        'type "%s", expected "%s"' %
-                        (key, oqparam.inputs[key],
-                         rmodel.lossCategory, loss_type))
+    for key, fname in get_risk_files(oqparam.inputs).items():
+        kind, loss_type = key.split('/')  # ex. vulnerability/structural
+        rmodel = nrml.to_python(fname)
+        if len(rmodel) == 0:
+            raise InvalidFile(f'{job_ini}: {fname} is empty!')
+        rmodels[loss_type, kind] = rmodel
+        if rmodel.lossCategory is None:  # NRML 0.4
+            continue
+        cost_type = str(rmodel.lossCategory)
+        rmodel_kind = rmodel.__class__.__name__
+        kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
+        if not rmodel_kind.lower().startswith(kind_):
+            raise ValueError(
+                'Error in the file "%s_file=%s": is '
+                'of kind %s, expected %s' % (
+                    key, oqparam.inputs[key], rmodel_kind,
+                    kind.capitalize() + 'Model'))
+        if cost_type != loss_type:
+            raise ValueError(
+                'Error in the file "%s_file=%s": lossCategory is of '
+                'type "%s", expected "%s"' %
+                (key, oqparam.inputs[key],
+                 rmodel.lossCategory, loss_type))
     cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
     rlist = RiskFuncList()
     rlist.limit_states = []
