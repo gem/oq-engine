@@ -434,7 +434,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
 
 
 # used only in riskmodels_test
-def get_riskcomputer(dic):
+def get_riskcomputer(dic, alias):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     rc.asset_df = pandas.DataFrame(dic['asset_df'])
@@ -459,12 +459,12 @@ def get_riskcomputer(dic):
                        group_by_lt(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
+        rm.alias = alias
         rc[riskid, lt] = rm
         rc.wdic[riskid, lt] = weight
     rc.loss_types = dic['loss_types']
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']
-    rc.alias = dic['alias']
     return rc
 
 
