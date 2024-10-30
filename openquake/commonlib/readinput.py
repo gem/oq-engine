@@ -1649,7 +1649,8 @@ def read_countries_df(buffer=0.1):
     return read_geometries(fname, 'shapeGroup', buffer)
 
 
-def read_populated_places_df():
+def read_populated_places_df(lon_field='longitude', lat_field='latitude',
+                             label_field='name'):
     """
     :returns: a DataFrame of points corresponding to populated places
     """
@@ -1657,7 +1658,7 @@ def read_populated_places_df():
     fname = os.path.join(mosaic_dir, 'worldcities.csv')
     if not os.path.isfile(fname):
         return
-    return read_populated_places(fname, 'longitude', 'latitude', 'name')
+    return read_populated_places(fname, lon_field, lat_field, label_field)
 
 
 def read_source_models(fnames, hdf5path='', **converterparams):

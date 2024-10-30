@@ -47,18 +47,20 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0):
     return ax
 
 
-def add_populated_places(ax, xlim, ylim, read_df=readinput.read_populated_places_df):
-    data = read_df()
+def add_populated_places(ax, xlim, ylim, read_df=readinput.read_populated_places_df,
+                         lon_field='longitude', lat_field='latitude',
+                         label_field='name'):
+    data = read_df(lon_field, lat_field, label_field)
     if data is None:
         return ax
-    data = data[(data['longitude'] >= xlim[0]) & (data['longitude'] <= xlim[1])
-                & (data['latitude'] >= ylim[0]) & (data['latitude'] <= ylim[1])]
+    data = data[(data[lon_field] >= xlim[0]) & (data[lon_field] <= xlim[1])
+                & (data[lat_field] >= ylim[0]) & (data[lat_field] <= ylim[1])]
     if len(data) == 0:
         return ax
-    ax.scatter(data['longitude'], data['latitude'], label="Populated places",
+    ax.scatter(data[lon_field], data[lat_field], label="Populated places",
                s=2, color='black', alpha=0.5)
     for _, row in data.iterrows():
-        ax.text(row['longitude'], row['latitude'], row['name'], fontsize=7,
+        ax.text(row[lon_field], row[lat_field], row[label_field], fontsize=7,
                 ha='right', alpha=0.5)
     return ax
 
