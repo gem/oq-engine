@@ -1682,15 +1682,9 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical
         for riskid, lt in self:
             rm = self[riskid, lt]
-            imt = rm.imt_by_lt[lt]
-            col = rm.alias.get(imt, imt)
-            if event:
-                out = rm(lt, self.asset_df, haz, col, rndgen)
-            else:  # classical
-                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
+            out = rm(lt, self.asset_df, haz, rndgen)
             weights[lt].append(self.wdic[riskid, lt])
             dic[lt].append(out)
         out = {}
@@ -1706,7 +1700,7 @@ class RiskComputer(dict):
                 out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
             else:
                 out[lt] = outs[0]
-        if event:
+        if hasattr(haz, 'eid'):  # event based
             for update_losses in sec_losses:
                 update_losses(self.asset_df, out)
         return out
