@@ -18,6 +18,7 @@
 
 import os
 import numpy
+import pandas as pd
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
@@ -43,6 +44,22 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0):
                 ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
         else:
             ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
+    return ax
+
+
+def add_populated_places(ax, xlim, ylim, read_df=readinput.read_populated_places_df):
+    data = read_df()
+    if data is None:
+        return ax
+    data = data[(data['longitude'] >= xlim[0]) & (data['longitude'] <= xlim[1])
+                & (data['latitude'] >= ylim[0]) & (data['latitude'] <= ylim[1])]
+    if len(data) == 0:
+        return ax
+    ax.scatter(data['longitude'], data['latitude'], label="Populated places",
+               s=2, color='black', alpha=0.5)
+    for _, row in data.iterrows():
+        ax.text(row['longitude'], row['latitude'], row['name'], fontsize=7,
+                ha='right', alpha=0.5)
     return ax
 
 
@@ -120,21 +137,24 @@ def add_rupture(ax, rup):
     return ax, min_x, min_y, max_x, max_y
 
 
-def plot_rupture(rup, backend=None):
+def plot_rupture(rup, backend=None, figsize=(10, 10)):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
         matplotlib.use(backend)
-    _fig, ax = plt.subplots(figsize=(10, 10))
+    _fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
     ax.grid(True)
     ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
     ax = add_borders(ax)
-    BUF_ANGLE = 4
-    ax.set_xlim(min_x - BUF_ANGLE, max_x + BUF_ANGLE)
-    ax.set_ylim(min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    BUF_ANGLE = 1
+    xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
+    ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax = add_populated_places(ax, xlim, ylim)
     ax.legend()
     return plt
 

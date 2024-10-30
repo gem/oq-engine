@@ -440,12 +440,12 @@ table#aristotle-losses th td {
 
 .shakemap-image-container {
     float: left;
-    width: 50%;
+    /* width: 50%; */
 }
 
-.shakemap-image-container img{
-    width: 600px;
-}
+/* .shakemap-image-container img{ */
+/*     width: 600px; */
+/* } */
 
 .shakemap-clear-float {
     clear: both;
