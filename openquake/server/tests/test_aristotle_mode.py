@@ -252,7 +252,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         # values
         expected_keys = [
             'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id', 'intensity_map', 'pga',
+            'dep', 'mag', 'rake', 'usgs_id',
             'rupture_file', 'rupture_file_from_usgs', 'error',
             'station_data_file_from_usgs', 'mosaic_models', 'trts']
         self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
@@ -291,7 +291,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         # values
         expected_keys = [
             'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id', 'intensity_map', 'pga',
+            'dep', 'mag', 'rake', 'usgs_id',
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_error',
             'station_data_file_from_usgs', 'trts', 'mosaic_models', 'trt']
@@ -329,7 +329,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         # values
         expected_keys = [
             'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id', 'intensity_map', 'pga',
+            'dep', 'mag', 'rake', 'usgs_id',
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_file_from_usgs', 'trts',
             'mosaic_models']
@@ -349,7 +349,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         # values
         expected_keys = [
             'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id', 'intensity_map', 'pga',
+            'dep', 'mag', 'rake', 'usgs_id',
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_file_from_usgs', 'trts',
             'mosaic_models']
