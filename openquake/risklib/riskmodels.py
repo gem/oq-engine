@@ -135,21 +135,17 @@ class RiskFuncList(list):
         return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
 
 
-def get_risk_functions(oqparam, kind='vulnerability fragility '
-                       'vulnerability_retrofitted'):
+def get_risk_functions(oqparam):
     """
     :param oqparam:
         an OqParam instance
-    :param kind:
-        a space-separated string with the kinds of risk models to read
     :returns:
         a list of risk functions
     """
-    kinds = kind.split()
     rmodels = AccumDict()
-    for kind in kinds:
+    for kind in 'vulnerability fragility vulnerability_retrofitted'.split():
         for key in sorted(oqparam.inputs):
-            mo = re.match('(occupants|%s)_%s$' % (LTYPE_REGEX, kind), key)
+            mo = re.match('(%s)_%s$' % (LTYPE_REGEX, kind), key)
             if mo:
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
