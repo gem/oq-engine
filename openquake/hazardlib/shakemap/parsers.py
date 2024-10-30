@@ -591,6 +591,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         try:
             products['finite-fault']
         except KeyError:
+            # NOTE: we might also try reading information from phase-data or origin
             raise MissingLink(
                 'There is no shakemap nor finite-fault info for %s' % usgs_id)
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
