@@ -1687,7 +1687,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.sec_imts)
+        sec_imts = set(self.sec_imts) or self.inputs.get('multi_peril', ())
         return {imt: imls for imt, imls in self.imtls.items()
                 if imt not in sec_imts}
 
