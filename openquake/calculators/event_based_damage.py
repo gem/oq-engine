@@ -107,9 +107,8 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam, mon):
             for lti, lt in enumerate(oq.loss_types):
                 fractions = out[lt]
                 if oq.float_dmg_dist:
-                    dd4[lti, :, :, :D] = fractions
                     for a in range(A):
-                        dd4[lti, a] *= number[a]
+                        dd4[lti, a, :, :D] = fractions[a] * number[a]
                 else:
                     # this is a performance distaster; for instance
                     # the Messina test in oq-risk-tests becomes 12x
