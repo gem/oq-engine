@@ -1657,8 +1657,6 @@ class RiskComputer(dict):
         [taxidx] = asset_df.taxonomy.unique()
         self.asset_df = asset_df
         self.imtls = oq.imtls
-        self.alias = {imt: 'gmv_%d' % i
-                      for i, imt in enumerate(oq.get_primary_imtls())}
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
@@ -1687,13 +1685,8 @@ class RiskComputer(dict):
         event = hasattr(haz, 'eid')  # else classical
         for riskid, lt in self:
             rm = self[riskid, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = self.alias.get(imt, imt)
+            imt = rm.imt_by_lt[lt]
+            col = rm.alias.get(imt, imt)
             if event:
                 out = rm(lt, self.asset_df, haz, col, rndgen)
             else:  # classical
@@ -1735,7 +1728,6 @@ class RiskComputer(dict):
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
                    wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   alias=self.alias,
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
