@@ -622,14 +622,14 @@
                     // else {
                     //     $('#intensity-map').html('<p>No intensity map available</p>');
                     // }
-                    // if (data.pga) {
-                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.pga}" alt="PGA Map">`;
-                    //     $('#pga').html(imgElement);
+                    // if (data.pga_map) {
+                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map}" alt="PGA Map">`;
+                    //     $('#pga-map').html(imgElement);
                     //     $('#shakemap-image-row').show();
-                    //     $('#pga').show();
+                    //     $('#pga-map').show();
                     // }
                     // else {
-                    //     $('#pga').html('<p>No PGA map available</p>');
+                    //     $('#pga-map').html('<p>No PGA map available</p>');
                     // }
                     if (data.rupture_png) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
@@ -651,7 +651,7 @@
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                     // $('#intensity-map').hide();
-                    // $('#pga').hide();
+                    // $('#pga-map').hide();
                     $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
                 }).always(function () {

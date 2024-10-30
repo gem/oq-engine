@@ -63,8 +63,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.parsers import (
-    download_station_data_file, download_jpg)
+from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
     get_trts_around, get_aristotle_params, get_rupture_dict)
 from openquake.server import utils
@@ -759,15 +758,14 @@ def aristotle_get_rupture_data(request):
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     # intensity_map_jpg = download_jpg(rupdic['usgs_id'], 'intensity')
-    # pga_jpg = download_jpg(rupdic['usgs_id'], 'pga')
+    # pga_map_jpg = download_jpg(rupdic['usgs_id'], 'pga')
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
     # response_data['intensity_map'] = intensity_map_jpg
-    # response_data['pga'] = pga_jpg
-    # if not intensity_map_jpg and not pga_jpg and 'oq_rup' in rupdic:
+    # response_data['pga_map'] = pga_map_jpg
     if 'oq_rup' in rupdic:
         plt = plot_rupture(rupdic['oq_rup'], 'Agg')  # non-interactive backend
         del rupdic['oq_rup']
