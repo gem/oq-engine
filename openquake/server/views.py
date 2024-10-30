@@ -767,7 +767,9 @@ def aristotle_get_rupture_data(request):
     # response_data['intensity_map'] = intensity_map_jpg
     # response_data['pga_map'] = pga_map_jpg
     if 'oq_rup' in rupdic:
-        plt = plot_rupture(rupdic['oq_rup'], 'Agg', (6, 6))  # non-interactive backend
+        # Agg is a non-interactive backend
+        plt = plot_rupture(rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
+                           with_populated_places=True)
         del rupdic['oq_rup']
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')

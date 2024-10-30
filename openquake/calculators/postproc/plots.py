@@ -137,7 +137,7 @@ def add_rupture(ax, rup):
     return ax, min_x, min_y, max_x, max_y
 
 
-def plot_rupture(rup, backend=None, figsize=(10, 10)):
+def plot_rupture(rup, backend=None, figsize=(10, 10), with_populated_places=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -154,7 +154,8 @@ def plot_rupture(rup, backend=None, figsize=(10, 10)):
     ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    ax = add_populated_places(ax, xlim, ylim)
+    if with_populated_places:
+        ax = add_populated_places(ax, xlim, ylim)
     ax.legend()
     return plt
 
