@@ -18,7 +18,6 @@
 
 import os
 import numpy
-import pandas as pd
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
