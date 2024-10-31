@@ -218,7 +218,8 @@ class PerilDict(dict):
     >>> pd['structural']
     0.23
     >>> pd['structurl']
-    0.23
+    Traceback (most recent call last):
+    ...
     KeyError: ('earthquake', 'structurl')
     """
     def __getitem__(self, lt):

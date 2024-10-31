@@ -1710,13 +1710,14 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                            'retro'] = retro
+                    rfdic['%s#%s' % (rf.id, lt)] = dic
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
