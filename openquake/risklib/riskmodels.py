@@ -539,7 +539,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             try:
                 rf.peril = df.loc[i].peril
             except AttributeError:  # in engine < 3.22 the peril was not stored
-                rf.peril = 'eartquake'
+                rf.peril = 'earthquake'
             lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
