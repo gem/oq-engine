@@ -256,9 +256,9 @@ class RiskModel(object):
         """
         return sorted(self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df, rndgen=None):
+    def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, rndgen)
+        res = {lt: meth(lt, assets, gmf_df, rndgen) for lt in self.loss_types}
         return res  # for event_based_risk this is a DataFrame (eid, aid, loss)
 
     def __toh5__(self):

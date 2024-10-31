@@ -1668,7 +1668,7 @@ class RiskComputer(dict):
                     tm.country, tm.loss_type, tm.risk_id, tm.weight):
                 if loss_type in ('*', lt):
                     if country == '?' or country_str in country:
-                        self[riskid, lt] = crm._riskmodels[riskid]
+                        self[riskid] = crm._riskmodels[riskid]
                         self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
@@ -1682,11 +1682,10 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            out = rm(lt, self.asset_df, haz, rndgen)
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
+        for riskid, rm in self.items():
+            for lt, res in rm(self.asset_df, haz, rndgen).items():
+                weights[lt].append(self.wdic[riskid, lt])
+                dic[lt].append(res)
         out = {}
         for lt in self.minimum_asset_loss:
             outs = dic[lt]
