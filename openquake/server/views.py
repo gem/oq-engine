@@ -54,7 +54,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
-from openquake.calculators.postproc.plots import plot_rupture
+# from openquake.calculators.postproc.plots import plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, aristotle
