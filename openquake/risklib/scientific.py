@@ -1683,7 +1683,7 @@ class RiskComputer(dict):
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
         for riskid, rm in self.items():
-            for lt, res in rm(self.asset_df, haz, rndgen).items():
+            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
                 weights[lt].append(self.wdic[riskid, lt])
                 dic[lt].append(res)
         out = {}
