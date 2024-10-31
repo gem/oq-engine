@@ -1663,9 +1663,9 @@ class RiskComputer(dict):
         self.wdic = {}
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
-        for lt in self.minimum_asset_loss:
-            for country, loss_type, riskid, weight in zip(
-                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
+        for country, loss_type, riskid, weight in zip(
+                tm.country, tm.loss_type, tm.risk_id, tm.weight):
+            for lt in self.minimum_asset_loss:
                 if loss_type in ('*', lt):
                     if country == '?' or country_str in country:
                         self[riskid] = crm._riskmodels[riskid]
