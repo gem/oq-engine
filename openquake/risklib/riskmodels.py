@@ -259,7 +259,8 @@ class RiskModel(object):
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = {lt: meth(lt, assets, gmf_df, rndgen) for lt in self.loss_types}
-        return res  # for event_based_risk this is a DataFrame (eid, aid, loss)
+        # for event_based_risk this is a map loss_type -> DataFrame(eid, aid, loss)
+        return res
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
