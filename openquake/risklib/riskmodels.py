@@ -711,12 +711,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
         self.curve_params = self.make_curve_params()
+
+        # possibly set oq.minimum_intensity
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions.items():
-                if hasattr(rf, 'imt'):  # vulnerability
-                    iml[rf.imt].append(rf.imls[0])
+            for lt, rf in rm.risk_functions['earthquake'].items():
+                iml[rf.imt].append(rf.imls[0])
+
         if oq.aristotle:
             pass  # don't set minimum_intensity
         elif sum(oq.minimum_intensity.values()) == 0 and iml:
