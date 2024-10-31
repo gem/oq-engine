@@ -613,33 +613,33 @@
                         $('#mosaic_model').append('<option value="' + mosaic_model + '" data-value=\'' + mosaic_model_trts + '\'' + selected + '>' + mosaic_model + '</option>');
                     });
                     populateTrtSelector(data.trt);
-                    // if (data.intensity_map) {
-                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.intensity_map}" alt="Intensity Map">`;
-                    //     $('#intensity-map').html(imgElement);
-                    //     $('shakemap-image-row').show();
-                    //     $('#intensity-map').show();
-                    // }
-                    // else {
-                    //     $('#intensity-map').html('<p>No intensity map available</p>');
-                    // }
-                    // if (data.pga_map) {
-                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map}" alt="PGA Map">`;
-                    //     $('#pga-map').html(imgElement);
-                    //     $('#shakemap-image-row').show();
-                    //     $('#pga-map').show();
-                    // }
-                    // else {
-                    //     $('#pga-map').html('<p>No PGA map available</p>');
-                    // }
-                    if (data.rupture_png) {
-                        const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
-                        $('#rupture_png').html(imgElement);
-                        $('#shakemap-image-row').show();
-                        $('#rupture_png').show();
+                    if (data.mmi_map_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.mmi_map_png}" alt="Intensity Map">`;
+                        $('#intensity-map').html(imgElement);
+                        $('shakemap-image-row').show();
+                        $('#intensity-map').show();
                     }
                     else {
-                        $('#rupture_png').html('<p>No rupture image available</p>');
+                        $('#intensity-map').html('<p>No intensity map available</p>');
                     }
+                    if (data.pga_map_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map_png}" alt="PGA Map">`;
+                        $('#pga-map').html(imgElement);
+                        $('#shakemap-image-row').show();
+                        $('#pga-map').show();
+                    }
+                    else {
+                        $('#pga-map').html('<p>No PGA map available</p>');
+                    }
+                    // if (data.rupture_png) {
+                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
+                    //     $('#rupture_png').html(imgElement);
+                    //     $('#shakemap-image-row').show();
+                    //     $('#rupture_png').show();
+                    // }
+                    // else {
+                    //     $('#rupture_png').html('<p>No rupture image available</p>');
+                    // }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -650,9 +650,9 @@
                     }
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
-                    // $('#intensity-map').hide();
-                    // $('#pga-map').hide();
-                    $('#rupture_png').hide();
+                    $('#intensity-map').hide();
+                    $('#pga-map').hide();
+                    // $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);

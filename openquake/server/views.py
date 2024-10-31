@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import csv
 import shutil
 import json
@@ -32,7 +31,6 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
-import base64
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus
 from urllib.error import HTTPError
@@ -764,18 +762,18 @@ def aristotle_get_rupture_data(request):
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     response_data = rupdic
+    # FIXME: check if we want to display also the rupture png
+    if 'oq_rup' in rupdic:
+        del rupdic['oq_rup']
     # response_data['intensity_map'] = intensity_map_jpg
     # response_data['pga_map'] = pga_map_jpg
-    if 'oq_rup' in rupdic:
-        # Agg is a non-interactive backend
-        plt = plot_rupture(rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
-                           with_populated_places=True)
-        del rupdic['oq_rup']
-        bio = io.BytesIO()
-        plt.savefig(bio, format='png', bbox_inches='tight')
-        bio.seek(0)
-        img_base64 = base64.b64encode(bio.getvalue()).decode('utf-8')
-        response_data['rupture_png'] = img_base64
+    # if 'oq_rup' in rupdic:
+    #     # Agg is a non-interactive backend
+    #     rupture_png = plot_rupture(
+    #         rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
+    #         with_populated_places=True, return_png=True)
+    #     del rupdic['oq_rup']
+    #     response_data['rupture_png'] = rupture_png
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 

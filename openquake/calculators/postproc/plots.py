@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os
+import base64
 import numpy
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
@@ -74,6 +76,51 @@ def get_country_iso_codes(calc_id, assetcol):
     else:
         id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
     return id_0_str
+
+
+def plt_to_base64(plt):
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png', bbox_inches='tight')
+    bio.seek(0)
+    img_base64 = base64.b64encode(bio.getvalue()).decode('utf-8')
+    return img_base64
+
+
+def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
+                  with_populated_places=False, return_png=False):
+    plt = import_plt()
+    if backend is not None:
+        # we may need to use a non-interactive backend
+        import matplotlib
+        matplotlib.use(backend)
+    _fig, ax = plt.subplots(figsize=figsize)
+    ax.set_aspect('equal')
+    ax.grid(True)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+    title = 'Avg GMF for %s' % imt
+    ax.set_title(title)
+    gmf = shakemap_array['val'][imt]
+    markersize = 5
+    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
+                      cmap='jet', s=markersize)
+    plt.colorbar(coll)
+    ax = add_borders(ax)
+    BUF_ANGLE = 1
+    min_x = shakemap_array['lon'].min()
+    max_x = shakemap_array['lon'].max()
+    min_y = shakemap_array['lat'].min()
+    max_y = shakemap_array['lat'].max()
+    xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
+    ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    if with_populated_places:
+        ax = add_populated_places(ax, xlim, ylim)
+    if return_png:
+        return plt_to_base64(plt)
+    else:
+        return plt
 
 
 def plot_avg_gmf(ex, imt):
@@ -138,7 +185,8 @@ def add_rupture(ax, rup):
     return ax, min_x, min_y, max_x, max_y
 
 
-def plot_rupture(rup, backend=None, figsize=(10, 10), with_populated_places=False):
+def plot_rupture(rup, backend=None, figsize=(10, 10),
+                 with_populated_places=False, return_png=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -158,7 +206,10 @@ def plot_rupture(rup, backend=None, figsize=(10, 10), with_populated_places=Fals
     if with_populated_places:
         ax = add_populated_places(ax, xlim, ylim)
     ax.legend()
-    return plt
+    if return_png:
+        return plt_to_base64(plt)
+    else:
+        return plt
 
 
 def add_surface_3d(ax, surface, label):
