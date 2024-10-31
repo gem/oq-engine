@@ -441,6 +441,8 @@ def get_riskcomputer(dic, alias):
     rc.asset_df = pandas.DataFrame(dic['asset_df'])
     rc.wdic = {}
     rfs = AccumDict(accum=[])
+    steps = dic.get('lrem_steps_per_interval', 1)
+    mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
     for rlk, func in dic['risk_functions'].items():
         riskid, lt = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
@@ -452,16 +454,14 @@ def get_riskcomputer(dic, alias):
             rf.retro.init()
             rf.retro.loss_type = lt
         rfs[riskid].append(rf)
-    steps = dic.get('lrem_steps_per_interval', 1)
-    mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
-    for rlt, weight in dic['wdic'].items():
-        riskid, lt = rlt.split('#')
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        group_by_lt(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
-        rc[riskid, lt] = rm
+        rc[riskid] = rm
+    for rlt, weight in dic['wdic'].items():
+        riskid, lt = rlt.split('#')
         rc.wdic[riskid, lt] = weight
     rc.loss_types = dic['loss_types']
     rc.minimum_asset_loss = mal
