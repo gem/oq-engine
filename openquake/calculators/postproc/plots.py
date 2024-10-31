@@ -33,7 +33,7 @@ def import_plt():
     return plt
 
 
-def add_borders(ax, read_df=readinput.read_countries_df, buffer=0):
+def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
     plt = import_plt()
     polys = read_df(buffer)['geom']
     cm = plt.get_cmap('RdBu')
@@ -42,9 +42,9 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0):
         colour = cm(1. * idx / num_colours)
         if isinstance(poly, MultiPolygon):
             for onepoly in poly.geoms:
-                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
+                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=alpha))
         else:
-            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
+            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=alpha))
     return ax
 
 
@@ -96,8 +96,8 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     _fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
     ax.grid(True)
-    ax.set_xlabel('Lon')
-    ax.set_ylabel('Lat')
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
     title = 'Avg GMF for %s' % imt
     ax.set_title(title)
     gmf = shakemap_array['val'][imt]
@@ -105,7 +105,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
                       cmap='jet', s=markersize)
     plt.colorbar(coll)
-    ax = add_borders(ax)
+    ax = add_borders(ax, alpha=0.2)
     BUF_ANGLE = 1
     min_x = shakemap_array['lon'].min()
     max_x = shakemap_array['lon'].max()

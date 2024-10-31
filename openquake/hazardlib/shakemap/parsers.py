@@ -612,11 +612,12 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         logging.info('Downloading grid.xml')
         grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         shakemap_array = get_shakemap_array(grid_fname)
+        figsize = (7, 3.73)  # fitting in a single row in the webui without resizing
         pga_map_png = plot_shakemap(
-            shakemap_array, 'PGA', backend='Agg', figsize=(6, 6),
+            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
             with_populated_places=False, return_base64=True)
         mmi_map_png = plot_shakemap(
-            shakemap_array, 'MMI', backend='Agg', figsize=(6, 6),
+            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
             with_populated_places=False, return_base64=True)
 
     url = contents.get('download/rupture.json')['url']
