@@ -399,10 +399,8 @@ Running the engine tests
 ------------------------
 
 If you are a hazard scientist contributing a bug fix to a GMPE (or any other kind of bug fix) you may need to run the
-engine tests and possibly change the expected files if there is a change in the numbers. The way to do it is to start
-the dbserver and then run the tests from the repository root::
+engine tests and possibly change the expected files if there is a change in the numbers. The way to do it is to give the following command from the repository root::
 
-	$ oq dbserver start
 	$ pytest -vx openquake/calculators
 
 If you get an error like the following::
