@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: changed the ordering in the composite risk model from
+    (loss_type, riskid) -> (riskid, loss_type)
   * Added an exporter for trt_gsim
   * Internal: added utility function readinput.read_source_models
 
