@@ -614,10 +614,10 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         shakemap_array = get_shakemap_array(grid_fname)
         pga_map_png = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=(6, 6),
-            with_populated_places=False, return_png=True)
+            with_populated_places=False, return_base64=True)
         mmi_map_png = plot_shakemap(
             shakemap_array, 'MMI', backend='Agg', figsize=(6, 6),
-            with_populated_places=False, return_png=True)
+            with_populated_places=False, return_base64=True)
 
     url = contents.get('download/rupture.json')['url']
     logging.info('Downloading rupture.json')

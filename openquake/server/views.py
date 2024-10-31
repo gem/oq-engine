@@ -771,7 +771,7 @@ def aristotle_get_rupture_data(request):
     #     # Agg is a non-interactive backend
     #     rupture_png = plot_rupture(
     #         rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
-    #         with_populated_places=True, return_png=True)
+    #         with_populated_places=True, return_base64=True)
     #     del rupdic['oq_rup']
     #     response_data['rupture_png'] = rupture_png
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,

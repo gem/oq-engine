@@ -87,7 +87,7 @@ def plt_to_base64(plt):
 
 
 def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
-                  with_populated_places=False, return_png=False):
+                  with_populated_places=False, return_base64=False):
     plt = import_plt()
     if backend is not None:
         # we may need to use a non-interactive backend
@@ -117,7 +117,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     ax.set_ylim(*ylim)
     if with_populated_places:
         ax = add_populated_places(ax, xlim, ylim)
-    if return_png:
+    if return_base64:
         return plt_to_base64(plt)
     else:
         return plt
@@ -186,7 +186,7 @@ def add_rupture(ax, rup):
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
-                 with_populated_places=False, return_png=False):
+                 with_populated_places=False, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -206,7 +206,7 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     if with_populated_places:
         ax = add_populated_places(ax, xlim, ylim)
     ax.legend()
-    if return_png:
+    if return_base64:
         return plt_to_base64(plt)
     else:
         return plt
