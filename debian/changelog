@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Adding M9 (Seattle) Basin amplification term for ModifiableGMPE
+    and assoc unit tests
+ 
   [Michele Simionato]
   * Internal: changed the ordering in the composite risk model from
     (loss_type, riskid) -> (riskid, loss_type)
