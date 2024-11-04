@@ -48,7 +48,7 @@ class M9BasinTerm(GMPE):
         The name of a GMPE class
     """
     # Req Params
-    REQUIRES_SITES_PARAMETERS = {}
+    REQUIRES_SITES_PARAMETERS = {'z2pt5'}
 
     # Others are set from underlying GMM
     REQUIRES_DISTANCES = set() 
