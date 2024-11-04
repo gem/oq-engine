@@ -1640,7 +1640,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMTK
+# mock of a site collection used in the tests and in the SMT
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -1653,7 +1653,7 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    # _slots_ is used in hazardlib check_gsim and in the SMTK
+    # _slots_ is used in hazardlib check_gsim and in the SMT
     def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
                  sitecol=None):
         self._slots_ = slots
@@ -1662,7 +1662,7 @@ class SitesContext(BaseContext):
             for slot in slots:
                 setattr(self, slot, getattr(sitecol, slot))
 
-    # used in the SMTK
+    # used in the SMT
     def __len__(self):
         return len(self.sids)
 
@@ -1699,7 +1699,7 @@ def get_dists(ctx):
 
 
 # used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMTK
+# to .get_mean_and_stddevs, like for instance in the SMT
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
@@ -1739,7 +1739,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     return out[:, 0] if single else out
 
 
-# mock of a rupture used in the tests and in the SMTK
+# mock of a rupture used in the tests and in the SMT
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
