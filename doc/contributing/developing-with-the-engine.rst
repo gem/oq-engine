@@ -262,7 +262,8 @@ Then the hazard curve can be computed as follows::
 	>>> sitecol = readinput.get_site_collection(oq)
 	>>> gsims = readinput.get_gsim_lt(oq).values['*']
 	>>> calc_hazard_curve(sitecol, src, gsims, oq)
-	[[0.00507997]]>
+	array([[0.00508004]], dtype=float32)
+
 
 Working with GMPEs directly: the ContextMaker
 ---------------------------------------------
@@ -344,6 +345,57 @@ the result provided by ``calc_hazard_curve(sitecol, src, gsims, oq)`` in the sec
 
 If you want to know exactly how ``get_pmap`` works you are invited to look at the source code in
 ``openquake.hazardlib.contexts``.
+
+Generating ground motion fields from a rupture
+----------------------------------------------
+
+The easiest way to create a finite size rupture (a.k.a. planar rupture)
+is to use the factory function `get_planar`:
+
+>>> from openquake.hazardlib.source.rupture import get_planar
+
+The function requires in input a site and a magnitude scaling relationship,
+so first you have to build such objects:
+
+>>> [site] = sitecol  # since there is a single site
+>>> from openquake.hazardlib.scalerel import WC1994
+>>> msr = WC1994()  # magnitude scaling relationship
+>>> rup = get_planar(site, msr, mag=6., aratio=1., strike=11., dip=38.,
+...                  rake=55., trt=cmaker.trt)
+
+If you want to generate the GMF produced by a rupture (i.e. to emulate
+a scenario calculation) you need to supplement the number of
+occurrences of the rupture and a random seed, i.e. you need to convert the
+hazardlib rupture into an EBRupture:
+
+>>> from openquake.hazardlib.source.rupture import EBRupture
+>>> ebr = EBRupture(rup, n_occ=2, seed=42)
+
+Then you can use the GmfComputer class to perform the calculation:
+
+>>> from openquake.hazardlib.calc.gmf import GmfComputer
+>>> gc = GmfComputer(ebr, sitecol, cmaker)
+>>> gc.compute_all()  # returns a DataFrame
+      gmv_0  eid  sid  rlz
+0  0.660239    0    0    0
+1  0.301583    1    0    0
+
+`gmv_0` is the value of the ground motion field for the first IMT (i.e PGA in this
+case), `eid` the event ID, `sid` the site ID (there is a single site in this case)
+and `rlz` the realization index.
+In scenario calculations there is a realization for each GSIM and in this case
+there is a single GSIM, so rlz=0. The total number of events is the number
+of realizations times the number of occurrences and therefore in this case
+the event ID (`eid`) can only have the values 0 or 1.
+
+It is also possible to perform calculations with point-like ruptures
+(i.e. ignoring the finite-size effects) by simply using the appropriate
+scale relation:
+
+>>> from openquake.hazardlib.scalerel import PointMSR
+>>> msr = PointMSR()  # ignores finite-size effects
+>>> rup = get_planar(site, msr, mag=6., aratio=1., strike=11., dip=38.,
+...                  rake=55., trt=cmaker.trt)
 
 Working with verification tables
 --------------------------------

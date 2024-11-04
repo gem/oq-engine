@@ -719,7 +719,7 @@ class ExportedRupture(object):
     Simplified Rupture class with attributes rupid, events_by_ses, indices
     and others, used in export.
 
-    :param rupid: rupture.seed ID
+    :param rupid: rupture ID
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
@@ -744,13 +744,14 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id, trt_smr, n_occ=1, id=None, e0=0):
+    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0, seed=42):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = source_id * TWO30 + id
         self.e0 = e0
+        self.seed = seed
 
     @property
     def tectonic_region_type(self):
