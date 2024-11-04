@@ -121,6 +121,8 @@ def get_aristotle_params(arist):
     inputs = {'exposure': [arist.exposure_hdf5],
               'job_ini': '<in-memory>'}
     rupdic = get_rupture_dict(arist.rupture_dict, arist.ignore_shakemap)
+    if 'shakemap_array' in rupdic:
+        del rupdic['shakemap_array']
     if arist.station_data_file is None:
         # NOTE: giving precedence to the station_data_file uploaded via form
         try:

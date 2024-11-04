@@ -54,7 +54,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
-# from openquake.calculators.postproc.plots import plot_rupture
+from openquake.calculators.postproc.plots import plot_shakemap  # , plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, aristotle
@@ -755,25 +755,33 @@ def aristotle_get_rupture_data(request):
         logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-    # intensity_map_jpg = download_jpg(rupdic['usgs_id'], 'intensity')
-    # pga_map_jpg = download_jpg(rupdic['usgs_id'], 'pga')
+
+    # NOTE: these 2 lines would download the images from the USGS website
+    # rupdic['intensity_map'] = download_jpg(rupdic['usgs_id'], 'intensity')
+    # rupdic['pga_map'] = download_jpg(rupdic['usgs_id'], 'pga')
+
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
-    response_data = rupdic
-    # FIXME: check if we want to display also the rupture png
+    if 'shakemap_array' in rupdic:
+        shakemap_array = rupdic['shakemap_array']
+        figsize = (7, 3.73)  # fitting in a single row in the template without resizing
+        rupdic['pga_map_png'] = plot_shakemap(
+            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
+            with_populated_places=False, return_base64=True)
+        rupdic['mmi_map_png'] = plot_shakemap(
+            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
+            with_populated_places=False, return_base64=True)
+        del rupdic['shakemap_array']
     if 'oq_rup' in rupdic:
+        # FIXME: check if we want to display also the rupture png
+        # # Agg is a non-interactive backend
+        # rupdic['rupture_png'] = plot_rupture(
+        #     rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
+        #     with_populated_places=True, return_base64=True)
         del rupdic['oq_rup']
-    # response_data['intensity_map'] = intensity_map_jpg
-    # response_data['pga_map'] = pga_map_jpg
-    # if 'oq_rup' in rupdic:
-    #     # Agg is a non-interactive backend
-    #     rupture_png = plot_rupture(
-    #         rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
-    #         with_populated_places=True, return_base64=True)
-    #     del rupdic['oq_rup']
-    #     response_data['rupture_png'] = rupture_png
+    response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 

@@ -42,7 +42,6 @@ from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import (
     node_from_xml, Node)
-from openquake.calculators.postproc.plots import plot_shakemap
 from openquake.hazardlib.source.rupture import get_multiplanar
 from openquake.hazardlib import nrml, sourceconverter
 
@@ -606,19 +605,12 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
     else:  # missing rupture.json
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
 
-    pga_map_png = mmi_map_png = None
+    shakemap_array = None
     if 'download/grid.xml' in contents:
         url = contents.get('download/grid.xml')['url']
         logging.info('Downloading grid.xml')
         grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         shakemap_array = get_shakemap_array(grid_fname)
-        figsize = (7, 3.73)  # fitting in a single row in the webui without resizing
-        pga_map_png = plot_shakemap(
-            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True)
-        mmi_map_png = plot_shakemap(
-            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True)
 
     url = contents.get('download/rupture.json')['url']
     logging.info('Downloading rupture.json')
@@ -636,7 +628,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': is_point_rup,
-                'pga_map_png': pga_map_png, 'mmi_map_png': mmi_map_png,
+                'shakemap_array': shakemap_array,
                 'usgs_id': usgs_id, 'rupture_file': None}
     try:
         oq_rup = convert_to_oq_rupture(rup_data)
@@ -650,7 +642,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': True,
-                'pga_map_png': pga_map_png, 'mmi_map_png': mmi_map_png,
+                'shakemap_array': shakemap_array,
                 'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
@@ -671,13 +663,13 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': True,
-                'pga_map_png': pga_map_png, 'mmi_map_png': mmi_map_png,
+                'shakemap_array': shakemap_array,
                 'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
     return {'lon': lon, 'lat': lat, 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
             'is_point_rup': False,
-            'pga_map_png': pga_map_png, 'mmi_map_png': mmi_map_png,
+            'shakemap_array': shakemap_array,
             'trt': oq_rup.tectonic_region_type,
             'usgs_id': usgs_id, 'rupture_file': rupture_file, 'oq_rup': oq_rup}
 
