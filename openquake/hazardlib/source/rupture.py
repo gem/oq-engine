@@ -583,19 +583,15 @@ class ParametricProbabilisticRupture(BaseRupture):
 class PointSurface:
     """
     A fake surface used in PointRuptures.
-    The parameters `hypocenter` and `strike` are determined by
-    collapsing the corresponding parameters in the original PointSource.
     """
-    def __init__(self, hypocenter, strike, dip):
+    def __init__(self, hypocenter):
         self.hypocenter = hypocenter
-        self.strike = strike
-        self.dip = dip
 
     def get_strike(self):
-        return self.strike
+        return 0
 
     def get_dip(self):
-        return self.dip
+        return 0
 
     def get_top_edge_depth(self):
         return self.hypocenter.depth
@@ -628,17 +624,17 @@ class PointRupture(ParametricProbabilisticRupture):
     A rupture coming from a far away PointSource, so that the finite
     size effects can be neglected.
     """
-    def __init__(self, mag, rake, tectonic_region_type, hypocenter, strike,
-                 dip, occurrence_rate, temporal_occurrence_model, zbot):
+    def __init__(self, mag, tectonic_region_type, hypocenter,
+                 occurrence_rate, temporal_occurrence_model, zbot=0):
+        self.mag = mag
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
-        self.mag = mag
-        self.strike = strike
-        self.rake = rake
-        self.dip = dip
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
-        self.surface = PointSurface(hypocenter, strike, dip)
+        self.surface = PointSurface(hypocenter)
+        self.rake = 0
+        self.dip = 0
+        self.strike = 0
         self.zbot = zbot  # bottom edge depth, used in Campbell-Bozorgnia
 
 
@@ -719,7 +715,7 @@ class ExportedRupture(object):
     Simplified Rupture class with attributes rupid, events_by_ses, indices
     and others, used in export.
 
-    :param rupid: rupture.seed ID
+    :param rupid: rupture ID
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
@@ -744,13 +740,14 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id, trt_smr, n_occ=1, id=None, e0=0):
+    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0, seed=42):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = source_id * TWO30 + id
         self.e0 = e0
+        self.seed = seed
 
     @property
     def tectonic_region_type(self):
