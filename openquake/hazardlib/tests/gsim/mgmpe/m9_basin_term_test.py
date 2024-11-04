@@ -23,7 +23,6 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import M9BasinTerm
-from openquake.hazardlib.gsim.kuehn_2020 import KuehnEtAl2020SInter
 
 ae = np.testing.assert_equal
 aae = np.testing.assert_almost_equal
