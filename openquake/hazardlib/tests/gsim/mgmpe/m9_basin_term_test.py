@@ -19,12 +19,13 @@ import unittest
 
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
 from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib import valid
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import M9BasinTerm
-from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 from openquake.hazardlib.gsim.kuehn_2020 import KuehnEtAl2020SInter
 
+ae = np.testing.assert_equal
 aae = np.testing.assert_almost_equal
 
 
@@ -58,29 +59,53 @@ class M9BasinTermTestCase(unittest.TestCase):
         and below 6 km threshold and considering SAs with periods
         above and below 1.9 s)
         """
-        # Make base GMM
-        gmpe = KuehnEtAl2020SInter()
+        k20 = valid.gsim('KuehnEtAl2020SInter')
         
+        # Make original GMM
+        gmpe = valid.modified_gsim(k20)
+
         # Make GMM with basin term using the mgmpe class directly
         mgmpe_cls = M9BasinTerm(gmpe_name='KuehnEtAl2020SInter')
-        
-        # Make GMM with basin term using ModifiableGMPE and kwargs
-        kwargs = {'gmpe': {'KuehnEtAl2020SInter': {}},
-                  'm9_basin_term': {}}
-        mgmpe_kws = ModifiableGMPE(**kwargs)
 
+        # Make GMM with basin term using ModifiableGMPE and kwargs
+        mgmpe_val = valid.modified_gsim(k20, m9_basin_term={})
+        
         # Make the ctx
-        cmaker = simple_cmaker([gmpe, mgmpe_cls, mgmpe_kws],
-                               ['PGA', 'SA(1.0)', 'SA(2.0)'])
-                               
-        ctx = new_ctx(cmaker, 6)
+        imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
+        cmaker = simple_cmaker([gmpe, mgmpe_cls, mgmpe_val], imts)                       
+        ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.
         ctx.rake = 90.
-        ctx.z1pt0 = np.array([522.32, 516.98, 522.32, 516.98, 522.32])
-        ctx.z2pt5 = np.array([6.32, 3.53, 6.32, 3.53, 6.32])
-        ctx.rrup = np.array([1., 10., 30., 70., 200., 500.])
+        ctx.z1pt0 = np.array([522.32, 516.98, 522.32])
+        ctx.z2pt5 = np.array([6.32, 3.53, 6.32])
+        ctx.rrup = np.array([50., 200., 500.])
         ctx.vs30 = 1100.
         ctx.vs30measured = 1
-        mea, sig, _, _ = cmaker.get_mean_stds([ctx])
-        aae(mea[0], mea[1])
-        aae(sig[0], sig[1])
+        mea, _, _, _ = cmaker.get_mean_stds([ctx])
+        
+        # For SA with period less than 2 all means should be
+        # the same (amp term only applied for long periods)
+        ori_mea_pga = mea[0][0]
+        cls_mea_pga = mea[1][0]
+        val_mea_pga = mea[2][0]
+        ae(ori_mea_pga, cls_mea_pga, val_mea_pga)
+        ori_mea_sa1pt0 = mea[0][1]
+        cls_mea_sa1pt0 = mea[1][1]
+        val_mea_sa1pt0 = mea[2][1]
+        ae(ori_mea_sa1pt0, cls_mea_sa1pt0, val_mea_sa1pt0)
+
+        # Check means using m9 term from mgmpe cls and 
+        # valid.modifiable_gmpe are the same
+        ae(mea[1], mea[2])
+
+        # For SA(2.0) basin amplification should be added
+        # unmodified + np.log(2.0) 
+        ori_sa2pt0 = mea[0][2]
+        cls_sa2pt0 = mea[1][2]
+        val_sa2pt0 = mea[2][2]
+        exp_diff = np.array([np.log(2.0), 0., np.log(2.0)])
+        for idx_v, v in enumerate(exp_diff):
+            diff_cls = cls_sa2pt0[idx_v] - ori_sa2pt0[idx_v]
+            diff_val = val_sa2pt0[idx_v] - ori_sa2pt0[idx_v]
+            aae(diff_cls, exp_diff[idx_v])
+            aae(diff_val, exp_diff[idx_v])

@@ -62,6 +62,11 @@ class M9BasinTerm(GMPE):
     def __init__(self, gmpe_name, **kwargs):
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()    
+        
+        # Need z2pt5 in req site params to ensure in ctx site col 
+        if 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
+            self.REQUIRES_SITES_PARAMETERS = frozenset(
+                self.gmpe.REQUIRES_SITES_PARAMETERS | {'z2pt5'})
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):      
         """
@@ -71,4 +76,4 @@ class M9BasinTerm(GMPE):
         """
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
-             mean[m] += _get_m9_basin_term(ctx, imt, mean[m])
+             mean[m] = _get_m9_basin_term(ctx, imt, mean[m])

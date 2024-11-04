@@ -78,11 +78,11 @@ def cy14_site_term(ctx, imt, me, si, ta, phi):
     me[:] += fa
 
 
-def m9_basin_term(ctx, imt, me):
+def m9_basin_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the M9 basin amplification term
     """
-    me += _get_m9_basin_term(ctx, imt, me)
+    me = _get_m9_basin_term(ctx, imt, me)
     
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
@@ -255,6 +255,12 @@ class ModifiableGMPE(GMPE):
         if 'add_between_within_stds' in self.params:
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
+
+        if ('m9_basin_term' in self.params) and (
+                'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            tmp = list(self.gmpe.REQUIRES_SITES_PARAMETERS)
+            tmp.append('z2pt5')
+            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(tmp)
 
         # This is required by the `sigma_model_alatik2015` function
         key = 'sigma_model_alatik2015'
