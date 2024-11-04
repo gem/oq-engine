@@ -631,6 +631,7 @@
                     else {
                         $('#pga-map').html('<p>No PGA map available</p>');
                     }
+                    // // NOTE: we may want to plot also the rupture right after retrieving rupture data
                     // if (data.rupture_png) {
                     //     const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
                     //     $('#rupture_png').html(imgElement);
