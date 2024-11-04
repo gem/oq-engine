@@ -480,7 +480,7 @@ def get_riskcomputer(dic, alias):
             rf.retro.loss_type = lt
         rfs[riskid].append(rf)
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       group_by_lt(rfs[riskid]),
+                       group_by_peril(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
