@@ -19,7 +19,7 @@
 # This is required to load a custom  local_settings.py when 'oq webui' is used.
 export PYTHONPATH=$HOME
 
-oq engine --upgrade-db &
+oq dbserver start &
 
 # Wait the DbServer to come up; may be replaced with a "oq dbserver wait"
 while :

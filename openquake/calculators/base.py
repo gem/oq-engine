@@ -835,6 +835,11 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         if len(self.crmodel):
+            # NB: the alias dict must be filled after import_gmf
+            alias = {imt: 'gmv_%d' % i for i, imt in enumerate(
+                self.oqparam.get_primary_imtls())}
+            for rm in self.crmodel._riskmodels.values():
+                rm.alias = alias
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
@@ -1195,6 +1200,7 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
+# NB: changes oq.imtls by side effect!
 def import_gmfs_csv(dstore, oqparam, sitecol):
     """
     Import in the datastore a ground motion field CSV file.

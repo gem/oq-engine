@@ -714,8 +714,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 return {}
 
         if oq.ground_motion_fields:
-            imts = oq.get_primary_imtls()
-            base.create_gmf_data(dstore, imts, oq.sec_imts)
+            prim_imts = oq.get_primary_imtls()
+            base.create_gmf_data(dstore, prim_imts, oq.sec_imts)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:

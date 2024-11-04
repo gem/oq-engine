@@ -45,6 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+PERILS = 'earthquake', 'liquefaction', 'landslide'
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1657,20 +1658,18 @@ class RiskComputer(dict):
         [taxidx] = asset_df.taxonomy.unique()
         self.asset_df = asset_df
         self.imtls = oq.imtls
-        self.alias = {imt: 'gmv_%d' % i
-                      for i, imt in enumerate(oq.get_primary_imtls())}
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
-        for lt in self.minimum_asset_loss:
-            for country, loss_type, riskid, weight in zip(
-                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
+        for country, loss_type, riskid, weight in zip(
+                tm.country, tm.loss_type, tm.risk_id, tm.weight):
+            for lt in self.minimum_asset_loss:
                 if loss_type in ('*', lt):
                     if country == '?' or country_str in country:
-                        self[riskid, lt] = crm._riskmodels[riskid]
+                        self[riskid] = crm._riskmodels[riskid]
                         self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
@@ -1684,22 +1683,10 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = self.alias.get(imt, imt)
-            if event:
-                out = rm(lt, self.asset_df, haz, col, rndgen)
-            else:  # classical
-                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
+        for riskid, rm in self.items():
+            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
+                weights[lt].append(self.wdic[riskid, lt])
+                dic[lt].append(res)
         out = {}
         for lt in self.minimum_asset_loss:
             outs = dic[lt]
@@ -1713,7 +1700,7 @@ class RiskComputer(dict):
                 out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
             else:
                 out[lt] = outs[0]
-        if event:
+        if hasattr(haz, 'eid'):  # event based
             for update_losses in sec_losses:
                 update_losses(self.asset_df, out)
         return out
@@ -1724,18 +1711,18 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                            'retro'] = retro
+                    rfdic['%s#%s' % (rf.id, lt)] = dic
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
                    wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   alias=self.alias,
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
@@ -1748,19 +1735,19 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def _max(dic):
-    if len(dic) == 1:
-        res = dic[next(iter(dic))]
+def _max(lossdic):
+    if len(lossdic) == 1:
+        res = lossdic[next(iter(lossdic))]
     else:
-        res = numpy.array([dic[lt] for lt in dic]).max(axis=0)
+        res = numpy.array([lossdic[lt] for lt in lossdic]).max(axis=0)
     return res
 
 
-def _sum(dic):
-    if len(dic) == 1:
-        res = dic[next(iter(dic))]
+def _sum(lossdic):
+    if len(lossdic) == 1:
+        res = lossdic[next(iter(lossdic))]
     else:
-        res = sum(dic[lt] for lt in dic)
+        res = sum(lossdic[lt] for lt in lossdic)
     return res
 
 
