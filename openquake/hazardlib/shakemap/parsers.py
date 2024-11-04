@@ -570,6 +570,21 @@ def download_jpg(usgs_id, what):
         return None
 
 
+def download_grid(shakemap_contents):
+    if 'download/grid.xml' in shakemap_contents:
+        url = shakemap_contents.get('download/grid.xml')['url']
+        logging.info('Downloading grid.xml')
+        grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
+        return grid_fname
+
+
+def download_rupture_data(shakemap_contents):
+    url = shakemap_contents.get('download/rupture.json')['url']
+    logging.info('Downloading rupture.json')
+    rup_data = json.loads(urlopen(url).read())
+    return rup_data
+
+
 def download_rupture_dict(usgs_id, ignore_shakemap=False):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
@@ -604,17 +619,11 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
             break
     else:  # missing rupture.json
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
-
     shakemap_array = None
-    if 'download/grid.xml' in contents:
-        url = contents.get('download/grid.xml')['url']
-        logging.info('Downloading grid.xml')
-        grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
+    grid_fname = download_grid(contents)
+    if grid_fname is not None:
         shakemap_array = get_shakemap_array(grid_fname)
-
-    url = contents.get('download/rupture.json')['url']
-    logging.info('Downloading rupture.json')
-    rup_data = json.loads(urlopen(url).read())
+    rup_data = download_rupture_data(contents)
     feats = rup_data['features']
     is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
