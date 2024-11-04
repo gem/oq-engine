@@ -360,7 +360,8 @@ so first you have to build such objects:
 >>> [site] = sitecol  # since there is a single site
 >>> from openquake.hazardlib.scalerel import WC1994
 >>> msr = WC1994()  # magnitude scaling relationship
->>> rup = get_planar(site, msr, mag=6., aratio=1., strike=11., dip=38.,
+>>> mag = 6.
+>>> rup = get_planar(site, msr, mag, aratio=1., strike=11., dip=38.,
 ...                  rake=55., trt=cmaker.trt)
 
 If you want to generate the GMF produced by a rupture (i.e. to emulate
@@ -389,13 +390,16 @@ of realizations times the number of occurrences and therefore in this case
 the event ID (`eid`) can only have the values 0 or 1.
 
 It is also possible to perform calculations with point-like ruptures
-(i.e. ignoring the finite-size effects) by simply using the appropriate
-scale relation:
+(i.e. ignoring the finite-size effects):
 
->>> from openquake.hazardlib.scalerel import PointMSR
->>> msr = PointMSR()  # ignores finite-size effects
->>> rup = get_planar(site, msr, mag=6., aratio=1., strike=11., dip=38.,
-...                  rake=55., trt=cmaker.trt)
+>>> from openquake.hazardlib.source.rupture import PointRupture
+>>> occ_rate = None  # not used in the GmfComputer
+>>> rup =  PointRupture(mag, cmaker.trt, site.location, occ_rate, cmaker.tom)
+>>> ebr = EBRupture(rup, n_occ=2, seed=42)
+>>> GmfComputer(ebr, sitecol, cmaker).compute_all()
+      gmv_0  eid  sid  rlz
+0  0.541180    0    0    0
+1  0.247199    1    0    0
 
 Working with verification tables
 --------------------------------
