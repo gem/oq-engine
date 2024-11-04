@@ -474,6 +474,7 @@ def get_riskcomputer(dic, alias):
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
+            rf.peril = 'earthquake'
         if getattr(rf, 'retro', False):
             rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
             rf.retro.init()
