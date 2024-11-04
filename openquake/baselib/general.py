@@ -45,7 +45,7 @@ from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
 from decorator import decorator
-from openquake.baselib import __version__
+from openquake.baselib import __version__, config
 from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
@@ -436,7 +436,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     if dir is not None:
         if not os.path.exists(dir):
             os.makedirs(dir)
-    fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    fh, path = tempfile.mkstemp(dir=dir or config.directory.custom_tmp,
+                                prefix=prefix, suffix=suffix)
     if remove:
         _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:

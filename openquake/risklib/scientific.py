@@ -45,6 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1663,12 +1664,12 @@ class RiskComputer(dict):
         self.wdic = {}
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
-        for lt in self.minimum_asset_loss:
-            for country, loss_type, riskid, weight in zip(
-                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
+        for country, loss_type, riskid, weight in zip(
+                tm.country, tm.loss_type, tm.risk_id, tm.weight):
+            for lt in self.minimum_asset_loss:
                 if loss_type in ('*', lt):
                     if country == '?' or country_str in country:
-                        self[riskid, lt] = crm._riskmodels[riskid]
+                        self[riskid] = crm._riskmodels[riskid]
                         self.wdic[riskid, lt] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
@@ -1682,11 +1683,10 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # lt -> outs
         weights = collections.defaultdict(list)  # lt -> weights
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            out = rm(lt, self.asset_df, haz, rndgen)
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
+        for riskid, rm in self.items():
+            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
+                weights[lt].append(self.wdic[riskid, lt])
+                dic[lt].append(res)
         out = {}
         for lt in self.minimum_asset_loss:
             outs = dic[lt]
@@ -1711,13 +1711,14 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                            'retro'] = retro
+                    rfdic['%s#%s' % (rf.id, lt)] = dic
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,

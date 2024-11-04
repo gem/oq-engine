@@ -46,11 +46,8 @@ MAX_DIST = IntegrationDistance.new('300')
 
 RUP = PointRupture(
     mag=MAG,
-    rake=0,
     tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
     hypocenter=Point(LON, LAT, DEP),
-    strike=0,
-    dip=90,
     occurrence_rate=1,
     temporal_occurrence_model=PoissonTOM(1.0),
     zbot=DEP,
