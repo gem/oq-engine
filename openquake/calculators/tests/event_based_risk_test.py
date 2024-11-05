@@ -553,7 +553,6 @@ agg_id
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
-        raise SkipTest('The taxonomy mapping cannot depend on the loss type')
         # loss_type-dependent taxonomy mapping
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')

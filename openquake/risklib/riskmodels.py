@@ -506,11 +506,11 @@ def get_cdict(fractions, coeffs, df, perils):
     :returns: a dict peril -> array of shape (A, E)
     """
     cdict = {}
-    for li, peril in enumerate(perils):
+    for pi, peril in enumerate(perils):
         for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
             cs = coeffs[risk_id]
             if per == peril or per == '*':
-                cdict[peril] = fractions[li] @ cs[peril] * weight
+                cdict[peril] = fractions[pi] @ cs[peril]['structural'] * weight
     return cdict
 
 
@@ -591,8 +591,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
                 if len(coeffs):
-                    for per, risk_id, weight in zip(
-                            df.peril, df.risk_id, df.weight):
+                    for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
                         if (per == '*' or per == peril) and risk_id != '?':
                             try:
                                 coeffs[risk_id][peril]
@@ -608,8 +607,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         for riskfunc in self.risklist:
             ids_by_kind[riskfunc.kind].add(riskfunc.id)
         kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
-        fnames = [fname for kind, fname in inputs.items()
-                  if kind.endswith(kinds)]
+        fnames = [fname for kind, fname in inputs.items() if kind.endswith(kinds)]
         if len(ids_by_kind) > 1:
             k = next(iter(ids_by_kind))
             base_ids = set(ids_by_kind.pop(k))
@@ -619,10 +617,10 @@ class CompositeRiskModel(collections.abc.Mapping):
                         'Check in the files %s the IDs %s' %
                         (fnames, sorted(base_ids.symmetric_difference(ids))))
 
-        # check imt_by_lt has consistent loss types for all taxonomies
         if self._riskmodels:
-            missing = AccumDict(accum=[])
             for peril in self.perils:
+                # check imt_by_lt has consistent loss types for all taxonomies
+                missing = AccumDict(accum=[])
                 rms = []
                 if len(self.tmap_df):
                     if len(self.tmap_df.peril.unique()) == 1:
@@ -634,6 +632,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
+                    # NB: in event_based_risk/case_8 the loss types are
+                    # area, number, occupants, residents
                     for lt in self.loss_types:
                         try:
                             rm.imt_by_lt[lt]
@@ -641,10 +641,10 @@ class CompositeRiskModel(collections.abc.Mapping):
                             key = '%s/%s/%s' % (peril, kinds[0], lt)
                             fname = self.oqparam._risk_files[key]
                             missing[fname].append(rm.taxonomy)
-            if missing:
-                for fname, ids in missing.items():
-                    raise InvalidFile(
-                        '%s: missing %s' % (fname, ' '.join(ids)))
+                if missing:
+                    for fname, ids in missing.items():
+                        raise InvalidFile(
+                            '%s: missing %s %s' % (fname, peril, ' '.join(ids)))
 
     def compute_csq(self, assets, fractions, tmap_df, oq):
         """
