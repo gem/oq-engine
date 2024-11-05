@@ -967,6 +967,8 @@ def aristotle_run(request):
     response_data[job_id] = dict(
         status='created', job_id=job_id, outputs_uri=outputs_uri_api,
         log_uri=log_uri, traceback_uri=traceback_uri)
+    # if 'shakemap_info' in rupdic:
+    #     response_data['shakemap_info'] = rupdic['shakemap_info']
     if not job_owner_email:
         response_data[job_id]['WARNING'] = (
             'No email address is speficied for your user account,'

@@ -535,8 +535,20 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
               'mag': mag, 'rake': 0.,
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'is_point_rup': True, 'usgs_id': usgs_id, 'rupture_file': None}
+              'is_point_rup': True, 'usgs_id': usgs_id, 'rupture_file': None,
+              'shakemap_info': None}
     return rupdic
+
+
+def get_shakemap_info(shakemap):
+    update_time_utc_str = datetime.utcfromtimestamp(
+        shakemap['updateTime'] / 1000).strftime("%Y-%m-%d %H:%M:%S (UTC)")
+    info = {
+        'catalog': shakemap['properties']['eventsource'],
+        'source': shakemap['source'],
+        'description': shakemap['properties']['event-description'],
+        'updateTime': update_time_utc_str}
+    return info
 
 
 def download_rupture_dict(usgs_id, ignore_shakemap=False):
@@ -567,6 +579,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'There is no shakemap nor finite-fault info for %s' % usgs_id)
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
     shakemap = get_preferred_shakemap(shakemaps)
+    shakemap_info = get_shakemap_info(shakemap)
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
@@ -586,7 +599,8 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': is_point_rup,
-                'usgs_id': usgs_id, 'rupture_file': None}
+                'usgs_id': usgs_id, 'rupture_file': None,
+                'shakemap_info': shakemap_info}
     try:
         oq_rup = convert_to_oq_rupture(rup_data)
     except Exception as exc:
@@ -599,7 +613,8 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'mag': md['mag'], 'rake': md['rake'],
                 'local_timestamp': str(local_time), 'time_event': time_event,
                 'is_point_rup': True,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
+                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg,
+                'shakemap_info': shakemap_info}
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
@@ -625,7 +640,8 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
             'local_timestamp': str(local_time), 'time_event': time_event,
             'is_point_rup': False,
             'trt': oq_rup.tectonic_region_type,
-            'usgs_id': usgs_id, 'rupture_file': rupture_file}
+            'usgs_id': usgs_id, 'rupture_file': rupture_file,
+            'shakemap_info': shakemap_info}
 
 
 def get_array_usgs_id(kind, usgs_id):
