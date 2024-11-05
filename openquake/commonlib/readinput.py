@@ -968,11 +968,11 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def _cons_coeffs(records, loss_types, limit_states):
-    dtlist = [(lt, F32) for lt in loss_types]
+def _cons_coeffs(records, perils, limit_states):
+    dtlist = [(peril, F32) for peril in perils]
     coeffs = numpy.zeros(len(limit_states), dtlist)
     for rec in records:
-        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
+        coeffs[rec['peril']] = [rec[ds] for ds in limit_states]
     return coeffs
 
 
@@ -993,11 +993,11 @@ def get_crmodel(oqparam):
                 return crm
 
     risklist = get_risk_functions(oqparam)
+    perils = numpy.array(sorted(set(rf.peril for rf in risklist)))
     if not oqparam.limit_states and risklist.limit_states:
         oqparam.limit_states = risklist.limit_states
     elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
         assert oqparam.limit_states == risklist.limit_states
-    loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
         if not risklist.limit_states:
@@ -1007,19 +1007,18 @@ def get_crmodel(oqparam):
         for by, fnames in oqparam.inputs['consequence'].items():
             if isinstance(fnames, str):  # single file
                 fnames = [fnames]
-            dtypedict = {
-                by: str, 'consequence': str, 'loss_type': str, None: float}
+            dtypedict = {by: str, 'consequence': str, 'peril': str, None: float}
 
             # i.e. files collapsed.csv, fatalities.csv, ... with headers
-            # taxonomy,consequence,loss_type,slight,moderate,extensive
+            # taxonomy,consequence,peril,slight,moderate,extensive
             arrays = []
             for fname in fnames:
                 arr = hdf5.read_csv(fname, dtypedict).array
                 for no, row in enumerate(arr, 2):
-                    if row['loss_type'] not in loss_types:
+                    if row['peril'] not in perils:
                         msg = '%s: line=%d: there is not fragility function for %s'
-                        logging.warning(msg, fname, no, row['loss_type'])
-                arrays.append(arr[numpy.isin(arr['loss_type'], loss_types)])
+                        logging.warning(msg, fname, no, row['peril'])
+                arrays.append(arr[numpy.isin(arr['peril'], perils)])
 
             array = numpy.concatenate(arrays)
             dic = group_array(array, 'consequence')
@@ -1028,7 +1027,7 @@ def get_crmodel(oqparam):
                     raise InvalidFile('Unknown consequence %s in %s' %
                                       (consequence, fnames))
                 bytag = {
-                    tag: _cons_coeffs(grp, loss_types, risklist.limit_states)
+                    tag: _cons_coeffs(grp, perils, risklist.limit_states)
                     for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (consequence, by)] = bytag
     # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
@@ -1241,7 +1240,7 @@ def taxonomy_mapping(oqparam, taxidx):
         df = pandas.DataFrame(dict(weight=numpy.ones(nt),
                                    taxi=taxidx.values(),
                                    risk_id=list(taxidx),
-                                   loss_type=['*']*nt,
+                                   peril=['*']*nt,
                                    country=['?']*nt))
         return df
     fname = oqparam.inputs['taxonomy_mapping']
@@ -1255,17 +1254,17 @@ def _taxonomy_mapping(filename, taxidx):
         raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
-    if 'loss_type' not in tmap_df:
-        tmap_df['loss_type'] = '*'
+    if 'peril' not in tmap_df:
+        tmap_df['peril'] = '*'
     if 'country' not in tmap_df:
         tmap_df['country'] = '?'
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'
+    assert set(tmap_df) == {'country', 'peril', 'taxonomy', 'risk_id', 'weight'
                             }, set(tmap_df)
     taxos = set()
-    for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
+    for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'peril']):
         taxos.add(taxo)
         if abs(df.weight.sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
