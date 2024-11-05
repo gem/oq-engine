@@ -36,9 +36,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-
-LTYPE_REGEX = '|'.join(lt for lt in scientific.LOSSTYPE
-                  if '+' not in lt and '_ins' not in lt)
+lts = numpy.concatenate([scientific.LOSSTYPE, scientific.PERILTYPE])
+LTYPE_REGEX = '|'.join(lt for lt in lts if '+' not in lt and '_ins' not in lt)
 RISK_TYPE_REGEX = re.compile(r'(%s)_([\w_]+)' % LTYPE_REGEX)
 
 
@@ -56,7 +55,7 @@ def _assert_equal(d1, d2):
 def get_risk_files(inputs):
     """
     :param inputs: a dictionary key -> path name
-    :returns: a pair (file_type, {risk_type: path})
+    :returns: a dictionary "peril/kind/cost_type" -> fname
     """
     rfs = {}
     job_ini = inputs['job_ini']
@@ -64,14 +63,22 @@ def get_risk_files(inputs):
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file
-            rfs['fragility/structural'] = inputs[
+            rfs['earthquake/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
         elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
             match = RISK_TYPE_REGEX.match(key)
             if match:
-                rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
-            elif match is None:
+                kind = match.group(2)  # fragility or vulnerability
+                value = inputs[key]
+                if isinstance(value, dict):  # cost_type -> fname
+                    peril = match.group(1)
+                    for cost_type, fname in value.items():
+                        rfs[f'{peril}/{kind}/{cost_type}'] = fname                        
+                else:
+                    cost_type = match.group(1)
+                    rfs[f'earthquake/{kind}/{cost_type}'] = value
+            else:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
     return rfs
 
@@ -96,29 +103,30 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def group_by_lt(funclist):
+def group_by_peril(funclist):
     """
     Converts a list of objects with attribute .loss_type into a dictionary
-    loss_type -> risk_function
+    peril -> loss_type -> risk_function
     """
-    d = AccumDict(accum=[])
+    ddic = AccumDict(accum=AccumDict(accum=[]))  # peril -> lt -> rf
     for rf in funclist:
-        d[rf.loss_type].append(rf)
-    for lt, lst in d.items():
-        if len(lst) == 1:
-            d[lt] = lst[0]
-        elif lst[1].kind == 'fragility':
-            # EventBasedDamageTestCase.test_case_11
-            cf, ffl = lst
-            ffl.cf = cf
-            d[lt] = ffl
-        elif lst[1].kind == 'vulnerability_retrofitted':
-            vf, retro = lst
-            vf.retro = retro
-            d[lt] = vf
-        else:
-            raise RuntimeError(lst)
-    return d
+        ddic[rf.peril][rf.loss_type].append(rf)
+    for peril, dic in ddic.items():
+        for lt, lst in dic.items():
+            if len(lst) == 1:
+                dic[lt] = lst[0]
+            elif lst[1].kind == 'fragility':
+                # EventBasedDamageTestCase.test_case_11
+                cf, ffl = lst
+                ffl.cf = cf
+                dic[lt] = ffl
+            elif lst[1].kind == 'vulnerability_retrofitted':
+                vf, retro = lst
+                vf.retro = retro
+                dic[lt] = vf
+            else:
+                raise RuntimeError(lst)
+    return ddic
 
 
 class RiskFuncList(list):
@@ -132,7 +140,7 @@ class RiskFuncList(list):
         ddic = AccumDict(accum=[])
         for rf in self:
             ddic[rf.id].append(rf)
-        return {riskid: group_by_lt(rfs) for riskid, rfs in ddic.items()}
+        return {riskid: group_by_peril(rfs) for riskid, rfs in ddic.items()}
 
 
 def get_risk_functions(oqparam):
@@ -143,13 +151,13 @@ def get_risk_functions(oqparam):
         a list of risk functions
     """
     job_ini = oqparam.inputs['job_ini']
-    rmodels = AccumDict()
+    rmodels = AccumDict()  # (peril, loss_type, kind) -> rmodel
     for key, fname in get_risk_files(oqparam.inputs).items():
-        kind, loss_type = key.split('/')  # ex. vulnerability/structural
+        peril, kind, loss_type = key.split('/')  # ex. earthquake/vulnerability/structural
         rmodel = nrml.to_python(fname)
         if len(rmodel) == 0:
             raise InvalidFile(f'{job_ini}: {fname} is empty!')
-        rmodels[loss_type, kind] = rmodel
+        rmodels[peril, loss_type, kind] = rmodel
         if rmodel.lossCategory is None:  # NRML 0.4
             continue
         cost_type = str(rmodel.lossCategory)
@@ -157,20 +165,16 @@ def get_risk_functions(oqparam):
         kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
         if not rmodel_kind.lower().startswith(kind_):
             raise ValueError(
-                'Error in the file "%s_file=%s": is '
-                'of kind %s, expected %s' % (
-                    key, oqparam.inputs[key], rmodel_kind,
-                    kind.capitalize() + 'Model'))
+                f'Error in the file "{key}_file={fname}": is '
+                f'of kind {rmodel_kind}, expected {kind.capitalize() + "Model"}')
         if cost_type != loss_type:
             raise ValueError(
-                'Error in the file "%s_file=%s": lossCategory is of '
-                'type "%s", expected "%s"' %
-                (key, oqparam.inputs[key],
-                 rmodel.lossCategory, loss_type))
+                f'Error in the file "{key}_file={fname}": lossCategory is of '
+                f'type "{rmodel.lossCategory}", expected "{loss_type}"')
     cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
     rlist = RiskFuncList()
     rlist.limit_states = []
-    for (loss_type, kind), rm in sorted(rmodels.items()):
+    for (peril, loss_type, kind), rm in sorted(rmodels.items()):
         if kind == 'fragility':
             for (imt, riskid), ffl in sorted(rm.items()):
                 if not rlist.limit_states:
@@ -179,6 +183,7 @@ def get_risk_functions(oqparam):
                 # limit states; this may change in the future
                 assert rlist.limit_states == rm.limitStates, (
                     rlist.limit_states, rm.limitStates)
+                ffl.peril = peril
                 ffl.loss_type = loss_type
                 ffl.kind = kind
                 rlist.append(ffl)
@@ -187,6 +192,7 @@ def get_risk_functions(oqparam):
             # to make sure they are strictly increasing
             for (imt, riskid), rf in sorted(rm.items()):
                 rf = rf.strictly_increasing() if cl_risk else rf
+                rf.peril = peril
                 rf.loss_type = loss_type
                 rf.kind = kind
                 rlist.append(rf)
@@ -234,7 +240,7 @@ class RiskModel(object):
     Base class. Can be used in the tests as a mock.
 
     :param taxonomy: a taxonomy string
-    :param risk_functions: a dict (loss_type, kind) -> risk_function
+    :param risk_functions: a dict peril -> (loss_type, kind) -> risk_function
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_crmodel
@@ -243,17 +249,17 @@ class RiskModel(object):
     def __init__(self, calcmode, taxonomy, risk_functions, **kw):
         self.calcmode = calcmode
         self.taxonomy = taxonomy
-        self.risk_functions = {'earthquake': risk_functions}
+        self.risk_functions = risk_functions
         vars(self).update(kw)  # updates risk_investigation_time too
         steps = kw.get('lrem_steps_per_interval')
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for lt, vf in risk_functions.items()}
+                for lt, vf in risk_functions['earthquake'].items()}
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
-            for lt, vf in risk_functions.items():
+            for lt, vf in risk_functions['earthquake'].items():
                 self.loss_ratios_orig[lt] = tuple(
                     vf.mean_loss_ratios_with_steps(steps))
                 self.loss_ratios_retro[lt] = tuple(
@@ -261,7 +267,7 @@ class RiskModel(object):
 
         # set imt_by_lt
         self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions.items():
+        for lt, rf in risk_functions['earthquake'].items():
             if rf.kind in ('vulnerability', 'fragility'):
                 self.imt_by_lt[lt] = rf.imt
 
@@ -468,13 +474,14 @@ def get_riskcomputer(dic, alias):
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
+            rf.peril = 'earthquake'
         if getattr(rf, 'retro', False):
             rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
             rf.retro.init()
             rf.retro.loss_type = lt
         rfs[riskid].append(rf)
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       group_by_lt(rfs[riskid]),
+                       group_by_peril(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
