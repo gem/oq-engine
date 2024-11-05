@@ -423,18 +423,18 @@ campbell_2003
     :undoc-members:
     :show-inheritance:
 
-campbell_bozorgnia_2003_world
--------------------------------------------------------
-
-.. automodule:: openquake.hazardlib.campbell_bozorgnia_2003_world
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 campbell_bozorgnia_2003
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+campbell_bozorgnia_2003_world
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003_world
     :members:
     :undoc-members:
     :show-inheritance:
