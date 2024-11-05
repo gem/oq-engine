@@ -35,20 +35,16 @@ class M9BasinTermTestCase(unittest.TestCase):
 
         # Check the assigned IMTs
         expected = set([PGA, SA, PGV])
-        self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES == expected,
-                        msg='The assigned IMTs are incorrect')
+        ae(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES, expected)
         # Check the TR
         expected = TRT.SUBDUCTION_INTERFACE
-        self.assertTrue(mgmpe.DEFINED_FOR_TECTONIC_REGION_TYPE == expected,
-                        msg='The assigned TRT is incorrect')
+        ae(mgmpe.DEFINED_FOR_TECTONIC_REGION_TYPE, expected)
         # Check the IM component
         expected = IMC.RotD50
-        self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
-                        expected, msg='The IM component is wrong')
+        ae(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT, expected)
         # Check the required distances
         expected = {'rrup'}
-        self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
-                        msg='The assigned distance types are wrong')
+        ae(mgmpe.REQUIRES_DISTANCES, expected)
         
 
     def test_all(self):

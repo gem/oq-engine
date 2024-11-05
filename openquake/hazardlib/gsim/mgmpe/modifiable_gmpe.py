@@ -28,7 +28,7 @@ from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
-from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _get_m9_basin_term
+from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 from openquake.hazardlib.gsim.nga_east import (
     TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
@@ -82,7 +82,7 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the M9 basin amplification term
     """
-    me = _get_m9_basin_term(ctx, imt, me)
+    me = _apply_m9_basin_term(ctx, imt, me)
     
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):

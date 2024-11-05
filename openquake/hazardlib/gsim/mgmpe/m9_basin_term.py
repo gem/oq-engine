@@ -24,7 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-def _get_m9_basin_term(ctx, imt, mean):
+def _apply_m9_basin_term(ctx, imt, mean):
     if imt.period > 1.9: # Only apply to long-period SA
         fb_m9 = np.log(2.0)
         idx = ctx.z2pt5 > 6.0 # Apply only if z2pt5 > 6
@@ -76,4 +76,4 @@ class M9BasinTerm(GMPE):
         """
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
-             mean[m] = _get_m9_basin_term(ctx, imt, mean[m])
+             mean[m] = _apply_m9_basin_term(ctx, imt, mean[m])
