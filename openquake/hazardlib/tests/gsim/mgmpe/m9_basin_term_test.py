@@ -94,12 +94,11 @@ class M9BasinTermTestCase(unittest.TestCase):
         ae(mea[1], mea[2])
 
         # For SA(2.0) basin amplification should be added
-        # unmodified + np.log(2.0) 
         ori_sa2pt0 = mea[0][2]
         cls_sa2pt0 = mea[1][2]
         val_sa2pt0 = mea[2][2]
-        exp_diff = np.array([np.log(2.0), 0., np.log(2.0)])
-        for idx_v, v in enumerate(exp_diff):
+        exp_diff = np.array([np.log(2.0), 0., np.log(2.0)]) # Site 1 intensities
+        for idx_v, v in enumerate(exp_diff):                # note be changed
             diff_cls = cls_sa2pt0[idx_v] - ori_sa2pt0[idx_v]
             diff_val = val_sa2pt0[idx_v] - ori_sa2pt0[idx_v]
             aae(diff_cls, exp_diff[idx_v])
