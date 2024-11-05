@@ -423,10 +423,17 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic_non_null
 
 
-def get_latest_shakemap(shakemaps):
-    update_times = [shakemap['updateTime'] for shakemap in shakemaps]
-    latest_idx = update_times.index(max(update_times))
-    shakemap = shakemaps[latest_idx]
+def get_preferred_shakemap(shakemaps):
+    preferred_weights = [shakemap['preferredWeight'] for shakemap in shakemaps]
+    preferred_idxs = [idx for idx, val in enumerate(preferred_weights)
+                      if val == max(preferred_weights)]
+    preferred_shakemaps = [shakemaps[idx] for idx in preferred_idxs]
+    if len(preferred_shakemaps) > 1:
+        update_times = [shakemap['updateTime'] for shakemap in preferred_shakemaps]
+        latest_idx = update_times.index(max(update_times))
+        shakemap = preferred_shakemaps[latest_idx]
+    else:
+        shakemap = preferred_shakemaps[0]
     return shakemap
 
 
@@ -453,7 +460,7 @@ def download_station_data_file(usgs_id, save_to_home=False):
         msg = 'No shakemap was found'
         logging.info(msg)
         raise
-    shakemap = get_latest_shakemap(shakemaps)
+    shakemap = get_preferred_shakemap(shakemaps)
     contents = shakemap['contents']
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
@@ -559,7 +566,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
             raise MissingLink(
                 'There is no shakemap nor finite-fault info for %s' % usgs_id)
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
-    shakemap = get_latest_shakemap(shakemaps)
+    shakemap = get_preferred_shakemap(shakemaps)
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
