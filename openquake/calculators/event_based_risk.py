@@ -242,7 +242,7 @@ def gen_outputs(df, crmodel, rng, monitor):
             if len(gmf_df) == 0:  # common enough
                 continue
             with mon_risk:
-                out = crmodel.get_output(
+                [out] = crmodel.get_output(
                     adf, gmf_df, crmodel.oqparam._sec_losses, rng)
             yield out
 
