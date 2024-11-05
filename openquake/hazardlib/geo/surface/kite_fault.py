@@ -330,14 +330,8 @@ class KiteSurface(BaseSurface):
             a_low = (tmp_strike + 10) % 360
             a_upp = (tmp_strike + 80) % 360
 
+            # Check that the dip direction is within a range
             tmp = geo_utils.angles_within(a_low, a_upp, azi_dip)
-
-            # Compare the dip direction from the strike against the one from
-            # the quadrilateral
-            # tmp = geo_utils._angles_diff(azi_strike, 90)
-            # if abs(geo_utils._angles_diff(tmp, azi_dip)) < 40:
-            # tmp = (azi_strike + 90) % 360
-            #if abs(geo_utils._angles_diff(tmp, azi_dip)) > 40:
             if not tmp:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
@@ -887,10 +881,9 @@ def _fix_right_hand(msh):
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
         chk1 = _does_mesh_comply_with_right_hand_rule(nmsh)
-        chk1 = True
 
         # NOTE this is for debugging purposes
-        if True and not chk1:
+        if False and not chk1:
             _plot_mesh(nmsh)
             _plot_mesh(msh)
 
