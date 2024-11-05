@@ -96,7 +96,7 @@ class Socket(object):
     """
     # NB: the timeout has to be large since starting a workerpool can be
     # slow due to numba compiling everything, so you have to wait
-    def __init__(self, end_point, socket_type, mode, timeout=30):
+    def __init__(self, end_point, socket_type, mode, timeout=60):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
