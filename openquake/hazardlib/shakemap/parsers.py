@@ -452,13 +452,6 @@ def download_station_data_file(usgs_id, save_to_home=False):
         contents = shakemap['contents']
         if 'download/stationlist.json' in contents:
             stationlist_url = contents.get('download/stationlist.json')['url']
-            if usgs_id not in stationlist_url:
-                unexpected_url = stationlist_url
-                version_id = get_shakemap_version(usgs_id)
-                stationlist_url = (f'{US_GOV}/product/shakemap/{usgs_id}/atlas/'
-                                   f'{version_id}/download/stationlist.json')
-                logging.warning('Downloading stations from %s instead of %s' %
-                                (stationlist_url, unexpected_url))
             logging.info('Downloading stationlist.json')
             stations_json_str = urlopen(stationlist_url).read()
             try:
