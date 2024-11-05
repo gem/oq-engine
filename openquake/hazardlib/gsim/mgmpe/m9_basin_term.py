@@ -35,13 +35,12 @@ def _apply_m9_basin_term(ctx, imt, mean):
 
 class M9BasinTerm(GMPE):
     """
-    Implements a modified GMPE class that can be used to account for
-    amplification of long period ground-motions within the Seattle Basin
-    through the use of the M9 project-based basin adjustment term.
+    Implements a modified GMPE class that can be used to implement the "M9"
+    US 2023 NSHM basin amplification adjustment.
      
-    This implementation is based on the description of the M9 adjustment as
-    provided by the Moschetti et al. (2024) EQ Spectra article on the
-    conterminous US 2023 NSHM GMC.
+    This implementation is based on the description of the M9 adjustment 
+    within the Moschetti et al. (2024) EQ Spectra article on the conterminous
+    US 2023 NSHM GMC.
 
     :param gmpe_name:
         The name of a GMPE class
