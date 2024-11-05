@@ -1219,7 +1219,7 @@ def aristotle_tmap(oqparam, taxidx):
             for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
-                    acc['loss_type'].append('*')
+                    acc['peril'].append('earthquake')
                     acc['taxi'].append(taxidx[taxo])
                     acc['risk_id'].append(risk_id)
                     acc['weight'].append(weight)
