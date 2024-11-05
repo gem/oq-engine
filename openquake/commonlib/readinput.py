@@ -1248,6 +1248,7 @@ def taxonomy_mapping(oqparam, taxidx):
 
 
 def _taxonomy_mapping(filename, taxidx):
+    breakpoint()
     try:
         tmap_df = pandas.read_csv(filename, converters=dict(weight=float))
     except Exception as e:
