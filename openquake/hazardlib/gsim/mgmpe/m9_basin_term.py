@@ -25,10 +25,9 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 
 
 def _apply_m9_basin_term(ctx, imt, mean):
-    if imt.period > 1.9: # Only apply to long-period SA
-        fb_m9 = np.log(2.0)
-        idx = ctx.z2pt5 > 6.0 # Apply only if z2pt5 > 6
-        mean[idx] += fb_m9
+    fb_m9 = np.log(2.0)
+    idx = ctx.z2pt5 >= 6.0
+    mean[idx] += fb_m9
 
     return mean
 
@@ -36,13 +35,14 @@ def _apply_m9_basin_term(ctx, imt, mean):
 class M9BasinTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to account for basin
-    amplification of long period ground-motions within the Seattle Basin
-    through the use of the M9 basin amplification model (Frankel et al. 2018,
-    Wirth et al. 2018).
+    amplification of ground-motions within the Seattle Basin through the use
+    of the M9 basin amplification model. Implementation is as described on
+    pp. 1178-1179 of the Moschetti et al. 2024 EQ Spectra article for US 2023
+    conterminous model GMC.
 
-    The amplification of the mean ground-motion is uniformly modelled across
-    the Seattle Basin as an additive factor of log(2.0) for long period
-    ground-motions with a z2pt5 greater than 6.0 km.
+    The amplification of the mean ground-motion is uniformly modelled as an
+    additive factor of log(2.0) for sites with a z2pt5 greater than or equal
+    to 6.0 km.
 
     :param gmpe_name:
         The name of a GMPE class
