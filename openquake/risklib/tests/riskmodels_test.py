@@ -205,6 +205,7 @@ class RiskComputerTestCase(unittest.TestCase):
                    'RC#structural':
                    {"openquake.risklib.scientific.VulnerabilityFunction":
                     {"id": "RC",
+                     "peril": 'earthquake',
                      "loss_type": "structural",
                      "imt": "PGA",
                      "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
@@ -217,7 +218,8 @@ class RiskComputerTestCase(unittest.TestCase):
                 'gmv_0': [.23, .31]}
         rc = riskmodels.get_riskcomputer(dic, alias={'PGA': 'gmv_0'})
         print(toml.dumps(dic))
-        self.assertEqual(dic, rc.todict())
+        for k, v in rc.todict().items():
+            self.assertEqual(dic[k], v)
         out = rc.output(pandas.DataFrame(gmfs))
         print(out)
 

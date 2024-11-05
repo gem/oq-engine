@@ -1472,12 +1472,12 @@ class OqParam(valid.ParamSet):
         else:
             self._parent = None
         # set all_cost_types
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        # rt has the form 'earthquake/vulnerability/structural', ...
+        costtypes = set(rt.split('/')[2] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
                 self._risk_files = rfs = get_risk_files(self._parent.inputs)
-                costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+                costtypes = set(rt.split('/')[2] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
         self.all_cost_types = sorted(costtypes)  # including occupants
