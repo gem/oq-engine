@@ -45,6 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -70,7 +71,6 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
-liquefaction landslide
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -1657,21 +1657,22 @@ class RiskComputer(dict):
         [taxidx] = asset_df.taxonomy.unique()
         self.asset_df = asset_df
         self.imtls = oq.imtls
-        self.alias = {imt: 'gmv_%d' % i
-                      for i, imt in enumerate(oq.get_primary_imtls())}
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
+        self.perils = crm.perils
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
-        self.wdic = {}
+        self.wdic = {}  # (riskid, peril) -> weight
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
-        for lt in self.minimum_asset_loss:
-            for country, loss_type, riskid, weight in zip(
-                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
-                if loss_type in ('*', lt):
-                    if country == '?' or country_str in country:
-                        self[riskid, lt] = crm._riskmodels[riskid]
-                        self.wdic[riskid, lt] = weight
+        for country, peril, riskid, weight in zip(
+                tm.country, tm.peril, tm.risk_id, tm.weight):
+            if country == '?' or country_str in country:
+                self[riskid] = crm._riskmodels[riskid]
+                if peril == '*':
+                    for per in self.perils:
+                        self.wdic[riskid, per] = weight
+                else:
+                    self.wdic[riskid, peril] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
@@ -1680,43 +1681,32 @@ class RiskComputer(dict):
         :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
-        :returns: loss dict {extended_loss_type: loss_output}
+        :yields: dictionaries {loss_type: loss_output}
         """
-        dic = collections.defaultdict(list)  # lt -> outs
-        weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = self.alias.get(imt, imt)
-            if event:
-                out = rm(lt, self.asset_df, haz, col, rndgen)
-            else:  # classical
-                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
-        out = {}
-        for lt in self.minimum_asset_loss:
-            outs = dic[lt]
-            if len(outs) == 0:  # can happen for nonstructural_ins
-                continue
-            elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                # computing the average dataframe for event_based_risk/case_8
-                out[lt] = _agg(outs, weights[lt])
-            elif len(outs) > 1:
-                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
-            else:
-                out[lt] = outs[0]
-        if event:
-            for update_losses in sec_losses:
-                update_losses(self.asset_df, out)
-        return out
+        dic = collections.defaultdict(list)  # peril, lt -> outs
+        weights = collections.defaultdict(list)  # peril, lt -> weights
+        for riskid, rm in self.items():
+            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
+                weights[peril, lt].append(self.wdic[riskid, peril])
+                dic[peril, lt].append(res)
+        for peril in self.perils:
+            out = {}
+            for lt in self.minimum_asset_loss:
+                outs = dic[peril, lt]
+                if len(outs) == 0:  # can happen for nonstructural_ins
+                    continue
+                elif len(outs) > 1 and hasattr(outs[0], 'loss'):
+                    # computing the average dataframe for event_based_risk/case_8
+                    out[lt] = _agg(outs, weights[peril, lt])
+                elif len(outs) > 1:
+                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
+                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                else:
+                    out[lt] = outs[0]
+            if hasattr(haz, 'eid'):  # event based
+                for update_losses in sec_losses:
+                    update_losses(self.asset_df, out)
+            yield out
 
     def todict(self):
         """
@@ -1724,18 +1714,18 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                            'retro'] = retro
+                    rfdic['%s#%s' % (rf.id, lt)] = dic
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
                    wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   alias=self.alias,
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
@@ -1748,45 +1738,39 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def _max(dic):
-    if len(dic) == 1:
-        res = dic[next(iter(dic))]
+def _max(coeffs):
+    perils = list(coeffs)
+    if len(perils) == 1:
+        res = coeffs[perils[0]]
     else:
-        res = numpy.array([dic[lt] for lt in dic]).max(axis=0)
+        res = numpy.array([coeffs[peril] for peril in perils]).max(axis=0)
     return res
 
 
-def _sum(dic):
-    if len(dic) == 1:
-        res = dic[next(iter(dic))]
-    else:
-        res = sum(dic[lt] for lt in dic)
-    return res
-
-
-def consequence(consequence, assets, coeffs, total_loss_types, time_event):
+def consequence(consequence, assets, cdict, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param assets: asset array (shape A)
-    :param coeffs: an array of multiplicative coefficients of shape (A, E)
+    :param cdict: peril -> composite array of coefficients of shape (A, E)
+    :param loss_type: loss type string
     :param time_event: time event string
     :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     if consequence.startswith('losses'):
-        res = _max({lt: assets['value-' + lt].reshape(-1, 1) * coeffs[lt]
-                    for lt in total_loss_types}) / assets['value-number'].reshape(-1, 1)
+        res = (assets['value-' + loss_type].reshape(-1, 1) *
+               _max(cdict)) / assets['value-number'].reshape(-1, 1)
         return res
     elif consequence in ['collapsed', 'non_operational']:
-        return _sum(coeffs)
+        return _max(cdict)
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         values = assets[f'occupants_{time_event}'] / assets['value-number']
-        return values.reshape(-1, 1) * _sum(coeffs)
+        return values.reshape(-1, 1) * _max(cdict)
     elif consequence == 'homeless':
         values = assets['value-residents'] / assets['value-number']
-        return values.reshape(-1, 1) * _sum(coeffs)
+        return values.reshape(-1, 1) * _max(cdict)
     else:
         raise NotImplementedError(consequence)
 

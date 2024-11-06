@@ -70,6 +70,7 @@ jobs:
           ruff check --preview .
           pytest calculators -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep hmtk risklib commonlib baselib hazardlib
+          pytest --doctest-modules ../doc/contributing/*.rst
 
   server_public_mode:
     runs-on: ${{ matrix.os }}

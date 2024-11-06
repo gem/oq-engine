@@ -190,46 +190,46 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 
 class RiskComputerTestCase(unittest.TestCase):
     def test1(self):
-        dic = {
-            'alias': {'PGA': 'gmv_0'},
-            'asset_df': {'area': [1.0],
-                         'id': [b'a2'],
-                         'lat': [38.17],
-                         'lon': [15.56],
-                         'site_id': [0],
-                         'taxonomy': [1],
-                         'value-number': [2000.0],
-                         'value-structural': [2000.0]},
-            'calculation_mode': 'event_based_risk',
-            'loss_types': ['structural'],
-            'minimum_asset_loss': {'structural': 0},
-            'risk_functions': {
-                'RC#structural':
-                {"openquake.risklib.scientific.VulnerabilityFunction":
-                 {"id": "RC",
-                  "loss_type": "structural",
-                  "imt": "PGA",
-                  "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
-                  "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
-                  "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
-                  "distribution_name": "LN"}}},
-            'wdic': {'RC#structural': 1}}
+        dic = {'asset_df': {'area': [1.0],
+                            'id': [b'a2'],
+                            'lat': [38.17],
+                            'lon': [15.56],
+                            'site_id': [0],
+                            'taxonomy': [1],
+                            'value-number': [2000.0],
+                            'value-structural': [2000.0]},
+               'calculation_mode': 'event_based_risk',
+               'loss_types': ['structural'],
+               'minimum_asset_loss': {'structural': 0},
+               'risk_functions': {
+                   'RC#structural':
+                   {"openquake.risklib.scientific.VulnerabilityFunction":
+                    {"id": "RC",
+                     "peril": 'earthquake',
+                     "loss_type": "structural",
+                     "imt": "PGA",
+                     "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
+                     "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
+                     "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
+                     "distribution_name": "LN"}}},
+               'wdic': {'RC#structural': 1}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
                 'gmv_0': [.23, .31]}
-        rc = riskmodels.get_riskcomputer(dic)
+        rc = riskmodels.get_riskcomputer(dic, alias={'PGA': 'gmv_0'})
         print(toml.dumps(dic))
-        self.assertEqual(dic, rc.todict())
+        for k, v in rc.todict().items():
+            self.assertEqual(dic[k], v)
         out = rc.output(pandas.DataFrame(gmfs))
         print(out)
 
     def test2(self):
-        dic = {'alias': {'PGA': 'gmv_0',
-                         'SA(0.2)': 'gmv_1',
-                         'SA(0.5)': 'gmv_2',
-                         'SA(0.8)': 'gmv_3',
-                         'SA(1.0)': 'gmv_4'},
-               'asset_df': {'area': [10.0, 1.0],
+        alias = {'PGA': 'gmv_0',
+                 'SA(0.2)': 'gmv_1',
+                 'SA(0.5)': 'gmv_2',
+                 'SA(0.8)': 'gmv_3',
+                 'SA(1.0)': 'gmv_4'}
+        dic = {'asset_df': {'area': [10.0, 1.0],
                             'id': [b'a0', b'a3'],
                             'lat': [29.1098, 27.9015],
                             'lon': [81.2985, 85.7477],
@@ -267,7 +267,7 @@ class RiskComputerTestCase(unittest.TestCase):
                 'gmv_2': [.23, .51],
                 'gmv_3': [.23, .32],
                 'gmv_4': [.23, .21]}
-        rc = riskmodels.get_riskcomputer(dic)
+        rc = riskmodels.get_riskcomputer(dic, alias)
         print(toml.dumps(dic))
         out = rc.output(pandas.DataFrame(gmfs))
         print(out)
