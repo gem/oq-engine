@@ -465,7 +465,7 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None, imt=None, m9=None):
         # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
         # rather than km)
         mean = u_gmm + get_basin_response_term(C, region, vs30, z_values)
-        # If m9 adjustment 
+        # If M9 adjustment specified
         if m9:
             # Apply to basin sites for SA with T >= 1.9 s only
             mean_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)

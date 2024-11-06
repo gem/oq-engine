@@ -362,7 +362,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt,
     f_bas = get_basin_depth_scaling(C, region, ctx.vs30, z25)
     means = u_gmm + f_bas
 
-    # If m9 basin adjustment
+    # If M9 basin adjustment
     if m9:
         # Apply to basin sites for SA with T >= 1.9 s only
         means_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
