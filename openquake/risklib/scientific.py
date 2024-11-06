@@ -1738,45 +1738,39 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def _max(lossdic):
-    if len(lossdic) == 1:
-        res = lossdic[next(iter(lossdic))]
+def _max(coeffs):
+    perils = list(coeffs)
+    if len(perils) == 1:
+        res = coeffs[perils[0]]
     else:
-        res = numpy.array([lossdic[peril] for peril in lossdic]).max(axis=0)
+        res = numpy.array([coeffs[peril] for peril in perils]).max(axis=0)
     return res
 
 
-def _sum(lossdic):
-    if len(lossdic) == 1:
-        res = lossdic[next(iter(lossdic))]
-    else:
-        res = sum(lossdic[peril] for peril in lossdic)
-    return res
-
-
-def consequence(consequence, assets, coeffs, total_loss_types, time_event):
+def consequence(consequence, assets, cdict, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param assets: asset array (shape A)
-    :param coeffs: a composite array of multiplicative coefficients of shape (A, E)
+    :param cdict: peril -> composite array of coefficients of shape (A, E)
+    :param loss_type: loss type string
     :param time_event: time event string
     :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     if consequence.startswith('losses'):
-        res = _max({lt: assets['value-' + lt].reshape(-1, 1) * coeffs['earthquake']
-                    for lt in total_loss_types}) / assets['value-number'].reshape(-1, 1)
+        res = (assets['value-' + loss_type].reshape(-1, 1) *
+               _max(cdict)) / assets['value-number'].reshape(-1, 1)
         return res
     elif consequence in ['collapsed', 'non_operational']:
-        return _sum(coeffs)
+        return _max(cdict)
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         values = assets[f'occupants_{time_event}'] / assets['value-number']
-        return values.reshape(-1, 1) * _sum(coeffs)
+        return values.reshape(-1, 1) * _max(cdict)
     elif consequence == 'homeless':
         values = assets['value-residents'] / assets['value-number']
-        return values.reshape(-1, 1) * _sum(coeffs)
+        return values.reshape(-1, 1) * _max(cdict)
     else:
         raise NotImplementedError(consequence)
 

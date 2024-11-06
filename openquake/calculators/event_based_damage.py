@@ -127,15 +127,15 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam, mon):
                             else:
                                 dd4[p, a, :, d] *= dprobs
 
-            df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
+            # compose damage distributions
             if P > 1:
-                # compose damage distributions
                 dd3 = numpy.empty(dd4.shape[1:])
                 for a in range(A):
                     for e in range(E):
                         dd3[a, e, :D] = scientific.compose_dds(dd4[:, a, e, :D])
             else:
                 dd3 = dd4[0]
+            df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
             csq = crmodel.compute_csq(assets, dd4[:, :, :, :D], df, oq)
             for name, values in csq.items():
                 dd3[:, :, dparam.csqidx[name]] = values

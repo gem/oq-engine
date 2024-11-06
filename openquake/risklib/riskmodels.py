@@ -501,7 +501,7 @@ class ValidationError(Exception):
     pass
 
 
-def get_cdict(fractions, coeffs, df, perils):
+def get_cdict(fractions, coeffs, df, loss_type, perils):
     """
     :returns: a dict peril -> array of shape (A, E)
     """
@@ -510,7 +510,7 @@ def get_cdict(fractions, coeffs, df, perils):
         for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
             cs = coeffs[risk_id]
             if per == peril or per == '*':
-                cdict[peril] = fractions[pi] @ cs[peril]['structural'] * weight
+                cdict[peril] = fractions[pi] @ cs[peril][loss_type] * weight
     return cdict
 
 
@@ -656,15 +656,17 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         _L, A, E, _D = fractions.shape
         csq = AccumDict(accum=numpy.zeros((A, E)))
+        [lt] = oq.loss_types
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
-                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, self.perils)
+                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, lt, self.perils)
+                    # array peril -> coeffs for the given loss type
                     csq[consequence] += scientific.consequence(
-                        consequence, assets, cdict, oq.total_loss_types, oq.time_event)
+                        consequence, assets, cdict, lt, oq.time_event)
         return csq
 
     def init(self):
