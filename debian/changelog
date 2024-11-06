@@ -1,8 +1,11 @@
   [Christopher Brooks]
-  * Adding M9 Basin amplification term for ModifiableGMPE
+  * Added M9 Basin amplification term for ModifiableGMPE
     and assoc. unit tests
- 
+  * Added ability to specify M9 basin term as an argument
+    within US 2023 NSHM interface GMMs
+
   [Michele Simionato]
+  * Added command `oq info peril`
   * Extended consequences to perils
   * Replaced taxonomy mapping by loss type with taxonomy mapping by peril
   * Internal: changed the ordering in the composite risk model from

@@ -367,7 +367,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt, m
         means_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
         # And only to sites where means are greater than if using GMM basin amp.
         idx = means_m9 > means
-        means[idx] = means_m9[idx] # pp. 1178 of Moschetti et al. 2024 EQ Spectra
+        means[idx] = means_m9[idx] # pp. 1178 of Moschetti et al. 2024 EQ Spec.
 
     return means
 
