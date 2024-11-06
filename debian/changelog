@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added comment `oq info peril`
+  * Added command `oq info peril`
   * Extended consequences to perils
   * Replaced taxonomy mapping by loss type with taxonomy mapping by peril
   * Internal: changed the ordering in the composite risk model from
