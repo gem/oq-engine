@@ -25,7 +25,6 @@ from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 
-import tempfile
 import io
 import os
 import pathlib
@@ -38,6 +37,7 @@ from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
 from json.decoder import JSONDecodeError
+from openquake.baselib.general import gettemp
 from openquake.baselib.node import (
     node_from_xml, Node)
 from openquake.hazardlib.source.rupture import get_multiplanar
@@ -506,13 +506,10 @@ def download_station_data_file(usgs_id, save_to_home=False):
                 logging.warning(msg)
                 raise LookupError(msg)
         else:
-            with tempfile.NamedTemporaryFile(
-                    delete=False, mode='w+', newline='',
-                    suffix='.csv') as temp_file:
-                station_data_file = temp_file.name
-                df.to_csv(station_data_file, encoding='utf8', index=False)
-                logging.info(f'Wrote stations to {station_data_file}')
-                return station_data_file
+            station_data_file = gettemp(suffix='.csv', remove=False)
+            df.to_csv(station_data_file, encoding='utf8', index=False)
+            logging.info(f'Wrote stations to {station_data_file}')
+            return station_data_file
 
 
 def load_rupdic_from_finite_fault(usgs_id, mag, products):
@@ -603,8 +600,8 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    rupture_file = rup_to_file(oq_rup, temp_file.name, comment_str)
+    temp_file = gettemp(remove=False)
+    rupture_file = rup_to_file(oq_rup, temp_file, comment_str)
     try:
         [rup_node] = nrml.read(rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
