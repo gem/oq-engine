@@ -1308,7 +1308,6 @@ def get_pmap_from_csv(oqparam, fnames):
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
     oqparam.investigation_time = wrapper.investigation_time
-    oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)

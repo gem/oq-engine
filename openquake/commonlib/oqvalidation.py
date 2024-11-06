@@ -1641,6 +1641,7 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
+    # called in CompositeRiskModel.init
     def set_risk_imts(self, risklist):
         """
         :param risklist:
