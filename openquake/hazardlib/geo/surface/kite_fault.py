@@ -867,7 +867,7 @@ def _fix_right_hand(msh):
     #   A :class:`numpy.ndarray` instance describing the mesh
 
     # Fit a plane through the four points of a non-null cell
-    lons, lats, deps = _get_non_null_cell(msh)
+    lons, lats, deps, ia = _get_non_null_cell(msh)
     _, vers = _get_plane(lons, lats, deps)
 
     # Check if the plane is vertical
@@ -930,7 +930,7 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45., vers=None):
     #   through the cell.
 
     if vers is None:
-        lons, lats, deps = _get_non_null_cell(msh)
+        lons, lats, deps, ia = _get_non_null_cell(msh)
         # Fit a plane through the four points
         _, vers = _get_plane(lons, lats, deps)
 
@@ -973,7 +973,7 @@ def _get_non_null_cell(msh):
     lats = np.array(lats)
     deps = np.array(deps)
 
-    return lons, lats, deps
+    return lons, lats, deps, ia
 
 def _get_plane(lons, lats, deps):
 
