@@ -80,7 +80,7 @@ def cy14_site_term(ctx, imt, me, si, ta, phi):
 
 def m9_basin_term(ctx, imt, me, si, ta, phi):
     """
-    This function adds the M9 basin amplification term
+    This function applies the M9 basin adjustment
     """
     me = _apply_m9_basin_term(ctx, imt, me)
     
