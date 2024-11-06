@@ -866,26 +866,33 @@ def _fix_right_hand(msh):
     # :param msh:
     #   A :class:`numpy.ndarray` instance describing the mesh
 
+    # Fit a plane through the four points of a non-null cell
+    lons, lats, deps = _get_non_null_cell(msh)
+    _, vers = _get_plane(lons, lats, deps)
+
+    # Check if the plane is vertical
+    tmp = np.cross(vers, [0, 0, 1])
+    if np.abs(tmp[2] < 0.01):
+        return msh
+
     # Check if the mesh complies with the right hand rule and flip it if
     # required
     chk = _does_mesh_comply_with_right_hand_rule(msh)
+
     if not chk:
 
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.empty_like(msh)
         nmsh[:, :, :] = msh[:, ::-1, :]
 
-        #chk_flip = ((msh[:, 0, 0] == nmsh[:, -1, 0]) &
-        #            (msh[:, 0, 2] == nmsh[:, -1, 2]))
-
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
         chk1 = _does_mesh_comply_with_right_hand_rule(nmsh)
 
         # NOTE this is for debugging purposes
-        if False and not chk1:
-            _plot_mesh(nmsh)
-            _plot_mesh(msh)
+        if True and not chk1:
+            _plot_mesh(nmsh, 'New Mesh')
+            _plot_mesh(msh, 'Old Mesh')
 
         assert chk1, msg
         return nmsh
@@ -893,7 +900,7 @@ def _fix_right_hand(msh):
     return msh
 
 
-def _plot_mesh(nmsh):
+def _plot_mesh(nmsh, title=''):
     scl = -0.01
     ax = plt.figure().add_subplot(projection='3d')
     ax.set_aspect('equal')
@@ -907,10 +914,11 @@ def _plot_mesh(nmsh):
             nmsh[j, i, 0], nmsh[j, i, 1], nmsh[j, i, 2] * scl, '-r', lw=.25)
     assert np.sum(np.isfinite(nmsh[:, 0, 0])) > 0
     plt.plot(nmsh[:, 0, 0], nmsh[:, 0, 1], nmsh[:, 0, 2] * scl, '-g', lw=2.0)
+    plt.title(title)
     plt.show()
 
 
-def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
+def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45., vers=None):
     # Given a mesh, this function checks if it complies with the right hand
     # rule
     #
@@ -921,13 +929,32 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
     #   the top edge of the selected cell and the strike of the plane passingg
     #   through the cell.
 
+    if vers is None:
+        lons, lats, deps = _get_non_null_cell(msh)
+        # Fit a plane through the four points
+        _, vers = _get_plane(lons, lats, deps)
+
+    # Find the strike
+    strike = geo_utils.get_strike_from_plane_normal(vers)
+
+    # Next we find the azimuth of the top segment of the cell
+    top = Line([Point(*msh[ia[0][0], ia[1][0], :]),
+                Point(*msh[ia[0][0], ia[1][0] + 1, :])])
+
+    # Compute the difference between strike from the plane and cell top
+    # direction
+    abs_angle_dff = np.abs(geo_utils._angles_diff(top.azimuth, strike))
+
+    return abs_angle_dff < tolerance
+
+
+def _get_non_null_cell(msh):
+
     ul = np.isfinite(msh[:-1, :-1, 0])
     ur = np.isfinite(msh[:-1, 1:, 0])
     ll = np.isfinite(msh[1:, :-1, 0])
     lr = np.isfinite(msh[1:, 1:, 0])
     ia = np.nonzero(ur & ul & ll & lr)
-
-    # idx = np.nonzero(msh[:, :, 0])
 
     # Coordinates of the cell with finite vertexes
     lons = [msh[ia[0][0], ia[1][0], 0],
@@ -946,21 +973,7 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45.):
     lats = np.array(lats)
     deps = np.array(deps)
 
-    # First we fit a plane through the four points and then we find the strike
-    # of the plane
-    _, vers = _get_plane(lons, lats, deps)
-    strike = geo_utils.get_strike_from_plane_normal(vers)
-
-    # Next we find the azimuth of the top segment of the cell
-    top = Line([Point(*msh[ia[0][0], ia[1][0], :]),
-                Point(*msh[ia[0][0], ia[1][0] + 1, :])])
-
-    # Compute the difference between strike from the plane and cell top
-    # direction
-    abs_angle_dff = np.abs(geo_utils._angles_diff(top.azimuth, strike))
-
-    return abs_angle_dff < tolerance
-
+    return lons, lats, deps
 
 def _get_plane(lons, lats, deps):
 
