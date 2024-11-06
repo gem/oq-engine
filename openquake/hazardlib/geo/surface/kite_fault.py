@@ -871,8 +871,8 @@ def _fix_right_hand(msh):
     _, vers = _get_plane(lons, lats, deps)
 
     # Check if the plane is vertical
-    tmp = np.cross(vers, [0, 0, 1])
-    if np.abs(tmp[2] < 0.01):
+    tmp = np.dot(vers, [0, 0, 1])
+    if tmp < 0.01:
         return msh
 
     # Check if the mesh complies with the right hand rule and flip it if
