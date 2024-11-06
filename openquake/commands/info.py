@@ -40,6 +40,7 @@ from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map, lon_lat
+from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
 from openquake.risklib import asset, scientific
@@ -125,6 +126,26 @@ def print_gsim(what):
             print('Unknown GSIM %s' % split[1])
 
 
+def print_peril(what):
+    """
+    Print the docstring of the given SecondaryPeril, or print all available
+    subclasses
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no peril specified, print all
+        for cls in SecondaryPeril.__subclasses__():
+            print(cls.__name__)
+    else:
+        # print the docstring of the specified class, if known
+        for cls in SecondaryPeril.__subclasses__():
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown SecondaryPeril %s' % split[1])
+
+
 def print_geohash(what):
     lon, lat = lon_lat(what.split(':')[1])
     arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
@@ -207,6 +228,8 @@ def main(what, report=False):
         print(fields.replace(',', '\t'))
         for row in rows:
             print('\t'.join(map(str, row)))
+    elif what.startswith('peril'):
+        print_peril(what)
     elif what.startswith('gsim'):
         print_gsim(what)
     elif what.startswith('imt'):

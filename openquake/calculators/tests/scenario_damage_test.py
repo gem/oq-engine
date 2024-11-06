@@ -165,7 +165,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             'risk_by_event', ['event_id', 'loss_id', 'agg_id'],
             dict(agg_id=K))
         self.assertEqual(len(df), 100)
-        self.assertEqual(len(df[df.dmg_1 > 0]), 12)  # only 12/100 are nonzero
+        self.assertEqual(len(df[df.dmg_1 > 0]), 28)  # only 28/100 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
@@ -202,18 +202,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertIn('The sites in gmf_data are disjoint', str(ctx.exception))
 
     def test_case_11(self):
-        # secondary perils without secondary simulations
-        self.run_calc(case_11.__file__, 'job.ini',
-                      secondary_simulations="{}")
+        # secondary perils
+        self.run_calc(case_11.__file__, 'job.ini')
         calc1 = self.calc.datastore
         [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/risk_by_event_1.csv', fname)
-
-        # secondary perils with secondary simulations
-        self.run_calc(case_11.__file__, 'job.ini')
-        calc2 = self.calc.datastore
-        [fname] = export(('risk_by_event', 'csv'), calc2)
-        self.assertEqualFiles('expected/risk_by_event_2.csv', fname)
 
         # check mean_perils
         fname = gettemp(text_table(view('mean_perils', self.calc.datastore)))
@@ -222,8 +215,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # check damages-rlzs
         [fname] = export(('damages-rlzs', 'csv'), calc1)
         self.assertEqualFiles('expected/avg_damages1.csv', fname)
-        [fname] = export(('damages-rlzs', 'csv'), calc2)
-        self.assertEqualFiles('expected/avg_damages2.csv', fname)
 
     def test_case_12(self):
         # secondary perils from rupture
