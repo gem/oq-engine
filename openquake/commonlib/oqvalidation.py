@@ -967,6 +967,8 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
+        'earthquake_fragility',
+        'earthquake_vulnerability',
         'liquefaction_fragility',
         'liquefaction_vulnerability',
         'landslide_fragility',
@@ -1387,9 +1389,8 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('missing investigation_time')
 
         # check total_losses
-        if ('damage' in self.calculation_mode and len(self.loss_types) > 1
-                and not self.total_losses):
-            self.raise_invalid('you forgot to specify total_losses =')
+        if 'damage' in self.calculation_mode and len(self.loss_types) > 1:
+            self.raise_invalid('Only a single loss type is supported')
 
     def check_ebrisk(self):
         # check specific to ebrisk
@@ -1480,7 +1481,8 @@ class OqParam(valid.ParamSet):
                 costtypes = set(rt.split('/')[2] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)  # including occupants
+        # all_cost_types includes occupants and exclude perils
+        self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
@@ -1638,12 +1640,15 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
+    # called in CompositeRiskModel.init
     def set_risk_imts(self, risklist):
         """
         :param risklist:
-            a list of risk functions with attributes .id, .loss_type, .kind
+            a list of risk functions with attributes .id, .peril, .loss_type, .kind
+        :returns:
+            a list of ordered unique perils
 
-        Set the attribute risk_imtls.
+        Set the attribute .risk_imtls as a side effect
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1664,6 +1669,7 @@ class OqParam(valid.ParamSet):
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
         self.risk_imtls = {imt: [min(ls)] for imt, ls in risk_imtls.items()}
+
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not self.hazard_imtls:
@@ -1682,6 +1688,9 @@ class OqParam(valid.ParamSet):
         for imt in self.get_primary_imtls():
             if imt in sec_imts:
                 self.raise_invalid('you forgot to set secondary_perils =')
+
+        risk_perils = sorted(set(rf.peril for rf in risklist))
+        return risk_perils
 
     def get_primary_imtls(self):
         """

@@ -165,7 +165,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             'risk_by_event', ['event_id', 'loss_id', 'agg_id'],
             dict(agg_id=K))
         self.assertEqual(len(df), 100)
-        self.assertEqual(len(df[df.dmg_1 > 0]), 12)  # only 12/100 are nonzero
+        self.assertEqual(len(df[df.dmg_1 > 0]), 28)  # only 28/100 are nonzero
 
     def test_case_8(self):
         # case with a shakemap

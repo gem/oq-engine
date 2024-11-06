@@ -1,3 +1,3 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git5d9564908c', start_date='2024-10-29T05:10:21', checksum=1335928015"
+#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git30e245f39e', start_date='2024-11-05T09:25:31', checksum=3271930950"
 asset_id,taxonomy,lon,lat,no_damage,ds1,ds2,ds3,ds4
-a1,tax1,-122.00000,38.11300,5.960464E-08,1.200000E-01,2.400000E-01,3.200000E-01,3.200000E-01
+a1,tax1,-122.00000,38.11300,3.900000E-01,2.800000E-01,1.300000E-01,8.000000E-02,1.200000E-01
