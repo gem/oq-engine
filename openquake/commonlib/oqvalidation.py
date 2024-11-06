@@ -720,10 +720,9 @@ sec_peril_params:
   INTERNAL
 
 secondary_perils:
-  INTERNAL
-
-secondary_simulations:
-  INTERNAL
+  List of supported secondary perils.
+  Example: *secondary_perils = HazusLiquefaction, HazusDeformation*
+  Default: empty list
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -1127,7 +1126,6 @@ class OqParam(valid.ParamSet):
     mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
-    secondary_simulations = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
