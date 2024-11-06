@@ -79,17 +79,9 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
 
 
 def _gen_dd3(asset_df, gmf_df, crmodel, dparam, mon):
-    # yields (aids, dd3) triples
-
-    # this part is ultra-fast, even for discrete damage distributions
+    # yields (aids, dd3) triples 
+    # this part is quite slow for discrete damage distributions
     oq = crmodel.oqparam
-    sec_sims = oq.secondary_simulations.items()
-    for prob_field, num_sims in sec_sims:
-        probs = gmf_df[prob_field].to_numpy()   # LiqProb
-        if not oq.float_dmg_dist:
-            dprobs = dparam.rng.boolean_dist(probs, num_sims).mean(axis=1)
-
-    # this part is ultra-slow, especially for discrete damage distributions
     E = len(dparam.eids)
     P = len(crmodel.perils)
     [lt] = oq.loss_types  # assume single loss type
@@ -116,16 +108,6 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam, mon):
                     # slower even if it has only 25_736 assets
                     dd4[p, :, :, :D] = dparam.rng.discrete_dmg_dist(
                         dparam.eids, fractions, number)
-
-                # secondary perils and consequences
-                for a, asset in enumerate(assets):
-                    if sec_sims:
-                        for d in range(1, D):
-                            # doing the mean on the secondary simulations
-                            if oq.float_dmg_dist:
-                                dd4[p, a, :, d] *= probs
-                            else:
-                                dd4[p, a, :, d] *= dprobs
 
             # compose damage distributions
             if P > 1:
@@ -173,7 +155,7 @@ def event_based_damage(df, oq, dstore, monitor):
             continue
         oq = crmodel.oqparam
         eids = gmf_df.eid.to_numpy()
-        if oq.secondary_simulations or not oq.float_dmg_dist:
+        if not oq.float_dmg_dist:
             rng = scientific.MultiEventRNG(
                 oq.master_seed, numpy.unique(eids))
         else:
