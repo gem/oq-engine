@@ -39,7 +39,7 @@ def classical_damage(riskinputs, param, monitor):
         dictionaries asset_ordinal -> damage(R, L, D)
     """
     crmodel = monitor.read('crmodel')
-    [loss_type] = crmodel.oqparam.total_loss_types
+    [loss_type] = crmodel.oqparam.loss_types
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         R = ri.hazard_getter.R
