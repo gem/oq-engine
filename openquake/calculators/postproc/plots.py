@@ -79,6 +79,10 @@ def get_country_iso_codes(calc_id, assetcol):
 
 
 def plt_to_base64(plt):
+    """
+    The base64 string can be passed to a Django template and embedded
+    directly in HTML, without having to save the image to disk
+    """
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
     bio.seek(0)
