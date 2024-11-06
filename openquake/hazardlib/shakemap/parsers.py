@@ -458,7 +458,7 @@ def download_station_data_file(usgs_id, save_to_home=False):
         shakemaps = products['shakemap']
     except KeyError:
         msg = 'No shakemap was found'
-        logging.info(msg)
+        logging.warning(msg)
         raise
     shakemap = get_preferred_shakemap(shakemaps)
     contents = shakemap['contents']
@@ -469,7 +469,7 @@ def download_station_data_file(usgs_id, save_to_home=False):
         try:
             stations = read_usgs_stations_json(stations_json_str)
         except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
-            logging.info(str(exc))
+            logging.error(str(exc))
             raise
         original_len = len(stations)
         try:
@@ -479,7 +479,7 @@ def download_station_data_file(usgs_id, save_to_home=False):
             msg = (f'{original_len} stations were found, but the'
                    f' "station_type" is not specified, so we can not'
                    f' identify the "seismic" stations.')
-            logging.info(msg)
+            logging.error(msg)
             raise LookupError(msg)
         df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
         if save_to_home:
@@ -494,16 +494,16 @@ def download_station_data_file(usgs_id, save_to_home=False):
                     msg = (f'{original_len} stations were found, but the'
                            f' {seismic_len} seismic stations were all'
                            f' discarded')
-                    logging.info(msg)
+                    logging.warning(msg)
                     raise LookupError(msg)
                 else:
                     msg = (f'{original_len} stations were found, but none'
                            f' of them are seismic')
-                    logging.info(msg)
+                    logging.warning(msg)
                     raise LookupError(msg)
             else:
                 msg = 'No stations were found'
-                logging.info(msg)
+                logging.warning(msg)
                 raise LookupError(msg)
         else:
             with tempfile.NamedTemporaryFile(
