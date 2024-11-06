@@ -42,6 +42,7 @@ from scipy.interpolate import RegularGridInterpolator
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 
 # Path to the within-model epistemic adjustment tables
@@ -426,7 +427,7 @@ def get_basin_response_term(C, region, vs30, z_value):
     return brt
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
+def get_mean_values(C, region, trt, m_b, ctx, a1100=None, imt=None, m9=None):
     """
     Returns the mean ground values for a specific IMT
 
@@ -448,24 +449,36 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
         else:
             z_values = np.zeros(vs30.shape)
     # Get the mean ground motions
-    mean = (get_base_term(C, trt, region) +
-            get_magnitude_scaling_term(C, trt, m_b, ctx.mag) +
-            get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup) +
-            get_anelastic_attenuation_term(C, trt, region, ctx.rrup) +
-            get_depth_term(C, trt, ctx.ztor) +
-            get_shallow_site_response_term(C, region, vs30, a1100))
+    u_gmm = (get_base_term(C, trt, region) +
+             get_magnitude_scaling_term(C, trt, m_b, ctx.mag) +
+             get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup) +
+             get_anelastic_attenuation_term(C, trt, region, ctx.rrup) +
+             get_depth_term(C, trt, ctx.ztor) +
+             get_shallow_site_response_term(C, region, vs30, a1100))
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
     if region in ("CAS", "JPN"):
+        # m9 adjustment only applicable for Cascadia region (Seattle Basin)
+        if region == "JPN" and m9:
+            raise ValueError("M9 basin adjustment is only for Cascadia region")
         # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
         # rather than km)
-        mean += get_basin_response_term(C, region, vs30, z_values)
+        mean = u_gmm + get_basin_response_term(C, region, vs30, z_values)
+        # If m9 adjustment 
+        if m9:
+            # Apply to basin sites for SA with T >= 1.9 s only
+            mean_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
+            # And only when greater than if using GMM basin amp. factor
+            idx = mean_m9 > mean
+            mean[idx] = mean_m9[idx]
+
     elif region in ("NZL", "TWN"):
         # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += get_basin_response_term(C, region, vs30, z_values)
+        mean = u_gmm + get_basin_response_term(C, region, vs30, z_values)
     else:
-        pass
+        mean = u_gmm # No basin term added if region is global
+
     return mean
 
 
@@ -629,6 +642,9 @@ class KuehnEtAl2020SInter(GMPE):
     m_b: The magnitude scaling breakpoint. This term is defined for each region
          and tectonic region type, but this can also be over-ridden by the user
 
+    m9_basin_adjustment (bool): Apply the M9 basin adjustment as defined 
+                                for US 2023 interface GMMs
+
     sigma_mu_epsilon: Within-model epistemic uncertainty (sigma_mu) is
                       described in Chapter 6 of the report by the authors. This
                       uncertainty is region specific and is described by a
@@ -670,7 +686,8 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0):
+    def __init__(self, region="GLO", m_b=None, m9_basin_adjustment=False,
+                 sigma_mu_epsilon=0.0):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -688,7 +705,12 @@ class KuehnEtAl2020SInter(GMPE):
         else:
             pass
 
+        # Mag-scaling breakpoint
         self.m_b = m_b
+
+        # M9 basin adjustment
+        self.m9_basin_adjustment = m9_basin_adjustment
+
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
@@ -713,11 +735,12 @@ class KuehnEtAl2020SInter(GMPE):
             m_b = REGION_TERMS_IF[self.region]["mb"] \
                 if trt == const.TRT.SUBDUCTION_INTERFACE else \
                 REGION_TERMS_SLAB[self.region]["mb"]
+        m9 = self.m9_basin_adjustment
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
         pga1100 = np.exp(get_mean_values(
-            C_PGA, self.region, trt, m_b, ctx, None))
+            C_PGA, self.region, trt, m_b, ctx))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
@@ -745,7 +768,7 @@ class KuehnEtAl2020SInter(GMPE):
             else:
                 # For PGV and Sa (T > 0.1 s)
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                                          ctx, pga1100, imt, m9)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(

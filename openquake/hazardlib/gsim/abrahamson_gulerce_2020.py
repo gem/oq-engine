@@ -338,7 +338,7 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
 
 
 def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt,
-                          m9=None):
+                          m9):
     """
     Returns the mean acceleration on soil
     """
@@ -364,11 +364,11 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt,
 
     # If m9 basin adjustment
     if m9:
-        # Applied to basin sites (z2pt5 >= 6 km) for SA with T >= 1.9 s only
+        # Apply to basin sites for SA with T >= 1.9 s only
         means_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
-        # And only to sites where means are greater than if using GMM basin amp.
+        # And only when greater than if using GMM basin amp. factor
         idx = means_m9 > means
-        means[idx] = means_m9[idx] # pp. 1178 of Moschetti et al. 2024 EQ Spec.
+        means[idx] = means_m9[idx]
 
     return means
 

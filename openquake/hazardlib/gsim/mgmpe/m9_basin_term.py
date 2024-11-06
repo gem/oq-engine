@@ -29,7 +29,7 @@ def _apply_m9_basin_term(ctx, imt, mean):
         fb_m9 = np.log(2.0)
         idx = ctx.z2pt5 >= 6.0 # Apply only to sites with z2pt5 >= 6
         mean[idx] += fb_m9
-
+    
     return mean
 
 
