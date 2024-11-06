@@ -867,7 +867,7 @@ def _fix_right_hand(msh):
     #   A :class:`numpy.ndarray` instance describing the mesh
 
     # Fit a plane through the four points of a non-null cell
-    lons, lats, deps, ia = _get_non_null_cell(msh)
+    lons, lats, deps, _ = _get_non_null_cell(msh)
     _, vers = _get_plane(lons, lats, deps)
 
     # Check if the plane is vertical
