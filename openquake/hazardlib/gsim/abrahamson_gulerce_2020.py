@@ -337,7 +337,8 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
             get_site_amplification_term(C, region, vs30, null_pga1000))
 
 
-def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt, m9):
+def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt,
+                          m9=None):
     """
     Returns the mean acceleration on soil
     """
