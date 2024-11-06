@@ -39,7 +39,7 @@ def classical_damage(riskinputs, param, monitor):
         dictionaries asset_ordinal -> damage(R, L, D)
     """
     crmodel = monitor.read('crmodel')
-    total_loss_types = crmodel.oqparam.total_loss_types
+    [loss_type] = crmodel.oqparam.total_loss_types
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         R = ri.hazard_getter.R
@@ -51,9 +51,8 @@ def classical_damage(riskinputs, param, monitor):
             for rlz in range(R):
                 hcurve = haz[:, rlz]
                 [out] = crmodel.get_outputs(assets, hcurve)
-                for loss_type in total_loss_types:
-                    for a, frac in zip(assets.ordinal, out[loss_type]):
-                        result[a][rlz] += frac
+                for a, frac in zip(assets.ordinal, out[loss_type]):
+                    result[a][rlz] += frac
         yield result
 
 
