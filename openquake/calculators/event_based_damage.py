@@ -95,7 +95,7 @@ def _gen_dd3(asset_df, gmf_df, crmodel, dparam, mon):
     [lt] = oq.loss_types  # assume single loss type
     for taxo, adf in asset_df.groupby('taxonomy'):
         with mon:
-            outs = crmodel.get_output(adf, gmf_df)  # dicts loss_type -> array
+            outs = crmodel.get_outputs(adf, gmf_df)  # dicts loss_type -> array
             aids = adf.index.to_numpy()
             A = len(aids)
             assets = adf.to_records()

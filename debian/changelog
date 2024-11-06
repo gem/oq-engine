@@ -13,8 +13,7 @@
   * Raised an error in case of non-invertible hazard curves, affecting
     disaggregation and site-specific hazard spectrum calculations
   * Changed the ruptures.csv exporter to also export the source IDs
-  * Specifying total_losses is now mandatory in damage calculations with
-    multiple loss types
+  * Restricted damage calculations to a single loss type
   * Added support for consequence=losses for liquefaction and landslides
   * Added a check for missing secondary perils
   * Added loss types liquefaction and landslide

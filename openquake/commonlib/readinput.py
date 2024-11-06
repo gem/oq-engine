@@ -969,12 +969,16 @@ def get_imts(oqparam):
 
 
 def _cons_coeffs(df, perils, loss_dt, limit_states):
+    # returns composite array peril -> loss_type -> coeffs
     dtlist = [(peril, loss_dt) for peril in perils]
     coeffs = numpy.zeros(len(limit_states), dtlist)
-    for lt in loss_dt.names:
+    for loss_type in loss_dt.names:
         for peril in perils:
-            the_df = df[(df.peril == peril) & (df.loss_type == lt)]
-            coeffs[peril][lt] = the_df[limit_states].to_numpy()[0]
+            the_df = df[(df.peril == peril) & (df.loss_type == loss_type)]
+            if len(the_df) == 1:
+                coeffs[peril][loss_type] = the_df[limit_states].to_numpy()[0]
+            elif len(the_df) > 1:
+                raise ValueError(f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
     return coeffs
 
 
@@ -1308,7 +1312,6 @@ def get_pmap_from_csv(oqparam, fnames):
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
     oqparam.investigation_time = wrapper.investigation_time
-    oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)

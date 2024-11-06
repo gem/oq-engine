@@ -1389,9 +1389,8 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('missing investigation_time')
 
         # check total_losses
-        if ('damage' in self.calculation_mode and len(self.loss_types) > 1
-                and not self.total_losses):
-            self.raise_invalid('you forgot to specify total_losses =')
+        if 'damage' in self.calculation_mode and len(self.loss_types) > 1:
+            self.raise_invalid('Only a single loss type is supported')
 
     def check_ebrisk(self):
         # check specific to ebrisk
@@ -1641,6 +1640,7 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
+    # called in CompositeRiskModel.init
     def set_risk_imts(self, risklist):
         """
         :param risklist:

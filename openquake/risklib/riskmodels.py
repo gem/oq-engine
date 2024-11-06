@@ -829,13 +829,13 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, asset_df, haz, sec_losses=(), rndgen=None):
+    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
         :param asset_df: a DataFrame of assets with the same taxonomy and country
         :param haz: a DataFrame of GMVs on the sites of the assets
         :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance
-        :returns: one or more dictionaries loss_type-> output
+        :returns: a list of dictionaries loss_type-> output
         """
         # rc.pprint()
         # dic = rc.todict()
@@ -844,9 +844,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         # _assert_equal(dic, dic2)
         rc = scientific.RiskComputer(self, asset_df)
         out = rc.output(haz, sec_losses, rndgen)
-        if not hasattr(haz, 'eid'):  # classical
-            return next(out)
-        return out
+        return list(out)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
