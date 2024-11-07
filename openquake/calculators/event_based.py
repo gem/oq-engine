@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import (
     nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
-from openquake.hazardlib import logictree, InvalidFile
+from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -428,6 +428,46 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     return dic
 
 
+def read_gsim_lt(oq):
+    # in aristotle mode the gsim_lt is read from the exposure.hdf5 file
+    gsim_lt = readinput.get_gsim_lt(oq)
+    if oq.aristotle:
+        if not oq.mosaic_model:
+            if oq.rupture_dict:
+                lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
+            elif oq.rupture_xml:
+                hypo = readinput.get_rupture(oq).hypocenter
+                lon, lat = [hypo.x, hypo.y]
+            mosaic_models = get_close_mosaic_models(lon, lat, 5)
+            # NOTE: using the first mosaic model
+            oq.mosaic_model = mosaic_models[0]
+            if len(mosaic_models) > 1:
+                logging.info('Using the "%s" model' % oq.mosaic_model)
+        [expo_hdf5] = oq.inputs['exposure']
+        if oq.mosaic_model == '???':
+            raise ValueError(
+                '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                oq.rupture_dict)
+        if oq.gsim != '[FromFile]':
+            raise ValueError(
+                'In Aristotle mode the gsim can not be specified in'
+                ' the job.ini: %s' % oq.gsim)
+        if oq.tectonic_region_type == '*':
+            raise ValueError(
+                'The tectonic_region_type parameter must be specified')
+        gsim_lt = logictree.GsimLogicTree.from_hdf5(
+            expo_hdf5, oq.mosaic_model,
+            oq.tectonic_region_type.encode('utf8'))
+        # add with_betw_ratio when only the total stddev is defined
+        betw = {'with_betw_ratio': 1.7}
+        for gsims in gsim_lt.values.values():
+            for g, gsim in enumerate(gsims):
+                if len(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES) == 1:
+                    gsims[g] = valid.modified_gsim(
+                        gsim, add_between_within_stds=betw)
+    return gsim_lt
+
+
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
@@ -590,36 +630,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
-        gsim_lt = readinput.get_gsim_lt(oq)
-        if oq.aristotle:
-            # the gsim_lt is read from the exposure.hdf5 file
-            if not oq.mosaic_model:
-                if oq.rupture_dict:
-                    lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
-                elif oq.rupture_xml:
-                    hypo = readinput.get_rupture(oq).hypocenter
-                    lon, lat = [hypo.x, hypo.y]
-                mosaic_models = get_close_mosaic_models(lon, lat, 5)
-                # NOTE: using the first mosaic model
-                oq.mosaic_model = mosaic_models[0]
-                if len(mosaic_models) > 1:
-                    logging.info('Using the "%s" model' % oq.mosaic_model)
-            [expo_hdf5] = oq.inputs['exposure']
-            if oq.mosaic_model == '???':
-                raise ValueError(
-                    '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
-                    oq.rupture_dict)
-            if oq.gsim != '[FromFile]':
-                raise ValueError(
-                    'In Aristotle mode the gsim can not be specified in'
-                    ' the job.ini: %s' % oq.gsim)
-            if oq.tectonic_region_type == '*':
-                raise ValueError(
-                    'The tectonic_region_type parameter must be specified')
-            gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                expo_hdf5, oq.mosaic_model,
-                oq.tectonic_region_type.encode('utf8'))
-        elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
+        gsim_lt = read_gsim_lt(oq)
+        if (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
                               oq.inputs['job_ini'])
