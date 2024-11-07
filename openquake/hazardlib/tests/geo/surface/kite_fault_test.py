@@ -730,13 +730,6 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
 
-        from openquake.hazardlib.geo.surface.kite_fault import _get_plane
-        from openquake.hazardlib.geo.utils import get_strike_from_plane_normal
-
-        _, nrml_plane = _get_plane(srfc.mesh.lons.flatten(),
-                                   srfc.mesh.lats.flatten(),
-                                   srfc.mesh.depths.flatten())
-
         expected = 270.002023
         strike = srfc.get_strike()
         np.testing.assert_allclose([expected], [strike])
