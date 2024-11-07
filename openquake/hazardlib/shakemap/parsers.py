@@ -506,7 +506,7 @@ def download_station_data_file(usgs_id, save_to_home=False):
                 logging.warning(msg)
                 raise LookupError(msg)
         else:
-            station_data_file = gettemp(suffix='.csv', remove=False)
+            station_data_file = gettemp(prefix='stations', suffix='.csv', remove=False)
             df.to_csv(station_data_file, encoding='utf8', index=False)
             logging.info(f'Wrote stations to {station_data_file}')
             return station_data_file
@@ -600,7 +600,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
-    temp_file = gettemp(remove=False)
+    temp_file = gettemp(prefix='rupture', remove=False)
     rupture_file = rup_to_file(oq_rup, temp_file, comment_str)
     try:
         [rup_node] = nrml.read(rupture_file)
