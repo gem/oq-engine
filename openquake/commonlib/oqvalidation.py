@@ -720,10 +720,9 @@ sec_peril_params:
   INTERNAL
 
 secondary_perils:
-  INTERNAL
-
-secondary_simulations:
-  INTERNAL
+  List of supported secondary perils.
+  Example: *secondary_perils = HazusLiquefaction, HazusDeformation*
+  Default: empty list
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -1127,7 +1126,6 @@ class OqParam(valid.ParamSet):
     mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
-    secondary_simulations = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -1387,10 +1385,6 @@ class OqParam(valid.ParamSet):
                     'for classical_damage calculations')
             if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
-
-        # check total_losses
-        if 'damage' in self.calculation_mode and len(self.loss_types) > 1:
-            self.raise_invalid('Only a single loss type is supported')
 
     def check_ebrisk(self):
         # check specific to ebrisk
@@ -1738,6 +1732,13 @@ class OqParam(valid.ParamSet):
         Dictionary extended_loss_type -> extended_loss_type index
         """
         return {lt: i for i, lt in enumerate(self.ext_loss_types)}
+
+    @property
+    def L(self):
+        """
+        :returns: the number of loss types
+        """
+        return len(self.loss_types)
 
     @property
     def loss_types(self):
