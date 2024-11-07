@@ -20,7 +20,7 @@ import unittest
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib import valid
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import CB14BasinTerm
 
