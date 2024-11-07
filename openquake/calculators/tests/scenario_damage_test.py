@@ -58,10 +58,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # checking that passing a fake loss type works,
         # for compatibility with the past
         [dmg] = extract(self.calc.datastore,
-                        'agg_damages/dummy?taxonomy=RC&CRESTA=01.1')
+                        'agg_damages/structural?taxonomy=RC&CRESTA=01.1')
         aac([1482., 489., 29.], dmg, atol=1E-4)
         # test no intersection
-        dmg = extract(self.calc.datastore, 'agg_damages?taxonomy=RM&CRESTA=01.1')
+        dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=RM&CRESTA=01.1')
         self.assertEqual(dmg.shape, ())
 
         # missing fragility functions
@@ -80,7 +80,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
         df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
-        self.assertEqual(list(df.columns), ['rlz', 'dmg_state', 'value'])
+        self.assertEqual(list(df.columns), ['rlz', 'loss_type', 'dmg_state', 'value'])
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
@@ -88,7 +88,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                               delta=1E-5)
 
         # check agg_damages extraction
-        total = extract(self.calc.datastore, 'agg_damages')
+        total = extract(self.calc.datastore, 'agg_damages/structural?')
 
         aac(total, [[27652.219, 28132.8, 9511.933, 2870.9312, 11832.913]],
             atol=.1)
@@ -138,7 +138,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_5a(self):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
-        dmg = extract(self.calc.datastore, 'agg_damages?taxonomy=*')
+        dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
         aac(dmg.array[0].sum(axis=0),
             [0.68951, 0.623331, 0.305033, 0.155678, 0.22645], atol=1E-5)
@@ -146,7 +146,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_6(self):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
-        dmg = extract(self.calc.datastore, 'agg_damages?taxonomy=*')
+        dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg, fmt='%.5E')  # (T, R, D) == (5, 1, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname,
                               delta=1E-5)
@@ -164,8 +164,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df(
             'risk_by_event', ['event_id', 'loss_id', 'agg_id'],
             dict(agg_id=K))
-        self.assertEqual(len(df), 100)
-        self.assertEqual(len(df[df.dmg_1 > 0]), 28)  # only 28/100 are nonzero
+        self.assertEqual(len(df), 300)
+        self.assertEqual(len(df[df.dmg_1 > 0]), 72)  # only 72/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
