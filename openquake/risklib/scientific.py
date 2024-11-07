@@ -1752,7 +1752,6 @@ def consequence(consequence, assets, cdict, loss_type, time_event):
     :param consequence: kind of consequence
     :param assets: asset array (shape A)
     :param cdict: peril -> composite array of coefficients of shape (A, E)
-    :param loss_type: loss type string
     :param time_event: time event string
     :returns: array of shape (A, E)
     """

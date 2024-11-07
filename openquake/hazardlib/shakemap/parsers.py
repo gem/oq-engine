@@ -483,7 +483,7 @@ def download_station_data_file(usgs_id, save_to_home=False):
             logging.error(msg)
             raise LookupError(msg)
         df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
-        if save_to_home:
+        if save_to_home:  # when debugging
             homedir = os.path.expanduser('~')
             stations_usgs = os.path.join(homedir, 'stations_usgs.csv')
             stations.to_csv(stations_usgs, index=False)
