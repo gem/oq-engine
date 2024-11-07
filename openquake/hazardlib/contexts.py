@@ -198,13 +198,19 @@ class Oq(object):
     """
     mea_tau_phi = False
     split_sources = True
+    use_rates = False
+    af = None
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
 
     @property
     def min_iml(self):
-        return numpy.array([1E-10 for imt in self.imtls])
+        try:
+            imtls = self.imtls
+        except AttributeError:
+            imtls = self.hazard_imtls
+        return numpy.array([1E-10 for imt in imtls])
 
     def get_reqv(self):
         if 'reqv' not in self.inputs:
@@ -530,7 +536,10 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
-        self.gsims = gsims
+        if isinstance(gsims, dict):
+            self.gsims = gsims
+        else:
+            self.gsims = {gsim: U32([i]) for i, gsim in enumerate(gsims)}
         # NB: the gid array can be overridden later on
         self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         if isinstance(oq, dict):
@@ -594,8 +603,6 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = self.oq.split_sources
-
-    def _init2(self, param, extraparams):
         for gsim in self.gsims:
             if hasattr(gsim, 'set_tables'):
                 if len(self.mags) == 0 and not is_modifiable(gsim):
@@ -603,7 +610,8 @@ class ContextMaker(object):
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
                 gsim.set_tables(self.mags, self.imtls)
-        self.effect = param.get('effect')
+
+    def _init2(self, param, extraparams):
         for req in self.REQUIRES:
             reqset = set()
             for gsim in self.gsims:
@@ -1220,7 +1228,9 @@ class ContextMaker(object):
     def get_att_curves(self, site, msr, mag, aratio=1., strike=0.,
                        dip=45., rake=-90):
         """
-        :returns: 4 attenuation curves mu, sig, tau, phi
+        :returns:
+            4 attenuation curves mea, sig, tau, phi
+            (up to 500 km from the site at steps of 5 km)
         """
         from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(

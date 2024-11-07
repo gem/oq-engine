@@ -34,7 +34,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import RateMap, MapArray, rates_dt
+from openquake.hazardlib.map_array import RateMap, MapArray, rates_dt, check_hmaps
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -626,6 +626,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _post_regular(self, acc):
         # save the rates and performs some checks
+        oq = self.oqparam
         if self.rmap.size_mb:
             logging.info('Processing %s', self.rmap)
 
@@ -647,9 +648,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 rates = self.rmap.to_array(g)
                 _store(rates, self.num_chunks, self.datastore)
         del self.rmap
-        if self.oqparam.disagg_by_src:
+        if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
-            if self.oqparam.use_rates and self.N == 1:  # sanity check
+            if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
@@ -814,6 +815,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         if 'hmaps-stats' in self.datastore and not oq.tile_spec:
             self.plot_hmaps()
+
+            # check numerical stability of the hmaps around the poes
+            if self.N <= oq.max_sites_disagg and not self.amplifier:
+                mean_hcurves = self.datastore.sel('hcurves-stats', stat='mean')[:, 0]
+                check_hmaps(mean_hcurves, oq.imtls, oq.poes)
 
     def plot_hmaps(self):
         """

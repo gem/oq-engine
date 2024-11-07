@@ -26,8 +26,8 @@ import pandas
 from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
-from openquake.engine import engine
 from openquake.calculators import base, views
+from openquake.calculators.base import expose_outputs
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -336,6 +336,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
 
     agg_ids = rbe_df.agg_id.unique()
     K = agg_ids.max()
+    L = len(oq.loss_types)
     T = scientific.LOSSID[oq.total_losses or 'structural']
     logging.info("Performing %d aggregations", len(agg_ids))
 
@@ -372,7 +373,9 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
             if dmgs:
                 # infer the number of buildings in nodamage state
                 ndamaged = sum(df[col].sum() for col in dmgs)
-                acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
+                dmg0 = aggnumber[agg_id] - ndamaged / (ne * L)
+                assert dmg0 >= 0, dmg0
+                acc['dmg_0'].append(dmg0)
             for col in columns:
                 losses = df[col].sort_values().to_numpy()
                 sorted_losses, _, eperiods = scientific.fix_losses(
@@ -659,4 +662,4 @@ def post_aggregate(calc_id: int, aggregate_by):
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
         prc.run(aggregate_by=[aggby])
-        engine.expose_outputs(prc.datastore)
+        expose_outputs(prc.datastore)

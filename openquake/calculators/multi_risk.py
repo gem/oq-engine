@@ -48,21 +48,24 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
     out = numpy.zeros((A, L, 1, D + 1), F32)
     for sid, assets in assets_by_site.items():
         gmv = gmf[sid]
-        peril_df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
+            dd5 = numpy.zeros((1, len(assets), 1, L, D), F32)  # 1 peril, 1 event
             for li, loss_type in enumerate(crm.loss_types):
                 # NB: assuming trivial taxonomy mapping for multi_risk
-                df = crm.tmap[crm.tmap.taxi == taxonomy]
+                df = crm.tmap_df[crm.tmap_df.taxi == taxonomy]
                 [rm] = [crm._riskmodels[k]
                         for k, w in zip(df.risk_id, df.weight)]
                 # NB: risk logic trees are not yet supported in multi_risk
-                fracs = rm.scenario_damage(loss_type, assets, peril_df, 'peril')
-                for asset, frac in zip(assets, fracs):
-                    dmg = asset['value-number'] * frac  # shape (1, D)
-                    csq = crm.compute_csq(asset, frac, loss_type, time_event)
-                    out[asset['ordinal'], li, 0, :D] = dmg
-                    out[asset['ordinal'], li, 0, [D]] = csq['losses']
+                [peril] = rm.imt_by_lt.values()
+                dd5[:, :, :, li] = rm.scenario_damage('earthquake', loss_type, assets,
+                                                      pandas.DataFrame({peril: [gmv]}))
+            csq = crm.compute_csq(assets, dd5, df, crm.oqparam)
+            number = assets['value-number']
+            for a, o in enumerate(assets['ordinal']):
+                for li in range(L):
+                    out[o, li, 0, :D] = number[a] * dd5[0, a, 0, li]
+                    out[o, li, 0, [D]] = csq['losses', li][a]
     return out
 
 

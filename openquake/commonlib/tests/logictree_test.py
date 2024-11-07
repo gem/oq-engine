@@ -2159,7 +2159,7 @@ taxo4,taxo1,.5
         exp = pandas.DataFrame(
             dict(risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
                  weight=[1., 1., .5, 1., .5],
-                 loss_type=['*'] * 5,
+                 peril=['*'] * 5,
                  country=['?'] * 5,
                  taxi=[1, 2, 4, 3, 4]))
         pandas.testing.assert_frame_equal(got, exp)

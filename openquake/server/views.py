@@ -49,6 +49,7 @@ from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
+from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -61,8 +62,7 @@ from openquake.engine.aelo import (
 from openquake.engine.export.core import DataStoreExportError
 from openquake.hazardlib.shakemap.parsers import download_station_data_file
 from openquake.engine.aristotle import (
-    get_close_mosaic_models, get_trts_around, get_aristotle_params,
-    get_rupture_dict)
+    get_trts_around, get_aristotle_params, get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings

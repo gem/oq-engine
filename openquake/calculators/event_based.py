@@ -28,7 +28,6 @@ from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
-from openquake.engine.aristotle import get_close_mosaic_models
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -45,14 +44,14 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
-from openquake.engine import engine
+from openquake.calculators.base import expose_outputs
 from PIL import Image
 
 U8 = numpy.uint8
@@ -715,8 +714,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 return {}
 
         if oq.ground_motion_fields:
-            imts = oq.get_primary_imtls()
-            base.create_gmf_data(dstore, imts, oq.sec_imts)
+            prim_imts = oq.get_primary_imtls()
+            base.create_gmf_data(dstore, prim_imts, oq.sec_imts)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:
@@ -809,7 +808,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     # source model, however usually this is quite fast and
                     # does not dominate the computation
                     self.cl.run()
-                    engine.expose_outputs(self.cl.datastore)
+                    expose_outputs(self.cl.datastore)
                     all = slice(None)
                     for imt in oq.imtls:
                         cl_mean_curves = get_mean_curve(

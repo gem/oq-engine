@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import logging
 import warnings
 import numpy
 import pandas
@@ -140,6 +141,39 @@ def compute_hmaps(curvesNML, imtls, poes):
     return iml3
 
 
+def check_hmaps(hcurves, imtls, poes):
+    """
+    :param hcurves: hazard curves of shape (N, M, L1)
+    :param imtls: a dictionary imt -> imls
+    :param poes: a list of poes
+    :param poes: P poes
+    """
+    N, M, _L1 = hcurves.shape
+    assert M == len(imtls), (M, len(imtls))
+    all_poes = []
+    for poe in poes:
+        all_poes.extend([poe, poe * .99])
+    for m, (imt, imls) in enumerate(imtls.items()):
+        hmaps = compute_hazard_maps(hcurves[:, m], imls, all_poes)  # (N, 2*P)
+        for site_id in range(N):
+            for p, poe in enumerate(poes):
+                iml = hmaps[site_id, p*2]
+                iml99 = hmaps[site_id, p*2+1]
+                if iml + iml99 == 0:  # zero curve
+                    logging.error(f'The {imt} hazard curve for {site_id=} cannot '
+                                  f'be inverted around {poe=}')
+                    continue
+                rel_err = abs(iml - iml99) / abs(iml + iml99)
+                if  rel_err > .05:
+                    raise ValueError(f'The {imt} hazard curve for {site_id=} cannot '
+                                     f'be inverted reliably around {poe=}')
+                elif rel_err > .01:
+                    logging.warning(
+                        f'The {imt} hazard curve for {site_id=} cannot be '
+                        f'inverted reliably around {poe=}: {iml=}, {iml99=}')
+
+
+# not used right now
 def get_lvl(hcurve, imls, poe):
     """
     :param hcurve: a hazard curve, i.e. array of L1 PoEs
@@ -160,7 +194,6 @@ def get_lvl(hcurve, imls, poe):
     [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
     iml -= 1E-10  # small buffer
     return numpy.searchsorted(imls, iml)
-
 
 # ############################# probability maps ##############################
 

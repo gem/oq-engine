@@ -45,7 +45,7 @@ from shapely import wkt, geometry
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp, AccumDict)
+    random_filter, countby, get_duplicates, gettemp, AccumDict)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -968,11 +968,17 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def _cons_coeffs(records, loss_types, limit_states):
-    dtlist = [(lt, F32) for lt in loss_types]
+def _cons_coeffs(df, perils, loss_dt, limit_states):
+    # returns composite array peril -> loss_type -> coeffs
+    dtlist = [(peril, loss_dt) for peril in perils]
     coeffs = numpy.zeros(len(limit_states), dtlist)
-    for rec in records:
-        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
+    for loss_type in loss_dt.names:
+        for peril in perils:
+            the_df = df[(df.peril == peril) & (df.loss_type == loss_type)]
+            if len(the_df) == 1:
+                coeffs[peril][loss_type] = the_df[limit_states].to_numpy()[0]
+            elif len(the_df) > 1:
+                raise ValueError(f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
     return coeffs
 
 
@@ -993,43 +999,35 @@ def get_crmodel(oqparam):
                 return crm
 
     risklist = get_risk_functions(oqparam)
+    perils = numpy.array(sorted(set(rf.peril for rf in risklist)))
     if not oqparam.limit_states and risklist.limit_states:
         oqparam.limit_states = risklist.limit_states
     elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
         assert oqparam.limit_states == risklist.limit_states
-    loss_types = oqparam.loss_dt().names
     consdict = {}
     if 'consequence' in oqparam.inputs:
         if not risklist.limit_states:
             raise InvalidFile('Missing fragility functions in %s' %
                               oqparam.inputs['job_ini'])
         # build consdict of the form consequence_by_tagname -> tag -> array
+        loss_dt = oqparam.loss_dt()
         for by, fnames in oqparam.inputs['consequence'].items():
             if isinstance(fnames, str):  # single file
                 fnames = [fnames]
-            dtypedict = {
-                by: str, 'consequence': str, 'loss_type': str, None: float}
-
-            # i.e. files collapsed.csv, fatalities.csv, ... with headers
-            # taxonomy,consequence,loss_type,slight,moderate,extensive
-            arrays = []
-            for fname in fnames:
-                arr = hdf5.read_csv(fname, dtypedict).array
-                arrays.append(arr)
-                for no, row in enumerate(arr, 2):
-                    if row['loss_type'] not in loss_types:
-                        msg = '%s: %s is not a recognized loss type, line=%d'
-                        raise InvalidFile(msg % (fname, row['loss_type'], no))
-
-            array = numpy.concatenate(arrays)
-            dic = group_array(array, 'consequence')
-            for consequence, group in dic.items():
+            # i.e. files collapsed.csv, fatalities.csv, ... with headers like
+            # taxonomy,consequence,slight,moderate,extensive
+            df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+            if 'loss_type' not in df.columns:
+                df['loss_type'] = 'structural'
+            if 'peril' not in df.columns:
+                df['peril'] = 'earthquake'
+            for consequence, group in df.groupby('consequence'):
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
                                       (consequence, fnames))
                 bytag = {
-                    tag: _cons_coeffs(grp, loss_types, risklist.limit_states)
-                    for tag, grp in group_array(group, by).items()}
+                    tag: _cons_coeffs(grp, perils, loss_dt, risklist.limit_states)
+                    for tag, grp in group.groupby(by)}
                 consdict['%s_by_%s' % (consequence, by)] = bytag
     # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
     # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
@@ -1220,7 +1218,7 @@ def aristotle_tmap(oqparam, taxidx):
             for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
-                    acc['loss_type'].append('*')
+                    acc['peril'].append('earthquake')
                     acc['taxi'].append(taxidx[taxo])
                     acc['risk_id'].append(risk_id)
                     acc['weight'].append(weight)
@@ -1241,7 +1239,7 @@ def taxonomy_mapping(oqparam, taxidx):
         df = pandas.DataFrame(dict(weight=numpy.ones(nt),
                                    taxi=taxidx.values(),
                                    risk_id=list(taxidx),
-                                   loss_type=['*']*nt,
+                                   peril=['*']*nt,
                                    country=['?']*nt))
         return df
     fname = oqparam.inputs['taxonomy_mapping']
@@ -1255,17 +1253,16 @@ def _taxonomy_mapping(filename, taxidx):
         raise e.__class__('%s while reading %s' % (e, filename))
     if 'weight' not in tmap_df:
         tmap_df['weight'] = 1.
-    if 'loss_type' not in tmap_df:
-        tmap_df['loss_type'] = '*'
+    if 'peril' not in tmap_df:
+        tmap_df['peril'] = '*'
     if 'country' not in tmap_df:
         tmap_df['country'] = '?'
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'loss_type', 'taxonomy', 'risk_id', 'weight'
-                            }, set(tmap_df)
+    assert set(tmap_df) == {'country', 'peril', 'taxonomy', 'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
-    for (taxo, lt), df in tmap_df.groupby(['taxonomy', 'loss_type']):
+    for (taxo, per), df in tmap_df.groupby(['taxonomy', 'peril']):
         taxos.add(taxo)
         if abs(df.weight.sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
@@ -1315,7 +1312,6 @@ def get_pmap_from_csv(oqparam, fnames):
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
     oqparam.investigation_time = wrapper.investigation_time
-    oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)
@@ -1638,3 +1634,24 @@ def read_countries_df(buffer=0.1):
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)
+
+
+def read_source_models(fnames, hdf5path='', **converterparams):
+    """
+    :param fnames: a list of source model files
+    :param hdf5path: auxiliary .hdf5 file used to store the multifault sources
+    :param converterparams: a dictionary of parameters like rupture_mesh_spacing
+    :returns: a list of SourceModel instances
+    """
+    converter = sourceconverter.SourceConverter()
+    vars(converter).update(converterparams)
+    smodels = list(nrml.read_source_models(fnames, converter))
+    smdict = dict(zip(fnames, smodels))
+    src_groups = [sg for sm in smdict.values() for sg in sm.src_groups]
+    secparams = source_reader.fix_geometry_sections(smdict, src_groups, hdf5path)
+    for smodel in smodels:
+        for sg in smodel.src_groups:
+            for src in sg:
+                if src.code == b'F':  # multifault
+                    src.set_msparams(secparams)
+    return smodels

@@ -310,7 +310,13 @@ def get_csm(oq, full_lt, dstore=None):
                            fillvalue=None)
 
     # must be called *after* _fix_dupl_ids
-    fix_geometry_sections(smdict, csm, dstore)
+    if oq.sites and len(oq.sites) == 1 and oq.use_rates:
+        lon, lat, _dep = oq.sites[0]
+        site1 = site.SiteCollection.from_points([lon], [lat])
+    else:
+        site1 = None
+    hdf5path = dstore.tempname if dstore else ''
+    fix_geometry_sections(smdict, csm.src_groups, hdf5path, site1)
     return csm
 
 
@@ -377,7 +383,7 @@ def replace(lst, splitdic, key):
     lst[:] = new
 
 
-def fix_geometry_sections(smdict, csm, dstore):
+def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
@@ -398,23 +404,21 @@ def fix_geometry_sections(smdict, csm, dstore):
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
 
     if sections:
-        # save in the temporary file
-        assert dstore, ('You forgot to pass the dstore to '
+        # save in the temporary file sources and sections
+        assert hdf5path, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
-        oq = dstore['oqparam']
         mfsources = []
-        for sg in csm.src_groups:
+        for sg in src_groups:
             for src in sg:
                 if src.code == b'F':
                     mfsources.append(src)
-        if oq.sites and len(oq.sites) == 1 and oq.use_rates:
-            lon, lat, _dep = oq.sites[0]
-            site1 = site.SiteCollection.from_points([lon], [lat])
-        else:
-            site1 = None
-        split_dic = save_and_split(mfsources, sections, dstore.tempname, site1)
-        for sg in csm.src_groups:
-            replace(sg.sources, split_dic, 'source_id')
+        if mfsources:
+            split_dic = save_and_split(mfsources, sections, hdf5path, site1)
+            for sg in src_groups:
+                replace(sg.sources, split_dic, 'source_id')
+            with hdf5.File(hdf5path, 'r') as h5:
+                return h5['secparams'][:]
+    return ()
 
 
 def _groups_ids(smlt_dir, smdict, fnames):

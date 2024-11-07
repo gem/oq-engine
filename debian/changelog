@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Added command `oq info peril`
+  * Extended consequences to perils
+  * Replaced taxonomy mapping by loss type with taxonomy mapping by peril
+  * Internal: changed the ordering in the composite risk model from
+    (loss_type, riskid) -> (riskid, loss_type)
+  * Added an exporter for trt_gsim
+  * Internal: added utility function readinput.read_source_models
+
+  [Manuela Villani]
+  * Improved the "Governing MCE" plot
+
+  [Michele Simionato]
+  * Raised an error in case of non-invertible hazard curves, affecting
+    disaggregation and site-specific hazard spectrum calculations
+  * Changed the ruptures.csv exporter to also export the source IDs
+  * Added support for consequence=losses for liquefaction and landslides
   * Added a check for missing secondary perils
   * Added loss types liquefaction and landslide
   * Removed support for XML consequences, after 3 years of deprecation

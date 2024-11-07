@@ -716,15 +716,6 @@ def _filter_agg(assetcol, losses, selected, stats=''):
             dict(selected=encode(selected), tags=encode(tags), stats=stats))
 
 
-def get_loss_type_tags(what):
-    try:
-        loss_type, query_string = what.rsplit('?', 1)
-    except ValueError:  # no question mark
-        loss_type, query_string = what, ''
-    tags = query_string.split('&') if query_string else []
-    return loss_type, tags
-
-
 # probably not used
 @extract.add('csq_curves')
 def extract_csq_curves(dstore, what):
@@ -832,7 +823,11 @@ def extract_agg_losses(dstore, what):
         an array of shape (R,), being R the number of realizations
         an array of length 0 if there is no data for the given tags
     """
-    loss_type, tags = get_loss_type_tags(what)
+    if '?' in what:
+        loss_type, query_string = what.rsplit('?', 1)
+    else:
+        loss_type, query_string = what, ''
+    tags = query_string.split('&') if query_string else []
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     if 'avg_losses-stats/' + loss_type in dstore:
@@ -850,18 +845,23 @@ def extract_agg_losses(dstore, what):
 def extract_agg_damages(dstore, what):
     """
     Aggregate damages of the given loss type and tags. Use it as
-    /extract/agg_damages/structural?taxonomy=RC&custom_site_id=20126
+    /extract/agg_damages?taxonomy=RC&custom_site_id=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D the
         number of damage states, or an array of length 0 if there is no data
         for the given tags
     """
-    loss_type, tags = get_loss_type_tags(what)
+    if '?' in what:
+        loss_type, what = what.rsplit('?', 1)
+        tags = what.split('&') if what else []
+    else:
+        loss_type = what
+        tags = []
     if 'damages-rlzs' in dstore:
         oq = dstore['oqparam']
-        lti = oq.lti[loss_type]
-        damages = dstore['damages-rlzs'][:, :, lti]
+        li = oq.lti[loss_type]
+        damages = dstore['damages-rlzs'][:, :, li]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)
@@ -1058,15 +1058,13 @@ def build_csq_dt(dstore):
     """
     :param dstore: a datastore instance
     :returns:
-       a composite dtype loss_type -> (csq1, csq2, ...)
+       a composite dtype (csq1, csq2, ...)
     """
-    oq = dstore['oqparam']
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
     dt = numpy.dtype([(csq, F32) for csq in csqs])
-    loss_types = oq.loss_dt().names
-    return numpy.dtype([(lt, dt) for lt in loss_types])
+    return dt
 
 
 def build_damage_array(data, damage_dt):
@@ -1396,8 +1394,12 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    dtlist = [('rup_id', I64), ('multiplicity', U32), ('mag', F32),
-              ('centroid_lon', F32), ('centroid_lat', F32),
+    try:
+        source_id = dstore['source_info']['source_id']
+    except KeyError:  # scenario
+        source_id = None
+    dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
+              ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
@@ -1411,6 +1413,10 @@ def extract_rupture_info(dstore, what):
         rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
         arr = rdata.to_array(proxies)
         for r in arr:
+            if source_id is None:
+                srcid = 'no-source'
+            else:
+                srcid = source_id[r['source_id']]
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
             if len(coordset) < 4:   # degenerate to line
@@ -1418,8 +1424,8 @@ def extract_rupture_info(dstore, what):
             else:  # good polygon
                 boundaries.append('POLYGON((%s))' % ', '.join(coords))
             rows.append(
-                (r['rup_id'], r['multiplicity'], r['mag'],
-                 r['lon'], r['lat'], r['depth'],
+                (r['rup_id'], srcid, r['multiplicity'],
+                 r['mag'], r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))

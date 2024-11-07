@@ -771,3 +771,23 @@ def export_mag_dst_eps_sig(ekey, dstore):
     comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
     writer.save(data, fname, comment=comment)
     return [fname]
+
+
+@export.add(('trt_gsim', 'csv'))
+def export_trt_gsim(ekey, dstore):
+    """
+    Export a CSV with fields (grp_id, trt, gsim)
+    """
+    rows = []
+    gsims = dstore['gsims'][:]
+    data = dstore['source_groups'][:][['grp_id', 'trt', 'gsims']]
+    g = 0
+    for grp_id, trt, G in data:
+        for gsim in gsims[g:g + G]:
+            rows.append((grp_id, trt, gsim.replace(b'\n', b'\\n')))
+        g += G
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    writer = writers.CsvWriter()
+    writer.save(rows, fname, ['grp_id', 'trt', 'gsim'],
+                comment=dstore.metadata)
+    return [fname]

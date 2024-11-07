@@ -40,8 +40,8 @@ def set_imls(cmaker, uhs):
     imtls = {}
     loglevs = {}
     for imt, imls in zip(cmaker.imts, uhs):
-        imtls[imt] = imls
-        loglevs[imt] = np.log(imls)
+        imtls[imt.string] = imls
+        loglevs[imt.string] = np.log(imls)
     cmaker.imtls = general.DictArray(imtls)
     cmaker.loglevels = general.DictArray(loglevs)
     return cmaker

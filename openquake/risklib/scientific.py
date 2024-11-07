@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -45,6 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -70,7 +71,6 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
-liquefaction landslide
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -92,7 +92,13 @@ def _reduce(nested_dic):
 
 
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """
+    :param iterable: a sequence of N values (s0, s1, ...)
+    :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
+ 
+    >>> list(pairwise('ABC'))
+    [('A', 'B'), ('B', 'C')]
+    """
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
@@ -1008,12 +1014,12 @@ def classical_damage(
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
     afoos = pairwise_diff(
         pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
-    poes_per_damage_state = []
+    poes_per_dmgstate = []
     for ff in fragility_functions:
         fx = afoos @ ff(imls)
-        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
-        poes_per_damage_state.append(poe_per_damage_state)
-    poos = pairwise_diff([1] + poes_per_damage_state + [0])
+        poe_per_dmgstate = 1. - numpy.exp(-fx * risk_investigation_time)
+        poes_per_dmgstate.append(poe_per_dmgstate)
+    poos = pairwise_diff([1] + poes_per_dmgstate + [0])
     return poos
 
 #
@@ -1282,13 +1288,45 @@ def pla_factor(df):
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
-    "Averages between a value and the next value in a sequence"
+    """
+    Averages between a value and the next value in a sequence
+    """
     return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
-def pairwise_diff(values):
-    "Differences between a value and the next value in a sequence"
-    return numpy.array([x - y for x, y in pairwise(values)])
+def pairwise_diff(values, addlast=False):
+    """
+    Differences between a value and the next value in a sequence.
+    If addlast is set the last value is added to the difference,
+    i.e. N values are returned instead of N-1.
+    """
+    diff = [x - y for x, y in pairwise(values)]
+    if addlast:
+        diff.append(values[-1])
+    return numpy.array(diff)
+
+
+def dds_to_poes(dmg_dists):
+    """
+    Convert an array of damage distributions into an array of PoEs
+
+    >>> dds_to_poes([[.7, .2, .1], [0., 0., 1.0]])
+    array([[1. , 0.3, 0.1],
+           [1. , 1. , 1. ]])
+    """
+    arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
+    return arr
+    
+    
+def compose_dds(dmg_dists):
+    """
+    Compose an array of N damage distributions:
+
+    >>> compose_dds([[.6, .2, .1, .1], [.5, .3 ,.1, .1]])
+    array([0.3 , 0.34, 0.17, 0.19])
+    """
+    poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
+    return pairwise_diff(poes_per_dmgstate, addlast=True)
 
 
 def mean_std(fractions):
@@ -1619,21 +1657,22 @@ class RiskComputer(dict):
         [taxidx] = asset_df.taxonomy.unique()
         self.asset_df = asset_df
         self.imtls = oq.imtls
-        self.alias = {imt: 'gmv_%d' % i
-                      for i, imt in enumerate(oq.get_primary_imtls())}
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
+        self.perils = crm.perils
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
-        self.wdic = {}
-        tm = crm.tmap[crm.tmap.taxi == taxidx]
+        self.wdic = {}  # (riskid, peril) -> weight
+        tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         country_str = getattr(asset_df, 'country', '?')
-        for lt in self.minimum_asset_loss:
-            for country, loss_type, riskid, weight in zip(
-                    tm.country, tm.loss_type, tm.risk_id, tm.weight):
-                if loss_type in ('*', lt):
-                    if country == '?' or country_str in country:
-                        self[riskid, lt] = crm._riskmodels[riskid]
-                        self.wdic[riskid, lt] = weight
+        for country, peril, riskid, weight in zip(
+                tm.country, tm.peril, tm.risk_id, tm.weight):
+            if country == '?' or country_str in country:
+                self[riskid] = crm._riskmodels[riskid]
+                if peril == '*':
+                    for per in self.perils:
+                        self.wdic[riskid, per] = weight
+                else:
+                    self.wdic[riskid, peril] = weight
 
     def output(self, haz, sec_losses=(), rndgen=None):
         """
@@ -1642,43 +1681,32 @@ class RiskComputer(dict):
         :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
-        :returns: loss dict {extended_loss_type: loss_output}
+        :yields: dictionaries {loss_type: loss_output}
         """
-        dic = collections.defaultdict(list)  # lt -> outs
-        weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = self.alias.get(imt, imt)
-            if event:
-                out = rm(lt, self.asset_df, haz, col, rndgen)
-            else:  # classical
-                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
-        out = {}
-        for lt in self.minimum_asset_loss:
-            outs = dic[lt]
-            if len(outs) == 0:  # can happen for nonstructural_ins
-                continue
-            elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                # computing the average dataframe for event_based_risk/case_8
-                out[lt] = _agg(outs, weights[lt])
-            elif len(outs) > 1:
-                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
-            else:
-                out[lt] = outs[0]
-        if event:
-            for update_losses in sec_losses:
-                update_losses(self.asset_df, out)
-        return out
+        dic = collections.defaultdict(list)  # peril, lt -> outs
+        weights = collections.defaultdict(list)  # peril, lt -> weights
+        for riskid, rm in self.items():
+            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
+                weights[peril, lt].append(self.wdic[riskid, peril])
+                dic[peril, lt].append(res)
+        for peril in self.perils:
+            out = {}
+            for lt in self.minimum_asset_loss:
+                outs = dic[peril, lt]
+                if len(outs) == 0:  # can happen for nonstructural_ins
+                    continue
+                elif len(outs) > 1 and hasattr(outs[0], 'loss'):
+                    # computing the average dataframe for event_based_risk/case_8
+                    out[lt] = _agg(outs, weights[peril, lt])
+                elif len(outs) > 1:
+                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
+                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                else:
+                    out[lt] = outs[0]
+            if hasattr(haz, 'eid'):  # event based
+                for update_losses in sec_losses:
+                    update_losses(self.asset_df, out)
+            yield out
 
     def todict(self):
         """
@@ -1686,18 +1714,18 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                            'retro'] = retro
+                    rfdic['%s#%s' % (rf.id, lt)] = dic
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
                    wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   alias=self.alias,
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
@@ -1710,26 +1738,38 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
+def _max(coeffs):
+    perils = list(coeffs)
+    if len(perils) == 1:
+        res = coeffs[perils[0]]
+    else:
+        res = numpy.array([coeffs[peril] for peril in perils]).max(axis=0)
+    return res
+
+
+def consequence(consequence, assets, cdict, loss_type, time_event):
     """
     :param consequence: kind of consequence
-    :param coeffs: coefficients per damage state
-    :param asset: asset record
-    :param dmgdist: an array of probabilies of shape (E, D - 1)
-    :param loss_type: loss type string
-    :returns: array of shape E
+    :param assets: asset array (shape A)
+    :param cdict: peril -> composite array of coefficients of shape (A, E)
+    :param time_event: time event string
+    :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    if consequence.startswith(('loss', 'losses')):
-        return dmgdist @ coeffs * asset['value-' + loss_type]
+    if consequence.startswith('losses'):
+        res = (assets['value-' + loss_type].reshape(-1, 1) *
+               _max(cdict)) / assets['value-number'].reshape(-1, 1)
+        return res
     elif consequence in ['collapsed', 'non_operational']:
-        return dmgdist @ coeffs * asset['value-number']
+        return _max(cdict)
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
-        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
+        values = assets[f'occupants_{time_event}'] / assets['value-number']
+        return values.reshape(-1, 1) * _max(cdict)
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['value-residents']
+        values = assets['value-residents'] / assets['value-number']
+        return values.reshape(-1, 1) * _max(cdict)
     else:
         raise NotImplementedError(consequence)
 
@@ -1754,7 +1794,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
-        return aval[xltype]
+        try:
+            return aval[xltype]
+        except ValueError:  # liquefaction, landslide
+            return 0
     else:
         raise NotImplementedError(consequence)
 

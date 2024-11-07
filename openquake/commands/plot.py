@@ -248,13 +248,14 @@ def make_figure_uhs(extractors, what):
     got = {}  # (calc_id, kind) -> curves
     spec = {}  # calc_id -> spectra
     for i, ex in enumerate(extractors):
+        oq = ex.oqparam
         uhs = ex.get(what)
         for kind in uhs.kind:
             got[ex.calc_id, kind] = uhs[kind][0]  # 1 site
         if 'median_spectra' in ex.dstore:
-            spec[ex.calc_id] = ex.get(
-                f'median_spectra?site_id={uhs.site_id[0]}')[:]  # (M, P)
-    oq = ex.oqparam
+            for j, poe in enumerate(oq.poes):
+                arr = ex.get(f'median_spectra?site_id=0&poe_id={j}').array
+                spec[ex.calc_id, j] = numpy.exp(arr[:, 0].sum(axis=0))
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
     imts = [imt.string for imt in oq.imt_periods()]
@@ -268,8 +269,8 @@ def make_figure_uhs(extractors, what):
             curve = list(arr['%.6f' % poe][imts])
             ax.plot(periods, curve, '-', label='%s_%s_spectrum' % ck)
             ax.plot(periods, curve, '.')
-        for calc_id, spectra in spec.items():
-            ax.plot(periods, spectra[:, j], '-', label=f'{calc_id}_median_spectrum')
+        for (calc_id, poe_id), spectrum in spec.items():
+            ax.plot(periods, spectrum, '-', label=f'{calc_id}_median_spectrum')
         ax.grid(True)
         ax.legend()
     return plt
@@ -1060,7 +1061,10 @@ def plot_wkt(wkt_string):
     from shapely import wkt
     plt = import_plt()
     poly = wkt.loads(wkt_string)
-    coo = numpy.array(poly.exterior.coords)
+    if hasattr(poly, 'exterior'):
+        coo = numpy.array(poly.exterior.coords)
+    else:  # LINESTRING
+        coo = numpy.array(poly.coords)
     plt.plot(coo[:, 0], coo[:, 1], '-')
     return plt
 
@@ -1104,7 +1108,7 @@ def main(what,
     if what.endswith('.csv'):
         plot_csv(what)
         return
-    if what.startswith('POLYGON'):
+    if what.startswith(('POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
         plt.show()
         return
