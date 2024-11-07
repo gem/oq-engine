@@ -1063,12 +1063,12 @@ def build_csq_dt(dstore):
     return dt
 
 
-def build_damage_array(data, damage_dt):                                               
-    """                                                                                
-    :param data: an array of shape (A, L, D)                                           
-    :param damage_dt: a damage composite data type loss_type -> states                 
-    :returns: a composite array of length N and dtype damage_dt                        
-    """                                                                                
+def build_damage_array(data, damage_dt):
+    """
+    :param data: an array of shape (A, L, D)
+    :param damage_dt: a damage composite data type loss_type -> states
+    :returns: a composite array of length N and dtype damage_dt
+    """
     A, _L, _D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
