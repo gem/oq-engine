@@ -1,8 +1,8 @@
   [Christopher Brooks]
   * Added M9 Basin amplification term for ModifiableGMPE
     and assoc. unit tests
-  * Added ability to specify M9 basin term as an argument
-    within US 2023 NSHM interface GMMs
+  * Added the CB14 basin amplification term for
+    ModifiableGMPE and assoc. unit tests
 
   [Michele Simionato]
   * Added command `oq info peril`
