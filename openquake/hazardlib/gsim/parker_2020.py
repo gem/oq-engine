@@ -384,8 +384,13 @@ class ParkerEtAl2020SInter(GMPE):
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             u_gmm = fp + fnl + flin + fm + c0 + fd
             means = u_gmm + fb
-            # If M9 basin adjustment
-            if m9:
+            # If M9 basin adjustment and trt is interface
+            if m9 and trt == const.TRT.SUBDUCTION_INTERFACE:
+                # Can only use with the ParkerEtAl2020SInterB (basin version)
+                if 'z2pt5' not in self.REQUIRES_SITES_PARAMETERS:
+                    raise ValueError("To apply the M9 adjustment the " 
+                                     "ParkerEtAl2020SInterB gsim must "
+                                     "be selected (uses z2pt5 for basin amp.)")
                 # Apply to basin sites for SA with T >= 1.9 s only
                 means_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
                 # And only when greater than if using GMM basin amp. factor
