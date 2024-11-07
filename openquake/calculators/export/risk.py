@@ -414,7 +414,6 @@ def export_damages_csv(ekey, dstore):
     name = ekey[0].split('-')[0]
     if oq.calculation_mode != 'classical_damage':
         name = 'avg_' + name
-    md['loss_type'] = md
     for i, ros in enumerate(rlzs_or_stats):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)

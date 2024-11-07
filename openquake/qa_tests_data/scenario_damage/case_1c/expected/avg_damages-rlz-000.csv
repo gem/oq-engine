@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.22.0-gitdf92f4b764', start_date='2024-11-07T06:45:42', checksum=4136792175, loss_type={'generated_by': 'OpenQuake engine 3.22.0-gitdf92f4b764', 'start_date': '2024-11-07T06:45:42', 'checksum': 4136792175, 'loss_type': {...}}"
+#,,,,"generated_by='OpenQuake engine 3.22.0-git513b65764c', start_date='2024-11-07T08:01:17', checksum=2967236628"
 asset_id,taxonomy,lon,lat,modal-ds-structural
 a2,Wood,-122.00000,38.00000,slight
 a1,Wood,-122.00000,38.11300,slight
