@@ -1,4 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-gitdf92f4b764', start_date='2024-11-07T06:48:54', checksum=3172484047, loss_type={'generated_by': 'OpenQuake engine 3.22.0-gitdf92f4b764', 'start_date': '2024-11-07T06:48:54', 'checksum': 3172484047, 'loss_type': {...}}"
+#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-gitdf92f4b764', start_date='2024-11-07T06:48:54', checksum=3172484047"
 asset_id,taxonomy,lon,lat,structural~no_damage,structural~Slight,structural~Moderate,structural~Extensive,structural~Collapse
 ant_13_S1,MUR/LWAL/HEX:1,-75.07679,6.90913,2.129000E+03,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
 ant_13_S2,MUR/LWAL/HEX:2,-75.07679,6.90913,4.600000E+02,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
