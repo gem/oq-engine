@@ -431,7 +431,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     :param bool remove:
         True by default, meaning the file will be automatically removed
         at the exit of the program
-    :returns: a string with the path to the temporary file
+    :returns:
+        a string with the path to the temporary file
     """
     if dir is not None:
         if not os.path.exists(dir):
