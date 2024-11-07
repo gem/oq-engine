@@ -164,8 +164,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df(
             'risk_by_event', ['event_id', 'loss_id', 'agg_id'],
             dict(agg_id=K))
-        self.assertEqual(len(df), 100)
-        self.assertEqual(len(df[df.dmg_1 > 0]), 28)  # only 28/100 are nonzero
+        self.assertEqual(len(df), 300)
+        self.assertEqual(len(df[df.dmg_1 > 0]), 72)  # only 72/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap

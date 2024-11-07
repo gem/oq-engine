@@ -397,7 +397,6 @@ def export_damages_csv(ekey, dstore):
     ebd = oq.calculation_mode == 'event_based_damage'
     rlzs = dstore['full_lt'].get_realizations()
     orig = dstore[ekey[0]][:]  # shape (L, A, R, D)
-    dmg_states = ['no_damage'] + oq.limit_states
     dmg_dt = build_damage_dt(dstore)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
@@ -420,7 +419,7 @@ def export_damages_csv(ekey, dstore):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i] * rate
-            A, L, Dc = data.shape
+            A, _L, Dc = data.shape
             if Dc == D:  # no consequences, export nothing
                 return []
             csq_dt = build_csq_dt(dstore)

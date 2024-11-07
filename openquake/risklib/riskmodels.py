@@ -652,7 +652,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param oq: OqParam instance with .loss_types and .time_event
         :returns: a dict consequence_name, loss_type -> array[A, E]
         """
-        P, A, E, L, _D = dd5.shape
+        _P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
