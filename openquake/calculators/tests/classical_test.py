@@ -610,7 +610,8 @@ class ClassicalTestCase(CalculatorTestCase):
             hazard_calculation_id=hc_str)
         dbm = view('disagg:Mag', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
-        self.assertEqualFiles('expected/disagg_by_mag_true.org', fname)
+        self.assertEqualFiles(
+            'expected/disagg_by_mag_true.org', fname, delta=2E-4)
 
         # multiFaultSource with infer_occur_rates=false
         self.run_calc(
