@@ -587,11 +587,13 @@ def view_portfolio_damage(token, dstore):
     # dimensions assets, stat, dmg_state
     if 'damages-stats' in dstore:
         attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
-        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+        arr = dstore.sel('damages-stats', loss_type='structural', stat='mean'
+                         ).sum(axis=(0, 1, 2))
     else:
         attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
-        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))  # shape D
-    return numpy.array(arr, dt(list(attrs['dmg_state'])))
+        arr = dstore.sel('damages-rlzs', loss_type='structural', rlz=0
+                         ).sum(axis=(0, 1, 2))  # shape D
+    return numpy.array(arr, dt(attrs['dmg_state']))
 
 
 def sum_table(records):
