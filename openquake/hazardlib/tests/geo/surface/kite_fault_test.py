@@ -245,14 +245,17 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
 
     def test_get_tor(self):
         # test calculation of trace (i.e. surface projection of tor)
-        # notice that .tor also does a .keep_corners
+        # notice that .tor also does a .keep_corners. The surface dips
+        # toward north therefore longitudes must be decreasing
         coo = self.ksfc.tor.coo
         aae(coo[:, 0], [0.2, 0.05, 0.])
         aae(coo[:, 1], [0.0, 0.0, 0.05])
 
     def test_geom(self):
+
         # Converts a KiteSurface to a numpy.ndarray instance
         geom = kite_to_geom(self.ksfc)
+
         # Converts a numpy.ndarray instance back to a KiteSurface
         ksfc = geom_to_kite(geom)
         for par in ('lons', 'lats', 'depths'):
@@ -305,7 +308,8 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     def test_get_tor(self):
         coo = self.srfc.tor.coo
 
-        # Expected results extracted manually from the mesh
+        # Expected results extracted manually from the mesh. The ToR must have
+        # increasing longitudes since the surface dips toward south
         elo = np.array([10.01100473, 10.04737998, 10.2])
         ela = np.array([44.99134933, 45.00003155, 45.0])
 
@@ -687,8 +691,8 @@ class KiteSurfaceTestCase(unittest.TestCase):
         # Note that this mesh is flipped at the construction level
         self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
         self.assertTrue(np.all(np.abs(msh.depths[6, :] - 15.) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh.lons[:, -1] - 0.5) < 1e-2))
-        self.assertTrue(np.all(np.abs(msh.lons[:, 0]) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.lons[:, -1]) < 1e-2))
+        self.assertTrue(np.all(np.abs(msh.lons[:, 0] - 0.5) < 1e-2))
 
         dip = srfc.get_dip()
         msg = "The value of dip computed is wrong: {dip:.3f}"
@@ -697,7 +701,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
         strike = srfc.get_strike()
         msg = "The value of strike computed is wrong.\n"
         msg += f"computed: {strike:.3f} expected:"
-        self.assertTrue(abs(strike - 90.0) < 0.01, msg)
+        self.assertTrue(abs(strike - 270.0) < 0.01, msg)
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
@@ -718,13 +722,20 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         path = os.path.join(BASE_DATA_PATH, 'profiles05')
         self.prf, _ = _read_profiles(path)
 
-    def test_right_hand(self):
+    def test_right_hand_ism(self):
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 4
         idl = False
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
+
+        from openquake.hazardlib.geo.surface.kite_fault import _get_plane
+        from openquake.hazardlib.geo.utils import get_strike_from_plane_normal
+
+        _, nrml_plane = _get_plane(srfc.mesh.lons.flatten(),
+                                   srfc.mesh.lats.flatten(),
+                                   srfc.mesh.depths.flatten())
 
         expected = 270.002023
         strike = srfc.get_strike()
@@ -1037,7 +1048,8 @@ class TestNarrowSurface(unittest.TestCase):
     def test_narrow_01(self):
 
         # The profiles are aligned at the top and the bottom. Their horizontal
-        # distance is lower than the sampling distance
+        # distance is lower than the sampling distance. The fault is nearly
+        # vertical
         self.profiles = []
         tmp = [Point(0.0, 0.000, 0.0),
                Point(0.0, 0.001, 15.0)]
@@ -1059,11 +1071,11 @@ class TestNarrowSurface(unittest.TestCase):
             ppp(self.profiles, smsh, title, ax_equal=True)
 
         # Testing
-        expected_lons = np.array([[0.0, 0.01],
-                                  [0.0, 0.01],
-                                  [0.0, 0.01],
-                                  [0.0, 0.01]])
-        expected_lats = np.array([[0., 0.],
+        expected_lons = np.array([[0.01, 0.0],
+                                  [0.01, 0.0],
+                                  [0.01, 0.0],
+                                  [0.01, 0.0]])
+        expected_lats = np.array([[0.0, 0.0],
                                   [0.00033332, 0.00033332],
                                   [0.00066665, 0.00066665],
                                   [0.00099997, 0.00099997]])

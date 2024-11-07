@@ -325,8 +325,11 @@ class KiteSurface(BaseSurface):
             coo[3, 2] = self.mesh.depths[irow, icol + 1]
 
             from openquake.hazardlib.geo.utils import (
-                plane_fit, get_strike_from_plane_normal)
-            _, nrml_plane = plane_fit(coo)
+                get_strike_from_plane_normal)
+
+            _, nrml_plane = _get_plane(coo[:, 0].flatten(),
+                                       coo[:, 1].flatten(),
+                                       coo[:, 2].flatten())
 
             tmp_strike = get_strike_from_plane_normal(nrml_plane)
             a_low = (tmp_strike + 10) % 360
@@ -485,8 +488,11 @@ class KiteSurface(BaseSurface):
         # Create mesh
         msh = _create_mesh(rprof, ref_idx, edge_sd, idl, align)
 
-        return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
-                   profiles, sec_id)
+        out = cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
+                  profiles, sec_id)
+        out._fix_right_hand()
+
+        return out
 
     def get_center(self):
         """
@@ -810,12 +816,12 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     _edges_fix_sorting(msh)
 
     # Fix the orientation of the mesh
-    msh = _fix_right_hand(msh)
+    out = _fix_right_hand(msh)
 
     # INFO: this is just for debugging
     # _dbg_plot_mesh(msh)
 
-    return msh
+    return out
 
 
 def _edges_fix_sorting(msh):
@@ -906,7 +912,7 @@ def _fix_right_hand(msh):
 
 
 def _does_mesh_comply_with_right_hand_rule(
-        msh, tolerance=45., vers=None, ia=None, debug=False
+        msh, tolerance=45., vers=None, ia=None
 ):
     # Given a mesh, this function checks if it complies with the right hand
     # rule
@@ -934,13 +940,10 @@ def _does_mesh_comply_with_right_hand_rule(
     # direction
     abs_angle_dff = np.abs(geo_utils._angles_diff(top.azimuth, strike))
 
-    if debug:
-        breakpoint()
-
     return abs_angle_dff < tolerance
 
 
-def _get_non_null_cell(msh, debug=False):
+def _get_non_null_cell(msh):
 
     ul = np.isfinite(msh[:-1, :-1, 0])
     ur = np.isfinite(msh[:-1, 1:, 0])
@@ -964,9 +967,6 @@ def _get_non_null_cell(msh, debug=False):
     lons = np.array(lons)
     lats = np.array(lats)
     deps = np.array(deps)
-
-    if debug:
-        breakpoint()
 
     return lons, lats, deps, ia
 

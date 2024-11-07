@@ -860,13 +860,13 @@ def get_strike_from_plane_normal(nrml):
     elif numpy.abs(suv[0]) < 1e-5 and suv[1] < 0:
         return 180
 
-    if suv[0] > 0 and suv[1] > 0:
+    if suv[0] > 0 and suv[1] >= 0:
         # First quadrant
         return 90 - numpy.rad2deg(numpy.arctan(suv[1] / suv[0]))
     elif suv[0] > 0 and suv[1] < 0:
         # Second quadrant
         return 90 + numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
-    elif suv[0] < 0 and suv[1] < 0:
+    elif suv[0] < 0 and suv[1] <= 0:
         # Third quadrant
         return 270 - numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
     elif suv[0] < 0 and suv[1] > 0:
