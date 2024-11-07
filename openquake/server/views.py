@@ -755,11 +755,6 @@ def aristotle_get_rupture_data(request):
         logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
-
-    # NOTE: these 2 lines would download the images from the USGS website
-    # rupdic['intensity_map'] = download_jpg(rupdic['usgs_id'], 'intensity')
-    # rupdic['pga_map'] = download_jpg(rupdic['usgs_id'], 'pga')
-
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
@@ -767,7 +762,8 @@ def aristotle_get_rupture_data(request):
     oq_rup = None
     if 'oq_rup' in rupdic:
         oq_rup = rupdic['oq_rup']
-        # FIXME: check if we want to display also the rupture png
+        # FIXME: check if we want to display the rupture png as a separate plot, instead
+        # of inserting the hypocenter and the rupture boundaries in the gmf plots
         # # Agg is a non-interactive backend
         # rupdic['rupture_png'] = plot_rupture(
         #     rupdic['oq_rup'], backend='Agg', figsize=(6, 6),

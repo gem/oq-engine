@@ -563,6 +563,10 @@ def get_shakemap_version(usgs_id):
 
 
 def download_jpg(usgs_id, what):
+    """
+    It can be used to download a jpg file from the USGS service, returning it in a
+    base64 format that can be easily passed to a Django template
+    """
     version_id = get_shakemap_version(usgs_id)
     if version_id:
         intensity_url = (f'{US_GOV}/product/shakemap/{usgs_id}/us/'
