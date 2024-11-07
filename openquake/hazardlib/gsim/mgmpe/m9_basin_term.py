@@ -40,7 +40,7 @@ class M9BasinTerm(GMPE):
      
     This implementation is based on the description of the M9 adjustment 
     within the Moschetti et al. (2024) EQ Spectra article on the conterminous
-    US 2023 NSHM GMC.
+    US 2023 NSHM GMC (pp. 1178).
 
     :param gmpe_name:
         The name of a GMPE class
