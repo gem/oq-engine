@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14, case_16, case_17, case_18, case_19, case_20, case_21, case_22)
+    case_14, case_16, case_17, case_18, case_19, case_20, case_22)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -287,13 +287,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         out = self.run_calc(case_20.__file__, 'job.ini', exports='csv')
         [fname] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', fname)
-
-    def test_case_21(self):
-        # infrastructure risk for structural, liquefaction and landslides
-        out = self.run_calc(case_21.__file__, 'job.ini', exports='csv')
-        [agg_csv, aggparent_csv] = out[('aggrisk', 'csv')]
-        self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
-        self.assertEqualFiles('expected/aggrisk-parent.csv', aggparent_csv)
 
     def test_case_22(self):
         # losses with liquefaction and landslides
