@@ -25,7 +25,6 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 
 # The regions for which the model is supported. If not listed then the
@@ -313,7 +312,6 @@ def get_basin_depth_scaling(C, region, vs30, z25):
         # Cascadia Basin (Equation 3.11)
         idx = ln_z25_prime > 0.0
         f_basin[idx] = C["a39"] * ln_z25_prime[idx]
-
     return f_basin
 
 
@@ -337,8 +335,7 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
             get_site_amplification_term(C, region, vs30, null_pga1000))
 
 
-def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt,
-                          m9=None):
+def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
     """
     Returns the mean acceleration on soil
     """
@@ -349,28 +346,14 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment, imt,
         # Basin depths will be ignored, so set zeros
         z25 = np.zeros(ctx.vs30.shape)
 
-    # First get mean prior to basin amplification
-    u_gmm = (get_base_term(C, region, apply_adjustment) +
-             get_magnitude_scaling_term(C, trt, region, ctx.mag) +
-             get_geometric_spreading_term(C, region, ctx.mag, ctx.rrup) +
-             get_anelastic_attenuation_term(C, region, ctx.rrup) +
-             get_rupture_depth_scaling_term(C, trt, ctx) +
-             get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
-             get_site_amplification_term(C, region, ctx.vs30, pga1000))
-    
-    # Add basin amplification
-    f_bas = get_basin_depth_scaling(C, region, ctx.vs30, z25)
-    means = u_gmm + f_bas
-
-    # If M9 basin adjustment
-    if m9:
-        # Apply to basin sites for SA with T >= 1.9 s only
-        means_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
-        # And only when greater than if using GMM basin amp. factor
-        idx = means_m9 > means
-        means[idx] = means_m9[idx]
-
-    return means
+    return (get_base_term(C, region, apply_adjustment) +
+            get_magnitude_scaling_term(C, trt, region, ctx.mag) +
+            get_geometric_spreading_term(C, region, ctx.mag, ctx.rrup) +
+            get_anelastic_attenuation_term(C, region, ctx.rrup) +
+            get_rupture_depth_scaling_term(C, trt, ctx) +
+            get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
+            get_site_amplification_term(C, region, ctx.vs30, pga1000) +
+            get_basin_depth_scaling(C, region, ctx.vs30, z25))
 
 
 def _get_f2(t1, t2, t3, t4, alpha, period):
@@ -606,8 +589,6 @@ class AbrahamsonGulerce2020SInter(GMPE):
         apply_usa_adjustment (bool): Apply the modeller designated Alaska or
                                      Cascadia adjustments (available only for
                                      the regions "USA-AK" or "CAS")
-        m9_basin_adjustment (bool): Apply the M9 basin adjustment as defined
-                                    for US 2023 interface GMMs 
         sigma_mu_epsilon (float): Number of standard deviations to multiply
                                   sigma mu (the standard deviation of the
                                   median) for the epistemic uncertainty model
@@ -643,14 +624,13 @@ class AbrahamsonGulerce2020SInter(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1000.0
 
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
-                 m9_basin_adjustment=False, sigma_mu_epsilon=0.0):
+                 sigma_mu_epsilon=0.0):
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region
         self.ergodic = ergodic
         self.apply_usa_adjustment = apply_usa_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        self.m9_basin_adjustment = m9_basin_adjustment
         # If running for Cascadia or Japan then z2.5 is needed
         if region in ("CAS", "JPN"):
             self.REQUIRES_SITES_PARAMETERS = \
@@ -672,8 +652,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
-                                            self.apply_usa_adjustment, imt,
-                                            self.m9_basin_adjustment)
+                                            self.apply_usa_adjustment)
             if self.sigma_mu_epsilon:
                 # Apply an epistmic adjustment factor
                 mean[m] += (self.sigma_mu_epsilon *
