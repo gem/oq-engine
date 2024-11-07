@@ -501,16 +501,14 @@ class ValidationError(Exception):
     pass
 
 
-def get_cdict(fractions, coeffs, df, loss_type, perils):
-    """
-    :returns: a dict peril -> array of shape (A, E)
-    """
+def _cdict(fractions, coeffs, df, lt, perils):
+    # fractions[P, A, E, D]
+    # returns peril -> coeffs[A, E]
     cdict = {}
     for pi, peril in enumerate(perils):
         for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
-            cs = coeffs[risk_id]
             if per == peril or per == '*':
-                cdict[peril] = fractions[pi] @ cs[peril][loss_type] * weight
+                cdict[peril] = fractions[pi] @ coeffs[risk_id][peril][lt] * weight
     return cdict
 
 
@@ -646,27 +644,27 @@ class CompositeRiskModel(collections.abc.Mapping):
                         raise InvalidFile(
                             '%s: missing %s %s' % (fname, peril, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, tmap_df, oq):
+    def compute_csq(self, assets, dd5, tmap_df, oq):
         """
         :param assets: asset array
-        :param fractions: array of probabilies of shape (L, A, E, D)
+        :param dd5: distribution functions of shape (P, A, E, L, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
         :param oq: OqParam instance with .loss_types and .time_event
         :returns: a dict consequence_name -> array of shape (A, E)
         """
-        _L, A, E, _D = fractions.shape
-        csq = AccumDict(accum=numpy.zeros((A, E)))
-        [lt] = oq.loss_types
+        P, A, E, L, _D = dd5.shape
+        csq = AccumDict(accum=numpy.zeros((L, A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
-                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, lt, self.perils)
-                    # array peril -> coeffs for the given loss type
-                    csq[consequence] += scientific.consequence(
-                        consequence, assets, cdict, lt, oq.time_event)
+                    for li, lt in enumerate(oq.loss_types):
+                        cdict = _cdict(dd5[:, :, :, li, 1:], coeffs, df, lt, self.perils)
+                        # array loss_type -> peril -> coeffs for the given loss type
+                        csq[consequence, li] += scientific.consequence(
+                            consequence, assets, cdict, lt, oq.time_event)
         return csq
 
     def init(self):

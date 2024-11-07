@@ -44,7 +44,7 @@ def classical_damage(riskinputs, param, monitor):
     for ri in riskinputs:
         R = ri.hazard_getter.R
         D = len(crmodel.damage_states)
-        result = AccumDict(accum=numpy.zeros((L, R, D), F32))
+        result = AccumDict(accum=numpy.zeros((R, L, D), F32))
         with mon:
             haz = ri.hazard_getter.get_hazard()
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
@@ -53,7 +53,7 @@ def classical_damage(riskinputs, param, monitor):
                 [out] = crmodel.get_outputs(assets, hcurve)
                 for li, lt in enumerate(crmodel.oqparam.loss_types):
                     for a, frac in zip(assets.ordinal, out[lt]):
-                        result[a][li, rlz] += frac
+                        result[a][rlz, li] += frac
         yield result
 
 
@@ -73,13 +73,13 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
             a dictionary asset_ordinal -> array(R, D)
         """
         D = len(self.crmodel.damage_states)
-        damages = numpy.zeros((self.L, self.A, self.R, D), numpy.float32)
+        damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
         for a in result:
-            damages[:, a] = result[a]
+            damages[a] = result[a]
         self.datastore['damages-rlzs'] = damages
         stats.set_rlzs_stats(self.datastore, 'damages-rlzs',
-                             loss_type=self.oqparam.loss_types,
                              assets=self.assetcol['id'],
+                             loss_type=self.oqparam.loss_types,
                              dmg_state=self.crmodel.damage_states)
         dmg = views.view('portfolio_damage', self.datastore)
         logging.info('\n' + views.text_table(dmg, ext='org'))

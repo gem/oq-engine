@@ -1,5 +1,5 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-giteb247f4214', start_date='2024-11-06T07:06:29', checksum=3613274803, investigation_time=1.0, risk_investigation_time=1.0"
-asset_id,taxonomy,lon,lat,no_damage,ds1,ds2,ds3,ds4
+#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-gitdf92f4b764', start_date='2024-11-07T05:38:30', checksum=3613274803, investigation_time=1.0, risk_investigation_time=1.0, loss_type={'generated_by': 'OpenQuake engine 3.22.0-gitdf92f4b764', 'start_date': '2024-11-07T05:38:30', 'checksum': 3613274803, 'investigation_time': 1.0, 'risk_investigation_time': 1.0, 'loss_type': {...}}"
+asset_id,taxonomy,lon,lat,structural~no_damage,structural~ds1,structural~ds2,structural~ds3,structural~ds4
 a3,tax1,-122.57000,38.11300,9.998759E-01,1.001978E-04,-1.900840E-05,-4.311249E-05,8.599729E-05
 a2,tax2,-122.11400,38.11300,9.935337E-01,3.635901E-03,1.967967E-03,6.055560E-04,2.568487E-04
 a5,tax1,-122.00000,37.91000,9.982929E-01,1.166614E-03,1.155449E-04,-9.807565E-05,5.230483E-04

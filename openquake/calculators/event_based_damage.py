@@ -50,13 +50,13 @@ class Dparam:
     rng: scientific.MultiEventRNG
 
 
-def zero_dmgcsq(L, A, R, crmodel):
+def zero_dmgcsq(A, R, L, crmodel):
     """
-    :returns: an array of zeros of shape (A, R, Dc)
+    :returns: an array of zeros of shape (A, R, L, Dc)
     """
     dmg_csq = crmodel.get_dmg_csq()
     Dc = len(dmg_csq) + 1  # damages + consequences
-    return numpy.zeros((L, A, R, Dc), F32)
+    return numpy.zeros((A, R, L, Dc), F32)
 
 
 def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
@@ -95,19 +95,19 @@ def _gen_dd4(asset_df, gmf_df, crmodel, dparam, mon):
                 number = assets['value-number']
             else:
                 number = assets['value-number'] = U32(assets['value-number'])
-            dd5 = numpy.zeros((P, L, A, E, dparam.Dc), F32)
+            dd5 = numpy.zeros((P, A, E, L, dparam.Dc), F32)
             D = dparam.D
             for p, out in enumerate(outs):
                 for li, lt in enumerate(oq.loss_types):
-                    fractions = out[lt]
+                    fractions = out[lt]  # shape (A, E, Dc)
                     if oq.float_dmg_dist:
                         for a in range(A):
-                            dd5[p, li, a, :, :D] = fractions[a] * number[a]
+                            dd5[p, a, :, li, :D] = fractions[a] * number[a]
                     else:
                         # this is a performance distaster; for instance
                         # the Messina test in oq-risk-tests becomes 12x
                         # slower even if it has only 25_736 assets
-                        dd5[p, li, :, :, :D] = dparam.rng.discrete_dmg_dist(
+                        dd5[p, :, :, li, :D] = dparam.rng.discrete_dmg_dist(
                             dparam.eids, fractions, number)
 
             # compose damage distributions
@@ -116,15 +116,15 @@ def _gen_dd4(asset_df, gmf_df, crmodel, dparam, mon):
                 for li in range(L):
                     for a in range(A):
                         for e in range(E):
-                            dd4[li, a, e, :D] = scientific.compose_dds(
-                                dd5[:, li, a, e, :D])
+                            dd4[a, e, li, :D] = scientific.compose_dds(
+                                dd5[:, a, e, li, :D])
             else:
                 dd4 = dd5[0]
             df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
             csq = crmodel.compute_csq(assets, dd5[:, :, :, :, :D], df, oq)
-            for name, values in csq.items():
-                dd4[:, :, :, dparam.csqidx[name]] = values
-        yield aids, dd4  # dd4 has shape (L, A, E, Dc)
+            for (name, li), values in csq.items():
+                dd4[:, :, li, dparam.csqidx[name]] = values
+        yield aids, dd4  # dd4 has shape (A, E, L, Dc)
 
 
 def event_based_damage(df, oq, dstore, monitor):
@@ -146,8 +146,8 @@ def event_based_damage(df, oq, dstore, monitor):
         aggids = monitor.read('aggids')
     dmg_csq = crmodel.get_dmg_csq()
     csqidx = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(oq.L, len(assetcol), oq.R, crmodel)
-    L, _A, R, Dc = dmgcsq.shape
+    dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
+    _A, R, L, Dc = dmgcsq.shape
     D = Dc - len(crmodel.get_consequences())
     rlzs = dstore['events']['rlz_id']
     dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
@@ -164,19 +164,19 @@ def event_based_damage(df, oq, dstore, monitor):
             rng = None
         dparam = Dparam(eids, aggids, csqidx, D, Dc, rng)
         for aids, dd4 in _gen_dd4(asset_df, gmf_df, crmodel, dparam, mon):
-            # dd4 has shape (L, A, E, Dc)
+            # dd4 has shape (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
-                dmgcsq[:, aids, 0] += dd4.sum(axis=2)
+                dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:
                 for e, rlz in enumerate(rlzs[eids]):
-                    dmgcsq[:, aids, rlz] += dd4[:, :, e]
-            tot = dd4.sum(axis=1)  # (L, A, Dc)
+                    dmgcsq[aids, rlz] += dd4[:, e]
+            tot = dd4.sum(axis=0)  # (E, L, Dc)
             for e, eid in enumerate(eids):
-                dddict[eid, oq.K] += tot[:, e]
+                dddict[eid, oq.K] += tot[e]
                 if oq.K:
                     for kids in dparam.aggids:
                         for a, aid in enumerate(aids):
-                            dddict[eid, kids[aid]] += dd4[:, a, e]
+                            dddict[eid, kids[aid]] += dd4[a, e]
     return _dframe(dddict, csqidx, oq.loss_types), dmgcsq
 
 
@@ -227,7 +227,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
-        self.dmgcsq = zero_dmgcsq(oq.L, len(self.assetcol), self.R, self.crmodel)
+        self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, oq.L, self.crmodel)
         if oq.K:
             aggids, _ = self.assetcol.build_aggids(
                 oq.aggregate_by, oq.max_aggregations)
@@ -265,7 +265,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         oq = self.oqparam
         # no damage check, perhaps the sites where disjoint from gmf_data
-        if self.dmgcsq[:, :, 1:].sum() == 0:
+        if self.dmgcsq[:, :, :, 1:].sum() == 0:
             haz_sids = self.datastore['gmf_data/sid'][:]
             count = numpy.isin(haz_sids, self.sitecol.sids).sum()
             if count == 0:
@@ -283,29 +283,29 @@ class DamageCalculator(EventBasedRiskCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-        _L, _A, _R, _Dc = self.dmgcsq.shape
+        _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
         for r in range(self.R):
-            self.dmgcsq[:, :, r] /= prc.num_events[r]
-            self.dmgcsq[:, :, r, 0] = number - self.dmgcsq[:, :, r, 1:D].sum(axis=2)
+            self.dmgcsq[:, r] /= prc.num_events[r]
+            ndamaged = self.dmgcsq[:, r, :, 1:D].sum(axis=2)  # shape (A, L)
+            for li in range(L):
+                # set no_damage
+                self.dmgcsq[:, r, li, 0] = number - ndamaged[:, li]
 
         assert (self.dmgcsq >= 0).all()  # sanity check
         self.datastore['damages-rlzs'] = self.dmgcsq
         set_rlzs_stats(self.datastore,
                        'damages-rlzs',
-                       loss_type=oq.loss_types,
                        asset_id=self.assetcol['id'],
-                       rlz=numpy.arange(self.R),
+                       loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
 
-        if (hasattr(oq, 'infrastructure_connectivity_analysis')
-                and oq.infrastructure_connectivity_analysis):
-
+        if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
-            conn_results = connectivity.analysis(self.datastore)
-            self._store_connectivity_analysis_results(conn_results)
+            results = connectivity.analysis(self.datastore)
+            self._store_connectivity_analysis_results(results)
 
     def _store_connectivity_analysis_results(self, conn_results):
         avg_dict = {}
@@ -318,58 +318,41 @@ class DamageCalculator(EventBasedRiskCalculator):
         if 'avg_connectivity_loss_ccl' in conn_results:
             avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
         if avg_dict:
-            avg_df = pandas.DataFrame(data=avg_dict)
             self.datastore.create_df(
-                'infra-avg_loss', avg_df,
+                'infra-avg_loss', pandas.DataFrame(data=avg_dict),
                 display_name=DISPLAY_NAME['infra-avg_loss'])
-            logging.info(
-                'Stored avarage connectivity loss (infra-avg_loss)')
         if 'event_connectivity_loss_eff' in conn_results:
             self.datastore.create_df(
                 'infra-event_efl',
                 conn_results['event_connectivity_loss_eff'],
                 display_name=DISPLAY_NAME['infra-event_efl'])
-            logging.info(
-                'Stored efficiency loss by event (infra-event_efl)')
         if 'event_connectivity_loss_pcl' in conn_results:
             self.datastore.create_df(
                 'infra-event_pcl',
                 conn_results['event_connectivity_loss_pcl'],
                 display_name=DISPLAY_NAME['infra-event_pcl'])
-            logging.info(
-                'Stored partial connectivity loss by event (infra-event_pcl)')
         if 'event_connectivity_loss_wcl' in conn_results:
             self.datastore.create_df(
                 'infra-event_wcl',
                 conn_results['event_connectivity_loss_wcl'],
                 display_name=DISPLAY_NAME['infra-event_wcl'])
-            logging.info(
-                'Stored weighted connectivity loss by event (infra-event_wcl)')
         if 'event_connectivity_loss_ccl' in conn_results:
             self.datastore.create_df(
                 'infra-event_ccl',
                 conn_results['event_connectivity_loss_ccl'],
                 display_name=DISPLAY_NAME['infra-event_ccl'])
-            logging.info(
-                'Stored complete connectivity loss by event (infra-event_ccl)')
         if 'taz_cl' in conn_results:
             self.datastore.create_df(
                 'infra-taz_cl',
                 conn_results['taz_cl'],
                 display_name=DISPLAY_NAME['infra-taz_cl'])
-            logging.info(
-                'Stored connectivity loss of TAZ nodes (taz_cl)')
         if 'dem_cl' in conn_results:
             self.datastore.create_df(
                 'infra-dem_cl',
                 conn_results['dem_cl'],
                 display_name=DISPLAY_NAME['infra-dem_cl'])
-            logging.info(
-                'Stored connectivity loss of demand nodes (dem_cl)')
         if 'node_el' in conn_results:
             self.datastore.create_df(
                 'infra-node_el',
                 conn_results['node_el'],
                 display_name=DISPLAY_NAME['infra-node_el'])
-            logging.info(
-                'Stored efficiency loss of nodes (node_el)')
