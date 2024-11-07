@@ -28,6 +28,8 @@ from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
+from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import CampbellBozorgnia2014
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 from openquake.hazardlib.gsim.nga_east import (
@@ -74,8 +76,16 @@ def cy14_site_term(ctx, imt, me, si, ta, phi):
     This function adds the CY14 site term to GMMs requiring it
     """
     C = ChiouYoungs2014.COEFFS[imt]
-    fa = _get_cy14_site_term(C, ctx.vs30, me)  # ref mean must be in natural log
+    fa = _get_cy14_site_term(C, ctx.vs30, me) # Ref mean must be in natural log
     me[:] += fa
+
+
+def cb14_basin_term(ctx, imt, me, si, ta, phi):
+    """
+    This function adds the CB14 basin term to GMMs requiring it.
+    """
+    C = CampbellBozorgnia2014.COEFFS[imt]
+    me[:] += _get_cb14_basin_term(ctx, C)
 
 
 def m9_basin_term(ctx, imt, me, si, ta, phi):
@@ -256,8 +266,8 @@ class ModifiableGMPE(GMPE):
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
 
-        if ('m9_basin_term' in self.params) and (
-                'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+        if ('cb14_basin_term' in self.params or 'm9_basin_term' in self.params
+            ) and ( 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
             tmp = list(self.gmpe.REQUIRES_SITES_PARAMETERS)
             tmp.append('z2pt5')
             self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(tmp)

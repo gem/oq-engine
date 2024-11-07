@@ -31,7 +31,6 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
@@ -312,6 +311,7 @@ class ParkerEtAl2020SInter(GMPE):
     """
     Implements Parker et al. (2020) for subduction interface.
     """
+
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
@@ -335,8 +335,7 @@ class ParkerEtAl2020SInter(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None,
-                 m9_basin_adjustment=None):
+    def __init__(self, region=None, saturation_region=None, basin=None):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -347,7 +346,6 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             self.saturation_region = saturation_region
         self.basin = basin
-        self.m9_basin_adjustment = m9_basin_adjustment
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -357,7 +355,6 @@ class ParkerEtAl2020SInter(GMPE):
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
-        m9 = self.m9_basin_adjustment
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
@@ -382,21 +379,7 @@ class ParkerEtAl2020SInter(GMPE):
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-            u_gmm = fp + fnl + flin + fm + c0 + fd
-            means = u_gmm + fb
-            # If M9 basin adjustment and trt is interface
-            if m9 and trt == const.TRT.SUBDUCTION_INTERFACE:
-                # Can only use with the ParkerEtAl2020SInterB (basin version)
-                if 'z2pt5' not in self.REQUIRES_SITES_PARAMETERS:
-                    raise ValueError("To apply the M9 adjustment the " 
-                                     "ParkerEtAl2020SInterB gsim must "
-                                     "be selected (uses z2pt5 for basin amp.)")
-                # Apply to basin sites for SA with T >= 1.9 s only
-                means_m9 = _apply_m9_basin_term(ctx, imt, u_gmm)
-                # And only when greater than if using GMM basin amp. factor
-                idx = means_m9 > means
-                means[idx] = means_m9[idx]
-            mean[m] = means
+            mean[m] = fp + fnl + fb + flin + fm + c0 + fd
 
             sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
 
