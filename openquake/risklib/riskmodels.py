@@ -650,10 +650,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param dd5: distribution functions of shape (P, A, E, L, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
         :param oq: OqParam instance with .loss_types and .time_event
-        :returns: a dict consequence_name -> array of shape (A, E)
+        :returns: a dict consequence_name, loss_type -> array[A, E]
         """
         P, A, E, L, _D = dd5.shape
-        csq = AccumDict(accum=numpy.zeros((L, A, E)))
+        csq = AccumDict(accum=numpy.zeros((A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
