@@ -846,17 +846,36 @@ def get_strike_from_plane_normal(nrml):
         A float defining the strike direction
     """
 
-    # Make sure the vector normal to the plane points upwards
+    # Make sure the vector normal to the plane points upwards. Note that this
+    # unit vector corresponds to the normal to the plane passing through the
+    # mesh surface with DEPTHS UPWARDS POSITIVE
     if nrml[2] < 0:
         nrml *= -1
 
-    # Get the strike
-    if nrml[1] >= 0:
-        tmp = (numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) + 90.0) % 360.0
-    else:
-        tmp = (numpy.rad2deg(numpy.arctan2(nrml[0], nrml[1])) + 270.0) % 360.0
+    # Get strike unit vector
+    suv = numpy.cross([0, 0, 1], nrml)
 
-    return tmp
+    if numpy.abs(suv[0]) < 1e-5 and suv[1] > 0:
+        return 0
+    elif numpy.abs(suv[0]) < 1e-5 and suv[1] < 0:
+        return 180
+
+    if suv[0] > 0 and suv[1] > 0:
+        # First quadrant
+        return 90 - numpy.rad2deg(numpy.arctan(suv[1] / suv[0]))
+    elif suv[0] > 0 and suv[1] < 0:
+        # Second quadrant
+        return 90 + numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
+    elif suv[0] < 0 and suv[1] < 0:
+        # Third quadrant
+        return 270 - numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
+    elif suv[0] < 0 and suv[1] > 0:
+        # Fourth quadrant
+        return 270 + numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
+    else:
+        msg = 'Unknown case \n'
+        msg += f'{suv[0]:.5f} {suv[1]:.5f} {suv[2]:.5f}'
+        raise ValueError(msg)
 
 
 def bbox2poly(bbox):
@@ -969,11 +988,13 @@ def geolocate(lonlats, geom_df, exclude=()):
         codes[ok] = code
     return codes
 
+
 def _angles_diff(ang_a, ang_b):
     # Computes the difference between the first and the second angle. Both are
     # in decimal degrees.
     dff = ang_a - ang_b
     return (dff + 180.0) % 360.0 - 180.0
+
 
 def geolocate_geometries(geometries, geom_df, exclude=()):
     """
@@ -986,10 +1007,13 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
     result_codes = numpy.empty(len(geometries), dtype=object)
     filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
     for i, input_geom in enumerate(geometries):
-        intersecting_codes = set()  # to store intersecting codes for current geometry
+        # to store intersecting codes for current geometry
+        intersecting_codes = set()
         for code, df in filtered_geom_df.groupby('code'):
-            target_geoms = df['geom'].values  # geometries associated with this code
-            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
+            # geometries associated with this code
+            target_geoms = df['geom'].values
+            if any(target_geom.intersects(input_geom) for
+                    target_geom in target_geoms):
                 intersecting_codes.add(code)
         result_codes[i] = sorted(intersecting_codes)
     return result_codes

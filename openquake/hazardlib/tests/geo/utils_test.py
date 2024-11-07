@@ -23,6 +23,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.utils import (
     plane_fit, get_strike_from_plane_normal)
+from openquake.hazardlib.geo import utils as geo_utils
 
 Point = collections.namedtuple("Point",  'lon lat')
 aac = numpy.testing.assert_allclose
@@ -414,7 +415,7 @@ class PlaneFit(unittest.TestCase):
         """
         pnt, par = utils.plane_fit(self.points)
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-5, atol=0)
-        self.assertAlmostEqual(self.c[-1], -sum(par*pnt))
+        self.assertAlmostEqual(self.c[-1], -sum(par * pnt))
 
     def test_plane_fit02(self):
         """
@@ -431,22 +432,20 @@ class PlaneStrikeTest(unittest.TestCase):
 
     def test_get_strike01(self):
 
-        coo = numpy.empty((4, 3))
-        # Upper left
-        coo[0, :] = [10.0, 45.0, 0.0]
-        fnc = geo.geodetic.npoints_towards
-        # Lower right
-        tmp = fnc(coo[0, 0], coo[0, 1], coo[0, 2], 45, 20.0, 0.0, 2)
-        coo[1, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
-        # Lower left
-        tmp = fnc(coo[0, 0], coo[0, 1], coo[0, 2], 135, 20.0, 10.0, 2)
-        coo[2, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
-        # Lower right
-        tmp = fnc(coo[2, 0], coo[2, 1], coo[2, 2], 45, 20.0, 0.0, 2)
-        coo[3, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
+        expected = 45.0
+        coo = _get_coo_poly(10., 45.0, expected)
+
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
 
         # Fit plane (without projecting the points)
-        _, pnrm = plane_fit(coo)
+        _, pnrm = plane_fit(pcoo)
 
         # Find strike
         strike = get_strike_from_plane_normal(pnrm)
@@ -461,8 +460,17 @@ class PlaneStrikeTest(unittest.TestCase):
         expected = 135.0
         coo = _get_coo_poly(10., 45.0, expected)
 
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
         # Fit plane (without projecting the points)
-        _, pnrm = plane_fit(coo)
+        _, pnrm = plane_fit(pcoo)
 
         # Find strike
         strike = get_strike_from_plane_normal(pnrm)
@@ -476,18 +484,48 @@ class PlaneStrikeTest(unittest.TestCase):
         expected = 315.0
         coo = _get_coo_poly(10., 45.0, expected, True)
 
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
         # Fit plane (without projecting the points)
-        _, pnrm = plane_fit(coo)
+        _, pnrm = plane_fit(pcoo)
 
         # Find strike
         strike = get_strike_from_plane_normal(pnrm)
 
         # Test
-        check = numpy.abs(strike - expected + 180.0) < 15.0
+        check = numpy.abs(strike - expected + 180.0) < 10.0
         self.assertTrue(check)
 
-        _plot(coo)
+    def test_get_strike04(self):
 
+        expected = 265.0
+        coo = _get_coo_poly(10., 45.0, expected, True)
+
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
+        # Fit plane (without projecting the points)
+        _, pnrm = plane_fit(pcoo)
+
+        # Find strike
+        strike = get_strike_from_plane_normal(pnrm)
+
+        # Test
+        check = numpy.abs(strike - expected + 180.0) < 10.0
+        self.assertTrue(check)
 
 
 def _get_coo_poly(olon, olat, azim, opposite=False):

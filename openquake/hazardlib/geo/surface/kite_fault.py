@@ -45,6 +45,8 @@ SMALL = 1e-5
 VERY_SMALL = 1e-20
 VERY_BIG = 1e20
 ALMOST_RIGHT_ANGLE = 89.9
+# Vertical component of the unit vector of an almost vertical fault (dip > 88)
+STEEPER_THAN_88DEG = 0.035
 
 
 class KiteSurface(BaseSurface):
@@ -867,17 +869,19 @@ def _fix_right_hand(msh):
     #   A :class:`numpy.ndarray` instance describing the mesh
 
     # Fit a plane through the four points of a non-null cell
-    lons, lats, deps, _ = _get_non_null_cell(msh)
+    lons, lats, deps, ia = _get_non_null_cell(msh)
+
+    # NOTE This function projects the coordinates
     _, vers = _get_plane(lons, lats, deps)
 
-    # Check if the plane is vertical
+    # Check if the plane is vertical.
     tmp = np.dot(vers, [0, 0, 1])
-    if tmp < 0.01:
+    if tmp < STEEPER_THAN_88DEG:
         return msh
 
     # Check if the mesh complies with the right hand rule and flip it if
     # required
-    chk = _does_mesh_comply_with_right_hand_rule(msh)
+    chk = _does_mesh_comply_with_right_hand_rule(msh, vers=vers, ia=ia)
 
     if not chk:
 
@@ -893,6 +897,7 @@ def _fix_right_hand(msh):
         if True and not chk1:
             _plot_mesh(nmsh, 'New Mesh')
             _plot_mesh(msh, 'Old Mesh')
+            _does_mesh_comply_with_right_hand_rule(nmsh, debug=True)
 
         assert chk1, msg
         return nmsh
@@ -900,25 +905,9 @@ def _fix_right_hand(msh):
     return msh
 
 
-def _plot_mesh(nmsh, title=''):
-    scl = -0.01
-    ax = plt.figure().add_subplot(projection='3d')
-    ax.set_aspect('equal')
-    for i in range(0, nmsh.shape[0]):
-        j = np.isfinite(nmsh[i, :, 0])
-        plt.plot(
-            nmsh[i, j, 0], nmsh[i, j, 1], nmsh[i, j, 2] * scl, '-b', lw=.25)
-    for i in range(0, nmsh.shape[1]):
-        j = np.isfinite(nmsh[:, i, 0])
-        plt.plot(
-            nmsh[j, i, 0], nmsh[j, i, 1], nmsh[j, i, 2] * scl, '-r', lw=.25)
-    assert np.sum(np.isfinite(nmsh[:, 0, 0])) > 0
-    plt.plot(nmsh[:, 0, 0], nmsh[:, 0, 1], nmsh[:, 0, 2] * scl, '-g', lw=2.0)
-    plt.title(title)
-    plt.show()
-
-
-def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45., vers=None):
+def _does_mesh_comply_with_right_hand_rule(
+        msh, tolerance=45., vers=None, ia=None, debug=False
+):
     # Given a mesh, this function checks if it complies with the right hand
     # rule
     #
@@ -929,9 +918,9 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45., vers=None):
     #   the top edge of the selected cell and the strike of the plane passingg
     #   through the cell.
 
-    if vers is None:
+    if vers is None or ia is None:
         lons, lats, deps, ia = _get_non_null_cell(msh)
-        # Fit a plane through the four points
+        # Fit a plane through the four points and get the unit vector
         _, vers = _get_plane(lons, lats, deps)
 
     # Find the strike
@@ -945,10 +934,13 @@ def _does_mesh_comply_with_right_hand_rule(msh, tolerance=45., vers=None):
     # direction
     abs_angle_dff = np.abs(geo_utils._angles_diff(top.azimuth, strike))
 
+    if debug:
+        breakpoint()
+
     return abs_angle_dff < tolerance
 
 
-def _get_non_null_cell(msh):
+def _get_non_null_cell(msh, debug=False):
 
     ul = np.isfinite(msh[:-1, :-1, 0])
     ur = np.isfinite(msh[:-1, 1:, 0])
@@ -973,9 +965,32 @@ def _get_non_null_cell(msh):
     lats = np.array(lats)
     deps = np.array(deps)
 
+    if debug:
+        breakpoint()
+
     return lons, lats, deps, ia
 
+
+def _plot_mesh(nmsh, title=''):
+    scl = -0.01
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.set_aspect('equal')
+    for i in range(0, nmsh.shape[0]):
+        j = np.isfinite(nmsh[i, :, 0])
+        plt.plot(
+            nmsh[i, j, 0], nmsh[i, j, 1], nmsh[i, j, 2] * scl, '-b', lw=.25)
+    for i in range(0, nmsh.shape[1]):
+        j = np.isfinite(nmsh[:, i, 0])
+        plt.plot(
+            nmsh[j, i, 0], nmsh[j, i, 1], nmsh[j, i, 2] * scl, '-r', lw=.25)
+    assert np.sum(np.isfinite(nmsh[:, 0, 0])) > 0
+    plt.plot(nmsh[:, 0, 0], nmsh[:, 0, 1], nmsh[:, 0, 2] * scl, '-g', lw=2.0)
+    plt.title(title)
+    plt.show()
+
+
 def _get_plane(lons, lats, deps):
+    # NOTE: We assume that input depths are positive in downward direction
 
     from openquake.hazardlib.geo import utils as geo_utils
 
@@ -991,6 +1006,7 @@ def _get_plane(lons, lats, deps):
     coo[:, 1] = tmp[:, 1]
     coo[:, 2] = deps
     coo[:, 2] *= -1
+
     return geo_utils.plane_fit(coo)
 
 
