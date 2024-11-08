@@ -765,10 +765,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
             # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
-                            {StdDev.TOTAL}):
-                modifications = list(gsim.kwargs.keys())
+                            {StdDev.TOTAL}) and not oqparam.with_betw_ratio:
                 if not (type(gsim).__name__ == 'ModifiableGMPE' and
-                        'add_between_within_stds' in modifications):
+                        'add_between_within_stds' in gsim.kwargs):
                     raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:

@@ -868,6 +868,12 @@ width_of_mfd_bin:
   Used to specify the width of the Magnitude Frequency Distribution.
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
+
+with_betw_ratio:
+  Specify the between ratio for GSIMs with only the Total StdDev.
+  This is necessary in conditioned GMFs calculations.
+  Example: *with_betw_ratio = 1.7*
+  Default: None
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
@@ -1156,6 +1162,7 @@ class OqParam(valid.ParamSet):
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+    with_betw_ratio = valid.Param(valid.positivefloat, None)
 
     @property
     def no_pointsource_distance(self):

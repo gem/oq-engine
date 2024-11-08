@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added parameter `with_betw_ratio`
   * Added command `oq info peril`
   * Extended consequences to perils
   * Replaced taxonomy mapping by loss type with taxonomy mapping by peril

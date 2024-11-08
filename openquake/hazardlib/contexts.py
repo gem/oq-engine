@@ -514,10 +514,8 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 # ############################ ContextMaker ############################### #
 
 
-def _fix(gsimdict, aristotle):
-    if aristotle:
-        # add with_betw_ratio if only the total stddev is defined
-        betw = {'with_betw_ratio': 1.7}  # as in GEESE
+def _fix(gsimdict, betw):
+    if betw:
         out = {}
         for gsim, uints in gsimdict.items():
             if len(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES) == 1:
@@ -570,11 +568,18 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
+
+        if oq.with_betw_ratio:
+            betw_ratio = {'with_betw_ratio': oq.with_betw_ratio}
+        elif oq.aristotle:
+            betw_ratio = {'with_betw_ratio': 1.7}
+        else:
+            betw_ratio = {}
         if isinstance(gsims, dict):
-            self.gsims = _fix(gsims, oq.aristotle)
+            self.gsims = _fix(gsims, betw_ratio)
         else:
             self.gsims = _fix({gsim: U32([i]) for i, gsim in enumerate(gsims)},
-                              oq.aristotle)
+                              betw_ratio)
         # NB: the gid array can be overridden later on
         self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         self.oq = oq
