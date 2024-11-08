@@ -1066,17 +1066,43 @@ def get_exposure(oqparam, h5=None):
     return exposure
 
 
-def read_df(fname, lon, lat, id):
+def concat_if_different(values):
+    unique_values = values.dropna().unique().astype(str)
+    # If all values are identical, return the single unique value,
+    # otherwise join with "|"
+    return unique_values[0] if len(unique_values) == 1 else '|'.join(unique_values)
+
+
+def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
-    Read a DataFrame containing lon-lat-id fields and raise an error
-    for duplicate sites, if any
+    Read a DataFrame containing lon-lat-id fields
+    In case of rows having the same coordinates, raise an error by default or:
+    - keep the first occurrence if duplicates_strategy is 'keep_first';
+    - keep the last occurrence if duplicates_strategy is 'keep_last';
+    - keep the first occurrence but calculate the average numeric values if
+      duplicates_strategy is 'avg
     """
-    dframe = pandas.read_csv(fname)
+    # NOTE: the id field has to be treated as a string even if it contains numbers
+    dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
     dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
-    for key, df in dframe.groupby([lon, lat]):
-        if len(df) > 1:
-            raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
+    if duplicates_strategy == 'error':
+        for key, df in dframe.groupby([lon, lat]):
+            if len(df) > 1:
+                raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
+    elif duplicates_strategy == 'keep_first':
+        dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
+    elif duplicates_strategy == 'keep_last':
+        dframe = dframe.drop_duplicates(subset=[lon, lat], keep='last')
+    elif duplicates_strategy == 'avg':
+        string_columns = dframe.select_dtypes(include='object').columns
+        numeric_columns = dframe.select_dtypes(include='number').columns
+        # Group by lon and lat, averaging numeric columns and concatenating by "|"
+        # the different contents of string columns
+        dframe = dframe.groupby([lon, lat], as_index=False).agg(
+            {**{col: concat_if_different for col in string_columns},
+             **{col: 'mean' for col in numeric_columns}}
+        )
     return dframe
 
 
@@ -1096,8 +1122,8 @@ def get_station_data(oqparam, sitecol):
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'],
-                 'LONGITUDE', 'LATITUDE', 'STATION_ID')
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+                 duplicates_strategy='avg')
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
