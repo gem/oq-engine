@@ -2,8 +2,8 @@ import os
 
 APPLICATION_MODE = <'AELO'|'ARISTOTLE'>
 ALLOWED_HOSTS = (<hostname>, 'localhost', '127.0.0.1')
-CSRF_TRUSTED_ORIGINS = [<protocol://hostname>]
-
+# To avoid Origin checking failed
+CSRF_TRUSTED_ORIGINS = ['<protocol://hostname>']
 DISABLE_VERSION_WARNING = True
 
 ARISTOTLE_DEFAULT_USGS_ID = ''
@@ -47,4 +47,4 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-# TIME_ZONE = 
+# TIME_ZONE =
