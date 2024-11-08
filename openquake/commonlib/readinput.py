@@ -1075,12 +1075,14 @@ def concat_if_different(values):
 
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
-    Read a DataFrame containing lon-lat-id fields
-    In case of rows having the same coordinates, raise an error by default or:
-    - keep the first occurrence if duplicates_strategy is 'keep_first';
-    - keep the last occurrence if duplicates_strategy is 'keep_last';
-    - keep the first occurrence but calculate the average numeric values if
-      duplicates_strategy is 'avg
+    Read a DataFrame containing lon-lat-id fields.
+    In case of rows having the same coordinates duplicates_strategy determines how to
+    manage duplicates:
+
+    - 'error': raise an error (default)
+    - 'keep_first': keep the first occurrence
+    - 'keep_last': keep the last occurrence
+    - 'avg': calculate the average numeric values
     """
     # NOTE: the id field has to be treated as a string even if it contains numbers
     dframe = pandas.read_csv(fname, dtype={id: str})
@@ -1106,7 +1108,7 @@ def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     return dframe
 
 
-def get_station_data(oqparam, sitecol):
+def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     """
     Read the station data input file and build a list of
     ground motion stations and recorded ground motion values
@@ -1123,7 +1125,7 @@ def get_station_data(oqparam, sitecol):
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
     df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
-                 duplicates_strategy='avg')
+                 duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
