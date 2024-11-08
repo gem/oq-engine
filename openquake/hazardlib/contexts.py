@@ -198,10 +198,13 @@ class Oq(object):
     """
     af = None
     aristotle = False
+    cross_correl = None
     mea_tau_phi = False
     split_sources = True
     use_rates = False
     with_betw_ratio = None
+    infer_occur_rates = False
+    inputs = ()
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
