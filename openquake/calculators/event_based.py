@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import (
     nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
-from openquake.hazardlib import valid, logictree, InvalidFile
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -340,7 +340,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
@@ -372,7 +371,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
-        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for gsim in rlzs_by_gsim:
             toml_gsims.append(gsim._toml)
@@ -458,13 +456,6 @@ def read_gsim_lt(oq):
         gsim_lt = logictree.GsimLogicTree.from_hdf5(
             expo_hdf5, oq.mosaic_model,
             oq.tectonic_region_type.encode('utf8'))
-        # add with_betw_ratio when only the total stddev is defined
-        betw = {'with_betw_ratio': 1.7}
-        for gsims in gsim_lt.values.values():
-            for g, gsim in enumerate(gsims):
-                if len(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES) == 1:
-                    gsims[g] = valid.modified_gsim(
-                        gsim, add_between_within_stds=betw)
     return gsim_lt
 
 
@@ -649,7 +640,6 @@ class EventBasedCalculator(base.HazardCalculator):
             rup = readinput.get_rupture(oq)
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-            self.cmaker.gid = numpy.arange(len(rlzs_by_gsim))
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
                 for i in range(ngmfs):
