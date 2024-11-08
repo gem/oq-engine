@@ -217,9 +217,8 @@ class ConditionedGmfComputer(GmfComputer):
             self.rupture, self.cmaker,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
-            self.spatial_correl,
-            self.cross_correl_between, self.cross_correl_within,
-            self.cmaker.maximum_distance, sigma=False)
+            self.spatial_correl, self.cross_correl_between, self.cross_correl_within,
+            sigma=False)
 
 
 @dataclass
@@ -390,7 +389,7 @@ def get_mean_covs(
         rupture, cmaker, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
-        maximum_distance, sigma=True):
+        sigma=True):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
@@ -408,8 +407,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = cmaker.copy(imtls=observed_imtls,
-                           maximum_distance=maximum_distance)
+    cmaker_D = cmaker.copy(imtls=observed_imtls)
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
@@ -417,9 +415,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = cmaker.copy(
-        imtls={target_imts[0].string: [0]},
-        maximum_distance=maximum_distance)
+    cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
     mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
