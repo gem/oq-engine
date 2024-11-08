@@ -437,7 +437,7 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     if dir is not None:
         if not os.path.exists(dir):
             os.makedirs(dir)
-    fh, path = tempfile.mkstemp(dir=dir or config.directory.custom_tmp,
+    fh, path = tempfile.mkstemp(dir=dir or config.directory.custom_tmp or None,
                                 prefix=prefix, suffix=suffix)
     if remove:
         _tmp_paths.append(path)
