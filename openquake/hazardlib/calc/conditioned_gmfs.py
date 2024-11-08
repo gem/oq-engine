@@ -112,7 +112,7 @@ from dataclasses import dataclass
 
 import numpy
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.imt import from_string, dictarray
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
@@ -408,7 +408,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = cmaker.copy(imtls=dictarray(observed_imtls),
+    cmaker_D = cmaker.copy(imtls=observed_imtls,
                            maximum_distance=maximum_distance)
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
@@ -418,7 +418,7 @@ def get_mean_covs(
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
     cmaker_Y = cmaker.copy(
-        imtls=dictarray({target_imts[0].string: [0]}),
+        imtls={target_imts[0].string: [0]},
         maximum_distance=maximum_distance)
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
