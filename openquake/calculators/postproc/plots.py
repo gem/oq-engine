@@ -94,42 +94,77 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                   with_populated_places=False, return_base64=False,
                   rupture=None):
     plt = import_plt()
+    import contextily as ctx
+    from pyproj import Proj, transform
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
         matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
     title = 'Avg GMF for %s' % imt
     ax.set_title(title)
     gmf = shakemap_array['val'][imt]
-    markersize = 5
-    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
-                      cmap='jet', s=markersize)
-    plt.colorbar(coll)
-    ax = add_borders(ax, alpha=0.2)
-    BUF_ANGLE = 1
-    min_x = shakemap_array['lon'].min()
-    max_x = shakemap_array['lon'].max()
-    min_y = shakemap_array['lat'].min()
-    max_y = shakemap_array['lat'].max()
-    if rupture is not None:
-        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture(
-            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-            surf_facecolor='none', surf_linestyle='--')
-        min_x = min(min_x, rup_min_x)
-        max_x = max(max_x, rup_max_x)
-        min_y = min(min_y, rup_min_y)
-        max_y = max(max_y, rup_max_y)
-    xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
-    ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    # markersize = 5
+    markersize = 0.005
+
+    proj_wgs84 = Proj(init='epsg:4326')
+    proj_webmercator = Proj(init='epsg:3857')
+
+    x_webmercator, y_webmercator = transform(
+        proj_wgs84, proj_webmercator, shakemap_array['lon'], shakemap_array['lat'])
+
+    min_x, min_y, max_x, max_y = (min(x_webmercator),
+                                  min(y_webmercator),
+                                  max(x_webmercator),
+                                  max(y_webmercator))
+
+    w, h = max_x - min_x, max_y - min_y
+    buf = 0.1
+    min_x, max_x = min_x - buf * w, max_x + buf * w
+    min_y, max_y = min_y - buf * h, max_y + buf * h
+
+    # BUF_ANGLE = 1
+    # min_x = min_x - BUF_ANGLE
+    # max_x = max_x + BUF_ANGLE
+    # min_y = min_y - BUF_ANGLE
+    # max_y = max_y + BUF_ANGLE
+    xlim = (min_x, max_x)
+    ylim = (min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    if with_populated_places:
-        ax = add_populated_places(ax, xlim, ylim)
+
+    img, extent = ctx.bounds2img(
+        min_x, min_y, max_x, max_y, source=ctx.providers.OpenStreetMap.Mapnik)
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
+
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
+                      alpha=1)
+    plt.colorbar(coll, ax=ax)
+
+    # ax = add_borders(ax, alpha=0.2)
+    # BUF_ANGLE = 1
+    # min_x = shakemap_array['lon'].min()
+    # max_x = shakemap_array['lon'].max()
+    # min_y = shakemap_array['lat'].min()
+    # max_y = shakemap_array['lat'].max()
+    # if rupture is not None:
+    #     ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture(
+    #         ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
+    #         surf_facecolor='none', surf_linestyle='--')
+    #     min_x = min(min_x, rup_min_x)
+    #     max_x = max(max_x, rup_max_x)
+    #     min_y = min(min_y, rup_min_y)
+    #     max_y = max(max_y, rup_max_y)
+    # xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
+    # ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    # ax.set_xlim(*xlim)
+    # ax.set_ylim(*ylim)
+    # if with_populated_places:
+    #     ax = add_populated_places(ax, xlim, ylim)
     if return_base64:
         return plt_to_base64(plt)
     else:
@@ -138,6 +173,8 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
 
 def plot_avg_gmf(ex, imt):
     plt = import_plt()
+    import contextily as ctx
+    from pyproj import Proj, transform
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
     ax.grid(True)
@@ -155,19 +192,29 @@ def plot_avg_gmf(ex, imt):
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     markersize = 5
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
-                      s=markersize)
-    plt.colorbar(coll)
 
-    ax = add_borders(ax)
+    proj_wgs84 = Proj(init='epsg:4326')
+    proj_webmercator = Proj(init='epsg:3857')
 
-    minx = avg_gmf['lons'].min()
-    maxx = avg_gmf['lons'].max()
-    miny = avg_gmf['lats'].min()
-    maxy = avg_gmf['lats'].max()
-    w, h = maxx - minx, maxy - miny
-    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
-    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
+    x_webmercator, y_webmercator = transform(
+        proj_wgs84, proj_webmercator, avg_gmf['lons'], avg_gmf['lats'])
+
+    min_x, min_y, max_x, max_y = (min(x_webmercator),
+                                  min(y_webmercator),
+                                  max(x_webmercator),
+                                  max(y_webmercator))
+    w, h = max_x - min_x, max_y - min_y
+    min_x, max_x = min_x - 0.2 * w, max_x + 0.2 * w
+    min_y, max_y = min_y - 0.2 * h, max_y + 0.2 * h
+    img, extent = ctx.bounds2img(
+        min_x, min_y, max_x, max_y, source=ctx.providers.OpenStreetMap.Mapnik)
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=0.6)
+
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
+    plt.colorbar(coll, ax=ax)
+
+    ax.set_xlim(min_x, max_x)
+    ax.set_ylim(min_y, max_y)
     return plt
 
 
