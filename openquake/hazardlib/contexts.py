@@ -201,6 +201,7 @@ class Oq(object):
     mea_tau_phi = False
     split_sources = True
     use_rates = False
+    with_betw_ratio = None
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
@@ -552,6 +553,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
         if isinstance(oq, dict):
+            # this happens when instantiating RuptureData in extract.py
             param = oq
             oq = Oq(**param)
             self.mags = param.get('mags', ())  # list of strings %.2f
