@@ -574,7 +574,7 @@ class ContextMaker(object):
         if oq.with_betw_ratio:
             betw_ratio = {'with_betw_ratio': oq.with_betw_ratio}
         elif oq.aristotle:
-            betw_ratio = {'with_betw_ratio': 1.7}
+            betw_ratio = {'with_betw_ratio': 1.7}  # same as in GEESE
         else:
             betw_ratio = {}
         if isinstance(gsims, dict):
