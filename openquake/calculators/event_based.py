@@ -428,7 +428,6 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
 
 def read_gsim_lt(oq):
     # in aristotle mode the gsim_lt is read from the exposure.hdf5 file
-    gsim_lt = readinput.get_gsim_lt(oq)
     if oq.aristotle:
         if not oq.mosaic_model:
             if oq.rupture_dict:
@@ -456,6 +455,8 @@ def read_gsim_lt(oq):
         gsim_lt = logictree.GsimLogicTree.from_hdf5(
             expo_hdf5, oq.mosaic_model,
             oq.tectonic_region_type.encode('utf8'))
+    else:
+        gsim_lt = readinput.get_gsim_lt(oq)
     return gsim_lt
 
 
