@@ -1063,9 +1063,11 @@ def plot_wkt(wkt_string):
     poly = wkt.loads(wkt_string)
     if hasattr(poly, 'exterior'):
         coo = numpy.array(poly.exterior.coords)
-    else:  # LINESTRING
+    else:  # POINT or LINESTRING
         coo = numpy.array(poly.coords)
-    plt.plot(coo[:, 0], coo[:, 1], '-')
+    _fig, ax = plt.subplots()
+    ax.plot(coo[:, 0], coo[:, 1], 'o')
+    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     return plt
 
 
@@ -1108,7 +1110,7 @@ def main(what,
     if what.endswith('.csv'):
         plot_csv(what)
         return
-    if what.startswith(('POLYGON', 'LINESTRING')):
+    if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
         plt.show()
         return

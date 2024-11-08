@@ -3,17 +3,19 @@
 xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
-  <logicTree
-      logicTreeID="ESHM20 Logic Tree - 5 Stress Branch"
-      >
+  <logicTree logicTreeID="Example">
     <logicTreeBranchSet
         applyToTectonicRegionType="Shallow Default"
         branchSetID="Shallow_Def"
         uncertaintyType="gmpeModel"
         >
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+        <uncertaintyWeight>.5</uncertaintyWeight>
+      </logicTreeBranch>
       <logicTreeBranch branchID="b2">
         <uncertaintyModel>BooreAtkinson2011</uncertaintyModel>
-        <uncertaintyWeight>1</uncertaintyWeight>
+        <uncertaintyWeight>.5</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>    
   </logicTree>

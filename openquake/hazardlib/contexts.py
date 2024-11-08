@@ -196,10 +196,15 @@ class Oq(object):
     """
     A mock for OqParam
     """
+    af = None
+    aristotle = False
+    cross_correl = None
     mea_tau_phi = False
     split_sources = True
     use_rates = False
-    af = None
+    with_betw_ratio = None
+    infer_occur_rates = False
+    inputs = ()
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
@@ -512,6 +517,20 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 
 # ############################ ContextMaker ############################### #
 
+
+def _fix(gsimdict, betw):
+    if betw:
+        out = {}
+        for gsim, uints in gsimdict.items():
+            if len(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES) == 1:
+                out[valid.modified_gsim(gsim, add_between_within_stds=betw)] \
+                    = uints
+            else:
+                out[gsim] = uints
+        return out
+    return gsimdict
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -536,13 +555,8 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
-        if isinstance(gsims, dict):
-            self.gsims = gsims
-        else:
-            self.gsims = {gsim: U32([i]) for i, gsim in enumerate(gsims)}
-        # NB: the gid array can be overridden later on
-        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         if isinstance(oq, dict):
+            # this happens when instantiating RuptureData in extract.py
             param = oq
             oq = Oq(**param)
             self.mags = param.get('mags', ())  # list of strings %.2f
@@ -560,6 +574,19 @@ class ContextMaker(object):
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
 
+        if oq.with_betw_ratio:
+            betw_ratio = {'with_betw_ratio': oq.with_betw_ratio}
+        elif oq.aristotle:
+            betw_ratio = {'with_betw_ratio': 1.7}  # same as in GEESE
+        else:
+            betw_ratio = {}
+        if isinstance(gsims, dict):
+            self.gsims = _fix(gsims, betw_ratio)
+        else:
+            self.gsims = _fix({gsim: U32([i]) for i, gsim in enumerate(gsims)},
+                              betw_ratio)
+        # NB: the gid array can be overridden later on
+        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -576,8 +603,7 @@ class ContextMaker(object):
                     raise TypeError('Expected string, got %s' % type(imt))
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
-            self.imtls = DictArray(
-                imt_module.sort_by_imt(param['hazard_imtls']))
+            self.imtls = imt_module.dictarray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.cache_distances = param.get('cache_distances', False)
@@ -671,6 +697,17 @@ class ContextMaker(object):
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
 
+    def copy(self, **kw):
+        """
+        :returns: a copy of the ContextMaker with modified attributes
+        """
+        new = copy.copy(self)
+        for k, v in kw.items():
+            setattr(new, k, v)
+        if 'imtls' in kw:
+            new.set_imts_conv()
+        return new
+
     def restrict(self, imts):
         """
         :param imts: a list of IMT strings subset of the full list
@@ -684,7 +721,7 @@ class ContextMaker(object):
     def set_imts_conv(self):
         """
         Set the .imts list and .conv dictionary for the horizontal component
-        conversion (if any).
+        conversion (if any). Also set the .loglevels.
         """
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         with warnings.catch_warnings():
