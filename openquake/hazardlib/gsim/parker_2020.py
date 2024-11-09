@@ -57,7 +57,7 @@ def _get_sigma_mu_adjustment(region, trt, imt, epi_adjs_table):
         e_reg = region
 
     # Get values from table for region and trt
-    adjs = epi_adjs_table.set_index('Region').loc[region]
+    adjs = epi_adjs_table.set_index('Region').loc[e_reg]
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         add = 'interface'
     else:
