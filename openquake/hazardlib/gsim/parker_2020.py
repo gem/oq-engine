@@ -45,7 +45,7 @@ _a0 = CallableDict()
 def _get_sigma_mu_adjustment(region, trt, imt, epi_adjs_table):
     """
     Get the sigma_mu_adjustment (epistemic uncertainty) factor to be applied
-    to the mean ground-motion. Values are only provided by author's in the
+    to the mean ground-motion. Values are only provided by authors in the
     electronic for PGA and SA (not PGV).
     """
     # Map region to those within the adjustment table
@@ -73,7 +73,7 @@ def _get_sigma_mu_adjustment(region, trt, imt, epi_adjs_table):
         p2 = (np.log(period/adjs[f'T1_{add}']) / 
               np.log(adjs[f'T2_{add}']/adjs[f'T1_{add}']))
         eps_std = p1 * p2
-    else:  # Must be SA larger than T2
+    else:  # Must be SA with a period larger than or equal to T2
         eps_std = adjs[f'SigEp2_{add}']
 
     return eps_std
