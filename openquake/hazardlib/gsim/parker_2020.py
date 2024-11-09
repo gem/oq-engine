@@ -402,7 +402,7 @@ class ParkerEtAl2020SInter(GMPE):
         self.basin = basin
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
-            self.epi_adjs_table = pd.read_csv(EPI_ADJS)
+            self.epi_adjs_table = pd.read_csv(f.name)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
