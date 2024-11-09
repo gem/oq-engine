@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`AtkinsonMacias2009NSHMP2014` and :class:`NSHMP2014`
+Module exports :class:`<NGAWest2GMPE>NSHMP2014` and :class:`NSHMP2014`
 """
 import numpy as np
 from openquake.hazardlib import const

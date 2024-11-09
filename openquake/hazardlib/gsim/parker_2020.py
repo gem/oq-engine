@@ -22,9 +22,10 @@ Module exports :class:`ParkerEtAl2020SInter`
                :class:`ParkerEtAl2020SSlab`
                :class:`ParkerEtAl2020SSlabB`
 """
+import os
 import math
-
 import numpy as np
+import pandas as pd
 from scipy.special import erf
 
 from openquake.baselib.general import CallableDict
@@ -32,10 +33,50 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
 
+EPI_ADJS = os.path.join(os.path.dirname(__file__),
+                        "parker_2020_epi_adj_table.csv")
+
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
 
 _a0 = CallableDict()
+
+
+def _get_sigma_mu_adjustment(region, trt, imt, epi_adjs_table):
+    """
+    Get the sigma_mu_adjustment (epistemic uncertainty) factor to be applied
+    to the mean ground-motion. Values are only provided by author's in the
+    electronic for PGA and SA (not PGV).
+    """
+    # Map region to those within the adjustment table
+    if region is None:
+        e_reg = 'Global'
+    elif region in ['TW_N', 'TW_S']:
+        e_reg = 'Taiwan'
+    else:
+        e_reg = region
+
+    # Get values from table for region and trt
+    adjs = epi_adjs_table.set_index('Region').loc[region]
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        add = 'interface'
+    else:
+        add = 'intraslab'
+
+    # Get period-dependent epistemic standard deviation (equation 27)
+    period = imt.period
+    if period < adjs[f'T1_{add}']:
+        eps_std = adjs[f'SigEp1_{add}']
+    elif period >= adjs[f'T1_{add}'] and period < adjs[f'T2_{add}']:
+        p1 = adjs[f'SigEp1_{add}'
+                  ] - (adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}'])
+        p2 = (np.log(period/adjs[f'T1_{add}']) / 
+              np.log(adjs[f'T2_{add}']/adjs[f'T1_{add}']))
+        eps_std = p1 * p2
+    else:  # Must be SA larger than T2
+        eps_std = adjs[f'SigEp2_{add}']
+
+    return eps_std
 
 
 @_a0.add(const.TRT.SUBDUCTION_INTERFACE)
@@ -310,6 +351,17 @@ def get_stddevs(C, rrup, vs30):
 class ParkerEtAl2020SInter(GMPE):
     """
     Implements Parker et al. (2020) for subduction interface.
+
+    :param str region: Choice of sub region ("AK", "CAM", "SA", "TW",
+                       "Cascadia", "JP").
+    :param str saturation_region: Choice of saturation region ("Aleutian",
+                                  "CAM_N", "CAM_S", "SA_N", "SA_S", "TW_E",
+                                  "TW_W", "JP_Pac", "JP_Phi")
+    :param str basin: Choice of basin region ("Out" or "Seattle")
+    :param float sigma_mu_epsilon: Number of standard deviations to multiply
+                                   sigma_mu (which is the standard deviations 
+                                   of the median) for the epistemic uncertainty
+                                   model
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -333,9 +385,11 @@ class ParkerEtAl2020SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
-    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin'}
+    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
+                           'sigma_mu_epsilon'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None):
+    def __init__(self, region=None, saturation_region=None, basin=None, 
+                 sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -346,6 +400,9 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             self.saturation_region = saturation_region
         self.basin = basin
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+        with open(EPI_ADJS) as f:
+            self.epi_adjs_table = pd.read_csv(EPI_ADJS)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -381,6 +438,12 @@ class ParkerEtAl2020SInter(GMPE):
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             mean[m] = fp + fnl + fb + flin + fm + c0 + fd
 
+            if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
+                # Apply epistemic uncertainty scaling
+                sigma_mu_adjust = _get_sigma_mu_adjustment(self.region, trt, imt,
+                                                           self.epi_adjs_table)
+                mean[m] += sigma_mu_adjust * self.sigma_mu_epsilon
+
             sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -412,6 +475,8 @@ class ParkerEtAl2020SInter(GMPE):
     7.5    0.078 0.758796298 -1.137203702 -0.162      -0.837100092 -0.837100092 1.270125851 -0.143874149  1.175671414 1.366671414 -0.446153721 -0.446153721  3.132  2.391     3.65            2.84            2.821      3.152     2.368       2.368       3.554    -1.569 -2.019  0.1 -0.000766 -0.000519 -0.000371 -0.000828 -0.000382 -0.000755 -0.000234 -0.00021  -0.000385       -0.000209  -0.000299 -0.000209  -0.000341 1.638 -0.059 1.2   2.185 -0.154  0.73   0      0       0  760 -0.494 -0.311 -0.418 -1.147 -0.357      -0.52  -0.52  -0.444  0       -0.05443 -0.0031  -0.524  0.306  0.175 0      0.406  0.312 -0.35     0.15        0.492 0.254 0.254  0     419 0.181    -0.016 0.113    0.113    0.016
     10.0   0.046 0.708796298 -1.290203702 -0.193      -0.864100092 -0.864100092 1.364125851 -0.195874149  1.271671414 1.462671414 -0.473153721 -0.473153721  2.72   2.031     2.95            2.422           2.408      2.791     1.939       1.939       3.166    -1.676 -2.047  0.1  0         0         0         0         0         0         0         0         0               0          0         0          0        1.69  -0.067 1.194 2.35  -0.154  0.745  0      0       0  760 -0.395 -0.261 -0.321 -1.06  -0.302      -0.395 -0.42  -0.352  0       -0.03313 -0.0031  -0.327  0.182  0.121 0      0.345  0.265 -0.331    0.117       0.492 0.231 0.231  0     427 0.181     0.04  0.11     0.11     0.017
     """)
+
+    EPI_ADJS = pd.DataFrame({'Region': ['Global', 'AK', 'Aleutian', 'Cascadia', 'CAM_N', 'CAM_S', 'JP_Pac', 'JP_Phi', 'SA_N', 'SA_S', 'Taiwan']})
 
     # constant table suffix
     SUFFIX = ""
@@ -452,6 +517,7 @@ class ParkerEtAl2020SSlabB(ParkerEtAl2020SSlab):
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
 
 
 add_alias('ParkerEtAl2020SInterAleutian', ParkerEtAl2020SInter,
