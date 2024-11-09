@@ -51,7 +51,7 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     # Map region to those within the adjustment table
     if sat_region is None:
         e_reg = 'Global'
-    elif region in ['TW_N', 'TW_S']:
+    elif sat_region in ['TW_N', 'TW_S']:
         e_reg = 'Taiwan'
     else:
         e_reg = sat_region
