@@ -42,19 +42,19 @@ CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
 _a0 = CallableDict()
 
 
-def _get_sigma_mu_adjustment(region, trt, imt, epi_adjs_table):
+def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     """
     Get the sigma_mu_adjustment (epistemic uncertainty) factor to be applied
-    to the mean ground-motion. Values are only provided by authors in the
-    electronic for PGA and SA (not PGV).
+    to the mean ground-motion. Values are provided by authors in the
+    electronic for PGA and SA (not PGV) for each saturation regions.
     """
     # Map region to those within the adjustment table
-    if region is None:
+    if sat_region is None:
         e_reg = 'Global'
     elif region in ['TW_N', 'TW_S']:
         e_reg = 'Taiwan'
     else:
-        e_reg = region
+        e_reg = sat_region
 
     # Get values from table for region and trt
     adjs = epi_adjs_table.set_index('Region').loc[e_reg]
@@ -355,8 +355,8 @@ class ParkerEtAl2020SInter(GMPE):
     :param str region: Choice of sub region ("AK", "CAM", "SA", "TW",
                        "Cascadia", "JP").
     :param str saturation_region: Choice of saturation region ("Aleutian",
-                                  "CAM_N", "CAM_S", "SA_N", "SA_S", "TW_E",
-                                  "TW_W", "JP_Pac", "JP_Phi")
+                                  "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
+                                  "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
                                    sigma_mu (which is the standard deviations 
@@ -440,8 +440,8 @@ class ParkerEtAl2020SInter(GMPE):
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
                 # Apply epistemic uncertainty scaling
-                sigma_mu_adjust = _get_sigma_mu_adjustment(self.region, trt, imt,
-                                                           self.epi_adjs_table)
+                sigma_mu_adjust = _get_sigma_mu_adjustment(
+                    self.saturation_region, trt, imt, self.epi_adjs_table)
                 mean[m] += sigma_mu_adjust * self.sigma_mu_epsilon
 
             sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
@@ -475,8 +475,6 @@ class ParkerEtAl2020SInter(GMPE):
     7.5    0.078 0.758796298 -1.137203702 -0.162      -0.837100092 -0.837100092 1.270125851 -0.143874149  1.175671414 1.366671414 -0.446153721 -0.446153721  3.132  2.391     3.65            2.84            2.821      3.152     2.368       2.368       3.554    -1.569 -2.019  0.1 -0.000766 -0.000519 -0.000371 -0.000828 -0.000382 -0.000755 -0.000234 -0.00021  -0.000385       -0.000209  -0.000299 -0.000209  -0.000341 1.638 -0.059 1.2   2.185 -0.154  0.73   0      0       0  760 -0.494 -0.311 -0.418 -1.147 -0.357      -0.52  -0.52  -0.444  0       -0.05443 -0.0031  -0.524  0.306  0.175 0      0.406  0.312 -0.35     0.15        0.492 0.254 0.254  0     419 0.181    -0.016 0.113    0.113    0.016
     10.0   0.046 0.708796298 -1.290203702 -0.193      -0.864100092 -0.864100092 1.364125851 -0.195874149  1.271671414 1.462671414 -0.473153721 -0.473153721  2.72   2.031     2.95            2.422           2.408      2.791     1.939       1.939       3.166    -1.676 -2.047  0.1  0         0         0         0         0         0         0         0         0               0          0         0          0        1.69  -0.067 1.194 2.35  -0.154  0.745  0      0       0  760 -0.395 -0.261 -0.321 -1.06  -0.302      -0.395 -0.42  -0.352  0       -0.03313 -0.0031  -0.327  0.182  0.121 0      0.345  0.265 -0.331    0.117       0.492 0.231 0.231  0     427 0.181     0.04  0.11     0.11     0.017
     """)
-
-    EPI_ADJS = pd.DataFrame({'Region': ['Global', 'AK', 'Aleutian', 'Cascadia', 'CAM_N', 'CAM_S', 'JP_Pac', 'JP_Phi', 'SA_N', 'SA_S', 'Taiwan']})
 
     # constant table suffix
     SUFFIX = ""
