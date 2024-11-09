@@ -1,9 +1,7 @@
   [Christopher Brooks]
-  * Added M9 Basin amplification term for ModifiableGMPE
-    and assoc. unit tests
-  * Added the CB14 basin amplification term for
-    ModifiableGMPE and assoc. unit tests
-
+  * Added epistemic uncertainty scaling capabilities to
+    the Parker et al. (2020) NGASUB GMM.
+ 
   [Michele Simionato]
   * Added parameter `with_betw_ratio`
   * Added command `oq info peril`

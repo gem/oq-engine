@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
-def _get_cy14_site_term(C, vs30, ln_y_ref):
+def _get_site_term(C, vs30, ln_y_ref):
     """
     Applies the linear and nonlinear site amplification term of Chiou &
     Youngs (2014) (excluding the basin amplification term)
@@ -104,4 +104,4 @@ class CY14SiteTerm(GMPE):
         vs30 = ctx.vs30.copy()
         for m, imt in enumerate(imts):
             C = ChiouYoungs2014.COEFFS[imt]
-            mean[m] += _get_cy14_site_term(C, vs30, mean[m])
+            mean[m] += _get_site_term(C, vs30, mean[m])
