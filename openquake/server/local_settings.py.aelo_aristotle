@@ -2,8 +2,6 @@ import os
 
 APPLICATION_MODE = <'AELO'|'ARISTOTLE'>
 ALLOWED_HOSTS = (<hostname>, 'localhost', '127.0.0.1')
-# To avoid Origin checking failed
-CSRF_TRUSTED_ORIGINS = ['<protocol://hostname>']
 DISABLE_VERSION_WARNING = True
 
 ARISTOTLE_DEFAULT_USGS_ID = ''
