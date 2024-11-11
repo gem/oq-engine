@@ -661,8 +661,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
-                        cdict = _cdict(dd5[:, :, :, li, 1:], coeffs, df, lt, self.perils)
-                        # array loss_type -> peril -> coeffs for the given loss type
+                        # dict loss_type -> peril -> coeffs for the given loss type
+                        cdict = _cdict(dd5[:, :, :, li, 1:],
+                                       coeffs, df, lt, self.perils)
                         csq[consequence, li] += scientific.consequence(
                             consequence, assets, cdict, lt, oq.time_event)
         return csq
