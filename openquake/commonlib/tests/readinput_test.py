@@ -581,6 +581,8 @@ class ReadRiskTestCase(unittest.TestCase):
             duplicates_strategy='avg')
         self.assertTrue('GIF001|GIF013' in df['STATION_ID'].values)
         pga_avg = df[df['STATION_ID'] == 'GIF001|GIF013']['PGA_VALUE'].values[0]
+        # using the same mean operator used in read_df and expecting the same
+        # approximation
         data = {'values': [pga_first, pga_last]}
         df = pandas.DataFrame(data)
         expected_mean = df['values'].mean()
