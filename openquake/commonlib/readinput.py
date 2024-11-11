@@ -1076,8 +1076,8 @@ def concat_if_different(values):
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
     Read a DataFrame containing lon-lat-id fields.
-    In case of rows having the same coordinates duplicates_strategy determines how to
-    manage duplicates:
+    In case of rows having the same coordinates, duplicates_strategy
+    determines how to manage duplicates:
 
     - 'error': raise an error (default)
     - 'keep_first': keep the first occurrence
@@ -1088,23 +1088,25 @@ def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
     dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
-    if duplicates_strategy == 'error':
-        for key, df in dframe.groupby([lon, lat]):
-            if len(df) > 1:
-                raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
-    elif duplicates_strategy == 'keep_first':
-        dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
-    elif duplicates_strategy == 'keep_last':
-        dframe = dframe.drop_duplicates(subset=[lon, lat], keep='last')
-    elif duplicates_strategy == 'avg':
-        string_columns = dframe.select_dtypes(include='object').columns
-        numeric_columns = dframe.select_dtypes(include='number').columns
-        # Group by lon and lat, averaging numeric columns and concatenating by "|"
-        # the different contents of string columns
-        dframe = dframe.groupby([lon, lat], as_index=False).agg(
-            {**{col: concat_if_different for col in string_columns},
-             **{col: 'mean' for col in numeric_columns}}
-        )
+    duplicates = dframe[dframe.duplicated(subset=[lon, lat], keep=False)]
+    if not duplicates.empty:
+        msg = '%s: has duplicate sites %s' % (fname, list(duplicates[id]))
+        if duplicates_strategy == 'error':
+            raise InvalidFile(msg)
+        logging.warning(msg)
+        if duplicates_strategy == 'keep_first':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
+        elif duplicates_strategy == 'keep_last':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='last')
+        elif duplicates_strategy == 'avg':
+            string_columns = dframe.select_dtypes(include='object').columns
+            numeric_columns = dframe.select_dtypes(include='number').columns
+            # Group by lon and lat, averaging numeric columns and concatenating by "|"
+            # the different contents of string columns
+            dframe = dframe.groupby([lon, lat], as_index=False).agg(
+                {**{col: concat_if_different for col in string_columns},
+                 **{col: 'mean' for col in numeric_columns}}
+            )
     return dframe
 
 
@@ -1118,6 +1120,7 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
+    :param duplicates_strategy: either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
     if parallel.oq_distribute() == 'zmq':
