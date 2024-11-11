@@ -67,10 +67,8 @@ class PrintHeadersMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        print()
-        print(request)
-        print("Request Headers:")
+        print(f"\nRequest {request} headers:")
         for header, value in request.headers.items():
-            print(f"{header}: {value}")
+            print(f"\t{header}: {value}")
         response = self.get_response(request)
         return response
