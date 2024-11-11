@@ -56,8 +56,8 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     else:
         e_reg = sat_region
 
-    # Get values from table for region and trt
-    adjs = epi_adjs_table.set_index('Region').loc[e_reg]
+    # Get values for the saturation region
+    adjs = epi_adjs_table.loc[sat_region]
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         add = 'interface'
     else:
@@ -402,7 +402,7 @@ class ParkerEtAl2020SInter(GMPE):
         self.basin = basin
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
-            self.epi_adjs_table = pd.read_csv(f.name)
+            self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
