@@ -57,7 +57,7 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
         e_reg = sat_region
 
     # Get values for the saturation region
-    adjs = epi_adjs_table.loc[sat_region]
+    adjs = epi_adjs_table.loc[e_reg]
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         add = 'interface'
     else:
