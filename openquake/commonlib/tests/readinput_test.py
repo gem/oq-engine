@@ -564,6 +564,27 @@ class ReadRiskTestCase(unittest.TestCase):
             readinput.get_station_data(oq, sitecol, duplicates_strategy='error')
         self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
                       str(ctx.exception))
+        df = readinput.read_df(
+            oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+            duplicates_strategy='keep_first')
+        self.assertTrue('GIF001' in df['STATION_ID'].values
+                        and 'GIF013' not in df['STATION_ID'].values)
+        pga_first = df[df['STATION_ID'] == 'GIF001']['PGA_VALUE'].values[0]
+        df = readinput.read_df(
+            oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+            duplicates_strategy='keep_last')
+        pga_last = df[df['STATION_ID'] == 'GIF013']['PGA_VALUE'].values[0]
+        self.assertTrue('GIF013' in df['STATION_ID'].values
+                        and 'GIF001' not in df['STATION_ID'].values)
+        df = readinput.read_df(
+            oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+            duplicates_strategy='avg')
+        self.assertTrue('GIF001|GIF013' in df['STATION_ID'].values)
+        pga_avg = df[df['STATION_ID'] == 'GIF001|GIF013']['PGA_VALUE'].values[0]
+        data = {'values': [pga_first, pga_last]}
+        df = pandas.DataFrame(data)
+        expected_mean = df['values'].mean()
+        self.assertEqual(pga_avg, expected_mean)
 
 
 class ReadSourceModelsTestCase(unittest.TestCase):
