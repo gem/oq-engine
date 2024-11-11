@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added epistemic uncertainty scaling capabilities to
+    the Parker et al. (2020) NGASUB GMM.
+ 
   [Michele Simionato]
   * Added parameter `with_betw_ratio`
   * Added command `oq info peril`
