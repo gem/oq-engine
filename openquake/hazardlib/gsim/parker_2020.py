@@ -46,7 +46,7 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     """
     Get the sigma_mu_adjustment (epistemic uncertainty) factor to be applied
     to the mean ground-motion. Values are provided by authors in the
-    electronic for PGA and SA (not PGV) for each saturation regions.
+    electronic supplement for PGA and SA (not PGV) for each saturation regions.
     """
     # Map region to those within the adjustment table
     if sat_region is None:
