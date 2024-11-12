@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from openquake.risklib import riskmodels, scientific
 
 PLOTTING = False
-aae = numpy.testing.assert_allclose
+aac = numpy.testing.assert_allclose
 eids = numpy.arange(3)
 
 
@@ -214,7 +214,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.000, 0.000, 0.000, 0.000, 0.917],
             [0.000, 0.000, 0.000, 0.000, 0.480],
         ])
-        aae(lrem, expected_lrem, atol=1E-3)
+        aac(lrem, expected_lrem, atol=1E-3)
 
 
 class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
@@ -229,23 +229,23 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         self.v2.seed = 41
 
     def test_split_single_interval_with_no_steps_between(self):
-        aae([0.0, 0.5, 0.7, 1.0], self.v1.mean_loss_ratios_with_steps(1))
+        aac([0.0, 0.5, 0.7, 1.0], self.v1.mean_loss_ratios_with_steps(1))
 
     def test_evenly_spaced_single_interval_with_a_step_between(self):
-        aae([0., 0.25, 0.5, 0.6, 0.7, 0.85, 1.],
+        aac([0., 0.25, 0.5, 0.6, 0.7, 0.85, 1.],
             self.v1.mean_loss_ratios_with_steps(2))
 
     def test_evenly_spaced_single_interval_with_steps_between(self):
-        aae([0., 0.125, 0.25, 0.375, 0.5, 0.55, 0.6, 0.65,
+        aac([0., 0.125, 0.25, 0.375, 0.5, 0.55, 0.6, 0.65,
              0.7, 0.775, 0.85, 0.925, 1.],
             self.v1.mean_loss_ratios_with_steps(4))
 
     def test_evenly_spaced_multiple_intervals_with_a_step_between(self):
-        aae([0., 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.],
+        aac([0., 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.],
             self.v2.mean_loss_ratios_with_steps(2))
 
     def test_evenly_spaced_multiple_intervals_with_steps_between(self):
-        aae([0., 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375,
+        aac([0., 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375,
              0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125,
              0.875, 0.9375, 1.],
             self.v2.mean_loss_ratios_with_steps(4))
@@ -261,7 +261,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
                     0.2, 0.24000000000000002, 0.28, 0.32, 0.36, 0.4, 0.56,
                     0.72, 0.8799999999999999, 1.04, 1.2]
-        aae(es_lrs, expected)
+        aac(es_lrs, expected)
 
     def test__evenly_spaced_loss_ratios_prepend_0(self):
         # We expect a 0.0 to be prepended to the LRs before spacing them
@@ -275,7 +275,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
                     0.2, 0.24000000000000002, 0.28, 0.32, 0.36, 0.4, 0.56,
                     0.72, 0.8799999999999999, 1.04, 1.2]
-        aae(es_lrs, expected)
+        aac(es_lrs, expected)
 
     def test__evenly_spaced_loss_ratios_append_1(self):
         vf = scientific.VulnerabilityFunction(
@@ -284,7 +284,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         vf.init()
         es_lrs = vf.mean_loss_ratios_with_steps(2)
         expected = [0.0, 0.25, 0.5, 0.75, 1.0]
-        aae(es_lrs, expected)
+        aac(es_lrs, expected)
 
     def test_strictly_increasing(self):
         vf = scientific.VulnerabilityFunction(
@@ -293,9 +293,9 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         vf.init()
         vfs = vf.strictly_increasing()
 
-        aae([0, 1, 3], vfs.imls)
-        aae([0, 0.5, 1], vfs.mean_loss_ratios)
-        aae([0, 0, 4], vfs.covs)
+        aac([0, 1, 3], vfs.imls)
+        aac([0, 0.5, 1], vfs.mean_loss_ratios)
+        aac([0, 0, 4], vfs.covs)
         self.assertEqual(vf.distribution_name, vfs.distribution_name)
 
     def test_pickle(self):
@@ -367,7 +367,7 @@ class FragilityFunctionTestCase(unittest.TestCase):
                        scientific.scenario_damage(ffs, 0.075))
 
     def _close_to(self, expected, actual):
-        aae(actual, expected, atol=0.0, rtol=0.05)
+        aac(actual, expected, atol=0.0, rtol=0.05)
 
     def test_can_pickle(self):
         ffd = scientific.FragilityFunctionDiscrete(
@@ -392,24 +392,24 @@ class FragilityFunctionTestCase(unittest.TestCase):
 
 class InsuredLossesTestCase(unittest.TestCase):
     def test_below_deductible(self):
-        aae([0],scientific.insured_losses(numpy.array([0.05]), 0.1, 1))
-        aae([0, 0],
+        aac([0],scientific.insured_losses(numpy.array([0.05]), 0.1, 1))
+        aac([0, 0],
             scientific.insured_losses(numpy.array([0.05, 0.1]), 0.1, 1))
 
     def test_above_limit(self):
-        aae([0.4],
+        aac([0.4],
             scientific.insured_losses(numpy.array([0.6]), 0.1, 0.5))
-        aae([0.4, 0.4],
+        aac([0.4, 0.4],
             scientific.insured_losses(numpy.array([0.6, 0.7]), 0.1, 0.5))
 
     def test_in_range(self):
-        aae([0.2],
+        aac([0.2],
             scientific.insured_losses(numpy.array([0.3]), 0.1, 0.5))
-        aae([0.2, 0.3],
+        aac([0.2, 0.3],
             scientific.insured_losses(numpy.array([0.3, 0.4]), 0.1, 0.5))
 
     def test_mixed(self):
-        aae([0, 0.1, 0.4],
+        aac([0, 0.1, 0.4],
             scientific.insured_losses(numpy.array([0.05, 0.2, 0.6]), 0.1, 0.5))
 
     def test_mean(self):
@@ -421,7 +421,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         m2 = scientific.insured_losses(losses2, 0.1, 0.5).mean()
         m = scientific.insured_losses(numpy.concatenate([losses1, losses2]),
                                       0.1, 0.5).mean()
-        aae((m1 * l1 + m2 * l2) / (l1 + l2), m)
+        aac((m1 * l1 + m2 * l2) / (l1 + l2), m)
 
 
 class InsuredLossCurveTestCase(unittest.TestCase):
@@ -429,7 +429,7 @@ class InsuredLossCurveTestCase(unittest.TestCase):
         curve = numpy.array(
             [numpy.linspace(0, 1, 11), numpy.linspace(1, 0, 11)])
 
-        aae(numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
+        aac(numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
                          [0.8, 0.8, 0.8, 0.7, 0.6, 0.5]]),
             scientific.insurance_loss_curve(curve, 0.2, 0.5))
 
@@ -437,7 +437,7 @@ class InsuredLossCurveTestCase(unittest.TestCase):
         curve = numpy.array(
             [numpy.linspace(0, 1, 11), numpy.zeros(11)])
 
-        aae([[0, 0.1, 0.2, 0.3, 0.4, 0.5], [0, 0, 0, 0, 0, 0]],
+        aac([[0, 0.1, 0.2, 0.3, 0.4, 0.5], [0, 0, 0, 0, 0, 0]],
             scientific.insurance_loss_curve(curve, 0.1, 0.5))
 
 
@@ -475,7 +475,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
             investigation_time, risk_investigation_time)
-        aae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
+        aac(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
                    9.2836244E-01], atol=1E-5)
 
     def test_continuous(self):
@@ -530,7 +530,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
             investigation_time, risk_investigation_time)
-        aae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
+        aac(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
 
 
 class LossesByEventTestCase(unittest.TestCase):
@@ -548,7 +548,7 @@ class LossesByEventTestCase(unittest.TestCase):
         mean = (curve0 + curve1) / 2
         full = scientific.losses_by_period(
             losses, periods, len(losses), 2*eff_time)['curve']
-        aae(mean, full, rtol=1E-2)  # converges only at 1%
+        aac(mean, full, rtol=1E-2)  # converges only at 1%
 
     def test_maximum_probable_loss(self):
         # checking that MPL does not break summability
@@ -589,7 +589,7 @@ class LossesByEventTestCase(unittest.TestCase):
             cession[idxs], periods, n, efftime, sorting=False)['curve']
         ret_curve = scientific.losses_by_period(
             retention[idxs], periods, n, efftime, sorting=False)['curve']
-        aae(claim_curve, cession_curve + ret_curve)
+        aac(claim_curve, cession_curve + ret_curve)
         print('keeping event associations')
         print('claim', claim_curve)
         print('cession', cession_curve)
@@ -641,8 +641,8 @@ class ComposeDDSTestCase(unittest.TestCase):
         dd3 = [.7, .2, .1]
         exp = [0.504, 0.2655, 0.2305]
         dd = comp([comp([dd1, dd2]), dd3])
-        aae(exp, dd)
-        aae(exp, comp([dd1, dd2, dd3]))
+        aac(exp, dd)
+        aac(exp, comp([dd1, dd2, dd3]))
 
 
 class RiskComputerTestCase(unittest.TestCase):
@@ -740,3 +740,63 @@ class RiskComputerTestCase(unittest.TestCase):
         # seclosses = [partial(total_losses, kind=oq.total_losses)]
         # seclosses = [partial(insurance_losses, policy_df=self.policy_df)]
         pass
+
+    def test_5(self):
+        # multi-peril damage
+        rcdic = {'calculation_mode': 'scenario_damage',
+                 'risk_functions':
+                 {'earthquake#structural#Wood':
+                  {'openquake.risklib.scientific.FragilityFunctionList': {
+                      'array': [[0.0, 0.5, 0.861, 0.957, 0.985, 0.994, 0.997, 0.999],
+                                [0.0, 0.204, 0.6, 0.813, 0.909, 0.954, 0.976, 0.986],
+                                [0.0, 0.041, 0.255, 0.49, 0.664, 0.78, 0.855, 0.903],
+                                [0.0, 0.007, 0.088, 0.236, 0.394, 0.532, 0.642, 0.728]],
+                      'format': 'discrete',
+                      'id': 'Wood',
+                      'imls': [1e-10, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4],
+                      'imt': 'PGA',
+                      'kind': 'fragility',
+                      'loss_type': 'structural',
+                      'nodamage': 0.05,
+                      'peril': 'earthquake'}},
+                  'landslide#structural#Wood':
+                  {'openquake.risklib.scientific.FragilityFunctionList': {
+                      'array': [[0.0, 0.0, 0.0, 1.0],
+                                [0.0, 0.0, 0.0, 1.0],
+                                [0.0, 0.0, 0.0, 1.0],
+                                [0.0, 0.0, 0.0, 1.0]],
+                      'format': 'discrete',
+                      'id': 'Wood',
+                      'imls': [1e-10, 0.3, 0.6, 1.0],
+                      'imt': 'DispProb',
+                      'kind': 'fragility',
+                      'loss_type': 'structural',
+                      'nodamage': 1e-10,
+                      'peril': 'landslide'}}}}
+        limit_states = 'slight moderate extreme complete'.split()
+        rc = riskmodels.get_riskcomputer(rcdic, {'PGA': 'gmv_0'}, limit_states)
+        asset_df = pandas.DataFrame({
+            'id': ['a1'],
+            'lon': [83.31],
+            'lat': [29.46],
+            'site_id': [0],
+            'value-number': [100],
+            'value-structural': [11340.],
+            'taxonomy': [2]})
+        gmf_df = pandas.DataFrame({
+            'eid': [0, 1],
+            'sid': [0, 0],
+            'gmv_0': [.098234, .165975],
+            'DispProb': [.335, .335]})
+        dd4 = rc.get_dd4(asset_df, gmf_df)  # (A, E, L, D)
+        dd0 = dd4[0, 0, 0, 1:]
+        dd1 = dd4[0, 1, 0, 1:]
+        aac(dd0, [14.538632, 8.006071, 1.669978, 0.343819], atol=1e-6)
+        aac(dd1, [24.564302, 13.526962, 2.821575, 0.580912], atol=1e-6)
+
+        rng = scientific.MultiEventRNG(master_seed=42, eids=gmf_df.eid)
+        dd4 = rc.get_dd4(asset_df, gmf_df, rng)  # (A, E, L, D)
+        dd0 = dd4[0, 0, 0, 1:]
+        dd1 = dd4[0, 1, 0, 1:]
+        aac(dd0, [10, 8, 4, 0])
+        aac(dd1, [31, 14, 3, 0], atol=1e-8)
