@@ -65,7 +65,7 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def build_dd4(riskcomp, gmf_df, D, Dc, float_dmg_dist, rng, crm=None):
+def build_dd4(riskcomp, gmf_df, D, Dc, rng, crm=None):
     """
     :param riskcomp:
         RiskComputer instance with with A assets on the same site and taxonomy
@@ -82,7 +82,7 @@ def build_dd4(riskcomp, gmf_df, D, Dc, float_dmg_dist, rng, crm=None):
     P = len(riskcomp.perils)
     L = len(riskcomp.loss_types)
     assets = adf.to_records()
-    if float_dmg_dist:
+    if rng is None:
         number = assets['value-number']
     else:
         number = assets['value-number'] = U32(assets['value-number'])
@@ -91,7 +91,7 @@ def build_dd4(riskcomp, gmf_df, D, Dc, float_dmg_dist, rng, crm=None):
     for p, out in enumerate(outs):
         for li, lt in enumerate(riskcomp.loss_types):
             fractions = out[lt]  # shape (A, E, Dc)
-            if float_dmg_dist:
+            if rng is None:
                 for a in range(A):
                     dd5[p, a, :, li, :D] = fractions[a] * number[a]
             else:
@@ -158,8 +158,7 @@ def event_based_damage(df, oq, dstore, monitor):
             aids = adf.index.to_numpy()
             with mon:
                 rc = scientific.RiskComputer(crmodel, adf)
-                dd4 = build_dd4(rc, gmf_df, D, Dc, oq.float_dmg_dist, rng, crmodel)
-                # (A, E, L, Dc)
+                dd4 = build_dd4(rc, gmf_df, D, Dc, rng, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:
