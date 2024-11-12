@@ -305,8 +305,8 @@ class PointSource(ParametricSeismicSource):
                     for d, (drate, cdep) in hdd_[::step]:
                         rate = mrate * nrate * drate
                         yield PointRupture(
-                            mag, np.rake, self.tectonic_region_type,
-                            Point(clon, clat, cdep), np.strike, np.dip, rate,
+                            mag, self.tectonic_region_type,
+                            Point(clon, clat, cdep), rate,
                             self.temporal_occurrence_model,
                             self.lower_seismogenic_depth)
 

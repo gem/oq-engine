@@ -31,11 +31,11 @@ ORIG, MODI = 0, 1  # original vs modified GMPE
 class ModifiableGMPETest(unittest.TestCase):
 
     def test_AlAtik2015Sigma(self):
+        gmpe = valid.gsim('YenierAtkinson2015BSSA')
         params1 = {"tau_model": "global", "ergodic": False}
         params2 = {"tau_model": "cena", "ergodic": True}
         params3 = {}
-        gsims = [ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
-                                sigma_model_alatik2015=params)
+        gsims = [valid.modified_gsim(gmpe, sigma_model_alatik2015=params)
                  for params in [params1, params2, params3]]
         cmaker = simple_cmaker(gsims, ['PGA'])
         ctx = cmaker.new_ctx(4)
@@ -56,9 +56,10 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(tau[2], 0.36855)
 
         # now test with_betw_ratio
-        cmaker.gsims[0] = ModifiableGMPE(
+        gsims[0] = ModifiableGMPE(
             gmpe={'Campbell2003': {}},
             add_between_within_stds={'with_betw_ratio': 0.6})
+        cmaker = simple_cmaker(gsims, ['PGA'])
         _mea, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
         aae(tau[0], 0.44075136)
         aae(phi[0], 0.26445082)
@@ -70,9 +71,9 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_AkkarEtAlRjb2014(self):
         # check mean and stds
-        gsims = [ModifiableGMPE(gmpe={'AkkarEtAlRjb2014': {}},
-                                set_between_epsilon={'epsilon_tau': 0.5}),
-                 valid.gsim('AkkarEtAlRjb2014')]
+        gmm = valid.gsim('AkkarEtAlRjb2014')
+        gsims = [valid.modified_gsim(
+            gmm, set_between_epsilon={'epsilon_tau': 0.5}), gmm]
         cmaker = simple_cmaker(gsims, ['PGA'])
         ctx = cmaker.new_ctx(4)
         ctx.mag = 6.
@@ -102,9 +103,9 @@ class ModifiableGMPETest(unittest.TestCase):
         self.assertAlmostEqual(output_coeffs["XYZ"][SA(3.0)]["XYZ"], 3.0)
 
     def get_mean_stds(self, **kw):
-        gmpe_name = 'AkkarEtAlRjb2014'
-        gmm1 = ModifiableGMPE(gmpe={gmpe_name: {}})
-        gmm2 = ModifiableGMPE(gmpe={gmpe_name: {}}, **kw)
+        gmm = valid.gsim('AkkarEtAlRjb2014')
+        gmm1 = valid.modified_gsim(gmm)
+        gmm2 = valid.modified_gsim(gmm, **kw)
         cmaker = simple_cmaker([gmm1, gmm2], ['PGA', 'SA(0.2)'])
         ctx = cmaker.new_ctx(4)
         ctx.mag = 6.
@@ -183,9 +184,8 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
                           'BaumontEtAl2018High2210IAVGDC30n7',
                           'FaccioliCauzzi2006']:
 
-            gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
-                                 apply_swiss_amplification={})
             gmpe = valid.gsim(gmpe_name)
+            gmm = valid.modified_gsim(gmpe, apply_swiss_amplification={})
             cmaker = simple_cmaker([gmm, gmpe], ['MMI'])
             ctx = self.get_ctx(cmaker)
             mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
@@ -198,9 +198,8 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
                           'EdwardsFah2013Foreland60Bars',
                           'ChiouYoungs2008SWISS01']:
 
-            gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
-                                 apply_swiss_amplification_sa={})
             gmpe = valid.gsim(gmpe_name)
+            gmm = valid.modified_gsim(gmpe,apply_swiss_amplification_sa={})
             cmaker = simple_cmaker([gmm, gmpe], ['SA(0.3)'])
             ctx = self.get_ctx(cmaker)
             mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])

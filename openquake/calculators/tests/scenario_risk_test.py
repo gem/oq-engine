@@ -162,6 +162,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # check aggrisk
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        
         # extract losses by taxonomy
         extract(self.calc.datastore, 'agg_losses/structural?'
                 'taxonomy=*').array  # shape (T, R) = (3, 2)

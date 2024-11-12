@@ -469,8 +469,8 @@ def compare_oqparam(calc_ids: int):
     ds1 = datastore.read(calc_ids[1])
     dic0 = vars(ds0['oqparam'])
     dic1 = vars(ds1['oqparam'])
-    common = sorted(set(dic0) & set(dic1))
-    for key in common:
+    common = set(dic0) & set(dic1) - {'hdf5path'}
+    for key in sorted(common):
         if dic0[key] != dic1[key]:
             print('%s: %s != %s' % (key, dic0[key], dic1[key]))
 

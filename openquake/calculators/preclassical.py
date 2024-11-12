@@ -26,7 +26,6 @@ from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
-from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -278,9 +277,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifaults:
-            # this is ultra-fast
-            sections = multifaults[0].get_sections()
-            secparams = build_secparams(sections)
+            with hdf5.File(multifaults[0].hdf5path, 'r') as h5:
+                secparams = h5['secparams'][:]
             logging.warning(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))

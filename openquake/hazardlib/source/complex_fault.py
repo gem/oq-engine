@@ -185,6 +185,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         step = kwargs.get('step', 1)
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
+        if step > 1:  # do the expensive check only in preclassical
+            whole_fault_surface.check_proj_polygon()
         whole_fault_mesh = whole_fault_surface.mesh
         _cell_center, cell_length, _cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())

@@ -720,10 +720,9 @@ sec_peril_params:
   INTERNAL
 
 secondary_perils:
-  INTERNAL
-
-secondary_simulations:
-  INTERNAL
+  List of supported secondary perils.
+  Example: *secondary_perils = HazusLiquefaction, HazusDeformation*
+  Default: empty list
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -869,6 +868,12 @@ width_of_mfd_bin:
   Used to specify the width of the Magnitude Frequency Distribution.
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
+
+with_betw_ratio:
+  Specify the between ratio for GSIMs with only the Total StdDev.
+  This is necessary in conditioned GMFs calculations.
+  Example: *with_betw_ratio = 1.7*
+  Default: None
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
@@ -967,6 +972,8 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
+        'earthquake_fragility',
+        'earthquake_vulnerability',
         'liquefaction_fragility',
         'liquefaction_vulnerability',
         'landslide_fragility',
@@ -1125,7 +1132,6 @@ class OqParam(valid.ParamSet):
     mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
-    secondary_simulations = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -1156,6 +1162,7 @@ class OqParam(valid.ParamSet):
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+    with_betw_ratio = valid.Param(valid.positivefloat, None)
 
     @property
     def no_pointsource_distance(self):
@@ -1290,6 +1297,7 @@ class OqParam(valid.ParamSet):
 
         self.check_hazard()
         self.check_gsim_lt()
+        self.set_loss_types()
         self.check_risk()
         self.check_ebrisk()
 
@@ -1385,11 +1393,6 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
 
-        # check total_losses
-        if ('damage' in self.calculation_mode and len(self.loss_types) > 1
-                and not self.total_losses):
-            self.raise_invalid('you forgot to specify total_losses =')
-
     def check_ebrisk(self):
         # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':
@@ -1458,33 +1461,38 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('the IMTs PGA, SA(0.2), and SA(1.0)'
                                    ' are required to use compute_rtgm')
 
-
-    def validate(self):
+    def set_loss_types(self):
         """
-        Set self.loss_types
+        Set .all_cost_types and .total_losses from the parent calculation, if any
         """
         from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
+            if not self.total_losses:
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        # rt has the form 'earthquake/vulnerability/structural', ...
+        costtypes = set(rt.split('/')[2] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
                 self._risk_files = rfs = get_risk_files(self._parent.inputs)
-                costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+                costtypes = set(rt.split('/')[2] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)  # including occupants
-
+        # all_cost_types includes occupants and exclude perils
+        self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
             for ln in self.loss_types}
 
+    def validate(self):
+        """
+        Perform some checks
+        """
         super().validate()
         self.check_source_model()
         if 'post_loss_amplification' in self.inputs:
@@ -1633,12 +1641,15 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
+    # called in CompositeRiskModel.init
     def set_risk_imts(self, risklist):
         """
         :param risklist:
-            a list of risk functions with attributes .id, .loss_type, .kind
+            a list of risk functions with attributes .id, .peril, .loss_type, .kind
+        :returns:
+            a list of ordered unique perils
 
-        Set the attribute risk_imtls.
+        Set the attribute .risk_imtls as a side effect
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1659,6 +1670,7 @@ class OqParam(valid.ParamSet):
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
         self.risk_imtls = {imt: [min(ls)] for imt, ls in risk_imtls.items()}
+
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not self.hazard_imtls:
@@ -1678,11 +1690,14 @@ class OqParam(valid.ParamSet):
             if imt in sec_imts:
                 self.raise_invalid('you forgot to set secondary_perils =')
 
+        risk_perils = sorted(set(rf.peril for rf in risklist))
+        return risk_perils
+
     def get_primary_imtls(self):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.sec_imts)
+        sec_imts = set(self.sec_imts) or self.inputs.get('multi_peril', ())
         return {imt: imls for imt, imls in self.imtls.items()
                 if imt not in sec_imts}
 
@@ -1724,6 +1739,13 @@ class OqParam(valid.ParamSet):
         Dictionary extended_loss_type -> extended_loss_type index
         """
         return {lt: i for i, lt in enumerate(self.ext_loss_types)}
+
+    @property
+    def L(self):
+        """
+        :returns: the number of loss types
+        """
+        return len(self.loss_types)
 
     @property
     def loss_types(self):

@@ -20,6 +20,8 @@
 Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
+
+# import warnings
 import numpy
 from scipy.spatial.distance import cdist
 import shapely.geometry
@@ -226,8 +228,9 @@ class Mesh(object):
     Mesh object can also be created from a collection of points, see
     :meth:`from_points_list`.
     """
-    #: Tolerance level to be used in various spatial operations when
-    #: approximation is required -- set to 5 meters.
+    # Tolerance level to be used in various spatial operations when
+    # approximation is required -- set to 5 meters.
+    # NB: it affects the rjb distance and therefore nearly every calculation
     DIST_TOLERANCE = 0.005
 
     @property
@@ -458,14 +461,12 @@ class Mesh(object):
             on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
-        sbb = geo_utils.get_spherical_bounding_box(
+        proj = geo_utils.OrthographicProjection.from_(
             self.lons.flatten(), self.lats.flatten())
-        proj = geo_utils.OrthographicProjection(*sbb)
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(
-            proj(self.lons.flatten(), self.lats.flatten()))
+        coords = proj(self.lons.flatten(), self.lats.flatten()).T
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
@@ -533,9 +534,7 @@ class Mesh(object):
         # of distance in km (and that value is zero for points inside
         # the polygon).
         if unstructured:
-
-            proj = geo_utils.OrthographicProjection(
-                *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+            proj = geo_utils.OrthographicProjection.from_(self.lons, self.lats)
             # Points at distances lower than 40 km
             mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
             # Points representing the surface f the rupture
@@ -543,7 +542,6 @@ class Mesh(object):
             points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
             shaper = Alpha_Shaper(points)
             _alpha_opt, polygon = shaper.optimize()
-
         else:
             proj, polygon = self._get_proj_enclosing_polygon()
 
@@ -577,16 +575,14 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        sbb = geo_utils.get_spherical_bounding_box(
-            self.lons.flatten(), self.lats.flatten())
-        proj = geo_utils.OrthographicProjection(*sbb)
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
             lats = self.lats.reshape(len(self.lats), 1)
         else:  # 2D mesh
             lons = self.lons.T
             lats = self.lats.T
-        mesh2d = numpy.array(proj(lons, lats)).T
+        proj = geo_utils.OrthographicProjection.from_(lons, lats)
+        mesh2d = proj(lons, lats).T
         lines = iter(mesh2d)
         # we iterate over horizontal stripes, keeping the "previous"
         # line of points. we keep it reversed, such that together

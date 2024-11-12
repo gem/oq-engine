@@ -235,22 +235,22 @@ def gen_outputs(df, crmodel, rng, monitor):
             assets['ID_0'] = 0
         for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
             # multiple countries are tested in aristotle/case_02
-            adf.country = crmodel.countries[id0]
+            country = crmodel.countries[id0]
             with fil_mon:
                 # *crucial* for the performance of the next step
                 gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
             if len(gmf_df) == 0:  # common enough
                 continue
             with mon_risk:
-                out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                [out] = crmodel.get_outputs(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
             yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
     total_losses_units = set()
     for separate_lt in total_losses.split('+'):
-        assert separate_lt in loss_types
+        assert separate_lt in loss_types, (separate_lt, loss_types)
         for unit, lt in zip(units, loss_types):
             if separate_lt == lt:
                 total_losses_units.add(unit)
@@ -280,7 +280,7 @@ def set_oqparam(oq, assetcol, dstore):
 
     ideduc = assetcol['ideductible'].any()
     cc = dstore['exposure'].cost_calculator
-    if oq.total_losses and cc.cost_types:
+    if oq.total_losses and oq.total_loss_types and cc.cost_types:
         # cc.cost_types is empty in scenario_damage/case_21 (consequences)
         units = cc.get_units(oq.total_loss_types)
         _tot_loss_unit_consistency(

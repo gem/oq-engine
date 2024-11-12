@@ -852,11 +852,16 @@ def extract_agg_damages(dstore, what):
         number of damage states, or an array of length 0 if there is no data
         for the given tags
     """
-    if '?' in what:  # strip the loss type for backward compatibility
-        _, what = what.rsplit('?', 1)
-    tags = what.split('&') if what else []
+    if '?' in what:
+        loss_type, what = what.rsplit('?', 1)
+        tags = what.split('&') if what else []
+    else:
+        loss_type = what
+        tags = []
     if 'damages-rlzs' in dstore:
-        damages = dstore['damages-rlzs'][:, :]
+        oq = dstore['oqparam']
+        li = oq.lti[loss_type]
+        damages = dstore['damages-rlzs'][:, :, li]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)
@@ -1039,12 +1044,14 @@ def build_damage_dt(dstore):
     :returns:
        a composite dtype loss_type -> (ds1, ds2, ...)
     """
+    oq = dstore['oqparam']
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
     dt_list = [(ds, F32) for ds in ['no_damage'] + limit_states + csqs]
     damage_dt = numpy.dtype(dt_list)
-    return damage_dt
+    loss_types = oq.loss_dt().names
+    return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
 def build_csq_dt(dstore):
@@ -1062,14 +1069,15 @@ def build_csq_dt(dstore):
 
 def build_damage_array(data, damage_dt):
     """
-    :param data: an array of shape (A, D)
-    :param damage_dt: a damage data type
+    :param data: an array of shape (A, L, D)
+    :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, _D = data.shape
+    A, _L, _D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
-        dmg[a] = tuple(data[a])
+        for li, lt in enumerate(damage_dt.names):
+            dmg[lt][a] = tuple(data[a, li])
     return dmg
 
 
@@ -1390,7 +1398,7 @@ def extract_rupture_info(dstore, what):
         source_id = dstore['source_info']['source_id']
     except KeyError:  # scenario
         source_id = None
-    dtlist = [('rup_id', I64), ('source_id', hdf5.vstr), ('multiplicity', U32),
+    dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
