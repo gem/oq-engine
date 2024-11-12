@@ -677,7 +677,7 @@ class FragilityFunctionList(list):
         """For compatibility with vulnerability functions"""
         return fine_graining(self.imls, steps)
 
-    def build(self, limit_states, discretization, steps_per_interval):
+    def build(self, limit_states, discretization=20, steps_per_interval=1):
         """
         :param limit_states: a sequence of limit states
         :param discretization: continouos fragility discretization parameter
@@ -1654,7 +1654,7 @@ class RiskComputer(dict):
     """
     def __init__(self, crm, taxidx, country_str='?'):
         oq = crm.oqparam
-        self.imtls = oq.imtls
+        self.D = len(crm.damage_states)
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
@@ -1685,6 +1685,7 @@ class RiskComputer(dict):
         perils = {'earthquake'}
         for riskid, rm in self.items():
             for (peril, lt), res in rm(asset_df, haz, rndgen).items():
+                # res is an array of fractions of shape (A, E, D) 
                 weights[peril, lt].append(self.wdic[riskid, peril])
                 dic[peril, lt].append(res)
                 perils.add(peril)
@@ -1707,14 +1708,12 @@ class RiskComputer(dict):
                     update_losses(asset_df, out)
             yield out
 
-    def get_dd4(self, adf, gmf_df, D, C=0, P=1, rng=None, crm=None):
+    def get_dd4(self, adf, gmf_df, C=0, P=1, rng=None, crm=None):
         """
         :param adf:
             DataFrame of assets on the given site with the same taxonomy
         :param gmf_df:
             GMFs on the given site for E events
-        :param D:
-            Number of damage states
         :param C:
             Number of consequences
         :param P:
@@ -1727,6 +1726,7 @@ class RiskComputer(dict):
         A = len(adf)
         E = len(gmf_df)
         L = len(self.loss_types)
+        D = self.D
         assets = adf.to_records()
         if rng is None:
             number = assets['value-number']
