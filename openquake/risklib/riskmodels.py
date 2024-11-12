@@ -460,16 +460,19 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
 
 
 # used only in riskmodels_test
-def get_riskcomputer(dic, alias):
+def get_riskcomputer(dic, alias, limit_states=()):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
+    rc.D = len(limit_states) + 1
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     steps = dic.get('lrem_steps_per_interval', 1)
     lts = set()
     riskid_perils = set()
+    perils = set()
     for rlk, func in dic['risk_functions'].items():
         peril, lt, riskid = rlk.split('#')
+        perils.add(peril)
         riskid_perils.add((riskid, peril))
         lts.add(lt)
         rf = hdf5.json_to_obj(json.dumps(func))
@@ -481,6 +484,8 @@ def get_riskcomputer(dic, alias):
             rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
             rf.retro.init()
             rf.retro.loss_type = lt
+        if hasattr(rf, 'array'):  # fragility
+            rf = rf.build(limit_states)
         rfs[riskid].append(rf)
     lts = sorted(lts)
     mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
@@ -497,6 +502,7 @@ def get_riskcomputer(dic, alias):
             rc.wdic[riskid, peril] = weight
     else:
         rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+    rc.P = len(perils)
     rc.loss_types = lts
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']
