@@ -463,11 +463,10 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
 def get_riskcomputer(dic, alias):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
-    rc.asset_df = pandas.DataFrame(dic['asset_df'])
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     steps = dic.get('lrem_steps_per_interval', 1)
-    mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
+    mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
     for rlk, func in dic['risk_functions'].items():
         peril, lt, riskid = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
@@ -487,8 +486,8 @@ def get_riskcomputer(dic, alias):
         rm.alias = alias
         rc[riskid] = rm
     for rlt, weight in dic['wdic'].items():
-        riskid, lt = rlt.split('#')
-        rc.wdic[riskid, lt] = weight
+        riskid, peril = rlt.split('#')
+        rc.wdic[riskid, peril] = weight
     rc.loss_types = dic['loss_types']
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']
@@ -843,8 +842,9 @@ class CompositeRiskModel(collections.abc.Mapping):
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()
         # _assert_equal(dic, dic2)
-        rc = scientific.RiskComputer(self, asset_df, country)
-        out = rc.output(haz, sec_losses, rndgen)
+        [taxidx] = asset_df.taxonomy.unique()
+        rc = scientific.RiskComputer(self, taxidx, country)
+        out = rc.output(asset_df, haz, sec_losses, rndgen)
         return list(out)
 
     def __iter__(self):

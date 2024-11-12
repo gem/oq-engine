@@ -1652,14 +1652,11 @@ class RiskComputer(dict):
     :param crm: a CompositeRiskModel
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, asset_df, country_str='?'):
+    def __init__(self, crm, taxidx, country_str='?'):
         oq = crm.oqparam
-        [taxidx] = asset_df.taxonomy.unique()
-        self.asset_df = asset_df
         self.imtls = oq.imtls
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
-        self.perils = crm.perils
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}  # (riskid, peril) -> weight
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
@@ -1668,15 +1665,16 @@ class RiskComputer(dict):
             if country == '?' or country_str in country:
                 self[riskid] = crm._riskmodels[riskid]
                 if peril == '*':
-                    for per in self.perils:
+                    for per in crm.perils:
                         self.wdic[riskid, per] = weight
                 else:
                     self.wdic[riskid, peril] = weight
 
-    def output(self, haz, sec_losses=(), rndgen=None):
+    def output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
         Compute averages by using the taxonomy mapping
 
+        :param asset_df: assets on the same site with the same taxonomy
         :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
@@ -1684,11 +1682,13 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # peril, lt -> outs
         weights = collections.defaultdict(list)  # peril, lt -> weights
+        perils = {'earthquake'}
         for riskid, rm in self.items():
-            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
+            for (peril, lt), res in rm(asset_df, haz, rndgen).items():
                 weights[peril, lt].append(self.wdic[riskid, peril])
                 dic[peril, lt].append(res)
-        for peril in self.perils:
+                perils.add(peril)
+        for peril in sorted(perils):
             out = {}
             for lt in self.minimum_asset_loss:
                 outs = dic[peril, lt]
@@ -1704,26 +1704,28 @@ class RiskComputer(dict):
                     out[lt] = outs[0]
             if hasattr(haz, 'eid'):  # event based
                 for update_losses in sec_losses:
-                    update_losses(self.asset_df, out)
+                    update_losses(asset_df, out)
             yield out
 
-    def get_dd4(self, gmf_df, D, C=0, rng=None, crm=None):
+    def get_dd4(self, adf, gmf_df, D, C=0, P=1, rng=None, crm=None):
         """
+        :param adf:
+            DataFrame of assets on the given site with the same taxonomy
         :param gmf_df:
             GMFs on the given site for E events
         :param D:
             Number of damage states
         :param C:
             Number of consequences
+        :param P:
+            Number of perils
         :param rng:
             MultiEvent random generator or None
         :returns:
             damage distribution of shape (A, E, L, D+C)
         """
-        adf = self.asset_df
         A = len(adf)
         E = len(gmf_df)
-        P = len(self.perils)
         L = len(self.loss_types)
         assets = adf.to_records()
         if rng is None:
@@ -1731,7 +1733,7 @@ class RiskComputer(dict):
         else:
             number = assets['value-number'] = U32(assets['value-number'])
         dd5 = numpy.zeros((P, A, E, L, D + C), F32)
-        outs = self.output(gmf_df)  # dicts loss_type -> array
+        outs = self.output(adf, gmf_df)  # dicts loss_type -> array
         for p, out in enumerate(outs):
             for li, lt in enumerate(self.loss_types):
                 fractions = out[lt]  # shape (A, E, Dc)
@@ -1777,9 +1779,7 @@ class RiskComputer(dict):
                         dic['openquake.risklib.scientific.VulnerabilityFunction'][
                             'retro'] = retro
                     rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
-        df = self.asset_df
-        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfdic,
+        dic = dict(risk_functions=rfdic,
                    wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
                    loss_types=self.loss_types,
                    minimum_asset_loss=self.minimum_asset_loss,

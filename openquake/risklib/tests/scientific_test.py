@@ -647,17 +647,8 @@ class ComposeDDSTestCase(unittest.TestCase):
 
 class RiskComputerTestCase(unittest.TestCase):
     def test1(self):
-        dic = {'asset_df': {'area': [1.0],
-                            'id': [b'a2'],
-                            'lat': [38.17],
-                            'lon': [15.56],
-                            'site_id': [0],
-                            'taxonomy': [1],
-                            'value-number': [2000.0],
-                            'value-structural': [2000.0]},
-               'calculation_mode': 'event_based_risk',
+        dic = {'calculation_mode': 'event_based_risk',
                'loss_types': ['structural'],
-               'minimum_asset_loss': {'structural': 0},
                'risk_functions': {
                    'earthquake#structural#RC':
                    {"openquake.risklib.scientific.VulnerabilityFunction":
@@ -669,7 +660,7 @@ class RiskComputerTestCase(unittest.TestCase):
                      "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
                      "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
                      "distribution_name": "LN"}}},
-               'wdic': {'RC#structural': 1}}
+               'wdic': {'RC#earthquake': 1}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
                 'gmv_0': [.23, .31]}
@@ -677,7 +668,16 @@ class RiskComputerTestCase(unittest.TestCase):
         print(toml.dumps(dic))
         for k, v in rc.todict().items():
             self.assertEqual(dic[k], v)
-        out = rc.output(pandas.DataFrame(gmfs))
+        asset_df = pandas.DataFrame(
+            {'area': [1.0],
+             'id': [b'a2'],
+             'lat': [38.17],
+             'lon': [15.56],
+             'site_id': [0],
+             'taxonomy': [1],
+             'value-number': [2000.0],
+             'value-structural': [2000.0]})
+        [out] = rc.output(asset_df, pandas.DataFrame(gmfs))
         print(out)
 
     def test2(self):
@@ -686,17 +686,7 @@ class RiskComputerTestCase(unittest.TestCase):
                  'SA(0.5)': 'gmv_2',
                  'SA(0.8)': 'gmv_3',
                  'SA(1.0)': 'gmv_4'}
-        dic = {'asset_df': {'area': [10.0, 1.0],
-                            'id': [b'a0', b'a3'],
-                            'lat': [29.1098, 27.9015],
-                            'lon': [81.2985, 85.7477],
-                            'policy': [2, 1],
-                            'site_id': [0, 2],
-                            'taxonomy': [1, 1],
-                            'value-nonstructural': [1500.0, 2500.0],
-                            'value-number': [3.0, 10.0],
-                            'value-structural': [3000.0, 5000.0]},
-               'calculation_mode': 'event_based_risk',
+        dic = {'calculation_mode': 'event_based_risk',
                'loss_types': ['nonstructural', 'structural'],
                'risk_functions': {
                    'earthquake#nonstructural#RM': {
@@ -715,7 +705,7 @@ class RiskComputerTestCase(unittest.TestCase):
                            'imls': [0.02, 0.3, 0.5, 0.9, 1.2],
                            'imt': 'PGA',
                            'mean_loss_ratios': [0.05, 0.1, 0.2, 0.4, 0.8]}}},
-               'wdic': {'RM#nonstructural': 1, 'RM#structural': 1}}
+               'wdic': {'RM#earthquake': 1}}
 
         gmfs = {'eid': [0, 2],
                 'sid': [0, 0],
@@ -726,7 +716,18 @@ class RiskComputerTestCase(unittest.TestCase):
                 'gmv_4': [.23, .21]}
         rc = riskmodels.get_riskcomputer(dic, alias)
         print(toml.dumps(dic))
-        out = rc.output(pandas.DataFrame(gmfs))
+        asset_df = pandas.DataFrame({
+            'area': [10.0, 1.0],
+            'id': [b'a0', b'a3'],
+            'lat': [29.1098, 27.9015],
+            'lon': [81.2985, 85.7477],
+            'policy': [2, 1],
+            'site_id': [0, 2],
+            'taxonomy': [1, 1],
+            'value-nonstructural': [1500.0, 2500.0],
+            'value-number': [3.0, 10.0],
+            'value-structural': [3000.0, 5000.0]})
+        [out] = rc.output(asset_df, pandas.DataFrame(gmfs))
         print(out)
 
     def test3(self):

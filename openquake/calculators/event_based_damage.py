@@ -85,6 +85,7 @@ def event_based_damage(df, oq, dstore, monitor):
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
+    P = len(crmodel.perils)
     rlzs = dstore['events']['rlz_id']
     dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -101,8 +102,8 @@ def event_based_damage(df, oq, dstore, monitor):
         for taxo, adf in asset_df.groupby('taxonomy'):
             aids = adf.index.to_numpy()
             with mon:
-                rc = scientific.RiskComputer(crmodel, adf)
-                dd4 = rc.get_dd4(gmf_df, D, Dc-D, rng, crmodel)  # (A, E, L, Dc)
+                rc = scientific.RiskComputer(crmodel, taxo)
+                dd4 = rc.get_dd4(adf, gmf_df, D, Dc-D, P, rng, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:
