@@ -1779,9 +1779,9 @@ class RiskComputer(dict):
                         dic['openquake.risklib.scientific.VulnerabilityFunction'][
                             'retro'] = retro
                     rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
-        dic = dict(risk_functions=rfdic,
-                   minimum_asset_loss=self.minimum_asset_loss,
-                   calculation_mode=self.calculation_mode)
+        dic = dict(risk_functions=rfdic, calculation_mode=self.calculation_mode)
+        if any(mal for mal in self.minimum_asset_loss.values()):
+            dic['minimum_asset_loss'] = self.minimum_asset_loss
         if any(self.wdic[k] != 1 for k in self.wdic):
             dic['wdic'] = {'%s#%s' % k: v for k, v in self.wdic.items()},
         return dic
