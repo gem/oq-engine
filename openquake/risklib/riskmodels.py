@@ -467,8 +467,10 @@ def get_riskcomputer(dic, alias):
     rfs = AccumDict(accum=[])
     steps = dic.get('lrem_steps_per_interval', 1)
     lts = set()
+    riskid_perils = set()
     for rlk, func in dic['risk_functions'].items():
         peril, lt, riskid = rlk.split('#')
+        riskid_perils.add((riskid, peril))
         lts.add(lt)
         rf = hdf5.json_to_obj(json.dumps(func))
         if hasattr(rf, 'init'):
@@ -489,9 +491,12 @@ def get_riskcomputer(dic, alias):
                        minimum_asset_loss=mal)
         rm.alias = alias
         rc[riskid] = rm
-    for rlt, weight in dic['wdic'].items():
-        riskid, peril = rlt.split('#')
-        rc.wdic[riskid, peril] = weight
+    if 'wdic' in dic:
+        for rlt, weight in dic['wdic'].items():
+            riskid, peril = rlt.split('#')
+            rc.wdic[riskid, peril] = weight
+    else:
+        rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
     rc.loss_types = lts
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']

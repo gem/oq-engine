@@ -1780,9 +1780,10 @@ class RiskComputer(dict):
                             'retro'] = retro
                     rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
         dic = dict(risk_functions=rfdic,
-                   wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
                    minimum_asset_loss=self.minimum_asset_loss,
                    calculation_mode=self.calculation_mode)
+        if any(self.wdic[k] != 1 for k in self.wdic):
+            dic['wdic'] = {'%s#%s' % k: v for k, v in self.wdic.items()},
         return dic
 
     def pprint(self):
