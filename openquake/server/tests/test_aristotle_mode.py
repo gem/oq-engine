@@ -157,7 +157,9 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                     APPLICATION_MODE='ARISTOTLE',
                     WEBUI_ACCESS_LOG_DIR='/home/openquake',
                     EMAIL_FILE_PATH=email_dir,  # FIXME: this is ignored!
-                    EMAIL_BACKEND=email_backend):
+                    EMAIL_BACKEND=email_backend,
+                    EMAIL_HOST_USER='aristotlenoreply@openquake.org',
+                    EMAIL_SUPPORT='aristotlesupport@openquake.org'):
                 resp = self.post('aristotle_run', data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -223,12 +225,12 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                         self.assertIn('failed', email_content)
                     else:
                         self.assertIn('finished correctly', email_content)
-                    self.assertIn('From: aristotlenoreply@openquake.org',
-                                  email_content)
+                    email_from = self.settings.EMAIL_HOST_USER
+                    email_to = self.settings.EMAIL_SUPPORT
+                    self.assertIn(f'From: {email_from}', email_content)
                     self.assertIn('To: django-test-user@email.test',
                                   email_content)
-                    self.assertIn('Reply-To: aristotlesupport@openquake.org',
-                                  email_content)
+                    self.assertIn(f'Reply-To: {email_to}', email_content)
                     if failure_reason:
                         self.assertIn(failure_reason, email_content)
                     else:

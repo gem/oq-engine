@@ -81,7 +81,10 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             # issues in case tests run in parallel, because we are checking the
             # last email that was created instead of the only email created in
             # a test-specific directory
-            with self.settings(EMAIL_FILE_PATH=email_dir):
+            with self.settings(
+                    EMAIL_FILE_PATH=email_dir,
+                    EMAIL_HOST_USER='aelonoreply@openquake.org',
+                    EMAIL_SUPPORT='aelosupport@openquake.org'):
                 resp = self.post('aelo_run', params)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -121,9 +124,11 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('failed', email_content)
                 else:
                     self.assertIn('finished correctly', email_content)
-                self.assertIn('From: aelonoreply@openquake.org', email_content)
+                email_from = self.settings.EMAIL_HOST_USER
+                email_to = self.settings.EMAIL_SUPPORT
+                self.assertIn(f'From: {email_from}', email_content)
                 self.assertIn('To: django-test-user@email.test', email_content)
-                self.assertIn('Reply-To: aelosupport@openquake.org',
+                self.assertIn(f'Reply-To: {email_to}',
                               email_content)
                 self.assertIn(
                     f"Input values: lon = {params['lon']},"
