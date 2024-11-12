@@ -65,66 +65,6 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def build_dd4(riskcomp, gmf_df, D, C=0, rng=None, crm=None):
-    """
-    :param riskcomp:
-        RiskComputer instance with with A assets on the same site and taxonomy
-    :param gmf_df:
-        GMFs on the given site for E events
-    :param D:
-        Number of damage states
-    :param C:
-        Number of consequences
-    :param rng:
-        MultiEvent random generator or None
-    :returns:
-        damage distribution of shape (A, E, L, Dc)
-    """
-    adf = riskcomp.asset_df
-    A = len(adf)
-    E = len(gmf_df)
-    P = len(riskcomp.perils)
-    L = len(riskcomp.loss_types)
-    assets = adf.to_records()
-    if rng is None:
-        number = assets['value-number']
-    else:
-        number = assets['value-number'] = U32(assets['value-number'])
-    dd5 = numpy.zeros((P, A, E, L, D + C), F32)
-    outs = riskcomp.output(gmf_df)  # dicts loss_type -> array
-    for p, out in enumerate(outs):
-        for li, lt in enumerate(riskcomp.loss_types):
-            fractions = out[lt]  # shape (A, E, Dc)
-            if rng is None:
-                for a in range(A):
-                    dd5[p, a, :, li, :D] = fractions[a] * number[a]
-            else:
-                # this is a performance distaster; for instance
-                # the Messina test in oq-risk-tests becomes 12x
-                # slower even if it has only 25_736 assets
-                dd5[p, :, :, li, :D] = rng.discrete_dmg_dist(
-                    gmf_df.eid, fractions, number)
-
-    # compose damage distributions
-    if P > 1:
-        dd4 = numpy.empty(dd5.shape[1:])
-        for li in range(L):
-            for a in range(A):
-                for e in range(E):
-                    dd4[a, e, li, :D] = scientific.compose_dds(
-                        dd5[:, a, e, li, :D])
-    else:
-        dd4 = dd5[0]
-    if crm:
-        csqs = crm.get_consequences()
-        df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
-        csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, crm.oqparam)
-        csqidx = {dc: i for i, dc in enumerate(csqs, D)}
-        for (cons, li), values in csq.items():
-            dd4[:, :, li, csqidx[cons]] = values
-    return dd4
-
-
 def event_based_damage(df, oq, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -162,7 +102,7 @@ def event_based_damage(df, oq, dstore, monitor):
             aids = adf.index.to_numpy()
             with mon:
                 rc = scientific.RiskComputer(crmodel, adf)
-                dd4 = build_dd4(rc, gmf_df, D, Dc-D, rng, crmodel)  # (A, E, L, Dc)
+                dd4 = rc.get_dd4(gmf_df, D, Dc-D, rng, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:
