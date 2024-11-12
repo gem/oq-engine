@@ -1655,6 +1655,7 @@ class RiskComputer(dict):
     def __init__(self, crm, taxidx, country_str='?'):
         oq = crm.oqparam
         self.D = len(crm.damage_states)
+        self.P = len(crm.perils)
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
@@ -1708,7 +1709,7 @@ class RiskComputer(dict):
                     update_losses(asset_df, out)
             yield out
 
-    def get_dd4(self, adf, gmf_df, C=0, P=1, rng=None, crm=None):
+    def get_dd4(self, adf, gmf_df, C=0, rng=None, crm=None):
         """
         :param adf:
             DataFrame of assets on the given site with the same taxonomy
@@ -1716,8 +1717,6 @@ class RiskComputer(dict):
             GMFs on the given site for E events
         :param C:
             Number of consequences
-        :param P:
-            Number of perils
         :param rng:
             MultiEvent random generator or None
         :returns:
@@ -1732,7 +1731,7 @@ class RiskComputer(dict):
             number = assets['value-number']
         else:
             number = assets['value-number'] = U32(assets['value-number'])
-        dd5 = numpy.zeros((P, A, E, L, D + C), F32)
+        dd5 = numpy.zeros((self.P, A, E, L, D + C), F32)
         outs = self.output(adf, gmf_df)  # dicts loss_type -> array
         for p, out in enumerate(outs):
             for li, lt in enumerate(self.loss_types):
@@ -1748,7 +1747,7 @@ class RiskComputer(dict):
                         gmf_df.eid, fractions, number)
 
         # compose damage distributions
-        if P > 1:
+        if self.P > 1:
             dd4 = numpy.empty(dd5.shape[1:])
             for li in range(L):
                 for a in range(A):

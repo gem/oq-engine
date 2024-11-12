@@ -469,8 +469,10 @@ def get_riskcomputer(dic, alias, limit_states=()):
     steps = dic.get('lrem_steps_per_interval', 1)
     lts = set()
     riskid_perils = set()
+    perils = set()
     for rlk, func in dic['risk_functions'].items():
         peril, lt, riskid = rlk.split('#')
+        perils.add(peril)
         riskid_perils.add((riskid, peril))
         lts.add(lt)
         rf = hdf5.json_to_obj(json.dumps(func))
@@ -500,6 +502,7 @@ def get_riskcomputer(dic, alias, limit_states=()):
             rc.wdic[riskid, peril] = weight
     else:
         rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+    rc.P = len(perils)
     rc.loss_types = lts
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']

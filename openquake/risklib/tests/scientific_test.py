@@ -788,7 +788,7 @@ class RiskComputerTestCase(unittest.TestCase):
             'sid': [0, 0],
             'gmv_0': [.098234, .165975],
             'DispProb': [.335, .335]})
-        dd4 = rc.get_dd4(asset_df, gmf_df, P=2)  # (A, E, L, D)
+        dd4 = rc.get_dd4(asset_df, gmf_df)  # (A, E, L, D)
         dd0 = dd4[0, 0, 0]
         dd1 = dd4[0, 1, 0]
         aac(dd0, [0.75441498, 0.14538634, 0.08006072, 0.01669979, 0.00343817], atol=1e-8)
