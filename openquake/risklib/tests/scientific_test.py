@@ -659,7 +659,7 @@ class RiskComputerTestCase(unittest.TestCase):
                'loss_types': ['structural'],
                'minimum_asset_loss': {'structural': 0},
                'risk_functions': {
-                   'RC#structural':
+                   'earthquake#RC#structural':
                    {"openquake.risklib.scientific.VulnerabilityFunction":
                     {"id": "RC",
                      "peril": 'earthquake',
@@ -699,7 +699,7 @@ class RiskComputerTestCase(unittest.TestCase):
                'calculation_mode': 'event_based_risk',
                'loss_types': ['nonstructural', 'structural'],
                'risk_functions': {
-                   'RM#nonstructural': {
+                   'earthquake#RM#nonstructural': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
                            'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
                            'distribution_name': 'LN',
@@ -707,7 +707,7 @@ class RiskComputerTestCase(unittest.TestCase):
                            'imls': [0.1, 0.2, 0.4, 0.7, 1.0],
                            'imt': 'SA(1.0)',
                            'mean_loss_ratios': [0.1, 0.2, 0.35, 0.6, 0.9]}},
-                   'RM#structural': {
+                   'earthquake#RM#structural': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
                            'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
                            'distribution_name': 'LN',

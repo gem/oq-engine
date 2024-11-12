@@ -469,12 +469,12 @@ def get_riskcomputer(dic, alias):
     steps = dic.get('lrem_steps_per_interval', 1)
     mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
     for rlk, func in dic['risk_functions'].items():
-        riskid, lt = rlk.split('#')
+        peril, riskid, lt = rlk.split('#')
         rf = hdf5.json_to_obj(json.dumps(func))
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
-            rf.peril = 'earthquake'
+            rf.peril = peril
         if getattr(rf, 'retro', False):
             rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
             rf.retro.init()
