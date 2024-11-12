@@ -82,6 +82,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             # last email that was created instead of the only email created in
             # a test-specific directory
             with self.settings(
+                    APPLICATION_MODE='AELO',
                     EMAIL_FILE_PATH=email_dir,
                     EMAIL_HOST_USER='aelonoreply@openquake.org',
                     EMAIL_SUPPORT='aelosupport@openquake.org'):
@@ -124,8 +125,8 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('failed', email_content)
                 else:
                     self.assertIn('finished correctly', email_content)
-                email_from = self.settings.EMAIL_HOST_USER
-                email_to = self.settings.EMAIL_SUPPORT
+                email_from = settings.EMAIL_HOST_USER
+                email_to = settings.EMAIL_SUPPORT
                 self.assertIn(f'From: {email_from}', email_content)
                 self.assertIn('To: django-test-user@email.test', email_content)
                 self.assertIn(f'Reply-To: {email_to}',

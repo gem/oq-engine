@@ -33,6 +33,7 @@ import pathlib
 import django
 # from django.apps import apps
 from django.test import Client
+from django.conf import settings
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.datastructures import MultiValueDict
 from django.http import HttpResponseNotFound
@@ -225,8 +226,8 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                         self.assertIn('failed', email_content)
                     else:
                         self.assertIn('finished correctly', email_content)
-                    email_from = self.settings.EMAIL_HOST_USER
-                    email_to = self.settings.EMAIL_SUPPORT
+                    email_from = settings.EMAIL_HOST_USER
+                    email_to = settings.EMAIL_SUPPORT
                     self.assertIn(f'From: {email_from}', email_content)
                     self.assertIn('To: django-test-user@email.test',
                                   email_content)
