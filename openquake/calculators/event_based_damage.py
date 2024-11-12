@@ -65,7 +65,7 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def build_dd4(riskcomp, gmf_df, rng):
+def build_dd4(riskcomp, gmf_df, D, Dc, float_dmg_dist, rng, crm=None):
     """
     :param riskcomp:
         RiskComputer instance with with A assets on the same site and taxonomy
@@ -76,27 +76,22 @@ def build_dd4(riskcomp, gmf_df, rng):
     :returns:
         damage distribution of shape (A, E, L, Dc)
     """
-    crm = riskcomp.crm
-    D = len(crm.damage_states)
-    csqs = crm.get_consequences()
-    Dc = D + len(csqs)
-    oq = crm.oqparam
     adf = riskcomp.asset_df
     A = len(adf)
     E = len(gmf_df)
-    P = len(crm.perils)
-    L = len(oq.loss_types)
+    P = len(riskcomp.perils)
+    L = len(riskcomp.loss_types)
     assets = adf.to_records()
-    if oq.float_dmg_dist:
+    if float_dmg_dist:
         number = assets['value-number']
     else:
         number = assets['value-number'] = U32(assets['value-number'])
     dd5 = numpy.zeros((P, A, E, L, Dc), F32)
     outs = riskcomp.output(gmf_df)  # dicts loss_type -> array
     for p, out in enumerate(outs):
-        for li, lt in enumerate(oq.loss_types):
+        for li, lt in enumerate(riskcomp.loss_types):
             fractions = out[lt]  # shape (A, E, Dc)
-            if oq.float_dmg_dist:
+            if float_dmg_dist:
                 for a in range(A):
                     dd5[p, a, :, li, :D] = fractions[a] * number[a]
             else:
@@ -116,11 +111,13 @@ def build_dd4(riskcomp, gmf_df, rng):
                         dd5[:, a, e, li, :D])
     else:
         dd4 = dd5[0]
-    df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
-    csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, oq)
-    csqidx = {dc: i for i, dc in enumerate(csqs, D)}
-    for (cons, li), values in csq.items():
-        dd4[:, :, li, csqidx[cons]] = values
+    if crm:
+        csqs = crm.get_consequences()
+        df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
+        csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, crm.oqparam)
+        csqidx = {dc: i for i, dc in enumerate(csqs, D)}
+        for (cons, li), values in csq.items():
+            dd4[:, :, li, csqidx[cons]] = values
     return dd4
 
 
@@ -143,6 +140,7 @@ def event_based_damage(df, oq, dstore, monitor):
         aggids = monitor.read('aggids')
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     _A, R, L, Dc = dmgcsq.shape
+    D = len(crmodel.damage_states)
     rlzs = dstore['events']['rlz_id']
     dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -160,7 +158,8 @@ def event_based_damage(df, oq, dstore, monitor):
             aids = adf.index.to_numpy()
             with mon:
                 rc = scientific.RiskComputer(crmodel, adf)
-                dd4 = build_dd4(rc, gmf_df, rng)  # (A, E, L, Dc)
+                dd4 = build_dd4(rc, gmf_df, D, Dc, oq.float_dmg_dist, rng, crmodel)
+                # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:

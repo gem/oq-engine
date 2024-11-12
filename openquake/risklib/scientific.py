@@ -1655,7 +1655,6 @@ class RiskComputer(dict):
     def __init__(self, crm, asset_df):
         oq = crm.oqparam
         [taxidx] = asset_df.taxonomy.unique()
-        self.crm = crm
         self.asset_df = asset_df
         self.imtls = oq.imtls
         self.calculation_mode = oq.calculation_mode
