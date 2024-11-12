@@ -1652,7 +1652,7 @@ class RiskComputer(dict):
     :param crm: a CompositeRiskModel
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, asset_df):
+    def __init__(self, crm, asset_df, country_str='?'):
         oq = crm.oqparam
         [taxidx] = asset_df.taxonomy.unique()
         self.asset_df = asset_df
@@ -1663,7 +1663,6 @@ class RiskComputer(dict):
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}  # (riskid, peril) -> weight
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
-        country_str = getattr(asset_df, 'country', '?')
         for country, peril, riskid, weight in zip(
                 tm.country, tm.peril, tm.risk_id, tm.weight):
             if country == '?' or country_str in country:

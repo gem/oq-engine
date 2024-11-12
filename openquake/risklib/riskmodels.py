@@ -830,7 +830,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None):
+    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None, country='?'):
         """
         :param asset_df: a DataFrame of assets with the same taxonomy and country
         :param haz: a DataFrame of GMVs on the sites of the assets
@@ -843,7 +843,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()
         # _assert_equal(dic, dic2)
-        rc = scientific.RiskComputer(self, asset_df)
+        rc = scientific.RiskComputer(self, asset_df, country)
         out = rc.output(haz, sec_losses, rndgen)
         return list(out)
 
