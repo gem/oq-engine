@@ -648,7 +648,6 @@ class ComposeDDSTestCase(unittest.TestCase):
 class RiskComputerTestCase(unittest.TestCase):
     def test1(self):
         dic = {'calculation_mode': 'event_based_risk',
-               'loss_types': ['structural'],
                'risk_functions': {
                    'earthquake#structural#RC':
                    {"openquake.risklib.scientific.VulnerabilityFunction":
@@ -687,7 +686,6 @@ class RiskComputerTestCase(unittest.TestCase):
                  'SA(0.8)': 'gmv_3',
                  'SA(1.0)': 'gmv_4'}
         dic = {'calculation_mode': 'event_based_risk',
-               'loss_types': ['nonstructural', 'structural'],
                'risk_functions': {
                    'earthquake#nonstructural#RM': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
