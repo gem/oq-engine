@@ -65,14 +65,18 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def build_dd4(riskcomp, gmf_df, D, Dc, rng, crm=None):
+def build_dd4(riskcomp, gmf_df, D, C=0, rng=None, crm=None):
     """
     :param riskcomp:
         RiskComputer instance with with A assets on the same site and taxonomy
     :param gmf_df:
         GMFs on the given site for E events
+    :param D:
+        Number of damage states
+    :param C:
+        Number of consequences
     :param rng:
-        MultiEvent random generator
+        MultiEvent random generator or None
     :returns:
         damage distribution of shape (A, E, L, Dc)
     """
@@ -86,7 +90,7 @@ def build_dd4(riskcomp, gmf_df, D, Dc, rng, crm=None):
         number = assets['value-number']
     else:
         number = assets['value-number'] = U32(assets['value-number'])
-    dd5 = numpy.zeros((P, A, E, L, Dc), F32)
+    dd5 = numpy.zeros((P, A, E, L, D + C), F32)
     outs = riskcomp.output(gmf_df)  # dicts loss_type -> array
     for p, out in enumerate(outs):
         for li, lt in enumerate(riskcomp.loss_types):
@@ -158,7 +162,7 @@ def event_based_damage(df, oq, dstore, monitor):
             aids = adf.index.to_numpy()
             with mon:
                 rc = scientific.RiskComputer(crmodel, adf)
-                dd4 = build_dd4(rc, gmf_df, D, Dc, rng, crmodel)  # (A, E, L, Dc)
+                dd4 = build_dd4(rc, gmf_df, D, Dc-D, rng, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:
