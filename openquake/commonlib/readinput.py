@@ -1093,6 +1093,7 @@ def read_df(fname, lon, lat, id, duplicates_strategy='error'):
         msg = '%s: has duplicate sites %s' % (fname, list(duplicates[id]))
         if duplicates_strategy == 'error':
             raise InvalidFile(msg)
+        msg += f' (duplicates_strategy: {duplicates_strategy})'
         logging.warning(msg)
         if duplicates_strategy == 'keep_first':
             dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
