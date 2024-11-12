@@ -1652,32 +1652,29 @@ class RiskComputer(dict):
     :param crm: a CompositeRiskModel
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, asset_df):
+    def __init__(self, crm, taxidx, country_str='?'):
         oq = crm.oqparam
-        [taxidx] = asset_df.taxonomy.unique()
-        self.asset_df = asset_df
         self.imtls = oq.imtls
         self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
-        self.perils = crm.perils
         self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
         self.wdic = {}  # (riskid, peril) -> weight
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
-        country_str = getattr(asset_df, 'country', '?')
         for country, peril, riskid, weight in zip(
                 tm.country, tm.peril, tm.risk_id, tm.weight):
             if country == '?' or country_str in country:
                 self[riskid] = crm._riskmodels[riskid]
                 if peril == '*':
-                    for per in self.perils:
+                    for per in crm.perils:
                         self.wdic[riskid, per] = weight
                 else:
                     self.wdic[riskid, peril] = weight
 
-    def output(self, haz, sec_losses=(), rndgen=None):
+    def output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
         Compute averages by using the taxonomy mapping
 
+        :param asset_df: assets on the same site with the same taxonomy
         :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
@@ -1685,11 +1682,13 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # peril, lt -> outs
         weights = collections.defaultdict(list)  # peril, lt -> weights
+        perils = {'earthquake'}
         for riskid, rm in self.items():
-            for (peril, lt), res in rm(self.asset_df, haz, rndgen).items():
+            for (peril, lt), res in rm(asset_df, haz, rndgen).items():
                 weights[peril, lt].append(self.wdic[riskid, peril])
                 dic[peril, lt].append(res)
-        for peril in self.perils:
+                perils.add(peril)
+        for peril in sorted(perils):
             out = {}
             for lt in self.minimum_asset_loss:
                 outs = dic[peril, lt]
@@ -1705,8 +1704,66 @@ class RiskComputer(dict):
                     out[lt] = outs[0]
             if hasattr(haz, 'eid'):  # event based
                 for update_losses in sec_losses:
-                    update_losses(self.asset_df, out)
+                    update_losses(asset_df, out)
             yield out
+
+    def get_dd4(self, adf, gmf_df, D, C=0, P=1, rng=None, crm=None):
+        """
+        :param adf:
+            DataFrame of assets on the given site with the same taxonomy
+        :param gmf_df:
+            GMFs on the given site for E events
+        :param D:
+            Number of damage states
+        :param C:
+            Number of consequences
+        :param P:
+            Number of perils
+        :param rng:
+            MultiEvent random generator or None
+        :returns:
+            damage distribution of shape (A, E, L, D+C)
+        """
+        A = len(adf)
+        E = len(gmf_df)
+        L = len(self.loss_types)
+        assets = adf.to_records()
+        if rng is None:
+            number = assets['value-number']
+        else:
+            number = assets['value-number'] = U32(assets['value-number'])
+        dd5 = numpy.zeros((P, A, E, L, D + C), F32)
+        outs = self.output(adf, gmf_df)  # dicts loss_type -> array
+        for p, out in enumerate(outs):
+            for li, lt in enumerate(self.loss_types):
+                fractions = out[lt]  # shape (A, E, Dc)
+                if rng is None:
+                    for a in range(A):
+                        dd5[p, a, :, li, :D] = fractions[a] * number[a]
+                else:
+                    # this is a performance distaster; for instance
+                    # the Messina test in oq-risk-tests becomes 12x
+                    # slower even if it has only 25_736 assets
+                    dd5[p, :, :, li, :D] = rng.discrete_dmg_dist(
+                        gmf_df.eid, fractions, number)
+
+        # compose damage distributions
+        if P > 1:
+            dd4 = numpy.empty(dd5.shape[1:])
+            for li in range(L):
+                for a in range(A):
+                    for e in range(E):
+                        dd4[a, e, li, :D] = compose_dds(dd5[:, a, e, li, :D])
+        else:
+            dd4 = dd5[0]
+        if crm:
+            csqs = crm.get_consequences()
+            df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
+            csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, crm.oqparam)
+            csqidx = {dc: i for i, dc in enumerate(csqs, D)}
+            for (cons, li), values in csq.items():
+                dd4[:, :, li, csqidx[cons]] = values
+        return dd4
 
     def todict(self):
         """
@@ -1721,14 +1778,12 @@ class RiskComputer(dict):
                         retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
                         dic['openquake.risklib.scientific.VulnerabilityFunction'][
                             'retro'] = retro
-                    rfdic['%s#%s' % (rf.id, lt)] = dic
-        df = self.asset_df
-        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfdic,
-                   wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   loss_types=self.loss_types,
-                   minimum_asset_loss=self.minimum_asset_loss,
-                   calculation_mode=self.calculation_mode)
+                    rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
+        dic = dict(risk_functions=rfdic, calculation_mode=self.calculation_mode)
+        if any(mal for mal in self.minimum_asset_loss.values()):
+            dic['minimum_asset_loss'] = self.minimum_asset_loss
+        if any(self.wdic[k] != 1 for k in self.wdic):
+            dic['wdic'] = {'%s#%s' % k: v for k, v in self.wdic.items()},
         return dic
 
     def pprint(self):
