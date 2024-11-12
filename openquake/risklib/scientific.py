@@ -1777,7 +1777,7 @@ class RiskComputer(dict):
                         retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
                         dic['openquake.risklib.scientific.VulnerabilityFunction'][
                             'retro'] = retro
-                    rfdic['%s#%s#%s' % (rf.peril, rf.id, lt)] = dic
+                    rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
         df = self.asset_df
         dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
                    risk_functions=rfdic,
