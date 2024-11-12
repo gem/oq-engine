@@ -1709,16 +1709,16 @@ class RiskComputer(dict):
                     update_losses(asset_df, out)
             yield out
 
-    def get_dd4(self, adf, gmf_df, C=0, rng=None, crm=None):
+    def get_dd4(self, adf, gmf_df, rng=None, C=0, crm=None):
         """
         :param adf:
             DataFrame of assets on the given site with the same taxonomy
         :param gmf_df:
             GMFs on the given site for E events
-        :param C:
-            Number of consequences
         :param rng:
             MultiEvent random generator or None
+        :param C:
+            Number of consequences
         :returns:
             damage distribution of shape (A, E, L, D+C)
         """

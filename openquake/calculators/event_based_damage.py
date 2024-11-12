@@ -102,7 +102,7 @@ def event_based_damage(df, oq, dstore, monitor):
             aids = adf.index.to_numpy()
             with mon:
                 rc = scientific.RiskComputer(crmodel, taxo)
-                dd4 = rc.get_dd4(adf, gmf_df, Dc-D, rng, crmodel)  # (A, E, L, Dc)
+                dd4 = rc.get_dd4(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:

@@ -780,7 +780,7 @@ class RiskComputerTestCase(unittest.TestCase):
             'lon': [83.31],
             'lat': [29.46],
             'site_id': [0],
-            'value-number': [1],
+            'value-number': [100],
             'value-structural': [11340.],
             'taxonomy': [2]})
         gmf_df = pandas.DataFrame({
@@ -789,8 +789,14 @@ class RiskComputerTestCase(unittest.TestCase):
             'gmv_0': [.098234, .165975],
             'DispProb': [.335, .335]})
         dd4 = rc.get_dd4(asset_df, gmf_df)  # (A, E, L, D)
-        dd0 = dd4[0, 0, 0]
-        dd1 = dd4[0, 1, 0]
-        aac(dd0, [0.75441498, 0.14538634, 0.08006072, 0.01669979, 0.00343817], atol=1e-8)
-        aac(dd1, [0.5850625 , 0.24564302, 0.13526958, 0.02821577, 0.00580913], atol=1e-8)
+        dd0 = dd4[0, 0, 0, 1:]
+        dd1 = dd4[0, 1, 0, 1:]
+        aac(dd0, [14.538632, 8.006071, 1.669978, 0.343819], atol=1e-6)
+        aac(dd1, [24.564302, 13.526962, 2.821575, 0.580912], atol=1e-6)
 
+        rng = scientific.MultiEventRNG(master_seed=42, eids=gmf_df.eid)
+        dd4 = rc.get_dd4(asset_df, gmf_df, rng)  # (A, E, L, D)
+        dd0 = dd4[0, 0, 0, 1:]
+        dd1 = dd4[0, 1, 0, 1:]
+        aac(dd0, [10, 8, 4, 0])
+        aac(dd1, [31, 14, 3, 0], atol=1e-8)
