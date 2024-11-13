@@ -33,6 +33,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.test import Client, override_settings
 from django.conf import settings
+from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
 from openquake.server.views import get_disp_val
@@ -112,8 +113,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 # # FIXME: we should use the overridden EMAIL_FILE_PATH,
                 # #        so email_dir would contain only one file
                 # email_file = os.listdir(email_dir)[0]
-                app_msgs_dir = os.path.join(tempfile.gettempdir(),
-                                            'app-messages')
+                app_msgs_dir = os.path.join(
+                    config.directory.custom_tmp or tempfile.gettempdir(),
+                    'app-messages')
                 email_files = glob.glob(os.path.join(app_msgs_dir, '*'))
                 email_file = max(email_files, key=os.path.getctime)
                 with open(os.path.join(email_dir, email_file), 'r') as f:

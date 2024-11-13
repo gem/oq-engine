@@ -288,7 +288,9 @@ if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
     #        parallel
-    EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
+    EMAIL_FILE_PATH = os.path.join(
+        config.directory.custom_tmp or tempfile.gettempdir(),
+        'app-messages')
 
 if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True

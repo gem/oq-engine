@@ -38,6 +38,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.datastructures import MultiValueDict
 from django.http import HttpResponseNotFound
 from openquake.commonlib.logs import dbcmd
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
@@ -155,10 +156,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
     def aristotle_run_then_remove(
             self, data, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
-            email_backend = 'django.core.mail.backends.filebased.EmailBackend'
-            with override_settings(
-                    EMAIL_FILE_PATH=email_dir,  # FIXME: this is ignored!
-                    EMAIL_BACKEND=email_backend):
+            with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
                 resp = self.post('aristotle_run', data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -174,8 +172,9 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                     raise ValueError(
                         b'Invalid JSON response: %r' % resp.content)
                 self.wait()
-                app_msgs_dir = os.path.join(tempfile.gettempdir(),
-                                            'app-messages')
+                app_msgs_dir = os.path.join(
+                    config.directory.custom_tmp or tempfile.gettempdir(),
+                    'app-messages')
                 for job_id in js:
                     if failure_reason:
                         tb = self.get('%s/traceback' % job_id)
