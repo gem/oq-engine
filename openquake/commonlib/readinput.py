@@ -1066,21 +1066,54 @@ def get_exposure(oqparam, h5=None):
     return exposure
 
 
-def read_df(fname, lon, lat, id):
+def concat_if_different(values):
+    unique_values = values.dropna().unique().astype(str)
+    # If all values are identical, return the single unique value,
+    # otherwise join with "|"
+    return '|'.join(unique_values)
+
+
+def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
-    Read a DataFrame containing lon-lat-id fields and raise an error
-    for duplicate sites, if any
+    Read a DataFrame containing lon-lat-id fields.
+    In case of rows having the same coordinates, duplicates_strategy
+    determines how to manage duplicates:
+
+    - 'error': raise an error (default)
+    - 'keep_first': keep the first occurrence
+    - 'keep_last': keep the last occurrence
+    - 'avg': calculate the average numeric values
     """
-    dframe = pandas.read_csv(fname)
+    assert duplicates_strategy in (
+        'error', 'keep_first', 'keep_last', 'avg'), duplicates_strategy
+    # NOTE: the id field has to be treated as a string even if it contains numbers
+    dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
     dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
-    for key, df in dframe.groupby([lon, lat]):
-        if len(df) > 1:
-            raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
+    duplicates = dframe[dframe.duplicated(subset=[lon, lat], keep=False)]
+    if not duplicates.empty:
+        msg = '%s: has duplicate sites %s' % (fname, list(duplicates[id]))
+        if duplicates_strategy == 'error':
+            raise InvalidFile(msg)
+        msg += f' (duplicates_strategy: {duplicates_strategy})'
+        logging.warning(msg)
+        if duplicates_strategy == 'keep_first':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
+        elif duplicates_strategy == 'keep_last':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='last')
+        elif duplicates_strategy == 'avg':
+            string_columns = dframe.select_dtypes(include='object').columns
+            numeric_columns = dframe.select_dtypes(include='number').columns
+            # Group by lon and lat, averaging numeric columns and concatenating by "|"
+            # the different contents of string columns
+            dframe = dframe.groupby([lon, lat], as_index=False).agg(
+                {**{col: concat_if_different for col in string_columns},
+                 **{col: 'mean' for col in numeric_columns}}
+            )
     return dframe
 
 
-def get_station_data(oqparam, sitecol):
+def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     """
     Read the station data input file and build a list of
     ground motion stations and recorded ground motion values
@@ -1090,14 +1123,15 @@ def get_station_data(oqparam, sitecol):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
+    :param duplicates_strategy: either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
     if parallel.oq_distribute() == 'zmq':
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'],
-                 'LONGITUDE', 'LATITUDE', 'STATION_ID')
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+                 duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
