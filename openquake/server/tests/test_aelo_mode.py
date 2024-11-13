@@ -47,18 +47,6 @@ except RuntimeError:
     raise unittest.SkipTest('Use Django to run such tests')
 
 
-# NOTE: Overriding the APPLICATION_MODE is tricky, because settings are first loaded
-# (also importing the local_settings and producing the cascade consequences), then it
-# becomes late for overriding. Therefore we need the local settings to contain the
-# correct application mode in advance, or we need to define the OQ_APPLICATION_MODE
-# before running tests.
-AELO_SETTINGS = {
-    'EMAIL_HOST_USER': 'aelonoreply@openquake.org',
-    'EMAIL_SUPPORT': 'aelosupport@openquake.org',
-}
-
-
-@override_settings(**AELO_SETTINGS)
 class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
@@ -88,11 +76,6 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         finally:
             cls.user.delete()
         super().tearDownClass()
-
-    def setUp(self):
-        self.assertEqual(settings.APPLICATION_MODE, 'AELO',
-                         'You may need to define OQ_APPLICATION_MODE=AELO')
-
 
     def aelo_run_then_remove(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:

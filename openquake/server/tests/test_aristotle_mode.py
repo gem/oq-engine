@@ -47,17 +47,6 @@ from openquake.baselib.general import gettemp
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 
 
-# NOTE: Overriding the APPLICATION_MODE is tricky, because settings are first loaded
-# (also importing the local_settings and producing the cascade consequences), then it
-# becomes late for overriding. Therefore we need the local settings to contain the
-# correct application mode in advance, or we need to define the OQ_APPLICATION_MODE
-# before running tests.
-ARISTOTLE_SETTINGS = {
-    'EMAIL_HOST_USER': 'aristotlenoreply@openquake.org',
-    'EMAIL_SUPPORT': 'aristotlesupport@openquake.org',
-}
-
-
 django.setup()
 try:
     from django.contrib.auth.models import User  # noqa
@@ -132,7 +121,6 @@ class EngineServerTestCase(django.test.TestCase):
                 return
 
 
-@override_settings(**ARISTOTLE_SETTINGS)
 class EngineServerAristotleModeTestCase(EngineServerTestCase):
 
     @classmethod
@@ -163,11 +151,6 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         finally:
             cls.user.delete()
         super().tearDownClass()
-
-    def setUp(self):
-        super().setUp()
-        self.assertEqual(settings.APPLICATION_MODE, 'ARISTOTLE',
-                         'You may need to define OQ_APPLICATION_MODE=ARISTOTLE')
 
     def aristotle_run_then_remove(
             self, data, failure_reason=None):

@@ -265,6 +265,12 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
+if TEST:
+    if APPLICATION_MODE == 'ARISTOTLE':
+        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+    elif APPLICATION_MODE == 'AELO':
+        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
+
 if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
