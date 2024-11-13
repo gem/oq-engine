@@ -32,12 +32,11 @@ import pathlib
 
 import django
 # from django.apps import apps
-from django.test import Client
+from django.test import Client, override_settings
 from django.conf import settings
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.datastructures import MultiValueDict
 from django.http import HttpResponseNotFound
-# from django.conf import settings
 from openquake.commonlib.logs import dbcmd
 from openquake.baselib.general import gettemp
 
@@ -46,6 +45,19 @@ from openquake.baselib.general import gettemp
 # NOTE: before importing User or any other model, django.setup() is needed,
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+
+
+# NOTE: Overriding the APPLICATION_MODE is tricky, because settings are first loaded
+# (also importing the local_settings and producing the cascade consequences), then it
+# becomes late for overriding. Therefore we need the local settings to contain the
+# correct application mode in advance, or we need to define the OQ_APPLICATION_MODE
+# before running tests.
+ARISTOTLE_SETTINGS = {
+    'WEBUI_ACCESS_LOG_DIR': '/home/openquake',
+    'EMAIL_HOST_USER': 'aristotlenoreply@openquake.org',
+    'EMAIL_SUPPORT': 'aristotlesupport@openquake.org',
+}
+
 
 django.setup()
 try:
@@ -121,10 +133,12 @@ class EngineServerTestCase(django.test.TestCase):
                 return
 
 
+@override_settings(**ARISTOTLE_SETTINGS)
 class EngineServerAristotleModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -149,18 +163,20 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             cls.wait()
         finally:
             cls.user.delete()
+        super().tearDownClass()
+
+    def setUp(self):
+        super().setUp()
+        self.assertEqual(settings.APPLICATION_MODE, 'ARISTOTLE',
+                         'You may need to define OQ_APPLICATION_MODE=ARISTOTLE')
 
     def aristotle_run_then_remove(
             self, data, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             email_backend = 'django.core.mail.backends.filebased.EmailBackend'
-            with self.settings(
-                    APPLICATION_MODE='ARISTOTLE',
-                    WEBUI_ACCESS_LOG_DIR='/home/openquake',
+            with override_settings(
                     EMAIL_FILE_PATH=email_dir,  # FIXME: this is ignored!
-                    EMAIL_BACKEND=email_backend,
-                    EMAIL_HOST_USER='aristotlenoreply@openquake.org',
-                    EMAIL_SUPPORT='aristotlesupport@openquake.org'):
+                    EMAIL_BACKEND=email_backend):
                 resp = self.post('aristotle_run', data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -477,9 +493,9 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', dict(archive=a))
-        assert resp.status_code == 404, resp
+        self.assertEqual(resp.status_code, 404, resp)
 
     def test_can_not_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
-        assert resp.status_code == 404, resp
+        self.assertEqual(resp.status_code, 404, resp)

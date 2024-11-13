@@ -31,7 +31,7 @@ import logging
 import django
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import Client
+from django.test import Client, override_settings
 from django.conf import settings
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
@@ -47,10 +47,23 @@ except RuntimeError:
     raise unittest.SkipTest('Use Django to run such tests')
 
 
+# NOTE: Overriding the APPLICATION_MODE is tricky, because settings are first loaded
+# (also importing the local_settings and producing the cascade consequences), then it
+# becomes late for overriding. Therefore we need the local settings to contain the
+# correct application mode in advance, or we need to define the OQ_APPLICATION_MODE
+# before running tests.
+AELO_SETTINGS = {
+    'EMAIL_HOST_USER': 'aelonoreply@openquake.org',
+    'EMAIL_SUPPORT': 'aelosupport@openquake.org',
+}
+
+
+@override_settings(**AELO_SETTINGS)
 class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -74,6 +87,12 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             cls.wait()
         finally:
             cls.user.delete()
+        super().tearDownClass()
+
+    def setUp(self):
+        self.assertEqual(settings.APPLICATION_MODE, 'AELO',
+                         'You may need to define OQ_APPLICATION_MODE=AELO')
+
 
     def aelo_run_then_remove(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
@@ -81,11 +100,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             # issues in case tests run in parallel, because we are checking the
             # last email that was created instead of the only email created in
             # a test-specific directory
-            with self.settings(
-                    APPLICATION_MODE='AELO',
-                    EMAIL_FILE_PATH=email_dir,
-                    EMAIL_HOST_USER='aelonoreply@openquake.org',
-                    EMAIL_SUPPORT='aelosupport@openquake.org'):
+            with override_settings(EMAIL_FILE_PATH=email_dir):
                 resp = self.post('aelo_run', params)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -237,7 +252,6 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         announcement.delete()
 
     def test_displayed_values(self):
-
         test_vals_in = [
             0.0000, 0.30164, 1.10043, 0.00101, 0.00113, 0.00115,
             0.0101, 0.0109, 0.0110, 0.1234, 0.126, 0.109, 0.101,
