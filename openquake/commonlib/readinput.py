@@ -1070,7 +1070,7 @@ def concat_if_different(values):
     unique_values = values.dropna().unique().astype(str)
     # If all values are identical, return the single unique value,
     # otherwise join with "|"
-    return unique_values[0] if len(unique_values) == 1 else '|'.join(unique_values)
+    return '|'.join(unique_values)
 
 
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):
@@ -1084,6 +1084,8 @@ def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     - 'keep_last': keep the last occurrence
     - 'avg': calculate the average numeric values
     """
+    assert duplicates_strategy in (
+        'error', 'keep_first', 'keep_last', 'avg'), duplicates_strategy
     # NOTE: the id field has to be treated as a string even if it contains numbers
     dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)

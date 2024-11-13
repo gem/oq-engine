@@ -983,7 +983,7 @@ class HazardCalculator(BaseCalculator):
             # which then is associated to the site parameters below
             self.station_data, self.observed_imts = \
                 readinput.get_station_data(oq, self.sitecol,
-                                           duplicates_strategy='error')
+                                           duplicates_strategy='avg')
             self.datastore.create_df('station_data', self.station_data)
             oq.observed_imts = self.observed_imts
 
