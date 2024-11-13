@@ -22,7 +22,7 @@ import numpy
 import pandas
 import shapely
 from openquake.baselib import hdf5, general
-from openquake.hazardlib import valid, geo, InvalidFile
+from openquake.hazardlib import valid, geo, InvalidFile, source
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 
@@ -104,7 +104,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
     # computed losses and fatalities for binary_perils
     for rec in arr:
-        haz = hazard[rec['site_id']]
+        haz = hazard.loc[rec['site_id']]
         for loss_type in loss_types:
             value = rec['value-' + loss_type]
             for peril in binary_perils:
@@ -177,16 +177,17 @@ class MultiRiskCalculator(base.RiskCalculator):
     def import_perils(self):  # called in pre_execute
         """
         Read the hazard fields as csv files, associate them to the sites
-        and create the `hazard` dataset.
+        and create suitable `gmf_data` and `events`.
         """
         oq = self.oqparam
         perils, fnames = zip(*oq.inputs['multi_peril'].items())
         dt = numpy.dtype([(haz, float) for haz in perils])
         N = len(self.sitecol)
         self.datastore.create_dset('multi_peril', dt, (N,), fillvalue=None)
+        data = {'sid': self.sitecol.sids, 'eid': numpy.zeros(N, numpy.uint32)}
+        names = []
         for name, fname in zip(perils, fnames):
-            tofloat = (valid.positivefloat if name == 'ASH'
-                       else valid.probability)
+            tofloat = valid.positivefloat if name == 'ASH' else valid.probability
             with open(fname) as f:
                 header = next(f)
             if 'geom' in header:
@@ -196,7 +197,10 @@ class MultiRiskCalculator(base.RiskCalculator):
                                   oq.asset_hazard_distance)
             if peril.sum() == 0:
                 logging.warning('No sites were affected by %s' % name)
-            self.datastore['multi_peril'][name] = peril
+            data[name] = peril
+            names.append(name)
+        self.datastore['events'] = numpy.zeros(1, source.rupture.events_dt)     
+        base.create_gmf_data(self.datastore, [], names, data, N)
 
     def execute(self):
         """
@@ -214,14 +218,14 @@ class MultiRiskCalculator(base.RiskCalculator):
         perils = []
         if 'ASH' in theperils:
             assets = general.group_array(self.assetcol, 'site_id')
-            gmf = self.datastore['multi_peril']['ASH']
+            gmf = self.datastore['gmf_data/ASH'][:]
             dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf,
                                         self.oqparam.time_event)
             perils.append('ASH_DRY')
             dmg_csq[:, 1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
                                         self.oqparam.time_event)
             perils.append('ASH_WET')
-        hazard = self.datastore['multi_peril']
+        hazard = self.datastore.read_df('gmf_data', 'sid')
         binary_perils = []
         for peril in theperils:
             if peril != 'ASH':
