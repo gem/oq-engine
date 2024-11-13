@@ -15,14 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import csv
 import json
-import logging
 import numpy
 import pandas
-import shapely
 from openquake.baselib import hdf5, general
-from openquake.hazardlib import valid, geo, InvalidFile, source
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 
@@ -118,54 +114,6 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     return arr
 
 
-def csv2peril(fname, name, sitecol, tofloat, asset_hazard_distance):
-    """
-    Converts a CSV file into a peril array of length N
-    """
-    data = []
-    with open(fname) as f:
-        for row in csv.DictReader(f):
-            intensity = tofloat(row['intensity'])
-            if intensity > 0:
-                data.append((valid.longitude(row['lon']),
-                             valid.latitude(row['lat']),
-                             intensity))
-    data = numpy.array(data, [('lon', float), ('lat', float),
-                              ('number', float)])
-    logging.info('Read %s with %d rows' % (fname, len(data)))
-    if len(data) != len(numpy.unique(data[['lon', 'lat']])):
-        raise InvalidFile('There are duplicated points in %s' % fname)
-    try:
-        distance = asset_hazard_distance[name]
-    except KeyError:
-        distance = asset_hazard_distance['default']
-    sites, filtdata, _discarded = geo.utils.assoc(
-        data, sitecol, distance, 'filter')
-    peril = numpy.zeros(len(sitecol), float)
-    peril[sites.sids] = filtdata['number']
-    return peril
-
-
-def wkt2peril(fname, name, sitecol):
-    """
-    Converts a WKT file into a peril array of length N
-    """
-    with open(fname) as f:
-        header = next(f)  # skip header
-        if header != 'geom\n':
-            raise ValueError('%s has header %r, should be geom instead' %
-                             (fname, header))
-        wkt = f.read()
-        if not wkt.startswith('"'):
-            raise ValueError('The geometry must be quoted in %s : "%s..."' %
-                             (fname, wkt.split('(')[0]))
-        geom = shapely.wkt.loads(wkt.strip('"'))  # strip quotes
-    peril = numpy.zeros(len(sitecol), float)
-    for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
-        peril[sid] = shapely.geometry.Point(lon, lat).within(geom)
-    return peril
-
-
 @base.calculators.add('multi_risk')
 class MultiRiskCalculator(base.RiskCalculator):
     """
@@ -173,32 +121,6 @@ class MultiRiskCalculator(base.RiskCalculator):
     """
     core_task = None  # no parallel
     is_stochastic = True
-
-    def import_perils(self):  # called in pre_execute
-        """
-        Read the hazard fields as csv files, associate them to the sites
-        and create suitable `gmf_data` and `events`.
-        """
-        oq = self.oqparam
-        perils, fnames = zip(*oq.inputs['multi_peril'].items())
-        N = len(self.sitecol)
-        data = {'sid': self.sitecol.sids, 'eid': numpy.zeros(N, numpy.uint32)}
-        names = []
-        for name, fname in zip(perils, fnames):
-            tofloat = valid.positivefloat if name == 'ASH' else valid.probability
-            with open(fname) as f:
-                header = next(f)
-            if 'geom' in header:
-                peril = wkt2peril(fname, name, self.sitecol)
-            else:
-                peril = csv2peril(fname, name, self.sitecol, tofloat,
-                                  oq.asset_hazard_distance)
-            if peril.sum() == 0:
-                logging.warning('No sites were affected by %s' % name)
-            data[name] = peril
-            names.append(name)
-        self.datastore['events'] = numpy.zeros(1, source.rupture.events_dt)     
-        base.create_gmf_data(self.datastore, [], names, data, N)
 
     def execute(self):
         """
