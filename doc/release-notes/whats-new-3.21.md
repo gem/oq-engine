@@ -215,11 +215,6 @@ It is now possible to specify the parameter `maximum_distance_stations`,
 either from command line or from the WebUi. The `maximum_distance` was
 already there, but now has a default of 100 km to ensure faster calculations.
 
-We improved the procedure for generating hazardlib ruptures, automatically setting
-the `dip` and `strike` parameters when possible. In case of errors in
-the geometry a planar rupture with the given magnitude, hypocenter dip
-and strike is automatically generated.
-
 We added a dropdown menu so that the user can override the
 `time_event` parameter, which by default is automatically set
 depending on the local time of occurrence of the earthquake.
