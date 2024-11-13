@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
+import csv
 import sys
 import abc
 import pdb
@@ -28,7 +29,7 @@ import operator
 import traceback
 import getpass
 from datetime import datetime
-from shapely import wkt
+from shapely import wkt, geometry
 import psutil
 import numpy
 import pandas
@@ -41,7 +42,7 @@ from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
-    InvalidFile, site, stats, logictree, source_reader)
+    InvalidFile, valid, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -159,6 +160,54 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
+
+
+def csv2peril(fname, name, sitecol, tofloat, asset_hazard_distance):
+    """
+    Converts a CSV file into a peril array of length N
+    """
+    data = []
+    with open(fname) as f:
+        for row in csv.DictReader(f):
+            intensity = tofloat(row['intensity'])
+            if intensity > 0:
+                data.append((valid.longitude(row['lon']),
+                             valid.latitude(row['lat']),
+                             intensity))
+    data = numpy.array(data, [('lon', float), ('lat', float),
+                              ('number', float)])
+    logging.info('Read %s with %d rows' % (fname, len(data)))
+    if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+        raise InvalidFile('There are duplicated points in %s' % fname)
+    try:
+        distance = asset_hazard_distance[name]
+    except KeyError:
+        distance = asset_hazard_distance['default']
+    sites, filtdata, _discarded = geo.utils.assoc(
+        data, sitecol, distance, 'filter')
+    peril = numpy.zeros(len(sitecol), float)
+    peril[sites.sids] = filtdata['number']
+    return peril
+
+
+def wkt2peril(fname, name, sitecol):
+    """
+    Converts a WKT file into a peril array of length N
+    """
+    with open(fname) as f:
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
+        text = f.read()
+        if not text.startswith('"'):
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
+                             (fname, text.split('(')[0]))
+        geom = wkt.loads(text.strip('"'))  # strip quotes
+    peril = numpy.zeros(len(sitecol), float)
+    for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
+        peril[sid] = geometry.Point(lon, lat).within(geom)
+    return peril
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -585,8 +634,32 @@ class HazardCalculator(BaseCalculator):
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
 
-    def import_perils(self):
-        """Defined in MultiRiskCalculator"""
+
+    def import_perils(self):  # called in pre_execute
+        """
+        Read the hazard fields as csv files, associate them to the sites
+        and create suitable `gmf_data` and `events`.
+        """
+        oq = self.oqparam
+        perils, fnames = zip(*oq.inputs['multi_peril'].items())
+        N = len(self.sitecol)
+        data = {'sid': self.sitecol.sids, 'eid': numpy.zeros(N, numpy.uint32)}
+        names = []
+        for name, fname in zip(perils, fnames):
+            tofloat = valid.positivefloat if name == 'ASH' else valid.probability
+            with open(fname) as f:
+                header = next(f)
+            if 'geom' in header:
+                peril = wkt2peril(fname, name, self.sitecol)
+            else:
+                peril = csv2peril(fname, name, self.sitecol, tofloat,
+                                  oq.asset_hazard_distance)
+            if peril.sum() == 0:
+                logging.warning('No sites were affected by %s' % name)
+            data[name] = peril
+            names.append(name)
+        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)     
+        create_gmf_data(self.datastore, [], names, data, N)
 
     def pre_execute(self):
         """
