@@ -123,6 +123,8 @@ SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # NOTE: the following can be useful for debugging
+    # 'openquake.server.middleware.PrintHeadersMiddleware',
 )
 
 # Authentication is not enabled by default

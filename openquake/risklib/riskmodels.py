@@ -460,36 +460,50 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
 
 
 # used only in riskmodels_test
-def get_riskcomputer(dic, alias):
+def get_riskcomputer(dic, alias, limit_states=()):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
-    rc.asset_df = pandas.DataFrame(dic['asset_df'])
+    rc.D = len(limit_states) + 1
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     steps = dic.get('lrem_steps_per_interval', 1)
-    mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
+    lts = set()
+    riskid_perils = set()
+    perils = set()
     for rlk, func in dic['risk_functions'].items():
-        riskid, lt = rlk.split('#')
+        peril, lt, riskid = rlk.split('#')
+        perils.add(peril)
+        riskid_perils.add((riskid, peril))
+        lts.add(lt)
         rf = hdf5.json_to_obj(json.dumps(func))
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
-            rf.peril = 'earthquake'
+            rf.peril = peril
         if getattr(rf, 'retro', False):
             rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
             rf.retro.init()
             rf.retro.loss_type = lt
+        if hasattr(rf, 'array'):  # fragility
+            rf = rf.build(limit_states)
         rfs[riskid].append(rf)
+    lts = sorted(lts)
+    mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
+    for riskid in rfs:
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        group_by_peril(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
         rc[riskid] = rm
-    for rlt, weight in dic['wdic'].items():
-        riskid, lt = rlt.split('#')
-        rc.wdic[riskid, lt] = weight
-    rc.loss_types = dic['loss_types']
+    if 'wdic' in dic:
+        for rlt, weight in dic['wdic'].items():
+            riskid, peril = rlt.split('#')
+            rc.wdic[riskid, peril] = weight
+    else:
+        rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+    rc.P = len(perils)
+    rc.loss_types = lts
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']
     return rc
@@ -661,8 +675,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
-                        cdict = _cdict(dd5[:, :, :, li, 1:], coeffs, df, lt, self.perils)
-                        # array loss_type -> peril -> coeffs for the given loss type
+                        # dict loss_type -> peril -> coeffs for the given loss type
+                        cdict = _cdict(dd5[:, :, :, li, 1:],
+                                       coeffs, df, lt, self.perils)
                         csq[consequence, li] += scientific.consequence(
                             consequence, assets, cdict, lt, oq.time_event)
         return csq
@@ -829,7 +844,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None):
+    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None, country='?'):
         """
         :param asset_df: a DataFrame of assets with the same taxonomy and country
         :param haz: a DataFrame of GMVs on the sites of the assets
@@ -842,8 +857,9 @@ class CompositeRiskModel(collections.abc.Mapping):
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()
         # _assert_equal(dic, dic2)
-        rc = scientific.RiskComputer(self, asset_df)
-        out = rc.output(haz, sec_losses, rndgen)
+        [taxidx] = asset_df.taxonomy.unique()
+        rc = scientific.RiskComputer(self, taxidx, country)
+        out = rc.output(asset_df, haz, sec_losses, rndgen)
         return list(out)
 
     def __iter__(self):
