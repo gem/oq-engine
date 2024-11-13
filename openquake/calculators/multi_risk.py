@@ -181,9 +181,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         perils, fnames = zip(*oq.inputs['multi_peril'].items())
-        dt = numpy.dtype([(haz, float) for haz in perils])
         N = len(self.sitecol)
-        self.datastore.create_dset('multi_peril', dt, (N,), fillvalue=None)
         data = {'sid': self.sitecol.sids, 'eid': numpy.zeros(N, numpy.uint32)}
         names = []
         for name, fname in zip(perils, fnames):
