@@ -265,12 +265,6 @@ except ImportError:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if TEST:
-    if APPLICATION_MODE == 'ARISTOTLE':
-        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
-    elif APPLICATION_MODE == 'AELO':
-        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
-
 if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
@@ -286,7 +280,10 @@ if APPLICATION_MODE not in ('PUBLIC',):
     COOKIE_CONSENT_LOG_ENABLED = False
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+    elif APPLICATION_MODE == 'AELO':
+        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
