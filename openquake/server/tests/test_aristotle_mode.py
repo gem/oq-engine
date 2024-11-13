@@ -53,7 +53,6 @@ from openquake.baselib.general import gettemp
 # correct application mode in advance, or we need to define the OQ_APPLICATION_MODE
 # before running tests.
 ARISTOTLE_SETTINGS = {
-    'WEBUI_ACCESS_LOG_DIR': '/home/openquake',
     'EMAIL_HOST_USER': 'aristotlenoreply@openquake.org',
     'EMAIL_SUPPORT': 'aristotlesupport@openquake.org',
 }
