@@ -40,6 +40,7 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from importlib.metadata import version, PackageNotFoundError
 from contextlib import contextmanager
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
@@ -545,10 +546,14 @@ def check_dependencies():
     with open(os.path.join(repodir, reqfile)) as f:
         lines = f.readlines()
     for pkg, expected in extract_dependencies(lines):
-        version = __import__(pkg).__version__
-        if version != expected:
+        try:
+            installed_version = version(pkg)
+        except PackageNotFoundError:
+            # handling cases such as "No package metadata was found for zmq"
+            installed_version = __import__(pkg).__version__
+        if installed_version != expected:
             logging.warning('%s is at version %s but the requirements say %s' %
-                            (pkg, version, expected))
+                            (pkg, installed_version, expected))
 
 
 def run_in_process(code, *args):
