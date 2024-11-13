@@ -160,7 +160,7 @@ where `N` is the number of workers. We suggest `N = 4`.
 If you need to set a limit on the resources available for the OpenQuake service, Systemd offers a simple solution to create resource limits for a service,
 a unit type called "slice".
 
-This is a control group, which may apply limits that affect all processes in this slice / control group.
+This is a control group, which may apply limits that affect all processes in this slice/control group.
 
 To create a slice called webui.slice:
 
