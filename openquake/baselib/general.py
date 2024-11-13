@@ -550,6 +550,7 @@ def check_dependencies():
             installed_version = version(pkg)
         except PackageNotFoundError:
             # handling cases such as "No package metadata was found for zmq"
+            # (in other cases, e.g. timezonefinder, __version__ is not defined)
             installed_version = __import__(pkg).__version__
         if installed_version != expected:
             logging.warning('%s is at version %s but the requirements say %s' %
