@@ -280,12 +280,17 @@ if APPLICATION_MODE not in ('PUBLIC',):
     COOKIE_CONSENT_LOG_ENABLED = False
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+    elif APPLICATION_MODE == 'AELO':
+        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
     #        parallel
-    EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
+    EMAIL_FILE_PATH = os.path.join(
+        config.directory.custom_tmp or tempfile.gettempdir(),
+        'app-messages')
 
 if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
