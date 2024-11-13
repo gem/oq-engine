@@ -151,13 +151,9 @@ class MultiRiskCalculator(base.RiskCalculator):
             if peril != 'ASH':
                 binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(
-            self.assetcol, dmg_csq, hazard, ltypes, dstates,
-            perils, binary_perils)
+            self.assetcol, dmg_csq, hazard, ltypes, dstates, perils, binary_perils)
         self.all_perils = perils + binary_perils
         return arr
-
-    def get_fields(self, cat):
-        return [cat + '-' + peril for peril in self.all_perils]
 
     def post_execute(self, arr):
         """
@@ -174,7 +170,8 @@ class MultiRiskCalculator(base.RiskCalculator):
         cats = []
         values = []
         for cat in categories:
-            val = [tot.get(f, numpy.nan) for f in self.get_fields(cat)]
+            fields = [cat + '-' + peril for peril in self.all_perils]
+            val = [tot.get(f, numpy.nan) for f in fields]
             if not numpy.isnan(val).all():
                 cats.append(cat)
                 values.append(val)
