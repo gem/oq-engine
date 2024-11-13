@@ -155,6 +155,11 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
+### limit systemd services with control group ( slice )
+
+If you need to set a limit on the resources available for the OpenQuake service, Systemd offers a simple solution to create resource limits for a service.
+Systemd offers a unit type called "slice".
+This is a control group, which may apply limits that affect all processes in this slice / control group.
 
 ### nginx
 
