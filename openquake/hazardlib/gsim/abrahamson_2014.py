@@ -421,6 +421,7 @@ def get_epistemic_sigma(ctx):
 
     return sigma_epi
 
+
 class AbrahamsonEtAl2014(GMPE):
     """
     Implements GMPE by Abrahamson, Silva and Kamai developed within the

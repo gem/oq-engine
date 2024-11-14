@@ -32,7 +32,13 @@ class MultiRiskTestCase(CalculatorTestCase):
         # case with volcanic multiperil ASH, LAVA, LAHAR, PYRO
         self.run_calc(case_1.__file__, 'job.ini')
 
-        # check extract
+        # check extract gmf_data, called by QGIS
+        aw = extract(self.calc.datastore, 'gmf_data?event_id=0')
+        ae(len(aw['rlz-000']), 173)
+        ae(aw['rlz-000'].dtype.names,
+           ('custom_site_id', 'lon', 'lat', 'ASH', 'LAVA', 'LAHAR', 'PYRO'))
+
+        # check extract exposure_metadata
         md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
         ae(md['names'], ['value-number', 'value-structural', 'occupants_night'])
         ae(md['multi_risk'], ['collapse-structural-ASH_DRY',
