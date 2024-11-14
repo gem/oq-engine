@@ -55,7 +55,6 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
-    general.check_dependencies()
     dbserver.ensure_on()  # start the dbserver in a subprocess
     # reset any computation left in the 'executing' state
     db.actions.reset_is_running(dbserver.db)
