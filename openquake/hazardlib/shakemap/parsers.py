@@ -267,8 +267,9 @@ def utc_to_local_time(utc_timestamp, lon, lat):
         raise ImportError(
             'The python package "timezonefinder" is not installed. It is'
             ' required in order to convert the UTC time to the local time of'
-            ' the event. You can install it running:'
-            ' pip install timezonefinder==6.5.2')
+            ' the event. You can install it from'
+            ' https://wheelhouse.openquake.org/v3/linux/ choosing the one'
+            ' corresponding to the installed python version.')
     tf = TimezoneFinder()
     timezone_str = tf.timezone_at(lng=lon, lat=lat)
     if timezone_str is None:

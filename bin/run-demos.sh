@@ -7,7 +7,6 @@ fi
 
 oq info venv
 oq info cfg
-oq webui start & # test extract_dependencies
 
 # create .tmp.ini files with oqparam.to_ini()
 python -m openquake.calculators.checkers "$1"

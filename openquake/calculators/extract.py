@@ -979,9 +979,8 @@ def extract_gmf_npz(dstore, what):
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
-        imts = list(oq.imtls)
-        sec_imts = oq.sec_imts
-        gmfa = _gmf(df, n, imts, sec_imts)
+        prim_imts = list(oq.get_primary_imtls())
+        gmfa = _gmf(df, n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
