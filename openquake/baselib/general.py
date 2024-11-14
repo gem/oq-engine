@@ -463,6 +463,19 @@ def removetmp():
                 pass
 
 
+def check_extension(fnames):
+    """
+    Make sure all file names have the same extension
+    """
+    if not fnames:
+        return
+    _, extension = os.path.splitext(fnames[0])
+    for fname in fnames[1:]:
+        _, ext = os.path.splitext(fname)
+        if ext != extension:
+            raise NameError(f'{fname} does not end with {ext}')
+
+
 def engine_version():
     """
     :returns: __version__ + `<short git hash>` if Git repository found

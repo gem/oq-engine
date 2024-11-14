@@ -677,9 +677,9 @@ class HazardCalculator(BaseCalculator):
                 self.read_inputs()
             if 'gmfs' in oq.inputs:
                 self.datastore['full_lt'] = logictree.FullLogicTree.fake()
-                if oq.inputs['gmfs'].endswith('.csv'):
+                if oq.inputs['gmfs'][0].endswith('.csv'):
                     eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
-                elif oq.inputs['gmfs'].endswith('.hdf5'):
+                elif oq.inputs['gmfs'][0].endswith('.hdf5'):
                     eids = import_gmfs_hdf5(self.datastore, oq)
                 else:
                     raise NotImplementedError(
@@ -942,8 +942,8 @@ class HazardCalculator(BaseCalculator):
         elif oq.hazard_calculation_id:
             haz_sitecol = read_parent_sitecol(oq, self.datastore)
         else:
-            if 'gmfs' in oq.inputs and oq.inputs['gmfs'].endswith('.hdf5'):
-                with hdf5.File(oq.inputs['gmfs']) as f:
+            if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
+                with hdf5.File(oq.inputs['gmfs'][0]) as f:
                     haz_sitecol = f['sitecol']
             else:
                 haz_sitecol = readinput.get_site_collection(
@@ -1284,7 +1284,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     :param sitecol: the site collection
     :returns: event_ids
     """
-    fname = oqparam.inputs['gmfs']
+    fname = oqparam.inputs['gmfs'][0]
     dtdict = {'sid': U32,
               'eid': U32,
               'custom_site_id': (numpy.bytes_, 8),
@@ -1360,7 +1360,7 @@ def _getset_attrs(oq):
     # read effective_time, num_events and imts from oq.inputs['gmfs']
     # if the format of the file is old (v3.11) also sets the attributes
     # investigation_time and ses_per_logic_tree_path on `oq`
-    with hdf5.File(oq.inputs['gmfs'], 'r') as f:
+    with hdf5.File(oq.inputs['gmfs'][0], 'r') as f:
         attrs = f['gmf_data'].attrs
         etime = attrs.get('effective_time')
         num_events = attrs.get('num_events')
@@ -1401,7 +1401,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     # ownership would break calc_XXX.hdf5; therefore we copy everything
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
-    with hdf5.File(oqparam.inputs['gmfs'], 'r') as f:
+    with hdf5.File(oqparam.inputs['gmfs'][0], 'r') as f:
         f.copy('gmf_data', dstore.hdf5)
         dstore['sitecol'] = f['sitecol']  # complete by construction
     attrs = _getset_attrs(oqparam)
