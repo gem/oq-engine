@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Enhanced gmfs_file to multiple .hdf5 files, assuming they correspond to
+  * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
     disjoint sites and events
 
   [Paolo Tormene]

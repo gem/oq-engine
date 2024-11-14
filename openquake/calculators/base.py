@@ -1358,6 +1358,7 @@ def _getset_attrs(oq):
     # read effective_time, num_events and imts from oq.inputs['gmfs']
     # if the format of the file is old (v3.11) also sets the attributes
     # investigation_time and ses_per_logic_tree_path on `oq`
+    num_sites = []
     num_events = []
     for fname in oq.inputs['gmfs']:
         with hdf5.File(fname, 'r') as f:
@@ -1381,7 +1382,9 @@ def _getset_attrs(oq):
             else:  # engine >= 3.12
                 num_events.append(attrs['num_events'])
                 imts = attrs['imts'].split()
-    return dict(effective_time=etime, num_events=num_events, imts=imts)
+            num_sites.append(len(f['sitecol']))
+    return dict(effective_time=etime, num_events=num_events, num_sites=num_sites,
+                imts=imts)
 
 
 def import_gmfs_hdf5(dstore, oqparam):
@@ -1407,19 +1410,21 @@ def import_gmfs_hdf5(dstore, oqparam):
     fnames = oqparam.inputs['gmfs']
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
-            f.copy('gmf_data', dstore.hdf5)
             dstore['sitecol'] = f['sitecol']  # complete by construction
+            f.copy('gmf_data', dstore.hdf5)
     else:  # merge the sites and the gmfs
+        dstore['sitecol'] = site.merge_sitecols(fnames, check_gmfs=True)
         create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E)
-        offset = 0
-        for fname, ne in zip(fnames, attrs['num_events']):
+        nS, nE = 0, 0
+        for fname, ns, ne in zip(fnames, attrs['num_sites'], attrs['num_events']):
             with hdf5.File(fname, 'r') as f:
                 gmf_df = f.read_df('gmf_data')
-                gmf_df['eid'] += offset  # add an offset to the event IDs
-                offset += ne
+                gmf_df['sid'] += nS  # add an offset to the site IDs
+                gmf_df['eid'] += nE  # add an offset to the event IDs
+                nS += ns
+                nE += ne
                 for col in gmf_df.columns:
                     hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col].to_numpy())
-        dstore['sitecol'] = site.merge_sitecols(fnames, check_gmfs=True)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
