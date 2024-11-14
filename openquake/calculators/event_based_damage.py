@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-from dataclasses import dataclass
 import numpy
 import pandas
 
@@ -36,18 +35,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
-@dataclass
-class Dparam:
-    """
-    Parameters for a damage calculation
-    """
-    eids: U32
-    aggids: U16
-    csqidx: dict
-    D: int
-    Dc: int
-    rng: scientific.MultiEventRNG
 
 
 def zero_dmgcsq(A, R, L, crmodel):
@@ -78,55 +65,6 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     return event_based_damage(df, oqparam, dstore, monitor)
 
 
-def _gen_dd4(asset_df, gmf_df, crmodel, dparam, mon):
-    # yields (aids, dd4) triples 
-    # this part is quite slow for discrete damage distributions
-    oq = crmodel.oqparam
-    E = len(dparam.eids)
-    P = len(crmodel.perils)
-    L = len(oq.loss_types)
-    for taxo, adf in asset_df.groupby('taxonomy'):
-        with mon:
-            outs = crmodel.get_outputs(adf, gmf_df)  # dicts loss_type -> array
-            aids = adf.index.to_numpy()
-            A = len(aids)
-            assets = adf.to_records()
-            if oq.float_dmg_dist:
-                number = assets['value-number']
-            else:
-                number = assets['value-number'] = U32(assets['value-number'])
-            dd5 = numpy.zeros((P, A, E, L, dparam.Dc), F32)
-            D = dparam.D
-            for p, out in enumerate(outs):
-                for li, lt in enumerate(oq.loss_types):
-                    fractions = out[lt]  # shape (A, E, Dc)
-                    if oq.float_dmg_dist:
-                        for a in range(A):
-                            dd5[p, a, :, li, :D] = fractions[a] * number[a]
-                    else:
-                        # this is a performance distaster; for instance
-                        # the Messina test in oq-risk-tests becomes 12x
-                        # slower even if it has only 25_736 assets
-                        dd5[p, :, :, li, :D] = dparam.rng.discrete_dmg_dist(
-                            dparam.eids, fractions, number)
-
-            # compose damage distributions
-            if P > 1:
-                dd4 = numpy.empty(dd5.shape[1:])
-                for li in range(L):
-                    for a in range(A):
-                        for e in range(E):
-                            dd4[a, e, li, :D] = scientific.compose_dds(
-                                dd5[:, a, e, li, :D])
-            else:
-                dd4 = dd5[0]
-            df = crmodel.tmap_df[crmodel.tmap_df.taxi == assets[0]['taxonomy']]
-            csq = crmodel.compute_csq(assets, dd5[:, :, :, :, :D], df, oq)
-            for (name, li), values in csq.items():
-                dd4[:, :, li, dparam.csqidx[name]] = values
-        yield aids, dd4  # dd4 has shape (A, E, L, Dc)
-
-
 def event_based_damage(df, oq, dstore, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -144,11 +82,9 @@ def event_based_damage(df, oq, dstore, monitor):
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
-    dmg_csq = crmodel.get_dmg_csq()
-    csqidx = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     _A, R, L, Dc = dmgcsq.shape
-    D = Dc - len(crmodel.get_consequences())
+    D = len(crmodel.damage_states)
     rlzs = dstore['events']['rlz_id']
     dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
@@ -162,9 +98,11 @@ def event_based_damage(df, oq, dstore, monitor):
                 oq.master_seed, numpy.unique(eids))
         else:
             rng = None
-        dparam = Dparam(eids, aggids, csqidx, D, Dc, rng)
-        for aids, dd4 in _gen_dd4(asset_df, gmf_df, crmodel, dparam, mon):
-            # dd4 has shape (A, E, L, Dc)
+        for taxo, adf in asset_df.groupby('taxonomy'):
+            aids = adf.index.to_numpy()
+            with mon:
+                rc = scientific.RiskComputer(crmodel, taxo)
+                dd4 = rc.get_dd4(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[aids, 0] += dd4.sum(axis=1)
             else:
@@ -174,9 +112,10 @@ def event_based_damage(df, oq, dstore, monitor):
             for e, eid in enumerate(eids):
                 dddict[eid, oq.K] += tot[e]
                 if oq.K:
-                    for kids in dparam.aggids:
+                    for kids in aggids:
                         for a, aid in enumerate(aids):
                             dddict[eid, kids[aid]] += dd4[a, e]
+    csqidx = {dc: i + 1 for i, dc in enumerate(crmodel.get_dmg_csq())}
     return _dframe(dddict, csqidx, oq.loss_types), dmgcsq
 
 
@@ -233,8 +172,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                 oq.aggregate_by, oq.max_aggregations)
         else:
             aggids = 0
-        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq,
-                                      self.datastore, self._monitor)
+        smap = calc.starmap_from_gmfs(
+            damage_from_gmfs, oq, self.datastore, self._monitor)
         smap.monitor.save('aggids', aggids)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)

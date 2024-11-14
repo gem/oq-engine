@@ -45,7 +45,7 @@ from shapely import wkt, geometry
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, get_duplicates, gettemp, AccumDict)
+    random_filter, countby, get_duplicates, check_extension, gettemp, AccumDict)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -152,7 +152,18 @@ def normpath(fnames, base_path):
     return vals
 
 
-def normalize(key, fnames, base_path):
+def _normalize(key, fnames, base_path):
+    # returns (input_type, filenames)
+
+    # check that all the fnames have the same extension
+    # NB: for consequences fnames is a list of lists
+    flatten = []
+    for fname in fnames:
+        if isinstance(fname, list):
+            flatten.extend(fname)
+        else:
+            flatten.append(fname)
+    check_extension(flatten)
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
     for val in fnames:
@@ -191,18 +202,19 @@ def update(params, items, base_path):
     """
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
+                   'gmfs_csv', 'gmfs_file',
                    'site_model_csv', 'site_model_file',
                    'exposure_csv', 'exposure_file'):
-            input_type, fnames = normalize(key, value.split(), base_path)
+            input_type, fnames = _normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
-                input_type, fnames = normalize(key, dic.values(), base_path)
+                input_type, fnames = _normalize(key, dic.values(), base_path)
                 params['inputs'][input_type] = dict(zip(dic, fnames))
                 params[input_type] = ' '.join(dic)
             elif value:
-                input_type, fnames = normalize(key, [value], base_path)
+                input_type, fnames = _normalize(key, [value], base_path)
                 assert len(fnames) in (0, 1)
                 for fname in fnames:
                     params['inputs'][input_type] = fname
@@ -210,7 +222,8 @@ def update(params, items, base_path):
                 # remove the key if the value is empty
                 basekey, _file = key.rsplit('_', 1)
                 params['inputs'].pop(basekey, None)
-        elif isinstance(value, str) and value.endswith('.hdf5'):
+        elif (isinstance(value, str) and value.endswith('.hdf5')
+              and key != 'description'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
                             'adv-manual/equivalent-distance-app for the new '
@@ -765,11 +778,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
             # but it is not an error, it is actually the most common case!
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
-                            {StdDev.TOTAL}):
-                modifications = list(gsim.kwargs.keys())
-                if not (type(gsim).__name__ == 'ModifiableGMPE' and
-                        'add_between_within_stds' in modifications):
-                    raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+                            {StdDev.TOTAL}) and not oqparam.with_betw_ratio:
+                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.error('IMT-dependent weights in the logic tree cannot work '
@@ -1069,21 +1079,54 @@ def get_exposure(oqparam, h5=None):
     return exposure
 
 
-def read_df(fname, lon, lat, id):
+def concat_if_different(values):
+    unique_values = values.dropna().unique().astype(str)
+    # If all values are identical, return the single unique value,
+    # otherwise join with "|"
+    return '|'.join(unique_values)
+
+
+def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
-    Read a DataFrame containing lon-lat-id fields and raise an error
-    for duplicate sites, if any
+    Read a DataFrame containing lon-lat-id fields.
+    In case of rows having the same coordinates, duplicates_strategy
+    determines how to manage duplicates:
+
+    - 'error': raise an error (default)
+    - 'keep_first': keep the first occurrence
+    - 'keep_last': keep the last occurrence
+    - 'avg': calculate the average numeric values
     """
-    dframe = pandas.read_csv(fname)
+    assert duplicates_strategy in (
+        'error', 'keep_first', 'keep_last', 'avg'), duplicates_strategy
+    # NOTE: the id field has to be treated as a string even if it contains numbers
+    dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
     dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
-    for key, df in dframe.groupby([lon, lat]):
-        if len(df) > 1:
-            raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
+    duplicates = dframe[dframe.duplicated(subset=[lon, lat], keep=False)]
+    if not duplicates.empty:
+        msg = '%s: has duplicate sites %s' % (fname, list(duplicates[id]))
+        if duplicates_strategy == 'error':
+            raise InvalidFile(msg)
+        msg += f' (duplicates_strategy: {duplicates_strategy})'
+        logging.warning(msg)
+        if duplicates_strategy == 'keep_first':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
+        elif duplicates_strategy == 'keep_last':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='last')
+        elif duplicates_strategy == 'avg':
+            string_columns = dframe.select_dtypes(include='object').columns
+            numeric_columns = dframe.select_dtypes(include='number').columns
+            # Group by lon and lat, averaging numeric columns and concatenating by "|"
+            # the different contents of string columns
+            dframe = dframe.groupby([lon, lat], as_index=False).agg(
+                {**{col: concat_if_different for col in string_columns},
+                 **{col: 'mean' for col in numeric_columns}}
+            )
     return dframe
 
 
-def get_station_data(oqparam, sitecol):
+def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     """
     Read the station data input file and build a list of
     ground motion stations and recorded ground motion values
@@ -1093,14 +1136,15 @@ def get_station_data(oqparam, sitecol):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
+    :param duplicates_strategy: either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
     if parallel.oq_distribute() == 'zmq':
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'],
-                 'LONGITUDE', 'LATITUDE', 'STATION_ID')
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+                 duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)

@@ -116,7 +116,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.contexts import ContextMaker
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -215,12 +214,11 @@ class ConditionedGmfComputer(GmfComputer):
         :returns: a list of arrays [mea, sig, tau, phi]
         """
         return get_mean_covs(
-            self.rupture, self.cmaker.gsims,
+            self.rupture, self.cmaker,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
-            self.spatial_correl,
-            self.cross_correl_between, self.cross_correl_within,
-            self.cmaker.maximum_distance, sigma=False)
+            self.spatial_correl, self.cross_correl_between, self.cross_correl_within,
+            sigma=False)
 
 
 @dataclass
@@ -388,10 +386,10 @@ def compute_spatial_cross_covariance_matrix(
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
-        rupture, gsims, station_sitecol, station_data,
+        rupture, cmaker, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
-        maximum_distance, sigma=True):
+        sigma=True):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
@@ -409,9 +407,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = ContextMaker(
-        rupture.tectonic_region_type, gsims,
-        dict(imtls=observed_imtls, maximum_distance=maximum_distance))
+    cmaker_D = cmaker.copy(imtls=observed_imtls)
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
@@ -419,10 +415,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = ContextMaker(
-        rupture.tectonic_region_type, gsims, dict(
-            imtls={target_imts[0].string: [0]},
-            maximum_distance=maximum_distance))
+    cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
     mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
@@ -436,13 +429,13 @@ def get_mean_covs(
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
 
-    G = len(gsims)
+    G = len(cmaker.gsims)
     M = len(target_imts)
     N = len(ctx_Y)
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
-    for g, gsim in enumerate(gsims):
+    for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
                     and "add_between_within_stds" in gsim.kwargs):

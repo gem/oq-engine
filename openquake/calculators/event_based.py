@@ -340,7 +340,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
@@ -372,7 +371,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
-        cmaker.gid = numpy.arange(len(rlzs_by_gsim))
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for gsim in rlzs_by_gsim:
             toml_gsims.append(gsim._toml)
@@ -426,6 +424,40 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
         gmvs[eid.to_numpy()] = df.to_numpy()
         dic[sid] = geom_avg_std(gmvs, weights)
     return dic
+
+
+def read_gsim_lt(oq):
+    # in aristotle mode the gsim_lt is read from the exposure.hdf5 file
+    if oq.aristotle:
+        if not oq.mosaic_model:
+            if oq.rupture_dict:
+                lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
+            elif oq.rupture_xml:
+                hypo = readinput.get_rupture(oq).hypocenter
+                lon, lat = [hypo.x, hypo.y]
+            mosaic_models = get_close_mosaic_models(lon, lat, 5)
+            # NOTE: using the first mosaic model
+            oq.mosaic_model = mosaic_models[0]
+            if len(mosaic_models) > 1:
+                logging.info('Using the "%s" model' % oq.mosaic_model)
+        [expo_hdf5] = oq.inputs['exposure']
+        if oq.mosaic_model == '???':
+            raise ValueError(
+                '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
+                oq.rupture_dict)
+        if oq.gsim != '[FromFile]':
+            raise ValueError(
+                'In Aristotle mode the gsim can not be specified in'
+                ' the job.ini: %s' % oq.gsim)
+        if oq.tectonic_region_type == '*':
+            raise ValueError(
+                'The tectonic_region_type parameter must be specified')
+        gsim_lt = logictree.GsimLogicTree.from_hdf5(
+            expo_hdf5, oq.mosaic_model,
+            oq.tectonic_region_type.encode('utf8'))
+    else:
+        gsim_lt = readinput.get_gsim_lt(oq)
+    return gsim_lt
 
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
@@ -590,36 +622,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
-        gsim_lt = readinput.get_gsim_lt(oq)
-        if oq.aristotle:
-            # the gsim_lt is read from the exposure.hdf5 file
-            if not oq.mosaic_model:
-                if oq.rupture_dict:
-                    lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
-                elif oq.rupture_xml:
-                    hypo = readinput.get_rupture(oq).hypocenter
-                    lon, lat = [hypo.x, hypo.y]
-                mosaic_models = get_close_mosaic_models(lon, lat, 5)
-                # NOTE: using the first mosaic model
-                oq.mosaic_model = mosaic_models[0]
-                if len(mosaic_models) > 1:
-                    logging.info('Using the "%s" model' % oq.mosaic_model)
-            [expo_hdf5] = oq.inputs['exposure']
-            if oq.mosaic_model == '???':
-                raise ValueError(
-                    '(%(lon)s, %(lat)s) is not covered by the mosaic!' %
-                    oq.rupture_dict)
-            if oq.gsim != '[FromFile]':
-                raise ValueError(
-                    'In Aristotle mode the gsim can not be specified in'
-                    ' the job.ini: %s' % oq.gsim)
-            if oq.tectonic_region_type == '*':
-                raise ValueError(
-                    'The tectonic_region_type parameter must be specified')
-            gsim_lt = logictree.GsimLogicTree.from_hdf5(
-                expo_hdf5, oq.mosaic_model,
-                oq.tectonic_region_type.encode('utf8'))
-        elif (str(gsim_lt.branches[0].gsim) == '[FromFile]'
+        gsim_lt = read_gsim_lt(oq)
+        if (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
                               oq.inputs['job_ini'])
@@ -637,7 +641,6 @@ class EventBasedCalculator(base.HazardCalculator):
             rup = readinput.get_rupture(oq)
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-            self.cmaker.gid = numpy.arange(len(rlzs_by_gsim))
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
                 for i in range(ngmfs):

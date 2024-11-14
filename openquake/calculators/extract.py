@@ -852,8 +852,12 @@ def extract_agg_damages(dstore, what):
         number of damage states, or an array of length 0 if there is no data
         for the given tags
     """
-    loss_type, what = what.rsplit('?', 1)  # loss_type in mandatory
-    tags = what.split('&') if what else []
+    if '?' in what:
+        loss_type, what = what.rsplit('?', 1)
+        tags = what.split('&') if what else []
+    else:
+        loss_type = what
+        tags = []
     if 'damages-rlzs' in dstore:
         oq = dstore['oqparam']
         li = oq.lti[loss_type]
@@ -975,9 +979,8 @@ def extract_gmf_npz(dstore, what):
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
-        imts = list(oq.imtls)
-        sec_imts = oq.sec_imts
-        gmfa = _gmf(df, n, imts, sec_imts)
+        prim_imts = list(oq.get_primary_imtls())
+        gmfa = _gmf(df, n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 

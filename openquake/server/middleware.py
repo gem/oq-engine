@@ -60,3 +60,15 @@ class LoginRequiredMiddleware:
                     return HttpResponseRedirect(settings.LOGIN_URL)
 
         return self.get_response(request)
+
+
+class PrintHeadersMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        print(f"\nRequest {request} headers:")
+        for header, value in request.headers.items():
+            print(f"\t{header}: {value}")
+        response = self.get_response(request)
+        return response
