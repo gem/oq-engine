@@ -1429,7 +1429,7 @@ def import_gmfs_hdf5(dstore, oqparam):
 
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
-    rel = numpy.unique(dstore['gmf_data/eid'])
+    rel = numpy.unique(dstore['gmf_data/eid'][:])
     e = len(rel)
     assert E >= e, (E, e)
     events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])

@@ -222,7 +222,8 @@ def update(params, items, base_path):
                 # remove the key if the value is empty
                 basekey, _file = key.rsplit('_', 1)
                 params['inputs'].pop(basekey, None)
-        elif isinstance(value, str) and value.endswith('.hdf5'):
+        elif (isinstance(value, str) and value.endswith('.hdf5')
+              and key != 'description'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
                             'adv-manual/equivalent-distance-app for the new '
