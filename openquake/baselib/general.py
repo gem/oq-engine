@@ -40,6 +40,7 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from importlib.metadata import version, PackageNotFoundError
 from contextlib import contextmanager
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
@@ -462,6 +463,19 @@ def removetmp():
                 pass
 
 
+def check_extension(fnames):
+    """
+    Make sure all file names have the same extension
+    """
+    if not fnames:
+        return
+    _, extension = os.path.splitext(fnames[0])
+    for fname in fnames[1:]:
+        _, ext = os.path.splitext(fname)
+        if ext != extension:
+            raise NameError(f'{fname} does not end with {ext}')
+
+
 def engine_version():
     """
     :returns: __version__ + `<short git hash>` if Git repository found
@@ -545,10 +559,15 @@ def check_dependencies():
     with open(os.path.join(repodir, reqfile)) as f:
         lines = f.readlines()
     for pkg, expected in extract_dependencies(lines):
-        version = __import__(pkg).__version__
-        if version != expected:
+        try:
+            installed_version = version(pkg)
+        except PackageNotFoundError:
+            # handling cases such as "No package metadata was found for zmq"
+            # (in other cases, e.g. timezonefinder, __version__ is not defined)
+            installed_version = __import__(pkg).__version__
+        if installed_version != expected:
             logging.warning('%s is at version %s but the requirements say %s' %
-                            (pkg, version, expected))
+                            (pkg, installed_version, expected))
 
 
 def run_in_process(code, *args):
