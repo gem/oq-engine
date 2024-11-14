@@ -104,7 +104,7 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _basin_term(region, basin, C, ctx=None):
+def _get_basin_term(region, basin, C, ctx=None):
     """
     Basin term main handler.
     """
@@ -388,7 +388,7 @@ class ParkerEtAl2020SInter(GMPE):
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
                            'sigma_mu_epsilon'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None, 
+    def __init__(self, region=None, saturation_region=None, basin=None,
                  sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
@@ -429,7 +429,7 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _basin_term(self.region, self.basin, C, ctx)
+            fb = _get_basin_term(self.region, self.basin, C, ctx)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)

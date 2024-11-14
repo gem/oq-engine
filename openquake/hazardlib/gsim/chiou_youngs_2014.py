@@ -140,7 +140,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def get_basin_depth_term(region, C, centered_z1pt0):
+def _get_basin_term(region, C, centered_z1pt0):
     """
     Returns the basin depth scaling
     """
@@ -533,7 +533,7 @@ def get_mean_stddevs(region, C, ctx, imt, conf):
 
     # for Z1.0 = 0.0 no deep soil correction is applied
     dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = get_basin_depth_term(region, C, dz1pt0)
+    f_z1pt0 = _get_basin_term(region, C, dz1pt0)
 
     # Get linear amplification term
     f_lin = get_linear_site_term(region, C, ctx)
