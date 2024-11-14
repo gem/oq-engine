@@ -86,7 +86,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
         BSSA14_1100[0], BSSA14_2000[0], sites.vs30[sites.vs30 > 1100], imt)
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
-    fbd = BA14._get_basin_depth_term(region, C, sites, period)  # returns 0
+    fbd = BA14._get_basin_term(region, C, sites, period)  # returns 0
     fbd = 0.0
 
     return flin + fnl + fbd
