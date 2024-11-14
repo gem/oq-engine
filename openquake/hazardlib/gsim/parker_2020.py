@@ -40,7 +40,7 @@ CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
 
 _a0 = CallableDict()
-    
+
 
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     """
@@ -388,8 +388,8 @@ class ParkerEtAl2020SInter(GMPE):
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
                            'sigma_mu_epsilon'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None, 
-                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
+    def __init__(self, region=None, saturation_region=None, basin=None,
+                 sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.

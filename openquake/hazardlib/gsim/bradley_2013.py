@@ -47,9 +47,6 @@ cbd_polygon = shapely.geometry.Polygon(
 
 
 def _get_basin_term(C, z1pt0):
-    """
-    Get the basin term
-    """
     fb1 = C['phi5'] * (1.0 - 1.0 / np.cosh(
         C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
     fb2 = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
@@ -367,11 +364,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
 
     Implements eq. 5
     """
-    # we do not support estimating of basin depth and instead
-    # rely on it being available (since we require it).
-    z1pt0 = ctx.z1pt0
-
-    # we consider random variables being zero since we want
+    # We consider random variables being zero since we want
     # to find the exact mean value.
     eta = epsilon = 0
 
