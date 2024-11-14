@@ -240,7 +240,7 @@ def _get_site_response_term(C, imt, vs30, sa1180):
     return site_resp_term
 
 
-def _get_soil_depth_term(region, C, z1pt0, vs30):
+def _get_basin_term(region, C, z1pt0, vs30):
     """
     Compute and return soil depth term.  See page 1042.
     """
@@ -392,7 +392,7 @@ def _get_sa_at_1180(region, C, imt, ctx):
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
             _get_hanging_wall_term(C, ctx) +
             _get_top_of_rupture_depth_term(C, imt, ctx) +
-            _get_soil_depth_term(region, C, fake_z1pt0, vs30_1180) +
+            _get_basin_term(region, C, fake_z1pt0, vs30_1180) +
             _get_regional_term(region, C, imt, vs30_1180, ctx.rrup))
 
 def get_epistemic_sigma(ctx):
@@ -486,7 +486,7 @@ class AbrahamsonEtAl2014(GMPE):
             # f5 = _get_site_response_term(C, imt, ctx.vs30, sa1180)
             # f6 = _get_top_of_rupture_depth_term(C, imt, ctx)
             # f7 = _get_faulting_style_term(C, ctx)
-            # f10 =_get_soil_depth_term(self.region, C, ctx.z1pt0, ctx.vs30)
+            # f10 = _get_basin_term(self.region, C, ctx.z1pt0, ctx.vs30)
             # fre = _get_regional_term(self.region, C, imt, ctx.vs30, ctx.rrup)
 
             # get the mean value
@@ -495,8 +495,7 @@ class AbrahamsonEtAl2014(GMPE):
                        _get_site_response_term(C, imt, ctx.vs30, sa1180) +
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
-                       _get_soil_depth_term(self.region, C, ctx.z1pt0,
-                                            ctx.vs30))
+                       _get_basin_term(self.region, C, ctx.z1pt0, ctx.vs30))
 
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)

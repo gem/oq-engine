@@ -101,7 +101,7 @@ def _get_pga_on_rock(C, rup, dists):
 def _get_site_scaling(C, pga_rock, sites):
     """
     Returns the site-scaling term (equation 5), broken down into a
-    linear scaling, a nonlinear scaling and a basin scaling term
+    linear scaling and a nonlinear scaling
     """
     flin = _get_linear_site_term(C, sites.vs30)
     fnl = _get_nonlinear_site_term(C, sites.vs30, pga_rock)

@@ -117,7 +117,7 @@ def get_shallow_site_response_term(C, vs30, pga760):
     return (f_site_lin + f_site_nl) / np.log(10.0)
 
 
-def get_basin_response_term(C, z_value):
+def _get_basin_term(C, z_value):
     """
     Returns the basin response term (Eq. 3.10)
     """
@@ -131,7 +131,7 @@ def _get_pga_rock(C, trt, imt, ctx):
     mean = (get_base_term(trt, C) +
             get_magnitude_scaling_term(C, imt, ctx.mag) +
             get_geometric_attenuation_term(C, ctx) +
-            get_basin_response_term(C, ctx.z2pt5) +
+            _get_basin_term(C, ctx.z2pt5) +
             get_depth_scaling_term(C, ctx.hypo_depth) +
             get_anelastic_attenuation_term(C, ctx.rrup))
     return 10.0 ** mean
@@ -146,7 +146,7 @@ def get_mean_values(C, trt, imt, ctx, a760):
                            get_depth_scaling_term(C, ctx.hypo_depth) +
                            get_geometric_attenuation_term(C, ctx) +
                            get_anelastic_attenuation_term(C, ctx.rrup) +
-                           get_basin_response_term(C, ctx.z2pt5) +
+                           _get_basin_term(C, ctx.z2pt5) +
                            get_shallow_site_response_term(C, ctx.vs30, a760))
 
     return mean
