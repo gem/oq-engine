@@ -155,6 +155,53 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
+### Limit systemd services with control group (slice)
+
+If you need to set a limit on the resources available for the OpenQuake service, Systemd offers a simple solution to create resource limits for a service,
+a unit type called "slice".
+
+This is a control group, which may apply limits that affect all processes in this slice/control group.
+
+To create a slice called webui.slice:
+
+```console
+systemctl edit openquake-webui.slice
+
+[Unit]
+Description=OpenQuake Webui Slice
+Before=slices.target
+
+[Slice]
+MemoryAccounting=true
+MemoryLimit=10G
+CPUAccounting=true
+CPUQuota=50%
+TasksMax=4096
+```
+
+Edit the webui.service file:
+```console
+systemctl edit --full openquake-webui.service
+```
+
+and add in the [Service] section:
+```console
+Slice=openquake-webui.slice
+```
+
+After changing systemd config files a reload of the daemon is required and a restart of the service:
+
+```console
+systemctl daemon-reload
+systemctl stop openquake-webui.service
+systemctl start openquake-webui.service
+```
+
+To check if the service is in the correct control group, run:
+
+```console
+systemctl status  openquake-webui.service
+```
 
 ### nginx
 

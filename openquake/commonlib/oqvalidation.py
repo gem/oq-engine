@@ -868,6 +868,12 @@ width_of_mfd_bin:
   Used to specify the width of the Magnitude Frequency Distribution.
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
+
+with_betw_ratio:
+  Specify the between ratio for GSIMs with only the Total StdDev.
+  This is necessary in conditioned GMFs calculations.
+  Example: *with_betw_ratio = 1.7*
+  Default: None
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
@@ -1156,6 +1162,7 @@ class OqParam(valid.ParamSet):
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+    with_betw_ratio = valid.Param(valid.positivefloat, None)
 
     @property
     def no_pointsource_distance(self):
@@ -1397,10 +1404,10 @@ class OqParam(valid.ParamSet):
             
     def check_hazard(self):
         # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv')
+        if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
             self.raise_invalid('You forgot to specify a site_model')
-        elif self.inputs.get('gmfs', '').endswith('.xml'):
+        elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
             self.raise_invalid('GMFs in XML are not supported anymore')
 
         # checks for event_based
@@ -1690,9 +1697,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.sec_imts) or self.inputs.get('multi_peril', ())
         return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in sec_imts}
+                if imt not in self.sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -1833,6 +1839,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a list of secondary outputs
         """
+        mp = self.inputs.get('multi_peril', ())
+        if mp:
+            return list(mp)  # ASH, PYRO, etc
         outs = []
         for sp in self.get_sec_perils():
             outs.extend(sp.outputs)

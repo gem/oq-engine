@@ -88,7 +88,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                               delta=1E-5)
 
         # check agg_damages extraction
-        total = extract(self.calc.datastore, 'agg_damages/structural?')
+        total = extract(self.calc.datastore, 'agg_damages/structural')
 
         aac(total, [[27652.219, 28132.8, 9511.933, 2870.9312, 11832.913]],
             atol=.1)

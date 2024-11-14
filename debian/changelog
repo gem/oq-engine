@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
+    disjoint sites and events
+
+  [Paolo Tormene]
+  * Added a `duplicates_strategy` argument to `read_df` and changed the
+    approach used while reading station data, to calculate the average values
+    of stations having the same coordinates instead of raising an error
+
+  [Christopher Brooks]
+  * Added epistemic uncertainty scaling capabilities to
+    the Parker et al. (2020) NGASUB GMM.
+  * Added M9 basin term and associated tests to ModifiableGMPE
+  * Added CB14 basin term and associated tests to ModifiableGMPE
+
+  [Michele Simionato]
+  * Added parameter `with_betw_ratio`
   * Added command `oq info peril`
   * Extended consequences to perils
   * Replaced taxonomy mapping by loss type with taxonomy mapping by peril
