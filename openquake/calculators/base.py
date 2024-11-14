@@ -943,11 +943,9 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = read_parent_sitecol(oq, self.datastore)
         else:
             if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
-                with hdf5.File(oq.inputs['gmfs'][0]) as f:
-                    haz_sitecol = f['sitecol']
+                haz_sitecol = site.merge_sitecols(oq.inputs['gmfs'])
             else:
-                haz_sitecol = readinput.get_site_collection(
-                    oq, self.datastore.hdf5)
+                haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture

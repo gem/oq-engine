@@ -201,7 +201,8 @@ def update(params, items, base_path):
     correctly file parameters.
     """
     for key, value in items:
-        if key in ('hazard_curves_csv', 'hazard_curves_file', 'gmfs_file',
+        if key in ('hazard_curves_csv', 'hazard_curves_file',
+                   'gmfs_csv', 'gmfs_file',
                    'site_model_csv', 'site_model_file',
                    'exposure_csv', 'exposure_file'):
             input_type, fnames = _normalize(key, value.split(), base_path)

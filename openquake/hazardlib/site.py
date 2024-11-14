@@ -19,10 +19,12 @@
 """
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
+import logging
 import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
+from openquake.baselib import hdf5
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
@@ -832,3 +834,29 @@ class SiteCollection(object):
         total_sites = len(self.complete.array)
         return '<SiteCollection with %d/%d sites>' % (
             len(self), total_sites)
+
+
+def merge_sitecols(hdf5fnames):
+    """
+    Read a number of site collections from the given filenames
+    and returns a single SiteCollection instance. Raise an error
+    if there are duplicate sites (by looking at the custom_site_id).
+    """
+    sitecols = []
+    for fname in hdf5fnames:
+        with hdf5.File(fname, 'r') as f:
+            sitecols.append(f['sitecol'])
+    if len(sitecols) == 1:
+        return sitecols[0]
+
+    new = object.__new__(sitecols[0].__class__)
+    new.array = numpy.concatenate([sc.array for sc in sitecols])
+    new['sids'] = numpy.arange(len(new.array))
+    new.complete = new
+    if 'custom_site_id' in new.array.dtype.names:
+        ids, counts = numpy.unique(new['custom_site_id'], return_counts=1)
+        if (counts > 1).any():
+            raise RuntimeError(f'{ids[counts>1]} are duplicated')
+    elif len(sitecols) > 1:
+        logging.warning('There is no custom_site_id, not checking for duplicates')
+    return new
