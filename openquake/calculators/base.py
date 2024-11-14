@@ -1417,6 +1417,7 @@ def import_gmfs_hdf5(dstore, oqparam):
         create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E)
         nS, nE = 0, 0
         for fname, ns, ne in zip(fnames, attrs['num_sites'], attrs['num_events']):
+            logging.info('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 gmf_df = f.read_df('gmf_data')
                 gmf_df['sid'] += nS  # add an offset to the site IDs
