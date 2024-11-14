@@ -1404,10 +1404,10 @@ class OqParam(valid.ParamSet):
             
     def check_hazard(self):
         # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv')
+        if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
             self.raise_invalid('You forgot to specify a site_model')
-        elif self.inputs.get('gmfs', '').endswith('.xml'):
+        elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
             self.raise_invalid('GMFs in XML are not supported anymore')
 
         # checks for event_based

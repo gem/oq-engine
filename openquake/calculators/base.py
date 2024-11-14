@@ -677,9 +677,9 @@ class HazardCalculator(BaseCalculator):
                 self.read_inputs()
             if 'gmfs' in oq.inputs:
                 self.datastore['full_lt'] = logictree.FullLogicTree.fake()
-                if oq.inputs['gmfs'].endswith('.csv'):
+                if oq.inputs['gmfs'][0].endswith('.csv'):
                     eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
-                elif oq.inputs['gmfs'].endswith('.hdf5'):
+                elif oq.inputs['gmfs'][0].endswith('.hdf5'):
                     eids = import_gmfs_hdf5(self.datastore, oq)
                 else:
                     raise NotImplementedError(
@@ -942,12 +942,10 @@ class HazardCalculator(BaseCalculator):
         elif oq.hazard_calculation_id:
             haz_sitecol = read_parent_sitecol(oq, self.datastore)
         else:
-            if 'gmfs' in oq.inputs and oq.inputs['gmfs'].endswith('.hdf5'):
-                with hdf5.File(oq.inputs['gmfs']) as f:
-                    haz_sitecol = f['sitecol']
+            if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
+                haz_sitecol = site.merge_sitecols(oq.inputs['gmfs'], check_gmfs=True)
             else:
-                haz_sitecol = readinput.get_site_collection(
-                    oq, self.datastore.hdf5)
+                haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -1284,7 +1282,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     :param sitecol: the site collection
     :returns: event_ids
     """
-    fname = oqparam.inputs['gmfs']
+    [fname] = oqparam.inputs['gmfs']
     dtdict = {'sid': U32,
               'eid': U32,
               'custom_site_id': (numpy.bytes_, 8),
@@ -1360,28 +1358,33 @@ def _getset_attrs(oq):
     # read effective_time, num_events and imts from oq.inputs['gmfs']
     # if the format of the file is old (v3.11) also sets the attributes
     # investigation_time and ses_per_logic_tree_path on `oq`
-    with hdf5.File(oq.inputs['gmfs'], 'r') as f:
-        attrs = f['gmf_data'].attrs
-        etime = attrs.get('effective_time')
-        num_events = attrs.get('num_events')
-        if etime is None:   # engine == 3.11
-            R = len(f['weights'])
-            num_events = len(f['events'])
-            arr = f.getitem('oqparam')
-            it = arr['par_name'] == b'investigation_time'
-            it = float(arr[it]['par_value'][0])
-            oq.investigation_time = it
-            ses = arr['par_name'] == b'ses_per_logic_tree_path'
-            ses = int(arr[ses]['par_value'][0])
-            oq.ses_per_logic_tree_path = ses
-            etime = it * ses * R
-            imts = []
-            for name in arr['par_name']:
-                if name.startswith(b'hazard_imtls.'):
-                    imts.append(name[13:].decode('utf8'))
-        else:  # engine >= 3.12
-            imts = attrs['imts'].split()
-    return dict(effective_time=etime, num_events=num_events, imts=imts)
+    num_sites = []
+    num_events = []
+    for fname in oq.inputs['gmfs']:
+        with hdf5.File(fname, 'r') as f:
+            attrs = f['gmf_data'].attrs
+            etime = attrs.get('effective_time')
+            if etime is None:   # engine == 3.11
+                R = len(f['weights'])
+                num_events.append(len(f['events']))
+                arr = f.getitem('oqparam')
+                it = arr['par_name'] == b'investigation_time'
+                it = float(arr[it]['par_value'][0])
+                oq.investigation_time = it
+                ses = arr['par_name'] == b'ses_per_logic_tree_path'
+                ses = int(arr[ses]['par_value'][0])
+                oq.ses_per_logic_tree_path = ses
+                etime = it * ses * R
+                imts = []
+                for name in arr['par_name']:
+                    if name.startswith(b'hazard_imtls.'):
+                        imts.append(name[13:].decode('utf8'))
+            else:  # engine >= 3.12
+                num_events.append(attrs['num_events'])
+                imts = attrs['imts'].split()
+            num_sites.append(len(f['sitecol']))
+    return dict(effective_time=etime, num_events=num_events, num_sites=num_sites,
+                imts=imts)
 
 
 def import_gmfs_hdf5(dstore, oqparam):
@@ -1393,7 +1396,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     :returns: event_ids
     """
     # NB: once we tried to use ExternalLinks to avoid copying the GMFs,
-    # but: you cannot access an external link if the file it points to is
+    # but you cannot access an external link if the file it points to is
     # already open, therefore you cannot run in parallel two calculations
     # starting from the same GMFs; moreover a calc_XXX.hdf5 downloaded
     # from the webui would be small but orphan of the GMFs; moreover
@@ -1401,16 +1404,32 @@ def import_gmfs_hdf5(dstore, oqparam):
     # ownership would break calc_XXX.hdf5; therefore we copy everything
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
-    with hdf5.File(oqparam.inputs['gmfs'], 'r') as f:
-        f.copy('gmf_data', dstore.hdf5)
-        dstore['sitecol'] = f['sitecol']  # complete by construction
+
     attrs = _getset_attrs(oqparam)
+    E = sum(attrs['num_events'])
+    fnames = oqparam.inputs['gmfs']
+    if len(fnames) == 1:
+        with hdf5.File(fnames[0], 'r') as f:
+            dstore['sitecol'] = f['sitecol']  # complete by construction
+            f.copy('gmf_data', dstore.hdf5)
+    else:  # merge the sites and the gmfs
+        dstore['sitecol'] = site.merge_sitecols(fnames, check_gmfs=True)
+        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E)
+        nS, nE = 0, 0
+        for fname, ns, ne in zip(fnames, attrs['num_sites'], attrs['num_events']):
+            with hdf5.File(fname, 'r') as f:
+                gmf_df = f.read_df('gmf_data')
+                gmf_df['sid'] += nS  # add an offset to the site IDs
+                gmf_df['eid'] += nE  # add an offset to the event IDs
+                nS += ns
+                nE += ne
+                for col in gmf_df.columns:
+                    hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col].to_numpy())
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
-    E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
-    rel = numpy.unique(dstore['gmf_data/eid'])
+    rel = numpy.unique(dstore['gmf_data/eid'][:])
     e = len(rel)
     assert E >= e, (E, e)
     events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
@@ -1424,7 +1443,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     return events['id']
 
 
-def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
+def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
@@ -1447,7 +1466,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None):
     else:
         eff_time = 0
     dstore.create_df('gmf_data', items)  # not gzipping for speed
-    dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
+    dstore.set_attrs('gmf_data', num_events=E or len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
