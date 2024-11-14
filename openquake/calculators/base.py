@@ -1578,7 +1578,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
             raise RuntimeError(
                 'There are the following intensities in your model: %s '
                 'Models mixing MMI and other intensities are not supported. '
-                % ', '.join(oq.imtls.keys()))
+                % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
         if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
