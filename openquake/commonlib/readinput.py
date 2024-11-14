@@ -1664,6 +1664,11 @@ def read_geometries(fname, code, buffer=0):
 
 @functools.lru_cache()
 def read_populated_places(fname, lon_name, lat_name, label_name):
+    """
+    Reading coordinates and names of populated places from a CSV file
+
+    :returns: a Pandas DataFrame
+    """
     data = pandas.read_csv(fname)
     expected_colnames_set = {lon_name, lat_name, label_name}
     if not expected_colnames_set.issubset(data.columns):
@@ -1692,7 +1697,10 @@ def read_countries_df(buffer=0.1):
 def read_populated_places_df(lon_field='longitude', lat_field='latitude',
                              label_field='name'):
     """
-    :returns: a DataFrame of points corresponding to populated places
+    Reading from a 'worldcities.csv' file in the mosaic_dir, if present, or returning
+    None otherwise
+
+    :returns: a DataFrame of coordinates and names of populated places
     """
     mosaic_dir = config.directory.mosaic_dir
     fname = os.path.join(mosaic_dir, 'worldcities.csv')

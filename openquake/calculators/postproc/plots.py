@@ -79,6 +79,10 @@ def get_country_iso_codes(calc_id, assetcol):
 
 
 def plt_to_base64(plt):
+    """
+    The base64 string can be passed to a Django template and embedded
+    directly in HTML, without having to save the image to disk
+    """
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
     bio.seek(0)
@@ -87,7 +91,8 @@ def plt_to_base64(plt):
 
 
 def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
-                  with_populated_places=False, return_base64=False):
+                  with_populated_places=False, return_base64=False,
+                  rupture=None):
     plt = import_plt()
     if backend is not None:
         # we may need to use a non-interactive backend
@@ -111,6 +116,14 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     max_x = shakemap_array['lon'].max()
     min_y = shakemap_array['lat'].min()
     max_y = shakemap_array['lat'].max()
+    if rupture is not None:
+        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture(
+            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
+            surf_facecolor='none', surf_linestyle='--')
+        min_x = min(min_x, rup_min_x)
+        max_x = max(max_x, rup_max_x)
+        min_y = min(min_y, rup_min_y)
+        max_y = max(max_y, rup_max_y)
     xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
     ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
     ax.set_xlim(*xlim)
@@ -158,13 +171,20 @@ def plot_avg_gmf(ex, imt):
     return plt
 
 
-def add_surface(ax, surface, label):
-    ax.fill(*surface.get_surface_boundaries(), alpha=.5, edgecolor='grey',
-            label=label)
+def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
+    fill_params = {
+        'alpha': alpha,
+        'edgecolor': 'grey',
+        'label': label
+    }
+    if facecolor is not None:
+        fill_params['facecolor'] = facecolor
+    ax.fill(*surface.get_surface_boundaries(), **fill_params)
     return surface.get_bounding_box()
 
 
-def add_rupture(ax, rup):
+def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
+                surf_facecolor=None, surf_linestyle='-'):
     if hasattr(rup.surface, 'surfaces'):
         min_x = 180
         max_x = -180
@@ -172,15 +192,18 @@ def add_rupture(ax, rup):
         max_y = -90
         for surf_idx, surface in enumerate(rup.surface.surfaces):
             min_x_, max_x_, max_y_, min_y_ = add_surface(
-                ax, surface, 'Surface %d' % surf_idx)
+                ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
+                facecolor=surf_facecolor, linestyle=surf_linestyle)
             min_x = min(min_x, min_x_)
             max_x = max(max_x, max_x_)
             min_y = min(min_y, min_y_)
             max_y = max(max_y, max_y_)
     else:
-        min_x, max_x, max_y, min_y = add_surface(ax, rup.surface, 'Surface')
+        min_x, max_x, max_y, min_y = add_surface(
+            ax, rup.surface, 'Surface', alpha=surf_alpha, facecolor=surf_facecolor,
+            linestyle=surf_linestyle)
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
-            color='orange', label='Hypocenter', alpha=.5,
+            color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
     return ax, min_x, min_y, max_x, max_y
 
