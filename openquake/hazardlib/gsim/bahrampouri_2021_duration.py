@@ -61,18 +61,25 @@ def _get_path_term(C, ctx):
     return fpath
 
 
-def _get_site_term(C, ctx):
+def _get_basin_term(C, ctx):
     """
-    Implementing Eqs. 5, 6 and 12
+    Get the basin term
     """
     mean_z1pt0 = (np.exp(((-5.23 / 2.) * np.log((ctx.vs30 ** 2. +
                   412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9))
     delta_z1pt0 = np.round(ctx.z1pt0 - mean_z1pt0, 4)
-    fsite = []
-    for i, value in enumerate(delta_z1pt0):
-        s = (np.round(C['s1'] * np.log(min(ctx.vs30[i], 600.) / 600.) +
-             C['s2']*min(delta_z1pt0[i], 250.0) + C['s3'], 4))
-        fsite.append(s)
+    return C['s2'] * np.minimum(delta_z1pt0, 250.0)
+
+
+def _get_site_term(C, ctx):
+    """
+    Implementing Eqs. 5, 6 and 12
+    """
+    fbasin = _get_basin_term(C, ctx)
+
+    fsite = np.round(C['s1'] * np.log(np.clip(ctx.vs30, None, 600.0) / 600.0) +
+                     fbasin + C['s3'], 4)
+
     return fsite
 
 

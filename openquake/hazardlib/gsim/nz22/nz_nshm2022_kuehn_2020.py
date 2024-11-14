@@ -56,7 +56,7 @@ from openquake.hazardlib.gsim.nz22.const import (
 )
 
 
-def get_basin_response_term(C, region, vs30, z_value):
+def _get_basin_term(C, region, vs30, z_value):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -199,10 +199,10 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
     if region in ("CAS", "JPN"):
         # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
         # rather than km)
-        mean += get_basin_response_term(C, region, vs30, z_values)
+        mean += _get_basin_term(C, region, vs30, z_values)
     elif region in ("NZL", "TWN"):
         # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += get_basin_response_term(C, region, vs30, z_values)
+        mean += _get_basin_term(C, region, vs30, z_values)
     else:
         pass
     return mean

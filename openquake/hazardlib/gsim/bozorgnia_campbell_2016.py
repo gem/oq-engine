@@ -45,7 +45,7 @@ def _get_anelastic_attenuation_term(sgn, C, rrup):
     return f_atn
 
 
-def _get_basin_response_term(SJ, C, z2pt5):
+def _get_basin_term(SJ, C, z2pt5):
     """
     Returns the basin response term, f_sed, defined in equation 20
 
@@ -150,7 +150,7 @@ def get_mean_values(SJ, sgn, C, ctx):
             _get_style_of_faulting_term(C, ctx) +
             _get_hanging_wall_term(C, ctx) +
             _get_shallow_site_response_term(SJ, C, ctx.vs30) +
-            _get_basin_response_term(SJ, C, temp_z2pt5) +
+            _get_basin_term(SJ, C, temp_z2pt5) +
             _get_hypocentral_depth_term(C, ctx) +
             _get_fault_dip_term(C, ctx) +
             _get_anelastic_attenuation_term(sgn, C, ctx.rrup))

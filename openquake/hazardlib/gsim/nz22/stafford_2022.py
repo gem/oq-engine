@@ -33,7 +33,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     get_geometric_spreading,
     get_magnitude_scaling,
     get_directivity,
-    get_basin_depth_term,
+    _get_basin_term,
     get_linear_site_term,
     get_nonlinear_site_term,
 )
@@ -428,7 +428,7 @@ def get_mean_stddevs(
     dz1pt0 = _get_centered_z1pt0("Stafford2022", ctx)
     # for Z1.0 = 0.0 no deep soil correction is applied
     dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = get_basin_depth_term("Stafford2022", C, dz1pt0)
+    f_z1pt0 = _get_basin_term("Stafford2022", C, dz1pt0)
     # Get linear amplification term
     f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term

@@ -42,48 +42,6 @@ CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
 _a0 = CallableDict()
 
 
-def _get_z1pt0_usgs_basin_scaling(z, imt):
-    """
-    Get the USGS basin model scaling factor for z1pt0
-
-    Upper and lower z1pt0 values taken from GmmUtils.java in the
-    USGS 2023 conterminous US NSHM gitlab repo. 
-    """
-    z_scale = _get_usgs_basin_scaling(
-        z, basin_upper=0.3, basin_lower=0.5, period=imt.period)
-    
-    return z_scale
-
-
-def _get_z2pt5_usgs_basin_scaling(z, imt):
-    """
-    Get the USGS basin model scaling factor for z2pt5
-
-    Upper and lower z2pt5 values taken from GmmUtils.java in the
-    USGS 2023 conterminous US NSHM gitlab repo. 
-    """
-    z_scale = _get_usgs_basin_scaling(
-        z, basin_upper=1.0, basin_lower=3.0, period=imt.period)
-    
-    return z_scale
-    
-
-def _get_usgs_basin_scaling(z2pt5, basin_upper, basin_lower, period):
-    """
-    Get the USGS basin model scaling factor to be applied to the
-    basin amplification term (taken from GmmUtils.java in the USGS
-    2023 conterminous US NSHM gitlab repo). Can be used to scale
-    either z1pt0 or z2pt5.
-    """
-    constr = np.clip(z2pt5, basin_upper, basin_lower)
-    basin_range = basin_lower - basin_upper
-    z_scale = (constr - basin_upper) / basin_range
-    if period == 0.75:
-        return 0.585 * z_scale
-    else:
-        return z_scale
-    
-
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     """
     Get the sigma_mu_adjustment (epistemic uncertainty) factor to be applied
@@ -146,7 +104,7 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _basin_term(region, basin, C, ctx=None):
+def _get_basin_term(region, basin, C, ctx=None):
     """
     Basin term main handler.
     """
@@ -400,8 +358,6 @@ class ParkerEtAl2020SInter(GMPE):
                                   "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
                                   "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
-    :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
-                                    based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
@@ -430,10 +386,10 @@ class ParkerEtAl2020SInter(GMPE):
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
-                           'sigma_mu_epsilon', 'usgs_basin_scaling'}
+                           'sigma_mu_epsilon'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None, 
-                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
+    def __init__(self, region=None, saturation_region=None, basin=None,
+                 sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -444,11 +400,6 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             self.saturation_region = saturation_region
         self.basin = basin
-        self.usgs_basin_scaling = usgs_basin_scaling
-        if (self.usgs_basin_scaling and 'z2pt5' not in
-            self.REQUIRES_SITES_PARAMETERS):
-            raise ValueError('User must specify a GSIM class for this GMPE '
-                             'which considers the z2pt5 site parameter.')
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
@@ -464,12 +415,6 @@ class ParkerEtAl2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
-            # USGS basin scaling factor is imt-dependent
-            if self.usgs_basin_scaling:
-                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt)
-            else:
-                usgs_baf = 1.0
-
             # Regional Mb factor
             if self.saturation_region in self.MB_REGIONS:
                 m_b = self.MB_REGIONS[self.saturation_region]
@@ -484,7 +429,7 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _basin_term(self.region, self.basin, C, ctx) * usgs_baf
+            fb = _get_basin_term(self.region, self.basin, C, ctx)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)
