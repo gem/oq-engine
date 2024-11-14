@@ -32,12 +32,13 @@ import pathlib
 
 import django
 # from django.apps import apps
-from django.test import Client
+from django.test import Client, override_settings
+from django.conf import settings
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.datastructures import MultiValueDict
 from django.http import HttpResponseNotFound
-# from django.conf import settings
 from openquake.commonlib.logs import dbcmd
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
@@ -45,6 +46,7 @@ from openquake.baselib.general import gettemp
 # NOTE: before importing User or any other model, django.setup() is needed,
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+
 
 django.setup()
 try:
@@ -124,6 +126,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -148,16 +151,12 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             cls.wait()
         finally:
             cls.user.delete()
+        super().tearDownClass()
 
     def aristotle_run_then_remove(
             self, data, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
-            email_backend = 'django.core.mail.backends.filebased.EmailBackend'
-            with self.settings(
-                    APPLICATION_MODE='ARISTOTLE',
-                    WEBUI_ACCESS_LOG_DIR='/home/openquake',
-                    EMAIL_FILE_PATH=email_dir,  # FIXME: this is ignored!
-                    EMAIL_BACKEND=email_backend):
+            with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
                 resp = self.post('aristotle_run', data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -173,8 +172,9 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                     raise ValueError(
                         b'Invalid JSON response: %r' % resp.content)
                 self.wait()
-                app_msgs_dir = os.path.join(tempfile.gettempdir(),
-                                            'app-messages')
+                app_msgs_dir = os.path.join(
+                    config.directory.custom_tmp or tempfile.gettempdir(),
+                    'app-messages')
                 for job_id in js:
                     if failure_reason:
                         tb = self.get('%s/traceback' % job_id)
@@ -223,12 +223,12 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                         self.assertIn('failed', email_content)
                     else:
                         self.assertIn('finished correctly', email_content)
-                    self.assertIn('From: aristotlenoreply@openquake.org',
-                                  email_content)
+                    email_from = settings.EMAIL_HOST_USER
+                    email_to = settings.EMAIL_SUPPORT
+                    self.assertIn(f'From: {email_from}', email_content)
                     self.assertIn('To: django-test-user@email.test',
                                   email_content)
-                    self.assertIn('Reply-To: aristotlesupport@openquake.org',
-                                  email_content)
+                    self.assertIn(f'Reply-To: {email_to}', email_content)
                     if failure_reason:
                         self.assertIn(failure_reason, email_content)
                     else:
@@ -480,9 +480,9 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', dict(archive=a))
-        assert resp.status_code == 404, resp
+        self.assertEqual(resp.status_code, 404, resp)
 
     def test_can_not_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
-        assert resp.status_code == 404, resp
+        self.assertEqual(resp.status_code, 404, resp)

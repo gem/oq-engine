@@ -647,9 +647,9 @@ def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
         return
-    from_email = 'aelonoreply@openquake.org'
+    from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
-    reply_to = 'aelosupport@openquake.org'
+    reply_to = settings.EMAIL_SUPPORT
     lon, lat = inputs['sites'].split()
     body = (f"Input values: lon = {lon}, lat = {lat},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
@@ -695,9 +695,9 @@ def aristotle_callback(
             else:
                 params_to_print += f'{key}: {val}\n'
 
-    from_email = 'aristotlenoreply@openquake.org'
+    from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
-    reply_to = 'aristotlesupport@openquake.org'
+    reply_to = settings.EMAIL_SUPPORT
     body = (f"Input parameters:\n{params_to_print}\n\n")
     if warnings is not None:
         for warning in warnings:

@@ -1,20 +1,8 @@
-#,,,"generated_by='OpenQuake engine 3.21.0-git855f23bdf1', start_date='2024-06-04T05:50:50', checksum=1294572362"
+#,,,"generated_by='OpenQuake engine 3.22.0-git36e91b9743', start_date='2024-11-05T09:57:17', checksum=17759650"
 loss_type,loss,stat,NAME_1
-contents,15716.810742187501,mean,Far-Western
-contents,970.1735026041664,quantile-0.15,Far-Western
-contents,14552.6025390625,quantile-0.85,Far-Western
-structural,37673.17143554687,mean,Far-Western
-structural,8343.501057942707,quantile-0.15,Far-Western
-structural,35357.671142578125,quantile-0.85,Far-Western
-structural+contents,53389.98393554687,mean,Far-Western
-structural+contents,9313.674669053818,quantile-0.15,Far-Western
-structural+contents,49910.2753092448,quantile-0.85,Far-Western
-contents,26647.244531250002,mean,Mid-Western
-contents,22597.09765625,quantile-0.15,Mid-Western
-contents,26327.49609375,quantile-0.85,Mid-Western
-structural,31617.129296875,mean,Mid-Western
-structural,21822.005859375,quantile-0.15,Mid-Western
-structural,30843.830078125,quantile-0.85,Mid-Western
-structural+contents,58264.373828125,mean,Mid-Western
-structural+contents,44419.103515625,quantile-0.15,Mid-Western
-structural+contents,57171.326171875,quantile-0.85,Mid-Western
+structural,38452.133,mean,Far-Western
+structural,3820.0213208515493,quantile-0.15,Far-Western
+structural,35718.020226298315,quantile-0.85,Far-Western
+structural,31768.738,mean,Mid-Western
+structural,26386.984590841457,quantile-0.15,Mid-Western
+structural,31343.86276034833,quantile-0.85,Mid-Western

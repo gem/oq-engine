@@ -25,6 +25,7 @@ import unittest
 
 import numpy
 
+from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.calc.conditioned_gmfs import get_mean_covs
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
@@ -36,7 +37,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_01(self):
         case_name = "test_case_01"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE01_STATION_SITECOL
         station_data = test_data.CASE01_STATION_DATA
         observed_imt_strs = test_data.CASE01_OBSERVED_IMTS
@@ -45,12 +47,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.zeros_like(mu), mu)
@@ -62,7 +62,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_02(self):
         case_name = "test_case_02"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE02_STATION_SITECOL
         station_data = test_data.CASE02_STATION_DATA
         observed_imt_strs = test_data.CASE02_OBSERVED_IMTS
@@ -71,12 +72,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), -1, rtol=1e-4)
@@ -90,7 +89,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_03(self):
         case_name = "test_case_03"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE03_STATION_SITECOL
         station_data = test_data.CASE03_STATION_DATA
         observed_imt_strs = test_data.CASE03_OBSERVED_IMTS
@@ -99,12 +99,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.36, rtol=1e-4)
@@ -117,7 +115,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_04(self):
         case_name = "test_case_04"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE04_STATION_SITECOL
         station_data = test_data.CASE04_STATION_DATA
         observed_imt_strs = test_data.CASE04_OBSERVED_IMTS
@@ -126,12 +125,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.36, rtol=1e-4)
@@ -144,7 +141,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_04b(self):
         case_name = "test_case_04b"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE04B_STATION_SITECOL
         station_data = test_data.CASE04_STATION_DATA
         observed_imt_strs = test_data.CASE04_OBSERVED_IMTS
@@ -153,12 +151,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.52970, rtol=1e-4)
@@ -171,7 +167,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_05(self):
         case_name = "test_case_05"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE05_STATION_SITECOL
         station_data = test_data.CASE05_STATION_DATA
         observed_imt_strs = test_data.CASE05_OBSERVED_IMTS
@@ -180,12 +177,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.zeros_like(mu), mu, atol=1e-4)
@@ -197,7 +192,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_06(self):
         case_name = "test_case_06"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE06_STATION_SITECOL
         station_data = test_data.CASE06_STATION_DATA
         observed_imt_strs = test_data.CASE06_OBSERVED_IMTS
@@ -206,12 +202,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         plot_test_results(target_sitecol.lons, mu, sig, 0,
@@ -220,7 +214,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_07(self):
         case_name = "test_case_07"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE07_STATION_SITECOL
         station_data = test_data.CASE07_STATION_DATA
         observed_imt_strs = test_data.CASE07_OBSERVED_IMTS
@@ -229,12 +224,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0]
         sig = mean_covs[1][0]
         periods = [imt.period for imt in target_imts]
@@ -243,7 +236,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_08(self):
         case_name = "test_case_08"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE08_STATION_SITECOL
         station_data_list = test_data.CASE08_STATION_DATA_LIST
         observed_imt_strs = test_data.CASE08_OBSERVED_IMTS
@@ -252,7 +246,6 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         std_addon_d = test_data.CASE08_STD_ADDON_D
         bias_mean = test_data.CASE08_BD_YD
         conditioned_mean_obs = test_data.CASE08_MU_YD_OBS
@@ -262,10 +255,9 @@ class SetUSGSTestCase(unittest.TestCase):
         sigs = []
         for i, station_data in enumerate(station_data_list):
             mean_covs = get_mean_covs(
-                rupture, [gmm], station_sitecol, station_data,
+                rupture, cmaker, station_sitecol, station_data,
                 observed_imt_strs, target_sitecol, target_imts,
-                spatial_correl, cross_correl_between, cross_correl_within,
-                maximum_distance)
+                spatial_correl, cross_correl_between, cross_correl_within)
             mu = mean_covs[0][0, 0, :, 0]
             sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
             aac(numpy.min(mu), bias_mean[i], rtol=1e-4)
@@ -280,7 +272,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_09(self):
         case_name = "test_case_09"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE09_STATION_SITECOL
         station_data = test_data.CASE09_STATION_DATA
         observed_imt_strs = test_data.CASE09_OBSERVED_IMTS
@@ -289,12 +282,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         plot_test_results(target_sitecol.lons, mu, sig, 0,
@@ -303,7 +294,8 @@ class SetUSGSTestCase(unittest.TestCase):
     def test_case_10(self):
         case_name = "test_case_10"
         rupture = test_data.RUP
-        gmm = test_data.ZeroMeanGMM()
+        cmaker = simple_cmaker([test_data.ZeroMeanGMM()], [],
+                               maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE10_STATION_SITECOL
         station_data = test_data.CASE10_STATION_DATA
         observed_imt_strs = test_data.CASE10_OBSERVED_IMTS
@@ -312,12 +304,10 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        maximum_distance = test_data.MAX_DIST
         mean_covs = get_mean_covs(
-            rupture, [gmm], station_sitecol, station_data,
+            rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
-            spatial_correl, cross_correl_between, cross_correl_within,
-            maximum_distance)
+            spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         plot_test_results(target_sitecol.lons, mu, sig, 0,

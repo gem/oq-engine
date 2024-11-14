@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="RDN" lossCategory="structural">
+		<description>Road Network</description>
+		<limitStates>slight moderate extensive complete</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="DispProb" noDamageLimit="0">0 0.3 0.6 1</imls>
+			<poes ls="slight">0 0 0 1</poes>
+			<poes ls="moderate">0 0 0 1</poes>
+			<poes ls="extensive">0 0 0 1</poes>
+			<poes ls="complete">0 0 0 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="bridge1" format="discrete">
+			<imls imt="DispProb" noDamageLimit="0">0 0.3 0.6 1</imls>
+			<poes ls="slight">0 1 1 1</poes>
+			<poes ls="moderate">0 1 1 1</poes>
+			<poes ls="extensive">0 1 1 1</poes>
+			<poes ls="complete">0 1 1 1</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

@@ -23,6 +23,7 @@ types.
 import re
 import collections
 import numpy
+from openquake.baselib.general import DictArray
 
 FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
@@ -95,6 +96,13 @@ def sort_by_imt(imtls):
     """
     imts = sorted(imtls, key=lambda imt: from_string(imt).period)
     return {imt: imtls[imt] for imt in imts}
+
+
+def dictarray(imtls):
+    """
+    :returns: a DictArray sorted by IMT
+    """
+    return DictArray(sort_by_imt(imtls))
 
 
 def repr(self):
