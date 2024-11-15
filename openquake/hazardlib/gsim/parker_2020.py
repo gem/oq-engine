@@ -50,13 +50,13 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
     """
     delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1179.)
-    fb_adj = np.full(len(z2pt5), None)
+    fb_adj = np.zeros(len(z2pt5))
     idx_ce1 = delta_z2pt5_adj <= (C['C_e1']/C['C_e3'])
     idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
     fb_adj[idx_ce1] = C['C_e1']
     fb_adj[idx_ce2] = C['C_e2']
-    if len(fb_adj[fb_adj == None]) > 0:
-        fb_adj[fb_adj == None] = C['C_e3'] * delta_z2pt5_adj
+    if len(fb_adj[fb_adj == 0.]) > 0: # unmodified indices must be zeros still
+        fb_adj[fb_adj == 0.] = C['C_e3'] * delta_z2pt5_adj
     return np.log(2.0) - fb_adj
 
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
