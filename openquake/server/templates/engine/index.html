@@ -26,8 +26,9 @@
           {% if application_mode == 'AELO' %}
           {% include './includes/aelo_form.html' %}
           {% elif application_mode == 'ARISTOTLE' %}
-          {# TODO: include the form corresponding to the level of the user #}
-          {% include './includes/aristotle_form_level_2.html' %}
+          {% with template_path='./includes/aristotle_form_level_'|add:interface_level|add:'.html' %}
+          {% include template_path %}
+          {% endwith %}
           {% endif %}
           <div class="span12">
             <h2>List of calculations{% if server_name %} from {{ server_name }}{% endif %}</h2>

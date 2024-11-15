@@ -1413,6 +1413,9 @@ def web_engine(request, **kwargs):
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['aristotle_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
+        # TODO: determine the interface level from the user role
+        # (it needs to be passed as a string to the template)
+        params['interface_level'] = str(getattr(settings, 'INTERFACE_LEVEL', 1))
     return render(
         request, "engine/index.html", params)
 

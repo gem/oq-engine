@@ -31,7 +31,7 @@
                 <div id="pga-map" style="display: none;" class="shakemap-image-container"></div>
             </div>
             <div class="shakemap-clear-float"></div>
-            <form id="aristotle_run_form" method="post" enctype="multipart/form-data" style="display: none;">
+            <form id="aristotle_run_form" class="{% if interface_level != '2' %}hidden_except_submit{% endif %}" method="post" enctype="multipart/form-data">
             {% include './aristotle_run_form.html' %}
             </form>
           </div>
