@@ -22,15 +22,15 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import (
 
 aae = np.testing.assert_almost_equal
 
-exp_z1pt0_baf = np.array([[0.5, 0. , 0. , 0.5, 1. ],
-                          [0.2925, 0.    , 0.    , 0.2925, 0.585 ],
-                          [0.5, 0. , 0. , 0.5, 1. ],
-                          [0.5, 0. , 0. , 0.5, 1. ]])
+exp_z1pt0_baf = np.array([[0.5, 0., 0., 0.5, 1.],
+                          [0.2925, 0., 0., 0.2925, 0.585],
+                          [0.5, 0., 0., 0.5, 1.],
+                          [0.5, 0., 0., 0.5, 1.]])
 
-exp_z2pt5_baf = np.array([[0.5, 0. , 1. , 1. , 1. ],
-                          [0.2925, 0.    , 0.585 , 0.585 , 0.585 ],
-                          [0.5, 0. , 1. , 1. , 1. ],
-                          [0.5, 0. , 1. , 1. , 1. ]])
+exp_z2pt5_baf = np.array([[0.5, 0., 1., 1., 1.],
+                          [0.2925, 0., 0.585, 0.585, 0.585],
+                          [0.5, 0., 1., 1., 1.],
+                          [0.5, 0., 1., 1., 1.]])
 
 
 class USGSBasinScalingTestCase(unittest.TestCase):
