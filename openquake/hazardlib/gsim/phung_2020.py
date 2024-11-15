@@ -42,6 +42,7 @@ def _get_basin_term(region, C, ctx):
     """
     Basin term [16].
     """
+    vs30 = ctx.vs30
     if region == 'glb':
         return 0
 
@@ -57,9 +58,9 @@ def _get_basin_term(region, C, ctx):
         else:
             phi6 = 800
 
-    d_z1 = z1pt0 - ez_1
+    d_z1 = ctx.z1pt0 - ez_1
     return np.where(
-        z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
+        ctx.z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
 
 
 def _distance_attenuation(s, region, aftershocks, C, mag, rrup, ztor):

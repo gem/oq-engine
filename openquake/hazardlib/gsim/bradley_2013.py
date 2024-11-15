@@ -46,7 +46,8 @@ cbd_polygon = shapely.geometry.Polygon(
      (172.6220, -43.5233)])
 
 
-def _get_basin_term(C, z1pt0):
+def _get_basin_term(C, ctx):
+    z1pt0 = ctx.z1pt0
     fb1 = C['phi5'] * (1.0 - 1.0 / np.cosh(
         C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
     fb2 = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
@@ -376,7 +377,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
         # third line
-        + _get_basin_term(C, ctx.z1pt0)
+        + _get_basin_term(C, ctx)
         # fourth line
         + eta + epsilon)
 
