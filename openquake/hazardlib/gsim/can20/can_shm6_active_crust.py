@@ -30,7 +30,7 @@ import openquake.hazardlib.gsim.abrahamson_2014 as ASK14
 import openquake.hazardlib.gsim.chiou_youngs_2014 as CY14
 import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
