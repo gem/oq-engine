@@ -32,6 +32,7 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
@@ -359,6 +360,8 @@ class ParkerEtAl2020SInter(GMPE):
                                   "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
                                   "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
+    :param bool m9_basin_term: Apply the M9 basin term instead of the GMM's
+                               native basin term
     :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
                                     based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
@@ -388,11 +391,13 @@ class ParkerEtAl2020SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
-    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
-                           'usgs_basin_scaling', 'sigma_mu_epsilon'}
+    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin',
+                           'm9_basin_term' 'usgs_basin_scaling',
+                           'sigma_mu_epsilon'}
 
     def __init__(self, region=None, saturation_region=None, basin=None,
-                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
+                 m9_basin_term=False, usgs_basin_scaling=False,
+                 sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -403,8 +408,9 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             self.saturation_region = saturation_region
         self.basin = basin
+        self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
-        if (self.usgs_basin_scaling and 'z2pt5' not in
+        if (self.usgs_basin_scaling or self.m9_basin_term and 'z2pt5' not in
             self.REQUIRES_SITES_PARAMETERS):
             raise ValueError('User must specify a GSIM class for this GMPE '
                              'which considers the z2pt5 site parameter.')
@@ -450,7 +456,11 @@ class ParkerEtAl2020SInter(GMPE):
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-            mean[m] = fp + fnl + fb + flin + fm + c0 + fd
+            pre_baf_mean = fp + fnl + flin + fm + c0 + fd
+            if self.m9_basin_term:
+                mean[m] = _apply_m9_basin_term(ctx, imt, pre_baf_mean, usgs_baf)
+            else:
+                mean[m] = pre_baf_mean + fb
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
                 # Apply epistemic uncertainty scaling
