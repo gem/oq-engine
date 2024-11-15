@@ -42,6 +42,8 @@ from scipy.interpolate import RegularGridInterpolator
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 
 # Path to the within-model epistemic adjustment tables
@@ -433,8 +435,8 @@ def _get_basin_term(C, ctx, region):
     return brt
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None,
-                    get_basin_term=_get_basin_term):
+def get_mean_values(C, region, period, trt, m_b, ctx, a1100=None,
+                    get_basin_term=_get_basin_term, usgs_bs=False):
     """
     Returns the mean ground values for a specific IMT
 
@@ -453,12 +455,20 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None,
             get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup) +
             get_anelastic_attenuation_term(C, trt, region, ctx.rrup) +
             get_depth_term(C, trt, ctx.ztor) +
-            get_shallow_site_response_term(C, region, vs30, a1100))
+            get_shallow_site_response_term(C, region, vs30, a1100)) 
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
     if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
-        mean += get_basin_term(C, ctx, region)
+        
+        # USGS basin scaling factor is imt-dependent
+        if usgs_bs:
+            usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, period)
+        else:
+            usgs_baf = 1.0
+        
+        mean += get_basin_term(C, ctx, region) * usgs_baf
+
     return mean
 
 
@@ -622,6 +632,9 @@ class KuehnEtAl2020SInter(GMPE):
     m_b: The magnitude scaling breakpoint. This term is defined for each region
          and tectonic region type, but this can also be over-ridden by the user
 
+    :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
+                                    based on USGS basin model
+
     sigma_mu_epsilon: Within-model epistemic uncertainty (sigma_mu) is
                       described in Chapter 6 of the report by the authors. This
                       uncertainty is region specific and is described by a
@@ -663,7 +676,12 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0):
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'usgs_basin_scaling',
+                           'sigma_mu_epsilon'}
+
+    def __init__(self, region="GLO", m_b=None, usgs_basin_scaling=False,
+                 sigma_mu_epsilon=0.0):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -680,6 +698,12 @@ class KuehnEtAl2020SInter(GMPE):
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
         else:
             pass
+
+        self.usgs_basin_scaling = usgs_basin_scaling
+        if (self.usgs_basin_scaling and 'z2pt5' not in
+            self.REQUIRES_SITES_PARAMETERS):
+            raise ValueError('User must specify a GSIM class for this GMPE '
+                             'which considers the z2pt5 site parameter.')
 
         self.m_b = m_b
         # epsilon for epistemic uncertainty
@@ -709,15 +733,18 @@ class KuehnEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
-        pga1100 = np.exp(get_mean_values(C_PGA, self.region, trt, m_b, ctx))
+        pga1100 = np.exp(get_mean_values(C_PGA, self.region, 0., trt,
+                                         m_b, ctx, a1100=None,
+                                         usgs_bs=self.usgs_basin_scaling))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
         for imt in imts:
             if ("PGA" in imt.string) or (("SA" in imt.string) and
                                          (imt.period <= 0.1)):
-                pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
-                                           ctx, pga1100)
+                pga_soil = get_mean_values(C_PGA, self.region, imt.period,
+                                           trt, m_b, ctx, pga1100,
+                                           usgs_bs=self.usgs_basin_scaling)
                 break
 
         for m, imt in enumerate(imts):
@@ -730,14 +757,16 @@ class KuehnEtAl2020SInter(GMPE):
                 mean[m] = pga_soil
             elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
-                mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                mean[m] = get_mean_values(C, self.region, imt.period,
+                                          trt, m_break, ctx, pga1100,
+                                          usgs_bs=self.usgs_basin_scaling)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
-                mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                mean[m] = get_mean_values(C, self.region, imt.period,
+                                          trt, m_break, ctx, pga1100,
+                                          usgs_bs=self.usgs_basin_scaling)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(

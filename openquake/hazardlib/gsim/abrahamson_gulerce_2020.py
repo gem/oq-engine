@@ -25,7 +25,8 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 # The regions for which the model is supported. If not listed then the
 # global model (GLO) should be applied
@@ -339,7 +340,8 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
             get_site_amplification_term(C, region, vs30, null_pga1000))
 
 
-def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
+def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment,
+                          usgs_baf):
     """
     Returns the mean acceleration on soil
     """
@@ -350,7 +352,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
             get_rupture_depth_scaling_term(C, trt, ctx) +
             get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
             get_site_amplification_term(C, region, ctx.vs30, pga1000) +
-            _get_basin_term(C, ctx, region))
+            _get_basin_term(C, ctx, region) * usgs_baf)
 
 
 def _get_f2(t1, t2, t3, t4, alpha, period):
@@ -586,6 +588,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
         apply_usa_adjustment (bool): Apply the modeller designated Alaska or
                                      Cascadia adjustments (available only for
                                      the regions "USA-AK" or "CAS")
+        usgs_basin_scaling (bool): Scaling factor to be applied to basin term
+                                   based on USGS basin model
         sigma_mu_epsilon (float): Number of standard deviations to multiply
                                   sigma mu (the standard deviation of the
                                   median) for the epistemic uncertainty model
@@ -620,13 +624,22 @@ class AbrahamsonGulerce2020SInter(GMPE):
     #: Defined for a reference velocity of 1000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1000.0
 
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'ergodic', 'apply_usa_adjustment',
+                           'usgs_basin_scaling', 'sigma_mu_epsilon'}
+
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
-                 sigma_mu_epsilon=0.0):
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region
         self.ergodic = ergodic
         self.apply_usa_adjustment = apply_usa_adjustment
+        self.usgs_basin_scaling = usgs_basin_scaling
+        if (self.usgs_basin_scaling and 'z2pt5' not in
+            self.REQUIRES_SITES_PARAMETERS):
+            raise ValueError('User must specify a GSIM class for this GMPE '
+                             'which considers the z2pt5 site parameter.')
         self.sigma_mu_epsilon = sigma_mu_epsilon
         # If running for Cascadia or Japan then z2.5 is needed
         if region in ("CAS", "JPN"):
@@ -648,8 +661,16 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
+
+            # USGS basin scaling factor is imt-dependent
+            if self.usgs_basin_scaling:
+                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+            else:
+                usgs_baf = 1.0
+            
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
-                                            self.apply_usa_adjustment)
+                                            self.apply_usa_adjustment, usgs_baf)
+
             if self.sigma_mu_epsilon:
                 # Apply an epistmic adjustment factor
                 mean[m] += (self.sigma_mu_epsilon *

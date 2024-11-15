@@ -32,6 +32,8 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 EPI_ADJS = os.path.join(os.path.dirname(__file__),
                         "parker_2020_epi_adj_table.csv")
@@ -357,6 +359,8 @@ class ParkerEtAl2020SInter(GMPE):
                                   "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
                                   "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
+    :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
+                                    based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
@@ -385,10 +389,10 @@ class ParkerEtAl2020SInter(GMPE):
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
-                           'sigma_mu_epsilon'}
+                           'usgs_basin_scaling', 'sigma_mu_epsilon'}
 
     def __init__(self, region=None, saturation_region=None, basin=None,
-                 sigma_mu_epsilon=0.0):
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -399,6 +403,11 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             self.saturation_region = saturation_region
         self.basin = basin
+        self.usgs_basin_scaling = usgs_basin_scaling
+        if (self.usgs_basin_scaling and 'z2pt5' not in
+            self.REQUIRES_SITES_PARAMETERS):
+            raise ValueError('User must specify a GSIM class for this GMPE '
+                             'which considers the z2pt5 site parameter.')
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
@@ -414,6 +423,12 @@ class ParkerEtAl2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
+            # USGS basin scaling factor is imt-dependent
+            if self.usgs_basin_scaling:
+                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+            else:
+                usgs_baf = 1.0
+
             # Regional Mb factor
             if self.saturation_region in self.MB_REGIONS:
                 m_b = self.MB_REGIONS[self.saturation_region]
@@ -428,7 +443,7 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _get_basin_term(C, ctx, self.region, self.basin)
+            fb = _get_basin_term(C, ctx, self.region, self.basin) * usgs_baf
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)
