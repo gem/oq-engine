@@ -32,7 +32,6 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
@@ -44,6 +43,22 @@ CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
 
 _a0 = CallableDict()
 
+
+def _get_adjusted_m9_basin_term(C, z2pt5):
+    """
+    Return the adjusted version of the m9 basin term as detailed within the 
+    USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
+    """
+    delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1179.)
+    fb_adj = np.full(len(z2pt5), None)
+    idx_ce1 = delta_z2pt5_adj <= (C['C_e1']/C['C_e3'])
+    idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
+    fb_adj[idx_ce1] = C['C_e1']
+    fb_adj[idx_ce2] = C['C_e2']
+    idx_nan = np.argwhere(fb_adj == None)
+    if len(idx_nan) > 0:
+        fb_adj[fb_adj==None] = C['C_e3'] * delta_z2pt5_adj
+    return np.log(2.0) - fb_adj
 
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     """
@@ -458,7 +473,8 @@ class ParkerEtAl2020SInter(GMPE):
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             pre_baf_mean = fp + fnl + flin + fm + c0 + fd
             if self.m9_basin_term:
-                mean[m] = _apply_m9_basin_term(ctx, imt, pre_baf_mean, usgs_baf)
+                m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
+                mean[m] = pre_baf_mean + m9_adj
             else:
                 mean[m] = pre_baf_mean + fb
 
