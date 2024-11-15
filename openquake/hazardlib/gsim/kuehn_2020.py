@@ -433,7 +433,8 @@ def _get_basin_term(C, region, ctx):
     return brt
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None, get_basin_term=_get_basin_term):
+def get_mean_values(C, region, trt, m_b, ctx, a1100=None,
+                    get_basin_term=_get_basin_term):
     """
     Returns the mean ground values for a specific IMT
 
@@ -456,9 +457,7 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None, get_basin_term=_get_ba
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if (a1100 == 0).all():
-        pass  # no basin term
-    elif region in ("CAS", "JPN", "NZL", "TWN"):
+    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
         mean += get_basin_term(C, region, ctx)
     return mean
 
@@ -710,8 +709,7 @@ class KuehnEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
-        pga1100 = np.exp(get_mean_values(
-            C_PGA, self.region, trt, m_b, ctx, None))
+        pga1100 = np.exp(get_mean_values(C_PGA, self.region, trt, m_b, ctx))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
