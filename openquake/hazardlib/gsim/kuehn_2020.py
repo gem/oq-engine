@@ -468,6 +468,7 @@ def get_mean_values(C, region, period, trt, m_b, ctx, a1100=None,
             usgs_baf = 1.0
 
         mean += get_basin_term(C, region, ctx) * usgs_baf
+
     return mean
 
 
@@ -735,7 +736,7 @@ class KuehnEtAl2020SInter(GMPE):
         # Get PGA on rock
         pga1100 = np.exp(get_mean_values(C_PGA, self.region, 0.,
                                          trt, m_b, ctx, a1100=None,
-                                         usgs_bs = self.usgs_basin_scaling))
+                                         usgs_bs=self.usgs_basin_scaling))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
@@ -744,7 +745,7 @@ class KuehnEtAl2020SInter(GMPE):
                                          (imt.period <= 0.1)):
                 pga_soil = get_mean_values(C_PGA, self.region, imt.period,
                                            trt, m_b, ctx, pga1100,
-                                           usgs_bs = self.usgs_basin_scaling)
+                                           usgs_bs=self.usgs_basin_scaling)
                 break
 
         for m, imt in enumerate(imts):
