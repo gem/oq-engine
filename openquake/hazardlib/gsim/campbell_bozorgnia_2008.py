@@ -27,10 +27,11 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
 
 
-def _get_basin_term(C, z2pt5):
+def _get_basin_term(C, ctx):
     """
     Returns the basin response term (equation 12, page 146)
     """
+    z2pt5 = ctx.z2pt5
     fsed = np.zeros_like(z2pt5, dtype=float)
     idx = z2pt5 < 1.0
     if np.any(idx):
@@ -76,7 +77,7 @@ def _compute_imt1100(C, ctx, get_pga_site=False):
                      _compute_distance_term(C, ctx) +
                      _compute_style_of_faulting_term(C, ctx) +
                      _compute_hanging_wall_term(C, ctx) +
-                     _get_basin_term(C, ctx.z2pt5) +
+                     _get_basin_term(C, ctx) +
                      fsite)
     # If PGA at the site is needed then remove factor for rock and
     # re-calculate on correct site condition
@@ -321,7 +322,7 @@ class CampbellBozorgnia2008(GMPE):
                        _compute_style_of_faulting_term(C, ctx) +
                        _compute_hanging_wall_term(C, ctx) +
                        _compute_shallow_site_response(C, ctx, pga1100) +
-                       _get_basin_term(C, ctx.z2pt5))
+                       _get_basin_term(C, ctx))
 
             # If it is necessary to ensure that Sa(T) >= PGA
             # (see previous comment)

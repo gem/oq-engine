@@ -288,7 +288,7 @@ def get_reference_basin_depth(region, vs30):
     return np.exp(ln_zref)
 
 
-def _get_basin_term(C, region, vs30, z25):
+def _get_basin_term(C, region, ctx):
     """
     Returns the basin depth scaling term, applicable only for the Cascadia
     and Japan regions, defined in equations 3.9 - 3.11 and corrected in the
@@ -300,11 +300,15 @@ def _get_basin_term(C, region, vs30, z25):
     if region not in ("CAS", "JPN"):
         # Basin depth defined only for Cascadia and Japan, so return 0
         return 0.0
+
+    # Convert z25 from km to m
+    z25 = 1000.0 * ctx.z2pt5
+
     # Define the reference basin depth from Vs30
-    z25_ref = get_reference_basin_depth(region, vs30)
+    z25_ref = get_reference_basin_depth(region, ctx.vs30)
     # Normalise the basin depth term (Equation 3.9)
     ln_z25_prime = np.log((z25 + 50.0) / (z25_ref + 50.0))
-    f_basin = np.zeros(vs30.shape)
+    f_basin = np.zeros(ctx.vs30.shape)
     if region == "JPN":
         # Japan Basin (Equation 3.10)
         f_basin = C["a41"] * np.clip(ln_z25_prime, -2.0, np.inf)
@@ -339,13 +343,6 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
     """
     Returns the mean acceleration on soil
     """
-    if region in ("CAS", "JPN"):
-        # Convert z25 from km to m
-        z25 = 1000.0 * ctx.z2pt5
-    else:
-        # Basin depths will be ignored, so set zeros
-        z25 = np.zeros(ctx.vs30.shape)
-
     return (get_base_term(C, region, apply_adjustment) +
             get_magnitude_scaling_term(C, trt, region, ctx.mag) +
             get_geometric_spreading_term(C, region, ctx.mag, ctx.rrup) +
@@ -353,7 +350,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
             get_rupture_depth_scaling_term(C, trt, ctx) +
             get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
             get_site_amplification_term(C, region, ctx.vs30, pga1000) +
-            _get_basin_term(C, region, ctx.vs30, z25))
+            _get_basin_term(C, region, ctx))
 
 
 def _get_f2(t1, t2, t3, t4, alpha, period):

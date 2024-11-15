@@ -38,7 +38,7 @@ def get_stddevs(C):
             phi_tot]
 
 
-def _get_basin_term(region, C, vs30, z1pt0):
+def _get_basin_term(region, C, ctx):
     """
     Basin term [16].
     """
@@ -182,7 +182,7 @@ class PhungEtAl2020Asc(GMPE):
                     C['phi3'] * (1130 - 360))) * np.log(
                         (sa1130 + C['phi4']) / C['phi4'])
             # basin term [16]
-            lnmed += _get_basin_term(self.region, C, ctx.vs30, ctx.z1pt0)
+            lnmed += _get_basin_term(self.region, C, ctx)
             mean[m] = lnmed
             sig[m], tau[m], phi[m] = get_stddevs(C)
 
