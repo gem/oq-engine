@@ -440,13 +440,13 @@ class AbrahamsonEtAl2014(GMPE):
     Regions'.
     
     Attributes:
-    region (str): Choice of region among the supported regions ("CHN",
-                  "JPN", "TWN"
-    usgs_basin_scaling (bool): Scaling factor to be applied to basin term
-                               based on USGS basin model
-    sigma_mu_epsilon (float): Number of standard deviations to multiply
-                              sigma mu (the standard deviation of the
-                              median) for the epistemic uncertainty model
+        region (str): Choice of region among the supported
+                      regions ("CHN", "JPN", "TWN"
+        usgs_basin_scaling (bool): Scaling factor to be applied to basin term
+                                   based on USGS basin model
+        sigma_mu_epsilon (float): Number of standard deviations to multiply
+                                  sigma mu (the standard deviation of the
+                                  median) for the epistemic uncertainty model
     """
     #: Supported tectonic region type is active shallow crust, see title!
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
