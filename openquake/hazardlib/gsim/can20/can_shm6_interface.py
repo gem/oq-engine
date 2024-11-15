@@ -247,7 +247,7 @@ def _site_term_am09(ctx, imt):
     BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
     F = CanadaSHM6_ASC._get_site_scaling_ba14(
-        "", "", C, np.exp(pga760), ctx, imt.period, ctx.rjb)
+        "", "", C, np.exp(pga760), ctx, imt, ctx.rjb)
     return F
 
 
