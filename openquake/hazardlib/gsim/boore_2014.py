@@ -40,12 +40,12 @@ CONSTS = {
     "v2": 300.0}
 
 
-def _get_basin_depth_term(region, C, ctx, period):
+def _get_basin_term(C, ctx, region, imt):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
     """
-    if region == "nobasin" or period < 0.65:  # switched off
+    if region == "nobasin" or imt.period < 0.65:  # switched off
         return np.zeros(len(ctx.vs30), dtype=float)
     bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
               else california_basin_model(ctx.vs30))
@@ -194,7 +194,7 @@ def _get_pga_on_rock(kind, region, sof, C, ctx):
                   _get_path_scaling(kind, region, C, ctx))
 
 
-def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
+def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling term
@@ -204,7 +204,7 @@ def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_depth_term(region, C, ctx, period)
+        fbd = _get_basin_term(C, ctx, region, imt)
     return flin + fnl + fbd
 
 
@@ -295,7 +295,7 @@ class BooreEtAl2014(GMPE):
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
-                                  C, pga_rock, ctx, imt.period, ctx.rjb))
+                                  C, pga_rock, ctx, imt, ctx.rjb))
             if self.sigma_mu_epsilon:
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)

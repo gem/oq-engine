@@ -1,3 +1,14 @@
+  [Michele Simionato]
+  * Internal: forcing the signature (C, ctx, region, ...) for _get_basin_term
+    in hazardlib
+  * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
+    disjoint sites and events
+
+  [Paolo Tormene]
+  * Added a `duplicates_strategy` argument to `read_df` and changed the
+    approach used while reading station data, to calculate the average values
+    of stations having the same coordinates instead of raising an error
+
   [Christopher Brooks]
   * Added epistemic uncertainty scaling capabilities to
     the Parker et al. (2020) NGASUB GMM.
