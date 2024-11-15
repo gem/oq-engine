@@ -665,7 +665,7 @@
                     $('#shakemap-image-row').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
                 });
                 event.preventDefault();
             });
