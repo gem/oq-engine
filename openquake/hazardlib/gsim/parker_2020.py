@@ -104,7 +104,7 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _get_basin_term(region, basin, C, ctx=None):
+def _get_basin_term(region, basin, C, ctx):
     """
     Basin term main handler.
     """
@@ -186,8 +186,7 @@ def _depth_scaling_2(trt, C, ctx):
     return res
 
 
-def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3,
-                            ctx):
+def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3, ctx):
     """
     Basin term for given factors.
     """

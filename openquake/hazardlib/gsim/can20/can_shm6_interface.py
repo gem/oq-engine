@@ -54,7 +54,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
     """
     MAX_SA = 10.
     MIN_SA = 0.05
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -260,7 +260,7 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
 
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
