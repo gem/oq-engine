@@ -71,16 +71,28 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     me[:] = np.log(exp_mean * fa)
 
 
-def stewart2020_site_term(ctx, imt, me, si, ta, ph, kind):
+def ceus2020_site_term(ctx, imt, me, si, ta, ph, wimp, wgr, ref_vs30):
     """
     This function adds the Stewart et al. (2020; EQS) site term that uses as
     a reference 760 m/s.
     """
+
+    from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
+        stewart2020_linear_scaling)
+    from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
+        hashash2020_non_linear_scaling)
+
     # From the original GMM
     exp_mean = np.exp(me)
 
+    # Compute the linear term
+    slin = stewart2020_linear_scaling(imt, ctx.vs30, wimp, wgr)
+
+    # Compute the nonlinear term
+    snlin = hashash2020_non_linear_scaling(imt, ctx.vs30, exp_mean, ref_vs30)
+
     # Final mean
-    me[:] = np.log(exp_mean * fa)
+    me[:] += (slin + snlin)
 
 
 def cy14_site_term(ctx, imt, me, si, ta, phi):
@@ -105,7 +117,7 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     This function applies the M9 basin adjustment
     """
     me = _apply_m9_basin_term(ctx, imt, me)
-    
+
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """

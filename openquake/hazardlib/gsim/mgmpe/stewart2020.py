@@ -39,7 +39,7 @@ def _get_f760_model(C760, vs30, wimp, wgr):
     assert np.all((wimp + wgr) - 1.0 < 1e-1)
 
     # Compute the scaling factor
-    return C760['impedance'] * wimp + C760['gradient'] * wimp
+    return C760['impedance'] * wimp + C760['gradient'] * wgr
 
 
 def _get_vs30_scaling_model(C, vs30, f760):
@@ -70,7 +70,7 @@ def _get_vs30_scaling_model(C, vs30, f760):
     return fv
 
 
-def vs30_scaling_model(imtstr, vs30, wimp, wgr):
+def stewart2020_linear_scaling(imtstr, vs30, wimp, wgr):
     """
     Implements the Vs30 scaling model of Stewart et al. (2020; EQS).
 
@@ -90,11 +90,13 @@ def vs30_scaling_model(imtstr, vs30, wimp, wgr):
     C = COEFFS_F760[imtstr]
     f760 = _get_f760_model(C, vs30, wimp, wgr)
 
+    print(wimp, wgr, f760)
+
     # Amplification factor
     C = COEFFS[imtstr]
     fv = _get_vs30_scaling_model(C, vs30, f760)
 
-    return fv
+    return fv + f760
 
 
 COEFFS_F760 = CoeffsTable(table="""\

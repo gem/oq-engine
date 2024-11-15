@@ -24,17 +24,30 @@ import unittest
 import numpy as np
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.mgmpe.stewart2020 import vs30_scaling_model
+from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
+    stewart2020_linear_scaling)
 
 
 class StewartEtAl2020Test(unittest.TestCase):
 
-    def test_amplification_pga(self):
+    def test_amplification_pga_wimp(self):
+        """ high impedance velocity gradient """
         vs30 = np.array([201.0, 400.0, 800.0])
         imt = from_string('PGA')
         wimp = 1.0
         wgr = 1.0 - wimp
-        fv = vs30_scaling_model(imt, vs30, wimp, wgr)
+        fv = stewart2020_linear_scaling(imt, vs30, wimp, wgr)
         # hand computed results
-        expected = np.array([0.25175693, 0.18613762, 0.0])
-        np.testing.assert_allclose(fv, expected)
+        expected = np.array([0.436757, 0.371138, 0.185])
+        np.testing.assert_allclose(fv, expected, atol=1e-6)
+
+    def test_amplification_pga_wgr(self):
+        """ gradual velocity gradient """
+        vs30 = np.array([201.0, 400.0, 800.0])
+        imt = from_string('PGA')
+        wimp = 0.0
+        wgr = 1.0 - wimp
+        fv = stewart2020_linear_scaling(imt, vs30, wimp, wgr)
+        # hand computed results
+        expected = np.array([0.372757, 0.307138, 0.121])
+        np.testing.assert_allclose(fv, expected, atol=1e-6)

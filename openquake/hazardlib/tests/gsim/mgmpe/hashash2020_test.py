@@ -25,17 +25,17 @@ import numpy as np
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
-    hashash_non_linear_scaling)
+    hashash2020_non_linear_scaling)
 
 
 class HashashEtAl2020Test(unittest.TestCase):
 
     def test_amplification_pga(self):
-        vs30 = np.array([400.0, 2800.0])
+        vs30 = np.array([400.0, 2800.0, 3000.0])
         imtstr = from_string('PGA')
         ref_pga = 0.1
         ref_vs30 = 3000.0
-        fv = hashash_non_linear_scaling(imtstr, vs30, ref_pga, ref_vs30)
+        fv = hashash2020_non_linear_scaling(imtstr, vs30, ref_pga, ref_vs30)
         # hand-computed results
-        expected = np.array([0.88387463, 0.00395593])
+        expected = np.array([-0.310896, -0.001391, 0.0])
         np.testing.assert_allclose(fv, expected, atol=1e-6)

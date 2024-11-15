@@ -24,19 +24,18 @@ import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 
 C760OVER3000 = 2.275
-REFERENCE = 3000
 
 
-def hashash_non_linear_scaling(imtstr, vs30, ref_pga, ref_vs30):
+def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     """
     Implements the non-linear scaling model of Hashash et al. (2020; EQS).
 
-    :param imtstr:
+    :param imt:
     :param vs30:
     :param wimp:
     :param wgr:
     """
-    C = COEFFS[imtstr]
+    C = COEFFS[imt]
 
     if np.abs(ref_vs30 - 3000) < 1e-1:
         ref_pga = ref_pga
@@ -46,20 +45,25 @@ def hashash_non_linear_scaling(imtstr, vs30, ref_pga, ref_vs30):
         msg = 'The supported reference Vs30 is either 760 or 3000m/s'
         raise ValueError(msg)
 
+    # Fixing reference (see text at the bottom of page 71)
+    if imt.period < 0.4:
+        ref_vs30 = 760.0
+
     # Compute the argument of the logarithm in eq. 2
-    coeff = (ref_pga - C['f3']) / C['f3']
+    coeff = (ref_pga + C['f3']) / C['f3']
 
     # Initialize the output
     fnl = np.zeros_like(vs30)
 
     # Compute eq.3
     idx = vs30 < C['vc']
-    vsmin = np.minimum(vs30[idx], REFERENCE)
+    vsmin = np.minimum(vs30[idx], ref_vs30)
     exp1 = np.exp(C['f5'] * (vsmin - 360.))
-    exp2 = np.exp(C['f5'] * (REFERENCE - 360))
+    exp2 = np.exp(C['f5'] * (ref_vs30 - 360))
     f2 = C['f4'] * (exp1 - exp2)
 
     # Compute the median nonlinear amplification term using eq.2
+    assert np.all(coeff > 0.0)
     fnl[idx] = f2 * np.log(coeff)
 
     return fnl
@@ -69,6 +73,7 @@ COEFFS = CoeffsTable(table="""\
     IMT     f3       f4       f5       vc        sigma_c
     pgv     0.06089  -0.08344 -0.00667 2260      0.12
     pga     0.089417 -0.44895 -0.00175 2990      0.12
+    0.001   0.089417 -0.44895 -0.00175 2990      0.12
     0.01    0.075204 -0.43755 -0.00131 2990      0.12
     0.02    0.056603 -0.41511 -0.00098 2990      0.12
     0.03    0.103599 -0.49871 -0.00127 2990      0.12
