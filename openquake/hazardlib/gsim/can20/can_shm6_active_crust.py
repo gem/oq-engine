@@ -55,6 +55,7 @@ def _check_imts(imts):
                              + str(MAX_SA) + 's.')
 
 
+# NB: this is calling the basin term
 def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
@@ -291,7 +292,7 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
 
     See also header in CanadaSHM6_ActiveCrust.py
     """
-    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30', 'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
