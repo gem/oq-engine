@@ -541,6 +541,13 @@
                 $(this).css("background-color", "white");
             });
 
+
+            function toggleRunCalcBtnState() {
+                const lonValue = $('#lon').val().trim();
+                $('#submit_aristotle_calc').prop('disabled', lonValue === '');
+            }
+            toggleRunCalcBtnState();
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
@@ -558,6 +565,7 @@
                 }).done(function (data) {
                     // console.log(data);
                     $('#lon').val(data.lon);
+                    toggleRunCalcBtnState();
                     $('#lat').val(data.lat);
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
