@@ -18,8 +18,6 @@
 """
 Module exports :class:`NGAEastAUS23`
 """
-import os
-import numpy as np
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
