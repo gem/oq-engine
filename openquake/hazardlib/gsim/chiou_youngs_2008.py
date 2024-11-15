@@ -26,7 +26,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Return the basin term describing effects of deep sediment sites and shallow
     sediment sites through z1pt0 

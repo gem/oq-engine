@@ -157,7 +157,7 @@ def _compute_large_distance_term(C, ctx):
     return large_distance_term
 
 
-def _get_basin_term(C, imt, ctx, v1100=None):
+def _get_basin_term(C, ctx, region, imt, v1100=None):
     """
     Compute and return soil depth model term, that is the 9-th term in
     equation 1, page 74. The calculation of this term is explained in
@@ -193,7 +193,7 @@ def _compute_imt1100(C_PGA, ctx):
             _compute_hanging_wall_term(C_PGA, ctx) +
             _compute_top_of_rupture_depth_term(C_PGA, ctx) +
             _compute_large_distance_term(C_PGA, ctx) +
-            _get_basin_term(C_PGA, imt, ctx, vs30_1100) +
+            _get_basin_term(C_PGA, ctx, None, imt, vs30_1100) +
             # this is the site response term in case of vs30=1100
             ((C_PGA['a10'] + C_PGA['b'] * CONSTS['n']) *
              np.log(vs30_star / C_PGA['VLIN'])))
@@ -478,7 +478,7 @@ class AbrahamsonSilva2008(GMPE):
                        _compute_hanging_wall_term(C, ctx) +
                        _compute_top_of_rupture_depth_term(C, ctx) +
                        _compute_large_distance_term(C, ctx) +
-                       _get_basin_term(C, imt, ctx))
+                       _get_basin_term(C, ctx, None, imt))
 
             sig[m], tau[m], phi[m] = _get_stddevs(C, C_PGA, pga1100, ctx)
 

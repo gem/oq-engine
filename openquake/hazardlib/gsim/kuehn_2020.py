@@ -402,7 +402,7 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
-def _get_basin_term(C, region, ctx):
+def _get_basin_term(C, ctx, region):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -460,6 +460,7 @@ def get_mean_values(C, region, period, trt, m_b, ctx, a1100=None,
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
     if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
+<<<<<<< HEAD
         
         # USGS basin scaling factor is imt-dependent
         if usgs_bs:
@@ -469,6 +470,9 @@ def get_mean_values(C, region, period, trt, m_b, ctx, a1100=None,
 
         mean += get_basin_term(C, region, ctx) * usgs_baf
 
+=======
+        mean += get_basin_term(C, ctx, region)
+>>>>>>> 84d2e508bb01e668919256293aea10ca268258c5
     return mean
 
 

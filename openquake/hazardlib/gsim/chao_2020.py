@@ -123,7 +123,7 @@ def _fvs30(geology, C, ctx):
                     C['c27'] if geology else C['c28'])
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     z1pt0 factor.
     """

@@ -86,7 +86,7 @@ def _linear_site_response(C, ctx):
     return fsl
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """ Compute the soil depth scaling term """
     # Set the c11 coefficient - See eq.13b at page 2093
     c11 = np.ones_like(ctx.vs30) * C['c11a']

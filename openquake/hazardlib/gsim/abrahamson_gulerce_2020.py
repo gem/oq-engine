@@ -670,8 +670,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
                 usgs_baf = 1.0
 
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
-                                            self.apply_usa_adjustment,
-                                            usgs_baf)
+                                            self.apply_usa_adjustment, usgs_baf)
             if self.sigma_mu_epsilon:
                 # Apply an epistmic adjustment factor
                 mean[m] += (self.sigma_mu_epsilon *

@@ -106,7 +106,7 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _get_basin_term(region, basin, C, ctx):
+def _get_basin_term(C, ctx, region, basin):
     """
     Basin term main handler.
     """
@@ -443,7 +443,11 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
+<<<<<<< HEAD
             fb = _get_basin_term(self.region, self.basin, C, ctx) * usgs_baf
+=======
+            fb = _get_basin_term(C, ctx, self.region, self.basin)
+>>>>>>> 84d2e508bb01e668919256293aea10ca268258c5
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)
