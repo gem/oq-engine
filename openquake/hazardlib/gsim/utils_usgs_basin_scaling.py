@@ -47,7 +47,7 @@ def _get_z2pt5_usgs_basin_scaling(z, period):
 
 def _get_usgs_basin_scaling(z2pt5, basin_upper, basin_lower, period):
     """
-    Get the USGS basin model scaling factor to be applied to the
+    Get the USGS basin model scaling factor to be applied to the GMM's
     basin amplification term.
     """
     constr = np.clip(z2pt5, basin_upper, basin_lower)

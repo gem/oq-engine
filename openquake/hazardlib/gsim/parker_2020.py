@@ -359,6 +359,8 @@ class ParkerEtAl2020SInter(GMPE):
                                   "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
                                   "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
+    :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
+                                    based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
