@@ -27,8 +27,7 @@ import numpy as np
 
 def _get_z1pt0_usgs_basin_scaling(z, period):
     """
-    Get the USGS basin model scaling factor for z1pt0 based basin amp
-    functions. This is the deltaZ1scale scale function in the GmmUtils.java
+    Get the USGS basin model scaling factor for z1pt0-based GMM basin terms.
     """
     z_scale = _get_usgs_basin_scaling(
         z, basin_upper=0.3, basin_lower=0.5, period=period)
@@ -38,8 +37,7 @@ def _get_z1pt0_usgs_basin_scaling(z, period):
 
 def _get_z2pt5_usgs_basin_scaling(z, period):
     """
-    Get the USGS basin model scaling factor for z2pt5 based basin amp
-    functions. This is the deltaZ25scale scale function in the GmmUtils.java
+    Get the USGS basin model scaling factor for z2pt5 based GMM basin terms.
     """
     z_scale = _get_usgs_basin_scaling(
         z, basin_upper=1.0, basin_lower=3.0, period=period)
@@ -47,37 +45,15 @@ def _get_z2pt5_usgs_basin_scaling(z, period):
     return z_scale
 
 
-def _get_usgs_basin_scaling(z, basin_upper, basin_lower, period):
+def _get_usgs_basin_scaling(z2pt5, basin_upper, basin_lower, period):
     """
     Get the USGS basin model scaling factor to be applied to the
     basin amplification term.
     """
-    constr = np.clip(z, basin_upper, basin_lower)
+    constr = np.clip(z2pt5, basin_upper, basin_lower)
     basin_range = basin_lower - basin_upper
     z_scale = (constr - basin_upper) / basin_range
     if period == 0.75:
         return 0.585 * z_scale
     else:
         return z_scale
-    
-
-class USGSBasinScaling(object):
-    """
-    Compute a multiplicative adjustment factor for a GMM's basin term based
-    on the USGS basin model.
-
-    :param str z_type: Either depth to shear-wave velocity of 1000 m/s (z1pt0)
-                       or shear-wave velocity to 2500 m/s (z2pt5).
-    :param str period: Period of spectral acceleration.
-    """
-
-    def __init__(self, z_type, period):
-        assert self.ztype in ['z1pt0', 'z2pt5']
-        self.ztype = z_type
-        self.period = period
-
-    def get_basin_factor(self):
-        if self.ztype == 'z1pt0':
-            return _get_z1pt0_usgs_basin_scaling(self.ztype, self.period)
-        else:
-            return _get_z2pt5_usgs_basin_scaling(self.ztype, self.period)

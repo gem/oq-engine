@@ -32,7 +32,8 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.gsim.utils_usgs_basin_scaling import USGSBasinScaling
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 EPI_ADJS = os.path.join(os.path.dirname(__file__),
                         "parker_2020_epi_adj_table.csv")
@@ -422,7 +423,7 @@ class ParkerEtAl2020SInter(GMPE):
 
             # USGS basin scaling factor is imt-dependent
             if self.usgs_basin_scaling:
-                usgs_baf = USGSBasinScaling(ctx.z2pt5, imt)
+                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
             else:
                 usgs_baf = 1.0
 
