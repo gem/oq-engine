@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * We are now forcing the signature (C, ctx, region, ...) for _get_basin_term
+    in hazardlib
   * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
     disjoint sites and events
 

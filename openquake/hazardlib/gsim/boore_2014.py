@@ -40,7 +40,7 @@ CONSTS = {
     "v2": 300.0}
 
 
-def _get_basin_term(region, C, ctx, period):
+def _get_basin_term(C, ctx, region, period):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
@@ -204,7 +204,7 @@ def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_term(region, C, ctx, period)
+        fbd = _get_basin_term(C, ctx, region, period)
     return flin + fnl + fbd
 
 

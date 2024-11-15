@@ -46,7 +46,7 @@ cbd_polygon = shapely.geometry.Polygon(
      (172.6220, -43.5233)])
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     z1pt0 = ctx.z1pt0
     fb1 = C['phi5'] * (1.0 - 1.0 / np.cosh(
         C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))

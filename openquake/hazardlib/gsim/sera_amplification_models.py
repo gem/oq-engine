@@ -431,7 +431,7 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
 REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Get basin amplification term
     """

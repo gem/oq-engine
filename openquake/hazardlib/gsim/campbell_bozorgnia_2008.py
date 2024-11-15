@@ -27,7 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (equation 12, page 146)
     """

@@ -117,7 +117,7 @@ def get_shallow_site_response_term(C, vs30, pga760):
     return (f_site_lin + f_site_nl) / np.log(10.0)
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (Eq. 3.10)
     """

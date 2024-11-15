@@ -34,7 +34,7 @@ CONSTS = {
     "Mw1": 16.0}
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     d0 = CONSTS["D0"]
     tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)

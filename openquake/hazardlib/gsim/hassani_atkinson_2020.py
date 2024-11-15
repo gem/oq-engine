@@ -173,7 +173,7 @@ def _fvs30(C, vs30):
                     C['cv2'] * np.log10(vs30 / s['vref']), fvs30)
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Z2pt5 factor.
     """

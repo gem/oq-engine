@@ -61,7 +61,7 @@ def _get_path_term(C, ctx):
     return fpath
 
 
-def _get_basin_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Get the basin term
     """
