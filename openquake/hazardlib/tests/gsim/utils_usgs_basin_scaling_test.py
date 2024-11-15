@@ -23,12 +23,12 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import (
 aae = np.testing.assert_almost_equal
 
 exp_z1pt0_baf = np.array([[0.5, 0. , 0. , 0.5, 1. ],
-                          [0.5, 0. , 0. , 0.5, 1. ],
+                          [0.2925, 0.    , 0.    , 0.2925, 0.585 ],
                           [0.5, 0. , 0. , 0.5, 1. ],
                           [0.5, 0. , 0. , 0.5, 1. ]])
 
 exp_z2pt5_baf = np.array([[0.5, 0. , 1. , 1. , 1. ],
-                          [0.5, 0. , 1. , 1. , 1. ],
+                          [0.2925, 0.    , 0.585 , 0.585 , 0.585 ],
                           [0.5, 0. , 1. , 1. , 1. ],
                           [0.5, 0. , 1. , 1. , 1. ]])
 
@@ -43,7 +43,7 @@ class USGSBasinScalingTestCase(unittest.TestCase):
         z1pt0 = np.array([0.4, 0.3, 0.2, 0.4, 1])
         z2pt5 = np.array([2, 1, 4, 6, 3])
         # Some periods
-        periods = np.array([0.0, 0.6, 2, 3.])
+        periods = np.array([0.0, 0.75, 2, 3.])
 
         for idx, period in enumerate(periods):
             z1pt0_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, period)
