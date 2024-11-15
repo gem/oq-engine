@@ -140,15 +140,18 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def _get_basin_term(region, C, centered_z1pt0):
+def _get_basin_term(region, C, ctx):
     """
     Returns the basin depth scaling
     """
+    # Get basin depth
+    dz1pt0 = _get_centered_z1pt0(region, ctx)
+
+    # for Z1.0 = 0.0 no deep soil correction is applied
+    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
     if region == "JPN":
-        return C["phi5jp"] * (1.0 - np.exp(-centered_z1pt0 /
-                                           CONSTANTS["phi6jp"]))
-    return C["phi5"] * (1.0 - np.exp(-centered_z1pt0 /
-                                     CONSTANTS["phi6"]))
+        return C["phi5jp"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6jp"]))
+    return C["phi5"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6"]))
 
 
 def get_directivity(C, ctx):
@@ -527,13 +530,7 @@ def get_mean_stddevs(region, C, ctx, imt, conf):
     # Get ground motion on reference rock
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
-
-    # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(region, ctx)
-
-    # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = _get_basin_term(region, C, dz1pt0)
+    f_z1pt0 = _get_basin_term(region, C, ctx)
 
     # Get linear amplification term
     f_lin = get_linear_site_term(region, C, ctx)

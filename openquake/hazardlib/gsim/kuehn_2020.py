@@ -400,7 +400,7 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
-def _get_basin_term(C, region, vs30, z_value):
+def _get_basin_term(C, region, ctx, z_value):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -422,7 +422,7 @@ def _get_basin_term(C, region, vs30, z_value):
         # No basin amplification to be applied
         return 0.0
     brt[mask] = c11 + c12 * (np.log(z_value[mask]) -
-                             _get_ln_z_ref(CZ, vs30[mask]))
+                             _get_ln_z_ref(CZ, ctx.vs30[mask]))
     return brt
 
 
@@ -460,10 +460,10 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
     if region in ("CAS", "JPN"):
         # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
         # rather than km)
-        mean += _get_basin_term(C, region, vs30, z_values)
+        mean += _get_basin_term(C, region, ctx, z_values)
     elif region in ("NZL", "TWN"):
         # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += _get_basin_term(C, region, vs30, z_values)
+        mean += _get_basin_term(C, region, ctx, z_values)
     else:
         pass
     return mean

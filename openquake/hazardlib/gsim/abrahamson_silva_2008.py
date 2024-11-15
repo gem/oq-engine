@@ -157,21 +157,25 @@ def _compute_large_distance_term(C, ctx):
     return large_distance_term
 
 
-def _get_basin_term(C, imt, z1pt0, vs30):
+def _get_basin_term(C, imt, ctx, v1100=None):
     """
     Compute and return soil depth model term, that is the 9-th term in
     equation 1, page 74. The calculation of this term is explained in
     paragraph 'Soil Depth Model', page 79.
     """
-    a21 = _compute_a21_factor(C, imt, z1pt0, vs30)
+    if v1100 is None:
+        vs30 = ctx.vs30
+    else:
+        vs30 = v1100
+    a21 = _compute_a21_factor(C, imt, ctx.z1pt0, vs30)
     a22 = _compute_a22_factor(imt)
     median_z1pt0 = _compute_median_z1pt0(vs30)
 
-    soil_depth_term = a21 * np.log((z1pt0 + CONSTS['c2']) /
+    soil_depth_term = a21 * np.log((ctx.z1pt0 + CONSTS['c2']) /
                                    (median_z1pt0 + CONSTS['c2']))
 
-    idx = z1pt0 >= 200
-    soil_depth_term[idx] += a22 * np.log(z1pt0[idx] / 200)
+    idx = ctx.z1pt0 >= 200
+    soil_depth_term[idx] += a22 * np.log(ctx.z1pt0[idx] / 200)
 
     return soil_depth_term
 
@@ -189,7 +193,7 @@ def _compute_imt1100(C_PGA, ctx):
             _compute_hanging_wall_term(C_PGA, ctx) +
             _compute_top_of_rupture_depth_term(C_PGA, ctx) +
             _compute_large_distance_term(C_PGA, ctx) +
-            _get_basin_term(C_PGA, imt, ctx.z1pt0, vs30_1100) +
+            _get_basin_term(C_PGA, imt, ctx, vs30_1100) +
             # this is the site response term in case of vs30=1100
             ((C_PGA['a10'] + C_PGA['b'] * CONSTS['n']) *
              np.log(vs30_star / C_PGA['VLIN'])))
@@ -474,7 +478,7 @@ class AbrahamsonSilva2008(GMPE):
                        _compute_hanging_wall_term(C, ctx) +
                        _compute_top_of_rupture_depth_term(C, ctx) +
                        _compute_large_distance_term(C, ctx) +
-                       _get_basin_term(C, imt, ctx.z1pt0, ctx.vs30))
+                       _get_basin_term(C, imt, ctx))
 
             sig[m], tau[m], phi[m] = _get_stddevs(C, C_PGA, pga1100, ctx)
 

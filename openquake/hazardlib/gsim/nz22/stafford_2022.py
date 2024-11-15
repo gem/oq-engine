@@ -27,7 +27,6 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
-    _get_centered_z1pt0,
     _get_centered_ztor,
     get_hanging_wall_term,
     get_geometric_spreading,
@@ -425,10 +424,7 @@ def get_mean_stddevs(
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
-    dz1pt0 = _get_centered_z1pt0("Stafford2022", ctx)
-    # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = _get_basin_term("Stafford2022", C, dz1pt0)
+    f_z1pt0 = _get_basin_term("Stafford2022", C, ctx)
     # Get linear amplification term
     f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term

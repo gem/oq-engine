@@ -56,7 +56,7 @@ from openquake.hazardlib.gsim.nz22.const import (
 )
 
 
-def _get_basin_term(C, region, vs30, z_value):
+def _get_basin_term(C, region, ctx, z_value):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -74,20 +74,17 @@ def _get_basin_term(C, region, vs30, z_value):
 
     brt = np.zeros_like(z_value)
     mask = z_value > 0.0
+    vs30 = ctx.vs30[mask]
     if not np.any(mask):
         # No basin amplification to be applied
         return 0.0
-    if (
-        region == "NZL"
-    ):  # Personal communication with Nico. We need to use the NZ
+    if region == "NZL":
+        # Personal communication with Nico. We need to use the NZ
         # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
         brt[mask] = c11 + c12 * (
-            _get_ln_z_ref(CZ, vs30[mask]) - _get_ln_z_ref(CZ, vs30[mask])
-        )
+            _get_ln_z_ref(CZ, vs30) - _get_ln_z_ref(CZ, vs30))
     else:
-        brt[mask] = c11 + c12 * (
-            np.log(z_value[mask]) - _get_ln_z_ref(CZ, vs30[mask])
-        )
+        brt[mask] = c11 + c12 * (np.log(z_value) - _get_ln_z_ref(CZ, vs30))
     return brt
 
 
@@ -199,10 +196,10 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
     if region in ("CAS", "JPN"):
         # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
         # rather than km)
-        mean += _get_basin_term(C, region, vs30, z_values)
+        mean += _get_basin_term(C, region, ctx, z_values)
     elif region in ("NZL", "TWN"):
         # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += _get_basin_term(C, region, vs30, z_values)
+        mean += _get_basin_term(C, region, ctx, z_values)
     else:
         pass
     return mean

@@ -38,10 +38,11 @@ def get_stddevs(C):
             phi_tot]
 
 
-def _get_basin_term(region, C, vs30, z1pt0):
+def _get_basin_term(region, C, ctx):
     """
     Basin term [16].
     """
+    vs30 = ctx.vs30
     if region == 'glb':
         return 0
 
@@ -57,9 +58,9 @@ def _get_basin_term(region, C, vs30, z1pt0):
         else:
             phi6 = 800
 
-    d_z1 = z1pt0 - ez_1
+    d_z1 = ctx.z1pt0 - ez_1
     return np.where(
-        z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
+        ctx.z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
 
 
 def _distance_attenuation(s, region, aftershocks, C, mag, rrup, ztor):
@@ -182,7 +183,7 @@ class PhungEtAl2020Asc(GMPE):
                     C['phi3'] * (1130 - 360))) * np.log(
                         (sa1130 + C['phi4']) / C['phi4'])
             # basin term [16]
-            lnmed += _get_basin_term(self.region, C, ctx.vs30, ctx.z1pt0)
+            lnmed += _get_basin_term(self.region, C, ctx)
             mean[m] = lnmed
             sig[m], tau[m], phi[m] = get_stddevs(C)
 
