@@ -55,9 +55,8 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
     fb_adj[idx_ce1] = C['C_e1']
     fb_adj[idx_ce2] = C['C_e2']
-    idx_nan = np.argwhere(fb_adj == None)
-    if len(idx_nan) > 0:
-        fb_adj[idx_nan] = C['C_e3'] * delta_z2pt5_adj
+    if len(fb_adj[fb_adj == None]) > 0:
+        fb_adj[fb_adj == None] = C['C_e3'] * delta_z2pt5_adj
     return np.log(2.0) - fb_adj
 
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
