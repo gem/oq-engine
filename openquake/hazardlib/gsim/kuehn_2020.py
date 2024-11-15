@@ -433,7 +433,7 @@ def _get_basin_term(C, region, ctx):
     return brt
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
+def get_mean_values(C, region, trt, m_b, ctx, a1100=None, get_basin_term=_get_basin_term):
     """
     Returns the mean ground values for a specific IMT
 
@@ -443,6 +443,7 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
     if a1100 is None:
         # Refers to the reference rock case - so Vs30 is 1100
         vs30 = 1100.0 * np.ones(ctx.vs30.shape)
+        a1100 = np.zeros(vs30.shape)
     else:
         vs30 = ctx.vs30.copy()
     # Get the mean ground motions
@@ -455,10 +456,10 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if a1100 is None:
+    if (a1100 == 0).all():
         pass  # no basin term
     elif region in ("CAS", "JPN", "NZL", "TWN"):
-        mean += _get_basin_term(C, region, ctx)
+        mean += get_basin_term(C, region, ctx)
     return mean
 
 
