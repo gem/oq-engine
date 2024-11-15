@@ -30,7 +30,7 @@ import openquake.hazardlib.gsim.abrahamson_2014 as ASK14
 import openquake.hazardlib.gsim.chiou_youngs_2014 as CY14
 import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
@@ -56,7 +56,7 @@ def _check_imts(imts):
 
 
 # NB: this is calling the basin term
-def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
+def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, imt, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling
@@ -71,23 +71,12 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     BSSA14_1100 = BA14._get_linear_site_term(C, np.array([1100.0]))
     BSSA14_2000 = BA14._get_linear_site_term(C, np.array([2000.0]))
 
-    # Need OQ IMT for CanadaSHM6 hard rock factor
-    if period == 0.0:
-        imt = PGA()
-    elif period == -1.0:
-        imt = PGV()
-    else:
-        try:
-            imt = SA(period)
-        except TypeError:
-            imt = period  # for some versions of OQ period=imt
-
     # CanadaSHM6 hard rock site factor
     flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
         BSSA14_1100[0], BSSA14_2000[0], sites.vs30[sites.vs30 > 1100], imt)
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
-    fbd = BA14._get_basin_term(region, C, sites, period)  # returns 0
+    fbd = BA14._get_basin_term(C, sites, region, imt)  # returns 0
     fbd = 0.0
 
     return flin + fnl + fbd
@@ -121,7 +110,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
                 BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
                 BA14._get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling_ba14(self.kind, self.region, C, pga_rock,
-                                       ctx, imt.period, ctx.rjb))
+                                       ctx, imt, ctx.rjb))
             sig[m], tau[m], phi[m] = BA14._get_stddevs(self.kind, C, ctx)
 
 # =============================================================================

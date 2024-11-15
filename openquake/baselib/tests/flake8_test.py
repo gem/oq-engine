@@ -23,6 +23,7 @@ import io
 import os
 import sys
 import ast
+import inspect
 import importlib
 import unittest
 from contextlib import redirect_stdout
@@ -190,3 +191,17 @@ def test_forbid_long_funcs():
                                  ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)
+
+
+def test_get_basin_term():
+    # make sure the basin terms have the right signature
+    from openquake.hazardlib.gsim import registry
+    modules = set(cls.__module__ for cls in registry.values())
+    for name in modules:
+        mod = importlib.import_module(name)
+        if hasattr(mod, '_get_basin_term'):
+            args = inspect.getfullargspec(mod._get_basin_term).args[:3]
+            if args != ['C', 'ctx', 'region']:
+                msg = f'{mod.__name__}._get_basin_term has a wrong signature '
+                raise RuntimeError(msg + str(args))
+                    

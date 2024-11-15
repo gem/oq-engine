@@ -288,7 +288,7 @@ def get_reference_basin_depth(region, vs30):
     return np.exp(ln_zref)
 
 
-def _get_basin_term(C, region, ctx):
+def _get_basin_term(C, ctx, region):
     """
     Returns the basin depth scaling term, applicable only for the Cascadia
     and Japan regions, defined in equations 3.9 - 3.11 and corrected in the
@@ -350,7 +350,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
             get_rupture_depth_scaling_term(C, trt, ctx) +
             get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
             get_site_amplification_term(C, region, ctx.vs30, pga1000) +
-            _get_basin_term(C, region, ctx))
+            _get_basin_term(C, ctx, region))
 
 
 def _get_f2(t1, t2, t3, t4, alpha, period):

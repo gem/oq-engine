@@ -50,7 +50,7 @@ from openquake.hazardlib.gsim.nz22.const import (
 )
 
 
-def _get_basin_term(C, region, ctx):
+def _get_basin_term(C, ctx, region):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer

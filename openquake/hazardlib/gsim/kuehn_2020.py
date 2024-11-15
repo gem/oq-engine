@@ -400,7 +400,7 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
-def _get_basin_term(C, region, ctx):
+def _get_basin_term(C, ctx, region):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -458,7 +458,7 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None,
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
     if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
-        mean += get_basin_term(C, region, ctx)
+        mean += get_basin_term(C, ctx, region)
     return mean
 
 
