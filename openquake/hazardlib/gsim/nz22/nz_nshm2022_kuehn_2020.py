@@ -56,7 +56,7 @@ from openquake.hazardlib.gsim.nz22.const import (
 )
 
 
-def _get_basin_term(C, region, ctx, z_value):
+def _get_basin_term(C, region, ctx):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -72,8 +72,14 @@ def _get_basin_term(C, region, ctx, z_value):
     c12 = C[REGION_TERMS_IF[region]["c12"]]
     CZ = Z_MODEL[region]
 
-    brt = np.zeros_like(z_value)
-    mask = z_value > 0.0
+    if region in ("JPN", "CAS"):
+        z_values = ctx.z2pt5 * 1000.0
+    elif region == "TWN":
+        z_values = ctx.z1pt0
+    else:
+        z_values = np.zeros_like(ctx.vs30)
+    brt = np.zeros_like(z_values)
+    mask = z_values > 0.0
     vs30 = ctx.vs30[mask]
     if not np.any(mask):
         # No basin amplification to be applied
@@ -81,10 +87,9 @@ def _get_basin_term(C, region, ctx, z_value):
     if region == "NZL":
         # Personal communication with Nico. We need to use the NZ
         # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
-        brt[mask] = c11 + c12 * (
-            _get_ln_z_ref(CZ, vs30) - _get_ln_z_ref(CZ, vs30))
+        brt[mask] = c11 + c12 * (_get_ln_z_ref(CZ, vs30) - _get_ln_z_ref(CZ, vs30))
     else:
-        brt[mask] = c11 + c12 * (np.log(z_value) - _get_ln_z_ref(CZ, vs30))
+        brt[mask] = c11 + c12 * (np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30))
     return brt
 
 
@@ -172,15 +177,8 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
         # is defined
         vs30 = 1100.0 * np.ones(ctx.vs30.shape)
         a1100 = np.zeros(vs30.shape)
-        z_values = np.zeros(vs30.shape)
     else:
-        vs30 = ctx.vs30.copy()
-        if region in ("JPN", "CAS"):
-            z_values = ctx.z2pt5 * 1000.0
-        elif region in ("TWN"):
-            z_values = ctx.z1pt0.copy()
-        else:
-            z_values = np.zeros(vs30.shape)
+        vs30 = ctx.vs30
     # Get the mean ground motions
     mean = (
         get_base_term(C, trt, region)
@@ -190,18 +188,10 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
         + get_depth_term(C, trt, ctx.ztor)
         + get_shallow_site_response_term(C, region, vs30, a1100)
     )
-
-    # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
-    # is included
-    if region in ("CAS", "JPN"):
-        # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
-        # rather than km)
-        mean += _get_basin_term(C, region, ctx, z_values)
-    elif region in ("NZL", "TWN"):
-        # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += _get_basin_term(C, region, ctx, z_values)
-    else:
+    if (a1100 == 0).all():  # no basin term
         pass
+    elif region in ("CAS", "JPN", "NZL", "TWN"):
+        mean += _get_basin_term(C, region, ctx)
     return mean
 
 
