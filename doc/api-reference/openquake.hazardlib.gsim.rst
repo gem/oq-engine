@@ -1235,14 +1235,6 @@ utils_usgs_basin_scaling
     :undoc-members:
     :show-inheritance:
 
-utils_us23_basin_adj
-------------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.utils_us23_basin_adj
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 usgs_ceus_2019
 -------------------------------------------------------
 
