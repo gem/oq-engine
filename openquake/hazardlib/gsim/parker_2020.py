@@ -55,8 +55,9 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
     fb_adj[idx_ce1] = C['C_e1']
     fb_adj[idx_ce2] = C['C_e2']
-    if len(fb_adj[fb_adj == 0.]) > 0: # unmodified indices must be zeros still
-        fb_adj[fb_adj == 0.] = C['C_e3'] * delta_z2pt5_adj
+    idx_zero = fb_adj == 0.
+    if len(idx_zero) > 0: # unmodified indices must be zeros still
+        fb_adj[idx_zero] = (C['C_e3'] * delta_z2pt5_adj)[idx_zero]
     return np.log(2.0) - fb_adj
 
 
@@ -480,7 +481,7 @@ class ParkerEtAl2020SInter(GMPE):
             if self.m9_basin_term and imt != PGV:
                 if imt.period >= 1.9:
                     m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
-                    if fb != 0.0:
+                    if np.unique(fb) != 0.0:
                         fb[ctx.z2pt5 >= 6.0] += m9_adj[ctx.z2pt5 >= 6.0]
                     else:
                         fb = m9_adj # fb is zero if no region (no basin) thus
