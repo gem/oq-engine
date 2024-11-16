@@ -399,11 +399,13 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
                 _compute_distance_term(C, ctx.mag, d) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_site_class_term(C, ctx.vs30) +\
-                _compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
-                                                Q=C_SSLAB['QS'],
-                                                W=C_SSLAB['WS'],
-                                                mag=ctx.mag) + C_SSLAB['SS'] 
-            + _compute_slab_correction_term(C_SSLAB, d)
+                _compute_magnitude_squared_term(
+                    P=C_SSLAB['PS'],
+                    M=6.5,
+                    Q=C_SSLAB['QS'],
+                    W=C_SSLAB['WS'],
+                    mag=ctx.mag) + C_SSLAB['SS'] +\
+                    _compute_slab_correction_term(C_SSLAB, d)
 
             # Convert from cm/s**2 to g and back into natural log
             ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
