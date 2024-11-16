@@ -647,8 +647,7 @@ class KuehnEtAl2020SInter(GMPE):
     m_b: The magnitude scaling breakpoint. This term is defined for each region
          and tectonic region type, but this can also be over-ridden by the user
 
-    :param bool m9_basin_term: Apply the M9 basin term instead of the GMM's
-                               native basin term
+    :param bool m9_basin_term: Apply the M9 basin adjustment
 
     :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
                                     based on USGS basin model

@@ -375,8 +375,7 @@ class ParkerEtAl2020SInter(GMPE):
                                   "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
                                   "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
-    :param bool m9_basin_term: Apply the M9 basin term instead of the GMM's
-                               native basin term
+    :param bool m9_basin_term: Apply the M9 basin term adjustment
     :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
                                     based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
@@ -406,6 +405,8 @@ class ParkerEtAl2020SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
+
+    # Other required attributes
     REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin',
                            'm9_basin_term' 'usgs_basin_scaling',
                            'sigma_mu_epsilon'}
@@ -477,8 +478,14 @@ class ParkerEtAl2020SInter(GMPE):
             if self.m9_basin_term and imt != PGV:
                 if imt.period >= 1.9:
                     m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
-                    fb[ctx.z2pt5 >= 6.0] += m9_adj[ctx.z2pt5 >= 6.0]
-                    
+                    if fb != 0.0:
+                        fb[ctx.z2pt5 >= 6.0] += m9_adj[ctx.z2pt5 >= 6.0]
+                    else:
+                        fb = m9_adj # fb is zero if no region (no basin) thus
+                                    # just take the adjusted m9 term instead
+                                    # for the basin amplification given has
+                                    # been specified by user
+
             # Now get the mean with basin term added
             mean[m] = pre_baf_mean + (fb * usgs_baf)
 

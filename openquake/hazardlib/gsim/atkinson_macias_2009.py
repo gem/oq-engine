@@ -25,6 +25,7 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 
 
 def _get_distance_term(C, rrup, mag):
@@ -77,6 +78,12 @@ class AtkinsonMacias2009(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
+    def __init__(self, cb14_basin_term=False):
+        if cb14_basin_term:
+            self.REQUIRES_SITES_PARAMETERS = frozenset(
+            self.REQUIRES_SITES_PARAMETERS | {'z2pt5'})
+        self.cb14_basin_term = cb14_basin_term
+        
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -89,7 +96,11 @@ class AtkinsonMacias2009(GMPE):
                      _get_distance_term(C, ctx.rrup, ctx.mag))
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            ln_mean = np.log((10.0 ** (imean - 2.0)) / g)
+            # Apply CB14 basin term if specified
+            if self.cb14_basin_term:
+                ln_mean += _get_cb14_basin_term(imt, ctx)
+            mean[m] = ln_mean
             sig[m] = np.log(10.0 ** C["sigma"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
