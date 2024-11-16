@@ -42,7 +42,6 @@ from scipy.interpolate import RegularGridInterpolator
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling, _get_z1pt0_usgs_basin_scaling
 
@@ -471,16 +470,19 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
                 usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
         else:
             usgs_baf = 1.0
+
+        # Get GMM's own basin term
+        fb = get_basin_term(C, ctx, region)
         
         # For KuehnEtAl2020 in US 2023 either the M9 basin term OR the GMM's
         # basin term is applied (i.e. it is not additive to GMM basin term here
         # as can be seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
         if m9_basin_term and imt != PGV:
-            # Apply + np.log(2.0) for long period motions at deep basin sites
-            mean = _apply_m9_basin_term(ctx, imt, mean, usgs_baf)
-        else:
-            # Use the GMM's own basin term
-            mean += get_basin_term(C, ctx, region) * usgs_baf
+            if imt.period >= 1.9:
+                fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # M9 term instead
+
+         # Now add the basin term to pre-basin amp mean
+        mean += fb * usgs_baf
 
     return mean
 

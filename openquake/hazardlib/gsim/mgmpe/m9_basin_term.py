@@ -24,12 +24,12 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-def _apply_m9_basin_term(ctx, imt, mean, usgs_baf=1.0):
+def _apply_m9_basin_term(ctx, imt, mean):
     if imt.period > 1.9: # Only apply to long-period SA
         fb_m9 = np.log(2.0)
         idx = ctx.z2pt5 >= 6.0 # Apply only to sites with z2pt5 >= 6
-        mean[idx] += fb_m9 * usgs_baf # Apply basin scaling factor if provided
-    
+        mean[idx] += fb_m9
+            
     return mean
 
 
