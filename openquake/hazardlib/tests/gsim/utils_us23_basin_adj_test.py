@@ -119,3 +119,5 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         ctx.vs30 = np.array([800., 400., 200.])
         ctx.vs30measured = 1
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
+
+        aae(mea, exp_res)
