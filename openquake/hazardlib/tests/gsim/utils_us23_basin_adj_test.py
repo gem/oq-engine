@@ -93,12 +93,12 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
                              'basin="out"')
         
-        # AtkinsonMacias2009 (m9 and cb14 vs cb14)
+        # AtkinsonMacias2009 (m9 and cb14 vs m9)
         a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
                               'm9_basin_term="true"')
         a09_def = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"')
 
-        # ZhaoEtAl2006SInter (m9 and cb14 vs cb14)
+        # ZhaoEtAl2006SInter (m9 and cb14 vs m9)
         z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"\n'
                               'm9_basin_term="true"')
         z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
