@@ -235,7 +235,7 @@ class ZhaoEtAl2006Asc(GMPE):
                                             self.cb14_basin_term,
                                             self.m9_basin_term)
 
-            mean[m] = ln_mean #+ fb
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C['tauC'])
 
     #: Coefficient table obtained by joining table 4 (except columns for
