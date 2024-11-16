@@ -719,7 +719,7 @@ class KuehnEtAl2020SInter(GMPE):
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
         if self.usgs_basin_scaling or self.m9_basin_term:
-            msg = ('User must specify a GSIM class which considers the z1pt0 '
+            msg = ('User must specify a GSIM sub-class which considers z1pt0 '
                   'or z2pt5 site parameter if applying an alternative basin '
                   'term or basin adjustment')
             if ('z1pt0' not in self.REQUIRES_SITES_PARAMETERS and self.region

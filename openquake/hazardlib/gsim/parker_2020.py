@@ -151,7 +151,7 @@ def _get_basin_term(C, ctx, region, basin):
                                            C["C_e1"],
                                            C["C_e2"] + ds,
                                            C["C_e3"] + ds, ctx)
-
+    
     return 0
 
 
@@ -426,10 +426,12 @@ class ParkerEtAl2020SInter(GMPE):
         self.basin = basin
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
-        if (self.usgs_basin_scaling or self.m9_basin_term and 'z2pt5' not in
-            self.REQUIRES_SITES_PARAMETERS):
-            raise ValueError('User must specify a GSIM class for this GMPE '
-                             'which considers the z2pt5 site parameter.')
+        
+        if self.usgs_basin_scaling or self.m9_basin_term:
+            if 'z2pt5' not in self.REQUIRES_SITES_PARAMETERS:
+                raise ValueError('User must specify a GSIM class for this GMPE '
+                                'which considers the z2pt5 site parameter.')
+        
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')

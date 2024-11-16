@@ -636,15 +636,17 @@ class AbrahamsonGulerce2020SInter(GMPE):
         self.ergodic = ergodic
         self.apply_usa_adjustment = apply_usa_adjustment
         self.usgs_basin_scaling = usgs_basin_scaling
-        if (self.usgs_basin_scaling and 'z2pt5' not in
-            self.REQUIRES_SITES_PARAMETERS):
-            raise ValueError('User must specify a GSIM class for this GMPE '
-                             'which considers the z2pt5 site parameter.')
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        
         # If running for Cascadia or Japan then z2.5 is needed
         if region in ("CAS", "JPN"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
+            
+        if (self.usgs_basin_scaling and 'z2pt5' not in
+            self.REQUIRES_SITES_PARAMETERS):
+            raise ValueError('User must specify a GSIM sub-class for this GMPE '
+                             'which considers the z2pt5 site parameter.')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
