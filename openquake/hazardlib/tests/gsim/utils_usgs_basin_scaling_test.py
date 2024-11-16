@@ -39,7 +39,7 @@ class USGSBasinScalingTestCase(unittest.TestCase):
     factors (scaling factors can be applied to basin terms in GMMs)
     """
     def test_usgs_basin_scaling(self):
-        # Some example (physically correlated) z1pt0 and z2pt5
+        # Some example z1pt0 and z2pt5
         z1pt0 = np.array([0.4, 0.3, 0.2, 0.4, 1])
         z2pt5 = np.array([2, 1, 4, 6, 3])
         # Some periods
