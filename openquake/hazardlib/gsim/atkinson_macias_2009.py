@@ -98,6 +98,7 @@ class AtkinsonMacias2009(GMPE):
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
             ln_mean = np.log((10.0 ** (imean - 2.0)) / g)
+            
             # Set a null basin term
             fb = np.zeros(len(ln_mean))
             # Apply cb14 basin term if specified
@@ -107,7 +108,8 @@ class AtkinsonMacias2009(GMPE):
             # cb14 basin term for basin sites if T >= 1.9 s)
             if self.m9_basin_term and imt.period >= 1.9:
                 fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
-            # Get mean and sigma
+            
+            # Add basin term (if any) to mean and get sigma
             mean[m] = ln_mean + fb
             sig[m] = np.log(10.0 ** C["sigma"])
 
