@@ -84,8 +84,7 @@ def cb14_basin_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CB14 basin term to GMMs requiring it.
     """
-    C = CampbellBozorgnia2014.COEFFS[imt]
-    me[:] += _get_cb14_basin_term(ctx, C)
+    me[:] += _get_cb14_basin_term(imt, ctx)
 
 
 def m9_basin_term(ctx, imt, me, si, ta, phi):

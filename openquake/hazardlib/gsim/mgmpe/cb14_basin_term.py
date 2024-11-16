@@ -82,4 +82,4 @@ class CB14BasinTerm(GMPE):
         """
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
-             mean[m] += _get_cb14_basin_term(ctx)
+             mean[m] += _get_cb14_basin_term(imt, ctx)
