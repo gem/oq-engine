@@ -36,7 +36,8 @@ def _apply_m9_basin_term(ctx, imt, mean, usgs_baf=1.0):
 class M9BasinTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to implement the "M9"
-    US 2023 NSHM basin amplification adjustment.
+    US 2023 NSHM basin amplification adjustment (an additive factor for long
+    period ground-motions in the Seattle Basin region).
      
     This implementation is based on the description of the M9 adjustment 
     within the Moschetti et al. (2024) EQ Spectra article on the conterminous

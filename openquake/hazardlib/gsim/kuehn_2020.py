@@ -472,10 +472,15 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
         else:
             usgs_baf = 1.0
         
-        if m9_basin_term:
+        # For KuehnEtAl2020 in US 2023 either the M9 basin term OR the GMM's
+        # basin term is applied (i.e. it is not additive to GMM basin term here
+        # as can be seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
+        if m9_basin_term and imt != PGV:
+            # Apply + np.log(2.0) for long period motions at deep basin sites
             mean = _apply_m9_basin_term(ctx, imt, mean, usgs_baf)
-
-        mean += get_basin_term(C, ctx, region) * usgs_baf
+        else:
+            # Use the GMM's own basin term
+            mean += get_basin_term(C, ctx, region) * usgs_baf
 
     return mean
 

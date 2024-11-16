@@ -46,7 +46,7 @@ _a0 = CallableDict()
 
 def _get_adjusted_m9_basin_term(C, z2pt5):
     """
-    Return the adjusted version of the m9 basin term as detailed within the 
+    Return the adjusted version of the M9 basin term as detailed within the 
     USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
     """
     delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1179.)
@@ -58,6 +58,7 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     if len(fb_adj[fb_adj == 0.]) > 0: # unmodified indices must be zeros still
         fb_adj[fb_adj == 0.] = C['C_e3'] * delta_z2pt5_adj
     return np.log(2.0) - fb_adj
+
 
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     """
@@ -463,7 +464,7 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _get_basin_term(C, ctx, self.region, self.basin) * usgs_baf
+            fb = _get_basin_term(C, ctx, self.region, self.basin)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)
@@ -471,11 +472,15 @@ class ParkerEtAl2020SInter(GMPE):
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             pre_baf_mean = fp + fnl + flin + fm + c0 + fd
-            if self.m9_basin_term:
-                m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
-                mean[m] = pre_baf_mean + m9_adj
-            else:
-                mean[m] = pre_baf_mean + fb
+            
+            # Get the m9 basin adjustment if long period SA for deep basin sites
+            if self.m9_basin_term and imt != PGV:
+                if imt.period >= 1.9:
+                    m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
+                    fb[ctx.z2pt5 >= 6.0] += m9_adj[ctx.z2pt5 >= 6.0]
+                    
+            # Now get the mean with basin term added
+            mean[m] = pre_baf_mean + (fb * usgs_baf)
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
                 # Apply epistemic uncertainty scaling
