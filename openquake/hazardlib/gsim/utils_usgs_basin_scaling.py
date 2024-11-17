@@ -30,7 +30,7 @@ def _get_z1pt0_usgs_basin_scaling(z, period):
     Get the USGS basin model scaling factor for z1pt0-based GMM basin terms.
     """
     z_scale = _get_usgs_basin_scaling(
-        z, basin_upper=0.3, basin_lower=0.5, period=period)
+        z, basin_upper=0.3*1000, basin_lower=0.5*1000, period=period)
 
     return z_scale
 
@@ -45,15 +45,21 @@ def _get_z2pt5_usgs_basin_scaling(z, period):
     return z_scale
 
 
-def _get_usgs_basin_scaling(z2pt5, basin_upper, basin_lower, period):
+def _get_usgs_basin_scaling(z, basin_upper, basin_lower, period):
     """
     Get the USGS basin model scaling factor to be applied to the GMM's
     basin amplification term.
     """
-    constr = np.clip(z2pt5, basin_upper, basin_lower)
-    basin_range = basin_lower - basin_upper
-    z_scale = (constr - basin_upper) / basin_range
-    if period == 0.75:
-        return 0.585 * z_scale
+    z_scale = np.ones(len(z))
+    if period <= 0.5:
+        return z_scale # Only apply basin scaling to T > 0.5 s
     else:
-        return z_scale
+        constr = np.clip(z, basin_upper, basin_lower)
+        basin_range = basin_lower - basin_upper
+        baf = (constr - basin_upper) / basin_range
+        # Apply for sites with z > basin_upper (i.e. z_min)
+        z_scale[z > basin_upper] = baf[z > basin_upper]
+        if period == 0.75:
+            return 0.585 * z_scale
+        else:
+            return z_scale
