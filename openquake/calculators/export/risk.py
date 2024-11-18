@@ -381,10 +381,10 @@ def modal_damage_array(data, dstates):
     acc = general.AccumDict(accum=[])
     for name in data.dtype.names:  # peril-ltype-dstate
         try:
-            peril, ltype, _dstate = name.split('-')
+            peril, ltype, _dstate = name.split('~')
             modal = f'modal-ds-{peril}~{ltype}'
         except ValueError:
-            ltype, _dstate = name.split('-')
+            ltype, _dstate = name.split('~')
             modal = 'modal-ds-' + ltype
         if ltype != 'no_damage':
             acc[modal].append(data[name])
