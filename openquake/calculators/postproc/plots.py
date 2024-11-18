@@ -33,6 +33,19 @@ def import_plt():
     return plt
 
 
+def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
+    # Make the plot display all items with some margin, looking square
+    x_min, x_max = x_min - padding, x_max + padding
+    y_min, y_max = y_min - padding, y_max + padding
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+    max_range = max(x_range, y_range)
+    x_center = (x_min + x_max) / 2
+    y_center = (y_min + y_max) / 2
+    xlim = x_center - max_range / 2, x_center + max_range / 2
+    ylim = y_center - max_range / 2, y_center + max_range / 2
+    return xlim, ylim
+
 def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
     plt = import_plt()
     polys = read_df(buffer)['geom']
@@ -111,7 +124,6 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                       cmap='jet', s=markersize)
     plt.colorbar(coll)
     ax = add_borders(ax, alpha=0.2)
-    BUF_ANGLE = 1
     min_x = shakemap_array['lon'].min()
     max_x = shakemap_array['lon'].max()
     min_y = shakemap_array['lat'].min()
@@ -124,8 +136,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
         max_x = max(max_x, rup_max_x)
         min_y = min(min_y, rup_min_y)
         max_y = max(max_y, rup_max_y)
-    xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
-    ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     if with_populated_places:
@@ -165,9 +176,10 @@ def plot_avg_gmf(ex, imt):
     maxx = avg_gmf['lons'].max()
     miny = avg_gmf['lats'].min()
     maxy = avg_gmf['lats'].max()
-    w, h = maxx - minx, maxy - miny
-    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
-    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
+
+    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
     return plt
 
 
@@ -221,9 +233,7 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     ax.grid(True)
     ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
     ax = add_borders(ax)
-    BUF_ANGLE = 1
-    xlim = (min_x - BUF_ANGLE, max_x + BUF_ANGLE)
-    ylim = (min_y - BUF_ANGLE, max_y + BUF_ANGLE)
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     if with_populated_places:
