@@ -797,9 +797,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for ltype in self.oqparam.loss_types:
                 for dc in dcs:
                     if peril == 'earthquake':
-                        field = f'{ltype}~{dc}'
+                        field = f'{ltype}-{dc}'
                     else:
-                        field = f'{peril}~{ltype}~{dc}'
+                        field = f'{peril}-{ltype}-{dc}'
                     lst.append((field, F32))
         return numpy.dtype(lst)
 

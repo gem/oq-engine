@@ -561,7 +561,7 @@ def view_portfolio_dmgdist(token, dstore):
     sums = sum_records(dstore['damages-rlzs'][:, 0])
     acc = AccumDict(accum=[])
     for name in sums.dtype.names:
-        ltype, dstate = name.split('~')
+        ltype, dstate = name.split('-')
         acc[dstate].append(sums[name][0])
         if dstate == 'no_damage':
             acc['loss_type'].append(ltype)

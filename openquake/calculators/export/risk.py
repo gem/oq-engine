@@ -381,10 +381,10 @@ def modal_damage_array(data, dstates):
     acc = general.AccumDict(accum=[])
     for name in data.dtype.names:  # peril-ltype-dstate
         try:
-            peril, ltype, _dstate = name.split('~')
+            peril, ltype, _dstate = name.split('-')
             modal = f'modal-ds-{peril}~{ltype}'
         except ValueError:
-            ltype, _dstate = name.split('~')
+            ltype, _dstate = name.split('-')
             modal = 'modal-ds-' + ltype
         if ltype != 'no_damage':
             acc[modal].append(data[name])
@@ -437,8 +437,8 @@ def export_damages_csv(ekey, dstore):
             else:
                 damages = orig[:, i]
             fname = dstore.build_fname(name, ros, ekey[1])
-        writer.save(compose_arrays(assets, damages), fname,
-                    comment=md, renamedict=dict(id='asset_id'))
+        arr = compose_arrays(assets, damages)
+        writer.save(arr, fname, comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 

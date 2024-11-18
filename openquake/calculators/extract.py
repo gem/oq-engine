@@ -847,7 +847,7 @@ def _dmg_get(array, loss_type):
     out = []
     for name in array.dtype.names:
         try:
-            ltype, _dstate = name.split('~')
+            ltype, _dstate = name.split('-')
         except ValueError:
             # ignore secondary perils
             continue
