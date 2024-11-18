@@ -740,7 +740,7 @@
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aristotle_calc').prop('disabled', false);
-                    $('#submit_aristotle_calc').text('Submit');
+                    $('#submit_aristotle_calc').text('Launch impact calculation');
                 });
                 event.preventDefault();
             });
