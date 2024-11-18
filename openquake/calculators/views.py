@@ -554,11 +554,18 @@ def view_portfolio_loss(token, dstore):
 
 # used in the oq-risk-tests
 @view.add('portfolio_dmgdist')
-def portfolio_dmgdist(token, dstore):
+def view_portfolio_dmgdist(token, dstore):
     """
     The portfolio damages extracted from the first realization of damages-rlzs
     """
-    return sum_records(dstore['damages-rlzs'][:, 0])
+    sums = sum_records(dstore['damages-rlzs'][:, 0])
+    acc = AccumDict(accum=[])
+    for name in sums.dtype.names:
+        ltype, dstate = name.split('-')
+        acc[dstate].append(sums[name][0])
+        if dstate == 'no_damage':
+            acc['loss_type'].append(ltype)
+    return pandas.DataFrame(acc)
 
 
 @view.add('portfolio_damage')
