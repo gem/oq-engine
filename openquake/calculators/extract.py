@@ -1045,9 +1045,13 @@ def build_damage_dt(dstore):
     """
     oq = dstore['oqparam']
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    perils = attrs['peril']
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
-    dt_list = [(ds, F32) for ds in ['no_damage'] + limit_states + csqs]
+    dt_list = []
+    for peril in perils:
+        for ds in ['no_damage'] + limit_states + csqs:
+            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
@@ -1060,21 +1064,27 @@ def build_csq_dt(dstore):
        a composite dtype (csq1, csq2, ...)
     """
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    perils = attrs['peril']
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
-    dt = numpy.dtype([(csq, F32) for csq in csqs])
-    return dt
+    lst = []
+    for peril in perils:
+        for csq in csqs:
+            field = csq if peril == 'earthquake' else f'{peril}_{csq}'
+            lst.append((field, F32))
+    return numpy.dtype(lst)
 
 
 def build_damage_array(data, damage_dt):
     """
-    :param data: an array of shape (A, L, D)
+    :param data: an array of shape (A, L, D, P)
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, _L, _D = data.shape
+    A, _L, _D, P = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
+        breakpoint()
         for li, lt in enumerate(damage_dt.names):
             dmg[lt][a] = tuple(data[a, li])
     return dmg

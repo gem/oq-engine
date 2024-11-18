@@ -43,7 +43,8 @@ def zero_dmgcsq(A, R, L, crmodel):
     """
     dmg_csq = crmodel.get_dmg_csq()
     Dc = len(dmg_csq) + 1  # damages + consequences
-    return numpy.zeros((A, R, L, Dc), F32)
+    P = len(crmodel.perils)
+    return numpy.zeros((P, A, R, L, Dc), F32)
 
 
 def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
@@ -83,7 +84,7 @@ def event_based_damage(df, oq, dstore, monitor):
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
-    _A, R, L, Dc = dmgcsq.shape
+    P, _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     rlzs = dstore['events']['rlz_id']
     dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
@@ -93,6 +94,7 @@ def event_based_damage(df, oq, dstore, monitor):
         if len(gmf_df) == 0:
             continue
         eids = gmf_df.eid.to_numpy()
+        E = len(eids)
         if not oq.float_dmg_dist:
             rng = scientific.MultiEventRNG(
                 oq.master_seed, numpy.unique(eids))
@@ -100,14 +102,24 @@ def event_based_damage(df, oq, dstore, monitor):
             rng = None
         for taxo, adf in asset_df.groupby('taxonomy'):
             aids = adf.index.to_numpy()
+            A = len(aids)
             with mon:
                 rc = scientific.RiskComputer(crmodel, taxo)
-                dd4 = rc.get_dd4(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
+                dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
-                dmgcsq[aids, 0] += dd4.sum(axis=1)
+                dmgcsq[:, aids, 0] += dd5.sum(axis=2)
             else:
                 for e, rlz in enumerate(rlzs[eids]):
-                    dmgcsq[aids, rlz] += dd4[:, e]
+                    dmgcsq[:, aids, rlz] += dd5[:, :, e]
+            if P > 1:
+                dd4 = numpy.empty(dd5.shape[1:])
+                for li in range(L):
+                    for a in range(A):
+                        for e in range(E):
+                            dd4[a, e, li, :D] = scientific.compose_dds(dd5[:, a, e, li, :D])
+                            dd4[a, e, li, D:] = dd5[:, a, e, li, D:].max(axis=0)
+            else:
+                dd4 = dd5[0]
             tot = dd4.sum(axis=0)  # (E, L, Dc)
             for e, eid in enumerate(eids):
                 dddict[eid, oq.K] += tot[e]
@@ -204,7 +216,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         oq = self.oqparam
         # no damage check, perhaps the sites where disjoint from gmf_data
-        if self.dmgcsq[:, :, :, 1:].sum() == 0:
+        if self.dmgcsq[:, :, :, :, 1:].sum() == 0:
             haz_sids = self.datastore['gmf_data/sid'][:]
             count = numpy.isin(haz_sids, self.sitecol.sids).sum()
             if count == 0:
@@ -222,24 +234,26 @@ class DamageCalculator(EventBasedRiskCalculator):
         with prc.datastore:
             prc.run(exports='')
 
-        _A, _R, L, _Dc = self.dmgcsq.shape
+        P, _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
         number = self.assetcol['value-number']
-        for r in range(self.R):
-            self.dmgcsq[:, r] /= prc.num_events[r]
-            ndamaged = self.dmgcsq[:, r, :, 1:D].sum(axis=2)  # shape (A, L)
-            for li in range(L):
-                # set no_damage
-                self.dmgcsq[:, r, li, 0] = number - ndamaged[:, li]
+        for p in range(P):
+            for r in range(self.R):
+                self.dmgcsq[p, :, r] /= prc.num_events[r]
+                ndamaged = self.dmgcsq[p, :, r, :, 1:D].sum(axis=2)  # shape (A, L)
+                for li in range(L):
+                    # set no_damage
+                    self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
 
         assert (self.dmgcsq >= 0).all()  # sanity check
-        self.datastore['damages-rlzs'] = self.dmgcsq
+        self.datastore['damages-rlzs'] = self.dmgcsq.transpose(1, 2, 3, 4, 0) # ARLDP
         set_rlzs_stats(self.datastore,
                        'damages-rlzs',
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_types,
-                       dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
+                       dmg_state=['no_damage'] + self.crmodel.get_dmg_csq(),
+                       peril=self.crmodel.perils)
 
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')

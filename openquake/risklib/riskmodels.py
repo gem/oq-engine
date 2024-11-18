@@ -515,17 +515,6 @@ class ValidationError(Exception):
     pass
 
 
-def _cdict(fractions, coeffs, df, lt, perils):
-    # fractions[P, A, E, D]
-    # returns peril -> coeffs[A, E]
-    cdict = {}
-    for pi, peril in enumerate(perils):
-        for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
-            if per == peril or per == '*':
-                cdict[peril] = fractions[pi] @ coeffs[risk_id][peril][lt] * weight
-    return cdict
-
-
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -664,10 +653,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param dd5: distribution functions of shape (P, A, E, L, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
         :param oq: OqParam instance with .loss_types and .time_event
-        :returns: a dict consequence_name, loss_type -> array[A, E]
+        :returns: a dict consequence_name, loss_type -> array[P, A, E]
         """
-        _P, A, E, _L, _D = dd5.shape
-        csq = AccumDict(accum=numpy.zeros((A, E)))
+        P, A, E, _L, _D = dd5.shape
+        csq = AccumDict(accum=numpy.zeros((P, A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
@@ -675,11 +664,17 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
-                        # dict loss_type -> peril -> coeffs for the given loss type
-                        cdict = _cdict(dd5[:, :, :, li, 1:],
-                                       coeffs, df, lt, self.perils)
-                        csq[consequence, li] += scientific.consequence(
-                            consequence, assets, cdict, lt, oq.time_event)
+                        # dict loss_type -> coeffs for the given loss type
+                        for pi, peril in enumerate(self.perils):
+                            if len(df) == 1:
+                                w = 1.
+                            else:
+                                [w] = df[df.peril == peril].weight
+                            coeff = (dd5[pi, :, :, li, 1:] @
+                                     coeffs[risk_id][peril][lt] * w)
+                            cAE = scientific.consequence(
+                                consequence, assets, coeff, lt, oq.time_event)
+                            csq[consequence, li][pi] += cAE
         return csq
 
     def init(self):
