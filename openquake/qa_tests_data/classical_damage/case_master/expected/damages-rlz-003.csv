@@ -1,5 +1,5 @@
-#,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git513b65764c', start_date='2024-11-07T08:00:44', checksum=3613274803, investigation_time=1.0, risk_investigation_time=1.0"
-asset_id,taxonomy,lon,lat,nonstructural~no_damage,nonstructural~ds1,nonstructural~ds2,nonstructural~ds3,nonstructural~ds4,structural~no_damage,structural~ds1,structural~ds2,structural~ds3,structural~ds4
+#,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git2d65903bd5', start_date='2024-11-18T09:02:20', checksum=3613274803, investigation_time=1.0, risk_investigation_time=1.0"
+asset_id,taxonomy,lon,lat,nonstructural-no_damage,nonstructural-ds1,nonstructural-ds2,nonstructural-ds3,nonstructural-ds4,structural-no_damage,structural-ds1,structural-ds2,structural-ds3,structural-ds4
 a3,tax1,-122.57000,38.11300,9.991991E-01,7.334561E-04,6.742248E-05,6.752652E-09,0.000000E+00,9.999850E-01,1.112310E-05,-6.036313E-06,-1.177593E-05,2.164294E-05
 a2,tax2,-122.11400,38.11300,9.888512E-01,6.500258E-03,2.564109E-03,1.227661E-03,8.567129E-04,9.517417E-01,3.233826E-02,1.311680E-02,2.356229E-03,4.470131E-04
 a5,tax1,-122.00000,37.91000,9.872808E-01,9.728986E-03,2.919785E-03,7.043143E-05,7.509417E-09,9.995382E-01,3.744152E-04,-5.665246E-05,-1.368070E-04,2.808186E-04

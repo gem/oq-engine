@@ -73,13 +73,11 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
             a dictionary asset_ordinal -> array(R, D)
         """
         D = len(self.crmodel.damage_states)
-        damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
+        damages = numpy.zeros((1, self.A, self.R, self.L, D), numpy.float32)
         for a in result:
-            damages[a] = result[a]
-        self.datastore['damages-rlzs'] = damages
+            damages[0, a] = result[a]
+        self.datastore['damages-rlzs'] = self.crmodel.to_multi_damage(damages)
         stats.set_rlzs_stats(self.datastore, 'damages-rlzs',
-                             assets=self.assetcol['id'],
-                             loss_type=self.oqparam.loss_types,
-                             dmg_state=self.crmodel.damage_states)
+                             assets=self.assetcol['id'])
         dmg = views.view('portfolio_damage', self.datastore)
         logging.info('\n' + views.text_table(dmg, ext='org'))

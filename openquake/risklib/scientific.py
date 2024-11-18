@@ -1709,7 +1709,7 @@ class RiskComputer(dict):
                     update_losses(asset_df, out)
             yield out
 
-    def get_dd4(self, adf, gmf_df, rng=None, C=0, crm=None):
+    def get_dd5(self, adf, gmf_df, rng=None, C=0, crm=None):
         """
         :param adf:
             DataFrame of assets on the given site with the same taxonomy
@@ -1720,7 +1720,7 @@ class RiskComputer(dict):
         :param C:
             Number of consequences
         :returns:
-            damage distribution of shape (A, E, L, D+C)
+            damage distribution of shape (P, A, E, L, D+C)
         """
         A = len(adf)
         E = len(gmf_df)
@@ -1746,23 +1746,14 @@ class RiskComputer(dict):
                     dd5[p, :, :, li, :D] = rng.discrete_dmg_dist(
                         gmf_df.eid, fractions, number)
 
-        # compose damage distributions
-        if self.P > 1:
-            dd4 = numpy.empty(dd5.shape[1:])
-            for li in range(L):
-                for a in range(A):
-                    for e in range(E):
-                        dd4[a, e, li, :D] = compose_dds(dd5[:, a, e, li, :D])
-        else:
-            dd4 = dd5[0]
         if crm:
             csqs = crm.get_consequences()
             df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
             csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, crm.oqparam)
             csqidx = {dc: i for i, dc in enumerate(csqs, D)}
             for (cons, li), values in csq.items():
-                dd4[:, :, li, csqidx[cons]] = values
-        return dd4
+                dd5[:, :, :, li, csqidx[cons]] = values  # (P, A, E)
+        return dd5
 
     def todict(self):
         """
@@ -1792,20 +1783,12 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def _max(coeffs):
-    perils = list(coeffs)
-    if len(perils) == 1:
-        res = coeffs[perils[0]]
-    else:
-        res = numpy.array([coeffs[peril] for peril in perils]).max(axis=0)
-    return res
 
-
-def consequence(consequence, assets, cdict, loss_type, time_event):
+def consequence(consequence, assets, coeff, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param assets: asset array (shape A)
-    :param cdict: peril -> composite array of coefficients of shape (A, E)
+    :param coeff: composite array of coefficients of shape (A, E)
     :param time_event: time event string
     :returns: array of shape (A, E)
     """
@@ -1813,17 +1796,17 @@ def consequence(consequence, assets, cdict, loss_type, time_event):
         raise NotImplementedError(consequence)
     if consequence.startswith('losses'):
         res = (assets['value-' + loss_type].reshape(-1, 1) *
-               _max(cdict)) / assets['value-number'].reshape(-1, 1)
+               coeff) / assets['value-number'].reshape(-1, 1)
         return res
     elif consequence in ['collapsed', 'non_operational']:
-        return _max(cdict)
+        return coeff
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         values = assets[f'occupants_{time_event}'] / assets['value-number']
-        return values.reshape(-1, 1) * _max(cdict)
+        return values.reshape(-1, 1) * coeff
     elif consequence == 'homeless':
         values = assets['value-residents'] / assets['value-number']
-        return values.reshape(-1, 1) * _max(cdict)
+        return values.reshape(-1, 1) * coeff
     else:
         raise NotImplementedError(consequence)
 
