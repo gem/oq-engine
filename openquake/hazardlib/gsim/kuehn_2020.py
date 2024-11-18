@@ -400,7 +400,7 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
-def get_basin_response_term(C, region, vs30, z_value):
+def _get_basin_term(C, ctx, region):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -416,17 +416,25 @@ def get_basin_response_term(C, region, vs30, z_value):
     c12 = C[REGION_TERMS_IF[region]["c12"]]
     CZ = Z_MODEL[region]
 
-    brt = np.zeros_like(z_value)
-    mask = z_value > 0.0
-    if not np.any(mask):
+    vs30 = ctx.vs30
+    if region in ("JPN", "CAS"):
+        z_values = ctx.z2pt5 * 1000.0
+    elif region in ("NZL", "TWN"):
+        z_values = ctx.z1pt0
+    else:
+        z_values = np.zeros(vs30.shape)
+
+    brt = np.zeros_like(z_values)
+    mask = z_values > 0.0
+    if not mask.any():
         # No basin amplification to be applied
         return 0.0
-    brt[mask] = c11 + c12 * (np.log(z_value[mask]) -
-                             _get_ln_z_ref(CZ, vs30[mask]))
+    brt[mask] = c11 + c12 * (np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
     return brt
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
+def get_mean_values(C, region, trt, m_b, ctx, a1100=None,
+                    get_basin_term=_get_basin_term):
     """
     Returns the mean ground values for a specific IMT
 
@@ -434,19 +442,11 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
         Magnitude scaling breakpoint
     """
     if a1100 is None:
-        # Refers to the reference rock case - so Vs30 is 1100 and no a1100
-        # is defined
+        # Refers to the reference rock case - so Vs30 is 1100
         vs30 = 1100.0 * np.ones(ctx.vs30.shape)
         a1100 = np.zeros(vs30.shape)
-        z_values = np.zeros(vs30.shape)
     else:
         vs30 = ctx.vs30.copy()
-        if region in ("JPN", "CAS"):
-            z_values = ctx.z2pt5 * 1000.0
-        elif region in ("NZL", "TWN"):
-            z_values = ctx.z1pt0.copy()
-        else:
-            z_values = np.zeros(vs30.shape)
     # Get the mean ground motions
     mean = (get_base_term(C, trt, region) +
             get_magnitude_scaling_term(C, trt, m_b, ctx.mag) +
@@ -457,15 +457,8 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if region in ("CAS", "JPN"):
-        # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
-        # rather than km)
-        mean += get_basin_response_term(C, region, vs30, z_values)
-    elif region in ("NZL", "TWN"):
-        # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += get_basin_response_term(C, region, vs30, z_values)
-    else:
-        pass
+    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
+        mean += get_basin_term(C, ctx, region)
     return mean
 
 
@@ -716,8 +709,7 @@ class KuehnEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
-        pga1100 = np.exp(get_mean_values(
-            C_PGA, self.region, trt, m_b, ctx, None))
+        pga1100 = np.exp(get_mean_values(C_PGA, self.region, trt, m_b, ctx))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None

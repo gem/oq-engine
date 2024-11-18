@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, python3compat
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
@@ -876,7 +876,8 @@ def merge_sitecols(hdf5fnames, check_gmfs=False):
     if 'custom_site_id' in new.array.dtype.names:
         ids, counts = numpy.unique(new['custom_site_id'], return_counts=1)
         if (counts > 1).any():
-            raise RuntimeError(f'{ids[counts>1]} are duplicated')
+            dupl =  ' '.join(python3compat.decode(ids[counts > 1]))
+            raise RuntimeError(f'{dupl} are duplicated')
     elif len(sitecols) > 1:
         logging.warning('There is no custom_site_id, not checking for duplicates')
     return new

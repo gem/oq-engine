@@ -59,10 +59,14 @@ def _get_anelastic_attenuation_term(C, rrup):
     return f_atn
 
 
-def _get_basin_response_term(SJ, C, z2pt5):
+def _get_basin_term(C, ctx, region, SJ, a1100):
     """
     Returns the basin response term defined in equation 20
     """
+    if isinstance(a1100, np.ndarray):  # site model defined
+        z2pt5 = ctx.z2pt5
+    else:
+        z2pt5 = _select_basin_model(SJ, 1100.0) * np.ones_like(ctx.vs30)
     f_sed = np.zeros(len(z2pt5))
     idx = z2pt5 < 1.0
     f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
@@ -297,19 +301,15 @@ def get_mean_values(SJ, C, ctx, a1100=None):
     if isinstance(a1100, np.ndarray):
         # Site model defined
         temp_vs30 = ctx.vs30
-        temp_z2pt5 = ctx.z2pt5
     else:
         # Default site and basin model
         temp_vs30 = 1100.0 * np.ones(len(ctx))
-        temp_z2pt5 = _select_basin_model(SJ, 1100.0) * \
-            np.ones_like(temp_vs30)
-
     return (_get_magnitude_term(C, ctx.mag) +
             _get_geometric_attenuation_term(C, ctx.mag, ctx.rrup) +
             _get_style_of_faulting_term(C, ctx) +
             _get_hanging_wall_term(C, ctx) +
             _get_shallow_site_response_term(SJ, C, temp_vs30, a1100) +
-            _get_basin_response_term(SJ, C, temp_z2pt5) +
+            _get_basin_term(C, ctx, None, SJ, a1100) +
             _get_hypocentral_depth_term(C, ctx) +
             _get_fault_dip_term(C, ctx) +
             _get_anelastic_attenuation_term(C, ctx.rrup))
