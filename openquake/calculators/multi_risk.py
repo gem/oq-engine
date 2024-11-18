@@ -60,8 +60,8 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
             number = assets['value-number']
             for a, o in enumerate(assets['ordinal']):
                 for li in range(L):
-                    out[o, li, 0, :D] = number[a] * dd5[0, a, 0, li]
-                    out[o, li, 0, [D]] = csq['losses', li][a]
+                    out[o, li, :, :D] = number[a] * dd5[:, a, 0, li]
+                    out[o, li, :, [D]] = csq['losses', li][:, a]
     return out
 
 

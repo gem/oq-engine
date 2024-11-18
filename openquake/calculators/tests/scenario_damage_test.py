@@ -57,9 +57,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # test agg_damages, 1 realization x 3 damage states
         # checking that passing a fake loss type works,
         # for compatibility with the past
-        [dmg] = extract(self.calc.datastore,
-                        'agg_damages/structural?taxonomy=RC&CRESTA=01.1')
-        aac([1482., 489., 29.], dmg, atol=1E-4)
+        dmg = extract(self.calc.datastore,
+                      'agg_damages/structural?taxonomy=RC&CRESTA=01.1')
+        aac([[1482., 489., 29.]], dmg, atol=1E-4)
+
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=RM&CRESTA=01.1')
         self.assertEqual(dmg.shape, ())
@@ -80,7 +81,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
         df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
-        self.assertEqual(list(df.columns), ['rlz', 'loss_type', 'dmg_state', 'value'])
+        self.assertEqual(list(df.columns), ['rlz', 'value'])
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
@@ -113,13 +114,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=5E-4)
-
-        return  # TODO: fix avg_losses
-        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # one per realization
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=2E-4)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
