@@ -247,13 +247,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
 
         assert (self.dmgcsq >= 0).all()  # sanity check
-        self.datastore['damages-rlzs'] = self.dmgcsq.transpose(1, 2, 3, 4, 0) # ARLDP
-        set_rlzs_stats(self.datastore,
-                       'damages-rlzs',
-                       asset_id=self.assetcol['id'],
-                       loss_type=oq.loss_types,
-                       dmg_state=['no_damage'] + self.crmodel.get_dmg_csq(),
-                       peril=self.crmodel.perils)
+        self.datastore['damages-rlzs'] = self.crmodel.to_multi_damage(self.dmgcsq)
+        set_rlzs_stats(self.datastore, 'damages-rlzs', asset_id=self.assetcol['id'])
 
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')

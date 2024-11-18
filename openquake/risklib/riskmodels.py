@@ -787,6 +787,39 @@ class CompositeRiskModel(collections.abc.Mapping):
         dmgs = ['dmg_%d' % d for d in range(1, D)]
         return dmgs + self.get_consequences()
 
+    def multi_damage_dt(self):
+        """
+        :returns: composite datatype with fields peril-loss_type-damage_state
+        """
+        dcs = self.damage_states + self.get_consequences()
+        lst = []
+        for peril in self.perils:
+            for ltype in self.oqparam.loss_types:
+                for dc in dcs:
+                    if peril == 'earthquake':
+                        field = f'{ltype}-{dc}'
+                    else:
+                        field = f'{peril}-{ltype}-{dc}'
+                    lst.append((field, F32))
+        return numpy.dtype(lst)
+
+    def to_multi_damage(self, array5d):
+        """
+        :param array5d: array of shape (P, A, R, L, Dc)
+        :returns: array of shape (A, R) of dtype multi_damage_dt
+        """
+        P, A, R, L, Dc = array5d.shape
+        arr = numpy.zeros((A, R), self.multi_damage_dt())
+        for a in range(A):
+            for r in range(R):
+                lst = []
+                for pi in range(P):
+                    for li in range(L):
+                        for di in range(Dc):
+                            lst.append(array5d[pi, a, r, li, di])
+                arr[a, r] = tuple(lst)
+        return arr
+        
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too

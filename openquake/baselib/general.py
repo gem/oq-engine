@@ -1761,6 +1761,16 @@ def around(vec, value, delta):
     return (vec <= value + delta) & (vec >= value - delta)
 
 
+def sum_records(array):
+    """
+    :returns: the sums of the composite array
+    """
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].sum(axis=0)
+    return res
+
+
 def compose_arrays(**kwarrays):
     """
     Compose multiple 1D and 2D arrays into a single composite array.
