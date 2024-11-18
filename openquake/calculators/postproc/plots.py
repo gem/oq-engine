@@ -161,13 +161,12 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
 def plot_avg_gmf(ex, imt):
     plt = import_plt()
     import contextily as ctx
-    from pyproj import Proj, transform
+    from pyproj import Transformer
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-
     title = 'Avg GMF for %s' % imt
     assetcol = get_assetcol(ex.calc_id)
     if assetcol is not None:
@@ -175,29 +174,26 @@ def plot_avg_gmf(ex, imt):
         if country_iso_codes is not None:
             title += ' (Countries: %s)' % country_iso_codes
     ax.set_title(title)
-
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     markersize = 5
-
-    proj_wgs84 = Proj(init='epsg:4326')
-    proj_webmercator = Proj(init='epsg:3857')
-
-    x_webmercator, y_webmercator = transform(
-        proj_wgs84, proj_webmercator, avg_gmf['lons'], avg_gmf['lats'])
-
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857')
+    # NOTE: pyproj expects latitudes first, so this is the correct order (though
+    # counter-intuitive)
+    x_webmercator, y_webmercator = transformer.transform(
+        avg_gmf['lats'], avg_gmf['lons'])
     min_x, min_y, max_x, max_y = (min(x_webmercator),
                                   min(y_webmercator),
                                   max(x_webmercator),
                                   max(y_webmercator))
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
+    min_x, max_x = xlim
+    min_y, max_y = ylim
     img, extent = ctx.bounds2img(
         min_x, min_y, max_x, max_y, source=ctx.providers.OpenStreetMap.Mapnik)
-    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=0.6)
-
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=0.3)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
     plt.colorbar(coll, ax=ax)
-
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     return plt
