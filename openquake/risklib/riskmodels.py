@@ -667,8 +667,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                         # dict loss_type -> coeffs for the given loss type
                         for pi, peril in enumerate(self.perils):
                             if len(df) == 1:
-                                w = 1.
-                            else:
+                                [w] = df.weight
+                            else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
                             coeff = (dd5[pi, :, :, li, 1:] @
                                      coeffs[risk_id][peril][lt] * w)
