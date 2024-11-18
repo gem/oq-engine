@@ -841,12 +841,19 @@ def extract_agg_losses(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
+# TODO: extend to multiple perils
 def _dmg_get(array, loss_type):
+    # array of shape (A, R)
     out = []
     for name in array.dtype.names:
-        if loss_type in name:
+        try:
+            ltype, dstate = name.split('-')
+        except ValueError:
+            # ignore secondary perils
+            continue
+        if ltype == loss_type:
             out.append(array[name])
-    return numpy.array(out)  # shape (A, Dc)
+    return numpy.array(out).transpose(1, 2, 0)  # shape (A, R, Dc)
 
 
 @extract.add('agg_damages')
