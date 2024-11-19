@@ -467,7 +467,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
         if usgs_bs:
             usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
         else:
-            usgs_baf = 1.0
+            usgs_baf = np.ones(len(ctx.vs30))
 
         # Get GMM's own basin term
         fb = get_basin_term(C, ctx, region)

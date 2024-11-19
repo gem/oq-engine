@@ -461,7 +461,7 @@ class ParkerEtAl2020SInter(GMPE):
             if self.usgs_basin_scaling:
                 usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
             else:
-                usgs_baf = 1.0
+                usgs_baf = np.ones(len(ctx.vs30))
 
             # Regional Mb factor
             if self.saturation_region in self.MB_REGIONS:
