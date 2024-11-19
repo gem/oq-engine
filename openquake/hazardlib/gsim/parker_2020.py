@@ -491,14 +491,7 @@ class ParkerEtAl2020SInter(GMPE):
             if self.m9_basin_term and imt != PGV:
                 if imt.period >= 1.9:
                     m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
-                    if np.unique(fb) != 0.0:
-                        fb[ctx.z2pt5 >= 6.0] += m9_adj[ctx.z2pt5 >= 6.0]
-                    else:
-                        # fb is zero if no region (no basin amp) thus just 
-                        # take the adjusted m9 term instead for the basin 
-                        # amplification at z2pt5 >= 6 sites given m9 has 
-                        # been specified by user
-                        fb[ctx.z2pt5 >= 6.0] = m9_adj[ctx.z2pt5 >= 6.0] 
+                    fb[ctx.z2pt5 >= 6.0] = m9_adj[ctx.z2pt5 >= 6.0] 
 
             # Now get the mean with basin term added
             mean[m] = pre_baf_mean + (fb * usgs_baf)
