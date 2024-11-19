@@ -427,11 +427,13 @@ class ParkerEtAl2020SInter(GMPE):
         self.basin = basin
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
-        
+        # USGS basin scaling and M9 basin term is only applied when the
+        # region param is set to Cascadia.
         if self.usgs_basin_scaling or self.m9_basin_term:
-            if 'z2pt5' not in self.REQUIRES_SITES_PARAMETERS:
-                raise ValueError('User must specify a GSIM class for this GMPE '
-                                'which considers the z2pt5 site parameter.')
+            if region != "Cascadia":
+                raise ValueError('To apply the USGS basin scaling or the M9 '
+                                 'basin adjustment to ParkerEtAl2020 the '
+                                 'Cascadia region must be specified.')
         
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:

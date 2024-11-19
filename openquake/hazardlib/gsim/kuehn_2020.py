@@ -718,16 +718,13 @@ class KuehnEtAl2020SInter(GMPE):
 
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
+        # USGS basin scaling and M9 basin term is only
+        # applied when the region param is set to Cascadia.
         if self.usgs_basin_scaling or self.m9_basin_term:
-            msg = ('User must specify a GSIM sub-class which considers z1pt0 '
-                  'or z2pt5 site parameter if applying an alternative basin '
-                  'term or basin adjustment')
-            if ('z1pt0' not in self.REQUIRES_SITES_PARAMETERS and self.region
-                in ["NZL", "TWN"]):
-                    raise ValueError(msg)
-            elif ('z2pt5' not in self.REQUIRES_SITES_PARAMETERS and self.region
-                in ["CAS", "JPN"]):
-                    raise ValueError(msg)
+            if self.region != 'CAS':
+                raise ValueError('To apply the USGS basin scaling or the M9 '
+                                 'basin adjustment to KuehnEtAl2020 the '
+                                 'Cascadia region must be specified.')
         
         self.m_b = m_b
         # epsilon for epistemic uncertainty

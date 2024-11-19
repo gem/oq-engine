@@ -289,7 +289,7 @@ def get_reference_basin_depth(region, vs30):
     return np.exp(ln_zref)
 
 
-def _get_basin_term(C, ctx, region):
+def _get_basin_term(C, ctx, region, usgs_baf):
     """
     Returns the basin depth scaling term, applicable only for the Cascadia
     and Japan regions, defined in equations 3.9 - 3.11 and corrected in the
@@ -316,7 +316,8 @@ def _get_basin_term(C, ctx, region):
     else:
         # Cascadia Basin (Equation 3.11)
         idx = ln_z25_prime > 0.0
-        f_basin[idx] = C["a39"] * ln_z25_prime[idx]
+        f_basin[idx] = C["a39"] * ln_z25_prime[idx] * usgs_baf[idx]
+        breakpoint()
     return f_basin
 
 
@@ -352,7 +353,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment,
             get_rupture_depth_scaling_term(C, trt, ctx) +
             get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
             get_site_amplification_term(C, region, ctx.vs30, pga1000) +
-            _get_basin_term(C, ctx, region) * usgs_baf)
+            _get_basin_term(C, ctx, region, usgs_baf))
 
 
 def _get_f2(t1, t2, t3, t4, alpha, period):
@@ -642,11 +643,11 @@ class AbrahamsonGulerce2020SInter(GMPE):
         if region in ("CAS", "JPN"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
-            
-        if (self.usgs_basin_scaling and 'z2pt5' not in
-            self.REQUIRES_SITES_PARAMETERS):
-            raise ValueError('User must specify a GSIM sub-class for this GMPE '
-                             'which considers the z2pt5 site parameter.')
+        
+        # USGS basin scaling only used if region is set to Cascadia
+        if self.usgs_basin_scaling and self.region != "CAS":
+            raise ValueError('USGS basin scaling is only applicable to the '
+                             'Cascadia region for AbrahamsonGulerce2020.')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -668,7 +669,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
             if self.usgs_basin_scaling:
                 usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
             else:
-                usgs_baf = 1.0
+                usgs_baf = np.ones(len(ctx.vs30))
             
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
                                             self.apply_usa_adjustment, usgs_baf)

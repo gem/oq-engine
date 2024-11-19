@@ -57,7 +57,7 @@ def _get_usgs_basin_scaling(z, basin_upper, basin_lower, period):
         constr = np.clip(z, basin_upper, basin_lower)
         basin_range = basin_lower - basin_upper
         baf = (constr - basin_upper) / basin_range
-        # Apply for sites with z > basin_upper (i.e. z_min)
+        # And only apply for sites with z > basin_upper (i.e. z_min)
         z_scale[z > basin_upper] = baf[z > basin_upper]
         if period == 0.75:
             return 0.585 * z_scale
