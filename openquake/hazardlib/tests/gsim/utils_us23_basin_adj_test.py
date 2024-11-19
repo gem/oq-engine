@@ -43,7 +43,7 @@ exp_res = np.array([[[-4.73116981, -6.72824192, -8.69828689], # Same as unmod
 
                     [[-3.81017818, -5.87054779, -8.41343283], # Diff at SA(2.0)
                      [-4.35919525, -5.71917277, -7.55847418], # for basin sites
-                     [-5.12024646, -6.28641178, -7.8999625 ]],# as M9 term
+                     [-5.12024646, -6.26695433, -7.8999625 ]],# as M9 term
 
                     [[-3.81017818, -5.87054779, -8.41343283],
                      [-4.35919525, -5.71917277, -7.55847418],
@@ -119,5 +119,6 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         ctx.vs30 = np.array([800., 400., 200.])
         ctx.vs30measured = 1
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
-
         aae(mea, exp_res)
+
+        

@@ -49,7 +49,7 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     Return the adjusted version of the M9 basin term as detailed within the 
     USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
     """
-    delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1179.)
+    delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1279.)
     fb_adj = np.zeros(len(z2pt5))
     idx_ce1 = delta_z2pt5_adj <= (C['C_e1']/C['C_e3'])
     idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
