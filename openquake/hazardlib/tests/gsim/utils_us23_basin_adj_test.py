@@ -88,10 +88,9 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
 
         # ParkerEtAl2020SInterB (all adj vs no adj)
         p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
-                             'basin="out"\nm9_basin_term="true"\n'
+                             'm9_basin_term="true"\n'
                              'usgs_basin_scaling="true"')
-        p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
-                             'basin="out"')
+        p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
         
         # AtkinsonMacias2009 (m9 and cb14 vs m9)
         a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
