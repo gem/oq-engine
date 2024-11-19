@@ -486,7 +486,8 @@ class ParkerEtAl2020SInter(GMPE):
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             pre_baf_mean = fp + fnl + flin + fm + c0 + fd
             
-            # Get the m9 basin adjustment if long period SA for deep basin sites
+            # If required get the m9 basin adjustment if long period SA
+            # for deep basin sites
             if self.m9_basin_term and imt != PGV:
                 if imt.period >= 1.9:
                     m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
