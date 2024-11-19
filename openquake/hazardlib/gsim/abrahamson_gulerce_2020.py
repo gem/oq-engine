@@ -317,7 +317,6 @@ def _get_basin_term(C, ctx, region, usgs_baf):
         # Cascadia Basin (Equation 3.11)
         idx = ln_z25_prime > 0.0
         f_basin[idx] = C["a39"] * ln_z25_prime[idx] * usgs_baf[idx]
-        breakpoint()
     return f_basin
 
 
