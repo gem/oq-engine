@@ -43,7 +43,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
-    _get_z2pt5_usgs_basin_scaling, _get_z1pt0_usgs_basin_scaling
+    _get_z2pt5_usgs_basin_scaling
 
 
 # Path to the within-model epistemic adjustment tables
@@ -462,12 +462,10 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
     # is included
     if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
         
-        # USGS basin scaling factor is imt-dependent
+        # Get USGS basin scaling factor if required (can only be for 
+        # CAS region)
         if usgs_bs:
-            if region in ["NZL", "TWN"]:
-                usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
-            else:
-                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+            usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
         else:
             usgs_baf = 1.0
 

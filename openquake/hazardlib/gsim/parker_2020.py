@@ -450,7 +450,8 @@ class ParkerEtAl2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
-            # USGS basin scaling factor is imt-dependent
+            # Get USGS basin scaling factor if required (can only be
+            # applied for CAS region)
             if self.usgs_basin_scaling:
                 usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
             else:
