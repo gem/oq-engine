@@ -434,7 +434,13 @@ class ParkerEtAl2020SInter(GMPE):
                 raise ValueError('To apply the USGS basin scaling or the M9 '
                                  'basin adjustment to ParkerEtAl2020 the '
                                  'Cascadia region must be specified.')
-        
+            if 'z2pt5' not in self.REQUIRES_SITES_PARAMETERS:
+                raise ValueError('A subclass of ParkerEtAl2020 which applies '
+                                 'a basin term must be specified to use the '
+                                 'the USGS basin scaling or the M9 basin '
+                                 'adjustment (i.e. it must have z2pt5 as a '
+                                ' required site parameter).')
+
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
