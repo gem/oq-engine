@@ -317,6 +317,40 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
         return plt
 
 
+def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10),
+                 with_populated_places=False, return_base64=False):
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    import contextily as ctx
+    if backend is not None:
+        # we may need to use a non-interactive backend
+        import matplotlib
+        matplotlib.use(backend)
+    _fig, ax = plt.subplots(figsize=figsize)
+    ax.set_aspect('equal')
+    # ax.grid(True)
+    ax, min_x, min_y, max_x, max_y = add_rupture_webmercator(
+        ax, rup, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.3,
+        surf_linestyle='--')
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
+    min_x, max_x = xlim
+    min_y, max_y = ylim
+    # NOTE: another interesting option:
+    # source = ctx.providers.CartoDB.Positron
+    # source = ctx.providers.TopPlusOpen.Grey
+    source = ctx.providers.TopPlusOpen.Color
+    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
+    add_attribution(ax, source['attribution'])
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.legend()
+    if return_base64:
+        return plt_to_base64(plt)
+    else:
+        return plt
+
+
 def add_surface_3d(ax, surface, label):
     lon, lat, depth = surface.get_surface_boundaries_3d()
     lon_grid = numpy.array([[lon[0], lon[1]], [lon[3], lon[2]]])
