@@ -33,6 +33,17 @@ def import_plt():
     return plt
 
 
+def add_attribution(ax, attribution):
+    ax.text(
+        0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
+        attribution,
+        transform=ax.transAxes,  # Place text relative to axes
+        fontsize=8, color="black", alpha=0.5,
+        ha="left",  # Horizontal alignment
+        va="bottom",  # Vertical alignment
+    )
+
+
 def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
     # Make the plot display all items with some margin, looking square
     x_min, x_max = x_min - padding, x_max + padding
@@ -144,9 +155,12 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    img, extent = ctx.bounds2img(
-        min_x, min_y, max_x, max_y, source=ctx.providers.OpenStreetMap.Mapnik)
+    source = ctx.providers.CartoDB.Positron
+    # NOTE: another interesting option:
+    # source = ctx.providers.TopPlusOpen.Grey
+    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
     ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
+    add_attribution(ax, source['attribution'])
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
                       alpha=1)
     plt.colorbar(coll, ax=ax)
@@ -189,9 +203,12 @@ def plot_avg_gmf(ex, imt):
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    img, extent = ctx.bounds2img(
-        min_x, min_y, max_x, max_y, source=ctx.providers.OpenStreetMap.Mapnik)
+    source = ctx.providers.CartoDB.Positron
+    # NOTE: another interesting option:
+    # source = ctx.providers.TopPlusOpen.Grey
+    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
     ax.imshow(img, extent=extent, interpolation='bilinear', alpha=0.3)
+    add_attribution(ax, source['attribution'])
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
     plt.colorbar(coll, ax=ax)
     ax.set_xlim(*xlim)
