@@ -20,6 +20,7 @@ import io
 import os
 import base64
 import numpy
+from pyproj import Transformer
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
@@ -134,24 +135,21 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     ax.set_title(title)
     gmf = shakemap_array['val'][imt]
     markersize = 0.005
-    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857')
-    # NOTE: pyproj expects latitudes first, so this is the correct order (though
-    # counter-intuitive)
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
     x_webmercator, y_webmercator = transformer.transform(
-        shakemap_array['lat'], shakemap_array['lon'])
+        shakemap_array['lon'], shakemap_array['lat'])
     min_x, min_y, max_x, max_y = (min(x_webmercator),
                                   min(y_webmercator),
                                   max(x_webmercator),
                                   max(y_webmercator))
-    # TODO: project the rupture to webmercator
-    # if rupture is not None:
-    #     ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture(
-    #         ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-    #         surf_facecolor='none', surf_linestyle='--')
-    #     min_x = min(min_x, rup_min_x)
-    #     max_x = max(max_x, rup_max_x)
-    #     min_y = min(min_y, rup_min_y)
-    #     max_y = max(max_y, rup_max_y)
+    if rupture is not None:
+        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture_webmercator(
+            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=1,
+            surf_facecolor='none', surf_linestyle='--')
+        min_x = min(min_x, rup_min_x)
+        max_x = max(max_x, rup_max_x)
+        min_y = min(min_y, rup_min_y)
+        max_y = max(max_y, rup_max_y)
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
@@ -162,7 +160,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
     add_attribution(ax, source['attribution'])
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
-                      alpha=1)
+                      alpha=0.4)
     plt.colorbar(coll, ax=ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
@@ -191,11 +189,9 @@ def plot_avg_gmf(ex, imt):
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     markersize = 5
-    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857')
-    # NOTE: pyproj expects latitudes first, so this is the correct order (though
-    # counter-intuitive)
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
     x_webmercator, y_webmercator = transformer.transform(
-        avg_gmf['lats'], avg_gmf['lons'])
+        avg_gmf['lons'], avg_gmf['lats'])
     min_x, min_y, max_x, max_y = (min(x_webmercator),
                                   min(y_webmercator),
                                   max(x_webmercator),
@@ -228,6 +224,25 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
     return surface.get_bounding_box()
 
 
+def add_surface_webmercator(
+        ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    lon, lat = surface.get_surface_boundaries()
+    x, y = transformer.transform(lon, lat)  # Transform lat/lon to Web Mercator
+    fill_params = {
+        'alpha': alpha,
+        'edgecolor': 'grey',
+        'label': label
+    }
+    if facecolor is not None:
+        fill_params['facecolor'] = facecolor
+    ax.fill(x, y, **fill_params)
+    lon_min, lon_max, lat_max, lat_min = surface.get_bounding_box()
+    x_min, y_max = transformer.transform(lon_min, lat_max)  # Top-left corner
+    x_max, y_min = transformer.transform(lon_max, lat_min)  # Bottom-right corner
+    return x_min, x_max, y_min, y_max
+
+
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
                 surf_facecolor=None, surf_linestyle='-'):
     if hasattr(rup.surface, 'surfaces'):
@@ -250,6 +265,30 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
+    return ax, min_x, min_y, max_x, max_y
+
+
+def add_rupture_webmercator(
+        ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
+        surf_facecolor=None, surf_linestyle='-'):
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    min_x, max_x = float('inf'), float('-inf')
+    min_y, max_y = float('inf'), float('-inf')
+    if hasattr(rup.surface, 'surfaces'):
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            min_x_, max_x_, min_y_, max_y_ = add_surface_webmercator(
+                ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
+                facecolor=surf_facecolor, linestyle=surf_linestyle)
+            min_x, max_x = min(min_x, min_x_), max(max_x, max_x_)
+            min_y, max_y = min(min_y, min_y_), max(max_y, max_y_)
+    else:
+        min_x, max_x, min_y, max_y = add_surface_webmercator(
+            ax, rup.surface, 'Surface', alpha=surf_alpha,
+            facecolor=surf_facecolor, linestyle=surf_linestyle)
+    hypo_x, hypo_y = transformer.transform(rup.hypocenter.longitude,
+                                           rup.hypocenter.latitude)
+    ax.plot(hypo_x, hypo_y, marker='*', color='orange', label='Hypocenter',
+            alpha=hypo_alpha, linestyle='', markersize=hypo_markersize)
     return ax, min_x, min_y, max_x, max_y
 
 
