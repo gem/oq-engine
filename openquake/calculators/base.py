@@ -37,7 +37,7 @@ from PIL import Image
 import configparser
 import collections
 
-from openquake.commands.plot_assets import main as plot_assets
+from openquake.commands.plot_assets_webmercator import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
@@ -658,7 +658,7 @@ class HazardCalculator(BaseCalculator):
                 logging.warning('No sites were affected by %s' % name)
             data[name] = peril
             names.append(name)
-        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)     
+        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
         create_gmf_data(self.datastore, [], names, data, N)
 
     def pre_execute(self):
