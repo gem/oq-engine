@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2024 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -119,5 +119,3 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         ctx.vs30measured = 1
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
         aae(mea, exp_res)
-
-        
