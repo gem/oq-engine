@@ -20,8 +20,6 @@
 Module exports :class:`AmbraseysEtAl1996`.
 """
 import numpy as np
-from scipy.constants import g
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
