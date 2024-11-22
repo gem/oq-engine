@@ -22,7 +22,7 @@ import math
 import shapely
 import logging
 from openquake.commonlib import datastore
-from openquake.hazardlib.geo.utils import cross_idl, get_bbox
+from openquake.hazardlib.geo.utils import cross_idl  # , get_bbox
 from openquake.calculators.getters import get_rupture_from_dstore
 from openquake.calculators.postproc.plots import (
     get_assetcol, get_country_iso_codes, add_rupture_webmercator, adjust_limits,
@@ -37,7 +37,6 @@ def main(calc_id: int = -1, site_model=False,
 
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
-    import contextily as ctx
     from pyproj import Transformer
     from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -58,12 +57,12 @@ def main(calc_id: int = -1, site_model=False,
         ax.add_patch(pp)
     ax.set_aspect('equal')
     # ax.grid(True)
-    markersize = 0.005
-    if assets_only:
-        markersize_site_model = markersize_assets = 5
-    else:
-        markersize_site_model = markersize_sitecol = markersize_assets = 18
-        markersize_discarded = markersize_assets
+    # markersize = 0.005
+    # if assets_only:
+    #     markersize_site_model = markersize_assets = 5
+    # else:
+    #     markersize_site_model = markersize_sitecol = markersize_assets = 18
+    #     markersize_discarded = markersize_assets
     min_x, max_x, min_y, max_y = math.inf, -math.inf, math.inf, -math.inf
     if site_model and 'site_model' in dstore:
         sm = dstore['site_model']
@@ -86,18 +85,18 @@ def main(calc_id: int = -1, site_model=False,
                                   max(max_x, max(x_assetcol_wm)),
                                   max(max_y, max(y_assetcol_wm)))
     p.scatter(x_assetcol_wm, y_assetcol_wm, marker='.', color='green',
-              label='assets', s=markersize_assets)
+              label='assets')  # , s=markersize_assets)
     if not assets_only:
         x_webmercator, y_webmercator = transformer.transform(
             sitecol.lons, sitecol.lats)
         p.scatter(x_webmercator, y_webmercator, marker='+', color='black',
-                  label='sites', s=markersize_sitecol)
+                  label='sites')  # , s=markersize_sitecol)
         if 'discarded' in dstore:
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             x_webmercator, y_webmercator = transformer.transform(
                 disc['lon'], disc['lat'])
             p.scatter(x_webmercator, y_webmercator, marker='x', color='red',
-                      label='discarded', s=markersize_discarded)
+                      label='discarded')  # , s=markersize_discarded)
     if oq.rupture_xml or oq.rupture_dict:
         rec = dstore['ruptures'][0]
         lon, lat, _dep = rec['hypo']
