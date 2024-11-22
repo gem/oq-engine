@@ -25,7 +25,8 @@ from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
 from openquake.calculators.getters import get_rupture_from_dstore
 from openquake.calculators.postproc.plots import (
-    get_assetcol, get_country_iso_codes, add_rupture_webmercator, adjust_limits)
+    get_assetcol, get_country_iso_codes, add_rupture_webmercator, adjust_limits,
+    add_basemap)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -129,20 +130,7 @@ def main(calc_id: int = -1, site_model=False,
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    source = ctx.providers.CartoDB.Positron
-    # NOTE: another interesting option:
-    # source = ctx.providers.TopPlusOpen.Grey
-    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
-    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
-    # FIXME: use add_attribution, moved where it does not cause a circular import
-    ax.text(
-        0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
-        source['attribution'],
-        transform=ax.transAxes,  # Place text relative to axes
-        fontsize=8, color="black", alpha=0.5,
-        ha="left",  # Horizontal alignment
-        va="bottom",  # Vertical alignment
-    )
+    add_basemap(ax, min_x, min_y, max_x, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
 

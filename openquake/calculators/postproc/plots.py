@@ -20,6 +20,7 @@ import io
 import os
 import base64
 import numpy
+import contextily as ctx
 from pyproj import Transformer
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
@@ -34,15 +35,20 @@ def import_plt():
     return plt
 
 
-def add_attribution(ax, attribution):
+def add_basemap(ax, min_x, min_y, max_x, max_y, source=ctx.providers.CartoDB.Positron):
+    # NOTE: another interesting option:
+    # source = ctx.providers.TopPlusOpen.Grey
+    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
     ax.text(
         0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
-        attribution,
+        source['attribution'],
         transform=ax.transAxes,  # Place text relative to axes
         fontsize=8, color="black", alpha=0.5,
         ha="left",  # Horizontal alignment
         va="bottom",  # Vertical alignment
     )
+    return ax
 
 
 def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
@@ -120,8 +126,6 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                   with_populated_places=False, return_base64=False,
                   rupture=None):
     plt = import_plt()
-    import contextily as ctx
-    from pyproj import Transformer
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
@@ -153,12 +157,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    source = ctx.providers.CartoDB.Positron
-    # NOTE: another interesting option:
-    # source = ctx.providers.TopPlusOpen.Grey
-    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
-    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
-    add_attribution(ax, source['attribution'])
+    add_basemap(ax, min_x, min_y, max_x, max_y)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
                       alpha=0.4)
     plt.colorbar(coll, ax=ax)
@@ -172,8 +171,6 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
 
 def plot_avg_gmf(ex, imt):
     plt = import_plt()
-    import contextily as ctx
-    from pyproj import Transformer
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
     # ax.grid(True)
@@ -199,12 +196,7 @@ def plot_avg_gmf(ex, imt):
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    source = ctx.providers.CartoDB.Positron
-    # NOTE: another interesting option:
-    # source = ctx.providers.TopPlusOpen.Grey
-    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
-    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=0.3)
-    add_attribution(ax, source['attribution'])
+    add_basemap(ax, min_x, min_y, max_x, max_y)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
     plt.colorbar(coll, ax=ax)
     ax.set_xlim(*xlim)
@@ -317,11 +309,9 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
         return plt
 
 
-def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10),
-                 with_populated_places=False, return_base64=False):
+def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10), return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
-    import contextily as ctx
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
@@ -335,13 +325,7 @@ def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10),
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    # NOTE: another interesting option:
-    # source = ctx.providers.CartoDB.Positron
-    # source = ctx.providers.TopPlusOpen.Grey
-    source = ctx.providers.TopPlusOpen.Color
-    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
-    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
-    add_attribution(ax, source['attribution'])
+    add_basemap(ax, min_x, min_y, max_x, max_y, source=ctx.providers.TopPlusOpen.Color)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     ax.legend()
