@@ -1413,8 +1413,6 @@ def web_engine(request, **kwargs):
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['aristotle_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
-        # NOTE: using interface level 2 unless differently specified. We may prefer to
-        # force defining the interface level, raising an error otherwise
         try:
             params['interface_level'] = request.user.profile.interface_level
         except AttributeError:
