@@ -31,6 +31,8 @@ except ImportError:
     STANDALONE = False
     STANDALONE_APPS = ()
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 TEST = 'test' in sys.argv
 
 INSTALLED_APPS = ('openquake.server.db',)

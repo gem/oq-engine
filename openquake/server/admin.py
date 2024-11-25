@@ -4,6 +4,13 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from openquake.server.announcements.models import Announcement
+from openquake.server.models import Profile
+
+
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    verbose_name_plural = 'Profile'
 
 
 # NOTE: this customization only moves the email to a more visible section, as
@@ -13,7 +20,8 @@ from openquake.server.announcements.models import Announcement
 #       django User model, the email field still remains optional. However,
 #       email notifications will be disabled in case the email is not
 #       specified.
-class UserAdmin(UserAdmin):
+class CustomUserAdmin(UserAdmin):
+    inlines = (ProfileInline,)
     fieldsets = (
         (None, {'fields': ('username', 'password', 'email')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name')}),
@@ -34,6 +42,6 @@ try:
 except NotRegistered:
     pass
 
-admin.site.register(User, UserAdmin)
+admin.site.register(User, CustomUserAdmin)
 
 admin.site.register(Announcement)
