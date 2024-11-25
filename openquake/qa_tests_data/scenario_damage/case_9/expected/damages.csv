@@ -1,5 +1,5 @@
-#,,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git513b65764c', start_date='2024-11-07T08:01:20', checksum=1630009135"
-asset_id,Material,Municipio,Provincia,Region,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extensive,structural~complete,structural~collapsed,structural~losses
+#,,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git6e6623ae9e', start_date='2024-11-18T09:23:47', checksum=1630009135"
+asset_id,Material,Municipio,Provincia,Region,taxonomy,lon,lat,structural-no_damage,structural-slight,structural-moderate,structural-extensive,structural-complete,structural-collapsed,structural-losses
 asset_4291,Masonry with reinforcement,PEPILLO SALCEDO,MONTE CRISTI,REGIÓN CIBAO NOROESTE,MCF_LWAL-DNO_H3,-71.65401,19.66566,8.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
 asset_8638,Masonry with reinforcement,SAN JUAN,SAN JUAN,REGIÓN EL VALLE,MR_LWAL-DNO_H1,-71.32667,18.96847,2.289250E+01,1.067500E-01,7.500000E-04,0.000000E+00,0.000000E+00,0.000000E+00,1.989000E+02
 asset_7469,Wood,LA CIÉNAGA,BARAHONA,REGIÓN ENRIQUILLO,W-WWD_LWAL-DNO_H1,-71.12000,18.11139,4.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
