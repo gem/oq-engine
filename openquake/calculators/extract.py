@@ -841,6 +841,21 @@ def extract_agg_losses(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
+# TODO: extend to multiple perils
+def _dmg_get(array, loss_type):
+    # array of shape (A, R)
+    out = []
+    for name in array.dtype.names:
+        try:
+            ltype, _dstate = name.split('-')
+        except ValueError:
+            # ignore secondary perils
+            continue
+        if ltype == loss_type:
+            out.append(array[name])
+    return numpy.array(out).transpose(1, 2, 0)  # shape (A, R, Dc)
+
+
 @extract.add('agg_damages')
 def extract_agg_damages(dstore, what):
     """
@@ -859,9 +874,7 @@ def extract_agg_damages(dstore, what):
         loss_type = what
         tags = []
     if 'damages-rlzs' in dstore:
-        oq = dstore['oqparam']
-        li = oq.lti[loss_type]
-        damages = dstore['damages-rlzs'][:, :, li]
+        damages = _dmg_get(dstore['damages-rlzs'][:], loss_type)
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)
@@ -1045,53 +1058,28 @@ def build_damage_dt(dstore):
     """
     oq = dstore['oqparam']
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    perils = attrs['peril']
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
-    dt_list = [(ds, F32) for ds in ['no_damage'] + limit_states + csqs]
+    dt_list = []
+    for peril in perils:
+        for ds in ['no_damage'] + limit_states + csqs:
+            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
-def build_csq_dt(dstore):
-    """
-    :param dstore: a datastore instance
-    :returns:
-       a composite dtype (csq1, csq2, ...)
-    """
-    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
-    limit_states = list(dstore.get_attr('crm', 'limit_states'))
-    csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
-    dt = numpy.dtype([(csq, F32) for csq in csqs])
-    return dt
-
-
-def build_damage_array(data, damage_dt):
-    """
-    :param data: an array of shape (A, L, D)
-    :param damage_dt: a damage composite data type loss_type -> states
-    :returns: a composite array of length N and dtype damage_dt
-    """
-    A, _L, _D = data.shape
-    dmg = numpy.zeros(A, damage_dt)
-    for a in range(A):
-        for li, lt in enumerate(damage_dt.names):
-            dmg[lt][a] = tuple(data[a, li])
-    return dmg
-
-
 @extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
     oq = dstore['oqparam']
-    damage_dt = build_damage_dt(dstore)
     R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
         R = 1
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for r in range(R):
-        damages = build_damage_array(data[:, r], damage_dt)
-        yield 'rlz-%03d' % r, util.compose_arrays(assets, damages)
+        yield 'rlz-%03d' % r, util.compose_arrays(assets, data[:, r])
 
 
 # tested on oq-risk-tests event_based/etna
