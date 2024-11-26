@@ -239,17 +239,16 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
 
         # Get PGA on rock
         pga1100 = np.exp(
-            get_mean_values(C_PGA, self.region, trt, m_b, ctx, None, _get_basin_term)
-            + get_backarc_term(trt, PGA(), ctx)
-        )
+            get_mean_values(C_PGA, self.region, 0., trt, m_b, ctx, None,
+                            _get_basin_term) + get_backarc_term(trt, PGA(), ctx))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
         for imt in imts:
             if ("PGA" in imt.string) or ("SA" in imt.string) and (imt.period <= 0.1):
                 pga_soil = get_mean_values(
-                    C_PGA, self.region, trt, m_b, ctx, pga1100, _get_basin_term,
-                ) + get_backarc_term(trt, PGA(), ctx)
+                    C_PGA, self.region, 0., trt, m_b, ctx, pga1100,
+                    _get_basin_term) + get_backarc_term(trt, PGA(), ctx)
                 break
 
         for m, imt in enumerate(imts):
@@ -264,16 +263,16 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 mean[m] = pga_soil
             elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
-                mean[m] = get_mean_values(
-                    C, self.region, trt, m_break, ctx, pga1100, _get_basin_term
+                mean[m] = get_mean_values(C, self.region, imt.period, trt,
+                                          m_break, ctx, pga1100, _get_basin_term
                 ) + get_backarc_term(trt, imt, ctx)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
                 mean[m] = get_mean_values(
-                    C, self.region, trt, m_break, ctx, pga1100, _get_basin_term
-                ) + get_backarc_term(trt, imt, ctx)
+                    C, self.region, imt.period, trt, m_break, ctx, pga1100,
+                    _get_basin_term) + get_backarc_term(trt, imt, ctx)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(
