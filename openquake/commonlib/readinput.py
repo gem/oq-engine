@@ -1702,10 +1702,7 @@ def read_populated_places_df(lon_field='longitude', lat_field='latitude',
 
     :returns: a DataFrame of coordinates and names of populated places
     """
-    mosaic_dir = config.directory.mosaic_dir
-    fname = os.path.join(mosaic_dir, 'worldcities.csv')
-    if not os.path.isfile(fname):
-        return
+    fname = os.path.join(os.path.dirname(mosaic.__file__), 'worldcities.csv')
     return read_populated_places(fname, lon_field, lat_field, label_field)
 
 
