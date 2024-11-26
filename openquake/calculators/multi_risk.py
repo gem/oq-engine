@@ -66,7 +66,7 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
 
 def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                      perils, binary_perils):
-    # dmg_csq has shape (A, R, L, 1, D + 1)
+    # dmg_csq has shape (P, A, R, L, D + 1)
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
@@ -84,7 +84,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
                 # i.e. field = 'no_damage-structural-ASH_DRY'
-                field2tup[field] = (slice(None), p, li, d)
+                field2tup[field] = (p, slice(None), li, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
@@ -128,32 +128,31 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
-        theperils = self.oqparam.inputs['multi_peril']
-        P = len(theperils) + 1
+        multi_peril = self.oqparam.inputs['multi_peril']
+        P = len(multi_peril) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
-        dmg_csq = numpy.zeros((A, P, L, D + 1), F32)
-        sec_imts = []
-        if 'ASH' in theperils:
+        dmg_csq = numpy.zeros((P, A, L, D + 1), F32)
+        perils = []
+        if 'ASH' in multi_peril:
             assets = general.group_array(self.assetcol, 'site_id')
             gmf = self.datastore['gmf_data/ASH'][:]
-            dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf,
-                                        self.oqparam.time_event)
-            sec_imts.append('ASH_DRY')
-            dmg_csq[:, 1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
-                                        self.oqparam.time_event)
-            sec_imts.append('ASH_WET')
+            dmg_csq[0] = get_dmg_csq(self.crmodel, assets, gmf,
+                                     self.oqparam.time_event)
+            dmg_csq[1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
+                                     self.oqparam.time_event)
+            perils.append('ASH_DRY')
+            perils.append('ASH_WET')
         hazard = self.datastore.read_df('gmf_data', 'sid')
-        binary_sec_imts = []
-        for peril in theperils:
+        binary_perils = []
+        for peril in multi_peril:
             if peril != 'ASH':
-                binary_sec_imts.append(peril)
+                binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(
-            self.assetcol, dmg_csq, hazard, ltypes, dstates, sec_imts,
-            binary_sec_imts)
-        self.all_perils = sec_imts + binary_sec_imts
+            self.assetcol, dmg_csq, hazard, ltypes, dstates, perils, binary_perils)
+        self.all_perils = perils + binary_perils
         return arr
 
     def post_execute(self, arr):
