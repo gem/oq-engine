@@ -35,13 +35,13 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
     :param time_event: used in when the occupancy depend on the time (the
         default is avg)
     :returns:
-        an array of shape (A, L, 1, D + 1) with the number of buildings
+        an array of shape (A, L, D + 1) with the number of buildings
         in each damage state for each asset and loss type
     """
     A = sum(len(assets) for assets in assets_by_site.values())
     L = len(crm.loss_types)
     D = len(crm.damage_states)
-    out = numpy.zeros((A, L, 1, D + 1), F32)
+    out = numpy.zeros((A, L, D + 1), F32)
     for sid, assets in assets_by_site.items():
         gmv = gmf[sid]
         group = general.group_array(assets, 'taxonomy')
@@ -57,13 +57,13 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
                 dd5[:, :, :, li] = rm.scenario_damage(
                     'earthquake', loss_type, assets,
                     pandas.DataFrame({peril: [gmv]}))
-            csq = crm.compute_csq(assets, dd5, df, crm.oqparam)
+            csq = crm.compute_csq(assets, dd5, df, crm.oqparam)  # ->PAE
             number = assets['value-number']
             for a, o in enumerate(assets['ordinal']):
                 for li in range(L):
-                    out[o, li, :, :D] = number[a] * dd5[:, a, 0, li]
-                    out[o, li, :, [D]] = csq['losses', li][:, a]
-    return out
+                    out[o, li, :D] = number[a] * dd5[:, a, 0, li]
+                    out[o, li, [D]] = csq['losses', li][:, a, 0]
+    return out  # (A, L, D+1)
 
 
 def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
@@ -85,7 +85,8 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
-                field2tup[field] = (p, li, 0, d)
+                # i.e. field = 'no_damage-structural-ASH_DRY'
+                field2tup[field] = (p, li, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
@@ -135,7 +136,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
-        dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
+        dmg_csq = numpy.zeros((A, P, L, D + 1), F32)
         perils = []
         if 'ASH' in theperils:
             assets = general.group_array(self.assetcol, 'site_id')
