@@ -84,7 +84,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
                 # i.e. field = 'no_damage-structural-ASH_DRY'
-                field2tup[field] = (p, li, d)
+                field2tup[field] = (slice(None), p, li, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
@@ -97,7 +97,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         if field in assetcol.array.dtype.fields:
             arr[field] = assetcol.array[field]
         elif field in field2tup:  # dmg_csq field
-            arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
+            arr[field] = dmg_csq[field2tup[field]]
     # computed losses and fatalities for binary_perils
     for rec in arr:
         haz = hazard.loc[rec['site_id']]
