@@ -59,8 +59,9 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
                     pandas.DataFrame({sec_imt: [gmv]}))
             csq = crm.compute_csq(assets, dd5, df, crm.oqparam)  # ->PAE
             for li in range(L):
-                out[ordinal, li, :D] = number * dd5[:, :, 0, li]
-                out[ordinal, li, [D]] = csq['losses', li][:, :, 0]
+                # shape (A, 1) times (A, D) has shape (A, D)
+                out[ordinal, li, :D] = number[:, None] * dd5[0, :, 0, li]
+                out[ordinal, li, D] = csq['losses', li][0, :, 0]
     return out  # (A, L, D+1)
 
 
