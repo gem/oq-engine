@@ -35,40 +35,39 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
     :param time_event: used in when the occupancy depend on the time (the
         default is avg)
     :returns:
-        an array of shape (A, L, 1, D + 1) with the number of buildings
+        an array of shape (A, L, D + 1) with the number of buildings
         in each damage state for each asset and loss type
     """
     A = sum(len(assets) for assets in assets_by_site.values())
     L = len(crm.loss_types)
     D = len(crm.damage_states)
-    out = numpy.zeros((A, L, 1, D + 1), F32)
+    out = numpy.zeros((A, L, D + 1), F32)
     for sid, assets in assets_by_site.items():
         gmv = gmf[sid]
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
+            number = assets['value-number']
+            ordinal = assets['ordinal']
             dd5 = numpy.zeros((1, len(assets), 1, L, D), F32)  # 1 peril, 1 event
+            # NB: assuming trivial taxonomy mapping for multi_risk
+            df = crm.tmap_df[crm.tmap_df.taxi == taxonomy]
+            [rm] = [crm._riskmodels[k] for k, w in zip(df.risk_id, df.weight)]
+            [sec_imt] = rm.imt_by_lt.values()
             for li, loss_type in enumerate(crm.loss_types):
-                # NB: assuming trivial taxonomy mapping for multi_risk
-                df = crm.tmap_df[crm.tmap_df.taxi == taxonomy]
-                [rm] = [crm._riskmodels[k]
-                        for k, w in zip(df.risk_id, df.weight)]
-                # NB: risk logic trees are not yet supported in multi_risk
-                [peril] = rm.imt_by_lt.values()
                 dd5[:, :, :, li] = rm.scenario_damage(
                     'earthquake', loss_type, assets,
-                    pandas.DataFrame({peril: [gmv]}))
-            csq = crm.compute_csq(assets, dd5, df, crm.oqparam)
-            number = assets['value-number']
-            for a, o in enumerate(assets['ordinal']):
-                for li in range(L):
-                    out[o, li, :, :D] = number[a] * dd5[:, a, 0, li]
-                    out[o, li, :, [D]] = csq['losses', li][:, a]
-    return out
+                    pandas.DataFrame({sec_imt: [gmv]}))
+            csq = crm.compute_csq(assets, dd5, df, crm.oqparam)  # ->PAE
+            for li in range(L):
+                # shape (A, 1) times (A, D) has shape (A, D)
+                out[ordinal, li, :D] = number[:, None] * dd5[0, :, 0, li]
+                out[ordinal, li, D] = csq['losses', li][0, :, 0]
+    return out  # (A, L, D+1)
 
 
 def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                      perils, binary_perils):
-    # dmg_csq has shape (A, R, L, 1, D + 1)
+    # dmg_csq has shape (P, A, R, L, D + 1)
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
@@ -85,7 +84,8 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
-                field2tup[field] = (p, li, 0, d)
+                # i.e. field = 'no_damage-structural-ASH_DRY'
+                field2tup[field] = (p, slice(None), li, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
@@ -98,7 +98,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         if field in assetcol.array.dtype.fields:
             arr[field] = assetcol.array[field]
         elif field in field2tup:  # dmg_csq field
-            arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
+            arr[field] = dmg_csq[field2tup[field]]
     # computed losses and fatalities for binary_perils
     for rec in arr:
         haz = hazard.loc[rec['site_id']]
@@ -129,26 +129,26 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
-        theperils = self.oqparam.inputs['multi_peril']
-        P = len(theperils) + 1
+        multi_peril = self.oqparam.inputs['multi_peril']
+        P = len(multi_peril) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
-        dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
+        dmg_csq = numpy.zeros((P, A, L, D + 1), F32)
         perils = []
-        if 'ASH' in theperils:
+        if 'ASH' in multi_peril:
             assets = general.group_array(self.assetcol, 'site_id')
             gmf = self.datastore['gmf_data/ASH'][:]
-            dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf,
-                                        self.oqparam.time_event)
+            dmg_csq[0] = get_dmg_csq(self.crmodel, assets, gmf,
+                                     self.oqparam.time_event)
+            dmg_csq[1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
+                                     self.oqparam.time_event)
             perils.append('ASH_DRY')
-            dmg_csq[:, 1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
-                                        self.oqparam.time_event)
             perils.append('ASH_WET')
         hazard = self.datastore.read_df('gmf_data', 'sid')
         binary_perils = []
-        for peril in theperils:
+        for peril in multi_peril:
             if peril != 'ASH':
                 binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(
