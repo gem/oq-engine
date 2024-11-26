@@ -1227,6 +1227,14 @@ utils_swiss_gmpe
     :undoc-members:
     :show-inheritance:
 
+utils_usgs_basin_scaling
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.utils_usgs_basin_scaling
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 usgs_ceus_2019
 -------------------------------------------------------
 

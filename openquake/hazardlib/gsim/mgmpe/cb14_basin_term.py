@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2024 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,7 +25,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import CampbellBozorgnia2014
 
 
-def _get_cb14_basin_term(ctx, C, jpn_flag=False):
+def _get_cb14_basin_term(imt, ctx, jpn_flag=False):
     """
     Get the basin response term defined in equation 20 of the Campbell and 
     Bozorgnia (2014) GMM paper.
@@ -33,6 +33,7 @@ def _get_cb14_basin_term(ctx, C, jpn_flag=False):
     Currently the global basin term is provided (i.e. the Japan-regionalised
     basin term is for now turned off).
     """
+    C = CampbellBozorgnia2014.COEFFS[imt]
     z2pt5 = ctx.z2pt5
     fb = np.zeros(len(z2pt5))
     idx = z2pt5 < 1.0
@@ -81,5 +82,4 @@ class CB14BasinTerm(GMPE):
         """
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
-             C = CampbellBozorgnia2014.COEFFS[imt]
-             mean[m] += _get_cb14_basin_term(ctx, C)
+             mean[m] += _get_cb14_basin_term(imt, ctx)
