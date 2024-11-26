@@ -1574,9 +1574,16 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     time_job_after_event_str = None
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        losses = views.view('aggrisk', ds)
-        losses_header = [header.capitalize().replace('_', ' ')
-                         for header in losses.dtype.names]
+        try:
+            losses = views.view('aggrisk', ds)
+        except KeyError:
+            max_avg_gmf = ds['avg_gmf'][0].max()
+            losses = (f'The risk can not be computed since the hazard is too low:'
+                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses_header = None
+        else:
+            losses_header = [header.capitalize().replace('_', ' ')
+                             for header in losses.dtype.names]
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             assets = 'assets.png' in ds['png']
