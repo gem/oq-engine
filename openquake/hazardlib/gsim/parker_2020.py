@@ -32,6 +32,8 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 EPI_ADJS = os.path.join(os.path.dirname(__file__),
                         "parker_2020_epi_adj_table.csv")
@@ -40,6 +42,23 @@ CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
 
 _a0 = CallableDict()
+
+
+def _get_adjusted_m9_basin_term(C, z2pt5):
+    """
+    Return the adjusted version of the M9 basin term as detailed within the 
+    USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
+    """
+    delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1279.)
+    fb_adj = np.zeros(len(z2pt5))
+    idx_ce1 = delta_z2pt5_adj <= (C['C_e1']/C['C_e3'])
+    idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
+    fb_adj[idx_ce1] = C['C_e1']
+    fb_adj[idx_ce2] = C['C_e2']
+    idx_zero = fb_adj == 0.
+    if len(idx_zero) > 0: # unmodified indices must be zeros still
+        fb_adj[idx_zero] = (C['C_e3'] * delta_z2pt5_adj)[idx_zero]
+    return np.log(2.0) - fb_adj
 
 
 def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
@@ -133,7 +152,7 @@ def _get_basin_term(C, ctx, region, basin):
                                            C["C_e1"],
                                            C["C_e2"] + ds,
                                            C["C_e3"] + ds, ctx)
-
+    
     return 0
 
 
@@ -357,6 +376,9 @@ class ParkerEtAl2020SInter(GMPE):
                                   "AK", "Cascadia", "CAM_S", "CAM_N", "JP_Pac",
                                   "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
     :param str basin: Choice of basin region ("Out" or "Seattle")
+    :param bool m9_basin_term: Apply the M9 basin term adjustment
+    :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
+                                    based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
@@ -384,10 +406,14 @@ class ParkerEtAl2020SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
-    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin', 
+
+    # Other required attributes
+    REQUIRES_ATTRIBUTES = {'region', 'saturation_region', 'basin',
+                           'm9_basin_term' 'usgs_basin_scaling',
                            'sigma_mu_epsilon'}
 
     def __init__(self, region=None, saturation_region=None, basin=None,
+                 m9_basin_term=False, usgs_basin_scaling=False,
                  sigma_mu_epsilon=0.0):
         """
         Enable setting regions to prevent messy overriding
@@ -399,6 +425,22 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             self.saturation_region = saturation_region
         self.basin = basin
+        self.m9_basin_term = m9_basin_term
+        self.usgs_basin_scaling = usgs_basin_scaling
+        # USGS basin scaling and M9 basin term is only applied when the
+        # region param is set to Cascadia.
+        if self.usgs_basin_scaling or self.m9_basin_term:
+            if region != "Cascadia":
+                raise ValueError('To apply the USGS basin scaling or the M9 '
+                                 'basin adjustment to ParkerEtAl2020 the '
+                                 'Cascadia region must be specified.')
+            if 'z2pt5' not in self.REQUIRES_SITES_PARAMETERS:
+                raise ValueError('A subclass of ParkerEtAl2020 which applies '
+                                 'a basin term must be specified to use the '
+                                 'the USGS basin scaling or the M9 basin '
+                                 'adjustment (i.e. it must have z2pt5 as a '
+                                ' required site parameter).')
+
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
@@ -413,6 +455,13 @@ class ParkerEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
+
+            # Get USGS basin scaling factor if required (can only be
+            # applied for CAS region)
+            if self.usgs_basin_scaling:
+                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+            else:
+                usgs_baf = np.ones(len(ctx.vs30))
 
             # Regional Mb factor
             if self.saturation_region in self.MB_REGIONS:
@@ -435,7 +484,17 @@ class ParkerEtAl2020SInter(GMPE):
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-            mean[m] = fp + fnl + fb + flin + fm + c0 + fd
+            pre_baf_mean = fp + fnl + flin + fm + c0 + fd
+            
+            # If required get the m9 basin adjustment if long period SA
+            # for deep basin sites
+            if self.m9_basin_term and imt != PGV:
+                if imt.period >= 1.9:
+                    m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
+                    fb[ctx.z2pt5 >= 6.0] = m9_adj[ctx.z2pt5 >= 6.0] 
+
+            # Now get the mean with basin term added
+            mean[m] = pre_baf_mean + (fb * usgs_baf)
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
                 # Apply epistemic uncertainty scaling
