@@ -1662,6 +1662,20 @@ def read_geometries(fname, code, buffer=0):
     return pandas.DataFrame(dict(code=codes, geom=geoms))
 
 
+@functools.lru_cache()
+def read_populated_places(fname, lon_name, lat_name, label_name):
+    """
+    Reading coordinates and names of populated places from a CSV file
+
+    :returns: a Pandas DataFrame
+    """
+    data = pandas.read_csv(fname)
+    expected_colnames_set = {lon_name, lat_name, label_name}
+    if not expected_colnames_set.issubset(data.columns):
+        raise ValueError(f"CSV file must contain {expected_colnames_set} columns.")
+    return data
+
+
 def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
@@ -1678,6 +1692,21 @@ def read_countries_df(buffer=0.1):
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)
+
+
+def read_populated_places_df(lon_field='longitude', lat_field='latitude',
+                             label_field='name'):
+    """
+    Reading from a 'worldcities.csv' file in the mosaic_dir, if present, or returning
+    None otherwise
+
+    :returns: a DataFrame of coordinates and names of populated places
+    """
+    mosaic_dir = config.directory.mosaic_dir
+    fname = os.path.join(mosaic_dir, 'worldcities.csv')
+    if not os.path.isfile(fname):
+        return
+    return read_populated_places(fname, lon_field, lat_field, label_field)
 
 
 def read_source_models(fnames, hdf5path='', **converterparams):

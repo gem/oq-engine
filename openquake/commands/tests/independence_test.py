@@ -35,6 +35,9 @@ from openquake.baselib.general import assert_independent
 
 
 class IndependenceTestCase(unittest.TestCase):
+    def test_hazardlib(self):
+        assert_independent('openquake.hazardlib', 'openquake.calculators')
+
     def test_risklib(self):
         assert_independent('openquake.risklib', 'openquake.commonlib')
         assert_independent('openquake.risklib', 'openquake.calculators')
