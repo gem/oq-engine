@@ -54,8 +54,9 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
                         for k, w in zip(df.risk_id, df.weight)]
                 # NB: risk logic trees are not yet supported in multi_risk
                 [peril] = rm.imt_by_lt.values()
-                dd5[:, :, :, li] = rm.scenario_damage('earthquake', loss_type, assets,
-                                                      pandas.DataFrame({peril: [gmv]}))
+                dd5[:, :, :, li] = rm.scenario_damage(
+                    'earthquake', loss_type, assets,
+                    pandas.DataFrame({peril: [gmv]}))
             csq = crm.compute_csq(assets, dd5, df, crm.oqparam)
             number = assets['value-number']
             for a, o in enumerate(assets['ordinal']):
