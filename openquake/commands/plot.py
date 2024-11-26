@@ -29,6 +29,7 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
+from openquake.calculators.getters import get_rupture_from_dstore
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
@@ -57,6 +58,7 @@ def make_figure_magdist(extractors, what):
         ax.grid(True)
         ax.legend()
     return plt
+
 
 def make_figure_hcurves(extractors, what):
     """
@@ -1042,7 +1044,8 @@ def make_figure_rupture(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    return plot_rupture(dstore)
+    rup = get_rupture_from_dstore(dstore, rup_id=0)
+    return plot_rupture(rup)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1051,7 +1054,8 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    return plot_rupture_3d(dstore)
+    rup = get_rupture_from_dstore(dstore, rup_id=0)
+    return plot_rupture_3d(rup)
 
 
 def plot_wkt(wkt_string):
