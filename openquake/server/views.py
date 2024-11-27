@@ -762,10 +762,9 @@ def aristotle_get_rupture_data(request):
     if fname:
         oq_rup = get_rupture(fname)
         rupdic['rupture_png'] = plot_rupture(
-            rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
+            oq_rup, backend='Agg', figsize=(6, 6),
             with_populated_places=True, return_base64=True)
         if 'shakemap_array' in rupdic:
-            assert oq_rup
             shakemap_array = rupdic['shakemap_array']
             figsize = (14, 7)  # fitting in a single row in the template without resizing
             rupdic['pga_map_png'] = plot_shakemap(
