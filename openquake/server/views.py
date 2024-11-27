@@ -47,7 +47,7 @@ from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib import nrml, gsim, valid, sourceconverter
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
@@ -61,9 +61,8 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.parsers import download_station_data_file
-from openquake.engine.aristotle import (
-    get_trts_around, get_aristotle_params, get_rupture_dict)
+from openquake.hazardlib.shakemap.parsers import download_station_data_file, download_rupture_dict
+from openquake.engine.aristotle import get_trts_around, get_aristotle_params
 from openquake.server import utils
 
 from django.conf import settings
@@ -883,7 +882,24 @@ def aristotle_validate(request):
     if ignore_shakemap == 'True':
         ignore_shakemap = True
     try:
-        rupdic = get_rupture_dict(dic, ignore_shakemap)
+
+        usgs_id = dic['usgs_id']
+        rupture_file = dic['rupture_file']
+        if rupture_file:
+            [rup_node] = nrml.read(rupture_file)
+            conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+            rup = conv.convert_node(rup_node)
+            rup.tectonic_region_type = '*'
+            hp = rup.hypocenter
+            rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
+                          mag=rup.mag, rake=rup.rake,
+                          strike=rup.surface.get_strike(),
+                          dip=rup.surface.get_dip(),
+                          usgs_id=usgs_id,
+                          rupture_file=rupture_file)
+        else:
+            rupdic = download_rupture_dict(usgs_id, ignore_shakemap, convert_rup=True)
+        
     except Exception as exc:
         msg = f'Unable to retrieve rupture data: {str(exc)}'
         # signs '<>' would not be properly rendered in the popup notification

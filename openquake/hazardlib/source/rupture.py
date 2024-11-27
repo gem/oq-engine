@@ -895,6 +895,14 @@ def fix_vertices_order(array43):
     return numpy.array([top_left, top_right, bottom_left, bottom_right])
 
 
+def is_matrix(list_of_lists):
+    """
+    :returns: False if the list of lists is not homogeneous
+    """
+    lens = [len(lst) for lst in list_of_lists]
+    return len(set(lens)) == 1
+
+
 def get_multiplanar(multipolygon_coords, mag, rake, trt):
     """
     :param multipolygon_coords:
@@ -903,6 +911,7 @@ def get_multiplanar(multipolygon_coords, mag, rake, trt):
     """
     # NB: in geojson the last vertex is the same as the first, so I discard it
     # expecting shape (P, 4, 3)
+    assert is_matrix(multipolygon_coords), multipolygon_coords
     coords = numpy.array(multipolygon_coords, float)[:, :-1, :]
     P, vertices, _ = coords.shape
     if vertices != 4:

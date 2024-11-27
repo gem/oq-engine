@@ -41,7 +41,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3(self):
         # point_rup
-        rupdic = download_rupture_dict('us6000jllz', datadir=DATA)
+        rupdic = download_rupture_dict('us6000jllz', datadir=DATA, convert_rup=True)
         self.assertEqual(rupdic['lon'], 37.0143)
         self.assertEqual(rupdic['lat'], 37.2256)
         self.assertEqual(rupdic['dep'], 10.)

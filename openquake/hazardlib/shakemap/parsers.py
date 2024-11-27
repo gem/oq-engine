@@ -41,7 +41,7 @@ from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import (
     node_from_xml, Node)
-from openquake.hazardlib.source.rupture import get_multiplanar
+from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
 from openquake.hazardlib import nrml, sourceconverter
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -216,12 +216,13 @@ def convert_to_oq_rupture(rup_json):
     ftype = rup_json['features'][0]['geometry']['type']
     assert ftype == 'MultiPolygon', ftype
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    hyp_depth = rup_json['metadata']['depth']
-    rake = rup_json['metadata'].get('rake', 0)
-    trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
-    Mw = rup_json['metadata']['mag']
-    rup = get_multiplanar(multicoords, Mw, rake, trt)
-    return rup
+    if is_matrix(multicoords):
+        hyp_depth = rup_json['metadata']['depth']
+        rake = rup_json['metadata'].get('rake', 0)
+        trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
+        mag = rup_json['metadata']['mag']
+        rup = get_multiplanar(multicoords, mag, rake, trt)
+        return rup
 
 
 # Convert rupture to file
@@ -687,44 +688,41 @@ def _pure_download(usgs_id, ignore_shakemap, datadir):
     
 
 
-def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
+def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None, convert_rup=False):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
     :param usgs_id: ShakeMap ID
     :param ignore_shakemap: for testing purposes, only consider finite-fault
     :param datadir: not None in testing mode
+    :param rup: try to convert the rupture into a hazardlib object
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
     rupdic, rup_data = _pure_download(usgs_id, ignore_shakemap, datadir)
-    if rupdic['is_point_rup']:
+    if convert_rup is False or rupdic['is_point_rup']:
         return rupdic
-    try:
-        oq_rup = convert_to_oq_rupture(rup_data)
-    except Exception as exc:
-        logging.error('', exc_info=True)
-        rupdic['error'] = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
-        rupdic['is_point_rup'] = True
-        return rupdic
-    md = rup_data['metadata']
-    comment_str = (
-        f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
-        f" Reference: {md['reference']}.-->\n")
-    temp_file = gettemp(prefix='rupture', remove=False)
-    rupture_file = rup_to_file(oq_rup, temp_file, comment_str)
-    try:
-        [rup_node] = nrml.read(rupture_file)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        conv.convert_node(rup_node)
-    except ValueError as exc:
-        logging.error('', exc_info=True)
-        rupdic['error'] = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
-        return rupdic
+    oq_rup = convert_to_oq_rupture(rup_data)
+    if oq_rup:
+        md = rup_data['metadata']
+        comment_str = (
+            f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
+            f" Reference: {md['reference']}.-->\n")
+        temp_file = gettemp(prefix='rupture', remove=False)
+        rupture_file = rup_to_file(oq_rup, temp_file, comment_str)
+        rupdic['rupture_file'] = rupture_file
+        try:
+            [rup_node] = nrml.read(rupture_file)
+            conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+            conv.convert_node(rup_node)
+        except ValueError as exc:
+            logging.error('', exc_info=True)
+            rupdic['error'] = (
+                f'Unable to convert the rupture from the USGS format: {exc}')
+            rupdic['is_point_rup'] = True
+            return rupdic
 
     rupdic['oq_rup'] = oq_rup
-    rupdic['rupture_file'] = rupture_file
+    rupdic['is_point_rup'] = True
     return rupdic
 
 
