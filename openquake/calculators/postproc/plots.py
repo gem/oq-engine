@@ -49,8 +49,8 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
-                         lon_field='longitude', lat_field='latitude',
-                         label_field='name'):
+               lon_field='longitude', lat_field='latitude',
+               label_field='name'):
     data = read_df(lon_field, lat_field, label_field)
     if data is None:
         return ax
