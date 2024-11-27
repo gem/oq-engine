@@ -47,7 +47,7 @@ from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib import nrml, gsim, valid, sourceconverter
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
@@ -759,18 +759,11 @@ def aristotle_get_rupture_data(request):
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
-    oq_rup = None
-    if 'oq_rup' in rupdic:
-        oq_rup = rupdic['oq_rup']
-        # FIXME: check if we want to display the rupture png as a separate plot, instead
-        # of inserting the hypocenter and the rupture boundaries in the gmf plots
-        # # Agg is a non-interactive backend
-        # rupdic['rupture_png'] = plot_rupture(
-        #     rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
-        #     with_populated_places=True, return_base64=True)
-        del rupdic['oq_rup']
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
+        [rup_node] = nrml.read(rupdic['rupture_file'])
+        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+        oq_rup = conv.convert_node(rup_node)
         figsize = (14, 7)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,

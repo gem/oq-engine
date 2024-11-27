@@ -693,7 +693,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
             'is_point_rup': False,
             'shakemap_array': shakemap_array,
             'trt': oq_rup.tectonic_region_type,
-            'usgs_id': usgs_id, 'rupture_file': rupture_file, 'oq_rup': oq_rup}
+            'usgs_id': usgs_id, 'rupture_file': rupture_file}
 
 
 def get_array_usgs_id(kind, usgs_id):
