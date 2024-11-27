@@ -86,7 +86,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/protezione_civile.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/swiss_agency.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/t_e_m.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/usaid.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/usaid.png" width="20%" />
 
 
 
@@ -105,7 +105,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/swiss_re.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/verisk.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/wtw.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/zurich.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/zurich.png" width="20%" />
 
 #### Advisors
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/axa.png" width="20%" align="left" />
@@ -114,19 +114,19 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/gallagher_re.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/norman_max.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/one_concern.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/safehub.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/safehub.png" width="20%" />
+
+
 
 ## Associate Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/apdim.svg" width="30%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/IASPEI_logo_new_1.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/iaee.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Usgs-logo.jpg" width="18%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="14%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="12%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="30%" />
-<img src="" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/apdim.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/eeri.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/iaspei.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/irdr_icsu.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/undrr.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/unesco.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/usgs.png" width="20%" />
 
 
 
@@ -136,6 +136,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Servicio-Geol%C3%B3gico-Colombiano.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Sura-new-logos-website.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/edf_governing_board_logo.png" width="18%" />
+<img src="" width="20%" />
 
 
 ## Products Distribution Partners
