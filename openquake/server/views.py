@@ -762,22 +762,16 @@ def aristotle_get_rupture_data(request):
     oq_rup = None
     if 'oq_rup' in rupdic:
         oq_rup = rupdic['oq_rup']
-        # FIXME: check if we want to display the rupture png as a separate plot, instead
-        # of inserting the hypocenter and the rupture boundaries in the gmf plots
-        # # Agg is a non-interactive backend
-        # rupdic['rupture_png'] = plot_rupture(
-        #     rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
-        #     with_populated_places=True, return_base64=True)
         del rupdic['oq_rup']
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
         figsize = (14, 7)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True, rupture=oq_rup)
+            with_cities=False, return_base64=True, rupture=oq_rup)
         rupdic['mmi_map_png'] = plot_shakemap(
             shakemap_array, 'MMI', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True, rupture=oq_rup)
+            with_cities=False, return_base64=True, rupture=oq_rup)
         del rupdic['shakemap_array']
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
