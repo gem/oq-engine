@@ -256,7 +256,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_file_from_usgs', 'error',
             'station_data_file_from_usgs', 'mosaic_models', 'trts']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['local_timestamp'],
                          '2023-02-06 04:17:34+03:00')

@@ -901,6 +901,7 @@ def aristotle_validate(request):
             rupdic = download_rupture_dict(usgs_id, ignore_shakemap, convert_rup=True)
         
     except Exception as exc:
+
         msg = f'Unable to retrieve rupture data: {str(exc)}'
         # signs '<>' would not be properly rendered in the popup notification
         msg = msg.replace('<', '"').replace('>', '"')
