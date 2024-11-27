@@ -764,19 +764,17 @@ def aristotle_get_rupture_data(request):
         rupdic['rupture_png'] = plot_rupture(
             rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
             with_populated_places=True, return_base64=True)
-    else:
-        oq_rup = None
-    if 'shakemap_array' in rupdic:
-        assert oq_rup
-        shakemap_array = rupdic['shakemap_array']
-        figsize = (14, 7)  # fitting in a single row in the template without resizing
-        rupdic['pga_map_png'] = plot_shakemap(
-            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True, rupture=oq_rup)
-        rupdic['mmi_map_png'] = plot_shakemap(
-            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True, rupture=oq_rup)
-        del rupdic['shakemap_array']
+        if 'shakemap_array' in rupdic:
+            assert oq_rup
+            shakemap_array = rupdic['shakemap_array']
+            figsize = (14, 7)  # fitting in a single row in the template without resizing
+            rupdic['pga_map_png'] = plot_shakemap(
+                shakemap_array, 'PGA', backend='Agg', figsize=figsize,
+                with_populated_places=False, return_base64=True, rupture=oq_rup)
+            rupdic['mmi_map_png'] = plot_shakemap(
+                shakemap_array, 'MMI', backend='Agg', figsize=figsize,
+                with_populated_places=False, return_base64=True, rupture=oq_rup)
+            del rupdic['shakemap_array']
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
