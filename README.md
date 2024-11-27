@@ -89,6 +89,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/usaid.png" width="20%" align="left" />
 
 
+
 ## Private Partners
 
 #### Governors
@@ -107,13 +108,13 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/zurich.png" width="20%" align="left" />
 
 #### Advisors
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="15%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="17%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="24%"/>
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="18%" />
-<img src="" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/axa.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/celsius_pro.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/descartes.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/gallagher_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/norman_max.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/one_concern.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/safehub.png" width="20%" align="left" />
 
 ## Associate Partners
 
@@ -125,6 +126,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="12%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="30%" />
+<img src="" width="20%" align="left" />
 
 
 
