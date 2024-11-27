@@ -122,6 +122,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/apdim.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/eeri.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/iaee.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/iaspei.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/irdr_icsu.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/undrr.png" width="20%" align="left" />
