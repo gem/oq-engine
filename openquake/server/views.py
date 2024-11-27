@@ -757,10 +757,10 @@ def aristotle_get_rupture_data(request):
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
+    rupdic['rupture_file_from_usgs'] = fname = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
-    if 'rupture_file' in rupdic:
-        [rup_node] = nrml.read(rupdic['rupture_file'])
+    if fname:
+        [rup_node] = nrml.read(fname)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         oq_rup = conv.convert_node(rup_node)
         rupdic['rupture_png'] = plot_rupture(
