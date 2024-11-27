@@ -620,11 +620,11 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
               'time': '1981-02-24T20:53:38.000000Z'},
  'type': 'FeatureCollection'}
     """
-    fname = os.path.join(datadir, f'{usgs_id}-rup.json')
     url = shakemap_contents.get('download/rupture.json')['url']
-    #with open(fname, 'wb') as f:
-    #    f.write(urlopen(url).read())
     if datadir:  #  in parsers_test
+        fname = os.path.join(datadir, f'{usgs_id}-rup.json')
+        #with open(fname, 'wb') as f:
+        #    f.write(urlopen(url).read())
         text = open(fname).read()
     else:
         logging.info('Downloading rupture.json')
@@ -634,6 +634,7 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
 
 
 def _pure_download(usgs_id, ignore_shakemap, datadir):
+    # returns (rupdic, rup_data)
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
         text = open(fname).read()
@@ -651,7 +652,8 @@ def _pure_download(usgs_id, ignore_shakemap, datadir):
     mag = js['properties']['mag']
     products = js['properties']['products']
     if ignore_shakemap or 'shakemap' not in products:
-        return load_rupdic_from_finite_fault(usgs_id, mag, products)
+        return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
+
     shakemap = get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
@@ -675,7 +677,14 @@ def _pure_download(usgs_id, ignore_shakemap, datadir):
     utc_time = md['time']
     local_time = utc_to_local_time(utc_time, lon, lat)
     time_event = local_time_to_time_event(local_time)
-    return (shakemap_array, rup_data, is_point_rup, md, lon, lat, local_time, time_event)
+    rupdic = {'lon': lon, 'lat': lat, 'dep': md['depth'],
+              'mag': md['mag'], 'rake': md['rake'],
+              'local_timestamp': str(local_time), 'time_event': time_event,
+              'is_point_rup': is_point_rup,
+              'shakemap_array': shakemap_array,
+              'usgs_id': usgs_id, 'rupture_file': None}
+    return rupdic, rup_data
+    
 
 
 def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
@@ -687,29 +696,18 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
     :param datadir: not None in testing mode
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
-    shakemap_array, rup_data, is_point_rup, md, lon, lat, local_time, time_event = \
-        _pure_download(usgs_id, ignore_shakemap, datadir)
-    if is_point_rup:
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': is_point_rup,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None}
+    rupdic, rup_data = _pure_download(usgs_id, ignore_shakemap, datadir)
+    if rupdic['is_point_rup']:
+        return rupdic
     try:
         oq_rup = convert_to_oq_rupture(rup_data)
     except Exception as exc:
         logging.error('', exc_info=True)
-        error_msg = (
+        rupdic['error'] = (
             f'Unable to convert the rupture from the USGS format: {exc}')
-        # TODO: we can try to handle also cases that currently are not properly
-        # converted, then raise an exception here in case of failure
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': True,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
+        rupdic['is_point_rup'] = True
+        return rupdic
+    md = rup_data['metadata']
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
@@ -721,23 +719,13 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
         conv.convert_node(rup_node)
     except ValueError as exc:
         logging.error('', exc_info=True)
-        error_msg = (
+        rupdic['error'] = (
             f'Unable to convert the rupture from the USGS format: {exc}')
-        # TODO: we can try to handle also cases that currently are not properly
-        # converted, then raise an exception here in case of failure
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': True,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
-    return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake'],
-            'local_timestamp': str(local_time), 'time_event': time_event,
-            'is_point_rup': False,
-            'shakemap_array': shakemap_array,
-            'trt': oq_rup.tectonic_region_type,
-            'usgs_id': usgs_id, 'rupture_file': rupture_file, 'oq_rup': oq_rup}
+        return rupdic
+
+    rupdic['oq_rup'] = oq_rup
+    rupdic['rupture_file'] = rupture_file
+    return rupdic
 
 
 def get_array_usgs_id(kind, usgs_id):

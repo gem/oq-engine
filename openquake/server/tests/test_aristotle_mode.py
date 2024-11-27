@@ -296,8 +296,8 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'rupture_file', 'rupture_file_from_usgs',
             'mmi_map_png', 'pga_map_png',
             'station_data_error',
-            'station_data_file_from_usgs', 'trts', 'mosaic_models', 'trt']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+            'station_data_file_from_usgs', 'trts', 'mosaic_models']
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         rupfile = ret_dict['rupture_file']
         self.assertTrue(
             pathlib.Path(rupfile).resolve().is_file(),
@@ -317,7 +317,6 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'NEA': ['Cratonic Crust', 'Stable Continental Crust',
                     'Active Shallow Crust', 'Subduction Interface',
                     'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['trt'], 'Active Shallow Crust')
         self.assertEqual(ret_dict['is_point_rup'], False)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
 
@@ -336,7 +335,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_file_from_usgs', 'trts',
             'mosaic_models']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['is_point_rup'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n05d')
@@ -357,7 +356,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_file_from_usgs', 'trts',
             'mosaic_models']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['mmi_map_png'], None)
         self.assertEqual(ret_dict['pga_map_png'], None)
