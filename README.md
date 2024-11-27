@@ -89,6 +89,20 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
 
 
+## Public Governors
+
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/geoscience_australia.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/gns.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nanyang.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nerc.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nied.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nrcan.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nset.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/protezione_civile.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/swiss_agency.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/t_e_m.png" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/usaid.png" align="left" />
+
 ## Private Partners
 
 #### Governors
