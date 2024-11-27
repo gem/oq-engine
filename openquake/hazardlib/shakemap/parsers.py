@@ -39,8 +39,7 @@ from shapely.geometry import Polygon
 import numpy
 from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
-from openquake.baselib.node import (
-    node_from_xml, Node)
+from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.source.rupture import get_multiplanar
 from openquake.hazardlib import nrml, sourceconverter
 
