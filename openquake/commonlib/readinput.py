@@ -1663,7 +1663,7 @@ def read_geometries(fname, code, buffer=0):
 
 
 @functools.lru_cache()
-def read_populated_places(fname, lon_name, lat_name, label_name):
+def read_cities(fname, lon_name, lat_name, label_name):
     """
     Reading coordinates and names of populated places from a CSV file
 
@@ -1694,7 +1694,7 @@ def read_countries_df(buffer=0.1):
     return read_geometries(fname, 'shapeGroup', buffer)
 
 
-def read_populated_places_df(lon_field='longitude', lat_field='latitude',
+def read_cities_df(lon_field='longitude', lat_field='latitude',
                              label_field='name'):
     """
     Reading from a 'worldcities.csv' file in the mosaic_dir, if present, or returning
@@ -1703,7 +1703,7 @@ def read_populated_places_df(lon_field='longitude', lat_field='latitude',
     :returns: a DataFrame of coordinates and names of populated places
     """
     fname = os.path.join(os.path.dirname(mosaic.__file__), 'worldcities.csv')
-    return read_populated_places(fname, lon_field, lat_field, label_field)
+    return read_cities(fname, lon_field, lat_field, label_field)
 
 
 def read_source_models(fnames, hdf5path='', **converterparams):
