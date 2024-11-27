@@ -54,7 +54,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
-from openquake.calculators.postproc.plots import plot_shakemap  # , plot_rupture
+from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, aristotle
@@ -759,11 +759,18 @@ def aristotle_get_rupture_data(request):
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
-    if 'shakemap_array' in rupdic:
-        shakemap_array = rupdic['shakemap_array']
+    if 'rupture_file' in rupdic:
         [rup_node] = nrml.read(rupdic['rupture_file'])
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         oq_rup = conv.convert_node(rup_node)
+        rupdic['rupture_png'] = plot_rupture(
+            rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
+            with_populated_places=True, return_base64=True)
+    else:
+        oq_rup = None
+    if 'shakemap_array' in rupdic:
+        assert oq_rup
+        shakemap_array = rupdic['shakemap_array']
         figsize = (14, 7)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
