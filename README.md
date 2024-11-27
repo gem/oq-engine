@@ -74,21 +74,6 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](LICEN
 
 The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)** with the support of
 
-## Public Partners
-
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="18%" align="left"  />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="14%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="19%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="22%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
-
-
 ## Public Governors
 
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/geoscience_australia.png" width="20%" align="left" />
@@ -103,20 +88,23 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/t_e_m.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/usaid.png" width="20%" align="left" />
 
+
 ## Private Partners
 
 #### Governors
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Allianz_logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Aon_logo.png" width="14%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Eucentre_logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="25%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="12%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="15%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/allianz.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/aon.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/eucentre.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/fm.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/hannover_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/marsh.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/moodys.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/munich_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/partner_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/swiss_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/verisk.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/wtw.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/zurich.png" width="20%" align="left" />
 
 #### Advisors
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="15%" align="left" />
@@ -125,6 +113,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="24%"/>
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="18%" />
+<img src="" width="20%" align="left" />
 
 ## Associate Partners
 
