@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import cProfile
 import unittest
 from urllib.error import URLError
 from openquake.hazardlib.shakemap.parsers import \
@@ -40,5 +41,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('There is no finite-fault info for usp0001ccb', str(ctx.exception))
 
     def test_3(self):
-        rupdic = download_rupture_dict('us6000jllz', datadir=DATA)
-        #rupdic = download_rupture_dict('us6000jllz')
+        with cProfile.Profile() as pr:
+            rupdic = download_rupture_dict('us6000jllz', datadir=DATA)
+            #rupdic = download_rupture_dict('us6000jllz')
+            pr.print_stats('cumulative')
