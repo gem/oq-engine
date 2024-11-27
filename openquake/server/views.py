@@ -47,7 +47,7 @@ from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid, sourceconverter
+from openquake.hazardlib import nrml, gsim, valid
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
@@ -61,7 +61,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.parsers import download_station_data_file
+from openquake.hazardlib.shakemap.parsers import get_rupture, download_station_data_file
 from openquake.engine.aristotle import (
     get_trts_around, get_aristotle_params, get_rupture_dict)
 from openquake.server import utils
@@ -760,9 +760,7 @@ def aristotle_get_rupture_data(request):
     rupdic['rupture_file_from_usgs'] = fname = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
     if fname:
-        [rup_node] = nrml.read(fname)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        oq_rup = conv.convert_node(rup_node)
+        oq_rup = get_rupture(fname)
         rupdic['rupture_png'] = plot_rupture(
             rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
             with_populated_places=True, return_base64=True)

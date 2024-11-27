@@ -54,7 +54,7 @@ from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt)
+    shakemap, pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
@@ -801,7 +801,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
 
 def get_rupture(oqparam):
     """
-    Read the `rupture_model` XML file or the `rupture_dict` dictionary
+    Read the `rupture_model` JSON/XML file or the `rupture_dict` dictionary
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -810,10 +810,7 @@ def get_rupture(oqparam):
     """
     rupture_model = oqparam.inputs.get('rupture_model')
     if rupture_model:
-        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
-        rup = conv.convert_node(rup_node)
-        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
+        rup = shakemap.parsers.get_rupture(rupture_model)
     else:  # assume rupture_dict
         r = oqparam.rupture_dict
         hypo = Point(r['lon'], r['lat'], r['dep'])

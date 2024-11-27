@@ -209,55 +209,28 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
-def convert_to_oq_rupture(rup_json):
+def get_rupture(fname):
     """
-    Convert USGS json into an hazardlib rupture
+    Build an hazardlib rupture from a .json or an .xml file
     """
-    ftype = rup_json['features'][0]['geometry']['type']
-    assert ftype == 'MultiPolygon', ftype
-    multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    hyp_depth = rup_json['metadata']['depth']
-    rake = rup_json['metadata'].get('rake', 0)
-    trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
-    Mw = rup_json['metadata']['mag']
-    rup = get_multiplanar(multicoords, Mw, rake, trt)
-    return rup
-
-
-# Convert rupture to file
-def rup_to_file(rup, outfile, commentstr):
-    # Determine geometry
-    geom = rup.surface.surface_nodes[0].tag
-    name = ""
-    if len(rup.surface.surface_nodes) > 1:
-        name = 'multiPlanesRupture'
-    elif geom == 'planarSurface':
-        name = 'singlePlaneRupture'
-    elif geom == 'simpleFaultGeometry':
-        name = 'simpleFaultRupture'
-    elif geom == 'complexFaultGeometry':
-        name = 'complexFaultRupture'
-    elif geom == 'griddedSurface':
-        name = 'griddedRupture'
-    elif geom == 'kiteSurface':
-        name = 'kiteSurface'
-    # Arrange node
-    h = rup.hypocenter
-    hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
-    geom_nodes = [Node('magnitude', {}, rup.mag),
-                  Node('rake', {}, rup.rake),
-                  Node('hypocenter', hp_dict)]
-    geom_nodes.extend(rup.surface.surface_nodes)
-    rupt_nodes = [Node(name, nodes=geom_nodes)]
-    node = Node('nrml', nodes=rupt_nodes)
-    # Write file
-    with open(outfile, 'wb') as f:
-        # adding a comment like:
-        # <!-- Rupture XML automatically generated from USGS (us7000f93v).
-        #      Reference: Source: USGS NEIC Rapid Finite Fault
-        #      Event ID: 7000f93v Model created: 2021-09-08 03:53:15.-->
-        nrml.write(node, f, commentstr=commentstr)
-    return outfile
+    if fname.endswith('.json'):  # USGS format
+        with open(fname) as f:
+            rup_json = json.load(f)
+        ftype = rup_json['features'][0]['geometry']['type']
+        assert ftype == 'MultiPolygon', ftype
+        multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
+        hyp_depth = rup_json['metadata']['depth']
+        rake = rup_json['metadata'].get('rake', 0)
+        trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
+        mag = rup_json['metadata']['mag']
+        rup = get_multiplanar(multicoords, mag, rake, trt)
+        return rup
+    else:  # assume XML file
+        [rup_node] = nrml.read(fname)
+        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'
+        return rup
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
@@ -585,14 +558,6 @@ def download_jpg(usgs_id, what):
         return None
 
 
-def download_grid(shakemap_contents):
-    if 'download/grid.xml' in shakemap_contents:
-        url = shakemap_contents.get('download/grid.xml')['url']
-        logging.info('Downloading grid.xml')
-        grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-        return grid_fname
-
-
 def download_rupture_data(shakemap_contents):
     url = shakemap_contents.get('download/rupture.json')['url']
     logging.info('Downloading rupture.json')
@@ -632,9 +597,11 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
-    shakemap_array = None
-    grid_fname = download_grid(contents)
-    if grid_fname is not None:
+    shakemap_array = None    
+    if 'download/grid.xml' in contents:
+        url = contents.get('download/grid.xml')['url']
+        logging.info('Downloading grid.xml')
+        grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         shakemap_array = get_shakemap_array(grid_fname)
     rup_data = download_rupture_data(contents)
     feats = rup_data['features']
@@ -652,48 +619,20 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
                 'is_point_rup': is_point_rup,
                 'shakemap_array': shakemap_array,
                 'usgs_id': usgs_id, 'rupture_file': None}
-    try:
-        oq_rup = convert_to_oq_rupture(rup_data)
-    except Exception as exc:
-        logging.error('', exc_info=True)
-        error_msg = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
-        # TODO: we can try to handle also cases that currently are not properly
-        # converted, then raise an exception here in case of failure
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': True,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
-    comment_str = (
-        f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
-        f" Reference: {md['reference']}.-->\n")
-    temp_file = gettemp(prefix='rupture', remove=False)
-    rupture_file = rup_to_file(oq_rup, temp_file, comment_str)
-    try:
-        [rup_node] = nrml.read(rupture_file)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        conv.convert_node(rup_node)
-    except ValueError as exc:
-        logging.error('', exc_info=True)
-        error_msg = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
-        # TODO: we can try to handle also cases that currently are not properly
-        # converted, then raise an exception here in case of failure
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': True,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
+    rup_file = gettemp(prefix='rupture', suffix='.json', remove=False)
+    with open(rup_file, 'w') as f:
+        rup_data['comment'] = (
+            f"<!-- Rupture JSON automatically generated from USGS ({md['id']})."
+            f" Reference: {md['reference']}.-->\n")
+        f.write(json.dumps(rup_data))
+    rup = get_rupture(rup_file)
     return {'lon': lon, 'lat': lat, 'dep': md['depth'],
             'mag': md['mag'], 'rake': md['rake'],
             'local_timestamp': str(local_time), 'time_event': time_event,
             'is_point_rup': False,
             'shakemap_array': shakemap_array,
-            'trt': oq_rup.tectonic_region_type,
-            'usgs_id': usgs_id, 'rupture_file': rupture_file}
+            'trt': rup.tectonic_region_type,
+            'usgs_id': usgs_id, 'rupture_file': rup_file}
 
 
 def get_array_usgs_id(kind, usgs_id):
