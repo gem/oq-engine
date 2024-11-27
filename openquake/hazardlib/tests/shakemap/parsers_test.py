@@ -40,10 +40,17 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('There is no finite-fault info for usp0001ccb', str(ctx.exception))
 
     def test_3(self):
+        # point_rup
         rupdic = download_rupture_dict('us6000jllz', datadir=DATA)
         self.assertEqual(rupdic['lon'], 37.0143)
         self.assertEqual(rupdic['lat'], 37.2256)
         self.assertEqual(rupdic['dep'], 10.)
+        self.assertEqual(rupdic['is_point_rup'], True)
+
+    def test_4(self):
+        # no point_rup
+        rupdic = download_rupture_dict('usp0001ccb', datadir=DATA)
+        self.assertEqual(rupdic['is_point_rup'], False)
 
 
 """

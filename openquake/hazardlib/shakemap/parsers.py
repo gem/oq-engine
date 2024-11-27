@@ -211,7 +211,7 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 def convert_to_oq_rupture(rup_json):
     """
-    Convert USGS json into an hazardlib rupture
+    Convert USGS json (output of download_rupture_data) into an hazardlib rupture
     """
     ftype = rup_json['features'][0]['geometry']['type']
     assert ftype == 'MultiPolygon', ftype
@@ -590,26 +590,50 @@ def download_jpg(usgs_id, what):
 
 
 def download_rupture_data(usgs_id, shakemap_contents, datadir):
+    """
+    :returns: a JSON dictionary with a format like this:
+
+{'features': [{'geometry': {'coordinates': [[[[22.93, 38.04, 0.0],
+                                              [23.13, 38.06, 0.0],
+                                              [23.11, 38.16, 12.0],
+                                              [22.9, 38.14, 12.0],
+                                              [22.93, 38.04, 0.0]]]],
+                            'type': 'MultiPolygon'},
+               'properties': {'rupture type': 'rupture extent'},
+               'type': 'Feature'}],
+ 'metadata': {'depth': 33.0,
+              'id': 'usp0001ccb',
+              'lat': 38.222,
+              'locstring': 'Greece',
+              'lon': 22.934,
+              'mag': 6.7,
+              'mech': 'ALL',
+              'netid': 'us',
+              'network': 'USGS National Earthquake Information Center, PDE',
+              'productcode': 'usp0001ccb',
+              'rake': 0.0,
+              'reference': 'Source: Strios, Psimoulis, and Pitharouli.  '
+                           'Geodetic constraints to the kinematics of the '
+                           'Kapareli fault, reactivated during the 1981, Gulf '
+                           'of Corinth earthquakes. Tectonophysics Issue 440 '
+                           'pp. 105-119. 2007.',
+              'time': '1981-02-24T20:53:38.000000Z'},
+ 'type': 'FeatureCollection'}
+    """
+    fname = os.path.join(datadir, f'{usgs_id}-rup.json')
+    url = shakemap_contents.get('download/rupture.json')['url']
+    #with open(fname, 'wb') as f:
+    #    f.write(urlopen(url).read())
     if datadir:  #  in parsers_test
-        fname = os.path.join(datadir, f'{usgs_id}-rup.json')
         text = open(fname).read()
     else:
-        url = shakemap_contents.get('download/rupture.json')['url']
         logging.info('Downloading rupture.json')
         text = urlopen(url).read()
     rup_data = json.loads(text)
     return rup_data
 
 
-def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
-    """
-    Download a rupture from the USGS site given a ShakeMap ID.
-
-    :param usgs_id: ShakeMap ID
-    :param ignore_shakemap: for testing purposes, only consider finite-fault
-    :param datadir: not None in testing mode
-    :returns: a dictionary with keys lon, lat, dep, mag, rake
-    """
+def _pure_download(usgs_id, ignore_shakemap, datadir):
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
         text = open(fname).read()
@@ -651,6 +675,20 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
     utc_time = md['time']
     local_time = utc_to_local_time(utc_time, lon, lat)
     time_event = local_time_to_time_event(local_time)
+    return (shakemap_array, rup_data, is_point_rup, md, lon, lat, local_time, time_event)
+
+
+def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
+    """
+    Download a rupture from the USGS site given a ShakeMap ID.
+
+    :param usgs_id: ShakeMap ID
+    :param ignore_shakemap: for testing purposes, only consider finite-fault
+    :param datadir: not None in testing mode
+    :returns: a dictionary with keys lon, lat, dep, mag, rake
+    """
+    shakemap_array, rup_data, is_point_rup, md, lon, lat, local_time, time_event = \
+        _pure_download(usgs_id, ignore_shakemap, datadir)
     if is_point_rup:
         return {'lon': lon, 'lat': lat, 'dep': md['depth'],
                 'mag': md['mag'], 'rake': md['rake'],
