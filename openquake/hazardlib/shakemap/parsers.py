@@ -514,12 +514,16 @@ def download_station_data_file(usgs_id, save_to_home=False):
             return station_data_file
 
 
-def load_rupdic_from_finite_fault(usgs_id, mag, products):
+def get_finite_fault(usgs_id, products):
+    logging.info('Getting finite-fault properties')
     try:
-        ff = products['finite-fault']
+        return products['finite-fault']
     except KeyError:
         raise MissingLink('There is no finite-fault info for %s' % usgs_id)
-    logging.info('Getting finite-fault properties')
+    
+
+def load_rupdic_from_finite_fault(usgs_id, mag, products):
+    ff = get_finite_fault(usgs_id, products)
     if isinstance(ff, list):
         if len(ff) > 1:
             logging.warning(f'The finite-fault list contains {len(ff)}'
@@ -613,22 +617,13 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
     try:
         js = json.loads(urlopen(url).read())
     except URLError as exc:
-        raise URLError(f'Unable to download from the USGS website: {str(exc)}')
+        raise URLError(f'Unable to download from {url}: {exc}')
+    
     mag = js['properties']['mag']
     products = js['properties']['products']
-    try:
-        if ignore_shakemap:
-            raise KeyError
-        shakemaps = products['shakemap']
-    except KeyError:
-        try:
-            products['finite-fault']
-        except KeyError:
-            # NOTE: we might also try reading information from phase-data or origin
-            raise MissingLink(
-                'There is no shakemap nor finite-fault info for %s' % usgs_id)
+    if ignore_shakemap or 'shakemap' not in products:
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
-    shakemap = get_preferred_shakemap(shakemaps)
+    shakemap = get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
         return load_rupdic_from_finite_fault(usgs_id, mag, products)
