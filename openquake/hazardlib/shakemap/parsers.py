@@ -604,21 +604,29 @@ def download_rupture_data(shakemap_contents):
     return rup_data
 
 
-def download_rupture_dict(usgs_id, ignore_shakemap=False):
+def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
     :param usgs_id: ShakeMap ID
     :param ignore_shakemap: for testing purposes, only consider finite-fault
+    :param datadir: not None in testing mode
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
-    url = SHAKEMAP_URL.format(usgs_id)
-    logging.info('Downloading %s' % url)
-    try:
-        js = json.loads(urlopen(url).read())
-    except URLError as exc:
-        raise URLError(f'Unable to download from {url}: {exc}')
-    
+    if datadir:
+        fname = os.path.join(datadir, usgs_id + '.json')
+        text = open(fname).read()
+    else:
+        url = SHAKEMAP_URL.format(usgs_id)
+        logging.info('Downloading %s' % url)
+        try:
+            text = urlopen(url).read()
+        except URLError as exc:
+            raise URLError(f'Unable to download from {url}: {exc}')
+
+    js = json.loads(text)
+    #with open('/tmp/x.json', 'wb') as f:
+    #    f.write(text)
     mag = js['properties']['mag']
     products = js['properties']['products']
     if ignore_shakemap or 'shakemap' not in products:
