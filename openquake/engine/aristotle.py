@@ -29,7 +29,7 @@ from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.shakemap.parsers import (
-    download_rupture_dict, download_station_data_file)
+    download_rupdicdata, download_station_data_file)
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.engine import engine
@@ -106,7 +106,7 @@ def get_rupture_dict(dic, ignore_shakemap=False):
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
     else:
-        rupdic = download_rupture_dict(usgs_id, ignore_shakemap)
+        rupdic, _rupdata = download_rupdicdata(usgs_id, ignore_shakemap)
     return rupdic
 
 

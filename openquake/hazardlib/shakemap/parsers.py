@@ -633,7 +633,7 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     return rup_data
 
 
-def _pure_download(usgs_id, ignore_shakemap, datadir):
+def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
     # returns (rupdic, rup_data)
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
@@ -696,7 +696,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
     :param datadir: not None in testing mode
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
-    rupdic, rup_data = _pure_download(usgs_id, ignore_shakemap, datadir)
+    rupdic, rup_data = download_rupdicdata(usgs_id, ignore_shakemap, datadir)
     if rupdic['is_point_rup']:
         return rupdic
     try:
