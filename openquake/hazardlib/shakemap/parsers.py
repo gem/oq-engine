@@ -262,7 +262,7 @@ def rup_to_file(rup, outfile, commentstr):
 
 def utc_to_local_time(utc_timestamp, lon, lat):
     try:
-        # NOTE: optional dependency needed for ARISTOTLE
+        # NOTE: mandatory dependency for ARISTOTLE
         from timezonefinder import TimezoneFinder
     except ImportError:
         raise ImportError(
