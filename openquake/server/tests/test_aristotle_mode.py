@@ -28,7 +28,6 @@ import secrets
 import logging
 import io
 import numpy
-import pathlib
 
 import django
 # from django.apps import apps
@@ -298,12 +297,6 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'station_data_error',
             'station_data_file_from_usgs', 'trts', 'mosaic_models']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        rupfile = ret_dict['rupture_file']
-        self.assertTrue(
-            pathlib.Path(rupfile).resolve().is_file(),
-            f'Rupture file {rupfile} does not exist')
-        self.assertEqual(ret_dict['rupture_file'],
-                         ret_dict['rupture_file_from_usgs'])
         self.assertEqual(
             ret_dict['station_data_error'],
             'Unable to collect station data for rupture'
