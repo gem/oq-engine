@@ -628,9 +628,9 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
  'type': 'FeatureCollection'}
     """
     url = shakemap_contents.get('download/rupture.json')['url']
-    if datadir:  #  in parsers_test
+    if datadir:  # in parsers_test
         fname = os.path.join(datadir, f'{usgs_id}-rup.json')
-        #with open(fname, 'wb') as f:
+        # with open(fname, 'wb') as f:
         #    f.write(urlopen(url).read())
         text = open(fname).read()
     else:
@@ -653,6 +653,7 @@ def download_rupdicdata(usgs_id, datadir=None):
         try:
             text = urlopen(url).read()
         except URLError as exc:
+            # in parsers_test
             raise URLError(f'Unable to download from {url}: {exc}')
 
     js = json.loads(text)
@@ -665,7 +666,7 @@ def download_rupdicdata(usgs_id, datadir=None):
     shakemap = get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
-        # happens for us6000f65h
+        # happens for us6000f65h in parsers_test
         return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
     shakemap_array = None
 
@@ -705,9 +706,11 @@ def download_rupture_dict(usgs_id, datadir=None):
     """
     rupdic, rup_data = download_rupdicdata(usgs_id, datadir)
     if rupdic['is_point_rup']:
+        # in parsers_test
         return rupdic
     oq_rup = convert_to_oq_rupture(rup_data)
     if oq_rup is None:
+        # in parsers_test for us6000jllz
         rupdic['error'] = 'Unable to convert the rupture from the USGS format'
         rupdic['is_point_rup'] = True
         return rupdic
@@ -722,11 +725,13 @@ def download_rupture_dict(usgs_id, datadir=None):
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         conv.convert_node(rup_node)
     except ValueError as exc:
+        # FIXME: not tested yet
         logging.error('', exc_info=True)
         rupdic['error'] = (
             f'Unable to convert the rupture from the USGS format: {exc}')
         return rupdic
 
+    # in parsers_test for usp0001ccb
     rupdic['oq_rup'] = oq_rup
     rupdic['rupture_file'] = rupture_file
     return rupdic
@@ -739,6 +744,7 @@ def get_array_usgs_id(kind, usgs_id):
     :param kind: the string "usgs_id", for API compatibility
     :param usgs_id: ShakeMap ID
     """
+    # not tested on purpose
     url = SHAKEMAP_URL.format(usgs_id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
