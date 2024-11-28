@@ -33,7 +33,6 @@ import re
 import psutil
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus
-from urllib.error import HTTPError
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -43,11 +42,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
-from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
-from openquake.hazardlib import nrml, gsim, valid, sourceconverter
+from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.shakemap.validate import aristotle_validate
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
@@ -61,8 +60,6 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.parsers import (
-    download_station_data_file, download_rupture_dict)
 from openquake.engine.aristotle import get_trts_around, get_aristotle_params
 from openquake.server import utils
 
@@ -114,31 +111,6 @@ AELO_FORM_PLACEHOLDERS = {
     'vs30': 'fixed at 760 m/s',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
-}
-
-ARISTOTLE_FORM_LABELS = {
-    'usgs_id': 'Rupture identifier',
-    'rupture_file_from_usgs': 'Rupture from USGS',
-    'rupture_file': 'Rupture model XML',
-    'lon': 'Longitude (degrees)',
-    'lat': 'Latitude (degrees)',
-    'dep': 'Depth (km)',
-    'mag': 'Magnitude (Mw)',
-    'rake': 'Rake (degrees)',
-    'local_timestamp': 'Local timestamp of the event',
-    'time_event': 'Time of the event',
-    'dip': 'Dip (degrees)',
-    'strike': 'Strike (degrees)',
-    'maximum_distance': 'Maximum source-to-site distance (km)',
-    'mosaic_model': 'Mosaic model',
-    'trt': 'Tectonic region type',
-    'truncation_level': 'Level of truncation',
-    'number_of_ground_motion_fields': 'Number of ground motion fields',
-    'asset_hazard_distance': 'Asset hazard distance (km)',
-    'ses_seed': 'Random seed (ses_seed)',
-    'station_data_file_from_usgs': 'Station data from USGS',
-    'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -802,135 +774,6 @@ def get_uploaded_file_path(request, filename):
     file_path = copy_to_temp_dir_with_unique_name(
         file.temporary_file_path())
     return file_path
-
-
-def aristotle_validate(POST, rupture_path, station_data_path):
-    """
-    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
-    In the first case the form contains only usgs_id and rupture_file and
-    returns (rupdic, station_file, error).
-    In the second case the form contains all fields and returns
-    (rupdic, AristotleParam, error).
-    """
-    validation_errs = {}
-    invalid_inputs = []
-    field_validation = {
-        'usgs_id': valid.simple_id,
-        'lon': valid.longitude,
-        'lat': valid.latitude,
-        'dep': valid.positivefloat,
-        'mag': valid.positivefloat,
-        'rake': valid.rake_range,
-        'dip': valid.dip_range,
-        'strike': valid.strike_range,
-        'local_timestamp': valid.local_timestamp,
-        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
-        'time_event': valid.Choice('day', 'night', 'transit'),
-        'maximum_distance': valid.positivefloat,
-        'mosaic_model': valid.utf8,
-        'trt': valid.utf8,
-        'truncation_level': valid.positivefloat,
-        'number_of_ground_motion_fields': valid.positiveint,
-        'asset_hazard_distance': valid.positivefloat,
-        'ses_seed': valid.positiveint,
-        'maximum_distance_stations': valid.positivefloat,
-    }
-    params = {}
-    if rupture_path is None and POST.get('rupture_file_from_usgs'):
-        # giving precedence to the user-uploaded rupture file
-        rupture_path = POST.get('rupture_file_from_usgs')
-    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
-               dep=None, mag=None, rake=None, dip=None, strike=None)
-    for fieldname, validation_func in field_validation.items():
-        if fieldname not in POST:
-            continue
-        try:
-            value = validation_func(POST.get(fieldname))
-        except Exception as exc:
-            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
-                                'local_timestamp']
-            # NOTE: valid.positivefloat, valid_dip_range and
-            #       valid_strike_range raise errors if their
-            #       value is blank or None
-            if (fieldname in blankable_fields and
-                    POST.get(fieldname) == ''):
-                if fieldname in dic:
-                    dic[fieldname] = None
-                else:
-                    params[fieldname] = None
-                continue
-            validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
-            invalid_inputs.append(fieldname)
-            continue
-        if fieldname in dic:
-            dic[fieldname] = value
-        else:
-            params[fieldname] = value
-
-    if 'is_point_rup' in POST:
-        dic['is_point_rup'] = POST['is_point_rup'] == 'true'
-
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return {}, [], response_data
-    ignore_shakemap = POST.get('ignore_shakemap', False)
-    if ignore_shakemap == 'True':
-        ignore_shakemap = True
-    try:
-        
-        usgs_id = dic['usgs_id']
-        rupture_file = dic['rupture_file']
-        if rupture_file:
-            [rup_node] = nrml.read(rupture_file)
-            conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-            rup = conv.convert_node(rup_node)
-            rup.tectonic_region_type = '*'
-            hp = rup.hypocenter
-            rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                          mag=rup.mag, rake=rup.rake,
-                          strike=rup.surface.get_strike(),
-                          dip=rup.surface.get_dip(),
-                          usgs_id=usgs_id,
-                          rupture_file=rupture_file)
-        else:
-            rupdic = download_rupture_dict(usgs_id, ignore_shakemap)
-
-    except Exception as exc:
-        msg = f'Unable to retrieve rupture data: {str(exc)}'
-        # signs '<>' would not be properly rendered in the popup notification
-        msg = msg.replace('<', '"').replace('>', '"')
-        response_data = {"status": "failed", "error_msg": msg,
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return {}, [], response_data
-    if station_data_path is not None:
-        # giving precedence to the user-uploaded station data file
-        params['station_data_file'] = station_data_path
-    elif POST.get('station_data_file_from_usgs'):
-        params['station_data_file'] = POST.get(
-            'station_data_file_from_usgs')
-    else:
-        try:
-            station_data_file = download_station_data_file(dic['usgs_id'])
-        except HTTPError as exc:
-            logging.info(f'Station data is not available: {exc}')
-            params['station_data_file'] = None
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
-            # NOTE: saving the error instead of the file path, then we need to
-            # check if that is a file or not
-            params['station_data_file'] = str(exc)
-        else:
-            params['station_data_file'] = station_data_file
-    return rupdic, list(params.values()), None
 
 
 @csrf_exempt
