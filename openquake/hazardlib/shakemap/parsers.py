@@ -660,10 +660,8 @@ def download_rupdicdata(usgs_id, datadir=None):
     #    f.write(text)
     mag = js['properties']['mag']
     products = js['properties']['products']
-    if 'shakemap' not in products:
-        1/0
-        return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
 
+    # NB: currently we cannot find a case with missing shakemap
     shakemap = get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
