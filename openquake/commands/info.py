@@ -40,6 +40,7 @@ from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map, lon_lat
+from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
@@ -153,6 +154,19 @@ def print_geohash(what):
     print(gh.decode('ascii'))
 
 
+def print_usgs_rupture(what):
+    """
+    Show the parameters of a rupture downloaded from the USGS site.
+    $ oq info usgs_rupture:us70006sj8
+    {'lon': 74.628, 'lat': 35.5909, 'dep': 13.8, 'mag': 5.6, 'rake': 0.0}
+    """
+    try:
+        usgs_id = what.split(':', 1)[1]
+    except IndexError:
+        return 'Example: oq show usgs_rupture:us70006sj8'
+    print(download_rupture_dict(usgs_id))
+
+
 def source_model_info(sm_nodes):
     """
     Extract information about source models. Returns a table
@@ -234,6 +248,8 @@ def main(what, report=False):
         print_gsim(what)
     elif what.startswith('imt'):
         print_imt(what)
+    elif what.startswith('usgs_rupture'):
+        print_usgs_rupture(what)
     elif what == 'views':
         for name in sorted(view):
             print(name)
