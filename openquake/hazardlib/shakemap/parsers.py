@@ -39,10 +39,8 @@ from shapely.geometry import Polygon
 import numpy
 from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
-from openquake.baselib.node import (
-    node_from_xml, Node)
+from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
-from openquake.hazardlib import nrml, sourceconverter
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -225,42 +223,6 @@ def convert_to_oq_rupture(rup_json):
         mag = rup_json['metadata']['mag']
         rup = get_multiplanar(multicoords, mag, rake, trt)
         return rup
-
-
-# Convert rupture to file
-def rup_to_file(rup, outfile, commentstr):
-    # Determine geometry
-    geom = rup.surface.surface_nodes[0].tag
-    name = ""
-    if len(rup.surface.surface_nodes) > 1:
-        name = 'multiPlanesRupture'
-    elif geom == 'planarSurface':
-        name = 'singlePlaneRupture'
-    elif geom == 'simpleFaultGeometry':
-        name = 'simpleFaultRupture'
-    elif geom == 'complexFaultGeometry':
-        name = 'complexFaultRupture'
-    elif geom == 'griddedSurface':
-        name = 'griddedRupture'
-    elif geom == 'kiteSurface':
-        name = 'kiteSurface'
-    # Arrange node
-    h = rup.hypocenter
-    hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
-    geom_nodes = [Node('magnitude', {}, rup.mag),
-                  Node('rake', {}, rup.rake),
-                  Node('hypocenter', hp_dict)]
-    geom_nodes.extend(rup.surface.surface_nodes)
-    rupt_nodes = [Node(name, nodes=geom_nodes)]
-    node = Node('nrml', nodes=rupt_nodes)
-    # Write file
-    with open(outfile, 'wb') as f:
-        # adding a comment like:
-        # <!-- Rupture XML automatically generated from USGS (us7000f93v).
-        #      Reference: Source: USGS NEIC Rapid Finite Fault
-        #      Event ID: 7000f93v Model created: 2021-09-08 03:53:15.-->
-        nrml.write(node, f, commentstr=commentstr)
-    return outfile
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
@@ -714,27 +676,10 @@ def download_rupture_dict(usgs_id, datadir=None):
         rupdic['error'] = 'Unable to convert the rupture from the USGS format'
         rupdic['is_point_rup'] = True
         return rupdic
-    md = rup_data['metadata']
-    comment_str = (
-        f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
-        f" Reference: {md['reference']}.-->\n")
-    temp_file = gettemp(prefix='rupture', remove=False)
-    rupture_file = rup_to_file(oq_rup, temp_file, comment_str)
-    try:
-        [rup_node] = nrml.read(rupture_file)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        rup = conv.convert_node(rup_node)
-    except ValueError as exc:
-        1/0
-        logging.error('', exc_info=True)
-        rupdic['error'] = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
+    else:
+        # in parsers_test for usp0001ccb
+        rupdic['oq_rup'] = oq_rup
         return rupdic
-
-    # in parsers_test for usp0001ccb
-    rupdic['oq_rup'] = oq_rup
-    rupdic['rupture_file'] = rupture_file
-    return rupdic
 
 
 def get_array_usgs_id(kind, usgs_id):
