@@ -19,8 +19,7 @@
 import os
 import unittest
 from urllib.error import URLError
-from openquake.hazardlib.shakemap.parsers import \
-    download_rupture_dict, MissingLink
+from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 
 DATA = os.path.join(os.path.dirname(__file__), 'jsondata')
 
