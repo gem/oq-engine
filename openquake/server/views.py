@@ -46,7 +46,7 @@ import numpy
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.hazardlib.shakemap.validate import aristotle_validate
+from openquake.hazardlib.shakemap.validate import aristotle_validate, ARISTOTLE_FORM_LABELS
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
