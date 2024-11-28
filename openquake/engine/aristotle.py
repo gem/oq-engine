@@ -52,7 +52,6 @@ class AristotleParam:
     exposure_hdf5: str = None
     station_data_file: str = None
     maximum_distance_stations: float = None
-    ignore_shakemap: bool = False
 
 
 def get_trts_around(mosaic_model, exposure_hdf5):
@@ -86,7 +85,7 @@ def trivial_callback(
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
-def get_rupture_dict(dic, ignore_shakemap=False):
+def get_rupture_dict(dic):
     """
     :param dic: a dictionary with keys usgs_id and rupture_file
     :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
@@ -106,7 +105,7 @@ def get_rupture_dict(dic, ignore_shakemap=False):
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
     else:
-        rupdic, _rupdata = download_rupdicdata(usgs_id, ignore_shakemap)
+        rupdic, _rupdata = download_rupdicdata(usgs_id)
     return rupdic
 
 
@@ -120,7 +119,7 @@ def get_aristotle_params(arist):
             config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [arist.exposure_hdf5],
               'job_ini': '<in-memory>'}
-    rupdic = get_rupture_dict(arist.rupture_dict, arist.ignore_shakemap)
+    rupdic = get_rupture_dict(arist.rupture_dict)
     if 'shakemap_array' in rupdic:
         del rupdic['shakemap_array']
     if arist.station_data_file is None:
@@ -205,7 +204,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42',
              local_timestamp=None, exposure_hdf5=None, station_data_file=None,
-             maximum_distance_stations=None, ignore_shakemap=False):
+             maximum_distance_stations=None):
     """
     This script is meant to be called from the command-line
     """
@@ -217,7 +216,7 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
             trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, local_timestamp, exposure_hdf5, station_data_file,
-            maximum_distance_stations, ignore_shakemap)
+            maximum_distance_stations)
         oqparams = get_aristotle_params(arist)
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
@@ -250,8 +249,6 @@ main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
-main_cmd.ignore_shakemap = (
-    'Used to test retrieving rupture data from finite-fault info')
 
 if __name__ == '__main__':
     sap.run(main_cmd)
