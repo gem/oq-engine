@@ -32,6 +32,8 @@ class ShakemapParsersTestCase(unittest.TestCase):
             import timezonefinder
         except ImportError:
             raise unittest.SkipTest('Missing timezonefinder')
+        else:
+            del timezonefinder
 
     def test_1(self):
         # wrong usgs_id
