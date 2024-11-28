@@ -31,7 +31,7 @@
         record[3] = record[3].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         return record
     };
- 
+
     var dialog = (function ()
                   {
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
@@ -159,7 +159,7 @@
             show_modal_confirm: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                
+
                 var show_or_back = (function (e) {
                     this.conf_show = $('#confirmDialog' + calc_id).show();
                     this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
@@ -170,7 +170,7 @@
             hide_modal_confirm: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                
+
                 var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
@@ -190,7 +190,7 @@
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
                     setTimer();
                 })();
-                
+
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/remove",
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
@@ -551,7 +551,7 @@
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
+                $('#submit_aristotle_get_rupture').text('Retrieving rupture data (it may take more than 10 seconds)...');
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
