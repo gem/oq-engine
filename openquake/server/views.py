@@ -722,7 +722,9 @@ def aristotle_get_rupture_data(request):
     :param request:
         a `django.http.HttpRequest` object containing usgs_id
     """
-    res = aristotle_validate(request)
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    res = aristotle_validate(request.POST, rupture_path, station_data_path)
     if isinstance(res, HttpResponse):  # error
         return res
     rupdic, station_data_file = res
@@ -802,14 +804,12 @@ def get_uploaded_file_path(request, filename):
     return file_path
 
 
-def aristotle_validate(request):
+def aristotle_validate(POST, rupture_path, station_data_path):
     # this is called by aristotle_get_rupture_data and aristotle_run.
     # In the first case the form contains only usgs_id and rupture_file and
     # returns rupdic only.
     # In the second case the form contains all fields and it returns rupdic
-    # plus the calculation parameters (like maximum_ditance, etc.)
-    rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    # plus the calculation parameters (like maximum_distance, etc.)
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -834,16 +834,16 @@ def aristotle_validate(request):
         'maximum_distance_stations': valid.positivefloat,
     }
     params = {}
-    if rupture_path is None and request.POST.get('rupture_file_from_usgs'):
+    if rupture_path is None and POST.get('rupture_file_from_usgs'):
         # giving precedence to the user-uploaded rupture file
-        rupture_path = request.POST.get('rupture_file_from_usgs')
+        rupture_path = POST.get('rupture_file_from_usgs')
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
                dep=None, mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in field_validation.items():
-        if fieldname not in request.POST:
+        if fieldname not in POST:
             continue
         try:
-            value = validation_func(request.POST.get(fieldname))
+            value = validation_func(POST.get(fieldname))
         except Exception as exc:
             blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
                                 'local_timestamp']
@@ -851,7 +851,7 @@ def aristotle_validate(request):
             #       valid_strike_range raise errors if their
             #       value is blank or None
             if (fieldname in blankable_fields and
-                    request.POST.get(fieldname) == ''):
+                    POST.get(fieldname) == ''):
                 if fieldname in dic:
                     dic[fieldname] = None
                 else:
@@ -865,8 +865,8 @@ def aristotle_validate(request):
         else:
             params[fieldname] = value
 
-    if 'is_point_rup' in request.POST:
-        dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
+    if 'is_point_rup' in POST:
+        dic['is_point_rup'] = POST['is_point_rup'] == 'true'
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -879,7 +879,7 @@ def aristotle_validate(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
-    ignore_shakemap = request.POST.get('ignore_shakemap', False)
+    ignore_shakemap = POST.get('ignore_shakemap', False)
     if ignore_shakemap == 'True':
         ignore_shakemap = True
     try:
@@ -913,8 +913,8 @@ def aristotle_validate(request):
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
         params['station_data_file'] = station_data_path
-    elif request.POST.get('station_data_file_from_usgs'):
-        params['station_data_file'] = request.POST.get(
+    elif POST.get('station_data_file_from_usgs'):
+        params['station_data_file'] = POST.get(
             'station_data_file_from_usgs')
     else:
         try:
@@ -950,7 +950,9 @@ def aristotle_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    res = aristotle_validate(request)
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    res = aristotle_validate(request.POST, rupture_path, station_data_path)
     if isinstance(res, HttpResponse):  # error
         return res
     (rupdic, local_timestamp, time_event, maximum_distance, mosaic_model, trt,
