@@ -78,7 +78,7 @@
               <div class="aristotle_form_row">
                 <label for"station_data_file">{{ aristotle_form_labels.station_data_file }}</label>
                 <input class="aristotle-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ aristotle_form_placeholders.station_data_file }}" {% if interface_level != '2' %}disabled{% endif %}>
-                {% if interface_level != '2' %}<button type="button" id="clearStationDataFile">Clear File</button>{% endif %}
+                {% if interface_level == '2' %}<button type="button" id="clearStationDataFile">Clear File</button>{% endif %}
               </div>
               <div class="aristotle_form_row">
                 <label for"maximum_distance_stations">{{ aristotle_form_labels.maximum_distance_stations }}</label>
