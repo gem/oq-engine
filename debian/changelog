@@ -4,7 +4,7 @@
     model to the AbrahamsonGulerce2020, KuehnEtAl2020, ParkerEtAl2020,
     ZhaoEtAl2006 and AtkinsonMacias2009 GMMs as required for the 2023
     US NSHM model's subduction interface GMC. Unit tests are also
-    provided for these GMM adjustments. 
+    provided for these GMM adjustments
 
   [Michele Simionato]
   * Internal: forcing the signature (C, ctx, region, ...) for _get_basin_term

@@ -61,9 +61,9 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
     return ax
 
 
-def add_populated_places(ax, xlim, ylim, read_df=readinput.read_populated_places_df,
-                         lon_field='longitude', lat_field='latitude',
-                         label_field='name'):
+def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
+               lon_field='longitude', lat_field='latitude',
+               label_field='name'):
     data = read_df(lon_field, lat_field, label_field)
     if data is None:
         return ax
@@ -104,7 +104,7 @@ def plt_to_base64(plt):
 
 
 def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
-                  with_populated_places=False, return_base64=False,
+                  with_cities=False, return_base64=False,
                   rupture=None):
     plt = import_plt()
     if backend is not None:
@@ -139,8 +139,8 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    if with_populated_places:
-        ax = add_populated_places(ax, xlim, ylim)
+    if with_cities:
+        ax = add_cities(ax, xlim, ylim)
     if return_base64:
         return plt_to_base64(plt)
     else:
@@ -221,7 +221,7 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
-                 with_populated_places=False, return_base64=False):
+                 with_cities=False, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -236,8 +236,8 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    if with_populated_places:
-        ax = add_populated_places(ax, xlim, ylim)
+    if with_cities:
+        ax = add_cities(ax, xlim, ylim)
     ax.legend()
     if return_base64:
         return plt_to_base64(plt)

@@ -37,7 +37,6 @@ from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -1589,20 +1588,6 @@ def view_rup(token, dstore):
     df = dstore.read_df('rup', sel=dict(src_id=src_id))
     df = df.sort_values(['rup_id', 'sids']).set_index('rup_id')
     return df
-
-
-@view.add('usgs_rupture')
-def view_usgs_rupture(token, dstore):
-    """
-    Show the parameters of a rupture downloaded from the USGS site.
-    $ oq show usgs_rupture:us70006sj8
-    {'lon': 74.628, 'lat': 35.5909, 'dep': 13.8, 'mag': 5.6, 'rake': 0.0}
-    """
-    try:
-        usgs_id = token.split(':', 1)[1]
-    except IndexError:
-        return 'Example: oq show usgs_rupture:us70006sj8'
-    return download_rupture_dict(usgs_id)
 
 
 # tested in oq-risk-tests etna
