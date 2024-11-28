@@ -185,8 +185,6 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: ARISTOTLE
-      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
@@ -215,4 +213,4 @@ jobs:
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           # -v 2 also logs the test names
-          OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode
+          OQ_APPLICATION_MODE=ARISTOTLE OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode

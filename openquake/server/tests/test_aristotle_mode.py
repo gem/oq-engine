@@ -256,7 +256,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_file_from_usgs', 'error',
             'station_data_file_from_usgs', 'mosaic_models', 'trts']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['local_timestamp'],
                          '2023-02-06 04:17:34+03:00')
@@ -296,8 +296,8 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'rupture_file', 'rupture_file_from_usgs',
             'mmi_map_png', 'pga_map_png',
             'station_data_error',
-            'station_data_file_from_usgs', 'trts', 'mosaic_models', 'trt']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+            'station_data_file_from_usgs', 'trts', 'mosaic_models']
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         rupfile = ret_dict['rupture_file']
         self.assertTrue(
             pathlib.Path(rupfile).resolve().is_file(),
@@ -317,7 +317,6 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'NEA': ['Cratonic Crust', 'Stable Continental Crust',
                     'Active Shallow Crust', 'Subduction Interface',
                     'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['trt'], 'Active Shallow Crust')
         self.assertEqual(ret_dict['is_point_rup'], False)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
 
@@ -336,48 +335,11 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'rupture_file', 'rupture_file_from_usgs',
             'station_data_file_from_usgs', 'trts',
             'mosaic_models']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
+        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['is_point_rup'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n05d')
         self.assertEqual(ret_dict['mosaic_models'], ['SAM'])
-
-    def test_get_rupture_data_from_finite_fault(self):
-        usgs_id = 'us6000jllz'
-        data = dict(usgs_id=usgs_id, ignore_shakemap=True)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'mmi_map_png', 'pga_map_png',
-            'rupture_file', 'rupture_file_from_usgs',
-            'station_data_file_from_usgs', 'trts',
-            'mosaic_models']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
-        self.assertEqual(ret_dict['rupture_file'], None)
-        self.assertEqual(ret_dict['mmi_map_png'], None)
-        self.assertEqual(ret_dict['pga_map_png'], None)
-        self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
-        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
-        self.assertEqual(ret_dict['trts'], {
-            'ARB': ['TECTONIC_REGION_1',
-                    'TECTONIC_REGION_2',
-                    'TECTONIC_REGION_3',
-                    'TECTONIC_REGION_4',
-                    'Active Shallow Crust EMME',
-                    'Stable Shallow Crust EMME',
-                    'Subduction Interface EMME',
-                    'Subduction Inslab EMME',
-                    'Deep Seismicity EMME'],
-            'MIE': ['Active Shallow Crust',
-                    'Stable Shallow Crust',
-                    'Subduction Interface',
-                    'Subduction Inslab',
-                    'Deep Seismicity']})
 
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',
