@@ -37,7 +37,7 @@ class StewartEtAl2020Test(unittest.TestCase):
         wimp = 1.0
         wgr = 1.0 - wimp
         fv = stewart2020_linear_scaling(imt, vs30, wimp, wgr)
-        # hand computed results
+        # results computed by hand
         expected = np.array([0.436757, 0.371138, 0.185])
         np.testing.assert_allclose(fv, expected, atol=1e-6)
 
@@ -48,6 +48,6 @@ class StewartEtAl2020Test(unittest.TestCase):
         wimp = 0.0
         wgr = 1.0 - wimp
         fv = stewart2020_linear_scaling(imt, vs30, wimp, wgr)
-        # hand computed results
+        # results computed by hand
         expected = np.array([0.372757, 0.307138, 0.121])
         np.testing.assert_allclose(fv, expected, atol=1e-6)

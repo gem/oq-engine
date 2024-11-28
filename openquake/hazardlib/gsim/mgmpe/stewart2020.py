@@ -32,11 +32,19 @@ def _get_sigma(vs30):
     pass
 
 
-def _get_f760_model(C760, vs30, wimp, wgr):
+def _get_f760_model(C760, vs30, wimp):
     # Implements eq. 5 in SeA2020
+    #
+    # param C760
+    #   Coefficients for
+    # param vs30
+    #   A 1D numpy array with vs30 values
+    # param wimp
+    #   A scalar or an array of values in [0, 1]. The array must have the
+    #   same cardinality of vs30
 
-    # Check that the sum of weights is equal to 1
-    assert np.all((wimp + wgr) - 1.0 < 1e-1)
+    # Compute the weight for gradient
+    wgr = 1.0 - wimp
 
     # Compute the scaling factor
     return C760['impedance'] * wimp + C760['gradient'] * wgr
@@ -44,6 +52,13 @@ def _get_f760_model(C760, vs30, wimp, wgr):
 
 def _get_vs30_scaling_model(C, vs30, f760):
     # Implements eq. 3 in SeA2020
+    #
+    # param C
+    #   Coefficients for a given IMT from table COEFFS
+    # param vs30
+    #   A 1D numpy array with vs30 values
+    # param f760
+    #   The f760 scaling factors
 
     # Initialise fv
     fv = np.zeros_like(vs30)
@@ -70,14 +85,20 @@ def _get_vs30_scaling_model(C, vs30, f760):
     return fv
 
 
-def stewart2020_linear_scaling(imtstr, vs30, wimp, wgr):
+def stewart2020_linear_scaling(imt, vs30, wimp):
     """
     Implements the Vs30 scaling model of Stewart et al. (2020; EQS).
 
-    :param imtstr:
+    NOTE a similar function is embedded in the NGA East implementation
+    `nga_east.py`.  For the time being we retain this implementation as this
+    code better fit the purpouse of being used within the modifiable GMPE.
+
+    :param imt:
+        Intensity measure type
     :param vs30:
+        A vector with values of Vs30
     :param wimp:
-    :param wgr:
+        Weight for the impedance model
     """
 
     # Check the Vs30 provided
@@ -87,13 +108,11 @@ def stewart2020_linear_scaling(imtstr, vs30, wimp, wgr):
         raise ValueError(msg)
 
     # Get f760
-    C = COEFFS_F760[imtstr]
-    f760 = _get_f760_model(C, vs30, wimp, wgr)
-
-    print(wimp, wgr, f760)
+    C = COEFFS_F760[imt]
+    f760 = _get_f760_model(C, vs30, wimp)
 
     # Amplification factor
-    C = COEFFS[imtstr]
+    C = COEFFS[imt]
     fv = _get_vs30_scaling_model(C, vs30, f760)
 
     return fv + f760

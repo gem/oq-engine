@@ -36,6 +36,6 @@ class HashashEtAl2020Test(unittest.TestCase):
         ref_pga = 0.1
         ref_vs30 = 3000.0
         fv = hashash2020_non_linear_scaling(imtstr, vs30, ref_pga, ref_vs30)
-        # hand-computed results
+        # results computed by hand
         expected = np.array([-0.146867, -0.      ,  0.])
         np.testing.assert_allclose(fv, expected, atol=1e-6)

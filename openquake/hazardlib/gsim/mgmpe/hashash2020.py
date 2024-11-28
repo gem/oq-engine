@@ -59,7 +59,7 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     idx = vs30 < C['vc']
     vsmin = np.minimum(vs30[idx], ref_vs30)
     exp1 = np.exp(C['f5'] * (vsmin - 360.))
-    exp2 = np.exp(C['f5'] * (ref_vs30 - 360))
+    exp2 = np.exp(C['f5'] * (ref_vs30 - 360.0))
     f2 = C['f4'] * (exp1 - exp2)
 
     # Compute the median nonlinear amplification term using eq.2
