@@ -724,9 +724,11 @@ def aristotle_get_rupture_data(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    rupdic, params, err = aristotle_validate(request.POST, rupture_path, station_data_path)
-    if isinstance(err, HttpResponse):  # error
-        return err
+    rupdic, params, err = aristotle_validate(
+        request.POST, rupture_path, station_data_path)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
     [station_data_file] = params
     trts = {}
     if not os.path.isfile(station_data_file):
@@ -877,8 +879,7 @@ def aristotle_validate(POST, rupture_path, station_data_path):
         logging.error(err_msg)
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
-        return {}, [], HttpResponse(content=json.dumps(response_data),
-                                    content_type=JSON, status=400)
+        return {}, [], response_data
     ignore_shakemap = POST.get('ignore_shakemap', False)
     if ignore_shakemap == 'True':
         ignore_shakemap = True
@@ -908,8 +909,7 @@ def aristotle_validate(POST, rupture_path, station_data_path):
         response_data = {"status": "failed", "error_msg": msg,
                          "error_cls": type(exc).__name__}
         logging.error('', exc_info=True)
-        return {}, [], HttpResponse(content=json.dumps(response_data),
-                                    content_type=JSON, status=500)
+        return {}, [], response_data
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
         params['station_data_file'] = station_data_path
@@ -953,8 +953,9 @@ def aristotle_run(request):
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
     rupdic, params, err = aristotle_validate(request.POST, rupture_path, station_data_path)
-    if isinstance(err, HttpResponse):  # error
-        return err
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
     (local_timestamp, time_event, maximum_distance, mosaic_model, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
