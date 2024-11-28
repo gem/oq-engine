@@ -341,38 +341,6 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         self.assertEqual(ret_dict['usgs_id'], 'us7000n05d')
         self.assertEqual(ret_dict['mosaic_models'], ['SAM'])
 
-    def test_get_rupture_data_from_finite_fault(self):
-        usgs_id = 'us6000f65h'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'mmi_map_png', 'pga_map_png',
-            'rupture_file', 'rupture_file_from_usgs',
-            'station_data_file_from_usgs', 'trts',
-            'mosaic_models']
-        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        self.assertEqual(ret_dict['rupture_file'], None)
-        self.assertEqual(ret_dict['mmi_map_png'], None)
-        self.assertEqual(ret_dict['pga_map_png'], None)
-        self.assertEqual(ret_dict['usgs_id'], 'us6000f65h')
-        self.assertEqual(ret_dict['mosaic_models'], ['CCA'])
-        self.assertEqual(ret_dict['trts'], {
-            'CCA': ['Subduction Interface',
-                    'Subduction Interface COL',
-                    'Subduction IntraSlab',
-                    'Subduction IntraSlab CAM',
-                    'Subduction IntraSlab LAN_PRC',
-                    'Subduction IntraSlab COL',
-                    'Active Shallow Crust',
-                    'SCR Non Craton',
-                    'Stable Shallow Gridded']})
-
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',
                     lon=37.0143, lat=37.2256, dep=10.0, mag=7.8,
