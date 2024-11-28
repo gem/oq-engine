@@ -170,7 +170,7 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             'station_data_file_from_usgs')
     else:
         try:
-            station_data_file = download_station_data_file(dic['usgs_id'])
+            station_data_file = download_station_data_file(dic['usgs_id'], datadir)
         except HTTPError as exc:
             logging.info(f'Station data is not available: {exc}')
             params['station_data_file'] = None
