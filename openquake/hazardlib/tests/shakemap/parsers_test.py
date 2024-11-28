@@ -49,6 +49,16 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('There is no finite-fault info for usp0001ccb', str(ctx.exception))
 
     def test_3(self):
+        # ignore_shakemap
+        rupdic = download_rupture_dict('us6000f65h', datadir=DATA)
+        self.assertEqual(rupdic, {'lon': -73.475, 'lat': 18.408, 'dep': 10.0,
+                                  'mag': 7.2, 'rake': 0.0,
+                                  'local_timestamp': '2021-08-13 20:00:00-04:00',
+                                  'time_event': 'transit', 'is_point_rup': True,
+                                  'pga_map_png': None, 'mmi_map_png': None,
+                                  'usgs_id': 'us6000f65h', 'rupture_file': None})
+
+    def test_4(self):
         # point_rup
         rupdic = download_rupture_dict('us6000jllz', datadir=DATA)
         self.assertEqual(rupdic['lon'], 37.0143)
@@ -56,7 +66,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(rupdic['dep'], 10.)
         self.assertEqual(rupdic['is_point_rup'], True)
 
-    def test_4(self):
+    def test_5(self):
         # no point_rup
         rupdic = download_rupture_dict('usp0001ccb', datadir=DATA)
         self.assertEqual(rupdic['is_point_rup'], False)
