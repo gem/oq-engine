@@ -72,20 +72,10 @@ validators = {
 }
 
 
-def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
-    """
-    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
-    In the first case the form contains only usgs_id and rupture_file and
-    returns (rupdic, [station_file], error).
-    In the second case the form contains all fields and returns
-    (rupdic, params, error).
-    """
+def _validate(POST, rupture_path=None):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    if rupture_path is None and POST.get('rupture_file_from_usgs'):
-        # giving precedence to the user-uploaded rupture file
-        rupture_path = POST.get('rupture_file_from_usgs')
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
                dep=None, mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in validators.items():
@@ -124,9 +114,24 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
              for field in validation_errs])
         logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return {}, [], response_data
+        err = {"status": "failed", "error_msg": err_msg,
+               "invalid_inputs": invalid_inputs}
+    else:
+        err = {}
+    return dic, params, err
+
+
+def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
+    """
+    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
+    In the first case the form contains only usgs_id and rupture_file and
+    returns (rupdic, [station_file], error).
+    In the second case the form contains all fields and returns
+    (rupdic, params, error).
+    """
+    dic, params, err = _validate(POST, rupture_path)
+    if err:
+        return {}, [], err
     ignore_shakemap = POST.get('ignore_shakemap', False)
     if ignore_shakemap == 'True':
         ignore_shakemap = True
