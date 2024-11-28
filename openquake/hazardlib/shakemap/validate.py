@@ -50,7 +50,7 @@ ARISTOTLE_FORM_LABELS = {
 }
 
 
-def aristotle_validate(POST, rupture_path, station_data_path):
+def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -146,7 +146,7 @@ def aristotle_validate(POST, rupture_path, station_data_path):
                           usgs_id=usgs_id,
                           rupture_file=rupture_file)
         else:
-            rupdic = download_rupture_dict(usgs_id, ignore_shakemap)
+            rupdic = download_rupture_dict(usgs_id, ignore_shakemap, datadir)
 
     except Exception as exc:
         msg = f'Unable to retrieve rupture data: {str(exc)}'
@@ -176,4 +176,4 @@ def aristotle_validate(POST, rupture_path, station_data_path):
             params['station_data_file'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rupdic, list(params.values()), None
+    return rupdic, list(params.values()), {}
