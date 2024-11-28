@@ -28,7 +28,6 @@ import secrets
 import logging
 import io
 import numpy
-import pathlib
 
 import django
 # from django.apps import apps
