@@ -263,7 +263,7 @@ def rup_to_file(rup, outfile, commentstr):
 
 def utc_to_local_time(utc_timestamp, lon, lat):
     try:
-        # NOTE: optional dependency needed for ARISTOTLE
+        # NOTE: mandatory dependency for ARISTOTLE
         from timezonefinder import TimezoneFinder
     except ImportError:
         raise ImportError(
@@ -634,7 +634,7 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     return rup_data
 
 
-def _pure_download(usgs_id, ignore_shakemap, datadir):
+def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
     # returns (rupdic, rup_data)
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
@@ -698,7 +698,7 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None, convert_
     :param rup: try to convert the rupture into a hazardlib object
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
-    rupdic, rup_data = _pure_download(usgs_id, ignore_shakemap, datadir)
+    rupdic, rup_data = download_rupdicdata(usgs_id, ignore_shakemap, datadir)
     if convert_rup is False or rupdic['is_point_rup']:
         return rupdic
     oq_rup = convert_to_oq_rupture(rup_data)

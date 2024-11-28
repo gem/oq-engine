@@ -26,6 +26,15 @@ DATA = os.path.join(os.path.dirname(__file__), 'jsondata')
 
 
 class ShakemapParsersTestCase(unittest.TestCase):
+    @classmethod
+    def setUp(cls):
+        try:
+            import timezonefinder
+        except ImportError:
+            raise unittest.SkipTest('Missing timezonefinder')
+        else:
+            del timezonefinder
+
     def test_1(self):
         # wrong usgs_id
         with self.assertRaises(URLError) as ctx:
