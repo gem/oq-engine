@@ -41,7 +41,7 @@ from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import (
     node_from_xml, Node)
-from openquake.hazardlib.source.rupture import get_multiplanar
+from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
 from openquake.hazardlib import nrml, sourceconverter
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -212,16 +212,19 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 def convert_to_oq_rupture(rup_json):
     """
     Convert USGS json (output of download_rupture_data) into an hazardlib rupture
+
+    :returns: None if not convertible
     """
     ftype = rup_json['features'][0]['geometry']['type']
     assert ftype == 'MultiPolygon', ftype
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    hyp_depth = rup_json['metadata']['depth']
-    rake = rup_json['metadata'].get('rake', 0)
-    trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
-    Mw = rup_json['metadata']['mag']
-    rup = get_multiplanar(multicoords, Mw, rake, trt)
-    return rup
+    if is_matrix(multicoords):
+        hyp_depth = rup_json['metadata']['depth']
+        rake = rup_json['metadata'].get('rake', 0)
+        trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
+        mag = rup_json['metadata']['mag']
+        rup = get_multiplanar(multicoords, mag, rake, trt)
+        return rup
 
 
 # Convert rupture to file
@@ -693,7 +696,6 @@ def download_rupdicdata(usgs_id, datadir=None):
     return rupdic, rup_data
 
 
-
 def download_rupture_dict(usgs_id, datadir=None):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
@@ -705,12 +707,9 @@ def download_rupture_dict(usgs_id, datadir=None):
     rupdic, rup_data = download_rupdicdata(usgs_id, datadir)
     if rupdic['is_point_rup']:
         return rupdic
-    try:
-        oq_rup = convert_to_oq_rupture(rup_data)
-    except Exception as exc:
-        logging.error('', exc_info=True)
-        rupdic['error'] = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
+    oq_rup = convert_to_oq_rupture(rup_data)
+    if oq_rup is None:
+        rupdic['error'] = 'Unable to convert the rupture from the USGS format'
         rupdic['is_point_rup'] = True
         return rupdic
     md = rup_data['metadata']
