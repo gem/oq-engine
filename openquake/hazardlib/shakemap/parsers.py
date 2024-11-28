@@ -439,7 +439,7 @@ def get_preferred_shakemap(shakemaps):
     return shakemap
 
 
-def download_station_data_file(usgs_id, save_to_home=False):
+def download_station_data_file(usgs_id, datadir=None, save_to_home=False):
     """
     Download station data from the USGS site given a ShakeMap ID.
 
@@ -467,7 +467,11 @@ def download_station_data_file(usgs_id, save_to_home=False):
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
         logging.info('Downloading stationlist.json')
-        stations_json_str = urlopen(stationlist_url).read()
+        if datadir:
+            fname = os.path.join(datadir, f'{usgs_id}-stations.json')
+            stations_json_str = open(fname, 'rb').read()
+        else:
+            stations_json_str = urlopen(stationlist_url).read()
         try:
             stations = read_usgs_stations_json(stations_json_str)
         except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
