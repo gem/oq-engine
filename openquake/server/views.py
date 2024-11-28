@@ -724,14 +724,12 @@ def aristotle_get_rupture_data(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    res = aristotle_validate(request.POST, rupture_path, station_data_path)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    rupdic, station_data_file = res
+    rupdic, params, err = aristotle_validate(request.POST, rupture_path, station_data_path)
+    if isinstance(err, HttpResponse):  # error
+        return err
+    [station_data_file] = params
     trts = {}
-    if station_data_file is None:
-        station_data_file = None
-    elif not os.path.isfile(station_data_file):
+    if not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
             'Unable to collect station data for rupture'
             ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
@@ -805,11 +803,13 @@ def get_uploaded_file_path(request, filename):
 
 
 def aristotle_validate(POST, rupture_path, station_data_path):
-    # this is called by aristotle_get_rupture_data and aristotle_run.
-    # In the first case the form contains only usgs_id and rupture_file and
-    # returns rupdic only.
-    # In the second case the form contains all fields and it returns rupdic
-    # plus the calculation parameters (like maximum_distance, etc.)
+    """
+    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
+    In the first case the form contains only usgs_id and rupture_file and
+    returns (rupdic, station_file, error).
+    In the second case the form contains all fields and returns
+    (rupdic, AristotleParam, error).
+    """
     validation_errs = {}
     invalid_inputs = []
     field_validation = {
@@ -877,8 +877,8 @@ def aristotle_validate(POST, rupture_path, station_data_path):
         logging.error(err_msg)
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
+        return {}, [], HttpResponse(content=json.dumps(response_data),
+                                    content_type=JSON, status=400)
     ignore_shakemap = POST.get('ignore_shakemap', False)
     if ignore_shakemap == 'True':
         ignore_shakemap = True
@@ -908,8 +908,8 @@ def aristotle_validate(POST, rupture_path, station_data_path):
         response_data = {"status": "failed", "error_msg": msg,
                          "error_cls": type(exc).__name__}
         logging.error('', exc_info=True)
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
+        return {}, [], HttpResponse(content=json.dumps(response_data),
+                                    content_type=JSON, status=500)
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
         params['station_data_file'] = station_data_path
@@ -930,7 +930,7 @@ def aristotle_validate(POST, rupture_path, station_data_path):
             params['station_data_file'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rupdic, *params.values()
+    return rupdic, list(params.values()), None
 
 
 @csrf_exempt
@@ -952,13 +952,13 @@ def aristotle_run(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    res = aristotle_validate(request.POST, rupture_path, station_data_path)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    (rupdic, local_timestamp, time_event, maximum_distance, mosaic_model, trt,
+    rupdic, params, err = aristotle_validate(request.POST, rupture_path, station_data_path)
+    if isinstance(err, HttpResponse):  # error
+        return err
+    (local_timestamp, time_event, maximum_distance, mosaic_model, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
-     station_data_file) = res
+     station_data_file) = params
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
