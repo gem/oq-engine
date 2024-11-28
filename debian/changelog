@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996 
+
   [Christopher Brooks]
   * Added instantiation-level arguments for contextually applying
     the M9 basin term, the CB14 basin term and the USGS basin scaling
