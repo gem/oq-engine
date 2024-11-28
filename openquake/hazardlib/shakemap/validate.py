@@ -49,6 +49,28 @@ ARISTOTLE_FORM_LABELS = {
     'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
 
+validators = {
+    'usgs_id': valid.simple_id,
+    'lon': valid.longitude,
+    'lat': valid.latitude,
+    'dep': valid.positivefloat,
+    'mag': valid.positivefloat,
+    'rake': valid.rake_range,
+    'dip': valid.dip_range,
+    'strike': valid.strike_range,
+    'local_timestamp': valid.local_timestamp,
+    # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
+    'time_event': valid.Choice('day', 'night', 'transit'),
+    'maximum_distance': valid.positivefloat,
+    'mosaic_model': valid.utf8,
+    'trt': valid.utf8,
+    'truncation_level': valid.positivefloat,
+    'number_of_ground_motion_fields': valid.positiveint,
+    'asset_hazard_distance': valid.positivefloat,
+    'ses_seed': valid.positiveint,
+    'maximum_distance_stations': valid.positivefloat,
+}
+
 
 def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
     """
@@ -60,34 +82,13 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     """
     validation_errs = {}
     invalid_inputs = []
-    field_validation = {
-        'usgs_id': valid.simple_id,
-        'lon': valid.longitude,
-        'lat': valid.latitude,
-        'dep': valid.positivefloat,
-        'mag': valid.positivefloat,
-        'rake': valid.rake_range,
-        'dip': valid.dip_range,
-        'strike': valid.strike_range,
-        'local_timestamp': valid.local_timestamp,
-        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
-        'time_event': valid.Choice('day', 'night', 'transit'),
-        'maximum_distance': valid.positivefloat,
-        'mosaic_model': valid.utf8,
-        'trt': valid.utf8,
-        'truncation_level': valid.positivefloat,
-        'number_of_ground_motion_fields': valid.positiveint,
-        'asset_hazard_distance': valid.positivefloat,
-        'ses_seed': valid.positiveint,
-        'maximum_distance_stations': valid.positivefloat,
-    }
     params = {}
     if rupture_path is None and POST.get('rupture_file_from_usgs'):
         # giving precedence to the user-uploaded rupture file
         rupture_path = POST.get('rupture_file_from_usgs')
     dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
                dep=None, mag=None, rake=None, dip=None, strike=None)
-    for fieldname, validation_func in field_validation.items():
+    for fieldname, validation_func in validators.items():
         if fieldname not in POST:
             continue
         try:
