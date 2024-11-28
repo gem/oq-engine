@@ -661,6 +661,7 @@ def download_rupdicdata(usgs_id, datadir=None):
     mag = js['properties']['mag']
     products = js['properties']['products']
     if 'shakemap' not in products:
+        1/0
         return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
 
     shakemap = get_preferred_shakemap(products['shakemap'])
