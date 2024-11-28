@@ -634,7 +634,9 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
 
 
 def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
-    # returns (rupdic, rup_data)
+    """
+    :returns: (rupdic, rup_data)
+    """
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
         text = open(fname).read()
@@ -657,7 +659,8 @@ def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
     shakemap = get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
-        return load_rupdic_from_finite_fault(usgs_id, mag, products)
+        # happens for us6000f65h
+        return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
     shakemap_array = None
 
     if 'download/grid.xml' in contents:
