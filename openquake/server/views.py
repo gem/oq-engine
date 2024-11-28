@@ -33,7 +33,6 @@ import re
 import psutil
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus
-from urllib.error import HTTPError
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -43,11 +42,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
-from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.shakemap.validate import aristotle_validate, ARISTOTLE_FORM_LABELS
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
@@ -61,9 +60,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.parsers import download_station_data_file
-from openquake.engine.aristotle import (
-    get_trts_around, get_aristotle_params, get_rupture_dict)
+from openquake.engine.aristotle import get_trts_around, get_aristotle_params
 from openquake.server import utils
 
 from django.conf import settings
@@ -114,31 +111,6 @@ AELO_FORM_PLACEHOLDERS = {
     'vs30': 'fixed at 760 m/s',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
-}
-
-ARISTOTLE_FORM_LABELS = {
-    'usgs_id': 'Rupture identifier',
-    'rupture_file_from_usgs': 'Rupture from USGS',
-    'rupture_file': 'Rupture model XML',
-    'lon': 'Longitude (degrees)',
-    'lat': 'Latitude (degrees)',
-    'dep': 'Depth (km)',
-    'mag': 'Magnitude (Mw)',
-    'rake': 'Rake (degrees)',
-    'local_timestamp': 'Local timestamp of the event',
-    'time_event': 'Time of the event',
-    'dip': 'Dip (degrees)',
-    'strike': 'Strike (degrees)',
-    'maximum_distance': 'Maximum source-to-site distance (km)',
-    'mosaic_model': 'Mosaic model',
-    'trt': 'Tectonic region type',
-    'truncation_level': 'Level of truncation',
-    'number_of_ground_motion_fields': 'Number of ground motion fields',
-    'asset_hazard_distance': 'Asset hazard distance (km)',
-    'ses_seed': 'Random seed (ses_seed)',
-    'station_data_file_from_usgs': 'Station data from USGS',
-    'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -722,14 +694,16 @@ def aristotle_get_rupture_data(request):
     :param request:
         a `django.http.HttpRequest` object containing usgs_id
     """
-    res = aristotle_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    rupdic, station_data_file = res
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    rupdic, params, err = aristotle_validate(
+        request.POST, rupture_path, station_data_path)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
+    [station_data_file] = params
     trts = {}
-    if station_data_file is None:
-        station_data_file = None
-    elif not os.path.isfile(station_data_file):
+    if not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
             'Unable to collect station data for rupture'
             ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
@@ -762,22 +736,16 @@ def aristotle_get_rupture_data(request):
     oq_rup = None
     if 'oq_rup' in rupdic:
         oq_rup = rupdic['oq_rup']
-        # FIXME: check if we want to display the rupture png as a separate plot, instead
-        # of inserting the hypocenter and the rupture boundaries in the gmf plots
-        # # Agg is a non-interactive backend
-        # rupdic['rupture_png'] = plot_rupture(
-        #     rupdic['oq_rup'], backend='Agg', figsize=(6, 6),
-        #     with_populated_places=True, return_base64=True)
         del rupdic['oq_rup']
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.2, 6.2)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True, rupture=oq_rup)
+            with_cities=False, return_base64=True, rupture=oq_rup)
         rupdic['mmi_map_png'] = plot_shakemap(
             shakemap_array, 'MMI', backend='Agg', figsize=figsize,
-            with_populated_places=False, return_base64=True, rupture=oq_rup)
+            with_cities=False, return_base64=True, rupture=oq_rup)
         del rupdic['shakemap_array']
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -808,120 +776,6 @@ def get_uploaded_file_path(request, filename):
     return file_path
 
 
-def aristotle_validate(request):
-    # this is called by aristotle_get_rupture_data and aristotle_run.
-    # In the first case the form contains only usgs_id and rupture_file and
-    # returns rupdic only.
-    # In the second case the form contains all fields and it returns rupdic
-    # plus the calculation parameters (like maximum_ditance, etc.)
-    rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    validation_errs = {}
-    invalid_inputs = []
-    field_validation = {
-        'usgs_id': valid.simple_id,
-        'lon': valid.longitude,
-        'lat': valid.latitude,
-        'dep': valid.positivefloat,
-        'mag': valid.positivefloat,
-        'rake': valid.rake_range,
-        'dip': valid.dip_range,
-        'strike': valid.strike_range,
-        'local_timestamp': valid.local_timestamp,
-        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
-        'time_event': valid.Choice('day', 'night', 'transit'),
-        'maximum_distance': valid.positivefloat,
-        'mosaic_model': valid.utf8,
-        'trt': valid.utf8,
-        'truncation_level': valid.positivefloat,
-        'number_of_ground_motion_fields': valid.positiveint,
-        'asset_hazard_distance': valid.positivefloat,
-        'ses_seed': valid.positiveint,
-        'maximum_distance_stations': valid.positivefloat,
-    }
-    params = {}
-    if rupture_path is None and request.POST.get('rupture_file_from_usgs'):
-        # giving precedence to the user-uploaded rupture file
-        rupture_path = request.POST.get('rupture_file_from_usgs')
-    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
-               dep=None, mag=None, rake=None, dip=None, strike=None)
-    for fieldname, validation_func in field_validation.items():
-        if fieldname not in request.POST:
-            continue
-        try:
-            value = validation_func(request.POST.get(fieldname))
-        except Exception as exc:
-            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
-                                'local_timestamp']
-            # NOTE: valid.positivefloat, valid_dip_range and
-            #       valid_strike_range raise errors if their
-            #       value is blank or None
-            if (fieldname in blankable_fields and
-                    request.POST.get(fieldname) == ''):
-                if fieldname in dic:
-                    dic[fieldname] = None
-                else:
-                    params[fieldname] = None
-                continue
-            validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
-            invalid_inputs.append(fieldname)
-            continue
-        if fieldname in dic:
-            dic[fieldname] = value
-        else:
-            params[fieldname] = value
-
-    if 'is_point_rup' in request.POST:
-        dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
-
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
-    ignore_shakemap = request.POST.get('ignore_shakemap', False)
-    if ignore_shakemap == 'True':
-        ignore_shakemap = True
-    try:
-        rupdic = get_rupture_dict(dic, ignore_shakemap)
-    except Exception as exc:
-        msg = f'Unable to retrieve rupture data: {str(exc)}'
-        # signs '<>' would not be properly rendered in the popup notification
-        msg = msg.replace('<', '"').replace('>', '"')
-        response_data = {"status": "failed", "error_msg": msg,
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
-    if station_data_path is not None:
-        # giving precedence to the user-uploaded station data file
-        params['station_data_file'] = station_data_path
-    elif request.POST.get('station_data_file_from_usgs'):
-        params['station_data_file'] = request.POST.get(
-            'station_data_file_from_usgs')
-    else:
-        try:
-            station_data_file = download_station_data_file(dic['usgs_id'])
-        except HTTPError as exc:
-            logging.info(f'Station data is not available: {exc}')
-            params['station_data_file'] = None
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
-            # NOTE: saving the error instead of the file path, then we need to
-            # check if that is a file or not
-            params['station_data_file'] = str(exc)
-        else:
-            params['station_data_file'] = station_data_file
-    return rupdic, *params.values()
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -939,13 +793,16 @@ def aristotle_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    res = aristotle_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    (rupdic, local_timestamp, time_event, maximum_distance, mosaic_model, trt,
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    rupdic, params, err = aristotle_validate(request.POST, rupture_path, station_data_path)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
+    (local_timestamp, time_event, maximum_distance, mosaic_model, trt,
      truncation_level, number_of_ground_motion_fields,
      asset_hazard_distance, ses_seed, maximum_distance_stations,
-     station_data_file) = res
+     station_data_file) = params
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
@@ -1579,9 +1436,16 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     time_job_after_event_str = None
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        losses = views.view('aggrisk', ds)
-        losses_header = [header.capitalize().replace('_', ' ')
-                         for header in losses.dtype.names]
+        try:
+            losses = views.view('aggrisk', ds)
+        except KeyError:
+            max_avg_gmf = ds['avg_gmf'][0].max()
+            losses = (f'The risk can not be computed since the hazard is too low:'
+                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses_header = None
+        else:
+            losses_header = [header.capitalize().replace('_', ' ')
+                             for header in losses.dtype.names]
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             assets = 'assets.png' in ds['png']

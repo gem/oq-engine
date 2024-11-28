@@ -792,15 +792,15 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: composite datatype with fields peril-loss_type-damage_state
         """
         dcs = self.damage_states + self.get_consequences()
+        if len(self.perils) == 1:
+            lst = [(f'{ltype}-{dc}', F32)
+                   for ltype in self.oqparam.loss_types for dc in dcs]
+            return numpy.dtype(lst)
         lst = []
         for peril in self.perils:
             for ltype in self.oqparam.loss_types:
                 for dc in dcs:
-                    if peril == 'earthquake':
-                        field = f'{ltype}-{dc}'
-                    else:
-                        field = f'{peril}-{ltype}-{dc}'
-                    lst.append((field, F32))
+                    lst.append((f'{peril}-{ltype}-{dc}', F32))
         return numpy.dtype(lst)
 
     def to_multi_damage(self, array5d):

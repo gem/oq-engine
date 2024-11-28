@@ -41,7 +41,7 @@ from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import (
     node_from_xml, Node)
-from openquake.hazardlib.source.rupture import get_multiplanar
+from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
 from openquake.hazardlib import nrml, sourceconverter
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -211,17 +211,20 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 def convert_to_oq_rupture(rup_json):
     """
-    Convert USGS json into an hazardlib rupture
+    Convert USGS json (output of download_rupture_data) into an hazardlib rupture
+
+    :returns: None if not convertible
     """
     ftype = rup_json['features'][0]['geometry']['type']
     assert ftype == 'MultiPolygon', ftype
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    hyp_depth = rup_json['metadata']['depth']
-    rake = rup_json['metadata'].get('rake', 0)
-    trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
-    Mw = rup_json['metadata']['mag']
-    rup = get_multiplanar(multicoords, Mw, rake, trt)
-    return rup
+    if is_matrix(multicoords):
+        hyp_depth = rup_json['metadata']['depth']
+        rake = rup_json['metadata'].get('rake', 0)
+        trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
+        mag = rup_json['metadata']['mag']
+        rup = get_multiplanar(multicoords, mag, rake, trt)
+        return rup
 
 
 # Convert rupture to file
@@ -262,7 +265,7 @@ def rup_to_file(rup, outfile, commentstr):
 
 def utc_to_local_time(utc_timestamp, lon, lat):
     try:
-        # NOTE: optional dependency needed for ARISTOTLE
+        # NOTE: mandatory dependency for ARISTOTLE
         from timezonefinder import TimezoneFinder
     except ImportError:
         raise ImportError(
@@ -439,7 +442,7 @@ def get_preferred_shakemap(shakemaps):
     return shakemap
 
 
-def download_station_data_file(usgs_id, save_to_home=False):
+def download_station_data_file(usgs_id, datadir=None, save_to_home=False):
     """
     Download station data from the USGS site given a ShakeMap ID.
 
@@ -467,7 +470,11 @@ def download_station_data_file(usgs_id, save_to_home=False):
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
         logging.info('Downloading stationlist.json')
-        stations_json_str = urlopen(stationlist_url).read()
+        if datadir:
+            fname = os.path.join(datadir, f'{usgs_id}-stations.json')
+            stations_json_str = open(fname, 'rb').read()
+        else:
+            stations_json_str = urlopen(stationlist_url).read()
         try:
             stations = read_usgs_stations_json(stations_json_str)
         except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
@@ -514,12 +521,16 @@ def download_station_data_file(usgs_id, save_to_home=False):
             return station_data_file
 
 
-def load_rupdic_from_finite_fault(usgs_id, mag, products):
+def get_finite_fault(usgs_id, products):
+    logging.info('Getting finite-fault properties')
     try:
-        ff = products['finite-fault']
+        return products['finite-fault']
     except KeyError:
         raise MissingLink('There is no finite-fault info for %s' % usgs_id)
-    logging.info('Getting finite-fault properties')
+
+
+def load_rupdic_from_finite_fault(usgs_id, mag, products):
+    ff = get_finite_fault(usgs_id, products)
     if isinstance(ff, list):
         if len(ff) > 1:
             logging.warning(f'The finite-fault list contains {len(ff)}'
@@ -585,58 +596,89 @@ def download_jpg(usgs_id, what):
         return None
 
 
-def download_grid(shakemap_contents):
-    if 'download/grid.xml' in shakemap_contents:
-        url = shakemap_contents.get('download/grid.xml')['url']
-        logging.info('Downloading grid.xml')
-        grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-        return grid_fname
+def download_rupture_data(usgs_id, shakemap_contents, datadir):
+    """
+    :returns: a JSON dictionary with a format like this:
 
-
-def download_rupture_data(shakemap_contents):
+{'features': [{'geometry': {'coordinates': [[[[22.93, 38.04, 0.0],
+                                              [23.13, 38.06, 0.0],
+                                              [23.11, 38.16, 12.0],
+                                              [22.9, 38.14, 12.0],
+                                              [22.93, 38.04, 0.0]]]],
+                            'type': 'MultiPolygon'},
+               'properties': {'rupture type': 'rupture extent'},
+               'type': 'Feature'}],
+ 'metadata': {'depth': 33.0,
+              'id': 'usp0001ccb',
+              'lat': 38.222,
+              'locstring': 'Greece',
+              'lon': 22.934,
+              'mag': 6.7,
+              'mech': 'ALL',
+              'netid': 'us',
+              'network': 'USGS National Earthquake Information Center, PDE',
+              'productcode': 'usp0001ccb',
+              'rake': 0.0,
+              'reference': 'Source: Strios, Psimoulis, and Pitharouli.  '
+                           'Geodetic constraints to the kinematics of the '
+                           'Kapareli fault, reactivated during the 1981, Gulf '
+                           'of Corinth earthquakes. Tectonophysics Issue 440 '
+                           'pp. 105-119. 2007.',
+              'time': '1981-02-24T20:53:38.000000Z'},
+ 'type': 'FeatureCollection'}
+    """
     url = shakemap_contents.get('download/rupture.json')['url']
-    logging.info('Downloading rupture.json')
-    rup_data = json.loads(urlopen(url).read())
+    if datadir:  # in parsers_test
+        fname = os.path.join(datadir, f'{usgs_id}-rup.json')
+        # with open(fname, 'wb') as f:
+        #    f.write(urlopen(url).read())
+        text = open(fname).read()
+    else:
+        logging.info('Downloading rupture.json')
+        text = urlopen(url).read()
+    rup_data = json.loads(text)
     return rup_data
 
 
-def download_rupture_dict(usgs_id, ignore_shakemap=False):
+def download_rupdicdata(usgs_id, datadir=None):
     """
-    Download a rupture from the USGS site given a ShakeMap ID.
+    :returns: (rupdic, rup_data)
+    """
+    if datadir:  # in parsers_test
+        fname = os.path.join(datadir, usgs_id + '.json')
+        text = open(fname).read()
+    else:
+        url = SHAKEMAP_URL.format(usgs_id)
+        logging.info('Downloading %s' % url)
+        try:
+            text = urlopen(url).read()
+        except URLError as exc:
+            # in parsers_test
+            raise URLError(f'Unable to download from {url}: {exc}')
 
-    :param usgs_id: ShakeMap ID
-    :param ignore_shakemap: for testing purposes, only consider finite-fault
-    :returns: a dictionary with keys lon, lat, dep, mag, rake
-    """
-    url = SHAKEMAP_URL.format(usgs_id)
-    logging.info('Downloading %s' % url)
-    try:
-        js = json.loads(urlopen(url).read())
-    except URLError as exc:
-        raise URLError(f'Unable to download from the USGS website: {str(exc)}')
+    js = json.loads(text)
+    # with open('/tmp/x.json', 'wb') as f:
+    #    f.write(text)
     mag = js['properties']['mag']
     products = js['properties']['products']
-    try:
-        if ignore_shakemap:
-            raise KeyError
-        shakemaps = products['shakemap']
-    except KeyError:
-        try:
-            products['finite-fault']
-        except KeyError:
-            # NOTE: we might also try reading information from phase-data or origin
-            raise MissingLink(
-                'There is no shakemap nor finite-fault info for %s' % usgs_id)
-        return load_rupdic_from_finite_fault(usgs_id, mag, products)
-    shakemap = get_preferred_shakemap(shakemaps)
+
+    # NB: currently we cannot find a case with missing shakemap
+    shakemap = get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
-        return load_rupdic_from_finite_fault(usgs_id, mag, products)
+        # happens for us6000f65h in parsers_test
+        return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
     shakemap_array = None
-    grid_fname = download_grid(contents)
-    if grid_fname is not None:
+
+    if 'download/grid.xml' in contents:
+        url = contents.get('download/grid.xml')['url']
+        if datadir:  # in parsers_test
+            grid_fname = f'{datadir}/{usgs_id}-grid.xml'
+        else:
+            logging.info('Downloading grid.xml')
+            grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         shakemap_array = get_shakemap_array(grid_fname)
-    rup_data = download_rupture_data(contents)
+    rup_data = download_rupture_data(usgs_id, contents, datadir)
     feats = rup_data['features']
     is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
@@ -645,27 +687,34 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
     utc_time = md['time']
     local_time = utc_to_local_time(utc_time, lon, lat)
     time_event = local_time_to_time_event(local_time)
-    if is_point_rup:
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': is_point_rup,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None}
-    try:
-        oq_rup = convert_to_oq_rupture(rup_data)
-    except Exception as exc:
-        logging.error('', exc_info=True)
-        error_msg = (
-            f'Unable to convert the rupture from the USGS format: {exc}')
-        # TODO: we can try to handle also cases that currently are not properly
-        # converted, then raise an exception here in case of failure
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': True,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
+    rupdic = {'lon': lon, 'lat': lat, 'dep': md['depth'],
+              'mag': md['mag'], 'rake': md['rake'],
+              'local_timestamp': str(local_time), 'time_event': time_event,
+              'is_point_rup': is_point_rup,
+              'shakemap_array': shakemap_array,
+              'usgs_id': usgs_id, 'rupture_file': None}
+    return rupdic, rup_data
+
+
+def download_rupture_dict(usgs_id, datadir=None):
+    """
+    Download a rupture from the USGS site given a ShakeMap ID.
+
+    :param usgs_id: ShakeMap ID
+    :param datadir: not None in testing mode
+    :returns: a dictionary with keys lon, lat, dep, mag, rake
+    """
+    rupdic, rup_data = download_rupdicdata(usgs_id, datadir)
+    if rupdic['is_point_rup']:
+        # in parsers_test
+        return rupdic
+    oq_rup = convert_to_oq_rupture(rup_data)
+    if oq_rup is None:
+        # in parsers_test for us6000jllz
+        rupdic['error'] = 'Unable to convert the rupture from the USGS format'
+        rupdic['is_point_rup'] = True
+        return rupdic
+    md = rup_data['metadata']
     comment_str = (
         f"<!-- Rupture XML automatically generated from USGS ({md['id']})."
         f" Reference: {md['reference']}.-->\n")
@@ -676,24 +725,16 @@ def download_rupture_dict(usgs_id, ignore_shakemap=False):
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         conv.convert_node(rup_node)
     except ValueError as exc:
+        # FIXME: not tested yet
         logging.error('', exc_info=True)
-        error_msg = (
+        rupdic['error'] = (
             f'Unable to convert the rupture from the USGS format: {exc}')
-        # TODO: we can try to handle also cases that currently are not properly
-        # converted, then raise an exception here in case of failure
-        return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-                'mag': md['mag'], 'rake': md['rake'],
-                'local_timestamp': str(local_time), 'time_event': time_event,
-                'is_point_rup': True,
-                'shakemap_array': shakemap_array,
-                'usgs_id': usgs_id, 'rupture_file': None, 'error': error_msg}
-    return {'lon': lon, 'lat': lat, 'dep': md['depth'],
-            'mag': md['mag'], 'rake': md['rake'],
-            'local_timestamp': str(local_time), 'time_event': time_event,
-            'is_point_rup': False,
-            'shakemap_array': shakemap_array,
-            'trt': oq_rup.tectonic_region_type,
-            'usgs_id': usgs_id, 'rupture_file': rupture_file, 'oq_rup': oq_rup}
+        return rupdic
+
+    # in parsers_test for usp0001ccb
+    rupdic['oq_rup'] = oq_rup
+    rupdic['rupture_file'] = rupture_file
+    return rupdic
 
 
 def get_array_usgs_id(kind, usgs_id):
@@ -703,6 +744,7 @@ def get_array_usgs_id(kind, usgs_id):
     :param kind: the string "usgs_id", for API compatibility
     :param usgs_id: ShakeMap ID
     """
+    # not tested on purpose
     url = SHAKEMAP_URL.format(usgs_id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[

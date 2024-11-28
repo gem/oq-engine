@@ -895,6 +895,14 @@ def fix_vertices_order(array43):
     return numpy.array([top_left, top_right, bottom_left, bottom_right])
 
 
+def is_matrix(rows):
+    """
+    :returns: False if the rows have different lenghts
+    """
+    lens = [len(row) for row in rows]
+    return len(set(lens)) == 1
+
+
 def get_multiplanar(multipolygon_coords, mag, rake, trt):
     """
     :param multipolygon_coords:
