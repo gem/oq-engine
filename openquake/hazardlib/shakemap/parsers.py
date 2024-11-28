@@ -723,9 +723,9 @@ def download_rupture_dict(usgs_id, datadir=None):
     try:
         [rup_node] = nrml.read(rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        conv.convert_node(rup_node)
+        rup = conv.convert_node(rup_node)
     except ValueError as exc:
-        # FIXME: not tested yet
+        1/0
         logging.error('', exc_info=True)
         rupdic['error'] = (
             f'Unable to convert the rupture from the USGS format: {exc}')
