@@ -18,7 +18,7 @@
               </div>
               <div class="aristotle_form_row hidden_except_submit">
                 <label for"rupture_file">{{ aristotle_form_labels.rupture_file }}</label>
-                <input class="aristotle-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ aristotle_form_placeholders.rupture_file }}" >
+                <input class="aristotle-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ aristotle_form_placeholders.rupture_file }}" disabled >
               </div>
               <div class="aristotle_form_row">
                 <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve ShakeMap data</button>
@@ -26,7 +26,6 @@
               </div>
             </form>
             <div id="shakemap-image-row" style="display: none;">
-                <!-- <div id="rupture_png" class="shakemap-image-container"></div> -->
                 <div id="intensity-map" style="display: none;" class="shakemap-image-container"></div>
                 <div id="pga-map" style="display: none;" class="shakemap-image-container"></div>
             </div>
