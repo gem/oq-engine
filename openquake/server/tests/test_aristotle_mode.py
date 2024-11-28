@@ -342,8 +342,8 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         self.assertEqual(ret_dict['mosaic_models'], ['SAM'])
 
     def test_get_rupture_data_from_finite_fault(self):
-        usgs_id = 'us6000jllz'
-        data = dict(usgs_id=usgs_id, ignore_shakemap=True)
+        usgs_id = 'us6000f65h'
+        data = dict(usgs_id=usgs_id)
         ret = self.post('aristotle_get_rupture_data', data=data)
         ret_dict = json.loads(ret.content)
         # NOTE: values returned by the USGS often change with time, so we check
@@ -360,23 +360,18 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         self.assertEqual(ret_dict['rupture_file'], None)
         self.assertEqual(ret_dict['mmi_map_png'], None)
         self.assertEqual(ret_dict['pga_map_png'], None)
-        self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
-        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
+        self.assertEqual(ret_dict['usgs_id'], 'us6000f65h')
+        self.assertEqual(ret_dict['mosaic_models'], ['CCA'])
         self.assertEqual(ret_dict['trts'], {
-            'ARB': ['TECTONIC_REGION_1',
-                    'TECTONIC_REGION_2',
-                    'TECTONIC_REGION_3',
-                    'TECTONIC_REGION_4',
-                    'Active Shallow Crust EMME',
-                    'Stable Shallow Crust EMME',
-                    'Subduction Interface EMME',
-                    'Subduction Inslab EMME',
-                    'Deep Seismicity EMME'],
-            'MIE': ['Active Shallow Crust',
-                    'Stable Shallow Crust',
-                    'Subduction Interface',
-                    'Subduction Inslab',
-                    'Deep Seismicity']})
+            'CCA': ['Subduction Interface',
+                    'Subduction Interface COL',
+                    'Subduction IntraSlab',
+                    'Subduction IntraSlab CAM',
+                    'Subduction IntraSlab LAN_PRC',
+                    'Subduction IntraSlab COL',
+                    'Active Shallow Crust',
+                    'SCR Non Craton',
+                    'Stable Shallow Gridded']})
 
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',

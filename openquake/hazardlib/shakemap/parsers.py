@@ -524,7 +524,7 @@ def get_finite_fault(usgs_id, products):
         return products['finite-fault']
     except KeyError:
         raise MissingLink('There is no finite-fault info for %s' % usgs_id)
-    
+
 
 def load_rupdic_from_finite_fault(usgs_id, mag, products):
     ff = get_finite_fault(usgs_id, products)
@@ -637,7 +637,7 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     return rup_data
 
 
-def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
+def download_rupdicdata(usgs_id, datadir=None):
     """
     :returns: (rupdic, rup_data)
     """
@@ -653,11 +653,11 @@ def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
             raise URLError(f'Unable to download from {url}: {exc}')
 
     js = json.loads(text)
-    #with open('/tmp/x.json', 'wb') as f:
+    # with open('/tmp/x.json', 'wb') as f:
     #    f.write(text)
     mag = js['properties']['mag']
     products = js['properties']['products']
-    if ignore_shakemap or 'shakemap' not in products:
+    if 'shakemap' not in products:
         return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
 
     shakemap = get_preferred_shakemap(products['shakemap'])
@@ -691,19 +691,18 @@ def download_rupdicdata(usgs_id, ignore_shakemap, datadir=None):
               'shakemap_array': shakemap_array,
               'usgs_id': usgs_id, 'rupture_file': None}
     return rupdic, rup_data
-    
 
 
-def download_rupture_dict(usgs_id, ignore_shakemap=False, datadir=None):
+
+def download_rupture_dict(usgs_id, datadir=None):
     """
     Download a rupture from the USGS site given a ShakeMap ID.
 
     :param usgs_id: ShakeMap ID
-    :param ignore_shakemap: for testing purposes, only consider finite-fault
     :param datadir: not None in testing mode
     :returns: a dictionary with keys lon, lat, dep, mag, rake
     """
-    rupdic, rup_data = download_rupdicdata(usgs_id, ignore_shakemap, datadir)
+    rupdic, rup_data = download_rupdicdata(usgs_id, datadir)
     if rupdic['is_point_rup']:
         return rupdic
     try:

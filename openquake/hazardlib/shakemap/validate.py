@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2024, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -132,11 +132,8 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     dic, params, err = _validate(POST, rupture_path)
     if err:
         return {}, [], err
-    ignore_shakemap = POST.get('ignore_shakemap', False)
-    if ignore_shakemap == 'True':
-        ignore_shakemap = True
     try:
-        
+
         usgs_id = dic['usgs_id']
         rupture_file = dic['rupture_file']
         if rupture_file:
@@ -152,7 +149,7 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
                           usgs_id=usgs_id,
                           rupture_file=rupture_file)
         else:
-            rupdic = download_rupture_dict(usgs_id, ignore_shakemap, datadir)
+            rupdic = download_rupture_dict(usgs_id, datadir)
 
     except Exception as exc:
         msg = f'Unable to retrieve rupture data: {str(exc)}'
