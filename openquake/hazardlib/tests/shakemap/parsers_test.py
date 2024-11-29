@@ -19,9 +19,9 @@
 import os
 import unittest
 from urllib.error import URLError
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
 
-DATA = os.path.join(os.path.dirname(__file__), 'jsondata')
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class ShakemapParsersTestCase(unittest.TestCase):
@@ -37,31 +37,31 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_1(self):
         # wrong usgs_id
         with self.assertRaises(URLError) as ctx:
-            download_rupture_dict('usp0001cc')
+            get_rup_dic('usp0001cc')
         self.assertIn('Unable to download from https://earthquake.usgs.gov/fdsnws/'
                       'event/1/query?eventid=usp0001cc&', str(ctx.exception))
 
     def test_3(self):
-        rupdic = download_rupture_dict('us6000f65h', datadir=DATA)
-        self.assertEqual(rupdic, {'lon': -73.475, 'lat': 18.408, 'dep': 10.0,
-                                  'mag': 7.2, 'rake': 0.0,
-                                  'local_timestamp': '2021-08-13 20:00:00-04:00',
-                                  'time_event': 'transit', 'is_point_rup': True,
-                                  'pga_map_png': None, 'mmi_map_png': None,
-                                  'usgs_id': 'us6000f65h', 'rupture_file': None})
+        _rup, dic = get_rup_dic('us6000f65h', datadir=DATA)
+        self.assertEqual(dic, {'lon': -73.475, 'lat': 18.408, 'dep': 10.0,
+                               'mag': 7.2, 'rake': 0.0,
+                               'local_timestamp': '2021-08-13 20:00:00-04:00',
+                               'time_event': 'transit', 'is_point_rup': True,
+                               'pga_map_png': None, 'mmi_map_png': None,
+                               'usgs_id': 'us6000f65h', 'rupture_file': None})
 
     def test_4(self):
         # point_rup
-        rupdic = download_rupture_dict('us6000jllz', datadir=DATA)
-        self.assertEqual(rupdic['lon'], 37.0143)
-        self.assertEqual(rupdic['lat'], 37.2256)
-        self.assertEqual(rupdic['dep'], 10.)
-        self.assertEqual(rupdic['is_point_rup'], True)
+        _rup, dic = get_rup_dic('us6000jllz', datadir=DATA)
+        self.assertEqual(dic['lon'], 37.0143)
+        self.assertEqual(dic['lat'], 37.2256)
+        self.assertEqual(dic['dep'], 10.)
+        self.assertEqual(dic['is_point_rup'], True)
 
     def test_5(self):
         # no point_rup
-        rupdic = download_rupture_dict('usp0001ccb', datadir=DATA)
-        self.assertEqual(rupdic['is_point_rup'], False)
+        _rup, dic = get_rup_dic('usp0001ccb', datadir=DATA)
+        self.assertEqual(dic['is_point_rup'], False)
 
 
 """

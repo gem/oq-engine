@@ -20,7 +20,7 @@ import os
 import unittest
 from openquake.hazardlib.shakemap.validate import aristotle_validate
 
-DATA = os.path.join(os.path.dirname(__file__), 'jsondata')
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class PostDict(dict):
@@ -31,10 +31,95 @@ class PostDict(dict):
 
 
 class AristotleValidateTestCase(unittest.TestCase):
+    @classmethod
+    def setUp(cls):
+        try:
+            import timezonefinder
+        except ImportError:
+            raise unittest.SkipTest('Missing timezonefinder')
+        else:
+            del timezonefinder
+
     def test_1(self):
+        # without rupture, stations
         POST = PostDict({'usgs_id': ['us6000jllz']})
-        rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['is_point_rup'], True)
-        self.assertIn('stations', params[0])
+        self.assertIn('stations', params['station_data_file'])
         self.assertEqual(err, {})
     
+    def test_2(self):
+        # with rupture_file
+        POST = PostDict({
+            'asset_hazard_distance': ['15'],
+            'dep': ['30'],
+            'dip': ['90'],
+            'lat': ['27.6'],
+            'local_timestamp': [''],
+            'lon': ['84.4'],
+            'mag': ['7'],
+            'maximum_distance': ['100'],
+            'maximum_distance_stations': [''],
+            'mosaic_model': ['IND'],
+            'number_of_ground_motion_fields': ['2'],
+            'rake': ['90'],
+            'ses_seed': ['42'],
+            'strike': ['0'],
+            'time_event': ['day'],
+            'trt': ['active shallow crust normal'],
+            'truncation_level': ['3'],
+            'usgs_id': ['FromFile']})
+
+        _rup, rupdic, params, err = aristotle_validate(
+            POST, 'fault_rupture.xml', datadir=DATA)
+        self.assertEqual(
+            rupdic,
+            {'lon': 84.4, 'lat': 27.6, 'dep': 30.0,
+             'mag': 7.0, 'rake': 90.0, 'strike': 295.24732, 'dip': 30.08335,
+             'usgs_id': 'FromFile', 'rupture_file': 'fault_rupture.xml'})
+        self.assertEqual(
+            params,
+            {'local_timestamp': None, 'time_event': 'day', 'maximum_distance': 100.0,
+             'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
+             'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
+             'asset_hazard_distance': 15.0, 'ses_seed': 42,
+             'maximum_distance_stations': None, 'station_data_file': None})
+        self.assertEqual(err, {})
+
+    def test_3(self):
+        # with rupture, stations
+        POST = PostDict({
+            'asset_hazard_distance': ['15'],
+            'dep': ['30'],
+            'dip': ['90'],
+            'lat': ['27.6'],
+            'local_timestamp': [''],
+            'lon': ['84.4'],
+            'mag': ['7'],
+            'maximum_distance': ['100'],
+            'maximum_distance_stations': [''],
+            'mosaic_model': ['IND'],
+            'number_of_ground_motion_fields': ['2'],
+            'rake': ['90'],
+            'ses_seed': ['42'],
+            'strike': ['0'],
+            'time_event': ['day'],
+            'trt': ['active shallow crust normal'],
+            'truncation_level': ['3'],
+            'usgs_id': ['FromFile']})
+
+        _rup, rupdic, params, err = aristotle_validate(
+            POST, 'fault_rupture.xml', 'stationlist_seismic.csv', datadir=DATA)
+        self.assertEqual(
+            rupdic,
+            {'lon': 84.4, 'lat': 27.6, 'dep': 30.0,
+             'mag': 7.0, 'rake': 90.0, 'strike': 295.24732, 'dip': 30.08335,
+             'usgs_id': 'FromFile', 'rupture_file': 'fault_rupture.xml'})
+        self.assertEqual(
+            params,
+            {'local_timestamp': None, 'time_event': 'day', 'maximum_distance': 100.0,
+             'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
+             'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
+             'asset_hazard_distance': 15.0, 'ses_seed': 42,
+             'maximum_distance_stations': None, 'station_data_file': 'stationlist_seismic.csv'})
+        self.assertEqual(err, {})
