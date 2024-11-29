@@ -287,14 +287,8 @@ class EngineServerTestCase(django.test.TestCase):
             'dep', 'mag', 'rake', 'usgs_id',
             'rupture_file', 'rupture_file_from_usgs',
             'mmi_map_png', 'pga_map_png',
-            'station_data_error',
             'station_data_file_from_usgs', 'trts', 'mosaic_models']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        self.assertEqual(
-            ret_dict['station_data_error'],
-            'Unable to collect station data for rupture'
-            ' identifier "us7000n7n8": stationlist.json was'
-            ' downloaded, but it contains no features')
         self.assertEqual(ret_dict['local_timestamp'],
                          '2024-08-18 07:10:26+12:00')
         self.assertEqual(ret_dict['time_event'], 'transit')

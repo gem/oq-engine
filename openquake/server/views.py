@@ -705,11 +705,6 @@ def aristotle_get_rupture_data(request):
                             status=400 if 'invalid_inputs' in err else 500)
     station_data_file = params['station_data_file']
     trts = {}
-    if not os.path.isfile(station_data_file):
-        rupdic['station_data_error'] = (
-            'Unable to collect station data for rupture'
-            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
-        station_data_file = None
     try:
         mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
         for mosaic_model in mosaic_models:
