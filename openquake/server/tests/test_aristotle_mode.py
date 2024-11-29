@@ -120,9 +120,6 @@ class EngineServerTestCase(django.test.TestCase):
                 time.sleep(2)
                 return
 
-
-class EngineServerAristotleModeTestCase(EngineServerTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -409,35 +406,3 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'station_data_file': stations_uploaded_file})
         data.update(files)
         self.aristotle_run_then_remove(data)
-
-    @unittest.skip("TODO: to be implemented")
-    def test_failing_site_association_error(self):
-        pass
-
-    def invalid_input(self, params, expected_error):
-        # NOTE: avoiding to print the expected traceback
-        logging.disable(logging.CRITICAL)
-        resp = self.post('aristotle_run', params)
-        logging.disable(logging.NOTSET)
-        self.assertEqual(resp.status_code, 400)
-        resp_dict = json.loads(resp.content.decode('utf8'))
-        print(resp_dict)
-        self.assertIn(expected_error, resp_dict['error_msg'])
-
-    @unittest.skip("TODO: to be implemented")
-    def test_invalid_latitude(self):
-        pass
-
-    @unittest.skip("TODO: to be implemented")
-    def test_invalid_longitude(self):
-        pass
-
-    def test_can_not_run_normal_calc(self):
-        with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
-            resp = self.post('run', dict(archive=a))
-        self.assertEqual(resp.status_code, 404, resp)
-
-    def test_can_not_validate_zip(self):
-        with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
-            resp = self.post('validate_zip', dict(archive=a))
-        self.assertEqual(resp.status_code, 404, resp)
