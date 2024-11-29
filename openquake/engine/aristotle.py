@@ -22,36 +22,18 @@ import sys
 import os
 import getpass
 import logging
-from dataclasses import dataclass
 import numpy
 from json.decoder import JSONDecodeError
 from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
-from openquake.hazardlib import nrml, sourceconverter
+from openquake.hazardlib.shakemap.validate import AristotleParam
 from openquake.hazardlib.shakemap.parsers import (
-    download_rup_rupdic, download_station_data_file)
+    get_rup_dic, download_station_data_file)
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
-
-@dataclass
-class AristotleParam:
-    rupture_dict: dict
-    time_event: str
-    maximum_distance: float
-    mosaic_model: str
-    trt: str
-    truncation_level: float
-    number_of_ground_motion_fields: int
-    asset_hazard_distance: float
-    ses_seed: int
-    local_timestamp: str = None
-    exposure_hdf5: str = None
-    station_data_file: str = None
-    maximum_distance_stations: float = None
 
 
 def get_trts_around(mosaic_model, exposure_hdf5):
@@ -85,30 +67,6 @@ def trivial_callback(
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
-def get_rupture_dict(dic):
-    """
-    :param dic: a dictionary with keys usgs_id and rupture_file
-    :returns: a new dictionary with keys usgs_id, rupture_file, lon, lat...
-    """
-    usgs_id = dic['usgs_id']
-    rupture_file = dic['rupture_file']
-    if rupture_file:
-        [rup_node] = nrml.read(rupture_file)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        rup = conv.convert_node(rup_node)
-        rup.tectonic_region_type = '*'
-        hp = rup.hypocenter
-        rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                      mag=rup.mag, rake=rup.rake,
-                      strike=rup.surface.get_strike(),
-                      dip=rup.surface.get_dip(),
-                      usgs_id=usgs_id,
-                      rupture_file=rupture_file)
-    else:
-        _rup, rupdic = download_rup_rupdic(usgs_id)
-    return rupdic
-
-
 def get_aristotle_params(arist):
     """
     :param arist: an instance of AristotleParam
@@ -119,7 +77,10 @@ def get_aristotle_params(arist):
             config.directory.mosaic_dir, 'exposure.hdf5')
     inputs = {'exposure': [arist.exposure_hdf5],
               'job_ini': '<in-memory>'}
-    rupdic = get_rupture_dict(arist.rupture_dict)
+    dic = arist.rupture_dict
+    usgs_id = dic['usgs_id']
+    _rup, rupdic = get_rup_dic(usgs_id, rupture_file=dic['rupture_file'])
+    
     if 'shakemap_array' in rupdic:
         del rupdic['shakemap_array']
     if arist.station_data_file is None:

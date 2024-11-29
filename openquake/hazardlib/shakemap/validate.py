@@ -17,12 +17,30 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+from dataclasses import dataclass
 from urllib.error import HTTPError
 from json.decoder import JSONDecodeError
-from openquake.hazardlib import nrml, valid
-from openquake.hazardlib import sourceconverter
+from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.parsers import (
-    download_station_data_file, download_rup_rupdic)
+    download_station_data_file, get_rup_dic)
+
+
+@dataclass
+class AristotleParam:
+    rupture_dict: dict
+    time_event: str
+    maximum_distance: float
+    mosaic_model: str
+    trt: str
+    truncation_level: float
+    number_of_ground_motion_fields: int
+    asset_hazard_distance: float
+    ses_seed: int
+    local_timestamp: str = None
+    exposure_hdf5: str = None
+    station_data_file: str = None
+    maximum_distance_stations: float = None
+
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
@@ -133,24 +151,8 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     if err:
         return None, {}, [], err
     try:
-
-        usgs_id = dic['usgs_id']
-        rupture_file = dic['rupture_file']
-        if rupture_file:
-            [rup_node] = nrml.read(rupture_file)
-            conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-            rup = conv.convert_node(rup_node)
-            rup.tectonic_region_type = '*'
-            hp = rup.hypocenter
-            rup, rupdic = None, dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                                     mag=rup.mag, rake=rup.rake,
-                                     strike=rup.surface.get_strike(),
-                                     dip=rup.surface.get_dip(),
-                                     usgs_id=usgs_id,
-                                     rupture_file=rupture_file)
-        else:
-            rup, rupdic = download_rup_rupdic(usgs_id, datadir)
-
+        rup, rupdic = get_rup_dic(
+            dic['usgs_id'], datadir, dic['rupture_file'])
     except Exception as exc:
         logging.error('', exc_info=True)
         msg = f'Unable to retrieve rupture data: {str(exc)}'
