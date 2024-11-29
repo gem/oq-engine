@@ -807,7 +807,7 @@ def aristotle_run(request):
     try:
         params = get_aristotle_params(arist)
     except Exception as exc:
-        # tested where??
+        # FIXME: not tested
         response_data = {"status": "failed", "error_msg": str(exc),
                          "error_cls": type(exc).__name__}
         logging.error('', exc_info=True)
