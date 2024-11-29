@@ -614,7 +614,8 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     :returns: (rupture object or None, rupture dictionary)
     """
     if rupture_file:
-        [rup_node] = nrml.read(rupture_file)
+        [rup_node] = nrml.read(os.path.join(datadir, rupture_file)
+                               if datadir else rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'

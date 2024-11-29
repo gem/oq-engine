@@ -90,12 +90,12 @@ validators = {
 }
 
 
-def _validate(POST, rupture_path=None):
+def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
-               dep=None, mag=None, rake=None, dip=None, strike=None)
+    dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
+               mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in validators.items():
         if fieldname not in POST:
             continue
@@ -147,11 +147,11 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
     """
-    dic, params, err = _validate(POST, rupture_path)
+    dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
     try:
-        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir, dic['rupture_file'])
+        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir, rupture_path)
     except Exception as exc:
         logging.error('', exc_info=True)
         msg = f'Unable to retrieve rupture data: {str(exc)}'
