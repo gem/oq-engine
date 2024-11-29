@@ -340,3 +340,15 @@ class EngineServerTestCase(django.test.TestCase):
                     local_timestamp='2023-02-06 04:17:34+03:00',
                     maximum_distance_stations='')
         self.aristotle_run_then_remove(data)
+
+    # check that the URL 'run' cannot be accessed in ARISTOTLE mode
+    def test_can_not_run_normal_calc(self):
+        with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
+            resp = self.post('run', dict(archive=a))
+        self.assertEqual(resp.status_code, 404, resp)
+
+    # check that the URL 'validate_zip' cannot be accessed in ARISTOTLE mode
+    def test_can_not_validate_zip(self):
+        with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
+            resp = self.post('validate_zip', dict(archive=a))
+        self.assertEqual(resp.status_code, 404, resp)
