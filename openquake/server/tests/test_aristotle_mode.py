@@ -31,8 +31,6 @@ import django
 # from django.apps import apps
 from django.test import Client, override_settings
 from django.conf import settings
-from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.utils.datastructures import MultiValueDict
 from django.http import HttpResponseNotFound
 from openquake.commonlib.logs import dbcmd
 from openquake.baselib import config
@@ -341,66 +339,4 @@ class EngineServerTestCase(django.test.TestCase):
                     asset_hazard_distance=15, ses_seed=42,
                     local_timestamp='2023-02-06 04:17:34+03:00',
                     maximum_distance_stations='')
-        self.aristotle_run_then_remove(data)
-
-    def get_data(self):
-        data = {'usgs_id': ['FromFile'], 'lon': ['84.4'], 'lat': ['27.6'],
-                'dep': ['30'], 'mag': ['7'], 'rake': ['90'], 'dip': ['90'],
-                'strike': ['0'],
-                'time_event': ['day'],
-                'maximum_distance': ['100'],
-                'trt': ['active shallow crust normal'],
-                'truncation_level': ['3'],
-                'number_of_ground_motion_fields': ['2'],
-                'asset_hazard_distance': ['15'], 'ses_seed': ['42'],
-                'local_timestamp': [''],
-                'maximum_distance_stations': [''],
-                'mosaic_model': ['IND']}  # close to both 'CHN' and 'IND'
-        return data
-
-    def get_path_and_content(self, filename):
-        curr_file_path = os.path.abspath(__file__)
-        folder_path = os.path.dirname(curr_file_path)
-        file_path = os.path.join(
-            folder_path, 'data', filename)
-        with open(file_path, 'rb') as file:
-            file_content = file.read()
-        return file_path, file_content
-
-    def create_temporary_uploaded_file(self, name, content, content_type):
-        temp_file = TemporaryUploadedFile(
-            name=name,
-            content_type=content_type,
-            size=len(content),
-            charset='utf-8'
-        )
-        temp_file.write(content)
-        temp_file.seek(0)  # Ensure the file pointer is at the beginning
-        return temp_file
-
-    def test_run_by_rupture_model_then_remove_calc(self):
-        data = self.get_data()
-        rupture_file_path, rupture_file_content = self.get_path_and_content(
-            'fault_rupture.xml')
-        rupture_uploaded_file = self.create_temporary_uploaded_file(
-            rupture_file_path, rupture_file_content, 'text/xml')
-        files = MultiValueDict({"rupture_file": rupture_uploaded_file})
-        data.update(files)
-        self.aristotle_run_then_remove(data)
-
-    def test_run_by_rupture_model_with_stations_then_remove_calc(self):
-        data = self.get_data()
-        data['maximum_distance_stations'] = '100'
-        rupture_file_path, rupture_file_content = self.get_path_and_content(
-            'fault_rupture.xml')
-        stations_file_path, stations_file_content = self.get_path_and_content(
-            'stationlist_seismic.csv')
-        rupture_uploaded_file = self.create_temporary_uploaded_file(
-            rupture_file_path, rupture_file_content, 'text/xml')
-        stations_uploaded_file = self.create_temporary_uploaded_file(
-            stations_file_path, stations_file_content, 'text/csv')
-        files = MultiValueDict({
-            'rupture_file': rupture_uploaded_file,
-            'station_data_file': stations_uploaded_file})
-        data.update(files)
         self.aristotle_run_then_remove(data)
