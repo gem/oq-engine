@@ -20,7 +20,7 @@ import os
 import unittest
 from openquake.hazardlib.shakemap.validate import aristotle_validate
 
-DATA = os.path.join(os.path.dirname(__file__), 'jsondata')
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class PostDict(dict):
@@ -41,6 +41,7 @@ class AristotleValidateTestCase(unittest.TestCase):
             del timezonefinder
 
     def test_1(self):
+        # without rupture, stations
         POST = PostDict({'usgs_id': ['us6000jllz']})
         _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['is_point_rup'], True)
@@ -48,6 +49,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertEqual(err, {})
     
     def test_2(self):
+        # with rupture, stations
         POST = PostDict({
             'asset_hazard_distance': ['15'],
             'dep': ['30'],

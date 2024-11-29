@@ -21,7 +21,7 @@ import unittest
 from urllib.error import URLError
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 
-DATA = os.path.join(os.path.dirname(__file__), 'jsondata')
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class ShakemapParsersTestCase(unittest.TestCase):
