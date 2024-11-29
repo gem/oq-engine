@@ -326,11 +326,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
-                    try:
-                        self._plot_assets()
-                    except Exception:
-                        logging.error('', exc_info=True)
+                # FIXME: this part can be called up to 3 times, for instance for
+                # EventBasedCalculator,EventBasedRiskCalculator,PostRiskCalculator
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
@@ -921,14 +918,14 @@ class HazardCalculator(BaseCalculator):
                 self.datastore.create_df('taxmap', self.crmodel.tmap_df, 'gzip')
 
     def _plot_assets(self):
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
-            plt = plot_assets(self.datastore.calc_id, show=False,
-                              assets_only=True)
-            bio = io.BytesIO()
-            plt.savefig(bio, format='png', bbox_inches='tight')
-            fig_path = 'png/assets.png'
-            logging.info(f'Saving {fig_path} into the datastore')
-            self.datastore[fig_path] = Image.open(bio)
+        # called by post_risk in ARISTOTLE mode
+        plt = plot_assets(self.datastore.calc_id, show=False,
+                          assets_only=True)
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        fig_path = 'png/assets.png'
+        logging.info(f'Saving {fig_path} into the datastore')
+        self.datastore[fig_path] = Image.open(bio)
 
     def _read_risk1(self):
         # read the risk model (if any), the exposure (if any) and then the
