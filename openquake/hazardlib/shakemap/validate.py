@@ -44,7 +44,7 @@ class AristotleParam:
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
-    'rupture_file_from_usgs': 'Rupture from USGS',
+    'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
