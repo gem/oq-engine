@@ -33,7 +33,7 @@ class PostDict(dict):
 class AristotleValidateTestCase(unittest.TestCase):
     def test_1(self):
         POST = PostDict({'usgs_id': ['us6000jllz']})
-        rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['is_point_rup'], True)
         self.assertIn('stations', params[0])
         self.assertEqual(err, {})

@@ -602,9 +602,13 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     return rup_data
 
 
-def download_rupdicdata(usgs_id, datadir=None):
+def download_rup_rupdic(usgs_id, datadir=None):
     """
-    :returns: (rupdic, rup_data)
+    Download a rupture from the USGS site given a ShakeMap ID.
+
+    :param usgs_id: ShakeMap ID
+    :param datadir: not None in testing mode
+    :returns: (rupture object or None, rupture dictionary)
     """
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
@@ -655,31 +659,17 @@ def download_rupdicdata(usgs_id, datadir=None):
               'is_point_rup': is_point_rup,
               'shakemap_array': shakemap_array,
               'usgs_id': usgs_id, 'rupture_file': None}
-    return rupdic, rup_data
-
-
-def download_rupture_dict(usgs_id, datadir=None):
-    """
-    Download a rupture from the USGS site given a ShakeMap ID.
-
-    :param usgs_id: ShakeMap ID
-    :param datadir: not None in testing mode
-    :returns: a dictionary with keys lon, lat, dep, mag, rake
-    """
-    rupdic, rup_data = download_rupdicdata(usgs_id, datadir)
-    if rupdic['is_point_rup']:
+    if is_point_rup:
         # in parsers_test
-        return rupdic
-    oq_rup = convert_to_oq_rupture(rup_data)
-    if oq_rup is None:
+        return None, rupdic
+
+    rup = convert_to_oq_rupture(rup_data)
+    if rup is None:
         # in parsers_test for us6000jllz
         rupdic['error'] = 'Unable to convert the rupture from the USGS format'
         rupdic['is_point_rup'] = True
-        return rupdic
-    else:
-        # in parsers_test for usp0001ccb
-        rupdic['oq_rup'] = oq_rup
-        return rupdic
+    # in parsers_test for usp0001ccb
+    return rup, rupdic
 
 
 def get_array_usgs_id(kind, usgs_id):

@@ -22,7 +22,7 @@ from json.decoder import JSONDecodeError
 from openquake.hazardlib import nrml, valid
 from openquake.hazardlib import sourceconverter
 from openquake.hazardlib.shakemap.parsers import (
-    download_station_data_file, download_rupture_dict)
+    download_station_data_file, download_rup_rupdic)
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
@@ -125,13 +125,13 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
-    returns (rupdic, [station_file], error).
+    returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
-    (rupdic, params, error).
+    (rup, rupdic, params, error).
     """
     dic, params, err = _validate(POST, rupture_path)
     if err:
-        return {}, [], err
+        return None, {}, [], err
     try:
 
         usgs_id = dic['usgs_id']
@@ -142,23 +142,23 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             rup = conv.convert_node(rup_node)
             rup.tectonic_region_type = '*'
             hp = rup.hypocenter
-            rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                          mag=rup.mag, rake=rup.rake,
-                          strike=rup.surface.get_strike(),
-                          dip=rup.surface.get_dip(),
-                          usgs_id=usgs_id,
-                          rupture_file=rupture_file)
+            rup, rupdic = None, dict(lon=hp.x, lat=hp.y, dep=hp.z,
+                                     mag=rup.mag, rake=rup.rake,
+                                     strike=rup.surface.get_strike(),
+                                     dip=rup.surface.get_dip(),
+                                     usgs_id=usgs_id,
+                                     rupture_file=rupture_file)
         else:
-            rupdic = download_rupture_dict(usgs_id, datadir)
+            rup, rupdic = download_rup_rupdic(usgs_id, datadir)
 
     except Exception as exc:
+        logging.error('', exc_info=True)
         msg = f'Unable to retrieve rupture data: {str(exc)}'
         # signs '<>' would not be properly rendered in the popup notification
         msg = msg.replace('<', '"').replace('>', '"')
-        response_data = {"status": "failed", "error_msg": msg,
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return {}, [], response_data
+        return None, {}, [], {"status": "failed", "error_msg": msg,
+                              "error_cls": type(exc).__name__}
+
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
         params['station_data_file'] = station_data_path
@@ -179,4 +179,4 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             params['station_data_file'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rupdic, list(params.values()), {}
+    return rup, rupdic, list(params.values()), {}

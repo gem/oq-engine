@@ -696,7 +696,7 @@ def aristotle_get_rupture_data(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    rupdic, params, err = aristotle_validate(
+    rup, rupdic, params, err = aristotle_validate(
         request.POST, rupture_path, station_data_path)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
@@ -733,19 +733,15 @@ def aristotle_get_rupture_data(request):
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
     rupdic['station_data_file_from_usgs'] = station_data_file
-    oq_rup = None
-    if 'oq_rup' in rupdic:
-        oq_rup = rupdic['oq_rup']
-        del rupdic['oq_rup']
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
         figsize = (14, 7)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
-            with_cities=False, return_base64=True, rupture=oq_rup)
+            with_cities=False, return_base64=True, rupture=rup)
         rupdic['mmi_map_png'] = plot_shakemap(
             shakemap_array, 'MMI', backend='Agg', figsize=figsize,
-            with_cities=False, return_base64=True, rupture=oq_rup)
+            with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
     response_data = rupdic
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -795,7 +791,8 @@ def aristotle_run(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    rupdic, params, err = aristotle_validate(request.POST, rupture_path, station_data_path)
+    rup, rupdic, params, err = aristotle_validate(
+        request.POST, rupture_path, station_data_path)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
