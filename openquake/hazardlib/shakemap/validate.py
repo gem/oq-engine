@@ -122,9 +122,6 @@ def _validate(POST):
         else:
             params[fieldname] = value
 
-    if 'is_point_rup' in POST:
-        dic['is_point_rup'] = POST['is_point_rup'] == 'true'
-
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -153,12 +150,17 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     try:
         rup, rupdic = get_rup_dic(dic['usgs_id'], datadir, rupture_path)
     except Exception as exc:
+        # FIXME: not tested
         logging.error('', exc_info=True)
         msg = f'Unable to retrieve rupture data: {str(exc)}'
         # signs '<>' would not be properly rendered in the popup notification
         msg = msg.replace('<', '"').replace('>', '"')
         return None, {}, params, {"status": "failed", "error_msg": msg,
                                   "error_cls": type(exc).__name__}
+    # round floats
+    for k, v in rupdic.items():
+        if isinstance(v, float):  # lon, lat, dep, strike, dip
+            rupdic[k] = round(v, 5)
 
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file

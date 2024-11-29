@@ -75,7 +75,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertEqual(
             rupdic,
             {'lon': 84.4, 'lat': 27.6, 'dep': 30.0,
-             'mag': 7.0, 'rake': 90.0, 'strike': 295.2473183845382, 'dip': 30.083351687181796,
+             'mag': 7.0, 'rake': 90.0, 'strike': 295.24732, 'dip': 30.08335,
              'usgs_id': 'FromFile', 'rupture_file': 'fault_rupture.xml'})
         self.assertEqual(
             params,
@@ -113,7 +113,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertEqual(
             rupdic,
             {'lon': 84.4, 'lat': 27.6, 'dep': 30.0,
-             'mag': 7.0, 'rake': 90.0, 'strike': 295.2473183845382, 'dip': 30.083351687181796,
+             'mag': 7.0, 'rake': 90.0, 'strike': 295.24732, 'dip': 30.08335,
              'usgs_id': 'FromFile', 'rupture_file': 'fault_rupture.xml'})
         self.assertEqual(
             params,
