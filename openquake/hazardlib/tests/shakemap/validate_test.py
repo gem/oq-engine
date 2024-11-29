@@ -123,3 +123,13 @@ class AristotleValidateTestCase(unittest.TestCase):
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
              'maximum_distance_stations': None, 'station_data_file': 'stationlist_seismic.csv'})
         self.assertEqual(err, {})
+
+    def test_4(self):
+        # for us7000n7n8 the stations.json does not contain stations
+        POST = PostDict({'usgs_id': ['us7000n7n8']})
+        _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        self.assertEqual(rupdic['mag'], 7.0)
+        self.assertEqual(rupdic['time_event'], 'transit')
+        self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
+        self.assertEqual(params, {'station_data_file': None})
+        self.assertEqual(err, {})

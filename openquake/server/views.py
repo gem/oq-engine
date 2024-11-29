@@ -687,6 +687,8 @@ def aristotle_callback(
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
+# FIXME: this function is doing too much: the get_close_mosaic_models
+# should be moved (and tested) in the shakemap.validate library
 def aristotle_get_rupture_data(request):
     """
     Retrieve rupture parameters corresponding to a given usgs id
@@ -703,11 +705,6 @@ def aristotle_get_rupture_data(request):
                             status=400 if 'invalid_inputs' in err else 500)
     station_data_file = params['station_data_file']
     trts = {}
-    if not os.path.isfile(station_data_file):
-        rupdic['station_data_error'] = (
-            'Unable to collect station data for rupture'
-            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
-        station_data_file = None
     try:
         mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
         for mosaic_model in mosaic_models:
@@ -749,8 +746,6 @@ def aristotle_get_rupture_data(request):
 
 
 def copy_to_temp_dir_with_unique_name(source_file_path):
-    # NOTE: for some reason, in some cases the environment variable TMPDIR is
-    # ignored, so we need to use config.directory.custom_tmp if defined
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     temp_file_path = temp_file.name
@@ -762,14 +757,11 @@ def copy_to_temp_dir_with_unique_name(source_file_path):
 
 def get_uploaded_file_path(request, filename):
     file = request.FILES.get(filename)
-    if not file:
-        return None
-    # NOTE: we could not find a reliable way to avoid the deletion of the
-    # uploaded file right after the request is consumed, therefore we need to
-    # store a copy of it
-    file_path = copy_to_temp_dir_with_unique_name(
-        file.temporary_file_path())
-    return file_path
+    if file:
+        # NOTE: we could not find a reliable way to avoid the deletion of the
+        # uploaded file right after the request is consumed, therefore we need
+        # to store a copy of it
+        return copy_to_temp_dir_with_unique_name(file.temporary_file_path())
 
 
 @csrf_exempt
