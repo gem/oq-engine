@@ -35,6 +35,6 @@ class AristotleValidateTestCase(unittest.TestCase):
         POST = PostDict({'usgs_id': ['us6000jllz']})
         _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['is_point_rup'], True)
-        self.assertIn('stations', params[0])
+        self.assertIn('stations', params['station_data_file'])
         self.assertEqual(err, {})
     

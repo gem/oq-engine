@@ -149,17 +149,16 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     """
     dic, params, err = _validate(POST, rupture_path)
     if err:
-        return None, {}, [], err
+        return None, dic, params, err
     try:
-        rup, rupdic = get_rup_dic(
-            dic['usgs_id'], datadir, dic['rupture_file'])
+        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir, dic['rupture_file'])
     except Exception as exc:
         logging.error('', exc_info=True)
         msg = f'Unable to retrieve rupture data: {str(exc)}'
         # signs '<>' would not be properly rendered in the popup notification
         msg = msg.replace('<', '"').replace('>', '"')
-        return None, {}, [], {"status": "failed", "error_msg": msg,
-                              "error_cls": type(exc).__name__}
+        return None, {}, params, {"status": "failed", "error_msg": msg,
+                                  "error_cls": type(exc).__name__}
 
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
@@ -181,4 +180,4 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             params['station_data_file'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rup, rupdic, list(params.values()), {}
+    return rup, rupdic, params, {}

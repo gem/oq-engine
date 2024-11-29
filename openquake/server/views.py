@@ -701,7 +701,7 @@ def aristotle_get_rupture_data(request):
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    [station_data_file] = params
+    station_data_file = params['station_data_file']
     trts = {}
     if not os.path.isfile(station_data_file):
         rupdic['station_data_error'] = (
@@ -796,28 +796,18 @@ def aristotle_run(request):
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    (local_timestamp, time_event, maximum_distance, mosaic_model, trt,
-     truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed, maximum_distance_stations,
-     station_data_file) = params
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
+    station_data_file = params['station_data_file']
     if station_data_file is None or not os.path.isfile(station_data_file):
         station_data_file = None
+    params['rupture_dict'] = rupdic
+    arist = aristotle.AristotleParam(**params)
     try:
-        arist = aristotle.AristotleParam(
-            rupdic,
-            time_event,
-            maximum_distance, mosaic_model, trt, truncation_level,
-            number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed,
-            local_timestamp,
-            station_data_file=station_data_file,
-            maximum_distance_stations=maximum_distance_stations)
         params = get_aristotle_params(arist)
     except Exception as exc:
-
+        # tested where??
         response_data = {"status": "failed", "error_msg": str(exc),
                          "error_cls": type(exc).__name__}
         logging.error('', exc_info=True)
