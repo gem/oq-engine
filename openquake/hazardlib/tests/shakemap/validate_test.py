@@ -128,4 +128,5 @@ class AristotleValidateTestCase(unittest.TestCase):
         # for us7000n7n8 the stations.json does not contain stations
         POST = PostDict({'usgs_id': ['us7000n7n8']})
         _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        self.assertEqual(params, {'station_data_file': None})
         self.assertEqual(err, {})

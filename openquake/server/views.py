@@ -687,6 +687,8 @@ def aristotle_callback(
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
+# FIXME: this function is doing too much: the get_close_mosaic_models
+# should be moved (and tested) in the shakemap.validate library
 def aristotle_get_rupture_data(request):
     """
     Retrieve rupture parameters corresponding to a given usgs id
