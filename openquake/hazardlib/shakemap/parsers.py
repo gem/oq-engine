@@ -441,9 +441,9 @@ def download_station_data_file(usgs_id, datadir=None, save_to_home=False):
             json_bytes = urlopen(stationlist_url).read()
         stations = read_usgs_stations_json(json_bytes)
         if len(stations) == 0:
-            logging.warning(
-                'stationlist.json was downloaded, but it contains no features')
-            return
+            msg = 'stationlist.json was downloaded, but it contains no features'
+            logging.warning(msg)
+            raise LookupError(msg)
         original_len = len(stations)
         try:
             seismic_len = len(

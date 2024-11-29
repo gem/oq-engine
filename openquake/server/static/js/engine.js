@@ -573,20 +573,20 @@
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
                     $('#rupture_from_usgs').val(data.rupture_from_usgs);
                     $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs ? 'Loaded' : 'N.A.');
-                    var errors = '';
-                    if ('error' in data) {
-                        errors += '<p>' + data.error + '</p>';
-                        $('#rupture_from_usgs_loaded').val('N.A. (conversion error)');
+                    var conversion_issues = '';
+                    if ('error' in data) {  // data.error comes from the rupture dictionary and refers to rupture importing/converting
+                        conversion_issues += '<p>' + data.error + '</p>';
+                        $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
                     $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
-                    if (data.station_data_error) {
-                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion error)');
-                        errors += '<p>' + data.station_data_error + '</p>';
+                    if (data.station_data_issue) {
+                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion issue)');
+                        conversion_issues += '<p>' + data.station_data_issue + '</p>';
                     } else {
                         $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
                     }
-                    if (errors != '') {
-                        diaerror.show(false, "Error", errors);
+                    if (conversion_issues != '') {
+                        diaerror.show(false, "Note", conversion_issues);
                     }
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
