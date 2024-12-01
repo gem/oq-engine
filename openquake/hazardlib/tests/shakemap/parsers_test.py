@@ -59,9 +59,9 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['is_point_rup'], True)
 
     def test_5(self):
-        # no point_rup
+        # 5 vertices instead of 4 in rupture.json
         _rup, dic = get_rup_dic('usp0001ccb', datadir=DATA)
-        self.assertEqual(dic['is_point_rup'], False)
+        self.assertEqual(dic['is_point_rup'], True)
 
 
 """
