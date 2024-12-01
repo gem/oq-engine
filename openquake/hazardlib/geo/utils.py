@@ -307,7 +307,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     :param mode:
         if 'strict' fail if at least one site is not associated
         if 'error' fail if all sites are not associated
-    :returns: (filtered site collection, filtered objects)
+    :returns: (filtered site collection, filtered objects, discarded objects)
     """
     return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
