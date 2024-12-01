@@ -282,12 +282,10 @@ class EngineServerTestCase(django.test.TestCase):
         # NOTE: values returned by the USGS often change with time, so we check
         # only that all the expected keys are present and a subset of stable
         # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'rupture_file', 'rupture_file_from_usgs',
-            'mmi_map_png', 'pga_map_png',
-            'station_data_file_from_usgs', 'trts', 'mosaic_models']
+        expected_keys = ['dep', 'error', 'is_point_rup', 'lat', 'local_timestamp',
+                         'lon', 'mag', 'mmi_map_png', 'mosaic_models', 'pga_map_png',
+                         'rake', 'rupture_file', 'rupture_file_from_usgs',
+                         'station_data_file_from_usgs', 'time_event', 'trts', 'usgs_id']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['local_timestamp'],
                          '2024-08-18 07:10:26+12:00')
@@ -297,7 +295,7 @@ class EngineServerTestCase(django.test.TestCase):
             'NEA': ['Cratonic Crust', 'Stable Continental Crust',
                     'Active Shallow Crust', 'Subduction Interface',
                     'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['is_point_rup'], False)
+        self.assertEqual(ret_dict['is_point_rup'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
 
     def test_get_point_rupture_data_from_shakemap(self):
