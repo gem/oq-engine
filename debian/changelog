@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the filtering of the site collection in event_based with --hc
   * Internal: writeability check for datadir and scratch_dir (if any)
 
   [Christopher Brooks]

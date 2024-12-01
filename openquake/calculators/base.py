@@ -985,9 +985,14 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            if oq.hazard_calculation_id:  # read the sitecol of the child
-                self.sitecol = readinput.get_site_collection(
-                    oq, self.datastore.hdf5)
+            if oq.hazard_calculation_id:
+                # NB: this is tested in event_based case_27 and case_31
+                child = readinput.get_site_collection(oq, self.datastore.hdf5)
+                assoc_dist = (oq.region_grid_spacing * 1.414
+                              if oq.region_grid_spacing else 5)  # Graeme's 5km
+                # keep the sites of the parent close to the sites of the child
+                self.sitecol, _array, _discarded = geo.utils.assoc(
+                    child, haz_sitecol, assoc_dist, 'filter')
                 self.datastore['sitecol'] = self.sitecol
             else:  # base case
                 self.sitecol = haz_sitecol

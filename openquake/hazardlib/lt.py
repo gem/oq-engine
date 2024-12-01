@@ -742,7 +742,7 @@ class BranchSet(object):
 
 
 # NB: this function cannot be used with monster logic trees like the one for
-# South Africa (ZAF), since it is too slow; the engine use a trick instead
+# South Africa (ZAF), since it is too slow; the engine uses a trick instead
 def count_paths(branches):
     """
     :param branches: a list of branches (endpoints or nodes)
