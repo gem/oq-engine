@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib import hdf5, python3compat
+from openquake.baselib import hdf5
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
