@@ -499,11 +499,14 @@ def export_relevant_gmfs(ekey, dstore):
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    if 'complete' in dstore:
-        sitecol.complete = dstore['complete']
-    elif 'complete' in dstore.parent:
-        sitecol.complete = dstore.parent['complete']
+    if dstore.parent:
+        sitecol = dstore.parent['sitecol']
+        if 'complete' in dstore.parent:
+            sitecol.complete = dstore.parent['complete']
+    else:
+        sitecol = dstore['sitecol']
+        if 'complete' in dstore:
+            sitecol.complete = dstore['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
         dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
     else:

@@ -216,7 +216,8 @@ def convert_to_oq_rupture(rup_json):
     ftype = rup_json['features'][0]['geometry']['type']
     assert ftype == 'MultiPolygon', ftype
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    if is_matrix(multicoords):
+    if is_matrix(multicoords) and len(multicoords[0]) == 4:
+        # convert only if there are 4 vertices
         hyp_depth = rup_json['metadata']['depth']
         rake = rup_json['metadata'].get('rake', 0)
         trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
