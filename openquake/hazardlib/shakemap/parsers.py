@@ -37,9 +37,9 @@ import pandas as pd
 from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
-from json.decoder import JSONDecodeError
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
+from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -216,7 +216,8 @@ def convert_to_oq_rupture(rup_json):
     ftype = rup_json['features'][0]['geometry']['type']
     assert ftype == 'MultiPolygon', ftype
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    if is_matrix(multicoords):
+    if is_matrix(multicoords) and len(multicoords[0]) == 4:
+        # convert only if there are 4 vertices
         hyp_depth = rup_json['metadata']['depth']
         rake = rup_json['metadata'].get('rake', 0)
         trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
@@ -258,15 +259,17 @@ def local_time_to_time_event(local_time):
     return 'transit'
 
 
-def read_usgs_stations_json(stations_json_str):
+def read_usgs_stations_json(js: bytes):
+    # tested in validate_test.py
     try:
-        stations_json_str = stations_json_str.decode('utf8')
+        stations_json_str = js.decode('utf8')
     except UnicodeDecodeError:
-        stations_json_str = stations_json_str.decode('latin1')
+        # not tested yet
+        stations_json_str = js.decode('latin1')
     sj = json.loads(stations_json_str)
     if 'features' not in sj or not sj['features']:
-        raise LookupError(
-            'stationlist.json was downloaded, but it contains no features')
+        # tested in validate_test.py #4
+        return []
     stations = pd.json_normalize(sj, 'features')
     try:
         stations['eventid'] = sj['metadata']['eventid']
@@ -431,17 +434,17 @@ def download_station_data_file(usgs_id, datadir=None, save_to_home=False):
     contents = shakemap['contents']
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
-        logging.info('Downloading stationlist.json')
         if datadir:
             fname = os.path.join(datadir, f'{usgs_id}-stations.json')
-            stations_json_str = open(fname, 'rb').read()
+            json_bytes = open(fname, 'rb').read()
         else:
-            stations_json_str = urlopen(stationlist_url).read()
-        try:
-            stations = read_usgs_stations_json(stations_json_str)
-        except (LookupError, UnicodeDecodeError, JSONDecodeError) as exc:
-            logging.error(str(exc))
-            raise
+            logging.info('Downloading stationlist.json')
+            json_bytes = urlopen(stationlist_url).read()
+        stations = read_usgs_stations_json(json_bytes)
+        if len(stations) == 0:
+            logging.warning(
+                'stationlist.json was downloaded, but it contains no features')
+            return
         original_len = len(stations)
         try:
             seismic_len = len(
@@ -592,8 +595,6 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     url = shakemap_contents.get('download/rupture.json')['url']
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, f'{usgs_id}-rup.json')
-        # with open(fname, 'wb') as f:
-        #    f.write(urlopen(url).read())
         text = open(fname).read()
     else:
         logging.info('Downloading rupture.json')
@@ -602,10 +603,31 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     return rup_data
 
 
-def download_rupdicdata(usgs_id, datadir=None):
+def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     """
-    :returns: (rupdic, rup_data)
+    If the rupture_file is None, download a rupture from the USGS site given
+    the ShakeMap ID, else build the rupture locally with the given usgs_id.
+
+    :param usgs_id: ShakeMap ID
+    :param datadir: not None in testing mode
+    :param rupture_file: None
+    :returns: (rupture object or None, rupture dictionary)
     """
+    if rupture_file:
+        [rup_node] = nrml.read(os.path.join(datadir, rupture_file)
+                               if datadir else rupture_file)
+        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'
+        hp = rup.hypocenter
+        rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
+                      mag=rup.mag, rake=rup.rake,
+                      strike=rup.surface.get_strike(),
+                      dip=rup.surface.get_dip(),
+                      usgs_id=usgs_id,
+                      rupture_file=rupture_file)
+        return rup, rupdic
+
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
         text = open(fname).read()
@@ -629,7 +651,7 @@ def download_rupdicdata(usgs_id, datadir=None):
     contents = shakemap['contents']
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
-        return load_rupdic_from_finite_fault(usgs_id, mag, products), {}
+        return None, load_rupdic_from_finite_fault(usgs_id, mag, products)
     shakemap_array = None
 
     if 'download/grid.xml' in contents:
@@ -639,6 +661,7 @@ def download_rupdicdata(usgs_id, datadir=None):
         else:
             logging.info('Downloading grid.xml')
             grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
+
         shakemap_array = get_shakemap_array(grid_fname)
     rup_data = download_rupture_data(usgs_id, contents, datadir)
     feats = rup_data['features']
@@ -655,31 +678,17 @@ def download_rupdicdata(usgs_id, datadir=None):
               'is_point_rup': is_point_rup,
               'shakemap_array': shakemap_array,
               'usgs_id': usgs_id, 'rupture_file': None}
-    return rupdic, rup_data
-
-
-def download_rupture_dict(usgs_id, datadir=None):
-    """
-    Download a rupture from the USGS site given a ShakeMap ID.
-
-    :param usgs_id: ShakeMap ID
-    :param datadir: not None in testing mode
-    :returns: a dictionary with keys lon, lat, dep, mag, rake
-    """
-    rupdic, rup_data = download_rupdicdata(usgs_id, datadir)
-    if rupdic['is_point_rup']:
+    if is_point_rup:
         # in parsers_test
-        return rupdic
-    oq_rup = convert_to_oq_rupture(rup_data)
-    if oq_rup is None:
+        return None, rupdic
+
+    rup = convert_to_oq_rupture(rup_data)
+    if rup is None:
         # in parsers_test for us6000jllz
         rupdic['error'] = 'Unable to convert the rupture from the USGS format'
         rupdic['is_point_rup'] = True
-        return rupdic
-    else:
-        # in parsers_test for usp0001ccb
-        rupdic['oq_rup'] = oq_rup
-        return rupdic
+    # in parsers_test for usp0001ccb
+    return rup, rupdic
 
 
 def get_array_usgs_id(kind, usgs_id):

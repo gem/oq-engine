@@ -17,12 +17,30 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+from dataclasses import dataclass
 from urllib.error import HTTPError
 from json.decoder import JSONDecodeError
-from openquake.hazardlib import nrml, valid
-from openquake.hazardlib import sourceconverter
+from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.parsers import (
-    download_station_data_file, download_rupture_dict)
+    download_station_data_file, get_rup_dic)
+
+
+@dataclass
+class AristotleParam:
+    rupture_dict: dict
+    time_event: str
+    maximum_distance: float
+    mosaic_model: str
+    trt: str
+    truncation_level: float
+    number_of_ground_motion_fields: int
+    asset_hazard_distance: float
+    ses_seed: int
+    local_timestamp: str = None
+    exposure_hdf5: str = None
+    station_data_file: str = None
+    maximum_distance_stations: float = None
+
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
@@ -72,12 +90,12 @@ validators = {
 }
 
 
-def _validate(POST, rupture_path=None):
+def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
-               dep=None, mag=None, rake=None, dip=None, strike=None)
+    dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
+               mag=None, rake=None, dip=None, strike=None)
     for fieldname, validation_func in validators.items():
         if fieldname not in POST:
             continue
@@ -104,9 +122,6 @@ def _validate(POST, rupture_path=None):
         else:
             params[fieldname] = value
 
-    if 'is_point_rup' in POST:
-        dic['is_point_rup'] = POST['is_point_rup'] == 'true'
-
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -125,40 +140,28 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
-    returns (rupdic, [station_file], error).
+    returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
-    (rupdic, params, error).
+    (rup, rupdic, params, error).
     """
-    dic, params, err = _validate(POST, rupture_path)
+    dic, params, err = _validate(POST)
     if err:
-        return {}, [], err
+        return None, dic, params, err
     try:
-
-        usgs_id = dic['usgs_id']
-        rupture_file = dic['rupture_file']
-        if rupture_file:
-            [rup_node] = nrml.read(rupture_file)
-            conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-            rup = conv.convert_node(rup_node)
-            rup.tectonic_region_type = '*'
-            hp = rup.hypocenter
-            rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                          mag=rup.mag, rake=rup.rake,
-                          strike=rup.surface.get_strike(),
-                          dip=rup.surface.get_dip(),
-                          usgs_id=usgs_id,
-                          rupture_file=rupture_file)
-        else:
-            rupdic = download_rupture_dict(usgs_id, datadir)
-
+        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir, rupture_path)
     except Exception as exc:
+        # FIXME: not tested
+        logging.error('', exc_info=True)
         msg = f'Unable to retrieve rupture data: {str(exc)}'
         # signs '<>' would not be properly rendered in the popup notification
         msg = msg.replace('<', '"').replace('>', '"')
-        response_data = {"status": "failed", "error_msg": msg,
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return {}, [], response_data
+        return None, {}, params, {"status": "failed", "error_msg": msg,
+                                  "error_cls": type(exc).__name__}
+    # round floats
+    for k, v in rupdic.items():
+        if isinstance(v, float):  # lon, lat, dep, strike, dip
+            rupdic[k] = round(v, 5)
+
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
         params['station_data_file'] = station_data_path
@@ -179,4 +182,4 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             params['station_data_file'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rupdic, list(params.values()), {}
+    return rup, rupdic, params, {}

@@ -218,6 +218,19 @@ def run_calc(log):
     return calc
 
 
+def check_directories(calc_id):
+    """
+    Make sure that the datadir and the scratch_dir (if any) are writeable
+    """
+    datadir = logs.get_datadir()
+    scratch_dir = parallel.scratch_dir(calc_id)
+    for dir in (datadir, scratch_dir):
+        assert os.path.exists(dir), dir
+        fname = os.path.join(dir, 'check')
+        open(fname, 'w').close()  # check writeable
+        os.remove(fname)
+
+
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                 user_name=USER, hc_id=None, host=None):
     """
@@ -240,6 +253,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             dic = readinput.get_params(job_ini)
         jobs.append(logs.init(dic, None, log_level, log_file,
                               user_name, hc_id, host))
+    check_directories(jobs[0].calc_id)
     return jobs
 
 

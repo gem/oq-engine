@@ -242,7 +242,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     return dic
 
 
-def event_based(proxies, cmaker, stations, dstore, monitor):
+def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -254,14 +254,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
     with dstore, rmon:
-        if dstore.parent:
-            sitecol = dstore['sitecol']
-            if 'complete' in dstore.parent:
-                sitecol.complete = dstore.parent['complete']
-        else:
-            sitecol = dstore['sitecol']
-            if 'complete' in dstore:
-                sitecol.complete = dstore['complete']
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
         dset = dstore['rupgeoms']
@@ -381,7 +373,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             smap.share(mea=mea, tau=tau, phi=phi)
         # producing slightly less than concurrent_tasks thanks to the 1.02
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
-            args = block, cmaker, (station_data, station_sites), dstore
+            args = block, cmaker, sitecol, (station_data, station_sites), dstore
             smap.submit(args)
     dstore['gsims'] = numpy.array(toml_gsims)
     return smap
