@@ -34,6 +34,7 @@ import functools
 import configparser
 import collections
 import itertools
+import json
 
 import numpy
 import pandas
@@ -59,6 +60,7 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
+from openquake.hazardlib.shakemap.parsers import convert_to_oq_rupture
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -809,12 +811,17 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rupture_model = oqparam.inputs.get('rupture_model')
-    if rupture_model:
-        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+    rup = None
+    if rupture_model and rupture_model.endswith('.xml'):
+        [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
-    else:  # assume rupture_dict
+    elif rupture_model and rupture_model.endswith('.json'):
+        with open(rupture_model) as f:
+            rup_data = json.load(f)
+        rup = convert_to_oq_rupture(rup_data)
+    if rup is None:  # assume rupture_dict
         r = oqparam.rupture_dict
         hypo = Point(r['lon'], r['lat'], r['dep'])
         rup = source.rupture.build_planar(

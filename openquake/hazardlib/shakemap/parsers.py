@@ -214,10 +214,10 @@ def convert_to_oq_rupture(rup_json):
     :returns: None if not convertible
     """
     ftype = rup_json['features'][0]['geometry']['type']
-    assert ftype == 'MultiPolygon', ftype
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    if is_matrix(multicoords) and len(multicoords[0]) == 4:
-        # convert only if there are 4 vertices
+    if (ftype == 'MultiPolygon' and is_matrix(multicoords) and len(multicoords[0]) == 5
+            and multicoords[0][0] == multicoords[0][4]):
+        # convert only if there are 4 vertices (the fifth coordinate closes the loop)
         hyp_depth = rup_json['metadata']['depth']
         rake = rup_json['metadata'].get('rake', 0)
         trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
@@ -442,9 +442,9 @@ def download_station_data_file(usgs_id, datadir=None, save_to_home=False):
             json_bytes = urlopen(stationlist_url).read()
         stations = read_usgs_stations_json(json_bytes)
         if len(stations) == 0:
-            logging.warning(
-                'stationlist.json was downloaded, but it contains no features')
-            return
+            msg = 'stationlist.json was downloaded, but it contains no features'
+            logging.warning(msg)
+            raise LookupError(msg)
         original_len = len(stations)
         try:
             seismic_len = len(
@@ -510,7 +510,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
               'mag': mag, 'rake': 0.,
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'is_point_rup': True,
+              'is_planar': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
     return rupdic
@@ -599,8 +599,28 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
     else:
         logging.info('Downloading rupture.json')
         text = urlopen(url).read()
+        # with open('/tmp/x-rup.json', 'wb') as f:
+        #     f.write(text)
     rup_data = json.loads(text)
-    return rup_data
+    return rup_data, gettemp(text, prefix='rup_', suffix='.json')
+
+
+def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
+    feats = rup_data['features']
+    is_planar = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
+    md = rup_data['metadata']
+    lon = md['lon']
+    lat = md['lat']
+    utc_time = md['time']
+    local_time = utc_to_local_time(utc_time, lon, lat)
+    time_event = local_time_to_time_event(local_time)
+    rupdic = {'lon': lon, 'lat': lat, 'dep': md['depth'],
+              'mag': md['mag'], 'rake': md['rake'],
+              'local_timestamp': str(local_time), 'time_event': time_event,
+              'is_planar': is_planar,
+              'shakemap_array': shakemap_array,
+              'usgs_id': usgs_id, 'rupture_file': rup_path}
+    return rupdic
 
 
 def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
@@ -613,7 +633,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     :param rupture_file: None
     :returns: (rupture object or None, rupture dictionary)
     """
-    if rupture_file:
+    if rupture_file and rupture_file.endswith('.xml'):
         [rup_node] = nrml.read(os.path.join(datadir, rupture_file)
                                if datadir else rupture_file)
         conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
@@ -627,6 +647,10 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
                       usgs_id=usgs_id,
                       rupture_file=rupture_file)
         return rup, rupdic
+    elif rupture_file and rupture_file.endswith('.json'):
+        with open(rupture_file) as f:
+            rup_data = json.load(f)
+        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
 
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
@@ -642,7 +666,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
 
     js = json.loads(text)
     # with open('/tmp/x.json', 'wb') as f:
-    #    f.write(text)
+    #     f.write(text)
     mag = js['properties']['mag']
     products = js['properties']['products']
 
@@ -663,22 +687,11 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
             grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
 
         shakemap_array = get_shakemap_array(grid_fname)
-    rup_data = download_rupture_data(usgs_id, contents, datadir)
-    feats = rup_data['features']
-    is_point_rup = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
-    md = rup_data['metadata']
-    lon = md['lon']
-    lat = md['lat']
-    utc_time = md['time']
-    local_time = utc_to_local_time(utc_time, lon, lat)
-    time_event = local_time_to_time_event(local_time)
-    rupdic = {'lon': lon, 'lat': lat, 'dep': md['depth'],
-              'mag': md['mag'], 'rake': md['rake'],
-              'local_timestamp': str(local_time), 'time_event': time_event,
-              'is_point_rup': is_point_rup,
-              'shakemap_array': shakemap_array,
-              'usgs_id': usgs_id, 'rupture_file': None}
-    if is_point_rup:
+    rup_data, rup_path = download_rupture_data(usgs_id, contents, datadir)
+
+    rupdic = convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array)
+
+    if rupdic['is_planar']:
         # in parsers_test
         return None, rupdic
 
@@ -686,7 +699,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     if rup is None:
         # in parsers_test for us6000jllz
         rupdic['error'] = 'Unable to convert the rupture from the USGS format'
-        rupdic['is_point_rup'] = True
+        rupdic['is_planar'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic
 

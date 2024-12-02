@@ -31,7 +31,7 @@
         record[3] = record[3].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         return record
     };
- 
+
     var dialog = (function ()
                   {
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
@@ -159,7 +159,7 @@
             show_modal_confirm: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                
+
                 var show_or_back = (function (e) {
                     this.conf_show = $('#confirmDialog' + calc_id).show();
                     this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
@@ -170,7 +170,7 @@
             hide_modal_confirm: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                
+
                 var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
@@ -190,7 +190,7 @@
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
                     setTimer();
                 })();
-                
+
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/remove",
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
@@ -566,33 +566,33 @@
                     $('#strike').val('strike' in data ? data.strike : '0');
                     $('#local_timestamp').val(data.local_timestamp);
                     $('#time_event').val(data.time_event);
-                    $('#is_point_rup').val(data.is_point_rup);
+                    $('#is_planar').val(data.is_planar);
                     // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
                     //       set a specific file in an HTML file input element using JavaScript or jQuery,
                     //       therefore we can not pre-populate the rupture_file_input with the rupture_file
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
-                    $('#rupture_file_from_usgs').val(data.rupture_file_from_usgs);
-                    $('#rupture_file_from_usgs_loaded').val(data.rupture_file_from_usgs ? 'Loaded' : 'N.A.');
-                    var errors = '';
-                    if ('error' in data) {
-                        errors += '<p>' + data.error + '</p>';
-                        $('#rupture_file_from_usgs_loaded').val('N.A. (conversion error)');
+                    $('#rupture_from_usgs').val(data.rupture_from_usgs);
+                    $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs ? 'Loaded' : 'N.A.');
+                    var conversion_issues = '';
+                    if ('error' in data) {  // data.error comes from the rupture dictionary and refers to rupture importing/converting
+                        conversion_issues += '<p>' + data.error + '</p>';
+                        $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
                     $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
-                    if (data.station_data_error) {
-                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion error)');
-                        errors += '<p>' + data.station_data_error + '</p>';
+                    if (data.station_data_issue) {
+                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion issue)');
+                        conversion_issues += '<p>' + data.station_data_issue + '</p>';
                     } else {
                         $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
                     }
-                    if (errors != '') {
-                        diaerror.show(false, "Error", errors);
+                    if (conversion_issues != '') {
+                        diaerror.show(false, "Note", conversion_issues);
                     }
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);
                     }
-                    else if (data.is_point_rup) {
+                    else if (data.is_planar) {
                         $('#dip').prop('disabled', false);
                         $('#strike').prop('disabled', false);
                         $('#dip').val('90');
@@ -687,7 +687,7 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = new FormData();
-                formData.append('rupture_file_from_usgs', $('#rupture_file_from_usgs').val());
+                formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
                 formData.append('lon', $("#lon").val());
@@ -697,7 +697,7 @@
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
-                formData.append('is_point_rup', $("#is_point_rup").val());
+                formData.append('is_planar', $("#is_planar").val());
                 formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('mosaic_model', $('#mosaic_model').val());
