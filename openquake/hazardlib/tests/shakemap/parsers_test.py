@@ -46,7 +46,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic, {'lon': -73.475, 'lat': 18.408, 'dep': 10.0,
                                'mag': 7.2, 'rake': 0.0,
                                'local_timestamp': '2021-08-13 20:00:00-04:00',
-                               'time_event': 'transit', 'is_planar': True,
+                               'time_event': 'transit', 'require_dip_strike': True,
                                'pga_map_png': None, 'mmi_map_png': None,
                                'usgs_id': 'us6000f65h', 'rupture_file': None})
 
@@ -56,18 +56,18 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['lon'], 37.0143)
         self.assertEqual(dic['lat'], 37.2256)
         self.assertEqual(dic['dep'], 10.)
-        self.assertEqual(dic['is_planar'], True)
+        self.assertEqual(dic['require_dip_strike'], True)
 
     def test_5(self):
         # 12 vertices instead of 4 in rupture.json
         rup, dic = get_rup_dic('us20002926', datadir=DATA)
         self.assertIsNone(rup)
-        self.assertEqual(dic['is_planar'], True)
+        self.assertEqual(dic['require_dip_strike'], True)
 
     def test_6(self):
         rup, dic = get_rup_dic('usp0001ccb', datadir=DATA)
         self.assertEqual(rup.mag, 6.7)
-        self.assertEqual(dic['is_planar'], False)
+        self.assertEqual(dic['require_dip_strike'], False)
 
 
 """
