@@ -566,7 +566,7 @@
                     $('#strike').val('strike' in data ? data.strike : '0');
                     $('#local_timestamp').val(data.local_timestamp);
                     $('#time_event').val(data.time_event);
-                    $('#is_planar').val(data.is_planar);
+                    $('#require_dip_strike').val(data.require_dip_strike);
                     // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
                     //       set a specific file in an HTML file input element using JavaScript or jQuery,
                     //       therefore we can not pre-populate the rupture_file_input with the rupture_file
@@ -592,7 +592,7 @@
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);
                     }
-                    else if (data.is_planar) {
+                    else if (data.require_dip_strike) {
                         $('#dip').prop('disabled', false);
                         $('#strike').prop('disabled', false);
                         $('#dip').val('90');
@@ -697,7 +697,7 @@
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
-                formData.append('is_planar', $("#is_planar").val());
+                formData.append('require_dip_strike', $("#require_dip_strike").val());
                 formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('mosaic_model', $('#mosaic_model').val());

@@ -243,7 +243,7 @@ class EngineServerTestCase(django.test.TestCase):
         # only that all the expected keys are present and a subset of stable
         # values
         expected_keys = [
-            'is_planar', 'local_timestamp', 'time_event', 'lon', 'lat',
+            'require_dip_strike', 'local_timestamp', 'time_event', 'lon', 'lat',
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_from_usgs', 'error',
@@ -271,7 +271,7 @@ class EngineServerTestCase(django.test.TestCase):
                     'Deep Seismicity']})
         self.assertIn('Unable to convert the rupture from the USGS format',
                       ret_dict['error'])
-        self.assertEqual(ret_dict['is_planar'], True)
+        self.assertEqual(ret_dict['require_dip_strike'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
 
     def test_get_rupture_data_from_shakemap_correctly_converted(self):
@@ -282,7 +282,7 @@ class EngineServerTestCase(django.test.TestCase):
         # NOTE: values returned by the USGS often change with time, so we check
         # only that all the expected keys are present and a subset of stable
         # values
-        expected_keys = ['dep', 'is_planar', 'lat', 'local_timestamp',
+        expected_keys = ['dep', 'require_dip_strike', 'lat', 'local_timestamp',
                          'lon', 'mag', 'mmi_map_png', 'mosaic_models', 'pga_map_png',
                          'rake', 'rupture_file', 'rupture_from_usgs',
                          'station_data_file_from_usgs', 'station_data_issue',
@@ -296,7 +296,7 @@ class EngineServerTestCase(django.test.TestCase):
             'NEA': ['Cratonic Crust', 'Stable Continental Crust',
                     'Active Shallow Crust', 'Subduction Interface',
                     'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['is_planar'], False)
+        self.assertEqual(ret_dict['require_dip_strike'], False)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
 
     def test_get_point_rupture_data_from_shakemap(self):
@@ -308,7 +308,7 @@ class EngineServerTestCase(django.test.TestCase):
         # only that all the expected keys are present and a subset of stable
         # values
         expected_keys = [
-            'is_planar', 'local_timestamp', 'time_event', 'lon', 'lat',
+            'require_dip_strike', 'local_timestamp', 'time_event', 'lon', 'lat',
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_from_usgs',
@@ -316,7 +316,7 @@ class EngineServerTestCase(django.test.TestCase):
             'mosaic_models']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertIsNotNone(ret_dict['rupture_file'])
-        self.assertEqual(ret_dict['is_planar'], True)
+        self.assertEqual(ret_dict['require_dip_strike'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n05d')
         self.assertEqual(ret_dict['mosaic_models'], ['SAM'])
 
