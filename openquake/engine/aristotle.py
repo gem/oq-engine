@@ -26,7 +26,7 @@ import numpy
 from json.decoder import JSONDecodeError
 from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
-from openquake.hazardlib.shakemap.validate import AristotleParam
+from openquake.hazardlib.shakemap.validate import AristotleParam, get_trts_around
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, download_station_data_file)
 from openquake.commonlib import readinput
@@ -34,17 +34,6 @@ from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
-
-def get_trts_around(mosaic_model, exposure_hdf5):
-    """
-    :returns: list of TRTs for the given mosaic model
-    """
-    with hdf5.File(exposure_hdf5) as f:
-        df = f.read_df('model_trt_gsim_weight',
-                       sel={'model': mosaic_model.encode()})
-    trts = [trt.decode('utf8') for trt in df.trt.unique()]
-    return trts
 
 
 def get_tmap_keys(exposure_hdf5, countries):

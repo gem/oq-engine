@@ -287,6 +287,7 @@ class EngineServerTestCase(django.test.TestCase):
                          'rake', 'rupture_file', 'rupture_from_usgs',
                          'station_data_file_from_usgs', 'station_data_issue',
                          'time_event', 'trts', 'usgs_id']
+        breakpoint()
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['local_timestamp'],
                          '2024-08-18 07:10:26+12:00')
