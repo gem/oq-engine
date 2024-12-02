@@ -18,8 +18,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from openquake.baselib import performance, sap
-from openquake.commonlib import readinput
+from openquake.baselib import performance, sap, hdf5
+from openquake.commonlib import readinput, datastore
+from openquake.calculators import base
 from openquake.engine import engine
 
 
@@ -28,6 +29,7 @@ INPUTS = dict(
     number_of_logic_tree_samples='10000',
     ses_per_logic_tree_path='1',
     investigation_time='1',
+    ground_motion_fields='false',
     minimum_magnitude='5')
 MODELS = 'EUR MIE NAF'.split()
 
@@ -49,7 +51,11 @@ def main(mosaic_dir):
     job_inis = read_job_inis(mosaic_dir, MODELS)
     with performance.Monitor(measuremem=True) as mon:
         jobs = engine.run_jobs(engine.create_jobs(job_inis))
-        breakpoint()
+        dstores = [datastore.read(job.id) for job in jobs]
+        oq = dstores[0]['oqparam']
+        oq.inputs['gmfs'] = [ds.filename for ds in dstores]
+        with hdf5.File('gmf_data.hdf5', 'w') as h5:
+            base.import_gmfs_hdf5(h5, oq)
     print(mon)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
