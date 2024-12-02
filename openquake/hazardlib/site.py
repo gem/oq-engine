@@ -847,12 +847,38 @@ def check_all_equal(dicts, *keys):
         for dic in dicts[1:]:
             assert dic[key] == dic0[key], (dic[key], dic0[key])
 
-    
+
+def merge_without_dupl(array1, array2, uniquefield):
+    """
+    >>> dt = [('code', 'S1'), ('value', int)]
+    >>> a1 = numpy.array([('a', 1), ('b', 2)], dt)
+    >>> a2 = numpy.array([('b', 2), ('c', 3)], dt)
+    >>> merge_without_dupl(a1, a2, 'code')
+    array([(b'a', 1), (b'b', 2), (b'c', 3)],
+          dtype=[('code', 'S1'), ('value', '<i8')])
+    """
+    dtype = {}
+    for array in (array1, array2):
+        for name in array.dtype.names:
+            dtype[name] = array.dtype[name]
+    dupl = numpy.isin(array2[uniquefield], array1[uniquefield])
+    new = array2[~dupl]
+    N = len(array1) + len(new)
+    array = numpy.zeros(N, [(n, dtype[n]) for n in dtype])
+    for n in dtype:
+        if n in array1.dtype.names:
+            array[n][:len(array1)] = array1[n]
+        if n in array2.dtype.names:
+            array[n][len(array1):] = new[n]
+    return array, dupl
+
+
 def merge_sitecols(hdf5fnames, check_gmfs=False):
     """
     Read a number of site collections from the given filenames
-    and returns a single SiteCollection instance. Raise an error
-    if there are duplicate sites (by looking at the custom_site_id).
+    and returns a single SiteCollection instance, plus a list
+    of site ID arrays, one for each site collection, excluding the duplicates.
+
     If `check_gmfs` is set, assume there are `gmf_data` groups and
     make sure the attributes are consistent (i.e. the same over all files).
     """
@@ -860,24 +886,30 @@ def merge_sitecols(hdf5fnames, check_gmfs=False):
     attrs = []
     for fname in hdf5fnames:
         with hdf5.File(fname, 'r') as f:
-            sitecols.append(f['sitecol'])
+            sitecol = f['sitecol']
+            sitecols.append(sitecol)
             if check_gmfs:
                 attrs.append(dict(f['gmf_data'].attrs))
+    sitecol = sitecols[0]
     if len(sitecols) == 1:
-        return sitecols[0]
+        return sitecol, [sitecol.sids]
 
     if attrs:
-        check_all_equal(attrs, '__pdcolumns__', 'effective_time', 'investigation_time')
+        check_all_equal(attrs, '__pdcolumns__', 'effective_time',
+                        'investigation_time')
 
-    new = object.__new__(sitecols[0].__class__)
-    new.array = numpy.concatenate([sc.array for sc in sitecols])
+    new = object.__new__(sitecol.__class__)
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        new.array = sitecols[0].array
+        allsids = []
+        for sc in sitecols[1:]:
+            new.array, dupl = merge_without_dupl(
+                new.array, sc.array, 'custom_site_id')
+            allsids.append(sc.sids[~dupl])
+    else:
+        logging.warning('There is no custom_site_id, not checking for duplicates')
+        new.array = numpy.concatenate([sc.array for sc in sitecols])
+        allsids = [sc.sids for sc in sitecols]
     new.array['sids'] = numpy.arange(len(new.array))
     new.complete = new
-    if 'custom_site_id' in new.array.dtype.names:
-        ids, counts = numpy.unique(new['custom_site_id'], return_counts=1)
-        if (counts > 1).any():
-            dupl =  ' '.join(python3compat.decode(ids[counts > 1]))
-            raise RuntimeError(f'{dupl} are duplicated')
-    elif len(sitecols) > 1:
-        logging.warning('There is no custom_site_id, not checking for duplicates')
-    return new
+    return new, allsids

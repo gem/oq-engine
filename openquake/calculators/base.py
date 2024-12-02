@@ -940,7 +940,8 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = read_parent_sitecol(oq, self.datastore)
         else:
             if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
-                haz_sitecol = site.merge_sitecols(oq.inputs['gmfs'], check_gmfs=True)
+                haz_sitecol, _ = site.merge_sitecols(
+                    oq.inputs['gmfs'], check_gmfs=True)
             else:
                 haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
@@ -1408,6 +1409,8 @@ def import_gmfs_hdf5(dstore, oqparam):
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
 
     attrs = _getset_attrs(oqparam)
+    if 'oqparam' not in dstore:
+        dstore['oqparam'] = oqparam
     E = sum(attrs['num_events'])
     fnames = oqparam.inputs['gmfs']
     if len(fnames) == 1:
@@ -1415,19 +1418,25 @@ def import_gmfs_hdf5(dstore, oqparam):
             dstore['sitecol'] = f['sitecol']  # complete by construction
             f.copy('gmf_data', dstore.hdf5)
     else:  # merge the sites and the gmfs
-        dstore['sitecol'] = site.merge_sitecols(fnames, check_gmfs=True)
-        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E)
+        dstore['sitecol'], allsids = site.merge_sitecols(fnames, check_gmfs=True)
+        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
+                        R=oqparam.number_of_logic_tree_samples)
         nS, nE = 0, 0
-        for fname, ns, ne in zip(fnames, attrs['num_sites'], attrs['num_events']):
+        for fname, sids, ne in zip(fnames, allsids, attrs['num_events']):
             logging.info('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
-                gmf_df = f.read_df('gmf_data')
-                gmf_df['sid'] += nS  # add an offset to the site IDs
-                gmf_df['eid'] += nE  # add an offset to the event IDs
-                nS += ns
-                nE += ne
-                for col in gmf_df.columns:
-                    hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col].to_numpy())
+                size = len(f['gmf_data/sid'])
+                logging.info('Reading {:_d} rows from {}'.format(size, fname))
+                for slc in general.gen_slices(0, size, 10_000_000):
+                    df = f.read_df('gmf_data', slc=slc)
+                    gmf_df = df[numpy.isin(df.sid, sids)].copy()
+                    gmf_df['sid'] += nS  # add an offset to the site IDs
+                    gmf_df['eid'] += nE  # add an offset to the event IDs
+                    nS += len(sids)
+                    nE += ne
+                    for col in gmf_df.columns:
+                        hdf5.extend(dstore[f'gmf_data/{col}'],
+                                    gmf_df[col].to_numpy())
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
@@ -1446,12 +1455,12 @@ def import_gmfs_hdf5(dstore, oqparam):
     return events['id']
 
 
-def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None):
+def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_paths()
+    R = R or dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
     if data is None:
         N = 0
@@ -1468,8 +1477,8 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None):
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
         eff_time = 0
-    dstore.create_df('gmf_data', items)  # not gzipping for speed
-    dstore.set_attrs('gmf_data', num_events=E or len(dstore['events']),
+    # not gzipping for speed
+    dstore.create_df('gmf_data', items, num_events=E or len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
