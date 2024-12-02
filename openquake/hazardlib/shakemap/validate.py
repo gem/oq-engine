@@ -180,7 +180,7 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
         except (KeyError, LookupError, UnicodeDecodeError,
                 JSONDecodeError) as exc:
             logging.info(str(exc))
-            params['station_data_file'] = str(exc)
+            err['station_data_issue'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rup, rupdic, params, {}
+    return rup, rupdic, params, err

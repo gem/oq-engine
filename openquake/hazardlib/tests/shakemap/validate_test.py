@@ -44,7 +44,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         # without rupture, stations
         POST = PostDict({'usgs_id': ['us6000jllz']})
         _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
-        self.assertEqual(rupdic['is_point_rup'], True)
+        self.assertEqual(rupdic['is_planar'], True)
         self.assertIn('stations', params['station_data_file'])
         self.assertEqual(err, {})
 
@@ -134,7 +134,6 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
-        self.assertEqual(params,
-                         {'station_data_file': ('stationlist.json was downloaded,'
+        self.assertEqual(err,
+                         {'station_data_issue': ('stationlist.json was downloaded,'
                                                 ' but it contains no features')})
-        self.assertEqual(err, {})

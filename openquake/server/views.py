@@ -700,15 +700,15 @@ def aristotle_get_rupture_data(request):
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
     rup, rupdic, params, err = aristotle_validate(
         request.POST, rupture_path, station_data_path)
+    station_data_issue = err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    # NOTE: station_data_file can be a path or an error/warning message
-    station_data_file = params['station_data_file']
-    if station_data_file is not None and not os.path.isfile(station_data_file):
+    station_data_file = params.get('station_data_file')
+    if station_data_issue:
         rupdic['station_data_issue'] = (
             'Unable to use USGS station data for rupture'
-            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
+            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_issue))
         station_data_file = None
     trts = {}
     try:
@@ -793,15 +793,13 @@ def aristotle_run(request):
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
         request.POST, rupture_path, station_data_path)
+    err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    station_data_file = params['station_data_file']
-    if station_data_file is None or not os.path.isfile(station_data_file):
-        station_data_file = None
     params['rupture_dict'] = rupdic
     arist = aristotle.AristotleParam(**params)
     try:
