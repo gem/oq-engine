@@ -40,7 +40,7 @@ from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map, lon_lat
-from openquake.hazardlib.shakemap.parsers import download_rupdicdata
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
@@ -164,7 +164,7 @@ def print_usgs_rupture(what):
         usgs_id = what.split(':', 1)[1]
     except IndexError:
         return 'Example: oq show usgs_rupture:us70006sj8'
-    print(download_rupdicdata(usgs_id)[0])
+    print(get_rup_dic(usgs_id)[1])
 
 
 def source_model_info(sm_nodes):

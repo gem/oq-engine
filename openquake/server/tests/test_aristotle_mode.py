@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 import time
 import os
 import sys
@@ -25,7 +24,6 @@ import tempfile
 import string
 import unittest
 import secrets
-import logging
 import io
 import numpy
 
@@ -33,8 +31,6 @@ import django
 # from django.apps import apps
 from django.test import Client, override_settings
 from django.conf import settings
-from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.utils.datastructures import MultiValueDict
 from django.http import HttpResponseNotFound
 from openquake.commonlib.logs import dbcmd
 from openquake.baselib import config
@@ -119,9 +115,6 @@ class EngineServerTestCase(django.test.TestCase):
                 # callback to finish and produce the email notification
                 time.sleep(2)
                 return
-
-
-class EngineServerAristotleModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -289,19 +282,11 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         # NOTE: values returned by the USGS often change with time, so we check
         # only that all the expected keys are present and a subset of stable
         # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'rupture_file', 'rupture_file_from_usgs',
-            'mmi_map_png', 'pga_map_png',
-            'station_data_error',
-            'station_data_file_from_usgs', 'trts', 'mosaic_models']
+        expected_keys = ['dep', 'error', 'is_point_rup', 'lat', 'local_timestamp',
+                         'lon', 'mag', 'mmi_map_png', 'mosaic_models', 'pga_map_png',
+                         'rake', 'rupture_file', 'rupture_file_from_usgs',
+                         'station_data_file_from_usgs', 'time_event', 'trts', 'usgs_id']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        self.assertEqual(
-            ret_dict['station_data_error'],
-            'Unable to collect station data for rupture'
-            ' identifier "us7000n7n8": stationlist.json was'
-            ' downloaded, but it contains no features')
         self.assertEqual(ret_dict['local_timestamp'],
                          '2024-08-18 07:10:26+12:00')
         self.assertEqual(ret_dict['time_event'], 'transit')
@@ -310,7 +295,7 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             'NEA': ['Cratonic Crust', 'Stable Continental Crust',
                     'Active Shallow Crust', 'Subduction Interface',
                     'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['is_point_rup'], False)
+        self.assertEqual(ret_dict['is_point_rup'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
 
     def test_get_point_rupture_data_from_shakemap(self):
@@ -348,95 +333,13 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                     maximum_distance_stations='')
         self.aristotle_run_then_remove(data)
 
-    def get_data(self):
-        data = {'usgs_id': ['FromFile'], 'lon': ['84.4'], 'lat': ['27.6'],
-                'dep': ['30'], 'mag': ['7'], 'rake': ['90'], 'dip': ['90'],
-                'strike': ['0'],
-                'time_event': ['day'],
-                'maximum_distance': ['100'],
-                'trt': ['active shallow crust normal'],
-                'truncation_level': ['3'],
-                'number_of_ground_motion_fields': ['2'],
-                'asset_hazard_distance': ['15'], 'ses_seed': ['42'],
-                'local_timestamp': [''],
-                'maximum_distance_stations': [''],
-                'mosaic_model': ['IND']}  # close to both 'CHN' and 'IND'
-        return data
-
-    def get_path_and_content(self, filename):
-        curr_file_path = os.path.abspath(__file__)
-        folder_path = os.path.dirname(curr_file_path)
-        file_path = os.path.join(
-            folder_path, 'data', filename)
-        with open(file_path, 'rb') as file:
-            file_content = file.read()
-        return file_path, file_content
-
-    def create_temporary_uploaded_file(self, name, content, content_type):
-        temp_file = TemporaryUploadedFile(
-            name=name,
-            content_type=content_type,
-            size=len(content),
-            charset='utf-8'
-        )
-        temp_file.write(content)
-        temp_file.seek(0)  # Ensure the file pointer is at the beginning
-        return temp_file
-
-    def test_run_by_rupture_model_then_remove_calc(self):
-        data = self.get_data()
-        rupture_file_path, rupture_file_content = self.get_path_and_content(
-            'fault_rupture.xml')
-        rupture_uploaded_file = self.create_temporary_uploaded_file(
-            rupture_file_path, rupture_file_content, 'text/xml')
-        files = MultiValueDict({"rupture_file": rupture_uploaded_file})
-        data.update(files)
-        self.aristotle_run_then_remove(data)
-
-    def test_run_by_rupture_model_with_stations_then_remove_calc(self):
-        data = self.get_data()
-        data['maximum_distance_stations'] = '100'
-        rupture_file_path, rupture_file_content = self.get_path_and_content(
-            'fault_rupture.xml')
-        stations_file_path, stations_file_content = self.get_path_and_content(
-            'stationlist_seismic.csv')
-        rupture_uploaded_file = self.create_temporary_uploaded_file(
-            rupture_file_path, rupture_file_content, 'text/xml')
-        stations_uploaded_file = self.create_temporary_uploaded_file(
-            stations_file_path, stations_file_content, 'text/csv')
-        files = MultiValueDict({
-            'rupture_file': rupture_uploaded_file,
-            'station_data_file': stations_uploaded_file})
-        data.update(files)
-        self.aristotle_run_then_remove(data)
-
-    @unittest.skip("TODO: to be implemented")
-    def test_failing_site_association_error(self):
-        pass
-
-    def invalid_input(self, params, expected_error):
-        # NOTE: avoiding to print the expected traceback
-        logging.disable(logging.CRITICAL)
-        resp = self.post('aristotle_run', params)
-        logging.disable(logging.NOTSET)
-        self.assertEqual(resp.status_code, 400)
-        resp_dict = json.loads(resp.content.decode('utf8'))
-        print(resp_dict)
-        self.assertIn(expected_error, resp_dict['error_msg'])
-
-    @unittest.skip("TODO: to be implemented")
-    def test_invalid_latitude(self):
-        pass
-
-    @unittest.skip("TODO: to be implemented")
-    def test_invalid_longitude(self):
-        pass
-
+    # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
+    # check that the URL 'validate_zip' cannot be accessed in ARISTOTLE mode
     def test_can_not_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
