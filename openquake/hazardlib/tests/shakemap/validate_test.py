@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2024, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -44,10 +44,10 @@ class AristotleValidateTestCase(unittest.TestCase):
         # without rupture, stations
         POST = PostDict({'usgs_id': ['us6000jllz']})
         _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
-        self.assertEqual(rupdic['is_point_rup'], True)
+        self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', params['station_data_file'])
         self.assertEqual(err, {})
-    
+
     def test_2(self):
         # with rupture_file
         POST = PostDict({
@@ -83,7 +83,9 @@ class AristotleValidateTestCase(unittest.TestCase):
              'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
              'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None, 'station_data_file': None})
+             'maximum_distance_stations': None,
+             'station_data_file': ('Station data is not available:'
+                                   ' HTTP Error 404: Not Found')})
         self.assertEqual(err, {})
 
     def test_3(self):
@@ -121,15 +123,17 @@ class AristotleValidateTestCase(unittest.TestCase):
              'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
              'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None, 'station_data_file': 'stationlist_seismic.csv'})
+             'maximum_distance_stations': None,
+             'station_data_file': 'stationlist_seismic.csv'})
         self.assertEqual(err, {})
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = PostDict({'usgs_id': ['us7000n7n8']})
-        _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
-        self.assertEqual(params, {'station_data_file': None})
-        self.assertEqual(err, {})
+        self.assertEqual(err,
+                         {'station_data_issue': ('stationlist.json was downloaded,'
+                                                ' but it contains no features')})

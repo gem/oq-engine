@@ -115,7 +115,7 @@ AELO_FORM_PLACEHOLDERS = {
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
     'usgs_id': 'USGS ID or custom',
-    'rupture_file_from_usgs': '',
+    'rupture_from_usgs': '',
     'rupture_file': 'Rupture model XML',
     'lon': '-180 ≤ float ≤ 180',
     'lat': '-90 ≤ float ≤ 90',
@@ -700,13 +700,21 @@ def aristotle_get_rupture_data(request):
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
     rup, rupdic, params, err = aristotle_validate(
         request.POST, rupture_path, station_data_path)
+    station_data_issue = err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    station_data_file = params['station_data_file']
+    station_data_file = params.get('station_data_file')
+    if station_data_issue:
+        rupdic['station_data_issue'] = (
+            'Unable to use USGS station data for rupture'
+            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_issue))
+        station_data_file = None
     trts = {}
     try:
-        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+        buffer_radius = 5  # degrees
+        mosaic_models = get_close_mosaic_models(
+            rupdic['lon'], rupdic['lat'], buffer_radius)
         for mosaic_model in mosaic_models:
             trts[mosaic_model] = get_trts_around(
                 mosaic_model,
@@ -728,7 +736,7 @@ def aristotle_get_rupture_data(request):
             content=json.dumps(response_data), content_type=JSON, status=400)
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
+    rupdic['rupture_from_usgs'] = rup is not None
     rupdic['station_data_file_from_usgs'] = station_data_file
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
@@ -785,15 +793,13 @@ def aristotle_run(request):
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
         request.POST, rupture_path, station_data_path)
+    err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    station_data_file = params['station_data_file']
-    if station_data_file is None or not os.path.isfile(station_data_file):
-        station_data_file = None
     params['rupture_dict'] = rupdic
     arist = aristotle.AristotleParam(**params)
     try:
