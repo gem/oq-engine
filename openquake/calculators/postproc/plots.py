@@ -20,7 +20,7 @@ import io
 import os
 import base64
 import numpy
-import contextily as ctx
+import contextily
 from pyproj import Transformer
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
@@ -35,10 +35,11 @@ def import_plt():
     return plt
 
 
-def add_basemap(ax, min_x, min_y, max_x, max_y, source=ctx.providers.CartoDB.Positron):
+def add_basemap(ax, min_x, min_y, max_x, max_y,
+                source=contextily.providers.CartoDB.Positron):
     # NOTE: another interesting option:
-    # source = ctx.providers.TopPlusOpen.Grey
-    img, extent = ctx.bounds2img(min_x, min_y, max_x, max_y, source=source)
+    # source = contextily.providers.TopPlusOpen.Grey
+    img, extent = contextily.bounds2img(min_x, min_y, max_x, max_y, source=source)
     ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
     ax.text(
         0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
@@ -327,7 +328,8 @@ def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10), return_base64=
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
     min_x, max_x = xlim
     min_y, max_y = ylim
-    add_basemap(ax, min_x, min_y, max_x, max_y, source=ctx.providers.TopPlusOpen.Color)
+    add_basemap(ax, min_x, min_y, max_x, max_y,
+                source=contextily.providers.TopPlusOpen.Color)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     ax.legend()
