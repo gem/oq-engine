@@ -44,7 +44,7 @@ class AristotleParam:
 
 ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
-    'rupture_file_from_usgs': 'Rupture from USGS',
+    'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
@@ -170,16 +170,17 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             'station_data_file_from_usgs')
     else:
         try:
+            # NOTE: saving the error instead of the file path, then we need to
+            # check if that is a file or not
             station_data_file = download_station_data_file(dic['usgs_id'], datadir)
         except HTTPError as exc:
-            logging.info(f'Station data is not available: {exc}')
-            params['station_data_file'] = None
+            msg = f'Station data is not available: {exc}'
+            logging.info(msg)
+            params['station_data_file'] = msg
         except (KeyError, LookupError, UnicodeDecodeError,
                 JSONDecodeError) as exc:
             logging.info(str(exc))
-            # NOTE: saving the error instead of the file path, then we need to
-            # check if that is a file or not
-            params['station_data_file'] = str(exc)
+            err['station_data_issue'] = str(exc)
         else:
             params['station_data_file'] = station_data_file
-    return rup, rupdic, params, {}
+    return rup, rupdic, params, err
