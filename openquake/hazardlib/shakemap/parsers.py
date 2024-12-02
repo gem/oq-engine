@@ -510,7 +510,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
               'mag': mag, 'rake': 0.,
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'is_planar': True,
+              'require_dip_strike': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
     return rupdic
@@ -607,7 +607,7 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
 
 def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     feats = rup_data['features']
-    is_planar = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
+    require_dip_strike = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
     lon = md['lon']
     lat = md['lat']
@@ -617,7 +617,7 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     rupdic = {'lon': lon, 'lat': lat, 'dep': md['depth'],
               'mag': md['mag'], 'rake': md['rake'],
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'is_planar': is_planar,
+              'require_dip_strike': require_dip_strike,
               'shakemap_array': shakemap_array,
               'usgs_id': usgs_id, 'rupture_file': rup_path}
     return rupdic
@@ -691,7 +691,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
 
     rupdic = convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array)
 
-    if rupdic['is_planar']:
+    if rupdic['require_dip_strike']:
         # in parsers_test
         return None, rupdic
 
@@ -699,7 +699,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     if rup is None:
         # in parsers_test for us6000jllz
         rupdic['error'] = 'Unable to convert the rupture from the USGS format'
-        rupdic['is_planar'] = True
+        rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic
 
