@@ -20,6 +20,7 @@ import logging
 from dataclasses import dataclass
 from urllib.error import HTTPError
 from json.decoder import JSONDecodeError
+from openquake.baselib import hdf5
 from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.parsers import (
     download_station_data_file, get_rup_dic)
@@ -134,6 +135,17 @@ def _validate(POST):
     else:
         err = {}
     return dic, params, err
+
+
+def get_trts_around(mosaic_model, exposure_hdf5):
+    """
+    :returns: list of TRTs for the given mosaic model
+    """
+    with hdf5.File(exposure_hdf5) as f:
+        df = f.read_df('model_trt_gsim_weight',
+                       sel={'model': mosaic_model.encode()})
+    trts = [trt.decode('utf8') for trt in df.trt.unique()]
+    return trts
 
 
 def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
