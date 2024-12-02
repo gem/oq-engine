@@ -130,7 +130,7 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = PostDict({'usgs_id': ['us7000n7n8']})
-        _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
