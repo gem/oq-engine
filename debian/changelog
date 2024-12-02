@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the filtering of the site collection in event_based with --hc
+  * Internal: writeability check for datadir and scratch_dir (if any)
+
   [Christopher Brooks]
   * Added instantiation-level arguments for contextually applying
     the M9 basin term, the CB14 basin term and the USGS basin scaling
