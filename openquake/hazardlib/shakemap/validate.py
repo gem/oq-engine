@@ -22,8 +22,7 @@ from dataclasses import dataclass
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import valid
 from openquake.commonlib.calc import get_close_mosaic_models
-from openquake.hazardlib.shakemap.parsers import (
-    download_station_data_file, get_rup_dic)
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 
 @dataclass
@@ -148,7 +147,7 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     return trts
 
 
-def aristotle_validate(POST, rupture_path=None, station_data_file=None, datadir=None):
+def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=None):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -160,7 +159,8 @@ def aristotle_validate(POST, rupture_path=None, station_data_file=None, datadir=
     if err:
         return None, dic, params, err
     try:
-        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir, rupture_path)
+        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,
+                                  rupture_file, station_data_file)
     except Exception as exc:
         # FIXME: not tested
         logging.error('', exc_info=True)
@@ -174,14 +174,10 @@ def aristotle_validate(POST, rupture_path=None, station_data_file=None, datadir=
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
-    if not station_data_file:
-        station_data_file, msg = download_station_data_file(dic['usgs_id'], datadir)
-        if msg:
-            err['station_data_issue'] = msg
-        else:
-            rupdic['station_data_file'] = station_data_file
-
-    params['station_data_file'] = station_data_file
+    params['station_data_file'] = rupdic.pop('station_data_file', None)
+    issue = rupdic.pop('station_data_issue', None)
+    if issue:
+        err['station_data_issue'] = issue
     trts = {}
     mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
     mosaic_dir = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
