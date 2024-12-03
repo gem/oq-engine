@@ -83,7 +83,7 @@ class AristotleValidateTestCase(unittest.TestCase):
              'rake': 90.0,
              'rupture_file': 'fault_rupture.xml',
              'rupture_from_usgs': True,
-             'station_data_file_from_usgs': None,
+             'station_data_file': None,
              'strike': 295.24732,
              'trts': {'CHN': ['Active Shallow Crust',
                               'Himalayan Thrust',
@@ -109,7 +109,8 @@ class AristotleValidateTestCase(unittest.TestCase):
              'maximum_distance_stations': None, 'station_data_file': None})
         self.assertEqual(
             err, {'station_data_issue':
-                  'Station data is not available: HTTP Error 404: Not Found'})
+                  'Cannot download https://earthquake.usgs.gov/fdsnws/event/1/'
+                  'query?eventid=FromFile&format=geojson'})
 
     def test_3(self):
         # with rupture, stations
@@ -146,7 +147,7 @@ class AristotleValidateTestCase(unittest.TestCase):
              'rake': 90.0,
              'rupture_file': 'fault_rupture.xml',
              'rupture_from_usgs': True,
-             'station_data_file_from_usgs': 'stationlist_seismic.csv',
+             'station_data_file': 'stationlist_seismic.csv',
              'strike': 295.24732,
              'trts': {'CHN': ['Active Shallow Crust',
                               'Himalayan Thrust',

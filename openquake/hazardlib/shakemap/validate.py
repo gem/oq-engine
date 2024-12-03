@@ -19,14 +19,12 @@
 import os
 import logging
 from dataclasses import dataclass
-from urllib.error import HTTPError
-from json.decoder import JSONDecodeError
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import valid
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
     download_station_data_file, get_rup_dic)
-
+from openquake.qa_tests_data import mosaic
 
 @dataclass
 class AristotleParam:
@@ -65,7 +63,6 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
     'ses_seed': 'Random seed (ses_seed)',
-    'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
@@ -150,7 +147,7 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     return trts
 
 
-def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
+def aristotle_validate(POST, rupture_path=None, station_data_file=None, datadir=None):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -176,35 +173,22 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
-    station_data_file = None
-    if station_data_path is not None:
-        # giving precedence to the user-uploaded station data file
-        station_data_file = station_data_path
-    elif POST.get('station_data_file_from_usgs'):
-        station_data_file = POST.get('station_data_file_from_usgs')
-    else:
-        try:
-            station_data_file = download_station_data_file(dic['usgs_id'], datadir)
-        except HTTPError as exc:
-            msg = f'Station data is not available: {exc}'
-            logging.info(msg)
+    if not station_data_file:
+        station_data_file, msg = download_station_data_file(dic['usgs_id'], datadir)
+        if msg:
             err['station_data_issue'] = msg
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
-            err['station_data_issue'] = str(exc)
         else:
-            rupdic['station_data_file_from_usgs'] = station_data_file
+            rupdic['station_data_file'] = station_data_file
 
     params['station_data_file'] = station_data_file
     trts = {}
     mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+    mosaic_dir = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
     for mosaic_model in mosaic_models:
         trts[mosaic_model] = get_trts_around(
-            mosaic_model,
-            os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
+            mosaic_model, os.path.join(mosaic_dir, 'exposure.hdf5'))
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    rupdic['station_data_file_from_usgs'] = station_data_file
+    rupdic['station_data_file'] = station_data_file
     return rup, rupdic, params, err

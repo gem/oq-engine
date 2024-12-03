@@ -133,7 +133,6 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'number_of_ground_motion_fields': 'float ≥ 1',
     'asset_hazard_distance': 'float ≥ 0',
     'ses_seed': 'int ≥ 0',
-    'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
 }
@@ -695,9 +694,9 @@ def aristotle_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
     rup, rupdic, _params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_path)
+        request.POST, rupture_path, station_data_file)
     err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
@@ -753,9 +752,9 @@ def aristotle_run(request):
         maximum_distance_stations, station_data_file
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_path)
+        request.POST, rupture_path, station_data_file)
     err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
