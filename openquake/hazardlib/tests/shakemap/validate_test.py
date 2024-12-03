@@ -43,7 +43,7 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_1(self):
         # without rupture, stations
         POST = PostDict({'usgs_id': ['us6000jllz']})
-        _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
+        _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
