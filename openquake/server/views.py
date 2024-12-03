@@ -133,7 +133,6 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'number_of_ground_motion_fields': 'float ≥ 1',
     'asset_hazard_distance': 'float ≥ 0',
     'ses_seed': 'int ≥ 0',
-    'station_data_file': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
 }
