@@ -695,9 +695,9 @@ def aristotle_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
     rup, rupdic, _params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_path)
+        request.POST, rupture_path, station_data_file)
     err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
@@ -753,9 +753,9 @@ def aristotle_run(request):
         maximum_distance_stations, station_data_file
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_path)
+        request.POST, rupture_path, station_data_file)
     err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,

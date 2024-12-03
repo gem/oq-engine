@@ -148,7 +148,7 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     return trts
 
 
-def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=None):
+def aristotle_validate(POST, rupture_path=None, station_data_file=None, datadir=None):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -174,13 +174,7 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
-    station_data_file = None
-    if station_data_path is not None:
-        # giving precedence to the user-uploaded station data file
-        station_data_file = station_data_path
-    elif POST.get('station_data_file'):
-        station_data_file = POST.get('station_data_file')
-    else:
+    if not station_data_file:
         station_data_file, msg = download_station_data_file(dic['usgs_id'], datadir)
         if msg:
             err['station_data_issue'] = msg
