@@ -46,9 +46,9 @@ import numpy
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.hazardlib.shakemap.validate import aristotle_validate, ARISTOTLE_FORM_LABELS
+from openquake.hazardlib.shakemap.validate import (
+    aristotle_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -60,7 +60,7 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_trts_around, get_aristotle_params
+from openquake.engine.aristotle import get_aristotle_params
 from openquake.server import utils
 
 from django.conf import settings
@@ -111,31 +111,6 @@ AELO_FORM_PLACEHOLDERS = {
     'vs30': 'fixed at 760 m/s',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
-}
-
-ARISTOTLE_FORM_PLACEHOLDERS = {
-    'usgs_id': 'USGS ID or custom',
-    'rupture_from_usgs': '',
-    'rupture_file': 'Rupture model XML',
-    'lon': '-180 ≤ float ≤ 180',
-    'lat': '-90 ≤ float ≤ 90',
-    'dep': 'float ≥ 0',
-    'mag': 'float ≥ 0',
-    'rake': '-180 ≤ float ≤ 180',
-    'local_timestamp': '',
-    'time_event': 'day|night|transit',
-    'dip': '0 ≤ float ≤ 90',
-    'strike': '0 ≤ float ≤ 360',
-    'maximum_distance': 'float ≥ 0',
-    'mosaic_model': 'Mosaic model',
-    'trt': 'Tectonic region type',
-    'truncation_level': 'float ≥ 0',
-    'number_of_ground_motion_fields': 'float ≥ 1',
-    'asset_hazard_distance': 'float ≥ 0',
-    'ses_seed': 'int ≥ 0',
-    'station_data_file_from_usgs': '',
-    'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'float ≥ 0',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
@@ -687,8 +662,6 @@ def aristotle_callback(
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-# FIXME: this function is doing too much: the get_close_mosaic_models
-# should be moved (and tested) in the shakemap.validate library
 def aristotle_get_rupture_data(request):
     """
     Retrieve rupture parameters corresponding to a given usgs id
@@ -697,47 +670,13 @@ def aristotle_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    rup, rupdic, params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_path)
-    station_data_issue = err.pop('station_data_issue', None)
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    rup, rupdic, _params, err = aristotle_validate(
+        request.POST, rupture_path, station_data_file)
+    err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    station_data_file = params.get('station_data_file')
-    if station_data_issue:
-        rupdic['station_data_issue'] = (
-            'Unable to use USGS station data for rupture'
-            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_issue))
-        station_data_file = None
-    trts = {}
-    try:
-        buffer_radius = 5  # degrees
-        mosaic_models = get_close_mosaic_models(
-            rupdic['lon'], rupdic['lat'], buffer_radius)
-        for mosaic_model in mosaic_models:
-            trts[mosaic_model] = get_trts_around(
-                mosaic_model,
-                os.path.join(config.directory.mosaic_dir,
-                             'exposure.hdf5'))
-    except Exception as exc:
-        usgs_id = rupdic['usgs_id']
-        if '404: Not Found' in str(exc):
-            error_msg = f'USGS ID "{usgs_id}" was not found'
-        elif 'There is not rupture.json' in str(exc):
-            error_msg = (f'USGS ID "{usgs_id}" was found, but it'
-                         f' has no associated rupture data')
-        else:
-            error_msg = str(exc)
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': error_msg}
-        logging.error('', exc_info=True)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
-    rupdic['trts'] = trts
-    rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_from_usgs'] = rup is not None
-    rupdic['station_data_file_from_usgs'] = station_data_file
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.2, 6.2)  # fitting in a single row in the template without resizing
@@ -748,8 +687,7 @@ def aristotle_get_rupture_data(request):
             shakemap_array, 'MMI', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
-    response_data = rupdic
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+    return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
                         status=200)
 
 
@@ -790,9 +728,9 @@ def aristotle_run(request):
         maximum_distance_stations, station_data_file
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_path)
+        request.POST, rupture_path, station_data_file)
     err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
@@ -801,6 +739,7 @@ def aristotle_run(request):
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
     params['rupture_dict'] = rupdic
+    params['station_data_file'] = rupdic['station_data_file']
     arist = aristotle.AristotleParam(**params)
     try:
         params = get_aristotle_params(arist)
