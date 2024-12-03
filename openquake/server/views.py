@@ -756,11 +756,7 @@ def aristotle_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    try:
-        interface_level = request.user.profile.interface_level
-    except AttributeError:
-        interface_level = '0'
-    if interface_level == '0':
+    if request.interface_level == '0':
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
@@ -1229,10 +1225,6 @@ def web_engine(request, **kwargs):
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['aristotle_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
-        try:
-            params['interface_level'] = request.user.profile.interface_level
-        except AttributeError:
-            params['interface_level'] = '0'
     return render(
         request, "engine/index.html", params)
 
