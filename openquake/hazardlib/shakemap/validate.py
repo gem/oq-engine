@@ -19,8 +19,6 @@
 import os
 import logging
 from dataclasses import dataclass
-from urllib.error import HTTPError
-from json.decoder import JSONDecodeError
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import valid
 from openquake.commonlib.calc import get_close_mosaic_models
@@ -183,16 +181,9 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     elif POST.get('station_data_file_from_usgs'):
         station_data_file = POST.get('station_data_file_from_usgs')
     else:
-        try:
-            station_data_file = download_station_data_file(dic['usgs_id'], datadir)
-        except HTTPError as exc:
-            msg = f'Station data is not available: {exc}'
-            logging.info(msg)
+        station_data_file, msg = download_station_data_file(dic['usgs_id'], datadir)
+        if msg:
             err['station_data_issue'] = msg
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
-            err['station_data_issue'] = str(exc)
         else:
             rupdic['station_data_file_from_usgs'] = station_data_file
 

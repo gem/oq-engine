@@ -109,7 +109,8 @@ class AristotleValidateTestCase(unittest.TestCase):
              'maximum_distance_stations': None, 'station_data_file': None})
         self.assertEqual(
             err, {'station_data_issue':
-                  'Station data is not available: HTTP Error 404: Not Found'})
+                  'Cannot download https://earthquake.usgs.gov/fdsnws/event/1/'
+                  'query?eventid=FromFile&format=geojson'})
 
     def test_3(self):
         # with rupture, stations

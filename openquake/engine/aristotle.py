@@ -23,8 +23,6 @@ import os
 import getpass
 import logging
 import numpy
-from json.decoder import JSONDecodeError
-from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib.shakemap.validate import AristotleParam, get_trts_around
 from openquake.hazardlib.shakemap.parsers import (
@@ -74,14 +72,10 @@ def get_aristotle_params(arist):
         del rupdic['shakemap_array']
     if arist.station_data_file is None:
         # NOTE: giving precedence to the station_data_file uploaded via form
-        try:
-            arist.station_data_file = download_station_data_file(
-                arist.rupture_dict['usgs_id'])
-        except HTTPError as exc:
-            logging.info(f'Station data is not available: {exc}')
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
+        arist.station_data_file, err = download_station_data_file(
+            arist.rupture_dict['usgs_id'])
+        if err:
+            logging.info(err)
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file
