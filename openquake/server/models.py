@@ -26,8 +26,8 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     INTERFACE_CHOICES = [
         ('0', 'View Only'),
-        ('1', 'Simplified Form'),
-        ('2', 'Advanced Form'),
+        ('1', 'Simplified'),
+        ('2', 'Advanced'),
     ]
     interface_level = models.CharField(
         max_length=10,

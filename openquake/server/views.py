@@ -727,6 +727,8 @@ def aristotle_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
+    if request.user.profile.interface_level == '0':
+        return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
