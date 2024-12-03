@@ -579,6 +579,11 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
 
 
 def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
+    """
+    Convert JSON data coming from the USGS into a rupdic with keys
+    lon, lat, dep, mag, rake, local_timestamp, require_dip_strike, shakemap,
+    usgs_id, rupture_file
+    """
     feats = rup_data['features']
     require_dip_strike = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
