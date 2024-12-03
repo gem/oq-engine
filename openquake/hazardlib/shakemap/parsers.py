@@ -620,10 +620,18 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
                       strike=rup.surface.get_strike(),
                       dip=rup.surface.get_dip(),
                       usgs_id=usgs_id,
-                      rupture_file=rupture_file)
+                      rupture_file=rupture_file,
+                      station_data_file=station_data_file)
+        if usgs_id == 'FromFile':
+            return rup, rupdic
     elif rupture_file and rupture_file.endswith('.json'):
         with open(rupture_file) as f:
             rup_data = json.load(f)
+        if usgs_id == 'FromFile':
+            rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
+            rupdic['station_data_file'] = station_data_file
+            rup = convert_to_oq_rupture(rup_data)
+            return rup, rupdic
 
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
