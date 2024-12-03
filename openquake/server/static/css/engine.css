@@ -453,3 +453,12 @@ table#aristotle-losses th td {
     clear: both;
     margin-bottom: 30px;
 }
+
+/* Hide all form elements except the submit button */
+.hidden_except_submit input:not([type="submit"]),
+.hidden_except_submit select,
+.hidden_except_submit textarea,
+.hidden_except_submit button:not([type="submit"]),
+.hidden_except_submit label {
+  display: none;
+}

@@ -679,7 +679,7 @@ def aristotle_get_rupture_data(request):
                             status=400 if 'invalid_inputs' in err else 500)
     if 'shakemap_array' in rupdic:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (14, 7)  # fitting in a single row in the template without resizing
+        figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
@@ -1194,6 +1194,11 @@ def web_engine(request, **kwargs):
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['aristotle_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
+        # TODO: determine the interface level from the user role
+        # (it needs to be passed as a string to the template)
+        # NOTE: using interface level 2 unless differently specified. We may prefer to
+        # force defining the interface level, raising an error otherwise
+        params['interface_level'] = str(getattr(settings, 'INTERFACE_LEVEL', 2))
     return render(
         request, "engine/index.html", params)
 
