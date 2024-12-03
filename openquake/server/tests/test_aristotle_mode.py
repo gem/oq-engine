@@ -285,7 +285,7 @@ class EngineServerTestCase(django.test.TestCase):
         expected_keys = ['dep', 'require_dip_strike', 'lat', 'local_timestamp',
                          'lon', 'mag', 'mmi_map_png', 'mosaic_models', 'pga_map_png',
                          'rake', 'rupture_file', 'rupture_from_usgs',
-                         'station_data_file_from_usgs', 'station_data_issue',
+                         'station_data_file_from_usgs',
                          'time_event', 'trts', 'usgs_id']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertEqual(ret_dict['local_timestamp'],

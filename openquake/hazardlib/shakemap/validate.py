@@ -207,6 +207,6 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
             os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
-
+    rupdic['rupture_from_usgs'] = rup is not None
+    rupdic['station_data_file_from_usgs'] = station_data_file
     return rup, rupdic, params, err
