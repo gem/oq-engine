@@ -146,17 +146,17 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
     """
     if rupture_dict is None:
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
-    try:
-        arist = AristotleParam(
-            rupture_dict, time_event, maximum_distance, mosaic_model,
-            trt, truncation_level,
-            number_of_ground_motion_fields, asset_hazard_distance,
-            ses_seed, local_timestamp, exposure_hdf5, station_data_file,
-            maximum_distance_stations)
-        oqparams = get_aristotle_params(arist)
-    except Exception as exc:
-        callback(None, dict(usgs_id=usgs_id), exc=exc)
+
+    arist, err = AristotleParam.validate(
+        rupture_dict, time_event, maximum_distance, mosaic_model,
+        trt, truncation_level,
+        number_of_ground_motion_fields, asset_hazard_distance,
+        ses_seed, local_timestamp, exposure_hdf5, station_data_file,
+        maximum_distance_stations)
+    if err:
+        callback(None, dict(usgs_id=usgs_id), exc=err)
         return
+    oqparams = get_aristotle_params(arist)
     # in  testing mode create new job contexts
     user = getpass.getuser()
     [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
