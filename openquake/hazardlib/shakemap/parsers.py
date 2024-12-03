@@ -611,8 +611,8 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
     if rupture_file and rupture_file.endswith('.xml'):
         [rup_node] = nrml.read(os.path.join(datadir, rupture_file)
                                if datadir else rupture_file)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        rup = conv.convert_node(rup_node)
+        rup = sourceconverter.RuptureConverter(
+            rupture_mesh_spacing=5.).convert_node(rup_node)
         rup.tectonic_region_type = '*'
         hp = rup.hypocenter
         rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
