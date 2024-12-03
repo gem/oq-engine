@@ -527,7 +527,6 @@ def calc_share(request, calc_id):
     """
     # FIXME: who can share a job? Probably the owner or any administrator or user with
     # interface_level == '2'
-    __import__('pdb').set_trace()
     try:
         message = logs.dbcmd('update_job', calc_id, {'status': 'shared'})
     except dbapi.NotFound:

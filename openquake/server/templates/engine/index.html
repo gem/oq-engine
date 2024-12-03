@@ -57,14 +57,14 @@
       <tbody>
         <% _.each(calculations, function(calc) { %>
         <% if (calc.get('status') == 'deleted') { return 0; } %>
-        <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
+        <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' || calc.get('status') == 'shared' ? 'success' : 'error') %>">
           <td><%= calc.get('id') || 'New' %></td>
           <td><%= calc.get('owner') %></td>
           <td><%= calc.get('calculation_mode') %></td>
           <td><%= calc.get('description') %></td>
           <td><%= calc.get('start_time') %></td>
           <td>
-            <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('is_running') == true) { %>
+            <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>
               <%= calc.get('status') %>
             <% } else { %>
               failed<br>( <%= calc.get('status') %> )
@@ -96,7 +96,7 @@
                 </div>
                 <!-- end confirm_modal -->
                 {% endif %}
-                <% if (calc.get('status') == 'complete') { %>
+                <% if (calc.get('status') == 'complete' || calc.get('status') == 'shared') { %>
 
                 {% if application_mode != 'READ_ONLY' and interface_level == '2' %}
                 <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-info calc-list-btn" style="margin: 2px 0 2px 0;">Share</a>
