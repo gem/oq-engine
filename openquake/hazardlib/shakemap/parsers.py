@@ -393,7 +393,7 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic_non_null
 
 
-def get_preferred_shakemap(shakemaps):
+def _get_preferred_shakemap(shakemaps):
     preferred_weights = [shakemap['preferredWeight'] for shakemap in shakemaps]
     preferred_idxs = [idx for idx, val in enumerate(preferred_weights)
                       if val == max(preferred_weights)]
@@ -652,7 +652,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
     products = js['properties']['products']
 
     # NB: currently we cannot find a case with missing shakemap
-    shakemap = get_preferred_shakemap(products['shakemap'])
+    shakemap = _get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
 
     if 'download/rupture.json' not in contents:
