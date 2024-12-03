@@ -25,6 +25,13 @@ from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 
+class PostDict(dict):
+    def get(self, key, default=None):
+        if key in self:
+            return self[key][0]
+        return default
+
+
 @dataclass
 class AristotleParam:
     rupture_dict: dict
@@ -40,6 +47,11 @@ class AristotleParam:
     exposure_hdf5: str = None
     station_data_file: str = None
     maximum_distance_stations: float = None
+
+    @classmethod
+    def validate(cls, **kw):
+        _rup, _rupdic, params, err = aristotle_validate(PostDict(kw))
+        return cls(params), err
 
 
 ARISTOTLE_FORM_LABELS = {

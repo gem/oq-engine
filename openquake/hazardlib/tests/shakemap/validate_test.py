@@ -18,17 +18,9 @@
 
 import os
 import unittest
-from openquake.hazardlib.shakemap.validate import aristotle_validate
+from openquake.hazardlib.shakemap.validate import aristotle_validate, PostDict
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
-
-
-class PostDict(dict):
-    def get(self, key, default=None):
-        if key in self:
-            return self[key][0]
-        return default
-
 
 class AristotleValidateTestCase(unittest.TestCase):
     @classmethod
