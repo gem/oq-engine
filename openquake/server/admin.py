@@ -13,13 +13,14 @@ class ProfileInline(admin.StackedInline):
     verbose_name_plural = 'Profile'
 
 
-# NOTE: this customization only moves the email to a more visible section, as
-#       a way to remind to the creator of the user that the email is an
-#       important field. In fact, it is used for email notifications. In order
+# NOTE: this customization adds the ProfileInline and moves the email to a more
+#       visible section, as a way to remind to the creator of the user that the email
+#       is an important field, being used for email notifications. In order
 #       to avoid tricky issues related to the modification of the standard
 #       django User model, the email field still remains optional. However,
 #       email notifications will be disabled in case the email is not
 #       specified.
+
 class CustomUserAdmin(UserAdmin):
     inlines = (ProfileInline,)
     fieldsets = (
