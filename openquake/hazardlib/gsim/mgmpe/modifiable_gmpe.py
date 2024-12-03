@@ -384,6 +384,7 @@ class ModifiableGMPE(GMPE):
             tmp = copy.copy(sig)
             tctx = ctx.copy()
             tctx.vs30 = self.params['ceus2020_site_term']['ref_vs30']
+            breakpoint()
             timt = (PGA(),)
             self.gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
             ref = np.squeeze(ref)

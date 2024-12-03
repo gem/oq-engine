@@ -61,11 +61,13 @@ def _get_vs30_scaling_model(C, vs30, f760):
     #   The f760 scaling factors
 
     # Initialise fv
-    fv = np.zeros_like(vs30)
+    fv = np.zeros(len(vs30))
 
-    # First interval
-    idx = (vs30 > CONSTANTS['vl']) & (vs30 <= C['v1'])
-    fv[idx] = C['c'] * np.log(C['v1'] / CONSTANTS['vref'])
+    # First interval - In the paper eq.3 they indicate vs30 > 200 but in figure
+    # 13 they show results for this vs30 value
+    idx = np.nonzero((vs30 >= CONSTANTS['vl']) & (vs30 <= C['v1']))[0]
+    tmp = C['c'] * np.log(C['v1'] / CONSTANTS['vref'])
+    fv[idx] = tmp
 
     # Second interval
     idx = (vs30 > C['v1']) & (vs30 <= C['v2'])
@@ -78,9 +80,9 @@ def _get_vs30_scaling_model(C, vs30, f760):
     # Fourth interval
     idx = (vs30 > CONSTANTS['vu']) & (vs30 <= 3000)
     fv[idx] = (C['c'] * np.log(C['v2'] / CONSTANTS['vref']) -
-               (C['c'] * np.log(C['v2'] / CONSTANTS['vref']) + f760) *
-               np.log(vs30[idx] / CONSTANTS['vu']) /
-               np.log(3000.0 / CONSTANTS['vu']))
+               ((C['c'] * np.log(C['v2'] / CONSTANTS['vref']) + f760) *
+                np.log(vs30[idx] / CONSTANTS['vu']) /
+                np.log(3000.0 / CONSTANTS['vu'])))
 
     return fv
 
