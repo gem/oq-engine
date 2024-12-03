@@ -184,8 +184,6 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
         station_data_file = POST.get('station_data_file_from_usgs')
     else:
         try:
-            # NOTE: saving the error instead of the file path, then we need to
-            # check if that is a file or not
             station_data_file = download_station_data_file(dic['usgs_id'], datadir)
         except HTTPError as exc:
             msg = f'Station data is not available: {exc}'
