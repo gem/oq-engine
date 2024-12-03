@@ -45,7 +45,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         POST = PostDict({'usgs_id': ['us6000jllz']})
         _rup, rupdic, params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], True)
-        self.assertIn('stations', params['station_data_file'])
+        self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_2(self):
@@ -106,7 +106,7 @@ class AristotleValidateTestCase(unittest.TestCase):
              'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
              'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None, 'station_data_file': None})
+             'maximum_distance_stations': None})
         self.assertEqual(err, {})
 
     def test_3(self):
@@ -167,8 +167,7 @@ class AristotleValidateTestCase(unittest.TestCase):
              'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
              'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None,
-             'station_data_file': 'stationlist_seismic.csv'})
+             'maximum_distance_stations': None})
         self.assertEqual(err, {})
 
     def test_4(self):

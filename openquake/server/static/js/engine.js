@@ -707,7 +707,7 @@
                                 $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
-                formData.append('station_data_file', $('#station_data_file').val());
+                formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
                 formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
