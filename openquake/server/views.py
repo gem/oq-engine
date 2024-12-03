@@ -696,7 +696,7 @@ def aristotle_get_rupture_data(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    rup, rupdic, params, err = aristotle_validate(
+    rup, rupdic, _params, err = aristotle_validate(
         request.POST, rupture_path, station_data_path)
     err.pop('station_data_issue', None)
     if err:
