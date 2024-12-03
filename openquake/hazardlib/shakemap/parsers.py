@@ -601,6 +601,41 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
+def _contents_properties_shakemap(usgs_id, datadir):
+    if datadir:  # in parsers_test
+        fname = os.path.join(datadir, usgs_id + '.json')
+        text = open(fname).read()
+    else:
+        url = SHAKEMAP_URL.format(usgs_id)
+        logging.info('Downloading %s' % url)
+        try:
+            text = urlopen(url).read()
+        except URLError as exc:
+            # in parsers_test
+            raise URLError(f'Unable to download from {url}: {exc}')
+
+    js = json.loads(text)
+    # with open('/tmp/x.json', 'wb') as f:
+    #     f.write(text)
+    properties = js['properties']
+
+    # NB: currently we cannot find a case with missing shakemap
+    shakemap = _get_preferred_shakemap(properties['products']['shakemap'])
+    contents = shakemap['contents']
+
+    if 'download/grid.xml' in contents:
+        url = contents.get('download/grid.xml')['url']
+        if datadir:  # in parsers_test
+            grid_fname = f'{datadir}/{usgs_id}-grid.xml'
+        else:
+            logging.info('Downloading grid.xml')
+            grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
+        shakemap_array = get_shakemap_array(grid_fname)
+    else:
+        shakemap_array = None
+    return contents, properties, shakemap_array
+
+
 def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None):
     """
     If the rupture_file is None, download a rupture from the USGS site given
@@ -638,47 +673,18 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             rup = convert_to_oq_rupture(rup_data)
             return rup, rupdic
 
-    if datadir:  # in parsers_test
-        fname = os.path.join(datadir, usgs_id + '.json')
-        text = open(fname).read()
-    else:
-        url = SHAKEMAP_URL.format(usgs_id)
-        logging.info('Downloading %s' % url)
-        try:
-            text = urlopen(url).read()
-        except URLError as exc:
-            # in parsers_test
-            raise URLError(f'Unable to download from {url}: {exc}')
-
-    js = json.loads(text)
-    # with open('/tmp/x.json', 'wb') as f:
-    #     f.write(text)
-    mag = js['properties']['mag']
-    products = js['properties']['products']
-
-    # NB: currently we cannot find a case with missing shakemap
-    shakemap = _get_preferred_shakemap(products['shakemap'])
-    contents = shakemap['contents']
+    contents, properties, shakemap = _contents_properties_shakemap(
+        usgs_id, datadir)
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
-        return None, load_rupdic_from_finite_fault(usgs_id, mag, products)
-
-    if 'download/grid.xml' in contents:
-        url = contents.get('download/grid.xml')['url']
-        if datadir:  # in parsers_test
-            grid_fname = f'{datadir}/{usgs_id}-grid.xml'
-        else:
-            logging.info('Downloading grid.xml')
-            grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-        shakemap_array = get_shakemap_array(grid_fname)
-    else:
-        shakemap_array = None
+        return None, load_rupdic_from_finite_fault(
+            usgs_id, properties['mag'], properties['products'])
 
     if not rupdic:
         if not rup_data:
             rup_data, rupture_file = download_rupture_data(usgs_id, contents, datadir)
-        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap_array)
+        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     if station_data_file is None:
         rupdic['station_data_file'], rupdic['station_data_issue'] = (
             download_station_data_file(usgs_id, contents, datadir))
