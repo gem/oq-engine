@@ -247,7 +247,7 @@ class EngineServerTestCase(django.test.TestCase):
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_from_usgs', 'error',
-            'station_data_file_from_usgs', 'mosaic_models', 'trts']
+            'station_data_file', 'mosaic_models', 'trts']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertIsNotNone(ret_dict['rupture_file'])
         self.assertEqual(ret_dict['local_timestamp'],
@@ -287,7 +287,7 @@ class EngineServerTestCase(django.test.TestCase):
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_from_usgs',
-            'station_data_file_from_usgs', 'trts',
+            'station_data_file', 'trts',
             'mosaic_models']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertIsNotNone(ret_dict['rupture_file'])

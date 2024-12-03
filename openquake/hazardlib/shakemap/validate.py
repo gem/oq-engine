@@ -63,7 +63,7 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
     'ses_seed': 'Random seed (ses_seed)',
-    'station_data_file_from_usgs': 'Station data from USGS',
+    'station_data_file': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
 }
@@ -178,14 +178,14 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
         station_data_file = station_data_path
-    elif POST.get('station_data_file_from_usgs'):
-        station_data_file = POST.get('station_data_file_from_usgs')
+    elif POST.get('station_data_file'):
+        station_data_file = POST.get('station_data_file')
     else:
         station_data_file, msg = download_station_data_file(dic['usgs_id'], datadir)
         if msg:
             err['station_data_issue'] = msg
         else:
-            rupdic['station_data_file_from_usgs'] = station_data_file
+            rupdic['station_data_file'] = station_data_file
 
     params['station_data_file'] = station_data_file
     trts = {}
@@ -197,5 +197,5 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    rupdic['station_data_file_from_usgs'] = station_data_file
+    rupdic['station_data_file'] = station_data_file
     return rup, rupdic, params, err
