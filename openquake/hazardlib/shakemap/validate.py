@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import logging
 from dataclasses import dataclass
 from urllib.error import HTTPError
 from json.decoder import JSONDecodeError
-from openquake.baselib import hdf5
+from openquake.baselib import config, hdf5
 from openquake.hazardlib import valid
+from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
     download_station_data_file, get_rup_dic)
 
@@ -174,25 +176,35 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
+    station_data_file = None
     if station_data_path is not None:
         # giving precedence to the user-uploaded station data file
-        params['station_data_file'] = station_data_path
+        station_data_file = station_data_path
     elif POST.get('station_data_file_from_usgs'):
-        params['station_data_file'] = POST.get(
-            'station_data_file_from_usgs')
+        station_data_file = POST.get('station_data_file_from_usgs')
     else:
         try:
-            # NOTE: saving the error instead of the file path, then we need to
-            # check if that is a file or not
             station_data_file = download_station_data_file(dic['usgs_id'], datadir)
         except HTTPError as exc:
             msg = f'Station data is not available: {exc}'
             logging.info(msg)
-            params['station_data_file'] = msg
+            err['station_data_issue'] = msg
         except (KeyError, LookupError, UnicodeDecodeError,
                 JSONDecodeError) as exc:
             logging.info(str(exc))
             err['station_data_issue'] = str(exc)
         else:
-            params['station_data_file'] = station_data_file
+            rupdic['station_data_file_from_usgs'] = station_data_file
+
+    params['station_data_file'] = station_data_file
+    trts = {}
+    mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+    for mosaic_model in mosaic_models:
+        trts[mosaic_model] = get_trts_around(
+            mosaic_model,
+            os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
+    rupdic['trts'] = trts
+    rupdic['mosaic_models'] = mosaic_models
+    rupdic['rupture_from_usgs'] = rup is not None
+    rupdic['station_data_file_from_usgs'] = station_data_file
     return rup, rupdic, params, err

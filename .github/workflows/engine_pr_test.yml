@@ -64,6 +64,7 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
           cd openquake
@@ -97,8 +98,8 @@ jobs:
           fi
       - name: Server 'PUBLIC' mode tests
         run: |
-          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           source ~/openquake/bin/activate
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
           # Starting the webui here is not needed by test_public_mode, 

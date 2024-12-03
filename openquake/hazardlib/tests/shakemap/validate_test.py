@@ -74,19 +74,42 @@ class AristotleValidateTestCase(unittest.TestCase):
             POST, 'fault_rupture.xml', datadir=DATA)
         self.assertEqual(
             rupdic,
-            {'lon': 84.4, 'lat': 27.6, 'dep': 30.0,
-             'mag': 7.0, 'rake': 90.0, 'strike': 295.24732, 'dip': 30.08335,
-             'usgs_id': 'FromFile', 'rupture_file': 'fault_rupture.xml'})
+            {'dep': 30.0,
+             'dip': 30.08335,
+             'lat': 27.6,
+             'lon': 84.4,
+             'mag': 7.0,
+             'mosaic_models': ['CHN', 'IND'],
+             'rake': 90.0,
+             'rupture_file': 'fault_rupture.xml',
+             'rupture_from_usgs': True,
+             'station_data_file_from_usgs': None,
+             'strike': 295.24732,
+             'trts': {'CHN': ['Active Shallow Crust',
+                              'Himalayan Thrust',
+                              'Craton',
+                              'Deep Crust 1',
+                              'Active-Stable Shallow Crust'],
+                      'IND': ['active shallow crust normal',
+                              'active shallow crust strike-slip reverse',
+                              'intraplate margin lower',
+                              'intraplate margin upper',
+                              'stable shallow crust',
+                              'subduction interface',
+                              'subduction interface megathrust',
+                              'subduction intraslab Himalayas',
+                              'subduction intraslab']},
+             'usgs_id': 'FromFile'})
         self.assertEqual(
             params,
             {'local_timestamp': None, 'time_event': 'day', 'maximum_distance': 100.0,
              'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
              'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None,
-             'station_data_file': ('Station data is not available:'
-                                   ' HTTP Error 404: Not Found')})
-        self.assertEqual(err, {})
+             'maximum_distance_stations': None, 'station_data_file': None})
+        self.assertEqual(
+            err, {'station_data_issue':
+                  'Station data is not available: HTTP Error 404: Not Found'})
 
     def test_3(self):
         # with rupture, stations
@@ -114,9 +137,32 @@ class AristotleValidateTestCase(unittest.TestCase):
             POST, 'fault_rupture.xml', 'stationlist_seismic.csv', datadir=DATA)
         self.assertEqual(
             rupdic,
-            {'lon': 84.4, 'lat': 27.6, 'dep': 30.0,
-             'mag': 7.0, 'rake': 90.0, 'strike': 295.24732, 'dip': 30.08335,
-             'usgs_id': 'FromFile', 'rupture_file': 'fault_rupture.xml'})
+            {'dep': 30.0,
+             'dip': 30.08335,
+             'lat': 27.6,
+             'lon': 84.4,
+             'mag': 7.0,
+             'mosaic_models': ['CHN', 'IND'],
+             'rake': 90.0,
+             'rupture_file': 'fault_rupture.xml',
+             'rupture_from_usgs': True,
+             'station_data_file_from_usgs': 'stationlist_seismic.csv',
+             'strike': 295.24732,
+             'trts': {'CHN': ['Active Shallow Crust',
+                              'Himalayan Thrust',
+                              'Craton',
+                              'Deep Crust 1',
+                              'Active-Stable Shallow Crust'],
+                      'IND': ['active shallow crust normal',
+                              'active shallow crust strike-slip reverse',
+                              'intraplate margin lower',
+                              'intraplate margin upper',
+                              'stable shallow crust',
+                              'subduction interface',
+                              'subduction interface megathrust',
+                              'subduction intraslab Himalayas',
+                              'subduction intraslab']},
+             'usgs_id': 'FromFile'})
         self.assertEqual(
             params,
             {'local_timestamp': None, 'time_event': 'day', 'maximum_distance': 100.0,
@@ -131,6 +177,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         # for us7000n7n8 the stations.json does not contain stations
         POST = PostDict({'usgs_id': ['us7000n7n8']})
         _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
+        self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
