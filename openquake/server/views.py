@@ -711,29 +711,13 @@ def aristotle_get_rupture_data(request):
             ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_issue))
         station_data_file = None
     trts = {}
-    try:
-        buffer_radius = 5  # degrees
-        mosaic_models = get_close_mosaic_models(
-            rupdic['lon'], rupdic['lat'], buffer_radius)
-        for mosaic_model in mosaic_models:
-            trts[mosaic_model] = get_trts_around(
-                mosaic_model,
-                os.path.join(config.directory.mosaic_dir,
-                             'exposure.hdf5'))
-    except Exception as exc:
-        usgs_id = rupdic['usgs_id']
-        if '404: Not Found' in str(exc):
-            error_msg = f'USGS ID "{usgs_id}" was not found'
-        elif 'There is not rupture.json' in str(exc):
-            error_msg = (f'USGS ID "{usgs_id}" was found, but it'
-                         f' has no associated rupture data')
-        else:
-            error_msg = str(exc)
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': error_msg}
-        logging.error('', exc_info=True)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
+    buffer_radius = 5  # degrees
+    mosaic_models = get_close_mosaic_models(
+        rupdic['lon'], rupdic['lat'], buffer_radius)
+    for mosaic_model in mosaic_models:
+        trts[mosaic_model] = get_trts_around(
+            mosaic_model,
+            os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
@@ -748,8 +732,7 @@ def aristotle_get_rupture_data(request):
             shakemap_array, 'MMI', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
-    response_data = rupdic
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+    return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
                         status=200)
 
 
