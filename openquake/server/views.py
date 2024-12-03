@@ -47,7 +47,7 @@ from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.validate import (
-    aristotle_validate, ARISTOTLE_FORM_LABELS)
+    aristotle_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -111,30 +111,6 @@ AELO_FORM_PLACEHOLDERS = {
     'vs30': 'fixed at 760 m/s',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
-}
-
-ARISTOTLE_FORM_PLACEHOLDERS = {
-    'usgs_id': 'USGS ID or custom',
-    'rupture_from_usgs': '',
-    'rupture_file': 'Rupture model XML',
-    'lon': '-180 ≤ float ≤ 180',
-    'lat': '-90 ≤ float ≤ 90',
-    'dep': 'float ≥ 0',
-    'mag': 'float ≥ 0',
-    'rake': '-180 ≤ float ≤ 180',
-    'local_timestamp': '',
-    'time_event': 'day|night|transit',
-    'dip': '0 ≤ float ≤ 90',
-    'strike': '0 ≤ float ≤ 360',
-    'maximum_distance': 'float ≥ 0',
-    'mosaic_model': 'Mosaic model',
-    'trt': 'Tectonic region type',
-    'truncation_level': 'float ≥ 0',
-    'number_of_ground_motion_fields': 'float ≥ 1',
-    'asset_hazard_distance': 'float ≥ 0',
-    'ses_seed': 'int ≥ 0',
-    'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'float ≥ 0',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
@@ -763,6 +739,7 @@ def aristotle_run(request):
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
     params['rupture_dict'] = rupdic
+    params['station_data_file'] = rupdic['station_data_file']
     arist = aristotle.AristotleParam(**params)
     try:
         params = get_aristotle_params(arist)

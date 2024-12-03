@@ -62,8 +62,34 @@ ARISTOTLE_FORM_LABELS = {
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
     'ses_seed': 'Random seed (ses_seed)',
+    'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
+}
+
+ARISTOTLE_FORM_PLACEHOLDERS = {
+    'usgs_id': 'USGS ID or custom',
+    'rupture_from_usgs': '',
+    'rupture_file': 'Rupture model XML',
+    'lon': '-180 ≤ float ≤ 180',
+    'lat': '-90 ≤ float ≤ 90',
+    'dep': 'float ≥ 0',
+    'mag': 'float ≥ 0',
+    'rake': '-180 ≤ float ≤ 180',
+    'local_timestamp': '',
+    'time_event': 'day|night|transit',
+    'dip': '0 ≤ float ≤ 90',
+    'strike': '0 ≤ float ≤ 360',
+    'maximum_distance': 'float ≥ 0',
+    'mosaic_model': 'Mosaic model',
+    'trt': 'Tectonic region type',
+    'truncation_level': 'float ≥ 0',
+    'number_of_ground_motion_fields': 'float ≥ 1',
+    'asset_hazard_distance': 'float ≥ 0',
+    'ses_seed': 'int ≥ 0',
+    'station_data_file_from_usgs': '',
+    'station_data_file': 'Station data CSV',
+    'maximum_distance_stations': 'float ≥ 0',
 }
 
 validators = {
@@ -173,8 +199,7 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
-    params['station_data_file'] = rupdic.pop('station_data_file', None)
-    issue = rupdic.pop('station_data_issue', None)
+    issue = rupdic.get('station_data_issue')
     if issue:
         err['station_data_issue'] = issue
     trts = {}
@@ -186,5 +211,4 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    rupdic['station_data_file'] = station_data_file
     return rup, rupdic, params, err
