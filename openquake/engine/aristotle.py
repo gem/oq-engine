@@ -62,8 +62,7 @@ def get_aristotle_params(arist):
     if arist.exposure_hdf5 is None:
         arist.exposure_hdf5 = os.path.join(
             config.directory.mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [arist.exposure_hdf5],
-              'job_ini': '<in-memory>'}
+    inputs = {'exposure': [arist.exposure_hdf5], 'job_ini': '<in-memory>'}
     dic = arist.rupture_dict
     usgs_id = dic['usgs_id']
     _rup, rupdic = get_rup_dic(usgs_id, rupture_file=dic['rupture_file'])
