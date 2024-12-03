@@ -48,31 +48,23 @@ class AristotleParam:
     ses_seed: int
     local_timestamp: str = None
     exposure_hdf5: str = None
+    rupture_file: str = None
     station_data_file: str = None
     maximum_distance_stations: float = None
 
-    @classmethod
-    def validate(cls, **kw):
-        _rup, _rupdic, params, err = aristotle_validate(PostDict(kw))
-        return cls(params), err
-
     def get_params(self):
         """
-        :returns: a list of dictionaries suitable for an Aristotle calculation
+        :returns: job_ini dictionary
         """
         if self.exposure_hdf5 is None:
             self.exposure_hdf5 = os.path.join(
                 config.directory.mosaic_dir, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
-        dic = self.rupture_dict
-        usgs_id = dic['usgs_id']
-        _rup, rupdic = get_rup_dic(usgs_id, rupture_file=dic['rupture_file'])
-
+        rupdic = self.rupture_dict
         if 'shakemap_array' in rupdic:
             del rupdic['shakemap_array']
-        rupture_file = rupdic.pop('rupture_file')
-        if rupture_file:
-            inputs['rupture_model'] = rupture_file
+        if self.rupture_file:
+            inputs['rupture_model'] = self.rupture_file
         if self.station_data_file:
             inputs['station_data'] = self.station_data_file
         if not self.mosaic_model:

@@ -301,16 +301,11 @@ def aristotle(exposure_hdf5=None, *,
         rupture_file = None
         df = pandas.read_csv(rupfname)
         for i, row in df.iterrows():
-            rupdic = row.to_dict()
-            rupdic['rake'] = 0.
-            rupdic['dip'] = 90.
-            rupdic['strike'] = 0.
-            rupdic['rupture_file'] = None
-            usgs_id = rupdic['usgs_id']
+            usgs_id = row['usgs_id']
             print('###################### %s [%d/%d] #######################' %
                   (usgs_id, i + 1, len(df)))
             main_cmd(
-                usgs_id, rupture_file, rupdic, callback,
+                usgs_id, rupture_file, callback,
                 maximum_distance=maximum_distance,
                 mosaic_model=mosaic_model,
                 trt=trt, truncation_level=truncation_level,
@@ -320,7 +315,7 @@ def aristotle(exposure_hdf5=None, *,
                 station_data_file=stations,
                 maximum_distance_stations=maximum_distance_stations)
     else:  # assume .xml
-        main_cmd('WithRuptureFile', rupfname, None, callback,
+        main_cmd('WithRuptureFile', rupfname, callback,
                  maximum_distance=maximum_distance,
                  mosaic_model=mosaic_model,
                  trt=trt, truncation_level=truncation_level,

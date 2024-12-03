@@ -93,16 +93,14 @@ class AristotleValidateTestCase(unittest.TestCase):
                                   'subduction intraslab Himalayas',
                                   'subduction intraslab']},
                  'usgs_id': 'FromFile'})
-            self.assertEqual(params.local_timestamp, None)
-            self.assertEqual(params.time_event, 'day')
-            self.assertEqual(params.maximum_distance, 100.0)
-            self.assertEqual(params.mosaic_model, 'IND')
-            self.assertEqual(params.trt, 'active shallow crust normal')
-            self.assertEqual(params.truncation_level, 3.0)
-            self.assertEqual(params.number_of_ground_motion_fields, 2),
-            self.assertEqual(params.asset_hazard_distance, 15.0)
-            self.assertEqual(params.ses_seed, 42)
-            self.assertEqual(params.maximum_distance_stations, None)
+            self.assertEqual(params['asset_hazard_distance'], '15.0')
+            self.assertEqual(params['calculation_mode'], 'scenario_risk')
+            self.assertEqual(params['time_event'], 'day')
+            self.assertEqual(params['maximum_distance'], '100.0')
+            self.assertEqual(params['mosaic_model'], 'IND')
+            self.assertEqual(params['truncation_level'], '3.0')
+            self.assertEqual(params['number_of_ground_motion_fields'], '2'),
+            self.assertEqual(params['ses_seed'], '42')
             self.assertEqual(err, {})
 
     def test_4(self):
