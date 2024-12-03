@@ -19,8 +19,11 @@
 import os
 import logging
 from dataclasses import dataclass
+import numpy
+
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import valid
+from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
@@ -52,6 +55,67 @@ class AristotleParam:
     def validate(cls, **kw):
         _rup, _rupdic, params, err = aristotle_validate(PostDict(kw))
         return cls(params), err
+
+    def get_params(self):
+        """
+        :returns: a list of dictionaries suitable for an Aristotle calculation
+        """
+        if self.exposure_hdf5 is None:
+            self.exposure_hdf5 = os.path.join(
+                config.directory.mosaic_dir, 'exposure.hdf5')
+        inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
+        dic = self.rupture_dict
+        usgs_id = dic['usgs_id']
+        _rup, rupdic = get_rup_dic(usgs_id, rupture_file=dic['rupture_file'])
+
+        if 'shakemap_array' in rupdic:
+            del rupdic['shakemap_array']
+        rupture_file = rupdic.pop('rupture_file')
+        if rupture_file:
+            inputs['rupture_model'] = rupture_file
+        if self.station_data_file:
+            inputs['station_data'] = self.station_data_file
+        if not self.mosaic_model:
+            lon, lat = rupdic['lon'], rupdic['lat']
+            mosaic_models = get_close_mosaic_models(lon, lat, 5)
+            # NOTE: using the first mosaic model
+            self.mosaic_model = mosaic_models[0]
+            if len(mosaic_models) > 1:
+                logging.info('Using the "%s" model' % self.mosaic_model)
+
+        if self.trt is None:
+            # NOTE: using the first tectonic region type
+            self.trt = get_trts_around(self.mosaic_model, self.exposure_hdf5)[0]
+        params = dict(
+            calculation_mode='scenario_risk',
+            rupture_dict=str(rupdic),
+            time_event=self.time_event,
+            maximum_distance=str(self.maximum_distance),
+            mosaic_model=self.mosaic_model,
+            tectonic_region_type=self.trt,
+            truncation_level=str(self.truncation_level),
+            number_of_ground_motion_fields=str(self.number_of_ground_motion_fields),
+            asset_hazard_distance=str(self.asset_hazard_distance),
+            ses_seed=str(self.ses_seed),
+            inputs=inputs)
+        if self.local_timestamp is not None:
+            params['local_timestamp'] = self.local_timestamp
+        if self.maximum_distance_stations is not None:
+            params['maximum_distance_stations'] = str(self.maximum_distance_stations)
+        oq = readinput.get_oqparam(params)
+        # NB: fake h5 to cache `get_site_model` and avoid multiple associations
+        _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
+            oq, h5={'performance_data': hdf5.FakeDataset()})
+        id0s = numpy.unique(assetcol['ID_0'])
+        countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
+        tmap_keys = get_tmap_keys(self.exposure_hdf5, countries)
+        if not tmap_keys:
+            raise LookupError(f'No taxonomy mapping was found for {countries}')
+        logging.root.handlers = []  # avoid breaking the logs
+        params['description'] = (
+            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+            f' M{rupdic["mag"]}')
+        return params
 
 
 ARISTOTLE_FORM_LABELS = {
@@ -184,6 +248,18 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     return trts
 
 
+def get_tmap_keys(exposure_hdf5, countries):
+    """
+    :returns: list of taxonomy mappings as keys in the the "tmap" data group
+    """
+    keys = []
+    with hdf5.File(exposure_hdf5, 'r') as exp:
+        for key in exp['tmap']:
+            if set(key.split('_')) & countries:
+                keys.append(key)
+    return keys
+
+
 def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=None):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
@@ -226,6 +302,6 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     if len(params) > 1:  # called by aristotle_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
-        return rup, rupdic, AristotleParam(**params), err
+        return rup, rupdic, AristotleParam(**params).get_params(), err
     else:  # called by aristotle_get_rupture_data
         return rup, rupdic, params, err

@@ -22,27 +22,11 @@ import sys
 import os
 import getpass
 import logging
-import numpy
-from openquake.baselib import config, hdf5, sap
-from openquake.hazardlib.shakemap.validate import AristotleParam, get_trts_around
-from openquake.hazardlib.shakemap.parsers import get_rup_dic
-from openquake.commonlib import readinput
-from openquake.commonlib.calc import get_close_mosaic_models
+from openquake.baselib import sap
+from openquake.hazardlib.shakemap.validate import AristotleParam
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
-
-def get_tmap_keys(exposure_hdf5, countries):
-    """
-    :returns: list of taxonomy mappings as keys in the the "tmap" data group
-    """
-    keys = []
-    with hdf5.File(exposure_hdf5, 'r') as exp:
-        for key in exp['tmap']:
-            if set(key.split('_')) & countries:
-                keys.append(key)
-    return keys
 
 
 def trivial_callback(
@@ -51,69 +35,6 @@ def trivial_callback(
         logging.error('', exc_info=True)
         sys.exit('There was an error: %s' % exc)
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
-
-
-def get_aristotle_params(arist):
-    """
-    :param arist: an instance of AristotleParam
-    :returns: a list of dictionaries suitable for an Aristotle calculation
-    """
-    if arist.exposure_hdf5 is None:
-        arist.exposure_hdf5 = os.path.join(
-            config.directory.mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [arist.exposure_hdf5], 'job_ini': '<in-memory>'}
-    dic = arist.rupture_dict
-    usgs_id = dic['usgs_id']
-    _rup, rupdic = get_rup_dic(usgs_id, rupture_file=dic['rupture_file'])
-    
-    if 'shakemap_array' in rupdic:
-        del rupdic['shakemap_array']
-    rupture_file = rupdic.pop('rupture_file')
-    if rupture_file:
-        inputs['rupture_model'] = rupture_file
-    if arist.station_data_file:
-        inputs['station_data'] = arist.station_data_file
-    if not arist.mosaic_model:
-        lon, lat = rupdic['lon'], rupdic['lat']
-        mosaic_models = get_close_mosaic_models(lon, lat, 5)
-        # NOTE: using the first mosaic model
-        arist.mosaic_model = mosaic_models[0]
-        if len(mosaic_models) > 1:
-            logging.info('Using the "%s" model' % arist.mosaic_model)
-
-    if arist.trt is None:
-        # NOTE: using the first tectonic region type
-        arist.trt = get_trts_around(arist.mosaic_model, arist.exposure_hdf5)[0]
-    params = dict(
-        calculation_mode='scenario_risk',
-        rupture_dict=str(rupdic),
-        time_event=arist.time_event,
-        maximum_distance=str(arist.maximum_distance),
-        mosaic_model=arist.mosaic_model,
-        tectonic_region_type=arist.trt,
-        truncation_level=str(arist.truncation_level),
-        number_of_ground_motion_fields=str(arist.number_of_ground_motion_fields),
-        asset_hazard_distance=str(arist.asset_hazard_distance),
-        ses_seed=str(arist.ses_seed),
-        inputs=inputs)
-    if arist.local_timestamp is not None:
-        params['local_timestamp'] = arist.local_timestamp
-    if arist.maximum_distance_stations is not None:
-        params['maximum_distance_stations'] = str(arist.maximum_distance_stations)
-    oq = readinput.get_oqparam(params)
-    # NB: fake h5 to cache `get_site_model` and avoid multiple associations
-    _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
-        oq, h5={'performance_data': hdf5.FakeDataset()})
-    id0s = numpy.unique(assetcol['ID_0'])
-    countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
-    tmap_keys = get_tmap_keys(arist.exposure_hdf5, countries)
-    if not tmap_keys:
-        raise LookupError(f'No taxonomy mapping was found for {countries}')
-    logging.root.handlers = []  # avoid breaking the logs
-    params['description'] = (
-        f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
-        f' M{rupdic["mag"]}')
-    return params
 
 
 def main_web(allparams, jobctxs,
@@ -147,13 +68,12 @@ def main_cmd(usgs_id, rupture_file=None, rupture_dict=None,
     if rupture_dict is None:
         rupture_dict = dict(usgs_id=usgs_id, rupture_file=rupture_file)
     try:
-        arist = AristotleParam(
+        oqparams = AristotleParam(
             rupture_dict, time_event, maximum_distance, mosaic_model,
             trt, truncation_level,
             number_of_ground_motion_fields, asset_hazard_distance,
             ses_seed, local_timestamp, exposure_hdf5, station_data_file,
-            maximum_distance_stations)
-        oqparams = get_aristotle_params(arist)
+            maximum_distance_stations).get_params()
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
