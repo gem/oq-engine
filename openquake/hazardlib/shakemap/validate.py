@@ -24,7 +24,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
     download_station_data_file, get_rup_dic)
-
+from openquake.qa_tests_data import mosaic
 
 @dataclass
 class AristotleParam:
@@ -190,10 +190,10 @@ def aristotle_validate(POST, rupture_path=None, station_data_path=None, datadir=
     params['station_data_file'] = station_data_file
     trts = {}
     mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+    mosaic_dir = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
     for mosaic_model in mosaic_models:
         trts[mosaic_model] = get_trts_around(
-            mosaic_model,
-            os.path.join(config.directory.mosaic_dir, 'exposure.hdf5'))
+            mosaic_model, os.path.join(mosaic_dir, 'exposure.hdf5'))
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
