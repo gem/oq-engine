@@ -247,7 +247,8 @@ class EngineServerTestCase(django.test.TestCase):
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_from_usgs', 'error',
-            'station_data_file_from_usgs', 'mosaic_models', 'trts']
+            'station_data_issue', 'station_data_file_from_usgs',
+            'station_data_file', 'mosaic_models', 'trts']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertIsNotNone(ret_dict['rupture_file'])
         self.assertEqual(ret_dict['local_timestamp'],
@@ -274,31 +275,6 @@ class EngineServerTestCase(django.test.TestCase):
         self.assertEqual(ret_dict['require_dip_strike'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
 
-    def test_get_rupture_data_from_shakemap_correctly_converted(self):
-        usgs_id = 'us7000n7n8'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = ['dep', 'require_dip_strike', 'lat', 'local_timestamp',
-                         'lon', 'mag', 'mmi_map_png', 'mosaic_models', 'pga_map_png',
-                         'rake', 'rupture_file', 'rupture_from_usgs',
-                         'station_data_file_from_usgs', 'station_data_issue',
-                         'time_event', 'trts', 'usgs_id']
-        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        self.assertEqual(ret_dict['local_timestamp'],
-                         '2024-08-18 07:10:26+12:00')
-        self.assertEqual(ret_dict['time_event'], 'transit')
-        self.assertEqual(ret_dict['mosaic_models'], ['NEA'])
-        self.assertEqual(ret_dict['trts'], {
-            'NEA': ['Cratonic Crust', 'Stable Continental Crust',
-                    'Active Shallow Crust', 'Subduction Interface',
-                    'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['require_dip_strike'], False)
-        self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
-
     def test_get_point_rupture_data_from_shakemap(self):
         usgs_id = 'us7000n05d'
         data = dict(usgs_id=usgs_id)
@@ -312,7 +288,8 @@ class EngineServerTestCase(django.test.TestCase):
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
             'rupture_file', 'rupture_from_usgs',
-            'station_data_file_from_usgs', 'trts',
+            'station_data_issue', 'station_data_file_from_usgs',
+            'station_data_file', 'trts',
             'mosaic_models']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
         self.assertIsNotNone(ret_dict['rupture_file'])

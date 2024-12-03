@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import shutil
 import numpy
 import pandas
@@ -79,7 +80,14 @@ def main(fname, reduction_factor: valid.probability,
     case, it is also able to reduce .csv files by sampling the lines.
     This is a debugging utility to reduce large computations to small ones.
     """
-    if fname.endswith('.csv'):
+    if fname.endswith('.json'):  # used to sample the USGS stations
+        with open(fname) as f:
+            data = json.load(f)
+        data['features'] = general.random_filter(data['features'], reduction_factor)
+        with open(fname, 'w') as f:
+            json.dump(data, f)
+        return
+    elif fname.endswith('.csv'):
         df = pandas.read_csv(fname, dtype=str)
         idxs = general.random_filter(numpy.arange(len(df)), reduction_factor)
         shutil.copy(fname, fname + '.bak')

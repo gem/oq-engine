@@ -23,28 +23,14 @@ import os
 import getpass
 import logging
 import numpy
-from json.decoder import JSONDecodeError
-from urllib.error import HTTPError
 from openquake.baselib import config, hdf5, sap
-from openquake.hazardlib.shakemap.validate import AristotleParam
-from openquake.hazardlib.shakemap.parsers import (
-    get_rup_dic, download_station_data_file)
+from openquake.hazardlib.shakemap.validate import AristotleParam, get_trts_around
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
-
-def get_trts_around(mosaic_model, exposure_hdf5):
-    """
-    :returns: list of TRTs for the given mosaic model
-    """
-    with hdf5.File(exposure_hdf5) as f:
-        df = f.read_df('model_trt_gsim_weight',
-                       sel={'model': mosaic_model.encode()})
-    trts = [trt.decode('utf8') for trt in df.trt.unique()]
-    return trts
 
 
 def get_tmap_keys(exposure_hdf5, countries):
@@ -75,24 +61,13 @@ def get_aristotle_params(arist):
     if arist.exposure_hdf5 is None:
         arist.exposure_hdf5 = os.path.join(
             config.directory.mosaic_dir, 'exposure.hdf5')
-    inputs = {'exposure': [arist.exposure_hdf5],
-              'job_ini': '<in-memory>'}
+    inputs = {'exposure': [arist.exposure_hdf5], 'job_ini': '<in-memory>'}
     dic = arist.rupture_dict
     usgs_id = dic['usgs_id']
     _rup, rupdic = get_rup_dic(usgs_id, rupture_file=dic['rupture_file'])
     
     if 'shakemap_array' in rupdic:
         del rupdic['shakemap_array']
-    if arist.station_data_file is None:
-        # NOTE: giving precedence to the station_data_file uploaded via form
-        try:
-            arist.station_data_file = download_station_data_file(
-                arist.rupture_dict['usgs_id'])
-        except HTTPError as exc:
-            logging.info(f'Station data is not available: {exc}')
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file

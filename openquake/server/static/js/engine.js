@@ -586,12 +586,12 @@
                         conversion_issues += '<p>' + data.error + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
-                    $('#station_data_file_from_usgs').val(data.station_data_file_from_usgs);
+                    $('#station_data_file').val(data.station_data_file);
                     if (data.station_data_issue) {
-                        $('#station_data_file_from_usgs_loaded').val('N.A. (conversion issue)');
+                        $('#station_data_file_loaded').val('N.A. (conversion issue)');
                         conversion_issues += '<p>' + data.station_data_issue + '</p>';
                     } else {
-                        $('#station_data_file_from_usgs_loaded').val(data.station_data_file_from_usgs ? 'Loaded' : 'N.A.');
+                        $('#station_data_file_loaded').val(data.station_data_file ? 'Loaded' : 'N.A.');
                     }
                     if (conversion_issues != '') {
                         diaerror.show(false, "Note", conversion_issues);
