@@ -729,7 +729,7 @@ def aristotle_run(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
-    _rup, rupdic, params, err = aristotle_validate(
+    _rup, rupdic, arist, err = aristotle_validate(
         request.POST, rupture_path, station_data_file)
     err.pop('station_data_issue', None)
     if err:
@@ -738,9 +738,6 @@ def aristotle_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    params['rupture_dict'] = rupdic
-    params['station_data_file'] = rupdic['station_data_file']
-    arist = aristotle.AristotleParam(**params)
     try:
         params = get_aristotle_params(arist)
     except Exception as exc:
