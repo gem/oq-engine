@@ -74,7 +74,7 @@
             <% if (calc.get('status') != 'created') { %>
               <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log calc-list-btn" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
-                {% if application_mode != 'READ_ONLY' %}
+                {% if application_mode != 'READ_ONLY' and interface_level != '0' %}
                 <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Remove</a>
                 <!-- confirm_modal -->
                 <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
@@ -97,8 +97,32 @@
                 <!-- end confirm_modal -->
                 {% endif %}
                 <% if (calc.get('status') == 'complete') { %>
+
+                {% if application_mode != 'READ_ONLY' and interface_level == '2' %}
+                <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-info calc-list-btn" style="margin: 2px 0 2px 0;">Share</a>
+                <!-- confirm_modal -->
+                <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
+                <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h4 class="modal-title">Share calculation</h4>
+                    </div>
+                    <div class="modal-body" style="font-size: 12px;">
+                        <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to share calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-show-share">Yes</button>
+                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-no">No</button>
+                    </div>
+                  </div>
+                </div>
+                </div>
+                <!-- end confirm_modal -->
+                {% endif %}
+
                 <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_aristotle{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
-                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
+                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' and interface_level != '0' %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -113,7 +137,7 @@
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback calc-list-btn" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
-              {% if application_mode != 'READ_ONLY' %}
+              {% if application_mode != 'READ_ONLY' and interface_level != '0' %}
               <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Abort</a>
               <!-- confirm_modal -->
               <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>

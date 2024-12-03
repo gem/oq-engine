@@ -518,6 +518,35 @@ def calc_remove(request, calc_id):
                             content_type='text/plain', status=500)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_share(request, calc_id):
+    """
+    Share the calculation id
+    """
+    # FIXME: who can share a job? Probably the owner or any administrator or user with
+    # interface_level == '2'
+    __import__('pdb').set_trace()
+    try:
+        message = logs.dbcmd('update_job', calc_id, {'status': 'shared'})
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    if 'success' in message:
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    elif 'error' in message:
+        logging.error(message['error'])
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+    else:
+        # This is an untrapped server error
+        logging.error(message)
+        return HttpResponse(content=message,
+                            content_type='text/plain', status=500)
+
+
 def log_to_json(log):
     """Convert a log record into a list of strings"""
     return [log.timestamp.isoformat()[:22],

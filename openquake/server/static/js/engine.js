@@ -128,6 +128,7 @@
                 this.calculations.bind('reset', this.render);
                 this.calculations.bind('add', this.render);
                 this.calculations.bind('remove', this.render);
+                this.calculations.bind('share', this.render);
 
                 /* if false, it prevents the table to be refreshed */
                 this.can_be_rendered = true;
@@ -138,6 +139,7 @@
             events: {
                 "click .btn-show-remove": "remove_calculation",
                 "click .btn-show-abort": "abort_calculation",
+                "click .btn-show-share": "share_calculation",
                 "click .btn-danger": "show_modal_confirm",
                 "click .btn-hide-no": "hide_modal_confirm",
                 "click .btn-traceback": "show_traceback",
@@ -204,6 +206,35 @@
                                         } else {
                                             diaerror.show(false, "Calculation removed", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been removed." );
                                             view.calculations.remove([view.calculations.get(calc_id)]);
+                                        }
+                                    }});
+            },
+
+            share_calculation: function (e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                var calc_desc = $(e.target).attr('data-calc-desc');
+                var view = this;
+                diaerror.show(false, "Sharing calculation " + calc_id, "...");
+
+                var hide_or_back = (function (e) {
+                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                    setTimer();
+                })();
+
+                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/share",
+                                    type: "POST",
+                                    error: function (jqXHR, textStatus, errorThrown) {
+                                        if (jqXHR.status == 403) {
+                                            diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
+                                        }
+                                    },
+                                    success: function (data, textStatus, jqXHR) {
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error);
+                                        } else {
+                                            diaerror.show(false, "Calculation shared", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been shared." );
                                         }
                                     }});
             },
