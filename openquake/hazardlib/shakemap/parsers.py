@@ -22,7 +22,7 @@ to numpy composite arrays.
 """
 
 from urllib.request import urlopen, pathname2url
-from urllib.error import URLError, HTTPError
+from urllib.error import URLError
 from collections import defaultdict
 
 import io
@@ -393,7 +393,7 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic_non_null
 
 
-def get_preferred_shakemap(shakemaps):
+def _get_preferred_shakemap(shakemaps):
     preferred_weights = [shakemap['preferredWeight'] for shakemap in shakemaps]
     preferred_idxs = [idx for idx, val in enumerate(preferred_weights)
                       if val == max(preferred_weights)]
@@ -407,30 +407,18 @@ def get_preferred_shakemap(shakemaps):
     return shakemap
 
 
-def download_station_data_file(usgs_id, datadir=None):
+def download_station_data_file(usgs_id, contents, datadir=None):
     """
     Download station data from the USGS site given a ShakeMap ID.
 
     :param usgs_id: ShakeMap ID
     :returns: (path_to_csv, error)
     """
-    # NOTE: downloading twice from USGS, but with a clearer workflow
-    url = SHAKEMAP_URL.format(usgs_id)
-    logging.info('Downloading %s' % url)
-    try:
-        js = json.loads(urlopen(url).read())
-    except HTTPError:
-        return None, f'Cannot download {url}'
-    products = js['properties']['products']
-    station_data_file = None
-    try:
-        shakemaps = products['shakemap']
-    except KeyError:
-        return None, 'No shakemap was found'
-    shakemap = get_preferred_shakemap(shakemaps)
-    contents = shakemap['contents']
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
+        # fname = os.path.join(datadir, f'{usgs_id}-stations.json')
+        # with open(fname, 'wb') as f:
+        #     f.write(urlopen(stationlist_url).read())
         if datadir:
             fname = os.path.join(datadir, f'{usgs_id}-stations.json')
             json_bytes = open(fname, 'rb').read()
@@ -608,7 +596,7 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
+def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
@@ -618,11 +606,13 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     :param rupture_file: None
     :returns: (rupture object or None, rupture dictionary)
     """
+    rupdic = {}
+    rup_data = {}
     if rupture_file and rupture_file.endswith('.xml'):
         [rup_node] = nrml.read(os.path.join(datadir, rupture_file)
                                if datadir else rupture_file)
-        conv = sourceconverter.RuptureConverter(rupture_mesh_spacing=5.)
-        rup = conv.convert_node(rup_node)
+        rup = sourceconverter.RuptureConverter(
+            rupture_mesh_spacing=5.).convert_node(rup_node)
         rup.tectonic_region_type = '*'
         hp = rup.hypocenter
         rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
@@ -630,12 +620,18 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
                       strike=rup.surface.get_strike(),
                       dip=rup.surface.get_dip(),
                       usgs_id=usgs_id,
-                      rupture_file=rupture_file)
-        return rup, rupdic
+                      rupture_file=rupture_file,
+                      station_data_file=station_data_file)
+        if usgs_id == 'FromFile':
+            return rup, rupdic
     elif rupture_file and rupture_file.endswith('.json'):
         with open(rupture_file) as f:
             rup_data = json.load(f)
-        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
+        if usgs_id == 'FromFile':
+            rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
+            rupdic['station_data_file'] = station_data_file
+            rup = convert_to_oq_rupture(rup_data)
+            return rup, rupdic
 
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
@@ -656,13 +652,13 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
     products = js['properties']['products']
 
     # NB: currently we cannot find a case with missing shakemap
-    shakemap = get_preferred_shakemap(products['shakemap'])
+    shakemap = _get_preferred_shakemap(products['shakemap'])
     contents = shakemap['contents']
+
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
         return None, load_rupdic_from_finite_fault(usgs_id, mag, products)
-    shakemap_array = None
-
+    
     if 'download/grid.xml' in contents:
         url = contents.get('download/grid.xml')['url']
         if datadir:  # in parsers_test
@@ -670,11 +666,16 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None):
         else:
             logging.info('Downloading grid.xml')
             grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-
         shakemap_array = get_shakemap_array(grid_fname)
-    rup_data, rup_path = download_rupture_data(usgs_id, contents, datadir)
+    else:
+        shakemap_array = None
 
-    rupdic = convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array)
+    if not rupdic:
+        if not rup_data:
+            rup_data, rupture_file = download_rupture_data(usgs_id, contents, datadir)
+        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap_array)
+    rupdic['station_data_file'], rupdic['station_data_issue'] = (
+        download_station_data_file(usgs_id, contents, datadir))
 
     if rupdic['require_dip_strike']:
         # in parsers_test

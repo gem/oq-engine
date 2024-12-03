@@ -25,8 +25,7 @@ import logging
 import numpy
 from openquake.baselib import config, hdf5, sap
 from openquake.hazardlib.shakemap.validate import AristotleParam, get_trts_around
-from openquake.hazardlib.shakemap.parsers import (
-    get_rup_dic, download_station_data_file)
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.engine import engine
@@ -69,12 +68,6 @@ def get_aristotle_params(arist):
     
     if 'shakemap_array' in rupdic:
         del rupdic['shakemap_array']
-    if arist.station_data_file is None:
-        # NOTE: giving precedence to the station_data_file uploaded via form
-        arist.station_data_file, err = download_station_data_file(
-            arist.rupture_dict['usgs_id'])
-        if err:
-            logging.info(err)
     rupture_file = rupdic.pop('rupture_file')
     if rupture_file:
         inputs['rupture_model'] = rupture_file

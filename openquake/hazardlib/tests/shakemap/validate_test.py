@@ -107,10 +107,7 @@ class AristotleValidateTestCase(unittest.TestCase):
              'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
              'asset_hazard_distance': 15.0, 'ses_seed': 42,
              'maximum_distance_stations': None, 'station_data_file': None})
-        self.assertEqual(
-            err, {'station_data_issue':
-                  'Cannot download https://earthquake.usgs.gov/fdsnws/event/1/'
-                  'query?eventid=FromFile&format=geojson'})
+        self.assertEqual(err, {})
 
     def test_3(self):
         # with rupture, stations
