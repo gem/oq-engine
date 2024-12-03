@@ -22,7 +22,7 @@ to numpy composite arrays.
 """
 
 from urllib.request import urlopen, pathname2url
-from urllib.error import URLError, HTTPError
+from urllib.error import URLError
 from collections import defaultdict
 
 import io
