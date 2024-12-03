@@ -658,8 +658,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
         return None, load_rupdic_from_finite_fault(usgs_id, mag, products)
-    shakemap_array = None
-
+    
     if 'download/grid.xml' in contents:
         url = contents.get('download/grid.xml')['url']
         if datadir:  # in parsers_test
@@ -667,8 +666,9 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
         else:
             logging.info('Downloading grid.xml')
             grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-
         shakemap_array = get_shakemap_array(grid_fname)
+    else:
+        shakemap_array = None
 
     if not rupdic:
         if not rup_data:
