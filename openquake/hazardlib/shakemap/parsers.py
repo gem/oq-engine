@@ -416,9 +416,9 @@ def download_station_data_file(usgs_id, contents, datadir=None):
     """
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
-        #fname = os.path.join(datadir, f'{usgs_id}-stations.json')
-        #with open(fname, 'wb') as f:
-        #    f.write(urlopen(stationlist_url).read())
+        # fname = os.path.join(datadir, f'{usgs_id}-stations.json')
+        # with open(fname, 'wb') as f:
+        #     f.write(urlopen(stationlist_url).read())
         if datadir:
             fname = os.path.join(datadir, f'{usgs_id}-stations.json')
             json_bytes = open(fname, 'rb').read()
