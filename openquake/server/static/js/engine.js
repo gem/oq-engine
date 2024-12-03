@@ -541,10 +541,17 @@
                 $(this).css("background-color", "white");
             });
 
+
+            function toggleRunCalcBtnState() {
+                const lonValue = $('#lon').val().trim();
+                $('#submit_aristotle_calc').prop('disabled', lonValue === '');
+            }
+            toggleRunCalcBtnState();
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
+                $('#submit_aristotle_get_rupture').text('Retrieving rupture data (it may take more than 10 seconds)...');
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
@@ -558,6 +565,7 @@
                 }).done(function (data) {
                     // console.log(data);
                     $('#lon').val(data.lon);
+                    toggleRunCalcBtnState();
                     $('#lat').val(data.lat);
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
@@ -657,7 +665,7 @@
                     $('#shakemap-image-row').hide();
                 }).always(function () {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
                 });
                 event.preventDefault();
             });
@@ -732,7 +740,7 @@
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aristotle_calc').prop('disabled', false);
-                    $('#submit_aristotle_calc').text('Submit');
+                    $('#submit_aristotle_calc').text('Launch impact calculation');
                 });
                 event.preventDefault();
             });
