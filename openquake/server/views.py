@@ -366,7 +366,7 @@ def download_png(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     try:
         from PIL import Image
@@ -392,7 +392,7 @@ def calc(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -998,10 +998,7 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        is_shared_job = 'status' in info and info['status'] == 'shared'
-        user_can_view_shared_job = request.user.is_authenticated and is_shared_job
-        if not (user_can_view_shared_job
-                or utils.user_has_permission(request, info['user_name'])):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1074,11 +1071,11 @@ def calc_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, _job_status, job_user, datadir, ds_key = logs.dbcmd(
+        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
         if ds_key in HIDDEN_OUTPUTS:
             return HttpResponseForbidden()
-        if not utils.user_has_permission(request, job_user):
+        if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1133,7 +1130,7 @@ def extract(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -1184,7 +1181,7 @@ def calc_datastore(request, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -1424,7 +1421,7 @@ def download_aggrisk(request, calc_id):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses = views.view('aggrisk', ds)

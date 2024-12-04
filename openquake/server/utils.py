@@ -88,12 +88,14 @@ def get_acl_on(request):
     return acl_on
 
 
-def user_has_permission(request, owner):
+def user_has_permission(request, owner, job_status):
     """
     Returns `True` if user coming from the request has the permission
     to view a resource, returns `false` otherwise.
     """
-    return owner in get_valid_users(request) or not get_acl_on(request)
+    return (owner in get_valid_users(request)
+            or not get_acl_on(request)
+            or job_status == 'shared')
 
 
 def oq_server_context_processor(request):
