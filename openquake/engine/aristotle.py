@@ -74,11 +74,10 @@ def main_cmd(usgs_id, rupture_file=None,
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
     post['usgs_id'] = usgs_id
-    try:
-        _rup, rupdic, oqparams, err = aristotle_validate(
-            post, rupture_file, station_data_file)
-    except Exception as exc:
-        callback(None, dict(usgs_id=usgs_id), exc=exc)
+    _rup, rupdic, oqparams, err = aristotle_validate(
+        post, rupture_file, station_data_file)
+    if err:
+        callback(None, oqparams, exc=err)
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()

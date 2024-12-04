@@ -28,6 +28,8 @@ from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 
+MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
+
 
 @dataclass
 class AristotleParam:
@@ -51,8 +53,7 @@ class AristotleParam:
         :returns: job_ini dictionary
         """
         if self.exposure_hdf5 is None:
-            self.exposure_hdf5 = os.path.join(
-                config.directory.mosaic_dir, 'exposure.hdf5')
+            self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
         if 'shakemap_array' in rupdic:
@@ -273,10 +274,9 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
         err['station_data_issue'] = issue
     trts = {}
     mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
-    mosaic_dir = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
     for mosaic_model in mosaic_models:
         trts[mosaic_model] = get_trts_around(
-            mosaic_model, os.path.join(mosaic_dir, 'exposure.hdf5'))
+            mosaic_model, os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
