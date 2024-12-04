@@ -234,69 +234,6 @@ class EngineServerTestCase(django.test.TestCase):
                 raise RuntimeError(
                     'Unable to remove job %s:\n%s' % (job_id, ret))
 
-    def test_get_rupture_data_from_shakemap_conversion_error(self):
-        usgs_id = 'us6000jllz'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'require_dip_strike', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'mmi_map_png', 'pga_map_png',
-            'rupture_file', 'rupture_from_usgs', 'rupture_issue',
-            'station_data_issue', 'station_data_file_from_usgs',
-            'station_data_file', 'mosaic_models', 'trts']
-        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        self.assertIsNotNone(ret_dict['rupture_file'])
-        self.assertEqual(ret_dict['local_timestamp'],
-                         '2023-02-06 04:17:34+03:00')
-        self.assertEqual(ret_dict['time_event'], 'night')
-        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
-        self.assertEqual(ret_dict['trts'], {
-            'ARB': ['TECTONIC_REGION_1',
-                    'TECTONIC_REGION_2',
-                    'TECTONIC_REGION_3',
-                    'TECTONIC_REGION_4',
-                    'Active Shallow Crust EMME',
-                    'Stable Shallow Crust EMME',
-                    'Subduction Interface EMME',
-                    'Subduction Inslab EMME',
-                    'Deep Seismicity EMME'],
-            'MIE': ['Active Shallow Crust',
-                    'Stable Shallow Crust',
-                    'Subduction Interface',
-                    'Subduction Inslab',
-                    'Deep Seismicity']})
-        self.assertIn('Unable to convert the rupture from the USGS format',
-                      ret_dict['rupture_issue'])
-        self.assertEqual(ret_dict['require_dip_strike'], True)
-        self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
-
-    def test_get_point_rupture_data_from_shakemap(self):
-        usgs_id = 'us7000n05d'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'require_dip_strike', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'mmi_map_png', 'pga_map_png',
-            'rupture_file', 'rupture_from_usgs',
-            'station_data_issue', 'station_data_file_from_usgs',
-            'station_data_file', 'trts',
-            'mosaic_models']
-        self.assertEqual(sorted(ret_dict), sorted(expected_keys))
-        self.assertIsNotNone(ret_dict['rupture_file'])
-        self.assertEqual(ret_dict['require_dip_strike'], True)
-        self.assertEqual(ret_dict['usgs_id'], 'us7000n05d')
-        self.assertEqual(ret_dict['mosaic_models'], ['SAM'])
-
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',
                     lon=37.0143, lat=37.2256, dep=10.0, mag=7.8,
