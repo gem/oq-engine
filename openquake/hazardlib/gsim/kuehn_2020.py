@@ -748,10 +748,11 @@ class KuehnEtAl2020SInter(GMPE):
         # USGS basin scaling and M9 basin term is only
         # applied when the region param is set to Cascadia.
         if self.usgs_basin_scaling or self.m9_basin_term:
-            if self.region != 'CAS':
+            if self.region not in ["CAS", "Sea"]:
                 raise ValueError('To apply the USGS basin scaling or the M9 '
                                  'basin adjustment to KuehnEtAl2020 the '
-                                 'Cascadia region must be specified.')
+                                 'Cascadia region or the Seattle Basin '
+                                 'region must be specified.')
         
         self.m_b = m_b
         # epsilon for epistemic uncertainty
