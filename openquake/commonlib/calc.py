@@ -465,7 +465,6 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
             f'({lon}, {lat}) is farther than {buffer_radius} deg'
             f' from any mosaic model!')
     elif len(close_mosaic_models) > 1:
-        logging.info(
-            '(%s, %s) is closer than %s deg with respect to the following'
-            ' mosaic models: %s' % (lon, lat, buffer_radius, close_mosaic_models))
+        logging.info('(%s, %s) is close to the following mosaic models: %s',
+                     lon, lat, close_mosaic_models)
     return close_mosaic_models
