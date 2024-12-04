@@ -604,7 +604,7 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def _contents_properties_shakemap(usgs_id, datadir):
+def _contents_properties_shakemap(usgs_id, datadir, monitor):
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
         text = open(fname).read()
@@ -612,7 +612,8 @@ def _contents_properties_shakemap(usgs_id, datadir):
         url = SHAKEMAP_URL.format(usgs_id)
         logging.info('Downloading %s' % url)
         try:
-            text = urlopen(url).read()
+            with monitor('Downloading USGS json'):
+                text = urlopen(url).read()
         except URLError as exc:
             # in parsers_test
             raise URLError(f'Unable to download from {url}: {exc}')
@@ -632,7 +633,8 @@ def _contents_properties_shakemap(usgs_id, datadir):
             grid_fname = f'{datadir}/{usgs_id}-grid.xml'
         else:
             logging.info('Downloading grid.xml')
-            grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
+            with monitor('Downloading grid.xml'):
+                grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         shakemap_array = get_shakemap_array(grid_fname)
     else:
         shakemap_array = None
@@ -678,9 +680,8 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             return rup, rupdic
 
     assert usgs_id
-    with monitor('downloading USGS json'):
-        contents, properties, shakemap = _contents_properties_shakemap(
-            usgs_id, datadir)
+    contents, properties, shakemap = _contents_properties_shakemap(
+        usgs_id, datadir, monitor)
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
