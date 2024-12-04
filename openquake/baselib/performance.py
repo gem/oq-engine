@@ -259,12 +259,6 @@ class Monitor(object):
         return datetime.fromtimestamp(self._start_time)
 
     def _get_data(self):
-        """
-        :returns:
-            an array of dtype perf_dt, with the information
-            of the monitor (operation, time_sec, memory_mb, counts);
-            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
-        """
         data = []
         if self.counts:
             time_sec = self.duration

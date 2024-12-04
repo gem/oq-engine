@@ -313,7 +313,7 @@ def aristotle(exposure_hdf5='', *,
                 asset_hazard_distance=asset_hazard_distance,
                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
                 station_data_file=stations,
-                maximum_distance_stations=maximum_distance_stations or '')
+                maximum_distance_stations=maximum_distance_stations)
     else:  # assume .xml
         main_cmd('WithRuptureFile', rupfname, callback,
                  maximum_distance=maximum_distance,
@@ -323,7 +323,7 @@ def aristotle(exposure_hdf5='', *,
                  asset_hazard_distance=asset_hazard_distance,
                  ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
                  station_data_file=stations,
-                 maximum_distance_stations=maximum_distance_stations or '')
+                 maximum_distance_stations=maximum_distance_stations)
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
