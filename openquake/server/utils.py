@@ -91,7 +91,7 @@ def get_acl_on(request):
 def user_has_permission(request, owner, job_status):
     """
     Returns `True` if user coming from the request has the permission
-    to view a resource, returns `false` otherwise.
+    to view a job-related resource, returns `False` otherwise.
     """
     return (owner in get_valid_users(request)
             or not get_acl_on(request)
