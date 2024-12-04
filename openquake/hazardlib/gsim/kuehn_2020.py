@@ -666,9 +666,9 @@ class KuehnEtAl2020SInter(GMPE):
     supported by the OQ-engine, so on the author's guidance a fixed anelastic
     attenuation term is used in these regions
 
-    For five of the regions (JPN, CAS, NZL, TWN, Sea) a basin response term is
-    defined. In these cases either Z2.5 (JPN, CAS, Sea) or Z1.0 (NZL, TWN) must
-    be specified.
+    For four of the regions (JPN, CAS, NZL, TWN) a basin response term
+    requiring z2pt5 or z1pt0 is defined. In these cases either Z2.5 (JPN, CAS)
+    or Z1.0 (NZL, TWN) must be specified.
 
     Two forms of configurable epistemic uncertainty adjustments are supported:
 
