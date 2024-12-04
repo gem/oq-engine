@@ -648,7 +648,7 @@ class KuehnEtAl2020SInter(GMPE):
 
     The GMM define a "global" model as well as a set of region-specific
     coefficients (and in some cases methods). The coefficients are defined for
-    seven specific subduction regions (with their region codes):
+    eight specific subduction regions (with their region codes):
 
     - Alaska (USA-AK)
     - Cascadia (CAS)
@@ -657,6 +657,7 @@ class KuehnEtAl2020SInter(GMPE):
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
+    - Seattle (Sea)
 
     In the original model defined by the authors, three of the regions
     (JPN, CAM, SAM) define a forearc/backarc dependent anelastic attenuation
@@ -665,9 +666,9 @@ class KuehnEtAl2020SInter(GMPE):
     supported by the OQ-engine, so on the author's guidance a fixed anelastic
     attenuation term is used in these regions
 
-    For four of the regions (JPN, CAS, NZL, TWN) a basin response term is
-    defined. In these cases either Z2.5 (JPN, CAS) or Z1.0 (NZL, TWN) must be
-    specified.
+    For five of the regions (JPN, CAS, NZL, TWN, Sea) a basin response term is
+    defined. In these cases either Z2.5 (JPN, CAS, Sea) or Z1.0 (NZL, TWN) must
+    be specified.
 
     Two forms of configurable epistemic uncertainty adjustments are supported:
 
