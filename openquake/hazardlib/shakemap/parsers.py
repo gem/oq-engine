@@ -534,6 +534,8 @@ def download_jpg(usgs_id, what):
         return None
 
 
+# NB: this is always available but sometimes the geometry is Point
+# or a MultiPolygon not convertible to an engine rupture geometry
 def download_rupture_data(usgs_id, shakemap_contents, datadir):
     """
     :returns: a JSON dictionary with a format like this:
@@ -673,33 +675,35 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             rup = convert_to_oq_rupture(rup_data)
             return rup, rupdic
 
+    assert usgs_id
     contents, properties, shakemap = _contents_properties_shakemap(
         usgs_id, datadir)
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
-        return None, load_rupdic_from_finite_fault(
+        rupdic = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
-
     if not rupdic:
         if not rup_data:
             rup_data, rupture_file = download_rupture_data(usgs_id, contents, datadir)
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
-    if station_data_file is None:
+
+    if not station_data_file:
         rupdic['station_data_file'], rupdic['station_data_issue'] = (
             download_station_data_file(usgs_id, contents, datadir))
         rupdic['station_data_file_from_usgs'] = True
     else:
+        rupdic['station_data_file'], rupdic['station_data_issue'] = (
+            station_data_file, None)
         rupdic['station_data_file_from_usgs'] = False
-
-    if rupdic['require_dip_strike']:
+    if not rup_data or rupdic['require_dip_strike']:
         # in parsers_test
         return None, rupdic
 
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:
         # in parsers_test for us6000jllz
-        rupdic['error'] = 'Unable to convert the rupture from the USGS format'
+        rupdic['rupture_issue'] = 'Unable to convert the rupture from the USGS format'
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic

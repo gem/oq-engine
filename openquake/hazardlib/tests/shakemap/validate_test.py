@@ -15,20 +15,22 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Validation tests for USGS ShakeMaps.
+Here are a few codes with interesting errors:
+
+- us6000jllz: ok stations, bad rupture
+- usp0001ccb: '3 stations were found, but none of them are seismic'
+- us7000n7n8: 'stationlist.json was downloaded, but it contains no features'
+- us6000f65h: 'No stations were found'
+- us20002926: 'Unable to convert the rupture from the USGS format'
+"""
 
 import os
 import unittest
 from openquake.hazardlib.shakemap.validate import aristotle_validate
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
-
-
-class PostDict(dict):
-    def get(self, key, default=None):
-        if key in self:
-            return self[key][0]
-        return default
-
 
 class AristotleValidateTestCase(unittest.TestCase):
     @classmethod
@@ -41,8 +43,8 @@ class AristotleValidateTestCase(unittest.TestCase):
             del timezonefinder
 
     def test_1(self):
-        # without rupture, stations
-        POST = PostDict({'usgs_id': ['us6000jllz']})
+        # no rupture, yes stations
+        POST = {'usgs_id': 'us6000jllz'}
         _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
@@ -50,134 +52,76 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_2(self):
         # with rupture_file
-        POST = PostDict({
-            'asset_hazard_distance': ['15'],
-            'dep': ['30'],
-            'dip': ['90'],
-            'lat': ['27.6'],
-            'local_timestamp': [''],
-            'lon': ['84.4'],
-            'mag': ['7'],
-            'maximum_distance': ['100'],
-            'maximum_distance_stations': [''],
-            'mosaic_model': ['IND'],
-            'number_of_ground_motion_fields': ['2'],
-            'rake': ['90'],
-            'ses_seed': ['42'],
-            'strike': ['0'],
-            'time_event': ['day'],
-            'trt': ['active shallow crust normal'],
-            'truncation_level': ['3'],
-            'usgs_id': ['FromFile']})
+        POST = {
+            'asset_hazard_distance': '15',
+            'dep': '30',
+            'dip': '90',
+            'lat': '27.6',
+            'local_timestamp': '',
+            'lon': '84.4',
+            'mag': '7',
+            'maximum_distance': '100',
+            'maximum_distance_stations': '',
+            'mosaic_model': 'IND',
+            'number_of_ground_motion_fields': '2',
+            'rake': '90',
+            'ses_seed': '42',
+            'strike': '0',
+            'time_event': 'day',
+            'trt': 'active shallow crust normal',
+            'truncation_level': '3',
+            'usgs_id': 'FromFile'}
 
-        _rup, rupdic, params, err = aristotle_validate(
-            POST, 'fault_rupture.xml', datadir=DATA)
-        self.assertEqual(
-            rupdic,
-            {'dep': 30.0,
-             'dip': 30.08335,
-             'lat': 27.6,
-             'lon': 84.4,
-             'mag': 7.0,
-             'mosaic_models': ['CHN', 'IND'],
-             'rake': 90.0,
-             'rupture_file': 'fault_rupture.xml',
-             'rupture_from_usgs': True,
-             'station_data_file': None,
-             'strike': 295.24732,
-             'trts': {'CHN': ['Active Shallow Crust',
-                              'Himalayan Thrust',
-                              'Craton',
-                              'Deep Crust 1',
-                              'Active-Stable Shallow Crust'],
-                      'IND': ['active shallow crust normal',
-                              'active shallow crust strike-slip reverse',
-                              'intraplate margin lower',
-                              'intraplate margin upper',
-                              'stable shallow crust',
-                              'subduction interface',
-                              'subduction interface megathrust',
-                              'subduction intraslab Himalayas',
-                              'subduction intraslab']},
-             'usgs_id': 'FromFile'})
-        self.assertEqual(
-            params,
-            {'local_timestamp': None, 'time_event': 'day', 'maximum_distance': 100.0,
-             'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
-             'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
-             'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None})
-        self.assertEqual(err, {})
-
-    def test_3(self):
-        # with rupture, stations
-        POST = PostDict({
-            'asset_hazard_distance': ['15'],
-            'dep': ['30'],
-            'dip': ['90'],
-            'lat': ['27.6'],
-            'local_timestamp': [''],
-            'lon': ['84.4'],
-            'mag': ['7'],
-            'maximum_distance': ['100'],
-            'maximum_distance_stations': [''],
-            'mosaic_model': ['IND'],
-            'number_of_ground_motion_fields': ['2'],
-            'rake': ['90'],
-            'ses_seed': ['42'],
-            'strike': ['0'],
-            'time_event': ['day'],
-            'trt': ['active shallow crust normal'],
-            'truncation_level': ['3'],
-            'usgs_id': ['FromFile']})
-
-        _rup, rupdic, params, err = aristotle_validate(
-            POST, 'fault_rupture.xml', 'stationlist_seismic.csv', datadir=DATA)
-        self.assertEqual(
-            rupdic,
-            {'dep': 30.0,
-             'dip': 30.08335,
-             'lat': 27.6,
-             'lon': 84.4,
-             'mag': 7.0,
-             'mosaic_models': ['CHN', 'IND'],
-             'rake': 90.0,
-             'rupture_file': 'fault_rupture.xml',
-             'rupture_from_usgs': True,
-             'station_data_file': 'stationlist_seismic.csv',
-             'strike': 295.24732,
-             'trts': {'CHN': ['Active Shallow Crust',
-                              'Himalayan Thrust',
-                              'Craton',
-                              'Deep Crust 1',
-                              'Active-Stable Shallow Crust'],
-                      'IND': ['active shallow crust normal',
-                              'active shallow crust strike-slip reverse',
-                              'intraplate margin lower',
-                              'intraplate margin upper',
-                              'stable shallow crust',
-                              'subduction interface',
-                              'subduction interface megathrust',
-                              'subduction intraslab Himalayas',
-                              'subduction intraslab']},
-             'usgs_id': 'FromFile'})
-        self.assertEqual(
-            params,
-            {'local_timestamp': None, 'time_event': 'day', 'maximum_distance': 100.0,
-             'mosaic_model': 'IND', 'trt': 'active shallow crust normal',
-             'truncation_level': 3.0, 'number_of_ground_motion_fields': 2,
-             'asset_hazard_distance': 15.0, 'ses_seed': 42,
-             'maximum_distance_stations': None})
-        self.assertEqual(err, {})
+        for stations in (None, 'stationlist_seismic.csv'):
+            _rup, rupdic, params, err = aristotle_validate(
+                POST, 'fault_rupture.xml', stations, datadir=DATA)
+            self.assertEqual(
+                rupdic,
+                {'dep': 30.0,
+                 'dip': 30.08335,
+                 'lat': 27.6,
+                 'lon': 84.4,
+                 'mag': 7.0,
+                 'mosaic_models': ['CHN', 'IND'],
+                 'rake': 90.0,
+                 'rupture_file': 'fault_rupture.xml',
+                 'rupture_from_usgs': True,
+                 'station_data_file': stations,
+                 'strike': 295.24732,
+                 'trts': {'CHN': ['Active Shallow Crust',
+                                  'Himalayan Thrust',
+                                  'Craton',
+                                  'Deep Crust 1',
+                                  'Active-Stable Shallow Crust'],
+                          'IND': ['active shallow crust normal',
+                                  'active shallow crust strike-slip reverse',
+                                  'intraplate margin lower',
+                                  'intraplate margin upper',
+                                  'stable shallow crust',
+                                  'subduction interface',
+                                  'subduction interface megathrust',
+                                  'subduction intraslab Himalayas',
+                                  'subduction intraslab']},
+                 'usgs_id': 'FromFile'})
+            self.assertEqual(params['asset_hazard_distance'], '15.0')
+            self.assertEqual(params['calculation_mode'], 'scenario_risk')
+            self.assertEqual(params['time_event'], 'day')
+            self.assertEqual(params['maximum_distance'], '100.0')
+            self.assertEqual(params['mosaic_model'], 'IND')
+            self.assertEqual(params['truncation_level'], '3.0')
+            self.assertEqual(params['number_of_ground_motion_fields'], '2'),
+            self.assertEqual(params['ses_seed'], '42')
+            self.assertEqual(err, {})
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
-        POST = PostDict({'usgs_id': ['us7000n7n8']})
-        _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
+        POST = {'usgs_id': 'us7000n7n8'}
+        _rup, rupdic, _oqparams, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
-        self.assertEqual(err,
-                         {'station_data_issue': ('stationlist.json was downloaded,'
-                                                ' but it contains no features')})
+        self.assertEqual(
+            rupdic['station_data_issue'], 'stationlist.json was downloaded,'
+            ' but it contains no features')
+        self.assertEqual(err, {})

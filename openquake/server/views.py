@@ -60,7 +60,6 @@ from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.engine.aristotle import get_aristotle_params
 from openquake.server import utils
 
 from django.conf import settings
@@ -671,9 +670,8 @@ def aristotle_get_rupture_data(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
-    rup, rupdic, _params, err = aristotle_validate(
+    rup, rupdic, _oqparams, err = aristotle_validate(
         request.POST, rupture_path, station_data_file)
-    err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
@@ -731,25 +729,12 @@ def aristotle_run(request):
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     _rup, rupdic, params, err = aristotle_validate(
         request.POST, rupture_path, station_data_file)
-    err.pop('station_data_issue', None)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    params['rupture_dict'] = rupdic
-    params['station_data_file'] = rupdic['station_data_file']
-    arist = aristotle.AristotleParam(**params)
-    try:
-        params = get_aristotle_params(arist)
-    except Exception as exc:
-        # FIXME: not tested
-        response_data = {"status": "failed", "error_msg": str(exc),
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
     user = utils.get_user(request)
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level, None, user, None)
