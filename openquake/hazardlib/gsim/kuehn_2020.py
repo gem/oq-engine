@@ -25,6 +25,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SInterNewZealand`,
                :class:`KuehnEtAl2020SInterSouthAmerica`,
                :class:`KuehnEtAl2020SInterTaiwan`,
+               :class:`KuehnEtAl2020SInterSeattle`,
                :class:`KuehnEtAl2020SSlab`,
                :class:`KuehnEtAl2020SSlabAlaska`,
                :class:`KuehnEtAl2020SSlabCascadia`
@@ -32,7 +33,8 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SSlabJapan`,
                :class:`KuehnEtAl2020SSlabNewZealand`,
                :class:`KuehnEtAl2020SSlabSouthAmerica`,
-               :class:`KuehnEtAl2020SSlabTaiwan`
+               :class:`KuehnEtAl2020SSlabTaiwan`,
+               :class:`KuehnEtAl2020SSSlabSeattle`,
 """
 import numpy as np
 import os
@@ -55,7 +57,7 @@ KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
 # Regions: Global (GLO), Alaska (ALU), Cascadia (CAS),
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
-SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
+SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN", "Sea"]
 
 # Define inputs according to 3-letter codes
 REGION_TERMS_IF = {
@@ -130,6 +132,15 @@ REGION_TERMS_IF = {
         "c12": "c_12_Tw",
         "mb": 7.1,
         "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",
+        },
+    # Seattle
+    "Sea": {
+        "c1": "c_1_if_reg_Ca",
+        "c6": "c_6_2_reg_Ca",
+        "c7": "c_7_reg_Ca",
+        "theta_11": "theta_11_Sea",
+        "mb": 8.0,
+        "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",
         },
 }
 
@@ -207,6 +218,15 @@ REGION_TERMS_SLAB = {
         "c12": "c_12_Tw",
         "mb": 7.7,
         "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",
+    # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
+    "Sea": {
+        "c1": "c_1_slab_reg_Ca",
+        "c6": "c_6_2_reg_Ca",
+        "c7": "c_7_reg_Ca",
+        "theta_11": "theta_11_Sea",
+        "mb": 7.2,
+        "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",
+        },
         },
 }
 
@@ -251,7 +271,7 @@ Z_MODEL = {
         "c_z_2": 2.302585092994046,
         "c_z_3": 6.1104992125,
         "c_z_4": 0.43671101999999995,
-    }
+        }
 }
 
 
@@ -412,27 +432,36 @@ def _get_basin_term(C, ctx, region):
     """
     # Basin term only defined for the four regions: Cascadia, Japan,
     # New Zealand and Taiwan
-    assert region in ("CAS", "JPN", "NZL", "TWN")
-    # Get c11, c12 and Z-model (same for both interface and inslab events)
-    c11 = C[REGION_TERMS_IF[region]["c11"]]
-    c12 = C[REGION_TERMS_IF[region]["c12"]]
-    CZ = Z_MODEL[region]
+    assert region in ("CAS", "JPN", "NZL", "TWN", "Sea")
 
-    vs30 = ctx.vs30
-    if region in ("JPN", "CAS"):
-        z_values = ctx.z2pt5 * 1000.0
-    elif region in ("NZL", "TWN"):
-        z_values = ctx.z1pt0
+    # If region is Seattle retrieve theta_11 as basin term (this coeff
+    # is imt-dependent but are the same for interface and inslab)
+    if region == "Sea":
+        return C[REGION_TERMS_IF[region]["theta_11"]]
+
     else:
-        z_values = np.zeros(vs30.shape)
+        # Get c11, c12 and Z-model (same for both interface and
+        # inslab events)
+        c11 = C[REGION_TERMS_IF[region]["c11"]]
+        c12 = C[REGION_TERMS_IF[region]["c12"]]
+        CZ = Z_MODEL[region]
 
-    brt = np.zeros_like(z_values)
-    mask = z_values > 0.0
-    if not mask.any():
-        # No basin amplification to be applied
-        return 0.0
-    brt[mask] = c11 + c12 * (np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
-    return brt
+        vs30 = ctx.vs30
+        if region in ("JPN", "CAS"):
+            z_values = ctx.z2pt5 * 1000.0
+        elif region in ("NZL", "TWN"):
+            z_values = ctx.z1pt0
+        else:
+            z_values = np.zeros(vs30.shape)
+
+        brt = np.zeros_like(z_values)
+        mask = z_values > 0.0
+        if not mask.any():
+            # No basin amplification to be applied
+            return 0.0
+        brt[mask] = c11 + c12 * (np.log(z_values[mask]) -\
+                                _get_ln_z_ref(CZ, vs30[mask]))
+        return brt
 
 
 def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
@@ -460,7 +489,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
+    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "Sea"):
         
         # Get USGS basin scaling factor if required (can only be for 
         # CAS region)
@@ -833,6 +862,7 @@ REGION_ALIASES = {
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
     "TWN": "Taiwan",
+    "Sea": "Seattle",
 }
 
 
