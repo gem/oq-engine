@@ -22,7 +22,7 @@ import sys
 import os
 import getpass
 import logging
-from openquake.baselib import sap, config
+from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.validate import (
     AristotleParam, aristotle_validate)
 from openquake.engine import engine
@@ -62,7 +62,8 @@ def main_cmd(usgs_id, rupture_file=None,
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None, station_data_file=None,
-             maximum_distance_stations=''):
+             maximum_distance_stations='',
+             loglevel='warn'):
     """
     This script is meant to be called from the command-line
     """
@@ -77,21 +78,24 @@ def main_cmd(usgs_id, rupture_file=None,
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
     post['usgs_id'] = usgs_id
+    monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = aristotle_validate(
-        post, rupture_file, station_data_file)
+        post, rupture_file, station_data_file, monitor=monitor)
     if err:
         callback(None, oqparams, exc=err)
         return
+
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
+    [job] = engine.create_jobs([oqparams], loglevel, None, user, None)
+    with job:
+        monitor.log_data()
     try:
         engine.run_jobs([job])
     except Exception as exc:
         callback(job.calc_id, oqparams, exc=exc)
     else:
         callback(job.calc_id, oqparams, exc=None)
-
 
 main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
@@ -110,6 +114,7 @@ main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
+main_cmd.loglevel = 'Log level'
 
 if __name__ == '__main__':
     sap.run(main_cmd)
