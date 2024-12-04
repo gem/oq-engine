@@ -689,13 +689,13 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             usgs_id, properties['mag'], properties['products'])
     if not rupdic:
         if not rup_data:
-            with monitor('downloading rupture json'):
+            with monitor('Downloading rupture json'):
                 rup_data, rupture_file = download_rupture_data(
                     usgs_id, contents, datadir)
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
 
     if not station_data_file:
-        with monitor('downloading stations'):
+        with monitor('Downloading stations'):
             rupdic['station_data_file'], rupdic['station_data_issue'] = (
                 download_station_data_file(usgs_id, contents, datadir))
         rupdic['station_data_file_from_usgs'] = True
