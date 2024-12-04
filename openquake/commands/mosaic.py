@@ -264,16 +264,13 @@ aristotle_res = dict(count_errors=0, res_list=[])
 
 
 def callback(job_id, params, exc=None):
-    if job_id is not None:
-        job = logs.dbcmd('get_job', job_id)
-        description = job.description
-    else:
-        description = params['description']
-    error = ''
     if exc:
         logging.error(str(exc), exc_info=True)
         aristotle_res['count_errors'] += 1
         error = str(exc)
+    else:
+        error = ''
+    description = params['description']
     aristotle_res['res_list'].append((job_id, description, error))
 
 
