@@ -43,7 +43,6 @@ class AristotleParam:
     asset_hazard_distance: float
     ses_seed: int
     local_timestamp: str = None
-    exposure_hdf5: str = None
     rupture_file: str = None
     station_data_file: str = None
     maximum_distance_stations: float = None
@@ -52,7 +51,7 @@ class AristotleParam:
         """
         :returns: job_ini dictionary
         """
-        if self.exposure_hdf5 is None:
+        if not hasattr(self, 'exposure_hdf5'):
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
