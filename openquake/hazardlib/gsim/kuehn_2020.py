@@ -667,7 +667,7 @@ class KuehnEtAl2020SInter(GMPE):
     attenuation term is used in these regions
 
     For four of the regions (JPN, CAS, NZL, TWN) a basin response term
-    requiring z2pt5 or z1pt0 is defined. In these cases either Z2.5 (JPN, CAS)
+    requiring Z2.5 or Z1.0 is defined. In these cases either Z2.5 (JPN, CAS)
     or Z1.0 (NZL, TWN) must be specified.
 
     Two forms of configurable epistemic uncertainty adjustments are supported:
