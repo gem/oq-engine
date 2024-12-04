@@ -266,9 +266,6 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
-    issue = rupdic.get('station_data_issue')
-    if issue:
-        err['station_data_issue'] = issue
     trts = {}
     mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
     for mosaic_model in mosaic_models:

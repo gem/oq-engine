@@ -268,7 +268,7 @@ def callback(job_id, params, exc=None):
         job = logs.dbcmd('get_job', job_id)
         description = job.description
     else:
-        description = params['usgs_id']
+        description = params['description']
     error = ''
     if exc:
         logging.error(str(exc), exc_info=True)

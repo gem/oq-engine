@@ -15,6 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Validation tests for USGS ShakeMaps.
+Here are a few codes with interesting errors:
+
+- us2000bmcg: '125 stations were found, but none of them are seismic'
+
+"""
 
 import os
 import unittest
@@ -106,11 +113,12 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = {'usgs_id': 'us7000n7n8'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
+        _rup, rupdic, _oqparams, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
         self.assertEqual(
-            err, {'station_data_issue': ('stationlist.json was downloaded,'
-                                         ' but it contains no features')})
+            rupdic['station_data_issue'], 'stationlist.json was downloaded,'
+            ' but it contains no features')
+        self.assertEqual(err, {})
