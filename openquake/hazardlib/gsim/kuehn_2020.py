@@ -218,6 +218,7 @@ REGION_TERMS_SLAB = {
         "c12": "c_12_Tw",
         "mb": 7.7,
         "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",
+        },
     # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
     "Sea": {
         "c1": "c_1_slab_reg_Ca",
@@ -226,7 +227,6 @@ REGION_TERMS_SLAB = {
         "theta_11": "theta_11_Sea",
         "mb": 7.2,
         "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",
-        },
         },
 }
 
