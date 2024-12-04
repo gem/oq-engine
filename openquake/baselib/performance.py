@@ -259,6 +259,12 @@ class Monitor(object):
         return datetime.fromtimestamp(self._start_time)
 
     def _get_data(self):
+        """
+        :returns:
+            an array of dtype perf_dt, with the information
+            of the monitor (operation, time_sec, memory_mb, counts);
+            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
+        """
         data = []
         if self.counts:
             time_sec = self.duration
@@ -330,11 +336,10 @@ class Monitor(object):
         Save the measurements on the performance file
         """
         data = self.get_data()
-        if len(data) == 0:  # no information
-            return
-        hdf5.extend(h5['performance_data'], data)
-        h5['performance_data'].flush()  # notify the reader
-        self.reset()
+        if len(data):
+            hdf5.extend(h5['performance_data'], data)
+            h5['performance_data'].flush()  # notify the reader
+            self.reset()
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation='no operation', **kw):
