@@ -742,7 +742,7 @@ class KuehnEtAl2020SInter(GMPE):
             # If region is NZL or TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
         else:
-            pass
+            pass # Seattle Basin uses imt-dependent fixed theta_c11_Sea
 
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
