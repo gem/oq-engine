@@ -258,9 +258,10 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
 
     trts = {}
     mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+    expo = getattr(AristotleParam, 'exposure_hdf5',
+                   os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     for mosaic_model in mosaic_models:
-        trts[mosaic_model] = get_trts_around(
-            mosaic_model, os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
+        trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
