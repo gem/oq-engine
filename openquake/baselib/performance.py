@@ -21,6 +21,7 @@ import time
 import pstats
 import pickle
 import signal
+import logging
 import getpass
 import tempfile
 import operator
@@ -283,6 +284,14 @@ class Monitor(object):
                 child.reset()
             data = numpy.concatenate(lst, dtype=perf_dt)
         return data
+
+    def log_data(self):
+        data = self.get_data()[['operation', 'time_sec']]
+        data.sort(order='time_sec')
+        if len(data):
+            for row in data:
+                op = row['operation'].decode('utf8')
+                logging.info(f"{op} = {round(row['time_sec'], 3)} seconds")
 
     def __enter__(self):
         self.exc = None  # exception

@@ -24,7 +24,6 @@ to numpy composite arrays.
 from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
-
 import io
 import os
 import pathlib
@@ -37,6 +36,8 @@ import pandas as pd
 from datetime import datetime
 from shapely.geometry import Polygon
 import numpy
+
+from openquake.baselib import performance
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter
@@ -638,7 +639,8 @@ def _contents_properties_shakemap(usgs_id, datadir):
     return contents, properties, shakemap_array
 
 
-def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None):
+def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None,
+                monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
@@ -676,8 +678,9 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             return rup, rupdic
 
     assert usgs_id
-    contents, properties, shakemap = _contents_properties_shakemap(
-        usgs_id, datadir)
+    with monitor('downloading USGS json'):
+        contents, properties, shakemap = _contents_properties_shakemap(
+            usgs_id, datadir)
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
@@ -685,12 +688,15 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             usgs_id, properties['mag'], properties['products'])
     if not rupdic:
         if not rup_data:
-            rup_data, rupture_file = download_rupture_data(usgs_id, contents, datadir)
+            with monitor('downloading rupture json'):
+                rup_data, rupture_file = download_rupture_data(
+                    usgs_id, contents, datadir)
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
 
     if not station_data_file:
-        rupdic['station_data_file'], rupdic['station_data_issue'] = (
-            download_station_data_file(usgs_id, contents, datadir))
+        with monitor('downloading stations'):
+            rupdic['station_data_file'], rupdic['station_data_issue'] = (
+                download_station_data_file(usgs_id, contents, datadir))
         rupdic['station_data_file_from_usgs'] = True
     else:
         rupdic['station_data_file'], rupdic['station_data_issue'] = (
