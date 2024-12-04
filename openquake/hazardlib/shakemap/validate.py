@@ -48,7 +48,7 @@ class AristotleParam:
     station_data_file: str = None
     maximum_distance_stations: float = None
 
-    def get_params(self):
+    def get_oqparams(self, mosaic_models, trts):
         """
         :returns: job_ini dictionary
         """
@@ -63,16 +63,13 @@ class AristotleParam:
         if self.station_data_file:
             inputs['station_data'] = self.station_data_file
         if not self.mosaic_model:
-            lon, lat = rupdic['lon'], rupdic['lat']
-            mosaic_models = get_close_mosaic_models(lon, lat, 5)
-            # NOTE: using the first mosaic model
             self.mosaic_model = mosaic_models[0]
             if len(mosaic_models) > 1:
                 logging.info('Using the "%s" model' % self.mosaic_model)
 
-        if self.trt is None:
+        if not self.trt:
             # NOTE: using the first tectonic region type
-            self.trt = get_trts_around(self.mosaic_model, self.exposure_hdf5)[0]
+            self.trt = next(iter(trts[self.mosaic_model]))
         params = dict(
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
@@ -283,6 +280,7 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     if len(params) > 1:  # called by aristotle_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
-        return rup, rupdic, AristotleParam(**params).get_params(), err
+        oqparams = AristotleParam(**params).get_oqparams(mosaic_models, trts)
+        return rup, rupdic, oqparams, err
     else:  # called by aristotle_get_rupture_data
         return rup, rupdic, params, err
