@@ -998,7 +998,10 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        is_shared_job = 'status' in info and info['status'] == 'shared'
+        user_can_view_shared_job = request.user.is_authenticated and is_shared_job
+        if not (user_can_view_shared_job
+                or utils.user_has_permission(request, info['user_name'])):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
