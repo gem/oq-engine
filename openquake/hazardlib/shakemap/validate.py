@@ -28,12 +28,6 @@ from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 
-class PostDict(dict):
-    def get(self, key, default=None):
-        if key in self:
-            return self[key][0]
-        return default
-
 
 @dataclass
 class AristotleParam:
@@ -262,6 +256,7 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     """
     dic, params, err = _validate(POST)
     if err:
+        breakpoint()
         return None, dic, params, err
     try:
         rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,

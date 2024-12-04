@@ -258,13 +258,7 @@ class Monitor(object):
         """
         return datetime.fromtimestamp(self._start_time)
 
-    def get_data(self):
-        """
-        :returns:
-            an array of dtype perf_dt, with the information
-            of the monitor (operation, time_sec, memory_mb, counts);
-            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
-        """
+    def _get_data(self):
         data = []
         if self.counts:
             time_sec = self.duration
@@ -272,6 +266,23 @@ class Monitor(object):
             data.append((self.operation, time_sec, memory_mb, self.counts,
                          self.task_no))
         return numpy.array(data, perf_dt)
+
+    def get_data(self):
+        """
+        :returns:
+            an array of dtype perf_dt, with the information
+            of the monitor (operation, time_sec, memory_mb, counts);
+            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
+        """
+        if not self.children:
+            data = self._get_data()
+        else:
+            lst = [self._get_data()]
+            for child in self.children:
+                lst.append(child.get_data())
+                child.reset()
+            data = numpy.concatenate(lst, dtype=perf_dt)
+        return data
 
     def __enter__(self):
         self.exc = None  # exception
@@ -318,14 +329,7 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        if not self.children:
-            data = self.get_data()
-        else:
-            lst = [self.get_data()]
-            for child in self.children:
-                lst.append(child.get_data())
-                child.reset()
-            data = numpy.concatenate(lst, dtype=perf_dt)
+        data = self.get_data()
         if len(data) == 0:  # no information
             return
         hdf5.extend(h5['performance_data'], data)

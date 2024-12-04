@@ -18,7 +18,7 @@
 
 import os
 import unittest
-from openquake.hazardlib.shakemap.validate import aristotle_validate, PostDict
+from openquake.hazardlib.shakemap.validate import aristotle_validate
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -34,7 +34,7 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         # without rupture, stations
-        POST = PostDict({'usgs_id': ['us6000jllz']})
+        POST = {'usgs_id': 'us6000jllz'}
         _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
@@ -42,25 +42,25 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_2(self):
         # with rupture_file
-        POST = PostDict({
-            'asset_hazard_distance': ['15'],
-            'dep': ['30'],
-            'dip': ['90'],
-            'lat': ['27.6'],
-            'local_timestamp': [''],
-            'lon': ['84.4'],
-            'mag': ['7'],
-            'maximum_distance': ['100'],
-            'maximum_distance_stations': [''],
-            'mosaic_model': ['IND'],
-            'number_of_ground_motion_fields': ['2'],
-            'rake': ['90'],
-            'ses_seed': ['42'],
-            'strike': ['0'],
-            'time_event': ['day'],
-            'trt': ['active shallow crust normal'],
-            'truncation_level': ['3'],
-            'usgs_id': ['FromFile']})
+        POST = {
+            'asset_hazard_distance': '15',
+            'dep': '30',
+            'dip': '90',
+            'lat': '27.6',
+            'local_timestamp': '',
+            'lon': '84.4',
+            'mag': '7',
+            'maximum_distance': '100',
+            'maximum_distance_stations': '',
+            'mosaic_model': 'IND',
+            'number_of_ground_motion_fields': '2',
+            'rake': '90',
+            'ses_seed': '42',
+            'strike': '0',
+            'time_event': 'day',
+            'trt': 'active shallow crust normal',
+            'truncation_level': '3',
+            'usgs_id': 'FromFile'}
 
         for stations in (None, 'stationlist_seismic.csv'):
             _rup, rupdic, params, err = aristotle_validate(
@@ -105,7 +105,7 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
-        POST = PostDict({'usgs_id': ['us7000n7n8']})
+        POST = {'usgs_id': 'us7000n7n8'}
         _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)

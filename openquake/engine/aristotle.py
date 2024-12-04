@@ -24,7 +24,7 @@ import getpass
 import logging
 from openquake.baselib import sap
 from openquake.hazardlib.shakemap.validate import (
-    AristotleParam, PostDict, aristotle_validate)
+    AristotleParam, aristotle_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -69,16 +69,16 @@ def main_cmd(usgs_id, rupture_file=None,
     loc = locals().copy()
     fields = set(AristotleParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
-    post = PostDict({f: loc.get(f) for f in fields})
+    post = {f: loc.get(f) for f in fields}
     try:
-        _rup, rupdic, arist, err = aristotle_validate(
+        _rup, rupdic, oqparams, err = aristotle_validate(
             post, rupture_file, station_data_file)
-        oqparams = arist.get_params()
     except Exception as exc:
         callback(None, dict(usgs_id=usgs_id), exc=exc)
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
+    breakpoint()
     [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
     try:
         engine.run_jobs([job])
