@@ -19,11 +19,17 @@
 import os
 import logging
 from dataclasses import dataclass
-from openquake.baselib import config, hdf5
+import numpy
+
+from openquake.baselib import config, hdf5, performance
 from openquake.hazardlib import valid
+from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
+
+MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
+
 
 @dataclass
 class AristotleParam:
@@ -37,9 +43,62 @@ class AristotleParam:
     asset_hazard_distance: float
     ses_seed: int
     local_timestamp: str = None
-    exposure_hdf5: str = None
+    rupture_file: str = None
     station_data_file: str = None
     maximum_distance_stations: float = None
+
+    def get_oqparams(self, mosaic_models, trts):
+        """
+        :returns: job_ini dictionary
+        """
+        if not hasattr(self, 'exposure_hdf5'):
+            self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
+        inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
+        rupdic = self.rupture_dict
+        if 'shakemap_array' in rupdic:
+            del rupdic['shakemap_array']
+        if self.rupture_file:
+            inputs['rupture_model'] = self.rupture_file
+        if self.station_data_file:
+            inputs['station_data'] = self.station_data_file
+        if not self.mosaic_model:
+            self.mosaic_model = mosaic_models[0]
+            if len(mosaic_models) > 1:
+                logging.info('Using the "%s" model' % self.mosaic_model)
+
+        if not self.trt:
+            # NOTE: using the first tectonic region type
+            self.trt = next(iter(trts[self.mosaic_model]))
+        params = dict(
+            calculation_mode='scenario_risk',
+            rupture_dict=str(rupdic),
+            time_event=self.time_event,
+            maximum_distance=str(self.maximum_distance),
+            mosaic_model=self.mosaic_model,
+            tectonic_region_type=self.trt,
+            truncation_level=str(self.truncation_level),
+            number_of_ground_motion_fields=str(self.number_of_ground_motion_fields),
+            asset_hazard_distance=str(self.asset_hazard_distance),
+            ses_seed=str(self.ses_seed),
+            inputs=inputs)
+        if self.local_timestamp is not None:
+            params['local_timestamp'] = self.local_timestamp
+        if self.maximum_distance_stations is not None:
+            params['maximum_distance_stations'] = str(self.maximum_distance_stations)
+        oq = readinput.get_oqparam(params)
+        # NB: fake h5 to cache `get_site_model` and avoid multiple associations
+        _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
+            oq, h5={'performance_data': hdf5.FakeDataset()})
+        id0s = numpy.unique(assetcol['ID_0'])
+        countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
+        tmap_keys = get_tmap_keys(self.exposure_hdf5, countries)
+        if not tmap_keys:
+            raise LookupError(f'No taxonomy mapping was found for {countries}')
+        logging.root.handlers = []  # avoid breaking the logs
+        params['description'] = (
+            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+            f' M{rupdic["mag"]}')
+        return params
 
 
 ARISTOTLE_FORM_LABELS = {
@@ -121,31 +180,27 @@ def _validate(POST):
     params = {}
     dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
                mag=None, rake=None, dip=None, strike=None)
-    for fieldname, validation_func in validators.items():
-        if fieldname not in POST:
+    for field, validation_func in validators.items():
+        if field not in POST:
             continue
         try:
-            value = validation_func(POST.get(fieldname))
+            value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
-                                'local_timestamp']
-            # NOTE: valid.positivefloat, valid_dip_range and
-            #       valid_strike_range raise errors if their
-            #       value is blank or None
-            if (fieldname in blankable_fields and
-                    POST.get(fieldname) == ''):
-                if fieldname in dic:
-                    dic[fieldname] = None
+            blankable = ['dip', 'strike',
+                         'maximum_distance_stations', 'local_timestamp']
+            if field in blankable and POST.get(field) == '':
+                if field in dic:
+                    dic[field] = None
                 else:
-                    params[fieldname] = None
+                    params[field] = None
                 continue
-            validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
-            invalid_inputs.append(fieldname)
+            validation_errs[ARISTOTLE_FORM_LABELS[field]] = str(exc)
+            invalid_inputs.append(field)
             continue
-        if fieldname in dic:
-            dic[fieldname] = value
+        if field in dic:
+            dic[field] = value
         else:
-            params[fieldname] = value
+            params[field] = value
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -153,7 +208,6 @@ def _validate(POST):
         err_msg += '\n'.join(
             [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
              for field in validation_errs])
-        logging.error(err_msg)
         err = {"status": "failed", "error_msg": err_msg,
                "invalid_inputs": invalid_inputs}
     else:
@@ -172,7 +226,20 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     return trts
 
 
-def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=None):
+def get_tmap_keys(exposure_hdf5, countries):
+    """
+    :returns: list of taxonomy mappings as keys in the the "tmap" data group
+    """
+    keys = []
+    with hdf5.File(exposure_hdf5, 'r') as exp:
+        for key in exp['tmap']:
+            if set(key.split('_')) & countries:
+                keys.append(key)
+    return keys
+
+
+def aristotle_validate(POST, rupture_file=None, station_data_file=None,
+                       datadir=None, monitor=performance.Monitor()):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -183,32 +250,28 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
-    try:
-        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,
-                                  rupture_file, station_data_file)
-    except Exception as exc:
-        # FIXME: not tested
-        logging.error('', exc_info=True)
-        msg = f'Unable to retrieve rupture data: {str(exc)}'
-        # signs '<>' would not be properly rendered in the popup notification
-        msg = msg.replace('<', '"').replace('>', '"')
-        return None, {}, params, {"status": "failed", "error_msg": msg,
-                                  "error_cls": type(exc).__name__}
+    rup, rupdic = get_rup_dic(
+        dic['usgs_id'], datadir, rupture_file, station_data_file, monitor)
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
-    issue = rupdic.get('station_data_issue')
-    if issue:
-        err['station_data_issue'] = issue
     trts = {}
-    mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
-    mosaic_dir = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
+    expo = getattr(AristotleParam, 'exposure_hdf5',
+                   os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
+    with monitor('get_close_mosaic_models'):
+        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
     for mosaic_model in mosaic_models:
-        trts[mosaic_model] = get_trts_around(
-            mosaic_model, os.path.join(mosaic_dir, 'exposure.hdf5'))
+        trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    return rup, rupdic, params, err
+    if len(params) > 1:  # called by aristotle_run
+        params['rupture_dict'] = rupdic
+        params['station_data_file'] = rupdic['station_data_file']
+        with monitor('get_oqparams'):
+            oqparams = AristotleParam(**params).get_oqparams(mosaic_models, trts)
+        return rup, rupdic, oqparams, err
+    else:  # called by aristotle_get_rupture_data
+        return rup, rupdic, params, err

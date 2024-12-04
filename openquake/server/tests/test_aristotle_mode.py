@@ -246,7 +246,7 @@ class EngineServerTestCase(django.test.TestCase):
             'require_dip_strike', 'local_timestamp', 'time_event', 'lon', 'lat',
             'dep', 'mag', 'rake', 'usgs_id',
             'mmi_map_png', 'pga_map_png',
-            'rupture_file', 'rupture_from_usgs', 'error',
+            'rupture_file', 'rupture_from_usgs', 'rupture_issue',
             'station_data_issue', 'station_data_file_from_usgs',
             'station_data_file', 'mosaic_models', 'trts']
         self.assertEqual(sorted(ret_dict), sorted(expected_keys))
@@ -271,7 +271,7 @@ class EngineServerTestCase(django.test.TestCase):
                     'Subduction Inslab',
                     'Deep Seismicity']})
         self.assertIn('Unable to convert the rupture from the USGS format',
-                      ret_dict['error'])
+                      ret_dict['rupture_issue'])
         self.assertEqual(ret_dict['require_dip_strike'], True)
         self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
 
