@@ -43,12 +43,20 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3(self):
         _rup, dic = get_rup_dic('us6000f65h', datadir=DATA)
-        self.assertEqual(dic, {'lon': -73.475, 'lat': 18.408, 'dep': 10.0,
-                               'mag': 7.2, 'rake': 0.0,
-                               'local_timestamp': '2021-08-13 20:00:00-04:00',
-                               'time_event': 'transit', 'require_dip_strike': True,
-                               'pga_map_png': None, 'mmi_map_png': None,
-                               'usgs_id': 'us6000f65h', 'rupture_file': None})
+        self.assertEqual(dic['lon'], -73.475)
+        self.assertEqual(dic['lat'], 18.408)
+        self.assertEqual(dic['dep'], 10.0)
+        self.assertEqual(dic['mag'], 7.2)
+        self.assertEqual(dic['rake'], 0.0)
+        self.assertEqual(dic['local_timestamp'], '2021-08-13 20:00:00-04:00')
+        self.assertEqual(dic['time_event'], 'transit')
+        self.assertEqual(dic['require_dip_strike'], True)
+        self.assertEqual(dic['pga_map_png'], None)
+        self.assertEqual(dic['mmi_map_png'], None)
+        self.assertEqual(dic['usgs_id'], 'us6000f65h')
+        self.assertEqual(dic['rupture_file'], None)
+        self.assertEqual(dic['station_data_file_from_usgs'], True)
+        self.assertEqual(dic['station_data_issue'], 'No stations were found')
 
     def test_4(self):
         # point_rup

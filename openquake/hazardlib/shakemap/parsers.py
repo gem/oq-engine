@@ -681,21 +681,22 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
-        return None, load_rupdic_from_finite_fault(
+        rupdic = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
-
     if not rupdic:
         if not rup_data:
             rup_data, rupture_file = download_rupture_data(usgs_id, contents, datadir)
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
-    if station_data_file is None:
+
+    if not station_data_file:
         rupdic['station_data_file'], rupdic['station_data_issue'] = (
             download_station_data_file(usgs_id, contents, datadir))
         rupdic['station_data_file_from_usgs'] = True
     else:
+        rupdic['station_data_file'], rupdic['station_data_issue'] = (
+            station_data_file, None)
         rupdic['station_data_file_from_usgs'] = False
-
-    if rupdic['require_dip_strike']:
+    if not rup_data or rupdic['require_dip_strike']:
         # in parsers_test
         return None, rupdic
 
