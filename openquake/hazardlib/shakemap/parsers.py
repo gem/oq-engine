@@ -703,7 +703,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:
         # in parsers_test for us6000jllz
-        rupdic['error'] = 'Unable to convert the rupture from the USGS format'
+        rupdic['rupture_issue'] = 'Unable to convert the rupture from the USGS format'
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic

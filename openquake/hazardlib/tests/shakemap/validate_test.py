@@ -19,8 +19,11 @@
 Validation tests for USGS ShakeMaps.
 Here are a few codes with interesting errors:
 
-- us2000bmcg: '125 stations were found, but none of them are seismic'
-
+- us6000jllz: ok stations, bad rupture
+- usp0001ccb: '3 stations were found, but none of them are seismic'
+- us7000n7n8: 'stationlist.json was downloaded, but it contains no features'
+- us6000f65h: 'No stations were found'
+- us20002926: 'Unable to convert the rupture from the USGS format'
 """
 
 import os
@@ -40,7 +43,7 @@ class AristotleValidateTestCase(unittest.TestCase):
             del timezonefinder
 
     def test_1(self):
-        # without rupture, stations
+        # no rupture, yes stations
         POST = {'usgs_id': 'us6000jllz'}
         _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
         self.assertEqual(rupdic['require_dip_strike'], True)

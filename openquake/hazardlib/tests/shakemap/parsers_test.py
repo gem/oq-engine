@@ -71,11 +71,15 @@ class ShakemapParsersTestCase(unittest.TestCase):
         rup, dic = get_rup_dic('us20002926', datadir=DATA)
         self.assertIsNone(rup)
         self.assertEqual(dic['require_dip_strike'], True)
+        self.assertEqual(dic['rupture_issue'],
+                         'Unable to convert the rupture from the USGS format')
 
     def test_6(self):
         rup, dic = get_rup_dic('usp0001ccb', datadir=DATA)
         self.assertEqual(rup.mag, 6.7)
         self.assertEqual(dic['require_dip_strike'], False)
+        self.assertEqual(dic['station_data_issue'],
+                         '3 stations were found, but none of them are seismic')
 
 
 """
