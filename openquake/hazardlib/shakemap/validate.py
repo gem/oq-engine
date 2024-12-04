@@ -250,17 +250,8 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
-    try:
-        rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,
-                                  rupture_file, station_data_file)
-    except Exception as exc:
-        # FIXME: not tested
-        logging.error('', exc_info=True)
-        msg = f'Unable to retrieve rupture data: {str(exc)}'
-        # signs '<>' would not be properly rendered in the popup notification
-        msg = msg.replace('<', '"').replace('>', '"')
-        return None, {}, params, {"status": "failed", "error_msg": msg,
-                                  "error_cls": type(exc).__name__}
+    rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,
+                              rupture_file, station_data_file)
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
