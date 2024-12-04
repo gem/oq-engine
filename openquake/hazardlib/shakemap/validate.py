@@ -183,31 +183,27 @@ def _validate(POST):
     params = {}
     dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
                mag=None, rake=None, dip=None, strike=None)
-    for fieldname, validation_func in validators.items():
-        if fieldname not in POST:
+    for field, validation_func in validators.items():
+        if field not in POST:
             continue
         try:
-            value = validation_func(POST.get(fieldname))
+            value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
-                                'local_timestamp']
-            # NOTE: valid.positivefloat, valid_dip_range and
-            #       valid_strike_range raise errors if their
-            #       value is blank or None
-            if (fieldname in blankable_fields and
-                    POST.get(fieldname) == ''):
-                if fieldname in dic:
-                    dic[fieldname] = None
+            blankable = ['dip', 'strike',
+                         'maximum_distance_stations', 'local_timestamp']
+            if field in blankable and POST.get(field) == '':
+                if field in dic:
+                    dic[field] = None
                 else:
-                    params[fieldname] = None
+                    params[field] = None
                 continue
-            validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
-            invalid_inputs.append(fieldname)
+            validation_errs[ARISTOTLE_FORM_LABELS[field]] = str(exc)
+            invalid_inputs.append(field)
             continue
-        if fieldname in dic:
-            dic[fieldname] = value
+        if field in dic:
+            dic[field] = value
         else:
-            params[fieldname] = value
+            params[field] = value
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -215,7 +211,6 @@ def _validate(POST):
         err_msg += '\n'.join(
             [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
              for field in validation_errs])
-        logging.error(err_msg)
         err = {"status": "failed", "error_msg": err_msg,
                "invalid_inputs": invalid_inputs}
     else:

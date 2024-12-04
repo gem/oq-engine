@@ -277,14 +277,14 @@ def callback(job_id, params, exc=None):
     aristotle_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(exposure_hdf5=None, *,
-              rupfname: str=FAMOUS,
-              stations: str=None,
-              mosaic_model: str=None,
-              maximum_distance: float=300.,
-              maximum_distance_stations: float=None,
-              asset_hazard_distance: float=15.,
-              number_of_ground_motion_fields: int=10):
+def aristotle(exposure_hdf5='', *,
+              rupfname=FAMOUS,
+              stations='',
+              mosaic_model='',
+              maximum_distance='300',
+              maximum_distance_stations='',
+              asset_hazard_distance='15',
+              number_of_ground_motion_fields='10'):
     """
     Run Aristotle calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
@@ -293,9 +293,9 @@ def aristotle(exposure_hdf5=None, *,
     """
     if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
-    trt = None
-    truncation_level = 3
-    ses_seed = 42
+    trt = ''
+    truncation_level = '3'
+    ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
         rupture_file = None
@@ -313,7 +313,7 @@ def aristotle(exposure_hdf5=None, *,
                 asset_hazard_distance=asset_hazard_distance,
                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
                 station_data_file=stations,
-                maximum_distance_stations=maximum_distance_stations)
+                maximum_distance_stations=maximum_distance_stations or '')
     else:  # assume .xml
         main_cmd('WithRuptureFile', rupfname, callback,
                  maximum_distance=maximum_distance,
@@ -323,7 +323,7 @@ def aristotle(exposure_hdf5=None, *,
                  asset_hazard_distance=asset_hazard_distance,
                  ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
                  station_data_file=stations,
-                 maximum_distance_stations=maximum_distance_stations)
+                 maximum_distance_stations=maximum_distance_stations or '')
     header = ['job_id', 'description', 'error']
     print(views.text_table(aristotle_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
