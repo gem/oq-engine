@@ -69,6 +69,7 @@ def main_cmd(usgs_id, rupture_file=None,
     if exposure_hdf5 is None:
         assert config.directory.mosaic_dir
         exposure_hdf5 = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
+    AristotleParam.exposure_hdf5 = exposure_hdf5
     loc = locals().copy()
     fields = set(AristotleParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
