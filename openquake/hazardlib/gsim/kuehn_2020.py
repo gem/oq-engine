@@ -57,7 +57,9 @@ KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
 # Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (Sea) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
-SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "Sea", "CAM", "JPN", "NZL", "SAM", "TWN"]
+SUPPORTED_REGIONS = ["GLO",
+                     "USA-AK", "CAS", "Sea", 
+                     "CAM", "JPN", "NZL", "SAM", "TWN"]
 
 # Define inputs according to 3-letter codes
 REGION_TERMS_IF = {
