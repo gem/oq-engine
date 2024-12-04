@@ -63,7 +63,19 @@ exp_res = np.array([[[-4.73116981, -6.72824192, -8.69828689],
 
                     [[-3.43253177, -5.38231865, -7.7114568 ],
                      [-4.4754561 , -5.71171233, -6.19501105],
-                     [-5.51471534, -6.71435625, -7.42008363]]])
+                     [-5.51471534, -6.71435625, -7.42008363]],
+
+                    [[-4.4961401 , -6.90354114, -9.1704392 ],
+                     [-4.63795079, -6.2103382 , -8.0068908 ],
+                     [-5.66174089, -7.06528288, -8.48453249]],
+
+                    [[-4.2549802 , -6.63321606, -8.87962362],
+                     [-4.16121733, -5.82549419, -7.68603107],
+                     [-4.94338881, -6.57681856, -8.15619706]],
+
+                    [[-4.10630526, -6.53500941, -8.77537358],
+                     [-3.95831828, -6.04455764, -7.85456617],
+                     [-4.64245446, -6.83630271, -8.3485733 ]]])
 
 
 class USBasinAdjustmentTestCase(unittest.TestCase):       
@@ -102,13 +114,25 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                               'm9_basin_term="true"')
         z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
 
+        # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia
+        k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
+        k20_def_cas_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
+
+        # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia
+        k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
+        k20_def_cas_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="CAS"')
+
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
         cmaker = simple_cmaker([ag_adj, ag_def,
                                 k20_adj, k20_def,
                                 p20_adj, p20_def,
                                 a09_adj, a09_def,
-                                z06_adj, z06_def], imts)                       
+                                z06_adj, z06_def,
+                                k20_adj_sea_int,
+                                k20_def_cas_int,
+                                k20_adj_sea_sslab,
+                                k20_def_cas_sslab], imts)                       
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.
         ctx.rake = 90.
