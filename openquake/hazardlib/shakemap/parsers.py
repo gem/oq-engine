@@ -534,6 +534,8 @@ def download_jpg(usgs_id, what):
         return None
 
 
+# NB: this is always available but sometimes the geometry is Point
+# or a MultiPolygon not convertible to an engine rupture geometry
 def download_rupture_data(usgs_id, shakemap_contents, datadir):
     """
     :returns: a JSON dictionary with a format like this:
@@ -673,6 +675,7 @@ def get_rup_dic(usgs_id, datadir=None, rupture_file=None, station_data_file=None
             rup = convert_to_oq_rupture(rup_data)
             return rup, rupdic
 
+    assert usgs_id
     contents, properties, shakemap = _contents_properties_shakemap(
         usgs_id, datadir)
 

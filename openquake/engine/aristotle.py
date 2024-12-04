@@ -22,7 +22,7 @@ import sys
 import os
 import getpass
 import logging
-from openquake.baselib import sap
+from openquake.baselib import sap, config
 from openquake.hazardlib.shakemap.validate import (
     AristotleParam, aristotle_validate)
 from openquake.engine import engine
@@ -60,16 +60,20 @@ def main_cmd(usgs_id, rupture_file=None,
              maximum_distance='300', mosaic_model=None, trt=None,
              truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
-             ses_seed='42',
+             ses_seed='42', local_timestamp='',
              exposure_hdf5=None, station_data_file=None,
-             maximum_distance_stations=None):
+             maximum_distance_stations=''):
     """
     This script is meant to be called from the command-line
     """
+    if exposure_hdf5 is None:
+        assert config.directory.mosaic_dir
+        exposure_hdf5 = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
     loc = locals().copy()
     fields = set(AristotleParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
+    post['usgs_id'] = usgs_id
     try:
         _rup, rupdic, oqparams, err = aristotle_validate(
             post, rupture_file, station_data_file)
@@ -78,7 +82,6 @@ def main_cmd(usgs_id, rupture_file=None,
         return
     # in  testing mode create new job contexts
     user = getpass.getuser()
-    breakpoint()
     [job] = engine.create_jobs([oqparams], 'warn', None, user, None)
     try:
         engine.run_jobs([job])
@@ -100,10 +103,11 @@ main_cmd.truncation_level = 'Truncation level'
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
-main_cmd.station_data_file = 'CSV file with the station data'
-main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
+main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
+main_cmd.station_data_file = 'CSV file with the station data'
+main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 
 if __name__ == '__main__':
     sap.run(main_cmd)

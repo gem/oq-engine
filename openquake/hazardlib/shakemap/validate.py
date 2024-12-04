@@ -256,7 +256,6 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     """
     dic, params, err = _validate(POST)
     if err:
-        breakpoint()
         return None, dic, params, err
     try:
         rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,
