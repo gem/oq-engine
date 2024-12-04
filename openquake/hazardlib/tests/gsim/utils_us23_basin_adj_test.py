@@ -69,13 +69,21 @@ exp_res = np.array([[[-4.73116981, -6.72824192, -8.69828689],
                      [-4.63795079, -6.2103382 , -8.0068908 ],
                      [-5.66174089, -7.06528288, -8.48453249]],
 
+                    [[-4.3697711 , -6.77717214, -9.0440702 ],
+                     [-4.87470779, -6.35831133, -8.0068908 ],
+                     [-5.94409889, -7.24175663, -8.07374331]],
+
                     [[-4.2549802 , -6.63321606, -8.87962362],
                      [-4.16121733, -5.82549419, -7.68603107],
                      [-4.94338881, -6.57681856, -8.15619706]],
 
                     [[-4.10630526, -6.53500941, -8.77537358],
                      [-3.95831828, -6.04455764, -7.85456617],
-                     [-4.64245446, -6.83630271, -8.3485733 ]]])
+                     [-4.64245446, -6.83630271, -8.3485733 ]],
+
+                    [[-4.1286112 , -6.50684706, -8.75325462],
+                     [-4.39797433, -5.97346732, -7.68603107],
+                     [-5.22574681, -6.75329231, -7.74540788]]])
 
 
 class USBasinAdjustmentTestCase(unittest.TestCase):       
@@ -114,13 +122,19 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                               'm9_basin_term="true"')
         z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
 
-        # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia
-        k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
+        # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
+        k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
         k20_def_cas_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
+        k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"\n'
+                                     'm9_basin_term="true"\n'
+                                     'usgs_basin_scaling="true"')
 
-        # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia
-        k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
+        # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
+        k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
         k20_def_cas_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="CAS"')
+        k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"\n'
+                                       'm9_basin_term="true"\n'
+                                       'usgs_basin_scaling="true"')
 
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
@@ -129,10 +143,12 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                                 p20_adj, p20_def,
                                 a09_adj, a09_def,
                                 z06_adj, z06_def,
-                                k20_adj_sea_int,
+                                k20_def_sea_int,
                                 k20_def_cas_int,
-                                k20_adj_sea_sslab,
-                                k20_def_cas_sslab], imts)                       
+                                k20_adj_sea_int,
+                                k20_def_sea_sslab,
+                                k20_def_cas_sslab,
+                                k20_adj_sea_sslab], imts)                       
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.
         ctx.rake = 90.

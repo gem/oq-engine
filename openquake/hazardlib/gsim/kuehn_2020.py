@@ -439,7 +439,8 @@ def _get_basin_term(C, ctx, region):
     # If region is Seattle retrieve theta_11 as basin term (this coeff
     # is imt-dependent but are the same for interface and inslab)
     if region == "Sea":
-        return C[REGION_TERMS_IF[region]["theta_11"]]
+        theta_11 = C[REGION_TERMS_IF[region]["theta_11"]]
+        return np.full_like(ctx.vs30, theta_11) 
 
     else:
         # Get c11, c12 and Z-model (same for both interface and
