@@ -133,7 +133,7 @@ REGION_TERMS_IF = {
         "mb": 7.1,
         "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",
         },
-    # Seattle
+    # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
     "Sea": {
         "c1": "c_1_if_reg_Ca",
         "c6": "c_6_2_reg_Ca",
