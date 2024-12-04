@@ -21,7 +21,7 @@ import logging
 from dataclasses import dataclass
 import numpy
 
-from openquake.baselib import config, hdf5
+from openquake.baselib import config, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
@@ -238,7 +238,8 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=None):
+def aristotle_validate(POST, rupture_file=None, station_data_file=None,
+                       datadir=None, monitor=performance.Monitor()):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -249,17 +250,18 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
-    rup, rupdic = get_rup_dic(dic['usgs_id'], datadir,
-                              rupture_file, station_data_file)
+    rup, rupdic = get_rup_dic(
+        dic['usgs_id'], datadir, rupture_file, station_data_file, monitor)
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
             rupdic[k] = round(v, 5)
 
     trts = {}
-    mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
     expo = getattr(AristotleParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
+    with monitor('get_close_mosaic_models'):
+        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
     for mosaic_model in mosaic_models:
         trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts
@@ -268,7 +270,8 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None, datadir=
     if len(params) > 1:  # called by aristotle_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
-        oqparams = AristotleParam(**params).get_oqparams(mosaic_models, trts)
+        with monitor('get_oqparams'):
+            oqparams = AristotleParam(**params).get_oqparams(mosaic_models, trts)
         return rup, rupdic, oqparams, err
     else:  # called by aristotle_get_rupture_data
         return rup, rupdic, params, err
