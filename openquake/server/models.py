@@ -32,7 +32,7 @@ class Profile(models.Model):
     interface_level = models.CharField(
         max_length=10,
         choices=INTERFACE_CHOICES,
-        default='0',
+        default='1',
     )
 
 

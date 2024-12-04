@@ -134,14 +134,7 @@ def oq_server_context_processor(request):
         context['aelo_version'] = get_aelo_version()
     if settings.APPLICATION_MODE == 'ARISTOTLE':
         # NOTE: it may be useful not only for ARISTOTLE
-        if (hasattr(request.user, 'profile')
-                and hasattr(request.user.profile, 'interface_level')):
-            interface_level = request.user.profile.interface_level
-        else:
-            interface_level = '0'
-            print(f'User {request.user.username} has no interface_level.'
-                  f' Using interface_level {interface_level}')
-        context['interface_level'] = interface_level
+        context['interface_level'] = request.user.profile.interface_level
     return context
 
 
