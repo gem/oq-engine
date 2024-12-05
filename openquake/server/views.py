@@ -517,17 +517,11 @@ def calc_remove(request, calc_id):
                             content_type='text/plain', status=500)
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def calc_share(request, calc_id):
-    """
-    Share the calculation id
-    """
+def job_share(calc_id, revert=False):
     # FIXME: who can share a job? Probably the owner or any administrator or user with
     # interface_level == '2'
     try:
-        message = logs.dbcmd('update_job', calc_id, {'status': 'shared'})
+        message = logs.dbcmd('share_job', calc_id, revert)
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
@@ -543,6 +537,26 @@ def calc_share(request, calc_id):
         logging.error(message)
         return HttpResponse(content=message,
                             content_type='text/plain', status=500)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_unshare(request, calc_id):
+    """
+    Unshare the calculation of the given id
+    """
+    return job_share(calc_id, revert=True)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_share(request, calc_id):
+    """
+    Share the calculation of the given id
+    """
+    return job_share(calc_id)
 
 
 def log_to_json(log):
