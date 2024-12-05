@@ -215,7 +215,7 @@ function capitalizeFirstLetter(val) {
                                         if(data.error) {
                                             diaerror.show(false, "Error", data.error);
                                         } else {
-                                            diaerror.show(false, "Calculation " + action_pfx + "ed", 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action_pfx + 'ed.');
+                                            diaerror.show(false, "Calculation " + action_pfx + "ed", 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action + 'ed.');
                                             if (action == 'abort') {
                                                 view.calculations.remove([view.calculations.get(calc_id)]);
                                             }

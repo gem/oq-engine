@@ -104,7 +104,7 @@
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
               {% if application_mode != 'READ_ONLY' and interface_level != '0' %}
-              <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Abort</a>
+              <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-abort" style="margin: 2px 0 2px 0;">Abort</a>
               {% endif %}
             <% } %>
           <% } %>
