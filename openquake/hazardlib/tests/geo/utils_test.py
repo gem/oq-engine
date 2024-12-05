@@ -21,6 +21,9 @@ import shapely.geometry
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo.utils import (
+    plane_fit, get_strike_from_plane_normal)
+from openquake.hazardlib.geo import utils as geo_utils
 
 Point = collections.namedtuple("Point",  'lon lat')
 aac = numpy.testing.assert_allclose
@@ -412,7 +415,7 @@ class PlaneFit(unittest.TestCase):
         """
         pnt, par = utils.plane_fit(self.points)
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-5, atol=0)
-        self.assertAlmostEqual(self.c[-1], -sum(par*pnt))
+        self.assertAlmostEqual(self.c[-1], -sum(par * pnt))
 
     def test_plane_fit02(self):
         """
@@ -422,7 +425,142 @@ class PlaneFit(unittest.TestCase):
         self.points[:, 2] += numpy.random.random(self.npts) * 0.01
         pnt, par = utils.plane_fit(self.points)
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-3, atol=0)
-        self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
+        self.assertAlmostEqual(self.c[-1], -sum(par * pnt), 2)
 
+
+class PlaneStrikeTest(unittest.TestCase):
+
+    def test_get_strike01(self):
+
+        expected = 45.0
+        coo = _get_coo_poly(10., 45.0, expected)
+
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
+        # Fit plane (without projecting the points)
+        _, pnrm = plane_fit(pcoo)
+
+        # Find strike
+        strike = get_strike_from_plane_normal(pnrm)
+
+        # Test
+        expected = 45.0
+        check = numpy.abs(strike - expected) < 15.0
+        self.assertTrue(check)
+
+    def test_get_strike02(self):
+
+        expected = 135.0
+        coo = _get_coo_poly(10., 45.0, expected)
+
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
+        # Fit plane (without projecting the points)
+        _, pnrm = plane_fit(pcoo)
+
+        # Find strike
+        strike = get_strike_from_plane_normal(pnrm)
+
+        # Test
+        check = numpy.abs(strike - expected) < 15.0
+        self.assertTrue(check)
+
+    def test_get_strike03(self):
+
+        expected = 315.0
+        coo = _get_coo_poly(10., 45.0, expected, True)
+
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
+        # Fit plane (without projecting the points)
+        _, pnrm = plane_fit(pcoo)
+
+        # Find strike
+        strike = get_strike_from_plane_normal(pnrm)
+
+        # Test
+        check = numpy.abs(strike - expected + 180.0) < 10.0
+        self.assertTrue(check)
+
+    def test_get_strike04(self):
+
+        expected = 265.0
+        coo = _get_coo_poly(10., 45.0, expected, True)
+
+        # Define projected coordinates
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+        )
+        pcoo = numpy.zeros((coo.shape[0], 3))
+        # Depths positive upwards
+        pcoo[:, 2] = -coo[:, 2]
+        pcoo[:, 0:2] = numpy.transpose(proj(coo[:, 0], coo[:, 1]))
+
+        # Fit plane (without projecting the points)
+        _, pnrm = plane_fit(pcoo)
+
+        # Find strike
+        strike = get_strike_from_plane_normal(pnrm)
+
+        # Test
+        check = numpy.abs(strike - expected + 180.0) < 10.0
+        self.assertTrue(check)
+
+
+def _get_coo_poly(olon, olat, azim, opposite=False):
+
+    coo = numpy.empty((4, 3))
+    fnc = geo.geodetic.npoints_towards
+
+    # Upper right
+    coo[0, :] = [olon, olat, 0.0]
+
+    # Upper left
+    tmp = fnc(coo[0, 0], coo[0, 1], coo[0, 2], azim, 20.0, 0.0, 2)
+    coo[1, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
+
+    # Lower right
+    factor = 1 if not opposite else -1
+    tmp = (azim + 90.0 * factor) % 360.
+    tmp = fnc(coo[0, 0], coo[0, 1], coo[0, 2], tmp, 20.0, 10.0, 2)
+    coo[2, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
+
+    # Lower left
+    tmp = fnc(coo[2, 0], coo[2, 1], coo[2, 2], azim, 20.0, 0.0, 2)
+    coo[3, :] = [tmp[0][1], tmp[1][1], tmp[2][1]]
+
+    return coo
+
+
+def _plot(coo):
+
+    import matplotlib.pyplot as plt
+    ax = plt.figure().add_subplot(projection='3d')
+    idx = [0, 1]
+    plt.plot(coo[:, 0], coo[:, 1], coo[:, 2], 'o', color='red')
+    plt.plot(coo[idx, 0], coo[idx, 1], coo[idx, 2], '-', lw=2)
+    ax.invert_zaxis()
+    plt.show()
 
 # NB: utils.assoc is tested in the engine
