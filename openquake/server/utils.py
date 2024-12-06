@@ -135,7 +135,7 @@ def oq_server_context_processor(request):
     if settings.APPLICATION_MODE == 'ARISTOTLE':
         # NOTE: it may be useful not only for ARISTOTLE
         try:
-            context['user_level'] = request.user.profile.level
+            context['user_level'] = request.user.level
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
             context['user_level'] = 0
     return context
