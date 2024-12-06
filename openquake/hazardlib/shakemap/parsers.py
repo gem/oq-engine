@@ -460,20 +460,19 @@ def download_station_data_file(usgs_id, contents, datadir=None):
             return station_data_file, None
 
 
-def get_finite_fault(usgs_id, products):
+def load_rupdic_from_finite_fault(usgs_id, mag, products):
+    """
+    Extract the finite fault properties from products.
+    NB: if the finite-fault list contains multiple elements we take the
+    first one.
+    """
     logging.info('Getting finite-fault properties')
     try:
-        return products['finite-fault']
+        ff = products['finite-fault']
     except KeyError:
+        # FIXME: not tested
         raise MissingLink('There is no finite-fault info for %s' % usgs_id)
-
-
-def load_rupdic_from_finite_fault(usgs_id, mag, products):
-    ff = get_finite_fault(usgs_id, products)
     if isinstance(ff, list):
-        if len(ff) > 1:
-            logging.warning(f'The finite-fault list contains {len(ff)}'
-                            f' elements. We are using the first one.')
         ff = ff[0]
     p = ff['properties']
     lon = float(p['longitude'])
@@ -569,14 +568,14 @@ def download_rupture_data(usgs_id, shakemap_contents, datadir):
  'type': 'FeatureCollection'}
     """
     url = shakemap_contents.get('download/rupture.json')['url']
+    # with open(f'/tmp/{usgs_id}-rup.json', 'wb') as f:
+    #       f.write(urlopen(url).read())
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, f'{usgs_id}-rup.json')
         text = open(fname).read()
     else:
         logging.info('Downloading rupture.json')
         text = urlopen(url).read()
-        # with open('/tmp/x-rup.json', 'wb') as f:
-        #     f.write(text)
     rup_data = json.loads(text)
     return rup_data, gettemp(text, prefix='rup_', suffix='.json')
 
@@ -587,6 +586,7 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     lon, lat, dep, mag, rake, local_timestamp, require_dip_strike, shakemap,
     usgs_id, rupture_file
     """
+    # geometry is Point for us7000n05d
     feats = rup_data['features']
     require_dip_strike = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
@@ -605,6 +605,9 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
 
 
 def _contents_properties_shakemap(usgs_id, datadir, monitor):
+    # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
+    #     url = SHAKEMAP_URL.format(usgs_id)
+    #     f.write(urlopen(url).read())
     if datadir:  # in parsers_test
         fname = os.path.join(datadir, usgs_id + '.json')
         text = open(fname).read()
@@ -619,8 +622,6 @@ def _contents_properties_shakemap(usgs_id, datadir, monitor):
             raise URLError(f'Unable to download from {url}: {exc}')
 
     js = json.loads(text)
-    # with open('/tmp/x.json', 'wb') as f:
-    #     f.write(text)
     properties = js['properties']
 
     # NB: currently we cannot find a case with missing shakemap
@@ -629,6 +630,7 @@ def _contents_properties_shakemap(usgs_id, datadir, monitor):
 
     if 'download/grid.xml' in contents:
         url = contents.get('download/grid.xml')['url']
+        # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         if datadir:  # in parsers_test
             grid_fname = f'{datadir}/{usgs_id}-grid.xml'
         else:

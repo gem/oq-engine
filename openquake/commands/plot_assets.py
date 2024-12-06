@@ -75,6 +75,7 @@ def main(calc_id: int = -1, site_model=False,
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
         rec = dstore['ruptures'][0]
         lon, lat, _dep = rec['hypo']
@@ -84,7 +85,7 @@ def main(calc_id: int = -1, site_model=False,
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_rupture_from_dstore(dstore, rup_id=0)
-            ax, _minx, _miny, _maxx, _maxy = add_rupture(ax, rup)
+            ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
@@ -98,10 +99,10 @@ def main(calc_id: int = -1, site_model=False,
     else:
         minx, miny, maxx, maxy = get_bbox(
             assetcol['lon'], assetcol['lat'], xlon, xlat)
-    minx = min(minx, _minx)
-    maxx = max(maxx, _maxx)
-    miny = min(miny, _miny)
-    maxy = max(maxy, _maxy)
+    minx = min(minx, min_x)
+    maxx = max(maxx, max_x)
+    miny = min(miny, min_y)
+    maxy = max(maxy, max_y)
     xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
