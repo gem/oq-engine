@@ -238,8 +238,8 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def aristotle_validate(POST, rupture_file=None, station_data_file=None,
-                       datadir=None, monitor=performance.Monitor()):
+def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
+                       monitor=performance.Monitor()):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and
@@ -251,7 +251,7 @@ def aristotle_validate(POST, rupture_file=None, station_data_file=None,
     if err:
         return None, dic, params, err
     rup, rupdic = get_rup_dic(
-        dic['usgs_id'], datadir, rupture_file, station_data_file, monitor)
+        dic['usgs_id'], user, rupture_file, station_data_file, monitor)
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
