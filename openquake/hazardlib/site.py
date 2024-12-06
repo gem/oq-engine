@@ -853,9 +853,12 @@ def merge_without_dupl(array1, array2, uniquefield):
     >>> dt = [('code', 'S1'), ('value', int)]
     >>> a1 = numpy.array([('a', 1), ('b', 2)], dt)
     >>> a2 = numpy.array([('b', 2), ('c', 3)], dt)
-    >>> merge_without_dupl(a1, a2, 'code')
+    >>> merged, dupl = merge_without_dupl(a1, a2, 'code')
+    >>> merged
     array([(b'a', 1), (b'b', 2), (b'c', 3)],
           dtype=[('code', 'S1'), ('value', '<i8')])
+    >>> a2[dupl]
+    array([(b'b', 2)], dtype=[('code', 'S1'), ('value', '<i8')])
     """
     dtype = {}
     for array in (array1, array2):
