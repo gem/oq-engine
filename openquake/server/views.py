@@ -670,8 +670,10 @@ def aristotle_get_rupture_data(request):
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    user = request.user
+    user.testdir = None
     rup, rupdic, _oqparams, err = aristotle_validate(
-        request.POST, rupture_path, station_data_file)
+        request.POST, user, rupture_path, station_data_file)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
@@ -731,8 +733,10 @@ def aristotle_run(request):
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    user = request.user
+    user.testdir = None
     _rup, rupdic, params, err = aristotle_validate(
-        request.POST, rupture_path, station_data_file)
+        request.POST, user, rupture_path, station_data_file)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
