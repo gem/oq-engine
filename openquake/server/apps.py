@@ -48,6 +48,11 @@ class ServerConfig(AppConfig):
                     ' It is required in order to convert the UTC time to'
                     ' the local time of the event. You can install it'
                     ' running: pip install timezonefinder==6.5.2')
+
+            # NOTE: this might be useful not only for ARISTOTLE
+            from .utils import add_user_level_property
+            add_user_level_property()
+
         if settings.LOCKDOWN and settings.APPLICATION_MODE in (
                 'AELO', 'ARISTOTLE'):
             # check essential constants are defined
