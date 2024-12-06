@@ -43,12 +43,20 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3(self):
         _rup, dic = get_rup_dic('us6000f65h', datadir=DATA)
-        self.assertEqual(dic, {'lon': -73.475, 'lat': 18.408, 'dep': 10.0,
-                               'mag': 7.2, 'rake': 0.0,
-                               'local_timestamp': '2021-08-13 20:00:00-04:00',
-                               'time_event': 'transit', 'is_point_rup': True,
-                               'pga_map_png': None, 'mmi_map_png': None,
-                               'usgs_id': 'us6000f65h', 'rupture_file': None})
+        self.assertEqual(dic['lon'], -73.475)
+        self.assertEqual(dic['lat'], 18.408)
+        self.assertEqual(dic['dep'], 10.0)
+        self.assertEqual(dic['mag'], 7.2)
+        self.assertEqual(dic['rake'], 0.0)
+        self.assertEqual(dic['local_timestamp'], '2021-08-13 20:00:00-04:00')
+        self.assertEqual(dic['time_event'], 'transit')
+        self.assertEqual(dic['require_dip_strike'], True)
+        self.assertEqual(dic['pga_map_png'], None)
+        self.assertEqual(dic['mmi_map_png'], None)
+        self.assertEqual(dic['usgs_id'], 'us6000f65h')
+        self.assertEqual(dic['rupture_file'], None)
+        self.assertEqual(dic['station_data_file_from_usgs'], True)
+        self.assertEqual(dic['station_data_issue'], 'No stations were found')
 
     def test_4(self):
         # point_rup
@@ -56,12 +64,22 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['lon'], 37.0143)
         self.assertEqual(dic['lat'], 37.2256)
         self.assertEqual(dic['dep'], 10.)
-        self.assertEqual(dic['is_point_rup'], True)
+        self.assertEqual(dic['require_dip_strike'], True)
 
     def test_5(self):
-        # 5 vertices instead of 4 in rupture.json
-        _rup, dic = get_rup_dic('usp0001ccb', datadir=DATA)
-        self.assertEqual(dic['is_point_rup'], True)
+        # 12 vertices instead of 4 in rupture.json
+        rup, dic = get_rup_dic('us20002926', datadir=DATA)
+        self.assertIsNone(rup)
+        self.assertEqual(dic['require_dip_strike'], True)
+        self.assertEqual(dic['rupture_issue'],
+                         'Unable to convert the rupture from the USGS format')
+
+    def test_6(self):
+        rup, dic = get_rup_dic('usp0001ccb', datadir=DATA)
+        self.assertEqual(rup.mag, 6.7)
+        self.assertEqual(dic['require_dip_strike'], False)
+        self.assertEqual(dic['station_data_issue'],
+                         '3 stations were found, but none of them are seismic')
 
 
 """
