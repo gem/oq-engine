@@ -22,7 +22,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-User.level = property(lambda self: self.profile.level)
+User.level = property(lambda self: getattr(self.profile, 'level', 0))
+
 
 
 class UserProfile(models.Model):
