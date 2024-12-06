@@ -47,14 +47,14 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_1(self):
         # no rupture, yes stations
         POST = {'usgs_id': 'us6000jllz'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, user=user)
+        _rup, rupdic, _params, err = aristotle_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_2(self):
         POST = {'usgs_id': 'us7000n05d'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, user=user)
+        _rup, rupdic, _params, err = aristotle_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], False)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
@@ -85,7 +85,7 @@ class AristotleValidateTestCase(unittest.TestCase):
 
         for stations in (None, 'stationlist_seismic.csv'):
             _rup, rupdic, params, err = aristotle_validate(
-                POST, 'fault_rupture.xml', stations, user=user)
+                POST, user, 'fault_rupture.xml', stations)
             self.assertEqual(
                 rupdic,
                 {'dep': 30.0,
@@ -127,7 +127,7 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = {'usgs_id': 'us7000n7n8'}
-        _rup, rupdic, _oqparams, err = aristotle_validate(POST, user=user)
+        _rup, rupdic, _oqparams, err = aristotle_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')

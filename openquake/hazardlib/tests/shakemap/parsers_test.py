@@ -37,7 +37,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_1(self):
         # wrong usgs_id
         with self.assertRaises(URLError) as ctx:
-            get_rup_dic('usp0001cc')
+            get_rup_dic('usp0001cc', User(level=2, testdir=''))
         self.assertIn('Unable to download from https://earthquake.usgs.gov/fdsnws/'
                       'event/1/query?eventid=usp0001cc&', str(ctx.exception))
 

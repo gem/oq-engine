@@ -25,7 +25,7 @@ from openquake.baselib import config, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
-from openquake.hazardlib.shakemap.parsers import get_rup_dic, User
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
@@ -238,8 +238,8 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def aristotle_validate(POST, rupture_file=None, station_data_file=None,
-                       user=User(), monitor=performance.Monitor()):
+def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
+                       monitor=performance.Monitor()):
     """
     This is called by `aristotle_get_rupture_data` and `aristotle_run`.
     In the first case the form contains only usgs_id and rupture_file and

@@ -414,7 +414,7 @@ def _get_preferred_shakemap(shakemaps):
     return shakemap
 
 
-def download_station_data_file(usgs_id, contents, user=User()):
+def download_station_data_file(usgs_id, contents, user):
     """
     Download station data from the USGS site given a ShakeMap ID.
 
@@ -495,6 +495,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     return rupdic
 
 
+# NB: not used right now
 def get_shakemap_version(usgs_id):
     # USGS event page to get ShakeMap details
     product_url = US_GOV + f"/earthquakes/feed/v1.0/detail/{usgs_id}.geojson"
@@ -518,6 +519,7 @@ def get_shakemap_version(usgs_id):
         return None
 
 
+# NB: not used
 def download_jpg(usgs_id, what):
     """
     It can be used to download a jpg file from the USGS service, returning it in a
@@ -542,7 +544,7 @@ def download_jpg(usgs_id, what):
 
 # NB: this is always available but sometimes the geometry is Point
 # or a MultiPolygon not convertible to an engine rupture geometry
-def download_rupture_data(usgs_id, shakemap_contents, user=User()):
+def download_rupture_data(usgs_id, shakemap_contents, user):
     """
     :returns: a JSON dictionary with a format like this:
 
@@ -634,7 +636,8 @@ def _contents_properties_shakemap(usgs_id, user, monitor):
     shakemap = _get_preferred_shakemap(properties['products']['shakemap'])
     contents = shakemap['contents']
 
-    if 'download/grid.xml' in contents:
+    if getattr(user, 'level', 0) == 1 and 'download/grid.xml' in contents:
+        # only for Aristotle users try to download the shakemap
         url = contents.get('download/grid.xml')['url']
         # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         if user.testdir:  # in parsers_test
@@ -649,7 +652,7 @@ def _contents_properties_shakemap(usgs_id, user, monitor):
     return contents, properties, shakemap_array
 
 
-def get_rup_dic(usgs_id, user=User(), rupture_file=None, station_data_file=None,
+def get_rup_dic(usgs_id, user, rupture_file=None, station_data_file=None,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given

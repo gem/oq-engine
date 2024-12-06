@@ -80,7 +80,7 @@ def main_cmd(usgs_id, rupture_file=None,
     post['usgs_id'] = usgs_id
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = aristotle_validate(
-        post, rupture_file, station_data_file, User(), monitor)
+        post, User(), rupture_file, station_data_file, monitor)
     if err:
         callback(None, oqparams, exc=err)
         return
