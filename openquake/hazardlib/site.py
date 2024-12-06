@@ -19,7 +19,7 @@
 """
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
-import logging
+
 import numpy
 import pandas
 from scipy.spatial import distance
@@ -891,25 +891,24 @@ def merge_sitecols(hdf5fnames, check_gmfs=False):
             if check_gmfs:
                 attrs.append(dict(f['gmf_data'].attrs))
     sitecol = sitecols[0]
+    converters = [{sid: i for i, sid in enumerate(sitecol.sids)}]
     if len(sitecols) == 1:
-        return sitecol, [sitecol.sids]
+        return sitecol, converters
 
     if attrs:
         check_all_equal(attrs, '__pdcolumns__', 'effective_time',
                         'investigation_time')
 
+    assert 'custom_site_id' in sitecol.array.dtype.names
     new = object.__new__(sitecol.__class__)
-    if 'custom_site_id' in sitecol.array.dtype.names:
-        new.array = sitecols[0].array
-        allsids = []
-        for sc in sitecols[1:]:
-            new.array, dupl = merge_without_dupl(
-                new.array, sc.array, 'custom_site_id')
-            allsids.append(sc.sids[~dupl])
-    else:
-        logging.warning('There is no custom_site_id, not checking for duplicates')
-        new.array = numpy.concatenate([sc.array for sc in sitecols])
-        allsids = [sc.sids for sc in sitecols]
+    new.array = sitecol.array
+    offset = len(sitecol)
+    for sc in sitecols[1:]:
+        new.array, dupl = merge_without_dupl(
+            new.array, sc.array, 'custom_site_id')
+        conv = {sid: offset + i for i, sid in enumerate(sc.sids[~dupl])}
+        converters.append(conv)
+        offset += dupl.sum()
     new.array['sids'] = numpy.arange(len(new.array))
     new.complete = new
-    return new, allsids
+    return new, converters

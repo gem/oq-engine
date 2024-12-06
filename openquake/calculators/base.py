@@ -1418,25 +1418,27 @@ def import_gmfs_hdf5(dstore, oqparam):
             dstore['sitecol'] = f['sitecol']  # complete by construction
             f.copy('gmf_data', dstore.hdf5)
     else:  # merge the sites and the gmfs
-        dstore['sitecol'], allsids = site.merge_sitecols(fnames, check_gmfs=True)
+        dstore['sitecol'], convs = site.merge_sitecols(fnames, check_gmfs=True)
         create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                         R=oqparam.number_of_logic_tree_samples)
-        nS, nE = 0, 0
-        for fname, sids, ne in zip(fnames, allsids, attrs['num_events']):
+        nE = 0
+        for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.info('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 size = len(f['gmf_data/sid'])
                 logging.info('Reading {:_d} rows from {}'.format(size, fname))
                 for slc in general.gen_slices(0, size, 10_000_000):
                     df = f.read_df('gmf_data', slc=slc)
-                    gmf_df = df[numpy.isin(df.sid, sids)].copy()
-                    gmf_df['sid'] += nS  # add an offset to the site IDs
+                    out = []
+                    for sid, idx in conv.items():
+                        gmf_df = df[df.sid == sid].copy()
+                        gmf_df['sid'] = idx
+                        out.append(gmf_df)
+                    gmf_df = pandas.concat(out)
                     gmf_df['eid'] += nE  # add an offset to the event IDs
-                    nS += len(sids)
                     nE += ne
                     for col in gmf_df.columns:
-                        hdf5.extend(dstore[f'gmf_data/{col}'],
-                                    gmf_df[col].to_numpy())
+                        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events

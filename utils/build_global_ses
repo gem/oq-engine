@@ -30,7 +30,8 @@ INPUTS = dict(
     ses_per_logic_tree_path='1',
     investigation_time='1',
     ground_motion_fields='false',
-    minimum_magnitude='5')
+    minimum_magnitude='5',
+    minimum_intensity='.05')
 MODELS = 'EUR MIE NAF'.split()
 
 
