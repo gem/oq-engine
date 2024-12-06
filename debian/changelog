@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added Seattle Basin class of Kuehn et al. (2020) NGASUB GMM (uses
+    Cascadia coeffs except for basin term). 
+
   [Michele Simionato]
   * Fixed the filtering of the site collection in event_based with --hc
   * Internal: writeability check for datadir and scratch_dir (if any)
