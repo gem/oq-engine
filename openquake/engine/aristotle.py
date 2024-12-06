@@ -23,8 +23,9 @@ import os
 import getpass
 import logging
 from openquake.baselib import sap, config, performance
+from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    AristotleParam, aristotle_validate, User)
+    AristotleParam, aristotle_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
