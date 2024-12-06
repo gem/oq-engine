@@ -10,7 +10,6 @@ from openquake.server.models import UserProfile
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
-    verbose_name_plural = 'User profiles'
 
 
 # NOTE: this customization adds the UserProfileInline and moves the email to a more
