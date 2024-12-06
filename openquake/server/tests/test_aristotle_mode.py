@@ -70,6 +70,23 @@ def get_email_content(directory, search_string):
         f'No email was found containing the string {search_string}')
 
 
+def get_or_create_user(level):
+    # creating/getting a user of the given level
+    # and returning the user object and its plain password
+    username = f'django-test-user-level-{level}'
+    email = f'django-test-user-level-{level}@email.test'
+    password = ''.join((secrets.choice(
+        string.ascii_letters + string.digits + string.punctuation)
+        for i in range(8)))
+    user, created = User.objects.get_or_create(username=username, email=email)
+    if created:
+        user.set_password(password)
+    user.save()
+    user.profile.level = level
+    user.profile.save()
+    return user, password  # user.password is the hashed password instead
+
+
 class EngineServerTestCase(django.test.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -123,19 +140,9 @@ class EngineServerTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        username = 'django-test-user'
-        email = 'django-test-user@email.test'
-        password = ''.join((secrets.choice(
-            string.ascii_letters + string.digits + string.punctuation)
-            for i in range(8)))
-        cls.user, created = User.objects.get_or_create(username=username, email=email)
-        cls.user.profile.level = 1
-        cls.user.profile.save()
-        if created:
-            cls.user.set_password(password)
-            cls.user.save()
+        cls.user, password = get_or_create_user(1)  # level 1
         cls.c = Client()
-        cls.c.login(username=username, password=password)
+        cls.c.login(username=cls.user.username, password=password)
         cls.maxDiff = None
 
     @classmethod
@@ -219,7 +226,7 @@ class EngineServerTestCase(django.test.TestCase):
                     email_from = settings.EMAIL_HOST_USER
                     email_to = settings.EMAIL_SUPPORT
                     self.assertIn(f'From: {email_from}', email_content)
-                    self.assertIn('To: django-test-user@email.test',
+                    self.assertIn('To: django-test-user-level-1@email.test',
                                   email_content)
                     self.assertIn(f'Reply-To: {email_to}', email_content)
                     if failure_reason:
