@@ -24,6 +24,7 @@ Here are a few codes with interesting errors:
 - us7000n7n8: 'stationlist.json was downloaded, but it contains no features'
 - us6000f65h: 'No stations were found'
 - us20002926: 'Unable to convert the rupture from the USGS format'
+- us7000n05d: USGS geometry == Point
 """
 
 import os
@@ -51,6 +52,15 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertEqual(err, {})
 
     def test_2(self):
+        POST = {'usgs_id': 'us7000n05d'}
+        _rup, rupdic, _params, err = aristotle_validate(POST, datadir=DATA)
+        self.assertEqual(rupdic['rupture_from_usgs'], False)
+        self.assertEqual(rupdic['require_dip_strike'], True)
+        self.assertEqual(rupdic['mosaic_models'], ['SAM'])
+        self.assertIn('stations', rupdic['station_data_file'])
+        self.assertEqual(err, {})
+
+    def test_3(self):
         # with rupture_file
         POST = {
             'asset_hazard_distance': '15',
