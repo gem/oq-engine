@@ -1429,16 +1429,12 @@ def import_gmfs_hdf5(dstore, oqparam):
                 logging.info('Reading {:_d} rows from {}'.format(size, fname))
                 for slc in general.gen_slices(0, size, 10_000_000):
                     df = f.read_df('gmf_data', slc=slc)
-                    out = []
                     for sid, idx in conv.items():
-                        gmf_df = df[df.sid == sid].copy()
-                        gmf_df['sid'] = idx
-                        out.append(gmf_df)
-                    gmf_df = pandas.concat(out)
-                    gmf_df['eid'] += nE  # add an offset to the event IDs
+                        df.loc[df.sid == sid, 'sid'] = idx
+                    df['eid'] += nE  # add an offset to the event IDs
                     nE += ne
-                    for col in gmf_df.columns:
-                        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+                    for col in df.columns:
+                        hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
