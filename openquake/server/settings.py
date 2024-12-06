@@ -35,7 +35,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 TEST = 'test' in sys.argv
 
-INSTALLED_APPS = ('openquake.server.db',)
+INSTALLED_APPS = ('openquake.server.db', 'django.contrib.auth',
+                  'django.contrib.contenttypes')
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
@@ -269,8 +270,7 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
 if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent
-    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent',):
+    for app in ('cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
@@ -339,8 +339,7 @@ if LOCKDOWN:
         'openquake.server.middleware.LoginRequiredMiddleware',
     )
 
-    for app in ('django.contrib.auth',
-                'django.contrib.contenttypes',
+    for app in (
                 'django.contrib.messages',
                 'django.contrib.sessions',
                 'django.contrib.admin',
