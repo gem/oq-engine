@@ -128,8 +128,9 @@ class EngineServerTestCase(django.test.TestCase):
         password = ''.join((secrets.choice(
             string.ascii_letters + string.digits + string.punctuation)
             for i in range(8)))
-        cls.user, created = User.objects.get_or_create(
-            username=username, email=email)
+        cls.user, created = User.objects.get_or_create(username=username, email=email)
+        cls.user.profile.level = 1
+        cls.user.profile.save()
         if created:
             cls.user.set_password(password)
             cls.user.save()
