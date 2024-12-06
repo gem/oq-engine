@@ -25,7 +25,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SInterNewZealand`,
                :class:`KuehnEtAl2020SInterSouthAmerica`,
                :class:`KuehnEtAl2020SInterTaiwan`,
-               :class:`KuehnEtAl2020SInterSeattle`,
+               :class:`KuehnEtAl2020SInterCascadiaSeattleBasin`,
                :class:`KuehnEtAl2020SSlab`,
                :class:`KuehnEtAl2020SSlabAlaska`,
                :class:`KuehnEtAl2020SSlabCascadia`
@@ -34,7 +34,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SSlabNewZealand`,
                :class:`KuehnEtAl2020SSlabSouthAmerica`,
                :class:`KuehnEtAl2020SSlabTaiwan`,
-               :class:`KuehnEtAl2020SSSlabSeattle`,
+               :class:`KuehnEtAl2020SSSlabCascadiaSeattleBasin`,
 """
 import numpy as np
 import os
@@ -867,7 +867,7 @@ REGION_ALIASES = {
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
     "TWN": "Taiwan",
-    "Sea": "Seattle",
+    "Sea": "CascadiaSeattleBasin",
 }
 
 
