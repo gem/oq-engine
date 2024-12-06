@@ -1365,29 +1365,15 @@ def _getset_attrs(oq):
     num_events = []
     for fname in oq.inputs['gmfs']:
         with hdf5.File(fname, 'r') as f:
-            attrs = f['gmf_data'].attrs
-            etime = attrs.get('effective_time')
-            if etime is None:   # engine == 3.11
-                R = len(f['weights'])
-                num_events.append(len(f['events']))
-                arr = f.getitem('oqparam')
-                it = arr['par_name'] == b'investigation_time'
-                it = float(arr[it]['par_value'][0])
-                oq.investigation_time = it
-                ses = arr['par_name'] == b'ses_per_logic_tree_path'
-                ses = int(arr[ses]['par_value'][0])
-                oq.ses_per_logic_tree_path = ses
-                etime = it * ses * R
-                imts = []
-                for name in arr['par_name']:
-                    if name.startswith(b'hazard_imtls.'):
-                        imts.append(name[13:].decode('utf8'))
-            else:  # engine >= 3.12
+            try:
+                attrs = f['gmf_data'].attrs
                 num_events.append(attrs['num_events'])
-                imts = attrs['imts'].split()
+            except KeyError:
+                attrs = {}
+                num_events.append(len(f['events']))
             num_sites.append(len(f['sitecol']))
-    return dict(effective_time=etime, num_events=num_events, num_sites=num_sites,
-                imts=imts)
+    return dict(effective_time=attrs.get('effective_time'), num_events=num_events,
+                num_sites=num_sites, imts=list(oq.imtls))
 
 
 def import_gmfs_hdf5(dstore, oqparam):
@@ -1408,34 +1394,39 @@ def import_gmfs_hdf5(dstore, oqparam):
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
 
-    attrs = _getset_attrs(oqparam)
     if 'oqparam' not in dstore:
         dstore['oqparam'] = oqparam
-    E = sum(attrs['num_events'])
     fnames = oqparam.inputs['gmfs']
+    attrs = _getset_attrs(oqparam)
+    E = sum(attrs['num_events'])
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
             dstore['sitecol'] = f['sitecol']  # complete by construction
             f.copy('gmf_data', dstore.hdf5)
-    else:  # merge the sites and the gmfs
-        dstore['sitecol'], convs = site.merge_sitecols(fnames, check_gmfs=True)
-        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
-                        R=oqparam.number_of_logic_tree_samples)
-        nE = 0
-        for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
-            logging.info('Importing %s', fname)
-            with hdf5.File(fname, 'r') as f:
-                size = len(f['gmf_data/sid'])
-                logging.info('Reading {:_d} rows from {}'.format(size, fname))
-                for slc in general.gen_slices(0, size, 10_000_000):
-                    df = f.read_df('gmf_data', slc=slc)
-                    for sid, idx in conv.items():
-                        df.loc[df.sid == sid, 'sid'] = idx
-                    df['eid'] += nE  # add an offset to the event IDs
-                    nE += ne
-                    for col in df.columns:
-                        hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
-    oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
+    else:  # merge the sites and the gmfs, tested in scenario/case_33
+        gmfs = oqparam.ground_motion_fields
+        dstore['sitecol'], convs = site.merge_sitecols(fnames, gmfs)
+        if gmfs:
+            create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
+                            R=oqparam.number_of_logic_tree_samples)
+            nE = 0
+            for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
+                logging.info('Importing %s', fname)
+                with hdf5.File(fname, 'r') as f:
+                    try:
+                        size = len(f['gmf_data/sid'])
+                    except KeyError:  # no GMFs, skip
+                        continue
+                    logging.info('Reading {:_d} rows from {}'.format(size, fname))
+                    for slc in general.gen_slices(0, size, 10_000_000):
+                        df = f.read_df('gmf_data', slc=slc)
+                        for sid, idx in conv.items():
+                            df.loc[df.sid == sid, 'sid'] = idx
+                        df['eid'] += nE  # add an offset to the event IDs
+                        nE += ne
+                        for col in df.columns:
+                            hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
+            oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     events = numpy.zeros(E, rupture.events_dt)

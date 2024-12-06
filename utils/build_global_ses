@@ -52,7 +52,7 @@ def main(mosaic_dir):
     job_inis = read_job_inis(mosaic_dir, MODELS)
     with performance.Monitor(measuremem=True) as mon:
         jobs = engine.run_jobs(engine.create_jobs(job_inis))
-        dstores = [datastore.read(job.id) for job in jobs]
+        dstores = [datastore.read(job.calc_id) for job in jobs]
         oq = dstores[0]['oqparam']
         oq.inputs['gmfs'] = [ds.filename for ds in dstores]
         with hdf5.File('gmf_data.hdf5', 'w') as h5:
