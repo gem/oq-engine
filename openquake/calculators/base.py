@@ -1436,6 +1436,7 @@ def import_gmfs_hdf5(dstore, oqparam):
         assert E >= e, (E, e)
         events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
     else:
+        e = E
         events['id'] = numpy.arange(E)
     logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
