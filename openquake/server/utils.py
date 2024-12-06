@@ -163,8 +163,3 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
         logging.warning('Unable to connect to %s within %s retries'
                         % (url, max_retries))
     return success
-
-
-def add_user_level_property():  # called after Django setup
-    from django.contrib.auth.models import User
-    User.level = property(lambda self: getattr(self.profile, 'level', 0))
