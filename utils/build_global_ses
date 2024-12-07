@@ -35,8 +35,8 @@ INPUTS = dict(
     minimum_intensity='.05')
 MODELS = '''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CAN CHN GLD IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
-'''.split()
+CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
+'''.split()  # GLD is missing
 # MODELS = 'EUR MIE NAF'.split()
 
 def read_job_inis(mosaic_dir, models):
