@@ -33,8 +33,11 @@ INPUTS = dict(
     ground_motion_fields='false',
     minimum_magnitude='5',
     minimum_intensity='.05')
-MODELS = 'EUR MIE NAF'.split()
-
+MODELS = '''
+ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
+CAN CHN GLD IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
+'''.split()
+# MODELS = 'EUR MIE NAF'.split()
 
 def read_job_inis(mosaic_dir, models):
     out = []
