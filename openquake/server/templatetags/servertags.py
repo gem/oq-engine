@@ -46,3 +46,14 @@ def hide_cookie_bar_accepted(request):
     return get_cookie_value_from_request(
         request, "hide_cookie_bar_group",
         "hide_cookie_bar_group:hide_cookie_bar")
+
+
+@register.filter
+def addstr(arg1, arg2):
+    """
+    concatenate arg1 & arg2
+    NOTE: if arguments are numeric, the Django 'add' filter would sum them instead of
+    concatenating them as strings, so we need this new filter to make sure that
+    arguments are always treated as strings
+    """
+    return str(arg1) + str(arg2)

@@ -19,8 +19,10 @@
 import logging
 from django.contrib.auth import get_user_model
 from django.dispatch import receiver
+from django.db.models.signals import post_save
 from django.contrib.auth.signals import (
     user_logged_in, user_logged_out, user_login_failed)
+from .models import UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -62,3 +64,9 @@ def log_user_logout(sender, request, user, **kwargs):
     logger.info(
         f'User "{user.username}" (IP: {get_client_ip(request)})'
         f' logged out through page {request.META.get("HTTP_REFERER")}')
+
+
+@receiver(post_save, sender=get_user_model())
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
