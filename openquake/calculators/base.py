@@ -1418,8 +1418,10 @@ def import_gmfs_hdf5(dstore, oqparam):
                     except KeyError:  # no GMFs, skip
                         continue
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
+                    sids = numpy.array(list(conv))
                     for slc in general.gen_slices(0, size, 10_000_000):
                         df = f.read_df('gmf_data', slc=slc)
+                        df = df[numpy.isin(df.sid, sids)]
                         for sid, idx in conv.items():
                             df.loc[df.sid == sid, 'sid'] = idx
                         df['eid'] += nE  # add an offset to the event IDs
