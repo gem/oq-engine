@@ -727,6 +727,10 @@ def aristotle_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
+    # NOTE: this is called via AJAX so the context processor isn't automatically
+    # applied, since AJAX calls often do not render templates
+    if request.user.level == 0:
+        return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     user = request.user
@@ -1183,11 +1187,6 @@ def web_engine(request, **kwargs):
         params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['aristotle_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
-        # TODO: determine the interface level from the user role
-        # (it needs to be passed as a string to the template)
-        # NOTE: using interface level 2 unless differently specified. We may prefer to
-        # force defining the interface level, raising an error otherwise
-        params['interface_level'] = str(getattr(settings, 'INTERFACE_LEVEL', 2))
     return render(
         request, "engine/index.html", params)
 
