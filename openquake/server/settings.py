@@ -37,7 +37,8 @@ TEST = 'test' in sys.argv
 
 # NOTE: the UserProfile class makes it more complicated to add
 # the apps django.contrib.auth and django.contrib.contenttypes conditionally
-# to the fact that the authentication is required
+# to the fact that the authentication is required. However, it is not a problem
+# to exclude AuthenticationMiddleware and LoginRequiredMiddleware in PUBLIC mode
 INSTALLED_APPS = ('openquake.server.db', 'django.contrib.auth',
                   'django.contrib.contenttypes')
 
