@@ -31,6 +31,7 @@ import getpass
 import logging
 import platform
 import functools
+import multiprocessing.pool
 from os.path import getsize
 from datetime import datetime
 import psutil
@@ -295,8 +296,10 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                              max_cores // parallel.Starmap.num_cores)
 
     if concurrent_jobs is None:
-        # // 10 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 10 or 1
+        # // 8 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 8 or 1
+        if dist in ('slurm', 'zmq'):
+            print(f'{concurrent_jobs=}')
 
     job_id = jobctxs[0].calc_id
     if precalc:
@@ -350,7 +353,9 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
-            parallel.multispawn(run_calc, args, concurrent_jobs)
+            with multiprocessing.pool.Pool(concurrent_jobs) as pool:
+                pool.starmap(run_calc, args)
+            # parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)

@@ -1366,7 +1366,7 @@ def _getset_attrs(oq):
     for fname in oq.inputs['gmfs']:
         with hdf5.File(fname, 'r') as f:
             try:
-                attrs = f['gmf_data'].attrs
+                attrs = dict(f['gmf_data'].attrs)
                 num_events.append(attrs['num_events'])
             except KeyError:
                 attrs = {}
