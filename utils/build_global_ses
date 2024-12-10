@@ -27,7 +27,7 @@ from openquake.engine import engine
 
 INPUTS = dict(
     calculation_mode='event_based',
-    number_of_logic_tree_samples='10000',
+    number_of_logic_tree_samples='100000',
     ses_per_logic_tree_path='1',
     investigation_time='1',
     ground_motion_fields='false',
@@ -45,6 +45,9 @@ def read_job_inis(mosaic_dir, models):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
         dic.update(INPUTS)
+        if model == "KOR":
+            dic['investigation_time'] = '50'
+            dic['number_of_logic_tree_samples'] = '2000'
         out.append(dic)
     return out
 
