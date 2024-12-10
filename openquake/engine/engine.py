@@ -353,7 +353,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
-            with multiprocessing.dummy.Pool(concurrent_jobs) as pool:
+            with multiprocessing.pool.Pool(concurrent_jobs) as pool:
                 pool.starmap(run_calc, args)
             # parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
