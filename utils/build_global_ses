@@ -41,7 +41,7 @@ CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 
 def read_job_inis(mosaic_dir, models):
     out = []
-    for model in models:
+    for model in sorted(models):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
         dic.update(INPUTS)
