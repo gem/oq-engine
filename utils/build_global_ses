@@ -47,7 +47,8 @@ def read_job_inis(mosaic_dir, models):
         dic.update(INPUTS)
         if model == "KOR":
             dic['investigation_time'] = '50'
-            dic['number_of_logic_tree_samples'] = '200'
+            dic['ses_per_logic_tree_path'] = '1'
+            dic['number_of_logic_tree_samples'] = '2000'
         out.append(dic)
     return out
 
