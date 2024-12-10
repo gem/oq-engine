@@ -564,11 +564,22 @@ def share_job(db, job_id, revert=False):
     :param revert: if True, revert the status to 'complete'
     """
     new_status = 'shared' if not revert else 'complete'
-    shared = db('UPDATE job SET ?D WHERE id=?x', {'status': new_status}, job_id)
+    initial_status = db('SELECT status FROM job WHERE id=?x', job_id)[0].status
+    if initial_status not in ('complete', 'shared'):
+        if revert:
+            err_msg = (f'Can not force the status of calculation {job_id}'
+                       f' from {initial_status} to "complete"')
+        else:
+            err_msg = f'Can not share calculation {job_id} from status {initial_status}'
+        return {'error': err_msg}
+    shared = db('UPDATE job SET ?D WHERE id=?x',
+                {'status': new_status}, job_id).rowcount
     if not shared:
         return {'error':
-                f'Can not set the status of calculation {job_id} to {new_status}'}
-    return {'success': str(job_id)}
+                f'Can not change the status of calculation {job_id}'
+                f' from {initial_status} to {new_status}'}
+    return {'success': f'The status of calculation {job_id} was changed'
+                       f' from {initial_status} to {new_status}'}
 
 
 def update_parent_child(db, parent_child):

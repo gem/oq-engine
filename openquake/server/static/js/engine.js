@@ -191,12 +191,13 @@ function capitalizeFirstLetter(val) {
             },
 
             modify_calculation: function(e, action) {  // e.g. remove, share or abort
-                var action_pfx = action.slice(0, -1);
+                const action_ing = action.endsWith("e") ? action.slice(0, -1) + "ing" : action + "ing";
+                const action_ed = action.endsWith("e") ? action + "d" : action + "ed";
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var calc_desc = $(e.target).attr('data-calc-desc');
                 var view = this;
-                diaerror.show(false, capitalizeFirstLetter(action_pfx) + "ing calculation " + calc_id, "...");
+                diaerror.show(false, capitalizeFirstLetter(action_ing) + " calculation " + calc_id, "...");
 
                 var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
@@ -215,7 +216,7 @@ function capitalizeFirstLetter(val) {
                                         if(data.error) {
                                             diaerror.show(false, "Error", data.error);
                                         } else {
-                                            diaerror.show(false, "Calculation " + action_pfx + "ed", 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action + 'ed.');
+                                            diaerror.show(false, "Calculation " + action_ed, 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action_ed);
                                             if (action == 'abort') {
                                                 view.calculations.remove([view.calculations.get(calc_id)]);
                                             }

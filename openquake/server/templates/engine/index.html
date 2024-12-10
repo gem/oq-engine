@@ -75,12 +75,12 @@
             <% if (calc.get('status') != 'created') { %>
               <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log calc-list-btn" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
-                {% if application_mode != 'READ_ONLY' and interface_level != '0' %}
+                {% if application_mode != 'READ_ONLY' and user_level > 0 %}
                 <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-remove" style="margin: 2px 0 2px 0;">Remove</a>
                 {% endif %}
                 <% if (calc.get('status') == 'complete' || calc.get('status') == 'shared') { %>
 
-                {% if application_mode != 'READ_ONLY' and interface_level == '2' %}
+                {% if application_mode != 'READ_ONLY' and user_level == 2 %}
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-share" style="margin: 2px 0 2px 0;">Share</a>
                 <% } else if (calc.get('status') == 'shared') { %>
@@ -89,7 +89,7 @@
                 {% endif %}
 
                 <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_aristotle{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
-                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' and interface_level != '0' %}
+                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' and user_level > 0 %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -104,7 +104,7 @@
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback calc-list-btn" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
-              {% if application_mode != 'READ_ONLY' and interface_level != '0' %}
+              {% if application_mode != 'READ_ONLY' and user_level > 0 %}
               <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-abort" style="margin: 2px 0 2px 0;">Abort</a>
               {% endif %}
             <% } %>

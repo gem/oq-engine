@@ -517,9 +517,9 @@ def calc_remove(request, calc_id):
                             content_type='text/plain', status=500)
 
 
-def job_share(calc_id, revert=False):
-    # FIXME: who can share a job? Probably the owner or any administrator or user with
-    # interface_level == '2'
+def job_share(user_level, calc_id, revert=False):
+    if user_level < 2:
+        return HttpResponseForbidden()
     try:
         message = logs.dbcmd('share_job', calc_id, revert)
     except dbapi.NotFound:
@@ -546,7 +546,7 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    return job_share(calc_id, revert=True)
+    return job_share(request.user.level, calc_id, revert=True)
 
 
 @csrf_exempt
@@ -556,7 +556,7 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    return job_share(calc_id)
+    return job_share(request.user.level, calc_id)
 
 
 def log_to_json(log):
