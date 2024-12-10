@@ -296,8 +296,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                              max_cores // parallel.Starmap.num_cores)
 
     if concurrent_jobs is None:
-        # // 16 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 16 or 1
+        # // 8 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 8 or 1
         if dist in ('slurm', 'zmq'):
             print(f'{concurrent_jobs=}')
 
