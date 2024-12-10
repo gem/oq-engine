@@ -368,5 +368,6 @@ class ScenarioTestCase(CalculatorTestCase):
             base.import_gmfs_hdf5(h5, oq)
         with hdf5.File(fname, 'r') as ds:
             sids = ds['sitecol'].sids
-            g_sids = numpy.unique(ds['gmf_data/sid'][:])
-            aae(sids, g_sids)
+            g_sids = ds['gmf_data/sid'][:]
+        aae(sids, numpy.unique(g_sids))
+        self.assertEqual(len(g_sids), 45+2)

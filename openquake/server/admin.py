@@ -4,16 +4,15 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from openquake.server.announcements.models import Announcement
-from openquake.server.models import Profile
+from openquake.server.models import UserProfile
 
 
-class ProfileInline(admin.StackedInline):
-    model = Profile
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
     can_delete = False
-    verbose_name_plural = 'Profile'
 
 
-# NOTE: this customization adds the ProfileInline and moves the email to a more
+# NOTE: this customization adds the UserProfileInline and moves the email to a more
 #       visible section, as a way to remind to the creator of the user that the email
 #       is an important field, being used for email notifications. In order
 #       to avoid tricky issues related to the modification of the standard
@@ -22,7 +21,7 @@ class ProfileInline(admin.StackedInline):
 #       specified.
 
 class CustomUserAdmin(UserAdmin):
-    inlines = (ProfileInline,)
+    inlines = (UserProfileInline,)
     fieldsets = (
         (None, {'fields': ('username', 'password', 'email')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name')}),

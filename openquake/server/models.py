@@ -18,25 +18,20 @@
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 
-class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    INTERFACE_CHOICES = [
-        ('0', 'View Only'),
-        ('1', 'Simplified'),
-        ('2', 'Advanced'),
+User.level = property(lambda self: getattr(self.profile, 'level', 0))
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    LEVEL_CHOICES = [
+        (0, 'View Only'),
+        (1, 'Simplified'),
+        (2, 'Advanced'),
     ]
-    interface_level = models.CharField(
-        max_length=10,
-        choices=INTERFACE_CHOICES,
-        default='1',
+    level = models.IntegerField(
+        choices=LEVEL_CHOICES,
+        default=0,
+        help_text="Choose the level for the user"
     )
-
-
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)

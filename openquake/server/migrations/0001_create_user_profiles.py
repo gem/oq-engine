@@ -7,9 +7,14 @@ import django.db.models.deletion
 
 def create_user_profiles(apps, schema_editor):
     User = apps.get_model('auth', 'User')
-    Profile = apps.get_model('server', 'Profile')
+    UserProfile = apps.get_model('server', 'UserProfile')
     for user in User.objects.all():
-        Profile.objects.get_or_create(user=user, defaults={'interface_level': '1'})
+        UserProfile.objects.get_or_create(user=user, defaults={'level': 0})
+
+
+def delete_user_profiles(apps, schema_editor):
+    UserProfile = apps.get_model("server", "UserProfile")
+    UserProfile.objects.all().delete()
 
 
 class Migration(migrations.Migration):
@@ -22,21 +27,23 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Profile',
+            name='UserProfile',
             fields=[
                 ('id', models.BigAutoField(auto_created=True,
                                            primary_key=True,
                                            serialize=False,
                                            verbose_name='ID')),
-                ('interface_level', models.CharField(choices=[('0', 'View Only'),
-                                                              ('1', 'Simplified'),
-                                                              ('2', 'Advanced')],
-                                                     default='1',
-                                                     max_length=10)),
+
+                ('level', models.IntegerField(
+                    choices=[(0, 'View Only'),
+                             (1, 'Simplified'),
+                             (2, 'Advanced')],
+                    default=0,
+                    help_text='Choose the level for the user')),
                 ('user', models.OneToOneField(
                     on_delete=django.db.models.deletion.CASCADE,
-                    to=settings.AUTH_USER_MODEL)),
+                    related_name='profile', to=settings.AUTH_USER_MODEL)),
             ],
         ),
-        migrations.RunPython(create_user_profiles),
+        migrations.RunPython(create_user_profiles, delete_user_profiles),
     ]
