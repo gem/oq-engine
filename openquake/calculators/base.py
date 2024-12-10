@@ -1410,16 +1410,17 @@ def import_gmfs_hdf5(dstore, oqparam):
         if gmfs:
             create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
-            nE = 0
-            for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
-                logging.info('Importing %s', fname)
-                with hdf5.File(fname, 'r') as f:
-                    if 'ruptures' in f:
-                        rups.append(f['ruptures'][:])
-                    try:
-                        size = len(f['gmf_data/sid'])
-                    except KeyError:  # no GMFs, skip
-                        continue
+        nE = 0
+        for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
+            logging.info('Importing %s', fname)
+            with hdf5.File(fname, 'r') as f:
+                if 'ruptures' in f:
+                    rups.append(f['ruptures'][:])
+                try:
+                    size = len(f['gmf_data/sid'])
+                except KeyError:  # no GMFs, skip
+                    continue
+                if gmfs:
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
                     sids = numpy.array(list(conv))
                     for slc in general.gen_slices(0, size, 10_000_000):
@@ -1430,11 +1431,11 @@ def import_gmfs_hdf5(dstore, oqparam):
                         df['eid'] += nE  # add an offset to the event IDs
                         for col in df.columns:
                             hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
-                nE += ne
-            oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
+            nE += ne
+        oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     if rups:
-        dstore['ruptures'] = numpy.concatenate(rups)
+        dstore.create_dataset('ruptures', data=numpy.concatenate(rups))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
     if 'gmf_data' in dstore:
