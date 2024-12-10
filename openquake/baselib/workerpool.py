@@ -117,7 +117,10 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                print(sock.send('stop'))
+                try:
+                    print(sock.send('stop'))
+                except TimeoutError:
+                    pass  # workerpool dead for some reason
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
