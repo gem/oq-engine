@@ -45,6 +45,8 @@ def read_job_inis(mosaic_dir, models):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
         dic.update(INPUTS)
+        if 'truncation_level' not in dic:  # for CAN
+            dic['truncation_level'] = '5'
         if model == "KOR":
             dic['investigation_time'] = '50'
             dic['ses_per_logic_tree_path'] = '1'
