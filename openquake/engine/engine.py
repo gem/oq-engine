@@ -297,6 +297,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
     if concurrent_jobs is None:
         # // 10 is chosen so that the core occupation in cole is decent
         concurrent_jobs = parallel.Starmap.CT // 10 or 1
+        if dist in ('slurm', 'zmq'):
+            logging.warning(f'{concurrent_jobs=}')
 
     job_id = jobctxs[0].calc_id
     if precalc:
