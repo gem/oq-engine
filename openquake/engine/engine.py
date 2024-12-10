@@ -31,7 +31,7 @@ import getpass
 import logging
 import platform
 import functools
-import multiprocessing.pool
+#import multiprocessing.pool
 from os.path import getsize
 from datetime import datetime
 import psutil
@@ -109,7 +109,7 @@ def manage_signals(job_id, signum, _stack):
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
-        stop_workers(job_id)
+        sys.exit(f'Killed {job_id}')
 
     if hasattr(signal, 'SIGHUP'):
         # kill the calculation only if os.getppid() != _PPID, i.e. the
@@ -352,9 +352,9 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
-            with multiprocessing.pool.Pool(concurrent_jobs) as pool:
-                pool.starmap(run_calc, args)
-            # parallel.multispawn(run_calc, args, concurrent_jobs)
+            #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
+            #    pool.starmap(run_calc, args)
+            parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
