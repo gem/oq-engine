@@ -93,9 +93,12 @@ def user_has_permission(request, owner, job_status):
     Returns `True` if user coming from the request has the permission
     to view a job-related resource, returns `False` otherwise.
     """
-    return (owner in get_valid_users(request)
-            or not get_acl_on(request)
-            or job_status == 'shared')
+    if job_status == 'shared':
+        if settings.LOCKDOWN and hasattr(request, 'user'):
+            return request.user.is_authenticated
+        return True
+    else:
+        return owner in get_valid_users(request) or not get_acl_on(request)
 
 
 def oq_server_context_processor(request):
