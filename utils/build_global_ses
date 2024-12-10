@@ -24,7 +24,6 @@ from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
 from openquake.engine import engine
 
-
 INPUTS = dict(
     calculation_mode='event_based',
     number_of_logic_tree_samples='10000',
@@ -61,7 +60,8 @@ def main(mosaic_dir, out='gmf_data.hdf5'):
     """
     job_inis = read_job_inis(mosaic_dir, MODELS)
     with performance.Monitor(measuremem=True) as mon:
-        jobs = engine.run_jobs(engine.create_jobs(job_inis))
+        jobs = engine.run_jobs(
+            engine.create_jobs(job_inis, log_level=logging.WARN))
         dstores = [datastore.read(job.calc_id) for job in jobs]
         oq = dstores[0]['oqparam']
         oq.inputs['gmfs'] = [ds.filename for ds in dstores]
