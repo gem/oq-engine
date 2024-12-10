@@ -132,6 +132,12 @@ def oq_server_context_processor(request):
         context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
     if settings.APPLICATION_MODE == 'AELO':
         context['aelo_version'] = get_aelo_version()
+    if settings.APPLICATION_MODE == 'ARISTOTLE':
+        # NOTE: it may be useful not only for ARISTOTLE
+        try:
+            context['user_level'] = request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            context['user_level'] = 0
     return context
 
 
