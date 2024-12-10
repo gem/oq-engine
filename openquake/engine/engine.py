@@ -110,7 +110,6 @@ def manage_signals(job_id, signum, _stack):
 
     if signum == signal.SIGTERM:
         stop_workers(job_id)
-        raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):
         # kill the calculation only if os.getppid() != _PPID, i.e. the
@@ -122,7 +121,7 @@ def manage_signals(job_id, signum, _stack):
 
 
 def register_signals(job_id):
-    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
+    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP;
     # when using the Django development server this module is imported by a
     # thread, so one gets a `ValueError: signal only works in main thread` that
     # can be safely ignored

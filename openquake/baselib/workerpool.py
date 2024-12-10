@@ -119,7 +119,7 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 try:
                     print(sock.send('stop'))
-                except TimeoutError:
+                except z.TimeoutError:
                     pass  # workerpool dead for some reason
                 stopped.append(host)
         for popen in self.popens:
@@ -181,7 +181,7 @@ class WorkerMaster(object):
                     total for host, running, total in status):
                 break
         else:
-            raise TimeoutError(status)
+            raise z.TimeoutError(status)
         return status
 
     def restart(self):
