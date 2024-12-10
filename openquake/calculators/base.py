@@ -1399,6 +1399,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     fnames = oqparam.inputs['gmfs']
     attrs = _getset_attrs(oqparam)
     E = sum(attrs['num_events'])
+    rups = []
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
             dstore['sitecol'] = f['sitecol']  # complete by construction
@@ -1413,6 +1414,8 @@ def import_gmfs_hdf5(dstore, oqparam):
             for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
                 logging.info('Importing %s', fname)
                 with hdf5.File(fname, 'r') as f:
+                    if 'ruptures' in f:
+                        rups.append(f['ruptures'][:])
                     try:
                         size = len(f['gmf_data/sid'])
                     except KeyError:  # no GMFs, skip
@@ -1430,6 +1433,8 @@ def import_gmfs_hdf5(dstore, oqparam):
                 nE += ne
             oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
+    if rups:
+        dstore['ruptures'] = numpy.concatenate(rups)
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
     if 'gmf_data' in dstore:

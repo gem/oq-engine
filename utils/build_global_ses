@@ -46,7 +46,7 @@ def read_job_inis(mosaic_dir, models):
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # for CAN
             dic['truncation_level'] = '5'
-        if model == "KOR":
+        if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
             dic['ses_per_logic_tree_path'] = '1'
         out.append(dic)
