@@ -38,6 +38,7 @@ ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 '''.split()  # GLD is missing
 # MODELS = 'EUR MIE NAF'.split()
+MODELS = ['CAN']
 
 def imts(dic):
     imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
@@ -59,6 +60,14 @@ def read_job_inis(mosaic_dir, models):
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # for CAN
             dic['truncation_level'] = '5'
+            dic['intensity_measure_types_and_levels'] = '''\
+            {"PGA": logscale(0.005, 3.00, 25),
+            "SA(0.1)": logscale(0.005, 8.00, 25),
+            "SA(0.2)": logscale(0.005, 9.00, 25),
+            "SA(0.3)": logscale(0.005, 8.00, 25),
+            "SA(0.6)": logscale(0.005, 5.50, 25),
+            "SA(1.0)": logscale(0.005, 3.60, 25),
+            "SA(2.0)": logscale(0.005, 2.10, 25)}'''
         if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
             dic['ses_per_logic_tree_path'] = '1'
