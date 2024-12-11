@@ -1397,6 +1397,9 @@ def import_gmfs_hdf5(dstore, oqparam):
     if 'oqparam' not in dstore:
         dstore['oqparam'] = oqparam
     fnames = oqparam.inputs['gmfs']
+    size = sum(os.path.getsize(f) for f in fnames)
+    logging.warning('Importing %d files, %s',
+                    len(fnames), general.humansize(size))
     attrs = _getset_attrs(oqparam)
     E = sum(attrs['num_events'])
     rups = []
