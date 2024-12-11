@@ -836,7 +836,7 @@ class SiteCollection(object):
             len(self), total_sites)
 
 
-def check_all_equal(dicts, *keys):
+def check_all_equal(mosaic_model, dicts, *keys):
     """
     Check all the dictionaries have the same value for the same key
     """
@@ -845,20 +845,22 @@ def check_all_equal(dicts, *keys):
     dic0 = dicts[0]
     for key in keys:
         for dic in dicts[1:]:
-            assert dic[key] == dic0[key], (dic[key], dic0[key])
+            if dic[key] != dic0[key]:
+                raise RuntimeError('Inconsistent key %s!=%s while processing %s',
+                                   dic[key], dic0[key], mosaic_model)
 
 
 def merge_without_dupl(array1, array2, uniquefield):
     """
-    >>> dt = [('code', 'S1'), ('value', int)]
+    >>> dt = [('code', 'S1'), ('value', numpy.int32)]
     >>> a1 = numpy.array([('a', 1), ('b', 2)], dt)
     >>> a2 = numpy.array([('b', 2), ('c', 3)], dt)
     >>> merged, dupl = merge_without_dupl(a1, a2, 'code')
     >>> merged
     array([(b'a', 1), (b'b', 2), (b'c', 3)],
-          dtype=[('code', 'S1'), ('value', '<i8')])
+          dtype=[('code', 'S1'), ('value', '<i4')])
     >>> a2[dupl]
-    array([(b'b', 2)], dtype=[('code', 'S1'), ('value', '<i8')])
+    array([(b'b', 2)], dtype=[('code', 'S1'), ('value', '<i4')])
     """
     dtype = {}
     for array in (array1, array2):
@@ -876,7 +878,7 @@ def merge_without_dupl(array1, array2, uniquefield):
     return array, dupl
 
 
-def merge_sitecols(hdf5fnames, check_gmfs=False):
+def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
     """
     Read a number of site collections from the given filenames
     and returns a single SiteCollection instance, plus a list
@@ -899,7 +901,7 @@ def merge_sitecols(hdf5fnames, check_gmfs=False):
         return sitecol, converters
 
     if attrs:
-        check_all_equal(attrs, '__pdcolumns__', 'effective_time',
+        check_all_equal(mosaic_model, attrs, '__pdcolumns__', 'effective_time',
                         'investigation_time')
 
     assert 'custom_site_id' in sitecol.array.dtype.names

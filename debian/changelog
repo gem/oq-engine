@@ -3,6 +3,7 @@
     Cascadia coeffs except for basin term). 
 
   [Michele Simionato]
+  * Added a script `utils/build_global_ses`
   * Removed the ability to read GMFs generated with engine <= 3.11
   * Fixed the filtering of the site collection in event_based with --hc
   * Internal: writeability check for datadir and scratch_dir (if any)
