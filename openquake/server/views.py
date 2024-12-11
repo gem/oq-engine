@@ -53,7 +53,7 @@ from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
-from openquake.calculators.postproc.plots import plot_shakemap  # , plot_rupture
+from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, aristotle
@@ -687,6 +687,9 @@ def aristotle_get_rupture_data(request):
             shakemap_array, 'MMI', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
+    elif rup is not None:
+        img_base64 = plot_rupture(rup, figsize=(8, 8), return_base64=True)
+        rupdic['rupture_png'] = img_base64
     return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
                         status=200)
 

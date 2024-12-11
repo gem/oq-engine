@@ -640,16 +640,20 @@
                     else {
                         $('#pga-map').html('<p>No PGA map available</p>');
                     }
-                    // // NOTE: we may want to plot the rupture as a separate image after retrieving rupture data
-                    // if (data.rupture_png) {
-                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
-                    //     $('#rupture_png').html(imgElement);
-                    //     $('#shakemap-image-row').show();
-                    //     $('#rupture_png').show();
-                    // }
-                    // else {
-                    //     $('#rupture_png').html('<p>No rupture image available</p>');
-                    // }
+                    if (data.rupture_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
+                        $('#rupture-map').html(imgElement);
+                        $('#rupture-image-row').show();
+                        $('#rupture-map').show();
+                    }
+                    else {
+                        if (data.pga_map_png || data.mmi_map_png) {
+                            $('#rupture-map').hide();
+                        }
+                        else {
+                            $('#rupture-map').html('<p>No rupture image available</p>');
+                        }
+                    }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
