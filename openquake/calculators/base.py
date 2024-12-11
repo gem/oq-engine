@@ -1414,6 +1414,7 @@ def import_gmfs_hdf5(dstore, oqparam):
             create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
         nE = 0
+        num_ev_rup = []
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
@@ -1435,12 +1436,14 @@ def import_gmfs_hdf5(dstore, oqparam):
                         for col in df.columns:
                             hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
             nE += ne
+            num_ev_rup.append((nE, len(rups)))
         oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     if rups:
         ruptures = numpy.concatenate(rups)
         ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
         dstore.create_dataset('ruptures', data=ruptures)
+        dstore.create_dataset('num_ev_rup', data=U32(num_ev_rup))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
     if 'gmf_data' in dstore:
