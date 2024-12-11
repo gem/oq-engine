@@ -1,6 +1,8 @@
   [Christopher Brooks]
   * Added Seattle Basin classes of Kuehn et al. (2020) NGASUB GMM (uses
     Cascadia coeffs except for basin term). 
+  * Added USGS basin scaling to the NGAWest2 GMMs + ability to pass
+    base gsim arguments within the NSHMP2014 gsim class.
 
   [Michele Simionato]
   * Added a script `utils/build_global_ses`
