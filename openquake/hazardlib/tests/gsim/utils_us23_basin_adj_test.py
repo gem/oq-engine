@@ -187,15 +187,6 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
                                        'sgn=0\nusgs_basin_scaling="true"')
         
-        # Check a typo in usgs basin scaling argument passed to NSHMP 2014 gsim is flagged
-        try:
-            exp_error = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
-                                   'sgn=0\nus_basin_scaling="true"') 
-            # Raise an error if gsim instantiates without flagging the typo
-            raise ValueError('Incorrectly specified input argument should raise error!')
-        except:
-            pass
-
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
         cmaker = simple_cmaker([ag_adj, ag_def,
