@@ -18,9 +18,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import ast
 import logging
 from openquake.baselib import performance, sap, hdf5
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
 from openquake.engine import engine
@@ -40,7 +40,7 @@ CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 # MODELS = 'EUR MIE NAF'.split()
 
 def imts(dic):
-    imtls = ast.literal_eval(dic['intensity_measure_types_and_levels'])
+    imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
     return ' '.join(imt for imt in imtls)
 
 
