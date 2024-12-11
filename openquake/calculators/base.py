@@ -1412,7 +1412,7 @@ def import_gmfs_hdf5(dstore, oqparam):
                             R=oqparam.number_of_logic_tree_samples)
         nE = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
-            logging.info('Importing %s', fname)
+            logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 if 'ruptures' in f:
                     rups.append(f['ruptures'][:])
