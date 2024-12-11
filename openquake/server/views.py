@@ -366,7 +366,7 @@ def download_png(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     try:
         from PIL import Image
@@ -392,7 +392,7 @@ def calc(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -515,6 +515,48 @@ def calc_remove(request, calc_id):
         logging.error(message)
         return HttpResponse(content=message,
                             content_type='text/plain', status=500)
+
+
+def job_share(user_level, calc_id, revert=False):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        message = logs.dbcmd('share_job', calc_id, revert)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    if 'success' in message:
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    elif 'error' in message:
+        logging.error(message['error'])
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+    else:
+        # This is an untrapped server error
+        logging.error(message)
+        return HttpResponse(content=message,
+                            content_type='text/plain', status=500)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_unshare(request, calc_id):
+    """
+    Unshare the calculation of the given id
+    """
+    return job_share(request.user.level, calc_id, revert=True)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_share(request, calc_id):
+    """
+    Share the calculation of the given id
+    """
+    return job_share(request.user.level, calc_id)
 
 
 def log_to_json(log):
@@ -976,7 +1018,7 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1049,11 +1091,11 @@ def calc_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, _job_status, job_user, datadir, ds_key = logs.dbcmd(
+        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
         if ds_key in HIDDEN_OUTPUTS:
             return HttpResponseForbidden()
-        if not utils.user_has_permission(request, job_user):
+        if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1108,7 +1150,7 @@ def extract(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -1159,7 +1201,7 @@ def calc_datastore(request, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -1399,7 +1441,7 @@ def download_aggrisk(request, calc_id):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses = views.view('aggrisk', ds)
