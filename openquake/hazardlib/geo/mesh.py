@@ -538,7 +538,7 @@ class Mesh(object):
             # Points at distances lower than 40 km
             mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
             # Points representing the surface f the rupture
-            sfc_xx, sfc_yy = proj(self.lons, self.lats)
+            sfc_xx, sfc_yy = proj(self.lons.flatten(), self.lats.flatten())
             points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
             shaper = Alpha_Shaper(points)
             _alpha_opt, polygon = shaper.optimize()
