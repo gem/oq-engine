@@ -941,7 +941,7 @@ class HazardCalculator(BaseCalculator):
         else:
             if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
                 haz_sitecol, _ = site.merge_sitecols(
-                    oq.inputs['gmfs'], check_gmfs=True)
+                    oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
             else:
                 haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
