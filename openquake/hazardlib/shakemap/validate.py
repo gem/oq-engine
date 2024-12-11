@@ -105,6 +105,7 @@ ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
     'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
+    'use_shakemap': 'Use the ShakeMap',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
