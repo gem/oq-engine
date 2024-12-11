@@ -143,7 +143,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def _get_basin_term(C, ctx, imt, region, usgs_bs):
+def _get_basin_term(C, ctx, region, imt, usgs_bs):
     """
     Returns the basin depth scaling
     """
@@ -542,7 +542,7 @@ def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs):
     y_ref = np.exp(ln_y_ref)
 
     # Get basin term
-    f_z1pt0 = _get_basin_term(C, ctx, imt, region, usgs_bs)
+    f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs)
 
     # Get linear amplification term
     f_lin = get_linear_site_term(region, C, ctx)
