@@ -382,7 +382,10 @@ class ScenarioTestCase(CalculatorTestCase):
             base.import_gmfs_hdf5(h5, oq)
         with hdf5.File(fname, 'r') as ds:
             sids = ds['sitecol'].sids
-            nrups = len(ds['ruptures'])
+            rups = ds['ruptures'][:]
+            ner = ds['num_ev_rup'][:]
             assert 'gmf_data' not in ds
+            aae(rups['e0'], [0, 1])
         aae(sids, numpy.unique(g_sids))
-        self.assertEqual(nrups, 2)
+        self.assertEqual(len(rups), 2)
+        aae(ner, [[1, 1], [2, 2]])
