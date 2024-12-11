@@ -43,7 +43,7 @@ CONSTS = {
     "v2": 300.0}
 
 
-def _get_basin_term(C, ctx, imt, region, usgs_bs):
+def _get_basin_term(C, ctx, imt, region, usgs_bs=False):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
@@ -203,7 +203,8 @@ def _get_pga_on_rock(kind, region, sof, C, ctx):
                   _get_path_scaling(kind, region, C, ctx))
 
 
-def _get_site_scaling(kind, region, usgs_bs, C, pga_rock, ctx, imt, rjb):
+def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb,
+                      usgs_bs=False):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling term
@@ -307,8 +308,8 @@ class BooreEtAl2014(GMPE):
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
-                                  self.usgs_basin_scaling,
-                                  C, pga_rock, ctx, imt, ctx.rjb))
+                                  C, pga_rock, ctx, imt, ctx.rjb,
+                                  self.usgs_basin_scaling,))
             if self.sigma_mu_epsilon:
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)

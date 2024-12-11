@@ -298,7 +298,7 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
 
             # compute median sa on rock (vs30=1180m/s). Used for site response
             # term calculation
-            sa1180 = np.exp(ASK14._get_sa_at_1180(self.region, False, C, imt, ctx))
+            sa1180 = np.exp(ASK14._get_sa_at_1180(self.region, C, imt, ctx))
 
             # Get the mean value. Note that in this version the
             # `soil_depth_term` has been removed

@@ -392,7 +392,7 @@ def _hw_taper5(ctx):
     return T5
 
 
-def _get_sa_at_1180(region, usgs_baf, C, imt, ctx):
+def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1100 m/s)
@@ -496,8 +496,8 @@ class AbrahamsonEtAl2014(GMPE):
             # compute median sa on rock (vs30=1180m/s). Used for site response
             # term calculation
             sa1180 = np.exp(_get_sa_at_1180(self.region,
-                                            self.usgs_basin_scaling,
-                                            C, imt, ctx))
+                                            C, imt, ctx,
+                                            self.usgs_basin_scaling))
 
             # For debugging purposes
             # f1 = _get_basic_term(C, ctx)
