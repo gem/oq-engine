@@ -40,8 +40,8 @@ CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 # MODELS = 'EUR MIE NAF'.split()
 
 def imts(dic):
-    dic = ast.literal_eval(dic)
-    return ' '.join(imt for imt in dic['intensity_measure_types_and_levels'])
+    imtls = ast.literal_eval(dic['intensity_measure_types_and_levels'])
+    return ' '.join(imt for imt in imtls)
 
 
 def check_imts(dicts, models):
