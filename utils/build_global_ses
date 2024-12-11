@@ -49,6 +49,7 @@ def read_job_inis(mosaic_dir, models):
         if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
             dic['ses_per_logic_tree_path'] = '1'
+        dic['mosaic_model'] = model
         out.append(dic)
     return out
 
