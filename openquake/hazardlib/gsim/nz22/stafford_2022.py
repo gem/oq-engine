@@ -413,6 +413,7 @@ def get_mean_stddevs(
     adjust_cg1,
     C,
     ctx,
+    imt
 ):
     """
     Return mean and standard deviation values.
@@ -424,7 +425,7 @@ def get_mean_stddevs(
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
-    f_z1pt0 = _get_basin_term(C, ctx, "Stafford2022")
+    f_z1pt0 = _get_basin_term(C, ctx, imt, "Stafford2022", False)
     # Get linear amplification term
     f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term
@@ -523,6 +524,7 @@ class Stafford2022(GMPE):
                     self.adjust_cg1,
                     self.COEFFS[SA(0.01)],
                     ctx,
+                    imt
                 )
                 # Peter has used T = 0.01 as the period for PGA because the
                 # coefficients (for 0.01s and PGA) are identical.
@@ -540,6 +542,7 @@ class Stafford2022(GMPE):
                     self.adjust_cg1,
                     self.COEFFS[imt],
                     ctx,
+                    imt
                 )
                 mean[m] = imt_mean
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi

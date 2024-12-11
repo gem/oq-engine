@@ -29,6 +29,8 @@ from scipy import interpolate
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
 
 METRES_PER_KM = 1000.0
 
@@ -240,10 +242,16 @@ def _get_site_response_term(C, imt, vs30, sa1180):
     return site_resp_term
 
 
-def _get_basin_term(C, ctx, region, v1180=None):
+def _get_basin_term(C, imt, ctx, region, usgs_bs, v1180=None):
     """
     Compute and return soil depth term.  See page 1042.
     """
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(ctx.vs30))
+
     if v1180 is None:
         vs30 = ctx.vs30
         z1pt0 = ctx.z1pt0
@@ -272,7 +280,7 @@ def _get_basin_term(C, ctx, region, v1180=None):
         [C['a43'], C['a43'], C['a44'], C['a45'], C['a46'], C['a46'],
          C['a46']],
         kind='linear')
-    return f2(vs30) * factor
+    return f2(vs30) * factor * usgs_baf
 
 
 def _get_stddevs(region, C, imt, ctx, sa1180):
@@ -384,7 +392,7 @@ def _hw_taper5(ctx):
     return T5
 
 
-def _get_sa_at_1180(region, C, imt, ctx):
+def _get_sa_at_1180(region, usgs_baf, C, imt, ctx):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1100 m/s)
@@ -398,7 +406,7 @@ def _get_sa_at_1180(region, C, imt, ctx):
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
             _get_hanging_wall_term(C, ctx) +
             _get_top_of_rupture_depth_term(C, imt, ctx) +
-            _get_basin_term(C, ctx, region, vs30_1180) +
+            _get_basin_term(C, imt, ctx, region, usgs_baf, vs30_1180) +
             _get_regional_term(region, C, imt, vs30_1180, ctx.rrup))
 
 def get_epistemic_sigma(ctx):
@@ -470,10 +478,12 @@ class AbrahamsonEtAl2014(GMPE):
     #: Reference rock conditions as defined at page
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    def __init__(self, sigma_mu_epsilon=0.0, region=None):
+    def __init__(self, sigma_mu_epsilon=0.0, region=None,
+                 usgs_basin_scaling=False):
         self.region = region
         assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        self.usgs_basin_scaling = usgs_basin_scaling
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -485,7 +495,9 @@ class AbrahamsonEtAl2014(GMPE):
             C = self.COEFFS[imt]
             # compute median sa on rock (vs30=1180m/s). Used for site response
             # term calculation
-            sa1180 = np.exp(_get_sa_at_1180(self.region, C, imt, ctx))
+            sa1180 = np.exp(_get_sa_at_1180(self.region,
+                                            self.usgs_basin_scaling,
+                                            C, imt, ctx))
 
             # For debugging purposes
             # f1 = _get_basic_term(C, ctx)
@@ -502,7 +514,8 @@ class AbrahamsonEtAl2014(GMPE):
                        _get_site_response_term(C, imt, ctx.vs30, sa1180) +
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
-                       _get_basin_term(C, ctx, self.region))
+                       _get_basin_term(C, imt, ctx, self.region,
+                                       self.usgs_basin_scaling))
 
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)

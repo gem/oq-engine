@@ -83,7 +83,43 @@ exp_res = np.array([[[-4.73116981, -6.72824192, -8.69828689],
 
                     [[-4.1286112 , -6.50684706, -8.75325462],
                      [-4.39797433, -5.97346732, -7.68603107],
-                     [-5.22574681, -6.75329231, -7.74540788]]])
+                     [-5.22574681, -6.75329231, -7.74540788]],
+
+                    [[-3.78353627, -5.91619801, -8.66217995],
+                     [-4.4371146 , -5.50137959, -6.52644857],
+                     [-5.2961146 , -6.26168121, -7.11054718]],
+
+                    [[-3.81234061, -5.91619801, -8.65816589],
+                     [-4.35646244, -5.49346344, -6.52644857],
+                     [-5.2039407 , -6.25143678, -7.11054718]],
+
+                    [[-0.96141029, -0.71209078, -0.85092839],
+                     [-1.77096597, -1.15736712, -0.95839284],
+                     [-3.05936274, -2.37822057, -1.7344926 ]],
+
+                    [[-0.96141029, -0.71209078, -0.85092839],
+                     [-1.77096597, -1.15736712, -0.95839284],
+                     [-3.05936274, -2.37822057, -1.7344926 ]],
+
+                    [[-3.41920968, -5.63581494, -8.24612451],
+                     [-3.95142704, -5.00650921, -5.24233594],
+                     [-4.99773441, -5.99001151, -6.03753215]],
+
+                    [[-3.41723244, -5.63582436, -8.05359796],
+                     [-4.03181004, -5.00650921, -5.24233672],
+                     [-5.09420641, -5.99001151, -6.03753227]],
+
+                    [[-3.78546864, -5.65888348, -8.53990403],
+                     [-4.33459936, -5.13940084, -6.21685285],
+                     [-5.35569267, -5.84909742, -6.40207779]],
+
+                    [[-3.78546864, -5.65888348, -8.53990403],
+                     [-4.32603582, -5.13532842, -6.21685285],
+                     [-5.32974644, -5.83675861, -6.40207779]],
+                     
+                     [[-3.78353627, -5.91619801, -8.66217995],
+                      [-4.4371146 , -5.50137959, -6.52644857],
+                      [-5.2961146 , -6.26168121, -7.11054718]]])
 
 
 class USBasinAdjustmentTestCase(unittest.TestCase):       
@@ -93,9 +129,10 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         Test the execution and correctness of values of the m9 basin adjustment
         argument and (for the ZhaoEtAl2006 and AtkinsonMacias2009 GMMs) the
         Campbell and Bozorgnia 2014 basin term argument.
-        """
-        # Just test the interface subclasses
 
+        Also check the USGS basin scaling adjustments for all GMMs added to
+        as required for the US 2023 model.
+        """
         # AbrahamsonGulerce2020SInter (all adj vs no adj)
         ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"\n'
                              'usgs_basin_scaling="true"')
@@ -136,6 +173,29 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                                        'm9_basin_term="true"\n'
                                        'usgs_basin_scaling="true"')
 
+        # NGAWest2 GMMs with/without USGS basin scaling
+        ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\nusgs_basin_scaling="true"')
+        ask14_def = valid.gsim('[AbrahamsonEtAl2014]')
+        bssa14_adj = valid.gsim('[BooreEtAl2014]\nusgs_basin_scaling="true"')
+        bssa14_def = valid.gsim('[BooreEtAl2014]')
+        cb14_adj = valid.gsim('[CampbellBozorgnia2014]\nusgs_basin_scaling="true"')    
+        cb14_def = valid.gsim('[CampbellBozorgnia2014]')   
+        cy14_adj = valid.gsim('[ChiouYoungs2014]\nusgs_basin_scaling="true"')
+        cy14_def = valid.gsim('[ChiouYoungs2014]')
+
+        # US NSHMP 2014 GMM with passing of an additional arguments for base GMM
+        nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+                                       'sgn=0\nusgs_basin_scaling="true"')
+        
+        # Check a typo in usgs basin scaling argument passed to NSHMP 2014 gsim is flagged
+        try:
+            exp_error = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+                                   'sgn=0\nus_basin_scaling="true"') 
+            # Raise an error if gsim instantiates without flagging the typo
+            raise ValueError('Incorrectly specified input argument should raise error!')
+        except:
+            pass
+
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
         cmaker = simple_cmaker([ag_adj, ag_def,
@@ -148,7 +208,13 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                                 k20_adj_sea_int,
                                 k20_def_sea_sslab,
                                 k20_def_cas_sslab,
-                                k20_adj_sea_sslab], imts)                       
+                                k20_adj_sea_sslab,
+                                ask14_adj, ask14_def,
+                                bssa14_adj, bssa14_def,
+                                cb14_adj, cb14_def,
+                                cy14_adj, cy14_def,
+                                nshmp14_ask14_adj],
+                                imts)                       
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.
         ctx.rake = 90.
@@ -159,3 +225,4 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         ctx.vs30measured = 1
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
         aae(mea, exp_res)
+        

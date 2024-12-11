@@ -30,6 +30,9 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
+
 
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
@@ -140,7 +143,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def _get_basin_term(C, ctx, region):
+def _get_basin_term(C, ctx, imt, region, usgs_bs):
     """
     Returns the basin depth scaling
     """
@@ -151,7 +154,14 @@ def _get_basin_term(C, ctx, region):
     dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
     if region == "JPN":
         return C["phi5jp"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6jp"]))
-    return C["phi5"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6"]))
+    fb = C["phi5"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6"]))
+
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(ctx.vs30))
+
+    return fb * usgs_baf
 
 
 def get_directivity(C, ctx):
@@ -523,14 +533,16 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, conf):
+def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
-    f_z1pt0 = _get_basin_term(C, ctx, region)
+
+    # Get basin term
+    f_z1pt0 = _get_basin_term(C, ctx, imt, region, usgs_bs)
 
     # Get linear amplification term
     f_lin = get_linear_site_term(region, C, ctx)
@@ -611,7 +623,8 @@ class ChiouYoungs2014(GMPE):
         
     def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
                  add_delta_c1=False, alpha_nm=1.0, stress_par_host=None,
-                 stress_par_target=None, delta_gamma_tab=None):
+                 stress_par_target=None, delta_gamma_tab=None,
+                 usgs_basin_scaling=False):
 
         # set region
         self.region = region
@@ -660,6 +673,9 @@ class ChiouYoungs2014(GMPE):
                 tmp = f.read()
             self.conf['delta_gamma_tab'] = CoeffsTable(sa_damping=5, table=tmp)
 
+        # USGS basin scaling
+        self.usgs_basin_scaling = usgs_basin_scaling
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -669,7 +685,8 @@ class ChiouYoungs2014(GMPE):
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf)
+            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf,
+            self.usgs_basin_scaling)
         # compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
@@ -679,7 +696,8 @@ class ChiouYoungs2014(GMPE):
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    self.region, self.COEFFS[imt], ctx, imt, self.conf)
+                    self.region, self.COEFFS[imt], ctx, imt, self.conf,
+                    self.usgs_basin_scaling)
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA

@@ -28,6 +28,9 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
+
 
 #: Equation constants that are IMT-independent
 CONSTS = {
@@ -40,11 +43,17 @@ CONSTS = {
     "v2": 300.0}
 
 
-def _get_basin_term(C, ctx, region, imt):
+def _get_basin_term(C, ctx, imt, region, usgs_bs):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
     """
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(ctx.vs30))
+    
     if region == "nobasin" or imt.period < 0.65:  # switched off
         return np.zeros(len(ctx.vs30), dtype=float)
     bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
@@ -54,7 +63,7 @@ def _get_basin_term(C, ctx, region, imt):
     dz1 = (ctx.z1pt0 / 1000.0) - bmodel
     idx = dz1 <= f_ratio
     f_dz1[idx] = C["f6"] * dz1[idx]
-    return f_dz1
+    return f_dz1 * usgs_baf
 
 
 def _get_inter_event_tau(C, mag):
@@ -194,7 +203,7 @@ def _get_pga_on_rock(kind, region, sof, C, ctx):
                   _get_path_scaling(kind, region, C, ctx))
 
 
-def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb):
+def _get_site_scaling(kind, region, usgs_bs, C, pga_rock, ctx, imt, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling term
@@ -204,7 +213,7 @@ def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb):
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_term(C, ctx, region, imt)
+        fbd = _get_basin_term(C, ctx, imt, region, usgs_bs)
     return flin + fnl + fbd
 
 
@@ -273,11 +282,14 @@ class BooreEtAl2014(GMPE):
 
     kind = "base"
 
-    def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0):
+    def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0,
+                 usgs_basin_scaling=False):
         self.region = region
         self.sof = sof
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        if region != "nobasin":  # z1pt0 is used if period >= 0.65
+        self.usgs_basin_scaling = usgs_basin_scaling
+        if (region != "nobasin" or
+            self.usgs_basin_scaling): # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -295,6 +307,7 @@ class BooreEtAl2014(GMPE):
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
+                                  self.usgs_basin_scaling,
                                   C, pga_rock, ctx, imt, ctx.rjb))
             if self.sigma_mu_epsilon:
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
