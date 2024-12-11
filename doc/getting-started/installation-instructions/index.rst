@@ -8,7 +8,7 @@ workstations, standalone servers and multi-node clusters. Due to its
 large range of use cases it can be installed in several different
 ways. The minimum hardware requirements are
 
-- 8 GB of RAM (16 GB on macOS Ventura or Sonoma)
+- 16 GB of RAM
 - 4 GB of free disk space
 
 To run any serious calculation (i.e. a model in GEM mosaic) you need
@@ -47,7 +47,7 @@ Other installation methods
 
 **Using ``pip``**
 
-The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/openquake.engine>`_ and can be installed 
+The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/openquake.engine>`_ and can be installed
 in any Python 3 environment via ``pip``::
 
 	```
@@ -74,7 +74,7 @@ A set of :doc:`Docker containers <docker>` for installing the engine in the clou
 Getting help
 ------------
 
-If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: 
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list:
 https://groups.google.com/g/openquake-users
 
 
