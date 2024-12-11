@@ -612,7 +612,7 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def _contents_properties_shakemap(usgs_id, user, monitor):
+def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
@@ -636,7 +636,8 @@ def _contents_properties_shakemap(usgs_id, user, monitor):
     shakemap = _get_preferred_shakemap(properties['products']['shakemap'])
     contents = shakemap['contents']
 
-    if getattr(user, 'level', 0) == 1 and 'download/grid.xml' in contents:
+    if ((getattr(user, 'level', 0) == 1 or use_shakemap)
+            and 'download/grid.xml' in contents):
         # only for Aristotle users try to download the shakemap
         url = contents.get('download/grid.xml')['url']
         # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
@@ -652,7 +653,7 @@ def _contents_properties_shakemap(usgs_id, user, monitor):
     return contents, properties, shakemap_array
 
 
-def get_rup_dic(usgs_id, user, rupture_file=None, station_data_file=None,
+def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_file=None,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
@@ -660,7 +661,9 @@ def get_rup_dic(usgs_id, user, rupture_file=None, station_data_file=None,
 
     :param usgs_id: ShakeMap ID
     :param user: User instance
+    :param use_shakemap: download the ShakeMap only if True
     :param rupture_file: None
+    :param station_data_file: None
     :returns: (rupture object or None, rupture dictionary)
     """
     rupdic = {}
@@ -692,7 +695,7 @@ def get_rup_dic(usgs_id, user, rupture_file=None, station_data_file=None,
 
     assert usgs_id
     contents, properties, shakemap = _contents_properties_shakemap(
-        usgs_id, user, monitor)
+        usgs_id, user, use_shakemap, monitor)
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test

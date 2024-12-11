@@ -677,7 +677,7 @@ def aristotle_get_rupture_data(request):
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    if 'shakemap_array' in rupdic:
+    if rupdic['shakemap_array'] is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
