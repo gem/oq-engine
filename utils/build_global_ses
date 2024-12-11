@@ -38,9 +38,20 @@ CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 '''.split()  # GLD is missing
 # MODELS = 'EUR MIE NAF'.split()
 
+def imts(dic):
+    return ' '.join(imt for imt in dic['intensity_measure_types_and_levels'])
+
+
+def check_imts(dicts, models):
+    imts0 = imts(dicts[0])
+    for model, imts1 in zip(models[1:], dicts[1:]):
+        if imts1 != imts0:
+            raise ValueError(f'{imts1} != {imts0} for {model}')
+
+
 def read_job_inis(mosaic_dir, models):
     out = []
-    for model in sorted(models):
+    for model in models:
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
         dic.update(INPUTS)
@@ -51,6 +62,7 @@ def read_job_inis(mosaic_dir, models):
             dic['ses_per_logic_tree_path'] = '1'
         dic['mosaic_model'] = model
         out.append(dic)
+    check_imts(out, models)
     return out
 
 
@@ -58,7 +70,7 @@ def main(mosaic_dir, out='gmf_data.hdf5'):
     """
     Storing global SES
     """
-    job_inis = read_job_inis(mosaic_dir, MODELS)
+    job_inis = read_job_inis(mosaic_dir, sorted(MODELS))
     with performance.Monitor(measuremem=True) as mon:
         jobs = engine.run_jobs(
             engine.create_jobs(job_inis, log_level=logging.WARN))
