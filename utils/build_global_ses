@@ -46,7 +46,7 @@ def imts(dic):
 
 def check_imts(dicts, models):
     imts0 = imts(dicts[0])
-    for model, imts1 in zip(models[1:], dicts[1:]):
+    for model, imts1 in zip(models[1:], map(imts, dicts[1:])):
         if imts1 != imts0:
             raise ValueError(f'{imts1} != {imts0} for {model}')
 
