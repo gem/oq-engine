@@ -43,7 +43,7 @@ CONSTS = {
     "v2": 300.0}
 
 
-def _get_basin_term(C, ctx, imt, region, usgs_bs=False):
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
@@ -214,7 +214,7 @@ def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb,
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_term(C, ctx, imt, region, usgs_bs)
+        fbd = _get_basin_term(C, ctx, region, imt, usgs_bs)
     return flin + fnl + fbd
 
 
@@ -309,7 +309,7 @@ class BooreEtAl2014(GMPE):
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
                                   C, pga_rock, ctx, imt, ctx.rjb,
-                                  self.usgs_basin_scaling,))
+                                  self.usgs_basin_scaling))
             if self.sigma_mu_epsilon:
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
