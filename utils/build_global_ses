@@ -30,9 +30,9 @@ INPUTS = dict(
     number_of_logic_tree_samples='2000',
     ses_per_logic_tree_path='50',
     investigation_time='1',
-    ground_motion_fields='false',
+    ground_motion_fields='true',
     minimum_magnitude='5',
-    minimum_intensity='.05')
+    minimum_intensity='.1')
 MODELS = '''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
