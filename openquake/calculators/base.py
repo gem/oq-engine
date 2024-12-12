@@ -1419,7 +1419,9 @@ def import_gmfs_hdf5(dstore, oqparam):
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
-                dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
+                if 'full_lt' in f:
+                    dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
+                # full_lt is missing in oq-risk-tests:test_merge_gmfs
                 nM += 1
                 if 'ruptures' in f:
                     rups.extend(f['ruptures'][:])
