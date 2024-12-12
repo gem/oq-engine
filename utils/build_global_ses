@@ -30,7 +30,7 @@ INPUTS = dict(
     number_of_logic_tree_samples='2000',
     ses_per_logic_tree_path='50',
     investigation_time='1',
-    ground_motion_fields='true',
+    ground_motion_fields='false',
     minimum_magnitude='5',
     minimum_intensity='.1')
 MODELS = '''
@@ -77,7 +77,7 @@ def read_job_inis(mosaic_dir, models):
     return out
 
 
-def main(mosaic_dir, out='gmf_data.hdf5'):
+def main(mosaic_dir, out):
     """
     Storing global SES
     """
