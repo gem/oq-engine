@@ -77,7 +77,7 @@ def read_job_inis(mosaic_dir, models):
     return out
 
 
-def main(mosaic_dir, out='gmf_data.hdf5'):
+def main(mosaic_dir, out):
     """
     Storing global SES
     """
