@@ -45,7 +45,7 @@ MAX_RUPTURES = 2000
 
 
 # this is really fast
-def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
+def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
     out the ruptures far away from every site. If a shapely polygon is passed
@@ -87,6 +87,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
         rec['maxlat'] = maxlat = numpy.nanmax(lats)
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
+        rec['model'] = model
 
         # apply magnitude filtering
         if srcfilter.integration_distance(rup.mag) == 0:
@@ -107,7 +108,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
-               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0)
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0, model)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
@@ -222,6 +223,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     :yields:
         dictionaries with keys rup_array, source_data
     """
+    model = getattr(cmaker, 'model', '???')
     model_geom = getattr(cmaker, 'model_geom', None)
     srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
@@ -248,7 +250,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
 
         # Yield ruptures
         er = sum(src.num_ruptures for src in sources)
-        dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter, model_geom),
+        dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter, model, model_geom),
                    source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
     else:
@@ -262,7 +264,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                 # yield partial result to avoid running out of memory
                 yield AccumDict(dict(
                     rup_array=get_rup_array(
-                        eb_ruptures, srcfilter, model_geom),
+                        eb_ruptures, srcfilter, model, model_geom),
                     source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
@@ -277,7 +279,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
         t0 = time.time()
-        rup_array = get_rup_array(eb_ruptures, srcfilter, model_geom)
+        rup_array = get_rup_array(eb_ruptures, srcfilter, model, model_geom)
         dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,

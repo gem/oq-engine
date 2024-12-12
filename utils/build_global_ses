@@ -35,7 +35,7 @@ INPUTS = dict(
     minimum_intensity='.1')
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
+CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 '''.split())  # GLD is missing
 # MODELS = 'EUR MIE'.split()
 
@@ -58,7 +58,7 @@ def read_job_inis(mosaic_dir, models):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
         dic.update(INPUTS)
-        if 'truncation_level' not in dic:  # CAN, but we are not using it
+        if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
             dic['intensity_measure_types_and_levels'] = '''\
             {"PGA": logscale(0.005, 3.00, 25),
