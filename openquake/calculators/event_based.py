@@ -525,6 +525,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
             g_index += len(rgb)
+            cmaker.model = oq.mosaic_model or '???'
             if oq.mosaic_model or 'geometry' in oq.inputs:
                 cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
