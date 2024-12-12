@@ -388,4 +388,4 @@ class ScenarioTestCase(CalculatorTestCase):
             aae(rups['e0'], [0, 1])
         aae(sids, numpy.unique(g_sids))
         self.assertEqual(len(rups), 2)
-        aae(ner, [[1, 1], [2, 2]])
+        aae(ner, [[1, 1, 45], [2, 2, 2]])
