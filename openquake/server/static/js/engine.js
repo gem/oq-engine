@@ -629,7 +629,12 @@
                         $('#intensity-map').show();
                     }
                     else {
-                        $('#intensity-map').html('<p>No intensity map available</p>');
+                        if (data.rupture_png) {
+                            $('#intensity-map').hide();
+                        }
+                        else {
+                            $('#intensity-map').html('<p>No intensity map available</p>');
+                        }
                     }
                     if (data.pga_map_png) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map_png}" alt="PGA Map">`;
@@ -638,7 +643,12 @@
                         $('#pga-map').show();
                     }
                     else {
-                        $('#pga-map').html('<p>No PGA map available</p>');
+                        if (data.rupture_png) {
+                            $('#pga-map').hide();
+                        }
+                        else {
+                            $('#pga-map').html('<p>No PGA map available</p>');
+                        }
                     }
                     if (data.rupture_png) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
