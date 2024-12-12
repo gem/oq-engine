@@ -383,7 +383,7 @@ class ScenarioTestCase(CalculatorTestCase):
         with hdf5.File(fname, 'r') as ds:
             sids = ds['sitecol'].sids
             rups = ds['ruptures'][:]
-            ner = ds['num_ev_rup'][:]
+            ner = ds['num_ev_rup_site'][:]
             assert 'gmf_data' not in ds
             aae(rups['e0'], [0, 1])
         aae(sids, numpy.unique(g_sids))

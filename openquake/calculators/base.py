@@ -1443,7 +1443,7 @@ def import_gmfs_hdf5(dstore, oqparam):
         ruptures = numpy.concatenate(rups)
         ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
         dstore.create_dataset('ruptures', data=ruptures)
-        dstore.create_dataset('num_ev_rup', data=U32(num_ev_rup_site))
+        dstore.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
     if 'gmf_data' in dstore:
