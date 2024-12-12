@@ -514,6 +514,22 @@ def make_figure_rupture_info(extractors, what):
     return plt
 
 
+def make_figure_ebruptures(extractors, what):
+    """
+    $ oq plot "ebruptures?min_mag=6"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    hypo = ex.get(what)['hypo']
+    _fig, ax = plt.subplots()
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    ax.grid(True)
+    ax.scatter(hypo[:, 0], hypo[:, 1])
+    ax.set_title('%d ruptures' % len(hypo))
+    return plt
+
+
 def make_figure_effect(extractors, what):
     """
     $ oq plot "effect?"

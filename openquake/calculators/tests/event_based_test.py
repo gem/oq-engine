@@ -41,7 +41,7 @@ from openquake.qa_tests_data.event_based import (
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
     case_25, case_26, case_27, case_28, case_29, case_30, case_31, case_32,
-    src_mutex)
+    case_33, src_mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -628,3 +628,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_32.__file__, 'job.ini', exports='csv')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)
+
+    def test_33(self):
+        # test Alpha_Shaper in get_joyner_boore_distance
+        self.run_calc(case_33.__file__, 'job.ini', exports='csv')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
