@@ -548,10 +548,25 @@
             }
             toggleRunCalcBtnState();
 
+            $(document).on('change', '#use_shakemap', function () {
+                if ($(this).is(':checked')) {
+                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                } else {
+                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                }
+            });
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('#submit_aristotle_get_rupture').text('Retrieving rupture data (it may take more than 10 seconds)...');
+                if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                    // if the checkbox use_shakemap does not exist or is checked
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving ShakeMap data (it may take more than 10 seconds)');
+                } else {
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving rupture data (it may take more than 10 seconds)');
+                }
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
@@ -678,9 +693,14 @@
                     $('#pga-map').hide();
                     // $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
-                }).always(function () {
+                }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                        // if the checkbox use_shakemap does not exist or is checked
+                        $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    } else {
+                        $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    }
                 });
                 event.preventDefault();
             });
