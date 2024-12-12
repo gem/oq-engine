@@ -479,13 +479,11 @@ class EventBasedCalculator(base.HazardCalculator):
             # NB: using vfloat32 for the geometries would make
             # debugging a lot more difficult
 
-    def build_events_from_sources(self):
+    def counting_ruptures(self):
         """
-        Prefilter the composite source model and store the source_info
+        Sets src.num_ruptures and src.offset
         """
-        oq = self.oqparam
         sources = self.csm.get_sources()
-
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
@@ -505,6 +503,14 @@ class EventBasedCalculator(base.HazardCalculator):
             self.csm.fix_src_offset()  # NB: must be AFTER count_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
+        return maxweight
+
+    def build_events_from_sources(self):
+        """
+        Prefilter the composite source model and store the source_info
+        """
+        oq = self.oqparam
+        maxweight = self.counting_ruptures()
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
