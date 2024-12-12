@@ -1421,6 +1421,7 @@ def import_gmfs_hdf5(dstore, oqparam):
             with hdf5.File(fname, 'r') as f:
                 if 'full_lt' in f:
                     dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
+                # full_lt is missing in oq-risk-tests:test_merge_gmfs
                 nM += 1
                 if 'ruptures' in f:
                     rups.extend(f['ruptures'][:])
