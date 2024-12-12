@@ -1367,6 +1367,21 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+@extract.add('ebruptures')
+def extract_ebruptures(dstore, what):
+    """
+    Extract the hypocenter of the ruptures.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ebruptures?min_mag=6
+    """
+    qdict = parse(what)
+    rups = dstore['ruptures'][:]
+    if 'min_mag' in qdict:
+        [min_mag] = qdict['min_mag']
+        rups = rups[rups['mag'] >= min_mag]
+    return rups
+
+
 # used in the rupture exporter and in the plugin
 @extract.add('rupture_info')
 def extract_rupture_info(dstore, what):

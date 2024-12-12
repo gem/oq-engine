@@ -941,7 +941,7 @@ class HazardCalculator(BaseCalculator):
         else:
             if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
                 haz_sitecol, _ = site.merge_sitecols(
-                    oq.inputs['gmfs'], check_gmfs=True)
+                    oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
             else:
                 haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
@@ -1397,6 +1397,9 @@ def import_gmfs_hdf5(dstore, oqparam):
     if 'oqparam' not in dstore:
         dstore['oqparam'] = oqparam
     fnames = oqparam.inputs['gmfs']
+    size = sum(os.path.getsize(f) for f in fnames)
+    logging.warning('Importing %d files, %s',
+                    len(fnames), general.humansize(size))
     attrs = _getset_attrs(oqparam)
     E = sum(attrs['num_events'])
     rups = []
@@ -1410,16 +1413,18 @@ def import_gmfs_hdf5(dstore, oqparam):
         if gmfs:
             create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
-            nE = 0
-            for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
-                logging.info('Importing %s', fname)
-                with hdf5.File(fname, 'r') as f:
-                    if 'ruptures' in f:
-                        rups.append(f['ruptures'][:])
-                    try:
-                        size = len(f['gmf_data/sid'])
-                    except KeyError:  # no GMFs, skip
-                        continue
+        nE = 0
+        num_ev_rup_site = []
+        nM = 0
+        for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
+            logging.warning('Importing %s', fname)
+            with hdf5.File(fname, 'r') as f:
+                dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
+                nM += 1
+                if 'ruptures' in f:
+                    rups.extend(f['ruptures'][:])
+                if gmfs:
+                    size = len(f['gmf_data/sid'])
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
                     sids = numpy.array(list(conv))
                     for slc in general.gen_slices(0, size, 10_000_000):
@@ -1430,11 +1435,15 @@ def import_gmfs_hdf5(dstore, oqparam):
                         df['eid'] += nE  # add an offset to the event IDs
                         for col in df.columns:
                             hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
-                nE += ne
-            oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
+            nE += ne
+            num_ev_rup_site.append((nE, len(rups), len(conv)))
+        oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     if rups:
-        dstore['ruptures'] = numpy.concatenate(rups)
+        ruptures = numpy.array(rups, dtype=rups[0].dtype)
+        ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
+        dstore.create_dataset('ruptures', data=ruptures)
+        dstore.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
     if 'gmf_data' in dstore:
