@@ -1415,16 +1415,16 @@ def import_gmfs_hdf5(dstore, oqparam):
                             R=oqparam.number_of_logic_tree_samples)
         nE = 0
         num_ev_rup_site = []
+        nM = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
+                dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
+                nM += 1
                 if 'ruptures' in f:
-                    rups.append(f['ruptures'][:])
-                try:
-                    size = len(f['gmf_data/sid'])
-                except KeyError:  # no GMFs, skip
-                    continue
+                    rups.extend(f['ruptures'][:])
                 if gmfs:
+                    size = len(f['gmf_data/sid'])
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
                     sids = numpy.array(list(conv))
                     for slc in general.gen_slices(0, size, 10_000_000):
@@ -1440,7 +1440,7 @@ def import_gmfs_hdf5(dstore, oqparam):
         oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     if rups:
-        ruptures = numpy.concatenate(rups)
+        ruptures = numpy.array(rups, dtype=rups[0].dtype)
         ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
         dstore.create_dataset('ruptures', data=ruptures)
         dstore.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
