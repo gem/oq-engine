@@ -37,8 +37,8 @@ MODELS = '''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 '''.split()  # GLD is missing
-# MODELS = 'EUR MIE NAF'.split()
-MODELS = ['CAN']
+MODELS = 'EUR MIE'.split()
+
 
 def imts(dic):
     imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
