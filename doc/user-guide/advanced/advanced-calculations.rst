@@ -756,7 +756,7 @@ to set
  aggregate_by = ID_0, OCCUPANCY
  reaggregate_by = ID_0
 
-``reaggregate_by` is a new feature of engine 3.13 which allows to go
+``reaggregate_by`` is a new feature of engine 3.13 which allows to go
 from a finer aggregation (i.e. one with more tags, in this example 2)
 to a coarser aggregation (i.e. one with fewer tags, in this example 1).
 Actually the command ``oq reaggregate`` has been there for more than one
