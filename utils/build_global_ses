@@ -33,10 +33,10 @@ INPUTS = dict(
     ground_motion_fields='false',
     minimum_magnitude='5',
     minimum_intensity='.1')
-MODELS = '''
+MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
-'''.split()  # GLD is missing
+'''.split())  # GLD is missing
 MODELS = 'EUR MIE'.split()
 
 
@@ -81,7 +81,7 @@ def main(mosaic_dir, out):
     """
     Storing global SES
     """
-    job_inis = read_job_inis(mosaic_dir, sorted(MODELS))
+    job_inis = read_job_inis(mosaic_dir, MODELS)
     with performance.Monitor(measuremem=True) as mon:
         jobs = engine.run_jobs(
             engine.create_jobs(job_inis, log_level=logging.WARN),
@@ -92,6 +92,7 @@ def main(mosaic_dir, out):
         logging.warning(f'Saving {out}')
         with hdf5.File(out, 'w') as h5:
             base.import_gmfs_hdf5(h5, oq)
+            h5['models'] = MODELS
     print(mon)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
