@@ -41,6 +41,12 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('Unable to download from https://earthquake.usgs.gov/fdsnws/'
                       'event/1/query?eventid=usp0001cc&', str(ctx.exception))
 
+    def test_2(self):
+        _rup, dic = get_rup_dic('usp0001ccb', user=user, use_shakemap=True)
+        self.assertIsNotNone(dic['shakemap_array'])
+        _rup, dic = get_rup_dic('usp0001ccb', user=user, use_shakemap=False)
+        self.assertIsNone(dic['shakemap_array'])
+
     def test_3(self):
         _rup, dic = get_rup_dic('us6000f65h', user=user, use_shakemap=True)
         self.assertEqual(dic['lon'], -73.475)
