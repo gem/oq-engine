@@ -369,10 +369,9 @@ class ScenarioTestCase(CalculatorTestCase):
         with hdf5.File(fname, 'r') as ds:
             sids = ds['sitecol'].sids
             g_sids = ds['gmf_data/sid'][:]
-            nrups = len(ds['ruptures'])
+            assert 'ruptures' not in ds
         aae(sids, numpy.unique(g_sids))
         self.assertEqual(len(g_sids), 45+2)
-        self.assertEqual(nrups, 2)
 
         # no GMFs
         oq.ground_motion_fields = False

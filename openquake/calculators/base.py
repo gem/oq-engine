@@ -1425,13 +1425,6 @@ def import_gmfs_hdf5(dstore, oqparam):
                     dstore['{:_d}/full_lt'.format(fileno)] = f['full_lt']
                 # full_lt is missing in oq-risk-tests:test_merge_gmfs
                 fileno += 1
-                if 'ruptures' in f:
-                    arr = f['rupgeoms'][:]
-                    dstore.save_vlen('rupgeoms', list(arr))
-                    rup = f['ruptures'][:]
-                    rup['geom_id'] += geom_offset
-                    geom_offset += len(arr)
-                    rups.extend(rup)
                 if gmfs:
                     size = len(f['gmf_data/sid'])
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
@@ -1444,6 +1437,13 @@ def import_gmfs_hdf5(dstore, oqparam):
                         df['eid'] += nE  # add an offset to the event IDs
                         for col in df.columns:
                             hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
+                elif 'ruptures' in f:
+                    arr = f['rupgeoms'][:]
+                    dstore.save_vlen('rupgeoms', list(arr))
+                    rup = f['ruptures'][:]
+                    rup['geom_id'] += geom_offset
+                    geom_offset += len(arr)
+                    rups.extend(rup)
             nE += ne
             num_ev_rup_site.append((nE, len(rups), len(conv)))
         oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
