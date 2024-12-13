@@ -475,10 +475,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.srcfilter = nofilter
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
-            self.datastore.create_dset('rupgeoms', hdf5.vfloat64)
-            # NB: using vfloat32 for the geometries would make
-            # debugging a lot more difficult
-
+            self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
     def counting_ruptures(self):
         """
         Sets src.num_ruptures and src.offset

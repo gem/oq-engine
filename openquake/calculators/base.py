@@ -1393,7 +1393,6 @@ def import_gmfs_hdf5(dstore, oqparam):
     # ownership would break calc_XXX.hdf5; therefore we copy everything
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
-
     if 'oqparam' not in dstore:
         dstore['oqparam'] = oqparam
     fnames = oqparam.inputs['gmfs']
@@ -1410,6 +1409,8 @@ def import_gmfs_hdf5(dstore, oqparam):
     else:  # merge the sites and the gmfs, tested in scenario/case_33
         gmfs = oqparam.ground_motion_fields
         dstore['sitecol'], convs = site.merge_sitecols(fnames, gmfs)
+        dstore.create_dataset(
+            'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
         if gmfs:
             create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
@@ -1425,6 +1426,8 @@ def import_gmfs_hdf5(dstore, oqparam):
                 nM += 1
                 if 'ruptures' in f:
                     rups.extend(f['ruptures'][:])
+                    arr = f['rupgeoms'][:]
+                    dstore.save_vlen('rupgeoms', list(arr))
                 if gmfs:
                     size = len(f['gmf_data/sid'])
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
