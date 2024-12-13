@@ -66,19 +66,22 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
         usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
     else:
         usgs_baf = np.ones(len(ctx.vs30))
-    
-    if region == "nobasin" or imt.period < 0.65:  # switched off
-        return np.zeros(len(ctx.vs30), dtype=float)
+
+    # Get basin model or return no basin term
+    if region == "nobasin" or imt.period < 0.65:  
+        return np.zeros(len(ctx.vs30), dtype=float) # Switched off
     bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
               else california_basin_model(ctx.vs30))
+    
     # If cybershake basin adj and SA(T > 1.9)
     if cy and imt.period > 1.9: 
         C_cy = COEFFS_CY[imt]
         dz1_cy = np.full(len(ctx.vs30), C_cy["dz1cy"])
-        cy_csim = 0.1  # CY_CSIM variable in java code
+        cy_csim = 0.1 # CY_CSIM variable in java code
         f_dz1 = np.where(dz1_cy <= C_cy["f6cy"],
                          C_cy["f6cy"] * dz1_cy,
                          C_cy["f7cy"]) + cy_csim
+    
     # Regular basin term
     else:
         dz1 = (ctx.z1pt0 / 1000.0) - bmodel

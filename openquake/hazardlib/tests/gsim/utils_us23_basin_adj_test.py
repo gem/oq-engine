@@ -139,36 +139,36 @@ exp_res = np.array([[[-4.73116981, -6.72824192, -8.69828689],
 
 # AbrahamsonGulerce2020SInter (all adj vs no adj)
 ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"\n'
-                        'usgs_basin_scaling="true"')
+                    'usgs_basin_scaling="true"')
 ag_def = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"')
 
 # KuehnEtAl2020SInter (all adj vs no adj)
 k20_adj = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"\n'
-                        'm9_basin_term="true"\nusgs_basin_scaling="true"')
+                     'm9_basin_term="true"\nusgs_basin_scaling="true"')
 k20_def = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
 
 # ParkerEtAl2020SInterB (all adj vs no adj)
 p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
-                        'm9_basin_term="true"\n'
-                        'usgs_basin_scaling="true"')
+                     'm9_basin_term="true"\n'
+                     'usgs_basin_scaling="true"')
 p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
 
 # AtkinsonMacias2009 (m9 and cb14 vs m9)
 a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
-                        'm9_basin_term="true"')
+                     'm9_basin_term="true"')
 a09_def = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"')
 
 # ZhaoEtAl2006SInter (m9 and cb14 vs m9)
 z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"\n'
-                        'm9_basin_term="true"')
+                     'm9_basin_term="true"')
 z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
 
 # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
 k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
 k20_def_cas_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
 k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"\n'
-                                'm9_basin_term="true"\n'
-                                'usgs_basin_scaling="true"')
+                             'm9_basin_term="true"\n'
+                             'usgs_basin_scaling="true"')
 
 # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
 k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
@@ -189,17 +189,17 @@ cy14_def = valid.gsim('[ChiouYoungs2014]')
 
 # US NSHMP 2014 GMM with passing of an additional arguments for base GMM
 nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
-                                'sgn=0\nusgs_basin_scaling="true"')
+                               'sgn=0\nusgs_basin_scaling="true"')
 
 # US NHSMP 2013 GMMs with Cybershake basin adjustments
 ask14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
-                        'sgn=0\ncybershake_basin_adj="true"')
+                      'sgn=0\ncybershake_basin_adj="true"')
 bssa14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="BooreEtAl2014"\n'
-                        'sgn=0\ncybershake_basin_adj="true"')
+                       'sgn=0\ncybershake_basin_adj="true"')
 cb14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="CampbellBozorgnia2014"\n'
-                        'sgn=0\ncybershake_basin_adj="true"')
+                     'sgn=0\ncybershake_basin_adj="true"')
 cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
-                        'sgn=0\ncybershake_basin_adj="true"')
+                     'sgn=0\ncybershake_basin_adj="true"')
 
 
 class USBasinAdjustmentTestCase(unittest.TestCase):       
