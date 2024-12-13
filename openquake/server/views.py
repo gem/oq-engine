@@ -517,7 +517,7 @@ def calc_remove(request, calc_id):
                             content_type='text/plain', status=500)
 
 
-def job_share(user_level, calc_id, share):
+def share_job(user_level, calc_id, share):
     if user_level < 2:
         return HttpResponseForbidden()
     try:
@@ -533,10 +533,8 @@ def job_share(user_level, calc_id, share):
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=403)
     else:
-        # This is an untrapped server error
-        logging.error(message)
-        return HttpResponse(content=message,
-                            content_type='text/plain', status=500)
+        raise AssertionError(
+            "share_job must return 'success' or 'error'!? Returned: {message}")
 
 
 @csrf_exempt
@@ -546,7 +544,7 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    return job_share(request.user.level, calc_id, share=False)
+    return share_job(request.user.level, calc_id, share=False)
 
 
 @csrf_exempt
@@ -556,7 +554,7 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    return job_share(request.user.level, calc_id, share=True)
+    return share_job(request.user.level, calc_id, share=True)
 
 
 def log_to_json(log):
