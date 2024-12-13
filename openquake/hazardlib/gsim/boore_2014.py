@@ -32,7 +32,7 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z1pt0_usgs_basin_scaling
 
 
-#: Equation constants that are IMT-independent
+# Equation constants that are IMT-independent
 CONSTS = {
     "Mref": 4.5,
     "Rref": 1.0,
@@ -42,27 +42,11 @@ CONSTS = {
     "v1": 225.0,
     "v2": 300.0}
 
-# CyberShake basin adjustments for BSSA14 taken
-# from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
+# CyberShake basin adjustments for BSSA14 (only applied above 
+# 1.9 seconds so don't provide dummy values listed below 2 s)
+# Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
     IMT          f6cy        f7cy       dz1cy
-    pgv     -9.900000   -9.900000   -9.900000
-    pga     -9.900000   -9.900000   -9.900000
-    0.010   -9.900000   -9.900000   -9.900000
-    0.020   -9.900000   -9.900000   -9.900000
-    0.030   -9.900000   -9.900000   -9.900000
-    0.050   -9.900000   -9.900000   -9.900000
-    0.075   -9.900000   -9.900000   -9.900000
-    0.100   -9.900000   -9.900000   -9.900000
-    0.150   -9.900000   -9.900000   -9.900000
-    0.200   -9.900000   -9.900000   -9.900000
-    0.250   -9.900000   -9.900000   -9.900000
-    0.300   -9.900000   -9.900000   -9.900000
-    0.400   -9.900000   -9.900000   -9.900000
-    0.600   -9.900000   -9.900000   -9.900000
-    0.750   -9.900000   -9.900000   -9.900000
-    1.000   -9.900000   -9.900000   -9.900000
-    1.500   -9.900000   -9.900000   -9.900000
     2.000    0.296000    0.163000    0.550000
     3.000    0.503000    0.277000    0.550000
     4.000    0.878000    0.483000    0.550000
