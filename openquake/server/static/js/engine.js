@@ -535,13 +535,29 @@ function capitalizeFirstLetter(val) {
             }
             toggleRunCalcBtnState();
 
+            $(document).on('change', '#use_shakemap', function () {
+                if ($(this).is(':checked')) {
+                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                } else {
+                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                }
+            });
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('#submit_aristotle_get_rupture').text('Retrieving rupture data (it may take more than 10 seconds)...');
+                if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                    // if the checkbox use_shakemap does not exist or is checked
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving ShakeMap data (it may take more than 10 seconds)');
+                } else {
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving rupture data (it may take more than 10 seconds)');
+                }
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
@@ -615,7 +631,12 @@ function capitalizeFirstLetter(val) {
                         $('#intensity-map').show();
                     }
                     else {
-                        $('#intensity-map').html('<p>No intensity map available</p>');
+                        if (data.rupture_png) {
+                            $('#intensity-map').hide();
+                        }
+                        else {
+                            $('#intensity-map').html('<p>No intensity map available</p>');
+                        }
                     }
                     if (data.pga_map_png) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map_png}" alt="PGA Map">`;
@@ -624,18 +645,27 @@ function capitalizeFirstLetter(val) {
                         $('#pga-map').show();
                     }
                     else {
-                        $('#pga-map').html('<p>No PGA map available</p>');
+                        if (data.rupture_png) {
+                            $('#pga-map').hide();
+                        }
+                        else {
+                            $('#pga-map').html('<p>No PGA map available</p>');
+                        }
                     }
-                    // // NOTE: we may want to plot the rupture as a separate image after retrieving rupture data
-                    // if (data.rupture_png) {
-                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
-                    //     $('#rupture_png').html(imgElement);
-                    //     $('#shakemap-image-row').show();
-                    //     $('#rupture_png').show();
-                    // }
-                    // else {
-                    //     $('#rupture_png').html('<p>No rupture image available</p>');
-                    // }
+                    if (data.rupture_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
+                        $('#rupture-map').html(imgElement);
+                        $('#rupture-image-row').show();
+                        $('#rupture-map').show();
+                    }
+                    else {
+                        if (data.pga_map_png || data.mmi_map_png) {
+                            $('#rupture-map').hide();
+                        }
+                        else {
+                            $('#rupture-map').html('<p>No rupture image available</p>');
+                        }
+                    }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -650,9 +680,14 @@ function capitalizeFirstLetter(val) {
                     $('#pga-map').hide();
                     // $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
-                }).always(function () {
+                }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                        // if the checkbox use_shakemap does not exist or is checked
+                        $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    } else {
+                        $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    }
                 });
                 event.preventDefault();
             });
@@ -685,6 +720,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
                 formData.append('dep', $("#dep").val());

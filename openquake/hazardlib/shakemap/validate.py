@@ -105,6 +105,7 @@ ARISTOTLE_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
     'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
+    'use_shakemap': 'Use the ShakeMap',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
@@ -250,8 +251,15 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
+
+    # NOTE: in level 1 interface there is no checkbox and the ShakeMap has to be used.
+    #       in level 2 interface the checkbox is unchecked by default
+    use_shakemap = True
+    if 'use_shakemap' in POST:
+        use_shakemap = POST['use_shakemap'] == 'true'
+
     rup, rupdic = get_rup_dic(
-        dic['usgs_id'], user, rupture_file, station_data_file, monitor)
+        dic['usgs_id'], user, use_shakemap, rupture_file, station_data_file, monitor)
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
