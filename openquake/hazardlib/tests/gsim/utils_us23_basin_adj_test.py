@@ -137,6 +137,70 @@ exp_res = np.array([[[-4.73116981, -6.72824192, -8.69828689],
                      [-4.32603582, -5.13532842, -6.21685285],
                      [-5.24588494, -5.77156808, -6.30737556]]])
 
+# AbrahamsonGulerce2020SInter (all adj vs no adj)
+ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"\n'
+                        'usgs_basin_scaling="true"')
+ag_def = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"')
+
+# KuehnEtAl2020SInter (all adj vs no adj)
+k20_adj = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"\n'
+                        'm9_basin_term="true"\nusgs_basin_scaling="true"')
+k20_def = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
+
+# ParkerEtAl2020SInterB (all adj vs no adj)
+p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
+                        'm9_basin_term="true"\n'
+                        'usgs_basin_scaling="true"')
+p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
+
+# AtkinsonMacias2009 (m9 and cb14 vs m9)
+a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
+                        'm9_basin_term="true"')
+a09_def = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"')
+
+# ZhaoEtAl2006SInter (m9 and cb14 vs m9)
+z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"\n'
+                        'm9_basin_term="true"')
+z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
+
+# KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
+k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
+k20_def_cas_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
+k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"\n'
+                                'm9_basin_term="true"\n'
+                                'usgs_basin_scaling="true"')
+
+# KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
+k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
+k20_def_cas_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="CAS"')
+k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"\n'
+                                'm9_basin_term="true"\n'
+                                'usgs_basin_scaling="true"')
+
+# NGAWest2 GMMs with/without USGS basin scaling
+ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\nusgs_basin_scaling="true"')
+ask14_def = valid.gsim('[AbrahamsonEtAl2014]')
+bssa14_adj = valid.gsim('[BooreEtAl2014]\nregion="CAL"\nusgs_basin_scaling="true"')
+bssa14_def = valid.gsim('[BooreEtAl2014]\nregion="CAL"')
+cb14_adj = valid.gsim('[CampbellBozorgnia2014]\nusgs_basin_scaling="true"')    
+cb14_def = valid.gsim('[CampbellBozorgnia2014]')   
+cy14_adj = valid.gsim('[ChiouYoungs2014]\nusgs_basin_scaling="true"')
+cy14_def = valid.gsim('[ChiouYoungs2014]')
+
+# US NSHMP 2014 GMM with passing of an additional arguments for base GMM
+nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+                                'sgn=0\nusgs_basin_scaling="true"')
+
+# US NHSMP 2013 GMMs with Cybershake basin adjustments
+ask14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+                        'sgn=0\ncybershake_basin_adj="true"')
+bssa14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="BooreEtAl2014"\n'
+                        'sgn=0\ncybershake_basin_adj="true"')
+cb14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="CampbellBozorgnia2014"\n'
+                        'sgn=0\ncybershake_basin_adj="true"')
+cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
+                        'sgn=0\ncybershake_basin_adj="true"')
+
 
 class USBasinAdjustmentTestCase(unittest.TestCase):       
 
@@ -149,70 +213,6 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         Also check the USGS basin scaling adjustments for all GMMs added to
         as required for the US 2023 model.
         """
-        # AbrahamsonGulerce2020SInter (all adj vs no adj)
-        ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"\n'
-                             'usgs_basin_scaling="true"')
-        ag_def = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"')
-
-        # KuehnEtAl2020SInter (all adj vs no adj)
-        k20_adj = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"\n'
-                             'm9_basin_term="true"\nusgs_basin_scaling="true"')
-        k20_def = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
-
-        # ParkerEtAl2020SInterB (all adj vs no adj)
-        p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
-                             'm9_basin_term="true"\n'
-                             'usgs_basin_scaling="true"')
-        p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
-        
-        # AtkinsonMacias2009 (m9 and cb14 vs m9)
-        a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
-                              'm9_basin_term="true"')
-        a09_def = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"')
-
-        # ZhaoEtAl2006SInter (m9 and cb14 vs m9)
-        z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"\n'
-                              'm9_basin_term="true"')
-        z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
-
-        # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
-        k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
-        k20_def_cas_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
-        k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"\n'
-                                     'm9_basin_term="true"\n'
-                                     'usgs_basin_scaling="true"')
-
-        # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
-        k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
-        k20_def_cas_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="CAS"')
-        k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"\n'
-                                       'm9_basin_term="true"\n'
-                                       'usgs_basin_scaling="true"')
-
-        # NGAWest2 GMMs with/without USGS basin scaling
-        ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\nusgs_basin_scaling="true"')
-        ask14_def = valid.gsim('[AbrahamsonEtAl2014]')
-        bssa14_adj = valid.gsim('[BooreEtAl2014]\nregion="CAL"\nusgs_basin_scaling="true"')
-        bssa14_def = valid.gsim('[BooreEtAl2014]\nregion="CAL"')
-        cb14_adj = valid.gsim('[CampbellBozorgnia2014]\nusgs_basin_scaling="true"')    
-        cb14_def = valid.gsim('[CampbellBozorgnia2014]')   
-        cy14_adj = valid.gsim('[ChiouYoungs2014]\nusgs_basin_scaling="true"')
-        cy14_def = valid.gsim('[ChiouYoungs2014]')
-
-        # US NSHMP 2014 GMM with passing of an additional arguments for base GMM
-        nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
-                                       'sgn=0\nusgs_basin_scaling="true"')
-        
-        # US NHSMP 2013 GMMs with Cybershake basin adjustments
-        ask14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
-                              'sgn=0\ncybershake_basin_adj="true"')
-        bssa14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="BooreEtAl2014"\n'
-                               'sgn=0\ncybershake_basin_adj="true"')
-        cb14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="CampbellBozorgnia2014"\n'
-                             'sgn=0\ncybershake_basin_adj="true"')
-        cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
-                             'sgn=0\ncybershake_basin_adj="true"')
-
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
         cmaker = simple_cmaker([ag_adj, ag_def,
@@ -242,10 +242,5 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         ctx.rrup = np.array([50., 200., 500.])
         ctx.vs30 = np.array([800., 400., 200.])
         ctx.vs30measured = 1
-
-        # Get the ground motions
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
-        
-        # Check against expected results
         aae(mea, exp_res)
-        
