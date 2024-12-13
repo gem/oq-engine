@@ -1376,11 +1376,11 @@ def _getset_attrs(oq):
                 num_sites=num_sites, imts=list(oq.imtls))
 
 
-def import_gmfs_hdf5(h5, oqparam):
+def import_gmfs_hdf5(dstore, oqparam):
     """
     Import in the datastore a ground motion field HDF5 file.
 
-    :param h5: the datastore or a hdf5.File instance
+    :param dstore: the datastore
     :param oqparam: an OqParam instance
     :returns: event_ids
     """
@@ -1393,10 +1393,8 @@ def import_gmfs_hdf5(h5, oqparam):
     # ownership would break calc_XXX.hdf5; therefore we copy everything
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
-    if hasattr(h5, 'hdf5'):
-        h5 = h5.hdf5
-    if 'oqparam' not in h5:
-        h5['oqparam'] = oqparam
+    if 'oqparam' not in dstore:
+        dstore['oqparam'] = oqparam
     fnames = oqparam.inputs['gmfs']
     size = sum(os.path.getsize(f) for f in fnames)
     logging.warning('Importing %d files, %s',
@@ -1406,21 +1404,17 @@ def import_gmfs_hdf5(h5, oqparam):
     rups = []
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
-            h5['sitecol'] = f['sitecol']  # complete by construction
-            f.copy('gmf_data', h5)
-    else:  # tested in scenario/case_33 and test_merge_gmfs
+            dstore['sitecol'] = f['sitecol']  # complete by construction
+            f.copy('gmf_data', dstore.hdf5)
+    else:  # merge the sites and the gmfs, tested in scenario/case_33
         gmfs = oqparam.ground_motion_fields
-        sitecol, convs = site.merge_sitecols(fnames, gmfs)
+        dstore['sitecol'], convs = site.merge_sitecols(fnames, gmfs)
         if gmfs:
-            if 'sitecol' in h5:
-                del h5['sitecol']
-            h5['sitecol'] = sitecol
-            create_gmf_data(h5, oqparam.get_primary_imtls(), E=E,
+            create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
         else:
-            h5.create_dataset(
+            dstore.create_dataset(
                 'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
-
         nE = 0
         num_ev_rup_site = []
         fileno = 0
@@ -1429,7 +1423,7 @@ def import_gmfs_hdf5(h5, oqparam):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 if 'full_lt' in f:
-                    h5['{:_d}/full_lt'.format(fileno)] = f['full_lt']
+                    dstore['{:_d}/full_lt'.format(fileno)] = f['full_lt']
                 # full_lt is missing in oq-risk-tests:test_merge_gmfs
                 fileno += 1
                 if gmfs:
@@ -1443,10 +1437,10 @@ def import_gmfs_hdf5(h5, oqparam):
                             df.loc[df.sid == sid, 'sid'] = idx
                         df['eid'] += nE  # add an offset to the event IDs
                         for col in df.columns:
-                            hdf5.extend(h5[f'gmf_data/{col}'], df[col])
+                            hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
                 elif 'ruptures' in f:
                     arr = f['rupgeoms'][:]
-                    h5.save_vlen('rupgeoms', list(arr))
+                    dstore.save_vlen('rupgeoms', list(arr))
                     rup = f['ruptures'][:]
                     rup['geom_id'] += geom_offset
                     geom_offset += len(arr)
@@ -1458,12 +1452,12 @@ def import_gmfs_hdf5(h5, oqparam):
     if rups:
         ruptures = numpy.array(rups, dtype=rups[0].dtype)
         ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
-        h5.create_dataset('ruptures', data=ruptures, compression='gzip')
-        h5.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
+        dstore.create_dataset('ruptures', data=ruptures, compression='gzip')
+        dstore.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
-    if 'gmf_data' in h5:
-        rel = numpy.unique(h5['gmf_data/eid'][:])
+    if 'gmf_data' in dstore:
+        rel = numpy.unique(dstore['gmf_data/eid'][:])
         e = len(rel)
         assert E >= e, (E, e)
         events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
@@ -1471,12 +1465,12 @@ def import_gmfs_hdf5(h5, oqparam):
         e = E
         events['id'] = numpy.arange(E)
     logging.info('Storing %d events, %d relevant', E, e)
-    h5['events'] = events
+    dstore['events'] = events
     n = oqparam.number_of_logic_tree_samples
     if n:
-        h5['weights'] = numpy.full(n, 1/n)
+        dstore['weights'] = numpy.full(n, 1/n)
     else:
-        h5['weights'] = numpy.ones(1)
+        dstore['weights'] = numpy.ones(1)
     return events['id']
 
 
