@@ -36,6 +36,19 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 
 CONSTS = {"h4": 1.0, "c": 1.88, "n": 1.18}
 
+# CyberShake basin adjustments for CB14 (only applied above 
+# 1.9 seconds so don't provide dummy values listed below 2 s)
+# Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CB14.csv?ref_type=heads
+COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
+IMT   slope_cy
+2.0   0.764
+3.0   1.279
+4.0   1.726
+5.0   2.080 
+7.5   3.000
+10    3.000
+""")
+
 
 def _get_alpha(C, vs30, pga_rock):
     """
@@ -62,7 +75,8 @@ def _get_anelastic_attenuation_term(C, rrup):
     return f_atn
 
 
-def _get_basin_term(C, ctx, region, period, SJ, a1100, usgs_bs):
+def _get_basin_term(C, ctx, region, period, SJ, a1100,
+                    usgs_bs=False, cy=False):
     """
     Returns the basin response term defined in equation 20
     """
@@ -76,6 +90,7 @@ def _get_basin_term(C, ctx, region, period, SJ, a1100, usgs_bs):
         z2pt5 = ctx.z2pt5
     else:
         z2pt5 = _select_basin_model(SJ, 1100.0) * np.ones_like(ctx.vs30)
+
     f_sed = np.zeros(len(z2pt5))
     idx = z2pt5 < 1.0
     f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
@@ -303,7 +318,7 @@ def _select_basin_model(SJ, vs30):
         return np.exp(7.089 - 1.144 * np.log(vs30))
 
 
-def get_mean_values(SJ, C, ctx, period, usgs_bs, a1100=None):
+def get_mean_values(SJ, C, ctx, period, usgs_bs=False, cy=False, a1100=None):
     """
     Returns the mean values for a specific IMT
     """
@@ -318,7 +333,7 @@ def get_mean_values(SJ, C, ctx, period, usgs_bs, a1100=None):
             _get_style_of_faulting_term(C, ctx) +
             _get_hanging_wall_term(C, ctx) +
             _get_shallow_site_response_term(SJ, C, temp_vs30, a1100) +
-            _get_basin_term(C, ctx, None, period, SJ, a1100, usgs_bs) +
+            _get_basin_term(C, ctx, None, period, SJ, a1100, usgs_bs, cy) +
             _get_hypocentral_depth_term(C, ctx) +
             _get_fault_dip_term(C, ctx) +
             _get_anelastic_attenuation_term(C, ctx.rrup))
@@ -420,7 +435,8 @@ class CampbellBozorgnia2014(GMPE):
 
     def __init__(self, coeffs={}, SJ=False, sigma_mu_epsilon=0.0,
                  estimate_ztor=False, estimate_width=False,
-                 estimate_hypo_depth=False, usgs_basin_scaling=False):
+                 estimate_hypo_depth=False, usgs_basin_scaling=False,
+                 cybershake_basin_adj=False):
         # tested in logictree/case_71
         if coeffs:  # extra coefficients by IMT
             self.COEFFS |= CoeffsTable.fromdict(coeffs)
@@ -433,6 +449,7 @@ class CampbellBozorgnia2014(GMPE):
             # To estimate a width, the GMPE needs Zbot
             self.REQUIRES_RUPTURE_PARAMETERS |= {"zbot"}
         self.usgs_basin_scaling = usgs_basin_scaling
+        self.cybershake_basin_adj = cybershake_basin_adj
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -449,13 +466,16 @@ class CampbellBozorgnia2014(GMPE):
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx, 0.,
                                          self.usgs_basin_scaling,
+                                         self.cybershake_basin_adj,
                                          a1100=None))
      
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
             mean[m] = get_mean_values(self.SJ, C, ctx, imt.period, 
-                                      self.usgs_basin_scaling, pga1100)
+                                      self.usgs_basin_scaling,
+                                      self.cybershake_basin_adj,
+                                      pga1100)
             mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             if imt.string[:2] == "SA" and imt.period < 0.25:
@@ -463,7 +483,9 @@ class CampbellBozorgnia2014(GMPE):
                 # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
                 # Get PGA on soil
                 pga = get_mean_values(self.SJ, C_PGA, ctx, imt.period,
-                                      self.usgs_basin_scaling, pga1100)
+                                      self.usgs_basin_scaling,
+                                      self.cybershake_basin_adj,
+                                      pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
                 mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
