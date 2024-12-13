@@ -1416,18 +1416,22 @@ def import_gmfs_hdf5(dstore, oqparam):
                             R=oqparam.number_of_logic_tree_samples)
         nE = 0
         num_ev_rup_site = []
-        nM = 0
+        fileno = 0
+        geom_offset = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 if 'full_lt' in f:
-                    dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
+                    dstore['{:_d}/full_lt'.format(fileno)] = f['full_lt']
                 # full_lt is missing in oq-risk-tests:test_merge_gmfs
-                nM += 1
+                fileno += 1
                 if 'ruptures' in f:
-                    rups.extend(f['ruptures'][:])
                     arr = f['rupgeoms'][:]
                     dstore.save_vlen('rupgeoms', list(arr))
+                    rup = f['ruptures'][:]
+                    rup['geom_id'] += geom_offset
+                    geom_offset += len(arr)
+                    rups.extend(rup)
                 if gmfs:
                     size = len(f['gmf_data/sid'])
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))

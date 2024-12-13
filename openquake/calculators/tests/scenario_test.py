@@ -387,7 +387,8 @@ class ScenarioTestCase(CalculatorTestCase):
             geoms.extend(ds['rupgeoms'][:])
             ner = ds['num_ev_rup_site'][:]
             assert 'gmf_data' not in ds
-            aae(rups['e0'], [0, 1])
+        aae(rups['e0'], [0, 1])
+        aae(rups['geom_id'], [0, 1])
         aae(sids, numpy.unique(g_sids))
         self.assertEqual(len(rups), 2)
         self.assertEqual(len(geoms), 2)
