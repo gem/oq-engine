@@ -206,12 +206,8 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
 
     def test_all(self):
         """
-        Test the execution and correctness of values of the m9 basin adjustment
-        argument and (for the ZhaoEtAl2006 and AtkinsonMacias2009 GMMs) the
-        Campbell and Bozorgnia 2014 basin term argument.
-
-        Also check the USGS basin scaling adjustments for all GMMs added to
-        as required for the US 2023 model.
+        Test the execution and correctness of values for GMMs as
+        adjusted within the Conterminous US 2023 NSHM:
         """
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
