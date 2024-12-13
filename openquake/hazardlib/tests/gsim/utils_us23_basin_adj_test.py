@@ -176,8 +176,8 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         # NGAWest2 GMMs with/without USGS basin scaling
         ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\nusgs_basin_scaling="true"')
         ask14_def = valid.gsim('[AbrahamsonEtAl2014]')
-        bssa14_adj = valid.gsim('[BooreEtAl2014]\nusgs_basin_scaling="true"')
-        bssa14_def = valid.gsim('[BooreEtAl2014]')
+        bssa14_adj = valid.gsim('[BooreEtAl2014]\nregion="CAL"\nusgs_basin_scaling="true"')
+        bssa14_def = valid.gsim('[BooreEtAl2014]\nregion="CAL"')
         cb14_adj = valid.gsim('[CampbellBozorgnia2014]\nusgs_basin_scaling="true"')    
         cb14_def = valid.gsim('[CampbellBozorgnia2014]')   
         cy14_adj = valid.gsim('[ChiouYoungs2014]\nusgs_basin_scaling="true"')
@@ -187,6 +187,16 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
                                        'sgn=0\nusgs_basin_scaling="true"')
         
+        # US NHSMP 2013 GMMs with Cybershake basin adjustments
+        ask14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+                              'sgn=0\ncybershake_basin_adj="true"')
+        bssa14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="BooreEtAl2014"\n'
+                               'sgn=0\ncybershake_basin_adj="true"')
+        cb14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="CampbellBozorgnia2014"\n'
+                             'sgn=0\ncybershake_basin_adj="true"')
+        cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
+                             'sgn=0\ncybershake_basin_adj="true"')
+
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
         cmaker = simple_cmaker([ag_adj, ag_def,
@@ -204,7 +214,9 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                                 bssa14_adj, bssa14_def,
                                 cb14_adj, cb14_def,
                                 cy14_adj, cy14_def,
-                                nshmp14_ask14_adj],
+                                nshmp14_ask14_adj,
+                                ask14_cy, bssa14_cy,
+                                cb14_cy, cy14_cy],
                                 imts)                       
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.

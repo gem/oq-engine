@@ -42,8 +42,37 @@ CONSTS = {
     "v1": 225.0,
     "v2": 300.0}
 
+# CyberShake basin adjustments for BSSA14 taken
+# from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
+COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
+    IMT          f6cy        f7cy       dz1cy
+    pgv     -9.900000   -9.900000   -9.900000
+    pga     -9.900000   -9.900000   -9.900000
+    0.010   -9.900000   -9.900000   -9.900000
+    0.020   -9.900000   -9.900000   -9.900000
+    0.030   -9.900000   -9.900000   -9.900000
+    0.050   -9.900000   -9.900000   -9.900000
+    0.075   -9.900000   -9.900000   -9.900000
+    0.100   -9.900000   -9.900000   -9.900000
+    0.150   -9.900000   -9.900000   -9.900000
+    0.200   -9.900000   -9.900000   -9.900000
+    0.250   -9.900000   -9.900000   -9.900000
+    0.300   -9.900000   -9.900000   -9.900000
+    0.400   -9.900000   -9.900000   -9.900000
+    0.600   -9.900000   -9.900000   -9.900000
+    0.750   -9.900000   -9.900000   -9.900000
+    1.000   -9.900000   -9.900000   -9.900000
+    1.500   -9.900000   -9.900000   -9.900000
+    2.000    0.296000    0.163000    0.550000
+    3.000    0.503000    0.277000    0.550000
+    4.000    0.878000    0.483000    0.550000
+    5.000    1.180000    0.457000    0.388695
+    7.500    1.480000    0.549000    0.370751
+    10.00    1.340000    0.498000    0.370755
+    """)
 
-def _get_basin_term(C, ctx, region, imt, usgs_bs=False):
+
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
@@ -58,11 +87,19 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False):
         return np.zeros(len(ctx.vs30), dtype=float)
     bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
               else california_basin_model(ctx.vs30))
-    f_dz1 = C["f7"] + np.zeros(len(ctx.vs30), dtype=float)
-    f_ratio = C["f7"] / C["f6"]
-    dz1 = (ctx.z1pt0 / 1000.0) - bmodel
-    idx = dz1 <= f_ratio
-    f_dz1[idx] = C["f6"] * dz1[idx]
+    # If cybershake basin adj and SA(T > 1.9)
+    if cy and imt.period > 1.9: 
+        C_cy = COEFFS_CY[imt]
+        dz1_cy = np.full(len(ctx.vs30), C_cy["dz1cy"])
+        cy_csim = 0.1  # CY_CSIM variable in java code
+        f_dz1 = np.where(dz1_cy <= C_cy["f6cy"],
+                         C_cy["f6cy"] * dz1_cy,
+                         C_cy["f7cy"]) + cy_csim
+    # Regular basin term
+    else:
+        dz1 = (ctx.z1pt0 / 1000.0) - bmodel
+        f_ratio = C["f7"] / C["f6"]
+        f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
     return f_dz1 * usgs_baf
 
 
@@ -204,7 +241,7 @@ def _get_pga_on_rock(kind, region, sof, C, ctx):
 
 
 def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb,
-                      usgs_bs=False):
+                      usgs_bs=False, cy=False):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling term
@@ -214,7 +251,7 @@ def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb,
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_term(C, ctx, region, imt, usgs_bs)
+        fbd = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
     return flin + fnl + fbd
 
 
@@ -284,21 +321,25 @@ class BooreEtAl2014(GMPE):
     kind = "base"
 
     def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0,
-                 usgs_basin_scaling=False):
+                 usgs_basin_scaling=False, cybershake_basin_adj=False):
         self.region = region
         self.sof = sof
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.usgs_basin_scaling = usgs_basin_scaling
-        if (region != "nobasin" or
-            self.usgs_basin_scaling): # z1pt0 is used if period >= 0.65
+        self.cybershake_basin_adj = cybershake_basin_adj
+
+        if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
+        elif self.usgs_basin_scaling:
+            raise ValueError('USGS basin scaling requires a '
+                             'basin region to be specified.')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-        """
+        """ 
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
@@ -309,13 +350,14 @@ class BooreEtAl2014(GMPE):
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
                                   C, pga_rock, ctx, imt, ctx.rjb,
-                                  self.usgs_basin_scaling))
+                                  self.usgs_basin_scaling,
+                                  self.cybershake_basin_adj))
             if self.sigma_mu_epsilon:
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         tau1         tau2
+    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2      
     pgv      5.037000    5.078000    4.849000    5.033000   1.073000   -0.153600    0.225200   6.200000   -1.243000   0.148900   -0.003440   5.300000   0.000000   -0.840000   1300.000000   -0.100000   -0.008440   -9.900000   -9.900000   105.000000   272.000000   0.082000   0.080000   0.644000   0.552000   0.401000   0.346000
     pga      0.447300    0.485600    0.245900    0.453900   1.431000    0.050530   -0.166200   5.500000   -1.134000   0.191700   -0.008088   4.500000   0.000000   -0.600000   1500.000000   -0.150000   -0.007010   -9.900000   -9.900000   110.000000   270.000000   0.100000   0.070000   0.695000   0.495000   0.398000   0.348000
     0.010    0.453400    0.491600    0.251900    0.459900   1.421000    0.049320   -0.165900   5.500000   -1.134000   0.191600   -0.008088   4.500000   0.000000   -0.603720   1500.200000   -0.148330   -0.007010   -9.900000   -9.900000   111.670000   270.000000   0.096000   0.070000   0.698000   0.499000   0.402000   0.345000

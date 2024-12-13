@@ -76,6 +76,9 @@ class NSHMP2014(base.GMPE):
         # are given in terms of Rrup, so both are required in the subclass
         self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES | {'rrup'})
         self.gsim = cls()  # underlying gsim
+        # Unilaterally add basin depth params to the GMMs in case specifying
+        # a conterminous US2023 basin adjustment or a basin region for BSSA14
+        self.REQUIRES_SITES_PARAMETERS |= {'z1pt0', 'z2pt5'}
         # Add any GMM specific inputs from kwargs
         exp_kwargs = inspect.signature(cls.__init__).parameters.keys()
         for kwarg in kwargs:
