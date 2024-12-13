@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Saving the rupture geometries as 32 bit floats to save memory
   * Internal: added a command `oq filter_around lon lat csvfile`
   * Added a command `oq plot ebruptures?min_mag=XXX`
   * Added a script `utils/build_global_ses`
