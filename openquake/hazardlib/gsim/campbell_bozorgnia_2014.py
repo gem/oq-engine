@@ -308,7 +308,6 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
             np.log(pga_rock[idx] +
                    CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
             np.log(pga_rock[idx] + CONSTS["c"]))
-        
 
     if SJ:
         fsite_j = (C["c13"] + C["k2"] * CONSTS["n"]) * \
