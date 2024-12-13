@@ -530,7 +530,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         users_filter = 1
 
     jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
-              "AND status != 'deleted' ORDER BY id DESC LIMIT %d"
+              "AND status != 'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
@@ -551,6 +551,38 @@ def update_job(db, job_id, dic):
         a dictionary of valid field/values for the job table
     """
     db('UPDATE job SET ?D WHERE id=?x', dic, job_id)
+
+
+def share_job(db, job_id, share):
+    """
+    Make the job visible to all users by setting its status to 'shared'.
+
+    :param db:
+        a :class:`openquake.commonlib.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param share: if False, revert the status to 'complete'
+    """
+    new_status = 'shared' if share else 'complete'
+    initial_status = db('SELECT status FROM job WHERE id=?x', job_id)[0].status
+    if new_status == initial_status:
+        return {'success': f'Calculation {job_id} was already {initial_status}'}
+    if initial_status not in ('complete', 'shared'):
+        if share:
+            err_msg = (f'Can not share calculation {job_id} from'
+                       f' status "{initial_status}"')
+        else:
+            err_msg = (f'Can not force the status of calculation {job_id}'
+                       f' from "{initial_status}" to "complete"')
+        return {'error': err_msg}
+    shared = db('UPDATE job SET ?D WHERE id=?x',
+                {'status': new_status}, job_id).rowcount
+    if not shared:
+        return {'error':
+                f'Can not change the status of calculation {job_id}'
+                f' from "{initial_status}" to "{new_status}"'}
+    return {'success': f'The status of calculation {job_id} was changed'
+                       f' from "{initial_status}" to "{new_status}"'}
 
 
 def update_parent_child(db, parent_child):
