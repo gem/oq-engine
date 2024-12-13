@@ -1393,7 +1393,6 @@ def import_gmfs_hdf5(dstore, oqparam):
     # ownership would break calc_XXX.hdf5; therefore we copy everything
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
-
     if 'oqparam' not in dstore:
         dstore['oqparam'] = oqparam
     fnames = oqparam.inputs['gmfs']
@@ -1413,16 +1412,20 @@ def import_gmfs_hdf5(dstore, oqparam):
         if gmfs:
             create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
+        else:
+            dstore.create_dataset(
+                'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
         nE = 0
         num_ev_rup_site = []
-        nM = 0
+        fileno = 0
+        geom_offset = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
-                dstore['{:_d}/full_lt'.format(nM)] = f['full_lt']
-                nM += 1
-                if 'ruptures' in f:
-                    rups.extend(f['ruptures'][:])
+                if 'full_lt' in f:
+                    dstore['{:_d}/full_lt'.format(fileno)] = f['full_lt']
+                # full_lt is missing in oq-risk-tests:test_merge_gmfs
+                fileno += 1
                 if gmfs:
                     size = len(f['gmf_data/sid'])
                     logging.info('Reading {:_d} rows from {}'.format(size, fname))
@@ -1435,6 +1438,13 @@ def import_gmfs_hdf5(dstore, oqparam):
                         df['eid'] += nE  # add an offset to the event IDs
                         for col in df.columns:
                             hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
+                elif 'ruptures' in f:
+                    arr = f['rupgeoms'][:]
+                    dstore.save_vlen('rupgeoms', list(arr))
+                    rup = f['ruptures'][:]
+                    rup['geom_id'] += geom_offset
+                    geom_offset += len(arr)
+                    rups.extend(rup)
             nE += ne
             num_ev_rup_site.append((nE, len(rups), len(conv)))
         oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
@@ -1442,7 +1452,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     if rups:
         ruptures = numpy.array(rups, dtype=rups[0].dtype)
         ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
-        dstore.create_dataset('ruptures', data=ruptures)
+        dstore.create_dataset('ruptures', data=ruptures, compression='gzip')
         dstore.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)

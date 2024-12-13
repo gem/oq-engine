@@ -22,6 +22,10 @@
                 <button type="button" id="clearRuptureFile">Clear File</button>
               </div>
               <div class="aristotle_form_row">
+                <label for"use_shakemap">{{ aristotle_form_labels.use_shakemap }}</label>
+                <input class="aristotle-input" type="checkbox" id="use_shakemap" name="use_shakemap" />
+              </div>
+              <div class="aristotle_form_row">
                 <button id="submit_aristotle_get_rupture" type="submit" class="btn">Retrieve rupture data</button>
               </div>
             </form>
@@ -29,6 +33,7 @@
                 <div id="intensity-map" style="display: none;" class="shakemap-image-container"></div>
                 <div id="pga-map" style="display: none;" class="shakemap-image-container"></div>
             </div>
+            <div id="rupture-map" style="display: none;" class="rupture-image-container"></div>
             <div class="shakemap-clear-float"></div>
             <form id="aristotle_run_form" method="post" enctype="multipart/form-data">
             {% include './aristotle_run_form.html' %}

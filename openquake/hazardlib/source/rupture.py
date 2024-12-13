@@ -87,7 +87,8 @@ rupture_dt = numpy.dtype([
     ('hypo', (F32, 3)),
     ('geom_id', U32),
     ('nsites', U32),
-    ('e0', U32)])
+    ('e0', U32),
+    ('model', '<S3')])
 
 code2cls = {}
 
@@ -871,7 +872,7 @@ def get_ruptures(fname_csv):
         trt_smr = aw.trts.index(row['trt']) * TWO24
         tup = (u, row['seed'], 0, trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, 1, 0)
+               minlon, minlat, maxlon, maxlat, hypo, u, 1, 0, '???')
         rups.append(tup)
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:

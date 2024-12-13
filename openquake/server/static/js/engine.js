@@ -15,6 +15,10 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 
+function capitalizeFirstLetter(val) {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+}
+
 (function ($, Backbone, _) {
     var calculation_table;
 
@@ -136,10 +140,10 @@
             },
 
             events: {
-                "click .btn-show-remove": "remove_calculation",
-                "click .btn-show-abort": "abort_calculation",
-                "click .btn-danger": "show_modal_confirm",
-                "click .btn-hide-no": "hide_modal_confirm",
+                "click .btn-abort": "confirm_abort_calculation",
+                "click .btn-share": "confirm_share_calculation",
+                "click .btn-unshare": "confirm_unshare_calculation",
+                "click .btn-remove": "confirm_remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -156,34 +160,44 @@
                 this.can_be_rendered = true;
             },
 
-            show_modal_confirm: function (e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-
-                var show_or_back = (function (e) {
-                    this.conf_show = $('#confirmDialog' + calc_id).show();
-                    this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
-                    closeTimer();
-                })();
+            confirm_share_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'share');
             },
 
-            hide_modal_confirm: function (e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-
-                var hide_or_back = (function (e) {
-                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                    setTimer();
-                })();
+            confirm_unshare_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'unshare');
             },
 
-            remove_calculation: function (e) {
+            confirm_remove_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'remove');
+            },
+
+            confirm_abort_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'abort');
+            },
+
+            confirm_modify_calculation: function(e, action) {
+              e.preventDefault();
+              const calc_id = $(e.target).attr('data-calc-id');
+              const calc_desc = $(e.target).attr('data-calc-desc');
+              showModal({
+                calc_id,
+                title: capitalizeFirstLetter(action) + ' calculation',
+                body: `Are you sure you want to ${action} calculation ${calc_id}?<br><em>"${calc_desc}"</em>`,
+                confirmText: `Yes, ${action}`,
+                cancelText: 'No',
+                confirmAction: () => this.modify_calculation(e, action),
+              });
+            },
+
+            modify_calculation: function(e, action) {  // e.g. remove, share or abort
+                const action_ing = action.endsWith("e") ? action.slice(0, -1) + "ing" : action + "ing";
+                const action_ed = action.endsWith("e") ? action + "d" : action + "ed";
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var calc_desc = $(e.target).attr('data-calc-desc');
                 var view = this;
-                diaerror.show(false, "Removing calculation " + calc_id, "...");
+                diaerror.show(false, capitalizeFirstLetter(action_ing) + " calculation " + calc_id, "...");
 
                 var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
@@ -191,7 +205,7 @@
                     setTimer();
                 })();
 
-                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/remove",
+                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/" + action,
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
@@ -202,38 +216,11 @@
                                         if(data.error) {
                                             diaerror.show(false, "Error", data.error);
                                         } else {
-                                            diaerror.show(false, "Calculation removed", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been removed." );
-                                            view.calculations.remove([view.calculations.get(calc_id)]);
-                                        }
-                                    }});
-            },
-
-            abort_calculation: function (e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-                var calc_desc = $(e.target).attr('data-calc-desc');
-                var view = this;
-                diaerror.show(false, "Aborting calculation " + calc_id, "...");
-
-                var hide_or_back = (function (e) {
-                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                    setTimer();
-                })();
-
-                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/abort",
-                                    type: "POST",
-                                    error: function (jqXHR, textStatus, errorThrown) {
-                                        if (jqXHR.status == 403) {
-                                            diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
-                                        }
-                                    },
-                                    success: function (data, textStatus, jqXHR) {
-                                        if(data.error) {
-                                            diaerror.show(false, "Error", data.error );
-                                        } else {
-                                            diaerror.show(false, "Calculation aborted", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been aborted." );
-                                            calculations.fetch({reset: true})
+                                            diaerror.show(false, "Calculation " + action_ed, 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action_ed);
+                                            if (action == 'abort') {
+                                                view.calculations.remove([view.calculations.get(calc_id)]);
+                                            }
+                                            calculations.fetch({reset: true});
                                         }
                                     }});
             },
@@ -548,13 +535,29 @@
             }
             toggleRunCalcBtnState();
 
+            $(document).on('change', '#use_shakemap', function () {
+                if ($(this).is(':checked')) {
+                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                } else {
+                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                }
+            });
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('#submit_aristotle_get_rupture').text('Retrieving rupture data (it may take more than 10 seconds)...');
+                if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                    // if the checkbox use_shakemap does not exist or is checked
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving ShakeMap data (it may take more than 10 seconds)');
+                } else {
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving rupture data (it may take more than 10 seconds)');
+                }
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
@@ -628,7 +631,12 @@
                         $('#intensity-map').show();
                     }
                     else {
-                        $('#intensity-map').html('<p>No intensity map available</p>');
+                        if (data.rupture_png) {
+                            $('#intensity-map').hide();
+                        }
+                        else {
+                            $('#intensity-map').html('<p>No intensity map available</p>');
+                        }
                     }
                     if (data.pga_map_png) {
                         const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map_png}" alt="PGA Map">`;
@@ -637,18 +645,27 @@
                         $('#pga-map').show();
                     }
                     else {
-                        $('#pga-map').html('<p>No PGA map available</p>');
+                        if (data.rupture_png) {
+                            $('#pga-map').hide();
+                        }
+                        else {
+                            $('#pga-map').html('<p>No PGA map available</p>');
+                        }
                     }
-                    // // NOTE: we may want to plot the rupture as a separate image after retrieving rupture data
-                    // if (data.rupture_png) {
-                    //     const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
-                    //     $('#rupture_png').html(imgElement);
-                    //     $('#shakemap-image-row').show();
-                    //     $('#rupture_png').show();
-                    // }
-                    // else {
-                    //     $('#rupture_png').html('<p>No rupture image available</p>');
-                    // }
+                    if (data.rupture_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
+                        $('#rupture-map').html(imgElement);
+                        $('#rupture-image-row').show();
+                        $('#rupture-map').show();
+                    }
+                    else {
+                        if (data.pga_map_png || data.mmi_map_png) {
+                            $('#rupture-map').hide();
+                        }
+                        else {
+                            $('#rupture-map').html('<p>No rupture image available</p>');
+                        }
+                    }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -663,9 +680,14 @@
                     $('#pga-map').hide();
                     // $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
-                }).always(function () {
+                }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                        // if the checkbox use_shakemap does not exist or is checked
+                        $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    } else {
+                        $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    }
                 });
                 event.preventDefault();
             });
@@ -698,6 +720,7 @@
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
                 formData.append('dep', $("#dep").val());
@@ -756,3 +779,31 @@
             });
         });
 })($, Backbone, _, gem_oq_server_url);
+
+
+function showModal({ id, title, body, confirmText = 'Yes', cancelText = 'No', confirmAction }) {
+  const modal = document.querySelector('#confirmModal');
+  modal.querySelector('.modal-title').innerHTML = title;
+  modal.querySelector('.modal-body-pre').innerHTML = body;
+  modal.querySelector('.btn-confirm').textContent = confirmText;
+  modal.querySelector('.btn-cancel').textContent = cancelText;
+
+  // Attach confirmation action
+  const confirmButton = modal.querySelector('.btn-confirm');
+  confirmButton.onclick = () => {
+    if (typeof confirmAction === 'function') {
+      confirmAction();
+    }
+    closeModal();
+  };
+
+  // Show the modal
+  modal.classList.remove('hide');
+  modal.classList.add('in');
+}
+
+function closeModal() {
+  const modal = document.querySelector('#confirmModal');
+  modal.classList.remove('in');
+  modal.classList.add('hide');
+}

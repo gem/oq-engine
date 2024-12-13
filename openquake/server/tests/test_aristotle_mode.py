@@ -32,9 +32,11 @@ import django
 from django.test import Client, override_settings
 from django.conf import settings
 from django.http import HttpResponseNotFound
-from openquake.commonlib.logs import dbcmd
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
+from openquake.commonlib.dbapi import db
+from openquake.commonlib.logs import dbcmd
+from openquake.engine.engine import create_jobs
 
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
 
@@ -140,9 +142,9 @@ class EngineServerTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        cls.user, password = get_or_create_user(1)  # level 1
+        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
         cls.c = Client()
-        cls.c.login(username=cls.user.username, password=password)
+        cls.c.login(username=cls.user1.username, password=cls.password1)
         cls.maxDiff = None
 
     @classmethod
@@ -150,7 +152,7 @@ class EngineServerTestCase(django.test.TestCase):
         try:
             cls.wait()
         finally:
-            cls.user.delete()
+            cls.user1.delete()
         super().tearDownClass()
 
     def aristotle_run_then_remove(
@@ -267,3 +269,112 @@ class EngineServerTestCase(django.test.TestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
+
+
+class ShareJobTestCase(django.test.TestCase):
+
+    @classmethod
+    def post(cls, path, data=None):
+        return cls.c.post('/v1/calc/%s' % path, data)
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user0, cls.password0 = get_or_create_user(0)  # level 0
+        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.user2, cls.password2 = get_or_create_user(2)  # level 2
+        cls.c = Client()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.user0.delete()
+        cls.user1.delete()
+        cls.user2.delete()
+        super().tearDownClass()
+
+    def test_share_complete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_share_complete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.json(),
+                         {'success': f'The status of calculation {job.calc_id} was'
+                                     f' changed from "complete" to "shared"'})
+
+    def test_share_incomplete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_share_incomplete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'created', 'is_running': 1}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.json(),
+                         {'error': f'Can not share calculation {job.calc_id} from'
+                                   f' status "created"'})
+
+    def test_share_shared_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_share_shared_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.json(),
+                         {'success': f'Calculation {job.calc_id} was already shared'})
+
+    def test_unshare_complete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_complete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.json(),
+                         {'success': f'Calculation {job.calc_id} was already complete'})
+
+    def test_unshare_incomplete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_incomplete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'created', 'is_running': 1}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.json(),
+                         {'error': f'Can not force the status of calculation'
+                                   f' {job.calc_id} from "created" to "complete"'})
+
+    def test_unshare_shared_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.json(),
+                         {'success': f'The status of calculation {job.calc_id} was'
+                                     f' changed from "shared" to "complete"'})
+
+    def test_share_or_unshare_user_level_below_2(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)
+        self.c.login(username=self.user0.username, password=self.password0)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)
