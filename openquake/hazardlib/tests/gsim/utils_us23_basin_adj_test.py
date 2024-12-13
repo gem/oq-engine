@@ -242,6 +242,10 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
         ctx.rrup = np.array([50., 200., 500.])
         ctx.vs30 = np.array([800., 400., 200.])
         ctx.vs30measured = 1
+
+        # Get the ground motions
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
+        
+        # Check against expected results
         aae(mea, exp_res)
         
