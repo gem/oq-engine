@@ -1409,11 +1409,12 @@ def import_gmfs_hdf5(dstore, oqparam):
     else:  # merge the sites and the gmfs, tested in scenario/case_33
         gmfs = oqparam.ground_motion_fields
         dstore['sitecol'], convs = site.merge_sitecols(fnames, gmfs)
-        dstore.create_dataset(
-            'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
         if gmfs:
             create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
                             R=oqparam.number_of_logic_tree_samples)
+        else:
+            dstore.create_dataset(
+                'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
         nE = 0
         num_ev_rup_site = []
         fileno = 0
