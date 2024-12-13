@@ -534,7 +534,7 @@ def share_job(user_level, calc_id, share):
                             content_type=JSON, status=403)
     else:
         raise AssertionError(
-            "share_job must return 'success' or 'error'!? Returned: {message}")
+            f"share_job must return 'success' or 'error'!? Returned: {message}")
 
 
 @csrf_exempt
