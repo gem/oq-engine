@@ -289,7 +289,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
     if cy and imt.period > 1.9:
         a44 = COEFFS_CY[imt]['a44cy']
         a45 = COEFFS_CY[imt]['a45cy']
-        adj = 0.1 # CY_SIM variable in USGS java code for ASK14
+        adj = 0.1 # CY_CSIM variable in USGS java code for ASK14
     # Regular basin term
     else:
         a44 = C['a44']
