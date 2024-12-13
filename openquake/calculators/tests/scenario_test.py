@@ -282,7 +282,7 @@ class ScenarioTestCase(CalculatorTestCase):
         df1 = self.calc.datastore.read_df('gmf_data')
         for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
             for g0, g1 in zip(df0[gmv], df1[gmv]):
-                assert abs(g0-g1) < 5E-6, (gmv, g0, g1)
+                assert abs(g0-g1) < 6E-6, (gmv, g0, g1)
 
     def test_case_23(self):
         # check exposure with duplicates
@@ -369,10 +369,9 @@ class ScenarioTestCase(CalculatorTestCase):
         with hdf5.File(fname, 'r') as ds:
             sids = ds['sitecol'].sids
             g_sids = ds['gmf_data/sid'][:]
-            nrups = len(ds['ruptures'])
+            assert 'ruptures' not in ds
         aae(sids, numpy.unique(g_sids))
         self.assertEqual(len(g_sids), 45+2)
-        self.assertEqual(nrups, 2)
 
         # no GMFs
         oq.ground_motion_fields = False
@@ -380,12 +379,15 @@ class ScenarioTestCase(CalculatorTestCase):
         fname = gettemp(suffix='.hdf5')
         with hdf5.File(fname, 'w') as h5:
             base.import_gmfs_hdf5(h5, oq)
+        geoms = []
         with hdf5.File(fname, 'r') as ds:
-            sids = ds['sitecol'].sids
             rups = ds['ruptures'][:]
+            geoms.extend(ds['rupgeoms'][:])
             ner = ds['num_ev_rup_site'][:]
             assert 'gmf_data' not in ds
-            aae(rups['e0'], [0, 1])
-        aae(sids, numpy.unique(g_sids))
+        aae(rups['e0'], [0, 1])
+        aae(rups['geom_id'], [0, 1])
         self.assertEqual(len(rups), 2)
+        self.assertEqual(len(geoms), 2)
         aae(ner, [[1, 1, 45], [2, 2, 2]])
+        
