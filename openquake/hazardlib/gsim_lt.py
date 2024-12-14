@@ -202,6 +202,18 @@ class GsimLogicTree(object):
                         nodes=ltbranches)])
         return cls('fake', [trt], ltnode=lt)
 
+    @classmethod
+    def read_dict(cls, fname, tectonic_region_types=['*']):
+        """
+        Read a file containing multiple logic trees and returns a dictionary
+        ID -> <GsimLogicTree> where the ID is usually a mosaic model
+        """
+        dic = {}
+        for ltnode in nrml.read(fname).nodes:
+            dic[ltnode['logicTreeID']] = cls(
+                fname, tectonic_region_types, ltnode)
+        return dic
+
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
         self.filename = fname
