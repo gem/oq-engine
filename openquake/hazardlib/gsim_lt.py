@@ -38,6 +38,8 @@ from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
+U32 = numpy.uint32
+
 
 @dataclass
 class GsimBranch:
@@ -588,8 +590,8 @@ class GsimLogicTree(object):
             rlzs = list(self)
         ddic = {}
         for i, trt in enumerate(self.values):
-            ddic[trt] = {gsim: [rlz.ordinal for rlz in rlzs
-                                if rlz.value[i] == gsim]
+            ddic[trt] = {gsim: U32([rlz.ordinal for rlz in rlzs
+                                    if rlz.value[i] == gsim])
                          for gsim in self.values[trt]}
         return ddic
 
