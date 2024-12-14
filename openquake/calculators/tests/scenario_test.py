@@ -349,7 +349,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
 
     def test_case_33(self):
-        # merge gmfs
+        # merge gmfs and events
         self.run_calc(case_33.__file__, 'job1.ini')
         ds1 = self.calc.datastore
         self.assertEqual(len(ds1['sitecol']), 45)
@@ -373,21 +373,23 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(sids, numpy.unique(g_sids))
         self.assertEqual(len(g_sids), 45+2)
 
-        # no GMFs
+        # no GMFs, merge ruptures and events
         oq.ground_motion_fields = False
-        oq.inputs['gmfs'] = [ds1.filename, ds2.filename]
+        fnames = [ds1.filename, ds2.filename]
         fname = gettemp(suffix='.hdf5')
         with hdf5.File(fname, 'w') as h5:
-            base.import_gmfs_hdf5(h5, oq)
+            base.import_ruptures_hdf5(h5, fnames)
         geoms = []
         with hdf5.File(fname, 'r') as ds:
+            evs = ds['events'][:]
             rups = ds['ruptures'][:]
             geoms.extend(ds['rupgeoms'][:])
-            ner = ds['num_ev_rup_site'][:]
-            assert 'gmf_data' not in ds
         aae(rups['e0'], [0, 1])
         aae(rups['geom_id'], [0, 1])
         self.assertEqual(len(rups), 2)
         self.assertEqual(len(geoms), 2)
-        aae(ner, [[1, 1, 45], [2, 2, 2]])
+        aae(evs['id'], [0, 1])
+        aae(evs['rup_id'], [0, 1])
+        aae(evs['rlz_id'], [0, 0])
+
         
