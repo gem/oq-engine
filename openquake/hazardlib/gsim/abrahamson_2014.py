@@ -533,8 +533,8 @@ class AbrahamsonEtAl2014(GMPE):
             # f6 = _get_top_of_rupture_depth_term(C, imt, ctx)
             # f7 = _get_faulting_style_term(C, ctx)
             # f10 = _get_basin_term(C, ctx, self.region, imt,
-            #                       usgs_bs=self.usgs_basin_scaling,
-            #                       cy=self.cybershake)
+            #                       self.usgs_basin_scaling,
+            #                       self.cybershake)
             # fre = _get_regional_term(self.region, C, imt, ctx.vs30, ctx.rrup)
 
             # get the mean value
@@ -544,8 +544,8 @@ class AbrahamsonEtAl2014(GMPE):
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
                        _get_basin_term(C, ctx, self.region, imt,
-                                       usgs_bs=self.usgs_basin_scaling,
-                                       cy=self.cybershake_basin_adj))
+                                       self.usgs_basin_scaling,
+                                       self.cybershake_basin_adj))
 
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)

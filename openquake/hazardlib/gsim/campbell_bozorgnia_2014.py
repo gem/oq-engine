@@ -499,8 +499,7 @@ class CampbellBozorgnia2014(GMPE):
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx, PGA(),
                                          self.usgs_basin_scaling,
-                                         self.cybershake_basin_adj,
-                                         a1100=None))
+                                         self.cybershake_basin_adj))
      
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
