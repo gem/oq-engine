@@ -87,6 +87,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
         dz1 = (ctx.z1pt0 / 1000.0) - bmodel
         f_ratio = C["f7"] / C["f6"]
         f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
+        
     return f_dz1 * usgs_baf
 
 
