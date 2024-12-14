@@ -79,7 +79,7 @@ class NSHMP2014(base.GMPE):
         # Add any GMM specific inputs from kwargs
         exp_kwargs = inspect.signature(cls.__init__).parameters.keys()
         # If any kwargs (which can include basin adjustments or basin
-        # regions) unilaterally add both z1pt0 and z2pt5 to req params)
+        # regions) unilaterally add both z1pt0 and z2pt5 to req. site params
         if kwargs:
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0', 'z2pt5'}
         for kwarg in kwargs:
