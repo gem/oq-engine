@@ -350,8 +350,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             station_df, sitecol.complete, rup, maxdist)
     else:
         station_data, station_sites = None, None
-
-    gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     maxw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('maxw = {:_d}'.format(round(maxw)))
@@ -385,7 +383,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
 
     # NB: for conditioned scenarios we are looping on a single trt
     toml_gsims = []
-    for trt_smr, proxies in gb.items():
+    for trt_smr, start, stop in dstore['rup_start_stop']:
+        proxies = allproxies[start:stop]
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
