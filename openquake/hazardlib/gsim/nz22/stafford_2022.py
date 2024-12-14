@@ -425,7 +425,7 @@ def get_mean_stddevs(
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
-    f_z1pt0 = _get_basin_term(C, ctx, "Stafford2022", imt, False)
+    f_z1pt0 = _get_basin_term(C, ctx, "Stafford2022", imt)
     # Get linear amplification term
     f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term
