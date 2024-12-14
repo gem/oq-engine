@@ -78,14 +78,15 @@ class NSHMP2014(base.GMPE):
         self.gsim = cls()  # underlying gsim
         # Add any GMM specific inputs from kwargs
         exp_kwargs = inspect.signature(cls.__init__).parameters.keys()
-        # If any kwargs (which can include basin adjustments or basin
-        # regions) unilaterally add both z1pt0 and z2pt5 to req. site params
-        if kwargs:
-            self.REQUIRES_SITES_PARAMETERS |= {'z1pt0', 'z2pt5'}
         for kwarg in kwargs:
             if kwarg not in exp_kwargs: # Prevent silently passing incorrect argument
                 raise ValueError(
                     f'{kwarg} is not a recognised argument for {cls.__name__}')
+            # Add z1pt0 if basin variant of BSSA14 (usually added 
+            # in BSSA14's init method but inherently omitted here)
+            if (self.gmpe_name == 'BooreEtAl2014' and kwarg == 'region'
+                and kwargs[kwarg] != "nobasin"):
+                self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
             setattr(self.gsim, kwarg, kwargs[kwarg])
             
 

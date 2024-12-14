@@ -298,7 +298,7 @@ class BooreEtAl2014(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, and rake.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
@@ -318,9 +318,6 @@ class BooreEtAl2014(GMPE):
 
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
-        elif self.usgs_basin_scaling:
-            raise ValueError('USGS basin scaling requires a '
-                             'basin region to be specified.')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -328,6 +325,10 @@ class BooreEtAl2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """ 
+        if self.usgs_basin_scaling and self.region == 'nobasin':
+            raise ValueError('USGS basin scaling requires a '
+                             'basin region to be specified.')
+
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
