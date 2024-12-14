@@ -410,11 +410,14 @@ def set_mags(oq, dstore):
     """
     Set the attribute oq.mags_by_trt
     """
+    rupture_file = oq.inputs.get('rupture_model', '')
     if 'source_mags' in dstore:
         # classical or event_based
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
+    elif rupture_file.endswith('.hdf5'):
+        pass
     elif 'ruptures' in dstore:
         # scenario
         trts = dstore['full_lt'].trts

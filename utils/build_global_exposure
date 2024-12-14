@@ -32,8 +32,7 @@ from openquake.qa_tests_data import mosaic
 U16 = numpy.uint16
 MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 F32 = numpy.float32
-dt = [('model', (numpy.bytes_, 3)), ('trt', numpy.bytes_, 61),
-      ('gsim', hdf5.vstr), ('weight', float)]
+dt = [('model', '<S3'), ('trt', '<61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
 def collect_exposures(grm_dir):
