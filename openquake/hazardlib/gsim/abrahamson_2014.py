@@ -523,8 +523,8 @@ class AbrahamsonEtAl2014(GMPE):
             # term calculation
             sa1180 = np.exp(_get_sa_at_1180(self.region,
                                             C, imt, ctx,
-                                            usgs_baf=self.usgs_basin_scaling,
-                                            cy=self.cybershake_basin_adj))
+                                            self.usgs_basin_scaling,
+                                            self.cybershake_basin_adj))
 
             # For debugging purposes
             # f1 = _get_basic_term(C, ctx)
