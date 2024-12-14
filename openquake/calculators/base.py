@@ -1372,8 +1372,58 @@ def _getset_attrs(oq):
                 attrs = {}
                 num_events.append(len(f['events']))
             num_sites.append(len(f['sitecol']))
-    return dict(effective_time=attrs.get('effective_time'), num_events=num_events,
-                num_sites=num_sites, imts=list(oq.imtls))
+    return dict(effective_time=attrs.get('effective_time'),
+                num_events=num_events, num_sites=num_sites, imts=list(oq.imtls))
+
+
+def import_sites_hdf5(dstore, fnames):
+    """
+    Import site collections by merging them.
+
+    :returns: a list of dictionaries local_sid->global_sid for each sitecol   
+    """
+    if len(fnames) == 1:
+        with hdf5.File(fnames[0], 'r') as f:
+            dstore['sitecol'] = f['sitecol']
+        convs = []
+    else:  # merge the sites
+        dstore['sitecol'], convs = site.merge_sitecols(fnames)
+    return convs
+
+
+def import_ruptures_hdf5(dstore, fnames):
+    """
+    Importing the ruptures and the events
+    """
+    size = sum(os.path.getsize(f) for f in fnames)
+    logging.warning('Importing %d files, %s',
+                    len(fnames), general.humansize(size))
+    rups = []
+    dstore.create_dataset(
+        'events', (0,), rupture.events_dt, maxshape=(None,), chunks=True,
+        compression='gzip')
+    dstore.create_dataset(
+        'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
+    offset = 0
+    E = 0
+    for fileno, fname in enumerate(fnames):
+        with hdf5.File(fname, 'r') as f:
+            events = f['events'][:]
+            events['id'] += E
+            events['rup_id'] += offset
+            E += len(events)
+            hdf5.extend(dstore['events'], events)
+            arr = f['rupgeoms'][:]
+            dstore.save_vlen('rupgeoms', list(arr))
+            rup = f['ruptures'][:]
+            rup['id'] += offset
+            rup['geom_id'] += offset
+            offset += len(arr)
+            rups.extend(rup)
+
+    ruptures = numpy.array(rups, dtype=rups[0].dtype)
+    ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
+    dstore.create_dataset('ruptures', data=ruptures, compression='gzip')
 
 
 def import_gmfs_hdf5(dstore, oqparam):
@@ -1407,63 +1457,37 @@ def import_gmfs_hdf5(dstore, oqparam):
             dstore['sitecol'] = f['sitecol']  # complete by construction
             f.copy('gmf_data', dstore.hdf5)
     else:  # merge the sites and the gmfs, tested in scenario/case_33
-        gmfs = oqparam.ground_motion_fields
-        dstore['sitecol'], convs = site.merge_sitecols(fnames, gmfs)
-        if gmfs:
-            create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
-                            R=oqparam.number_of_logic_tree_samples)
-        else:
-            dstore.create_dataset(
-                'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
-        nE = 0
+        convs = import_sites_hdf5(dstore, fnames)
+        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
+                        R=oqparam.number_of_logic_tree_samples)
         num_ev_rup_site = []
         fileno = 0
-        geom_offset = 0
+        nE = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
-                if 'full_lt' in f:
-                    dstore['{:_d}/full_lt'.format(fileno)] = f['full_lt']
-                # full_lt is missing in oq-risk-tests:test_merge_gmfs
                 fileno += 1
-                if gmfs:
-                    size = len(f['gmf_data/sid'])
-                    logging.info('Reading {:_d} rows from {}'.format(size, fname))
-                    sids = numpy.array(list(conv))
-                    for slc in general.gen_slices(0, size, 10_000_000):
-                        df = f.read_df('gmf_data', slc=slc)
-                        df = df[numpy.isin(df.sid, sids)]
-                        for sid, idx in conv.items():
-                            df.loc[df.sid == sid, 'sid'] = idx
-                        df['eid'] += nE  # add an offset to the event IDs
-                        for col in df.columns:
-                            hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
-                elif 'ruptures' in f:
-                    arr = f['rupgeoms'][:]
-                    dstore.save_vlen('rupgeoms', list(arr))
-                    rup = f['ruptures'][:]
-                    rup['geom_id'] += geom_offset
-                    geom_offset += len(arr)
-                    rups.extend(rup)
+                size = len(f['gmf_data/sid'])
+                logging.info('Reading {:_d} rows from {}'.format(size, fname))
+                sids = numpy.array(list(conv))
+                for slc in general.gen_slices(0, size, 10_000_000):
+                    df = f.read_df('gmf_data', slc=slc)
+                    df = df[numpy.isin(df.sid, sids)]
+                    for sid, idx in conv.items():
+                        df.loc[df.sid == sid, 'sid'] = idx
+                    df['eid'] += nE  # add an offset to the event IDs
+                    for col in df.columns:
+                        hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
             nE += ne
             num_ev_rup_site.append((nE, len(rups), len(conv)))
         oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
-    if rups:
-        ruptures = numpy.array(rups, dtype=rups[0].dtype)
-        ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
-        dstore.create_dataset('ruptures', data=ruptures, compression='gzip')
-        dstore.create_dataset('num_ev_rup_site', data=U32(num_ev_rup_site))
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
-    if 'gmf_data' in dstore:
-        rel = numpy.unique(dstore['gmf_data/eid'][:])
-        e = len(rel)
-        assert E >= e, (E, e)
-        events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
-    else:
-        e = E
-        events['id'] = numpy.arange(E)
+    rel = numpy.unique(dstore['gmf_data/eid'][:])
+    e = len(rel)
+    assert E >= e, (E, e)
+    events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
     logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
     n = oqparam.number_of_logic_tree_samples
