@@ -298,7 +298,7 @@ class BooreEtAl2014(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
