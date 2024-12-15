@@ -39,7 +39,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
-
+TWO24 = 2**24
 
 @dataclass
 class GsimBranch:
@@ -572,7 +572,7 @@ class GsimLogicTree(object):
             rlzs.append(rlz)
         return rlzs
 
-    def get_rlzs_by_gsim_trt(self, samples=0, seed=42,
+    def get_rlzs_by_gsim_dic(self, samples=0, seed=42,
                              sampling_method='early_weights'):
         """
         :param samples:
@@ -582,7 +582,7 @@ class GsimLogicTree(object):
         :param sampling_method:
             sampling method, by default 'early_weights'
         :returns:
-            dictionary trt -> gsim -> all_rlz_ordinals for each gsim in the trt
+            dictionary trt_smr -> gsim -> rlz_ordinals
         """
         if samples:
             rlzs = self.sample(samples, seed, sampling_method)
@@ -590,9 +590,9 @@ class GsimLogicTree(object):
             rlzs = list(self)
         ddic = {}
         for i, trt in enumerate(self.values):
-            ddic[trt] = {gsim: U32([rlz.ordinal for rlz in rlzs
-                                    if rlz.value[i] == gsim])
-                         for gsim in self.values[trt]}
+            ddic[i*TWO24] = {gsim: U32([rlz.ordinal for rlz in rlzs
+                                        if rlz.value[i] == gsim])
+                             for gsim in self.values[trt]}
         return ddic
 
     def __iter__(self):

@@ -648,6 +648,7 @@ class EventBasedCalculator(base.HazardCalculator):
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = read_gsim_lt(oq)
+        trts = list(gsim_lt.values)
         if (str(gsim_lt.branches[0].gsim) == '[FromFile]'
                 and 'gmfs' not in oq.inputs):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
@@ -662,7 +663,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 raise InvalidFile(
                     '%s for a scenario calculation must contain a single '
                     'branchset, found %d!' % (oq.inputs['job_ini'], bsets))
-            [(trt, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_trt().items()
+            [(trt_smr, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_dic().items()
+            trt = trts[trt_smr // TWO24]
             rup = readinput.get_rupture(oq)
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
