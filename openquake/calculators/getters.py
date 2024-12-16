@@ -359,7 +359,7 @@ def get_rupture_getters(dstore, ct=0):
     nr = len(dstore['ruptures'])
     if nr == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    maxweight = numpy.ceil(nr / (ct / 2 or 1))
+    maxweight = numpy.ceil(nr / (ct or 1))
     rgetters = []
     for trt_smr, start, stop in dstore['trt_smr_start_stop']:
         rg = RuptureGetter(dstore.filename, trt_smr,

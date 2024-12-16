@@ -308,8 +308,7 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
-    for block in general.block_splitter(
-            proxies, 20_000, event_based.rup_weight):
+    for block in general.block_splitter(proxies, 20_000):
         for dic in event_based.event_based(
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):

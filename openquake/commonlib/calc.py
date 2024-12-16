@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import math
 import logging
 import operator
 import functools
@@ -168,11 +167,6 @@ def make_uhs(hmap, info):
     return uhs
 
 
-def rup_weight(rup):
-    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    return math.ceil((rup['nsites'] or 1) / 100)
-
-
 class RuptureImporter(object):
     """
     Import an array of ruptures correctly, i.e. by populating the datasets
@@ -201,7 +195,6 @@ class RuptureImporter(object):
         :returns: (number of imported ruptures, number of imported events)
         """
         oq = self.oqparam
-        self.datastore['rup_weight'] = rup_array['nsites'].sum() / 100. or 1.
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]

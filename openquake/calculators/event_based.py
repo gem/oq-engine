@@ -41,10 +41,10 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, rup_weight)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import get_rupture_getters, sig_eps_dt, RuptureGetter
+from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
@@ -251,7 +251,7 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
         dset = dstore['rupgeoms']
         for proxy in proxies:
             proxy.geom = dset[proxy['geom_id']]
-    for block in block_splitter(proxies, 20_000, rup_weight):
+    for block in block_splitter(proxies, 20_000):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
@@ -343,13 +343,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
 
     # NB: for conditioned scenarios we are looping on a single trt
     toml_gsims = []
-    maxw = dstore['rup_weight'][()] / (oq.concurrent_tasks or 1)
-    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
-        trt = full_lt.trts[trt_smr // TWO24]
+    for rg in get_rupture_getters(dstore, oq.concurrent_tasks):
         extra = sitecol.array.dtype.names
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
-        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(rg.trt_smr)
+        cmaker = ContextMaker(rg.trt, rlzs_by_gsim, oq, extraparams=extra)
+        cmaker.min_mag = getdefault(oq.minimum_magnitude, rg.trt)
         for gsim in rlzs_by_gsim:
             toml_gsims.append(gsim._toml)
         if station_data is not None:
@@ -357,11 +355,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                 logging.error('Conditioned scenarios are not meant to be run'
                               ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
-        # producing slightly less than concurrent_tasks thanks to the 1.02
-        rg = RuptureGetter(dstore.filename, trt_smr, trt, slice(start, stop))
-        for block in block_splitter(rg.get_proxies(), maxw * 1.02, rup_weight):
-            args = block, cmaker, sitecol, (station_data, station_sites), dstore
-            smap.submit(args)
+        args = rg.get_proxies(), cmaker, sitecol, (station_data, station_sites), dstore
+        smap.submit(args)
     dstore['gsims'] = numpy.array(toml_gsims)
     return smap
 
