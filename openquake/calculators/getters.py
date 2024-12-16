@@ -368,9 +368,8 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
             proxies, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
-        rbg = full_lt.get_rlzs_by_gsim(trt_smr)
         rg = RuptureGetter(block, dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), rbg)
+                           full_lt.trt_by(trt_smr))
         rgetters.append(rg)
     return rgetters
 
@@ -435,16 +434,13 @@ class RuptureGetter(object):
         source group index
     :param trt:
         tectonic region type string
-    :param rlzs_by_gsim:
-        dictionary gsim -> rlzs for the group
     """
-    def __init__(self, proxies, filename, trt_smr, trt, rlzs_by_gsim):
+    def __init__(self, proxies, filename, trt_smr, trt):
         self.proxies = proxies
         self.weight = sum(proxy['n_occ'] for proxy in proxies)
         self.filename = filename
         self.trt_smr = trt_smr
         self.trt = trt
-        self.rlzs_by_gsim = rlzs_by_gsim
         self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
 
     @property
@@ -482,8 +478,7 @@ class RuptureGetter(object):
                 proxies.append(proxy)
         rgetters = []
         for block in general.block_splitter(proxies, maxw, weight):
-            rg = RuptureGetter(block, self.filename, self.trt_smr, self.trt,
-                               self.rlzs_by_gsim)
+            rg = RuptureGetter(block, self.filename, self.trt_smr, self.trt)
             rgetters.append(rg)
         return rgetters
 

@@ -175,6 +175,7 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        self.full_lt = dstore['full_lt']
         self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
@@ -232,8 +233,9 @@ class RuptureImporter(object):
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
         iterargs = []
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
         for i, rg in enumerate(rgetters):
-            iterargs.append((rg.proxies, rg.rlzs_by_gsim, i))
+            iterargs.append((rg.proxies, rlzs_by_gsim[rg.trt_smr], i))
         if len(events) < 1E5:
             acc = general.AccumDict()  # ordinal -> eid_rlz
             for args in iterargs:
