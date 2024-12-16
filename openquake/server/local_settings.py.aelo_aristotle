@@ -25,6 +25,7 @@ EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
 
 # NOTE: the following variables are needed to send pasword reset emails
 #       using the createnormaluser Django command.
