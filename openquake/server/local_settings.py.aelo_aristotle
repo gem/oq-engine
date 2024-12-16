@@ -27,11 +27,12 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 
 # NOTE: the following variables are needed to send pasword reset emails
-#       using the createnormaluser Django command. They should be the same
-#       specified in /etc/nginx/conf.d/webui.conf
+#       using the createnormaluser Django command.
+#       The SERVER_NAME should be the same specified
+#       in /etc/nginx/conf.d/webui.conf
 SERVER_NAME = <localhost>
-SERVER_PORT = <8800>
 USE_HTTPS = <True|False>
+SERVER_PORT = 443 if USE_HTTPS else 80
 
 # Set to True if using NGINX or some other reverse proxy
 # Externally visible url and port number is different from Django visible
@@ -45,4 +46,6 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-# TIME_ZONE =
+TIME_ZONE = 'UTC'
+
+DEBUG = False
