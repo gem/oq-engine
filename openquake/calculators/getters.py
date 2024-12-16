@@ -361,14 +361,12 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
         rup_array = rup_array[numpy.isin(rup_array['id'], rupids)]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    proxies = [RuptureProxy(rec) for rec in rup_array]
-    maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
+    maxweight = len(rup_array) / (ct / 2 or 1)
     rgetters = []
     for block in general.block_splitter(
-            proxies, maxweight, operator.itemgetter('n_occ'),
-            key=operator.itemgetter('trt_smr')):
+            rup_array, maxweight, key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
-        rg = RuptureGetter(block, dstore.filename, trt_smr,
+        rg = RuptureGetter(numpy.array(block), dstore.filename, trt_smr,
                            full_lt.trt_by(trt_smr))
         rgetters.append(rg)
     return rgetters
@@ -426,8 +424,8 @@ def get_rupture_from_dstore(dstore, rup_id=0):
 # this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
-    :param proxies:
-        a list of RuptureProxies
+    :param array:
+        an array of rupture records
     :param filename:
         path to the HDF5 file containing a 'rupgeoms' dataset
     :param trt_smr:
@@ -435,13 +433,12 @@ class RuptureGetter(object):
     :param trt:
         tectonic region type string
     """
-    def __init__(self, proxies, filename, trt_smr, trt):
-        self.proxies = proxies
-        self.weight = sum(proxy['n_occ'] for proxy in proxies)
+    def __init__(self, array, filename, trt_smr, trt):
+        self.array = array
         self.filename = filename
         self.trt_smr = trt_smr
         self.trt = trt
-        self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
+        self.num_events = array['n_occ'].sum()
 
     @property
     def num_ruptures(self):
@@ -449,7 +446,7 @@ class RuptureGetter(object):
 
     @property
     def seeds(self):
-        return [p['seed'] for p in self.proxies]
+        return self.array['seed']
 
     def get_proxies(self, min_mag=0):
         """
@@ -458,7 +455,8 @@ class RuptureGetter(object):
         proxies = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for proxy in self.proxies:
+            for rec in self.array:
+                proxy = RuptureProxy(rec)
                 if proxy['mag'] < min_mag:
                     # discard small magnitudes
                     continue
@@ -471,14 +469,16 @@ class RuptureGetter(object):
         """
         :returns: RuptureProxies with weight < maxw
         """
-        proxies = []
-        for proxy in self.proxies:
+        recs = []
+        for rec in self.array:
+            proxy = RuptureProxy(rec)
             sids = srcfilter.close_sids(proxy.rec, self.trt)
             if len(sids):
-                proxies.append(proxy)
+                recs.append(rec)
         rgetters = []
-        for block in general.block_splitter(proxies, maxw, weight):
-            rg = RuptureGetter(block, self.filename, self.trt_smr, self.trt)
+        for block in general.block_splitter(rec, maxw):
+            rg = RuptureGetter(numpy.array(block), self.filename,
+                               self.trt_smr, self.trt)
             rgetters.append(rg)
         return rgetters
 
@@ -486,6 +486,5 @@ class RuptureGetter(object):
         return len(self.proxies)
 
     def __repr__(self):
-        wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
-        return '<%s trt_smr=%d, %d rupture(s)%s>' % (
-            self.__class__.__name__, self.trt_smr, len(self), wei)
+        return '<%s trt_smr=%d, %d rupture(s)>' % (
+            self.__class__.__name__, self.trt_smr, len(self))
