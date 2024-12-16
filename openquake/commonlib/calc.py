@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import math
 import logging
 import operator
 import functools
@@ -167,6 +168,11 @@ def make_uhs(hmap, info):
     return uhs
 
 
+def rup_weight(rup):
+    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
+    return math.ceil((rup['nsites'] or 1) / 100)
+
+
 class RuptureImporter(object):
     """
     Import an array of ruptures correctly, i.e. by populating the datasets
@@ -195,6 +201,7 @@ class RuptureImporter(object):
         :returns: (number of imported ruptures, number of imported events)
         """
         oq = self.oqparam
+        self.datastore['rup_weight'] = rup_array['nsites'].sum() / 100. or 1.
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
@@ -205,8 +212,9 @@ class RuptureImporter(object):
         n_occ = rup_array['n_occ']        
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
-        self.datastore['trt_smr_start_stop'] = performance.idx_start_stop(
-            rup_array['trt_smr'])
+        self.datastore.create_dset(
+            'trt_smr_start_stop',
+            performance.idx_start_stop(rup_array['trt_smr']))
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)

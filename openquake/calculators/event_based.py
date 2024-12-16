@@ -17,17 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import math
 import time
 import os.path
 import logging
-import operator
 import numpy
 import pandas
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
-from openquake.baselib.general import (
-    AccumDict, humansize, groupby, block_splitter)
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -44,10 +41,10 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, rup_weight)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
+from openquake.calculators.getters import get_rupture_getters, sig_eps_dt, RuptureGetter
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
@@ -64,11 +61,6 @@ TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
-
-
-def rup_weight(rup):
-    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    return math.ceil((rup['nsites'] or 1) / 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -306,14 +298,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             raise ValueError('The vs30 is NaN, missing site model '
                              'or site parameter')
     set_mags(oq, dstore)
-    rups = dstore['ruptures'][:]
-    logging.info('Reading {:_d} ruptures'.format(len(rups)))
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
-                 rups['nsites'].mean(), rups['nsites'].max())
-    allproxies = [RuptureProxy(rec) for rec in rups]
+    nrups = len(dstore['ruptures'])
+    logging.info('Reading {:_d} ruptures'.format(nrups))
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
-        proxy = allproxies[0]
+        proxy = RuptureProxy(dstore['ruptures'][0])
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rup = proxy.to_ebr(trt).rupture
         station_df = dstore.read_df('station_data', 'site_id')
@@ -324,10 +313,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     else:
         station_data, station_sites = None, None
 
-    gb = groupby(allproxies, operator.itemgetter('trt_smr'))
-    maxw = sum(rup_weight(p) for p in allproxies) / (
-        oq.concurrent_tasks or 1)
-    logging.info('maxw = {:_d}'.format(round(maxw)))
     if station_data is not None:
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
@@ -358,7 +343,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
 
     # NB: for conditioned scenarios we are looping on a single trt
     toml_gsims = []
-    for trt_smr, proxies in gb.items():
+    maxw = dstore['rup_weight'][()] / (oq.concurrent_tasks or 1)
+    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
@@ -372,7 +358,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                               ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
         # producing slightly less than concurrent_tasks thanks to the 1.02
-        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
+        rg = RuptureGetter(dstore.filename, trt_smr, trt, slice(start, stop))
+        for block in block_splitter(rg.get_proxies(), maxw * 1.02, rup_weight):
             args = block, cmaker, sitecol, (station_data, station_sites), dstore
             smap.submit(args)
     dstore['gsims'] = numpy.array(toml_gsims)
