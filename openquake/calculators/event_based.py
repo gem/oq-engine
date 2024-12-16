@@ -20,6 +20,7 @@ import io
 import time
 import os.path
 import logging
+import operator
 import numpy
 import pandas
 from shapely import geometry
@@ -234,7 +235,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     return dic
 
 
-def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
+def event_based(rgetters, cmaker, sitecol, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -245,15 +246,17 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
+    proxies = []
     with dstore, rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
         dset = dstore['rupgeoms']
-        for proxy in proxies:
-            proxy.geom = dset[proxy['geom_id']]
-    for block in block_splitter(proxies, 20_000):
-        yield _event_based(block, cmaker, stations, srcfilter,
-                           monitor.shared, fmon, cmon, umon, mmon)
+        for rgetter in rgetters:
+            for proxy in rgetter.get_proxies():
+                proxy.geom = dset[proxy['geom_id']]
+                proxies.append(proxy)
+    return _event_based(proxies, cmaker, stations, srcfilter,
+                        monitor.shared, fmon, cmon, umon, mmon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -343,7 +346,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
 
     # NB: for conditioned scenarios we are looping on a single trt
     toml_gsims = []
-    for rg in get_rupture_getters(dstore, oq.concurrent_tasks):
+    rgetters = get_rupture_getters(dstore)
+    max_weight = sum(rg.weight for rg in rgetters) / (oq.concurrent_tasks or 1)
+    for block in block_splitter(rgetters, max_weight, key=operator.attrgetter('trt_smr'),
+                                weight=operator.attrgetter('weight')):
+        rg = block[0]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(rg.trt_smr)
         cmaker = ContextMaker(rg.trt, rlzs_by_gsim, oq, extraparams=extra)
@@ -355,7 +362,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                 logging.error('Conditioned scenarios are not meant to be run'
                               ' on a cluster')
             smap.share(mea=mea, tau=tau, phi=phi)
-        args = rg.get_proxies(), cmaker, sitecol, (station_data, station_sites), dstore
+        args = block, cmaker, sitecol, (station_data, station_sites), dstore
         smap.submit(args)
     dstore['gsims'] = numpy.array(toml_gsims)
     return smap

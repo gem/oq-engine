@@ -211,8 +211,7 @@ class RuptureImporter(object):
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
-        rgetters = get_rupture_getters(  # fast
-            self.datastore, self.oqparam.concurrent_tasks)
+        rgetters = get_rupture_getters(self.datastore)
         self._save_events(rup_array, rgetters)
         nr, ne = len(rup_array), rup_array['n_occ'].sum()
         if oq.investigation_time:

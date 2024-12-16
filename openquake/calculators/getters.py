@@ -349,7 +349,7 @@ class MapGetter(object):
         return means
 
 
-def get_rupture_getters(dstore, ct=0):
+def get_rupture_getters(dstore):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
@@ -359,12 +359,11 @@ def get_rupture_getters(dstore, ct=0):
     nr = len(dstore['ruptures'])
     if nr == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    maxweight = numpy.ceil(nr / (ct or 1))
     rgetters = []
-    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
+    for trt_smr, start, stop in dstore['trt_smr_start_stop'][:]:
         rg = RuptureGetter(dstore.filename, trt_smr,
                            full_lt.trt_by(trt_smr), slice(start, stop))
-        rgetters.extend(rg.split(maxweight))
+        rgetters.extend(rg.split())
     return rgetters
 
 
@@ -429,6 +428,12 @@ class RuptureGetter(object):
         self.trt_smr = trt_smr
         self.trt = trt
         self.slc = slc
+        with datastore.read(filename) as f:
+            if 'ruptures' in f:
+                rups = f['ruptures'][slc]
+                self.weight = rups['nsites'].sum() / 100. + len(rups)
+            else:
+                self.weight = 0.
 
     def get_proxies(self, min_mag=0):
         """
@@ -446,15 +451,15 @@ class RuptureGetter(object):
                 proxies.append(proxy)
         return proxies
 
-    def split(self, maxw):
+    def split(self):
         rgetters = []
-        for slc in general.gen_slices(self.slc.start, self.slc.stop, maxw):
+        for slc in general.gen_slices(self.slc.start, self.slc.stop, 1000):
             rg = RuptureGetter(self.filename, self.trt_smr, self.trt, slc)
             rgetters.append(rg)
         return rgetters
 
     def __len__(self):
-        return len(self.proxies)
+        return self.slc.stop - self.slc.start
 
     def __repr__(self):
         return '<%s trt_smr=%d, %d rupture(s)>' % (
