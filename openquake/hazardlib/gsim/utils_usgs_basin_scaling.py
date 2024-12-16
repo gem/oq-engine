@@ -68,7 +68,10 @@ def _get_usgs_basin_scaling(z, basin_upper, basin_lower, period):
     z_scale = np.zeros(len(z))
     if period <= 0.5:
         return z_scale # Only apply basin scaling to T > 0.5 s (effectively
-                       # turning off basin term for short-period ground-motions)
+                       # turning off basin amplfication term for short-period
+                       # ground-motions - zeros returned for each sites basin
+                       # adjustment if the checkBasin function returns False
+                       # in USGS java code)
     else:
         # First constrain z1pt0 or z2pt5 to basin limits
         z_constr = np.clip(z, basin_upper, basin_lower)
