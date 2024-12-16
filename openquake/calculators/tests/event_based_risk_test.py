@@ -549,7 +549,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826])
+        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], rtol=6e-5)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):

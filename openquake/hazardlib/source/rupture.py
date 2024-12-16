@@ -754,6 +754,10 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
+    @property
+    def mag(self):
+        return self.rupture.mag
+
     def get_eids(self):
         """
         :returns: an array of event IDs
