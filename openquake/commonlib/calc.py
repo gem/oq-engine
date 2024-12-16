@@ -235,7 +235,7 @@ class RuptureImporter(object):
         iterargs = []
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
         for i, rg in enumerate(rgetters):
-            iterargs.append((rg.proxies, rlzs_by_gsim[rg.trt_smr], i))
+            iterargs.append((rg.get_proxies(), rlzs_by_gsim[rg.trt_smr], i))
         if len(events) < 1E5:
             acc = general.AccumDict()  # ordinal -> eid_rlz
             for args in iterargs:
