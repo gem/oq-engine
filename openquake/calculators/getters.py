@@ -401,8 +401,8 @@ def multiline(array3RC):
 
 def get_ebrupture(dstore, rup_id):  # used in show rupture
     """
-    This is EXTREMELY inefficient, so it must be used only when you are
-    interested in a single rupture.
+    This is EXTREMELY inefficient, since it reads all ruptures.
+    NB: it assumes rup_is is unique
     """
     rups = dstore['ruptures'][:]  # read everything in memory
     rupgeoms = dstore['rupgeoms']  # do not read everything in memory
@@ -414,11 +414,6 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     trt = trts[rec['trt_smr'] // TWO24]
     geom = rupgeoms[rec['geom_id']]
     return get_ebr(rec, geom, trt)
-
-
-def get_rupture_from_dstore(dstore, rup_id=0):
-    ebr = get_ebrupture(dstore, rup_id)
-    return ebr.rupture
 
 
 # this is never called directly; get_rupture_getters is used instead
