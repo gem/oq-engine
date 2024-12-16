@@ -1507,12 +1507,11 @@ def extract_ruptures(dstore, what):
         if 'threshold' in qdict:
             [threshold] = qdict['threshold']
             rup_ids = get_relevant_rup_ids(dstore, threshold)
+            ebrups = [ebr for ebr in getters.get_ebruptures(dstore)
+                      if ebr.id in rup_ids and ebr.mag >= min_mag]
         else:
-            rup_ids = None
-        ebrups = []
-        for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
-            ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
-                          for proxy in rgetter.get_proxies(min_mag))
+            ebrups = [ebr for ebr in getters.get_ebruptures(dstore)
+                      if ebr.mag >= min_mag]
     if 'slice' in qdict:
         s0, s1 = qdict['slice']
         slc = slice(s0, s1)

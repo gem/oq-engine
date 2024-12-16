@@ -22,7 +22,7 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
-from openquake.calculators.getters import get_rupture_from_dstore
+from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture, adjust_limits)
 
@@ -84,7 +84,7 @@ def main(calc_id: int = -1, site_model=False,
         print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             # assuming there is only 1 rupture, so rup_id=0
-            rup = get_rupture_from_dstore(dstore, rup_id=0)
+            rup = get_ebrupture(dstore, rup_id=0).rupture
             ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
