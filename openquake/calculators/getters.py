@@ -453,7 +453,7 @@ class RuptureGetter(object):
 
     def split(self):
         rgetters = []
-        for slc in general.gen_slices(self.slc.start, self.slc.stop, 1000):
+        for slc in general.gen_slices(self.slc.start, self.slc.stop, 500):
             rg = RuptureGetter(self.filename, self.trt_smr, self.trt, slc)
             rgetters.append(rg)
         return rgetters
