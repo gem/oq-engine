@@ -434,10 +434,6 @@ class RuptureGetter(object):
         self.trt_smr = trt_smr
         self.trt = trt
 
-    @property
-    def seeds(self):
-        return self.array['seed']
-
     def get_proxies(self, min_mag=0):
         """
         :returns: a list of RuptureProxies
