@@ -433,11 +433,6 @@ class RuptureGetter(object):
         self.filename = filename
         self.trt_smr = trt_smr
         self.trt = trt
-        self.num_events = array['n_occ'].sum()
-
-    @property
-    def num_ruptures(self):
-        return len(self.proxies)
 
     @property
     def seeds(self):
