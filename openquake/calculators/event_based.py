@@ -476,6 +476,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
+
     def counting_ruptures(self):
         """
         Sets src.num_ruptures and src.offset
