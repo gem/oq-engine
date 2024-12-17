@@ -47,7 +47,7 @@ from openquake.commonlib.calc import (
     SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
+from openquake.calculators.getters import sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
@@ -350,6 +350,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             station_df, sitecol.complete, rup, maxdist)
     else:
         station_data, station_sites = None, None
+
     maxw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('maxw = {:_d}'.format(round(maxw)))
@@ -383,7 +384,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
 
     # NB: for conditioned scenarios we are looping on a single trt
     toml_gsims = []
-    for trt_smr, start, stop in dstore['rup_start_stop']:
+    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
         proxies = allproxies[start:stop]
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
@@ -603,8 +604,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info(eff_ruptures)
         imp = RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            imp.import_rups_events(
-                self.datastore.getitem('ruptures')[()], get_rupture_getters)
+            imp.import_rups_events(self.datastore.getitem('ruptures')[()])
 
     def agg_dicts(self, acc, result):
         """
@@ -707,7 +707,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info({})  # store weights
         self.save_params()
         imp = RuptureImporter(self.datastore)
-        imp.import_rups_events(rup_array, get_rupture_getters)
+        imp.import_rups_events(rup_array)
 
     def execute(self):
         oq = self.oqparam
