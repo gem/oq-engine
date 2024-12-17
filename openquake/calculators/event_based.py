@@ -45,7 +45,7 @@ from openquake.commonlib.calc import (
     SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import get_rupture_getters, sig_eps_dt
+from openquake.calculators.getters import sig_eps_dt
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
@@ -572,8 +572,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info(eff_ruptures)
         imp = RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            imp.import_rups_events(
-                self.datastore.getitem('ruptures')[()], get_rupture_getters)
+            imp.import_rups_events(self.datastore.getitem('ruptures')[()])
 
     def agg_dicts(self, acc, result):
         """
@@ -676,7 +675,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info({})  # store weights
         self.save_params()
         imp = RuptureImporter(self.datastore)
-        imp.import_rups_events(rup_array, get_rupture_getters)
+        imp.import_rups_events(rup_array)
 
     def execute(self):
         oq = self.oqparam
