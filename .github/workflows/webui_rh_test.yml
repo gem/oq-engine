@@ -67,29 +67,29 @@ jobs:
         ## Standalone apps
         echo "Downloading standalone apps"
         for app in oq-platform-standalone oq-platform-ipt oq-platform-taxtweb oq-platform-taxonomy; do
-        # do not fail on exit code 2 if the branch
-        # does not exist in the app repository
-        set +e
-        git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
-        EXIT_CODE=$?
-        # set again to fail on exit code not 0
-        set -e
-        if [[ $EXIT_CODE == '0' ]]; then
-           echo "Git branch '$BRANCH' exists in the remote repository"
-           TOOLS_BRANCH=$BRANCH
-        elif [[ $EXIT_CODE == '2' ]]; then
-           echo "Git branch '$BRANCH' does not exist in the remote repository"
-           TOOLS_BRANCH=master
-        fi
-        echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
-        git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
-        eval '$mypython -m pip install -e ./${app}'
-        if [ "$app" = "oq-platform-taxtweb" ]; then
-            export PYBUILD_NAME="oq-taxonomy"
-            eval '$mypython -m pip install -e ./${app}'
-            unset PYBUILD_NAME
-        fi
-        e
+         # do not fail on exit code 2 if the branch
+         # does not exist in the app repository
+         set +e
+         git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
+         EXIT_CODE=$?
+         # set again to fail on exit code not 0
+         set -e
+         if [[ $EXIT_CODE == '0' ]]; then
+            echo "Git branch '$BRANCH' exists in the remote repository"
+            TOOLS_BRANCH=$BRANCH
+         elif [[ $EXIT_CODE == '2' ]]; then
+            echo "Git branch '$BRANCH' does not exist in the remote repository"
+            TOOLS_BRANCH=master
+         fi
+         echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
+         git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
+         eval '$mypython -m pip install -e ./${app}'
+         if [ "$app" = "oq-platform-taxtweb" ]; then
+             export PYBUILD_NAME="oq-taxonomy"
+             eval '$mypython -m pip install -e ./${app}'
+             unset PYBUILD_NAME
+         fi
+        done
         deactivate
     - name: Test WebUI and run https calculation
       run: |
