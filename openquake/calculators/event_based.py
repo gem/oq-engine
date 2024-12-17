@@ -21,13 +21,11 @@ import math
 import time
 import os.path
 import logging
-import operator
 import numpy
 import pandas
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
-from openquake.baselib.general import (
-    AccumDict, humansize, groupby, block_splitter)
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -44,7 +42,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, get_proxies)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import sig_eps_dt
@@ -68,7 +66,10 @@ rup_dt = numpy.dtype(
 
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    return math.ceil((rup['nsites'] or 1) / 100)
+    if isinstance(rup, numpy.ndarray):
+        nsites = numpy.clip(rup['nsites'], 1.)
+        return numpy.ceil(nsites / 100.)
+    return math.ceil((rup['nsites'] or 1) / 100.)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -292,30 +293,46 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def starmap_from_rups_hdf5(oq, sitecol, dstore):
+def get_nsites(rups, slc, trt, srcfilter):    
+    return {slc: srcfilter.get_nsites(rups, trt)}
+
+
+def get_rups_dic(ruptures_hdf5, srcfilter, gsim_lt_dic):
+    dic = {}
+    smap = parallel.Starmap(get_nsites)
+    with hdf5.File(ruptures_hdf5) as f:
+        for trt_smr, start, stop in f['trt_smr_start_stop']:
+            slc = slice(start, stop)
+            rups = f['ruptures'][slc]
+            model = rups[0]['model']
+            trt = gsim_lt_dic[model].trts[trt_smr // TWO24]
+            dic[model, trt_smr, trt] = rups
+            smap.submit((rups, trt, slc, srcfilter))
+    for key, nsites in smap.reduce().items():
+        dic[key]['nsites'] = nsites
+    return dic
+
+
+def starmap_from_rups_hdf5(oq, srcfilter, dstore):
+    """
+    :returns: a Starmap instance sending event_based tasks
+    """
+    ruptures_hdf5 = oq.inputs['rupture_model']
+    gsim_lt_dic = logictree.GsimLogicTree.read_dict(ruptures_hdf5)
+    rups_dic = get_rups_dic(ruptures_hdf5, srcfilter, gsim_lt_dic)
+    totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
+    maxw = totw / (oq.concurrent_tasks or 1)
+    extra = srcfilter.sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    with hdf5.File(oq.inputs['rupture_model']) as rm:
-        models = rm['models'][:]
-        rup_stops = rm['num_ev_rup_site'][:, 1]
-        rup_start = 0
-        for no, (model, rup_stop) in enumerate(zip(models, rup_stops)):
-            full_lt = rm[f'{no}/full_lt']
-            rups = rm['ruptures'][rup_start: rup_stop]
-            allproxies = [RuptureProxy(rec) for rec in rups]
-            rup_start = rup_stop
-            gb = groupby(allproxies, operator.itemgetter('trt_smr'))
-            maxw = sum(rup_weight(p) for p in allproxies) / (
-                oq.concurrent_tasks or 1)
-            for trt_smr, proxies in gb.items():
-                trt = full_lt.trts[trt_smr // TWO24]
-                extra = sitecol.array.dtype.names
-                rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
-                cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
-                cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-                for block in block_splitter(proxies, maxw * 1.02, rup_weight):
-                    args = block, cmaker, sitecol, (None, None), dstore
-                    smap.submit(args)
+    for (model, smr_trt, trt), rups in rups_dic.items():
+        proxies = get_proxies(ruptures_hdf5, rups)
+        rlzs_by_gsim = gsim_lt_dic[model].get_rlzs_by_gsim(smr_trt)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
+        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
+            args = block, cmaker, srcfilter.sitecol, (None, None), dstore
+            smap.submit(args)
     return smap
 
 
@@ -762,7 +779,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # event_based in parallel
         if rupture_hdf5:
-            smap = starmap_from_rups_hdf5(oq, self.sitecol, dstore)
+            smap = starmap_from_rups_hdf5(oq, self.srcfilter, dstore)
         else:
             smap = starmap_from_rups(
                 event_based, oq, self.full_lt, self.sitecol, dstore)
