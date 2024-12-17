@@ -434,6 +434,12 @@ class SourceFilter(object):
                 return self.sitecol.sids
             return self.sitecol.within_bbox(bbox)
 
+    def get_nsites(self, rups, trt):
+        """
+        :returns: array of float32 with the number of close sites per rupture
+        """
+        return U32([len(self.closed_sids(rup, trt)) for rup in rups])
+
     def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)

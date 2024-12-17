@@ -23,9 +23,8 @@ import numpy
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
-from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, get_ebr)
-from openquake.commonlib import datastore
+from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
+from openquake.commonlib.calc import get_proxies
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -434,17 +433,7 @@ class RuptureGetter(object):
         """
         :returns: a list of RuptureProxies
         """
-        proxies = []
-        with datastore.read(self.filename) as dstore:
-            rupgeoms = dstore['rupgeoms']
-            for rec in dstore['ruptures'][self.slc]:
-                proxy = RuptureProxy(rec)
-                if proxy['mag'] < min_mag:
-                    # discard small magnitudes
-                    continue
-                proxy.geom = rupgeoms[proxy['geom_id']]
-                proxies.append(proxy)
-        return proxies
+        return get_proxies(self.filename, self.slc, min_mag)
 
     def split(self, maxw):
         rgetters = []

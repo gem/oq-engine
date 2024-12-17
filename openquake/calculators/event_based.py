@@ -573,7 +573,9 @@ class EventBasedCalculator(base.HazardCalculator):
         imp = RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(
-                self.datastore.getitem('ruptures')[()], get_rupture_getters)
+                self.datastore.getitem('ruptures')[()],
+                get_rupture_getters,
+                srcfilter if oq.hazard_calculation_id else None)
 
     def agg_dicts(self, acc, result):
         """
