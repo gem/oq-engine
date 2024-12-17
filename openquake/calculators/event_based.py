@@ -318,7 +318,7 @@ def starmap_from_rups_hdf5(oq, srcfilter, dstore):
     :returns: a Starmap instance sending event_based tasks
     """
     ruptures_hdf5 = oq.inputs['rupture_model']
-    gsim_lt_dic = logictree.GsimLogicTree.read_dict(ruptures_hdf5)
+    gsim_lt_dic = logictree.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
     rups_dic = get_rups_dic(ruptures_hdf5, srcfilter, gsim_lt_dic)
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
