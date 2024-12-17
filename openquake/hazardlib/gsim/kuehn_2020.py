@@ -25,6 +25,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SInterNewZealand`,
                :class:`KuehnEtAl2020SInterSouthAmerica`,
                :class:`KuehnEtAl2020SInterTaiwan`,
+               :class:`KuehnEtAl2020SInterCascadiaSeattleBasin`,
                :class:`KuehnEtAl2020SSlab`,
                :class:`KuehnEtAl2020SSlabAlaska`,
                :class:`KuehnEtAl2020SSlabCascadia`
@@ -32,7 +33,8 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SSlabJapan`,
                :class:`KuehnEtAl2020SSlabNewZealand`,
                :class:`KuehnEtAl2020SSlabSouthAmerica`,
-               :class:`KuehnEtAl2020SSlabTaiwan`
+               :class:`KuehnEtAl2020SSlabTaiwan`,
+               :class:`KuehnEtAl2020SSSlabCascadiaSeattleBasin`,
 """
 import numpy as np
 import os
@@ -52,10 +54,12 @@ BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020_tables")
 # Path to the model coefficients
 KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
 
-# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS),
+# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (Sea) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
-SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
+SUPPORTED_REGIONS = ["GLO",
+                     "USA-AK", "CAS", "Sea", 
+                     "CAM", "JPN", "NZL", "SAM", "TWN"]
 
 # Define inputs according to 3-letter codes
 REGION_TERMS_IF = {
@@ -130,6 +134,15 @@ REGION_TERMS_IF = {
         "c12": "c_12_Tw",
         "mb": 7.1,
         "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",
+        },
+    # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
+    "Sea": {
+        "c1": "c_1_if_reg_Ca",
+        "c6": "c_6_2_reg_Ca",
+        "c7": "c_7_reg_Ca",
+        "theta_11": "theta_11_Sea",
+        "mb": 8.0,
+        "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",
         },
 }
 
@@ -208,6 +221,15 @@ REGION_TERMS_SLAB = {
         "mb": 7.7,
         "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",
         },
+    # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
+    "Sea": {
+        "c1": "c_1_slab_reg_Ca",
+        "c6": "c_6_2_reg_Ca",
+        "c7": "c_7_reg_Ca",
+        "theta_11": "theta_11_Sea",
+        "mb": 7.2,
+        "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",
+        },
 }
 
 
@@ -251,7 +273,7 @@ Z_MODEL = {
         "c_z_2": 2.302585092994046,
         "c_z_3": 6.1104992125,
         "c_z_4": 0.43671101999999995,
-    }
+        }
 }
 
 
@@ -412,27 +434,37 @@ def _get_basin_term(C, ctx, region):
     """
     # Basin term only defined for the four regions: Cascadia, Japan,
     # New Zealand and Taiwan
-    assert region in ("CAS", "JPN", "NZL", "TWN")
-    # Get c11, c12 and Z-model (same for both interface and inslab events)
-    c11 = C[REGION_TERMS_IF[region]["c11"]]
-    c12 = C[REGION_TERMS_IF[region]["c12"]]
-    CZ = Z_MODEL[region]
+    assert region in ("CAS", "JPN", "NZL", "TWN", "Sea")
 
-    vs30 = ctx.vs30
-    if region in ("JPN", "CAS"):
-        z_values = ctx.z2pt5 * 1000.0
-    elif region in ("NZL", "TWN"):
-        z_values = ctx.z1pt0
+    # If region is Seattle retrieve theta_11 as basin term (this coeff
+    # is imt-dependent but are the same for interface and inslab)
+    if region == "Sea":
+        theta_11 = C[REGION_TERMS_IF[region]["theta_11"]]
+        return np.full_like(ctx.vs30, theta_11) 
+
     else:
-        z_values = np.zeros(vs30.shape)
+        # Get c11, c12 and Z-model (same for both interface and
+        # inslab events)
+        c11 = C[REGION_TERMS_IF[region]["c11"]]
+        c12 = C[REGION_TERMS_IF[region]["c12"]]
+        CZ = Z_MODEL[region]
 
-    brt = np.zeros_like(z_values)
-    mask = z_values > 0.0
-    if not mask.any():
-        # No basin amplification to be applied
-        return 0.0
-    brt[mask] = c11 + c12 * (np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
-    return brt
+        vs30 = ctx.vs30
+        if region in ("JPN", "CAS"):
+            z_values = ctx.z2pt5 * 1000.0
+        elif region in ("NZL", "TWN"):
+            z_values = ctx.z1pt0
+        else:
+            z_values = np.zeros(vs30.shape)
+
+        brt = np.zeros_like(z_values)
+        mask = z_values > 0.0
+        if not mask.any():
+            # No basin amplification to be applied
+            return 0.0
+        brt[mask] = c11 + c12 * (np.log(z_values[mask]) -\
+                                _get_ln_z_ref(CZ, vs30[mask]))
+        return brt
 
 
 def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
@@ -460,7 +492,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN"):
+    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "Sea"):
         
         # Get USGS basin scaling factor if required (can only be for 
         # CAS region)
@@ -619,7 +651,7 @@ class KuehnEtAl2020SInter(GMPE):
 
     The GMM define a "global" model as well as a set of region-specific
     coefficients (and in some cases methods). The coefficients are defined for
-    seven specific subduction regions (with their region codes):
+    eight specific subduction regions (with their region codes):
 
     - Alaska (USA-AK)
     - Cascadia (CAS)
@@ -628,6 +660,7 @@ class KuehnEtAl2020SInter(GMPE):
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
+    - Seattle (Sea)
 
     In the original model defined by the authors, three of the regions
     (JPN, CAM, SAM) define a forearc/backarc dependent anelastic attenuation
@@ -636,9 +669,9 @@ class KuehnEtAl2020SInter(GMPE):
     supported by the OQ-engine, so on the author's guidance a fixed anelastic
     attenuation term is used in these regions
 
-    For four of the regions (JPN, CAS, NZL, TWN) a basin response term is
-    defined. In these cases either Z2.5 (JPN, CAS) or Z1.0 (NZL, TWN) must be
-    specified.
+    For four of the regions (JPN, CAS, NZL, TWN) a basin response term
+    requiring Z2.5 or Z1.0 is defined. In these cases either Z2.5 (JPN, CAS)
+    or Z1.0 (NZL, TWN) must be specified.
 
     Two forms of configurable epistemic uncertainty adjustments are supported:
 
@@ -712,17 +745,18 @@ class KuehnEtAl2020SInter(GMPE):
             # If region is NZL or TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
         else:
-            pass
+            pass # Seattle Basin uses imt-dependent fixed theta_c11_Sea
 
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
         # USGS basin scaling and M9 basin term is only
         # applied when the region param is set to Cascadia.
         if self.usgs_basin_scaling or self.m9_basin_term:
-            if self.region != 'CAS':
+            if self.region not in ["CAS", "Sea"]:
                 raise ValueError('To apply the USGS basin scaling or the M9 '
                                  'basin adjustment to KuehnEtAl2020 the '
-                                 'Cascadia region must be specified.')
+                                 'Cascadia region or the Seattle Basin '
+                                 'region must be specified.')
         
         self.m_b = m_b
         # epsilon for epistemic uncertainty
@@ -833,6 +867,7 @@ REGION_ALIASES = {
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
     "TWN": "Taiwan",
+    "Sea": "CascadiaSeattleBasin",
 }
 
 
