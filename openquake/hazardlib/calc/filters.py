@@ -412,7 +412,9 @@ class SourceFilter(object):
         if not self.integration_distance:  # do not filter
             return self.sitecol.sids
         if trt:  # rupture proxy
-            assert hasattr(self.integration_distance, 'x')
+            if not hasattr(self.integration_distance, 'x'):
+                raise ValueError('The SourceFilter was instantiated with '
+                                 'maximum_distance and not maximum_distance(trt)')
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
@@ -438,7 +440,7 @@ class SourceFilter(object):
         """
         :returns: array of float32 with the number of close sites per rupture
         """
-        return U32([len(self.closed_sids(rup, trt)) for rup in rups])
+        return U32([len(self.close_sids(rup, trt)) for rup in rups])
 
     def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):

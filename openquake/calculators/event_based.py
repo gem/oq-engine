@@ -32,7 +32,7 @@ from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import (
-    nofilter, getdefault, get_distances, SourceFilter)
+    magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
@@ -42,7 +42,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_mosaic_models)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, get_proxies)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import sig_eps_dt
@@ -66,7 +66,10 @@ rup_dt = numpy.dtype(
 
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    return math.ceil((rup['nsites'] or 1) / 100)
+    if isinstance(rup, numpy.ndarray):
+        nsites = numpy.clip(rup['nsites'], 1., numpy.inf)
+        return numpy.ceil(nsites / 100.)
+    return math.ceil((rup['nsites'] or 1) / 100.)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -290,6 +293,54 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
+def get_nsites(rups, trt_smr, trt, srcfilter):
+    model = rups[0]['model'].decode('ascii')
+    return {(model, trt_smr, trt): srcfilter.get_nsites(rups, trt)}
+
+
+def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, gsim_lt_dic):
+    dic = {}
+    smap = parallel.Starmap(get_nsites)
+    with hdf5.File(ruptures_hdf5) as f:
+        for trt_smr, start, stop in f['trt_smr_start_stop']:
+            slc = slice(start, stop)
+            rups = f['ruptures'][slc]
+            model = rups[0]['model'].decode('ascii')
+            trts = list(gsim_lt_dic[model].values)
+            trt = trts[trt_smr // TWO24]
+            srcfilter = SourceFilter(sitecol, maximum_distance(trt))
+            dic[model, trt_smr, trt] = rups
+            smap.submit((rups, trt_smr, trt, srcfilter))
+    for key, nsites in smap.reduce().items():
+        dic[key]['nsites'] = nsites
+    return dic
+
+
+def starmap_from_rups_hdf5(oq, sitecol, dstore):
+    """
+    :returns: a Starmap instance sending event_based tasks
+    """
+    ruptures_hdf5 = oq.inputs['rupture_model']
+    gsim_lt_dic = logictree.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+    rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, gsim_lt_dic)
+    totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
+    maxw = totw / (oq.concurrent_tasks or 1)
+    extra = sitecol.array.dtype.names
+    dstore.swmr_on()
+    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
+    for (model, trt_smr, trt), rups in rups_dic.items():
+        proxies = get_proxies(ruptures_hdf5, rups)
+        mags = numpy.unique(numpy.round(rups['mag'], 2))
+        oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
+        rlzs_by_gsim = gsim_lt_dic[model].get_rlzs_by_gsim_dic()
+        cmaker = ContextMaker(trt, rlzs_by_gsim[trt_smr], oq, extraparams=extra)
+        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
+            args = block, cmaker, sitecol, (None, None), dstore
+            smap.submit(args)
+    return smap
+
+
 # NB: save_tmp is passed in event_based_risk
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
@@ -386,6 +437,8 @@ def set_mags(oq, dstore):
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
+    elif oq.ruptures_hdf5:
+        pass                
     elif 'ruptures' in dstore:
         # scenario
         trts = dstore['full_lt'].trts
@@ -635,7 +688,7 @@ class EventBasedCalculator(base.HazardCalculator):
             [(trt_smr, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_dic().items()
             trt = trts[trt_smr // TWO24]
             rup = readinput.get_rupture(oq)
-            oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
+            oq.mags_by_trt = {trt: magstr(rup.mag)}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
@@ -680,6 +733,7 @@ class EventBasedCalculator(base.HazardCalculator):
     def execute(self):
         oq = self.oqparam
         dstore = self.datastore
+        E = None
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
@@ -706,6 +760,9 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore['full_lt'] = fake  # needed to expose the outputs
             dstore['weights'] = [1.]
             return {}
+        elif oq.ruptures_hdf5:
+            with hdf5.File(oq.ruptures_hdf5) as r:
+                E = len(r['events'])
         else:  # scenario
             self._read_scenario_ruptures()
             if (oq.ground_motion_fields is False and
@@ -714,15 +771,19 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.ground_motion_fields:
             prim_imts = oq.get_primary_imtls()
-            base.create_gmf_data(dstore, prim_imts, oq.sec_imts)
+            base.create_gmf_data(dstore, prim_imts, oq.sec_imts,
+                                 E=E, R=oq.number_of_logic_tree_samples)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        smap = starmap_from_rups(
-            event_based, oq, self.full_lt, self.sitecol, dstore)
+        if oq.ruptures_hdf5:
+            smap = starmap_from_rups_hdf5(oq, self.sitecol, dstore)
+        else:
+            smap = starmap_from_rups(
+                event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc

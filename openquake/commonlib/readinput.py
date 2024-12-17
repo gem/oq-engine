@@ -669,7 +669,10 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5:
+    if oqparam.ruptures_hdf5:
+        with hdf5.File(oqparam.ruptures_hdf5) as r:
+            rup_sitecol = r['sitecol']
+    elif h5 and 'sitecol' in h5:
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -699,6 +702,15 @@ def get_site_collection(oqparam, h5=None):
             sm = get_site_model(oqparam, h5)
             if len(sm) > len(mesh):  # the association will happen in base.py
                 sm = oqparam
+        elif oqparam.ruptures_hdf5:
+            assoc_dist = (oqparam.region_grid_spacing * 1.414
+                          if oqparam.region_grid_spacing else 5)  # Graeme's 5km
+            sc = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+            logging.info('Associating the mesh to the site parameters')
+            sitecol, _array, _discarded = geo.utils.assoc(
+                sc, rup_sitecol, assoc_dist, 'filter')
+            return sitecol
         elif 'site_model' not in oqparam.inputs:
             # check the required site parameters are not NaN
             sm = oqparam
@@ -709,7 +721,10 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        return _get_sitecol(sitecol, exp, oqparam, h5)
 
+
+def _get_sitecol(sitecol, exp, oqparam, h5):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
