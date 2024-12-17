@@ -100,6 +100,7 @@ def main(mosaic_dir, out):
         fnames = [datastore.read(job.calc_id).filename for job in jobs]
         logging.warning(f'Saving {out}')
         with hdf5.File(out, 'a') as h5:
+            base.import_sites_hdf5(h5, fnames)
             base.import_ruptures_hdf5(h5, fnames)
     print(mon)
 
