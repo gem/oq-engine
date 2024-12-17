@@ -33,25 +33,25 @@ jobs:
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Check If the branch $BRANCH exists also on standalone apps
-        continue-on-error: true
-        run: |
-         set -x
-         if [ -z ${{ github.event.inputs.git-ref }} ];
-         then
-            BRANCH=master
-         else
-            BRANCH=${{ github.event.inputs.git-ref }}
-         fi
-         git ls-remote --exit-code --heads https://github.com/gem/oq-platform-standalone.git $BRANCH >/dev/null 2>&1
-         EXIT_CODE=$?
-         if [[ $EXIT_CODE == '0' ]]; then
-            echo "Git branch '$BRANCH' exists in the remote repository"
-            TOOLS_BRANCH=$BRANCH
-         elif [[ $EXIT_CODE == '2' ]]; then
-            echo "Git branch '$BRANCH' does not exist in the remote repository"
-            TOOLS_BRANCH=master
-         fi
-         echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
+      continue-on-error: true
+      run: |
+        set -x
+        if [ -z ${{ github.event.inputs.git-ref }} ];
+        then
+           BRANCH=master
+        else
+           BRANCH=${{ github.event.inputs.git-ref }}
+        fi
+        git ls-remote --exit-code --heads https://github.com/gem/oq-platform-standalone.git $BRANCH >/dev/null 2>&1
+        EXIT_CODE=$?
+        if [[ $EXIT_CODE == '0' ]]; then
+           echo "Git branch '$BRANCH' exists in the remote repository"
+           TOOLS_BRANCH=$BRANCH
+        elif [[ $EXIT_CODE == '2' ]]; then
+           echo "Git branch '$BRANCH' does not exist in the remote repository"
+           TOOLS_BRANCH=master
+        fi
+        echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
     - name: Set up Python  ${{ matrix.python-version }} and install OQ
       run: |
         set -x
