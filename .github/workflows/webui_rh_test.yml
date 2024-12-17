@@ -68,7 +68,7 @@ jobs:
         echo "Downloading standalone apps"
         for app in oq-platform-standalone oq-platform-ipt oq-platform-taxtweb oq-platform-taxonomy; do
           # check if the branch of the action exist also for tools
-          git ls-remote --exit-code --heads origin $BRANCH https://github.com/gem/${app}.git >/dev/null 2>&1
+          git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
           EXIT_CODE=$?
           if [[ $EXIT_CODE == '0' ]]; then
             echo "Git branch '$BRANCH' exists in the remote repository"
