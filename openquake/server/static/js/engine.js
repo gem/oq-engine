@@ -543,6 +543,35 @@ function capitalizeFirstLetter(val) {
                 }
             });
 
+            $('input[name="aristotle_approach"]').change(function () {
+                const selected_approach = $(this).val();
+                const approaches_requiring_usgs_id = [
+                    'use_shakemap_from_usgs',
+                    'use_pnt_src_from_usgs',
+                    'build_rup_from_usgs',
+                    'use_finite_rup_from_usgs'
+                ];
+                if (approaches_requiring_usgs_id.includes(selected_approach)) {
+                    $('#rupture_from_usgs_grp').removeClass('hidden');
+                    $('#usgs_id_grp').removeClass('hidden');
+                } else {
+                    $('#rupture_from_usgs_grp').addClass('hidden');
+                    $('#usgs_id_grp').addClass('hidden');
+                }
+                if (selected_approach == 'provide_rup') {
+                    $('#upload_rupture_grp').removeClass('hidden');
+                } else {
+                    $('#upload_rupture_grp').addClass('hidden');
+                }
+                if (selected_approach == 'provide_rup_params') {
+                    $('#rup_params').removeClass('hidden');
+                    $('#submit_aristotle_get_rupture').text('Build rupture');
+                } else {
+                    $('#rup_params').addClass('hidden');
+                    $('#submit_aristotle_get_rupture').text('Retrieve data');
+                }
+            });
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);

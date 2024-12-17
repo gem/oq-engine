@@ -462,3 +462,7 @@ table#aristotle-losses th td {
 .hidden_except_submit label {
   display: none;
 }
+
+.hidden {
+    display: none;
+}
