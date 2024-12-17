@@ -19,7 +19,6 @@
 import logging
 import operator
 import functools
-from dataclasses import dataclass
 import numpy
 from shapely.geometry import Point
 
@@ -168,14 +167,6 @@ def make_uhs(hmap, info):
     return uhs
 
 
-@dataclass
-class Result:
-    ordinal: int
-    eid_rlz: numpy.ndarray
-    slc: slice
-    nsites: numpy.ndarray
-
-
 def get_proxies(filename, rup_array, min_mag=0):
     """
     :returns: a list of RuptureProxies
@@ -212,16 +203,14 @@ class RuptureImporter(object):
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, slc, rlzs_by_gsim, srcfilter, ordinal):
+    def get_eid_rlz(self, proxies, slc, rlzs_by_gsim, ordinal):
         """
         :returns: a composite array with the associations eid->rlz
         """
-        nsites = srcfilter.get_nsites(proxies) if srcfilter else None
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        res = Result(ordinal, get_events(proxies, rlzs, self.scenario), slc, nsites)
-        return res
+        return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
-    def import_rups_events(self, rup_array, get_rupture_getters, srcfilter=None):
+    def import_rups_events(self, rup_array):
         """
         Import an array of ruptures and store the associated events.
         :returns: (number of imported ruptures, number of imported events)
@@ -239,7 +228,7 @@ class RuptureImporter(object):
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
         self.datastore.create_dset('trt_smr_start_stop', idx_start_stop)
-        self._save_events(rup_array, idx_start_stop, srcfilter)
+        self._save_events(rup_array, idx_start_stop)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
@@ -252,7 +241,7 @@ class RuptureImporter(object):
                          'years (mean mag={:.2f})'.format(
                              ne, nr, int(eff_time), mag))
 
-    def _save_events(self, rup_array, idx_start_stop, srcfilter):
+    def _save_events(self, rup_array, idx_start_stop):
         oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
@@ -270,23 +259,18 @@ class RuptureImporter(object):
         for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
             slc = slice(start, stop)
             proxies = get_proxies(filename, rup_array[slc])
-            iterargs.append((proxies, slc, rlzs_by_gsim[trt_smr], srcfilter, i))
+            iterargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
         acc = general.AccumDict()  # ordinal -> eid_rlz
         if len(events) < 1E5:
             for args in iterargs:
-                res = self.get_eid_rlz(*args)
-                acc[res.ordinal] = res.eid_rlz
-                if srcfilter:
-                    rup_array[res.slc]['nsites'] = res.nsites
+                acc += self.get_eid_rlz(*args)
         else:
             self.datastore.swmr_on()  # before the Starmap
             for res in parallel.Starmap(
                     self.get_eid_rlz, iterargs,
                     h5=self.datastore,
                     progress=logging.debug):
-                acc[res.ordinal] = res.eid_rlz
-                if srcfilter:
-                    rup_array[res.slc]['nsites'] = res.nsites
+                acc += res
         i = 0
         for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:
