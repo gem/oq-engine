@@ -32,7 +32,7 @@ from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import (
-    nofilter, getdefault, get_distances, SourceFilter)
+    magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
@@ -327,6 +327,8 @@ def starmap_from_rups_hdf5(oq, srcfilter, dstore):
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     for (model, smr_trt, trt), rups in rups_dic.items():
         proxies = get_proxies(ruptures_hdf5, rups)
+        mags = numpy.unique(numpy.round(proxies['mag'], 2))
+        oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
         rlzs_by_gsim = gsim_lt_dic[model].get_rlzs_by_gsim(smr_trt)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
@@ -427,14 +429,13 @@ def set_mags(oq, dstore):
     """
     Set the attribute oq.mags_by_trt
     """
-    rupture_file = oq.inputs.get('rupture_model', '')
     if 'source_mags' in dstore:
         # classical or event_based
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
-    elif rupture_file.endswith('.hdf5'):
-        pass
+    elif oq.ruptures_hdf5:
+        pass                
     elif 'ruptures' in dstore:
         # scenario
         trts = dstore['full_lt'].trts
@@ -684,7 +685,7 @@ class EventBasedCalculator(base.HazardCalculator):
             [(trt_smr, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_dic().items()
             trt = trts[trt_smr // TWO24]
             rup = readinput.get_rupture(oq)
-            oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
+            oq.mags_by_trt = {trt: magstr(rup.mag)}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
@@ -729,7 +730,6 @@ class EventBasedCalculator(base.HazardCalculator):
     def execute(self):
         oq = self.oqparam
         dstore = self.datastore
-        rupture_hdf5 = ''
         E = None
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
@@ -757,11 +757,9 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore['full_lt'] = fake  # needed to expose the outputs
             dstore['weights'] = [1.]
             return {}
-        elif oq.inputs.get('rupture_model', '').endswith('.hdf5'):
-            rupture_hdf5 = oq.inputs['rupture_model']
-            with hdf5.File(rupture_hdf5) as r:
+        elif oq.ruptures_hdf5:
+            with hdf5.File(oq.ruptures_hdf5) as r:
                 E = len(r['events'])
-            set_mags(oq, dstore)
         else:  # scenario
             self._read_scenario_ruptures()
             if (oq.ground_motion_fields is False and
@@ -778,7 +776,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        if rupture_hdf5:
+        if oq.ruptures_hdf5:
             smap = starmap_from_rups_hdf5(oq, self.srcfilter, dstore)
         else:
             smap = starmap_from_rups(
