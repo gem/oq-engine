@@ -322,6 +322,13 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     """
     ruptures_hdf5 = oq.inputs['rupture_model']
     gsim_lt_dic = logictree.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+    rlzs_by_gsim = {}
+    for model in gsim_lt_dic:
+        logging.info('Building rlzs_by_gsim for %s', model)
+        gslt = gsim_lt_dic[model]
+        trts = list(gslt.values)
+        for trt_smr, rbg in gslt.get_rlzs_by_gsim_dic().items():
+            rlzs_by_gsim[model, trts[trt_smr // TWO24]] = rbg
     rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, gsim_lt_dic)
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
@@ -329,11 +336,13 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     for (model, trt_smr, trt), rups in rups_dic.items():
+        if model not in gsim_lt_dic:
+            continue
         proxies = get_proxies(ruptures_hdf5, rups)
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
-        rlzs_by_gsim = gsim_lt_dic[model].get_rlzs_by_gsim_dic()
-        cmaker = ContextMaker(trt, rlzs_by_gsim[trt_smr], oq, extraparams=extra)
+        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt],
+                              oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
             args = block, cmaker, sitecol, (None, None), dstore
@@ -688,7 +697,7 @@ class EventBasedCalculator(base.HazardCalculator):
             [(trt_smr, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_dic().items()
             trt = trts[trt_smr // TWO24]
             rup = readinput.get_rupture(oq)
-            oq.mags_by_trt = {trt: magstr(rup.mag)}
+            oq.mags_by_trt = {trt: [magstr(rup.mag)]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
