@@ -172,7 +172,11 @@ def get_proxies(filename, rup_array, min_mag=0):
     :returns: a list of RuptureProxies
     """
     proxies = []
-    with datastore.read(filename) as h5:
+    try:
+        h5 = datastore.read(filename)
+    except ValueError: # cannot extract calc_id
+        h5 = hdf5.File(filename)
+    with h5:
         rupgeoms = h5['rupgeoms']
         if hasattr(rup_array, 'start'):  # is a slice
             recs = h5['ruptures'][rup_array]

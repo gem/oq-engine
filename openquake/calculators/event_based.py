@@ -67,7 +67,7 @@ rup_dt = numpy.dtype(
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
     if isinstance(rup, numpy.ndarray):
-        nsites = numpy.clip(rup['nsites'], 1.)
+        nsites = numpy.clip(rup['nsites'], 1., numpy.inf)
         return numpy.ceil(nsites / 100.)
     return math.ceil((rup['nsites'] or 1) / 100.)
 
@@ -293,47 +293,50 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_nsites(rups, slc, trt, srcfilter):    
-    return {slc: srcfilter.get_nsites(rups, trt)}
+def get_nsites(rups, trt_smr, trt, srcfilter):
+    model = rups[0]['model'].decode('ascii')
+    return {(model, trt_smr, trt): srcfilter.get_nsites(rups, trt)}
 
 
-def get_rups_dic(ruptures_hdf5, srcfilter, gsim_lt_dic):
+def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, gsim_lt_dic):
     dic = {}
     smap = parallel.Starmap(get_nsites)
     with hdf5.File(ruptures_hdf5) as f:
         for trt_smr, start, stop in f['trt_smr_start_stop']:
             slc = slice(start, stop)
             rups = f['ruptures'][slc]
-            model = rups[0]['model']
-            trt = gsim_lt_dic[model].trts[trt_smr // TWO24]
+            model = rups[0]['model'].decode('ascii')
+            trts = list(gsim_lt_dic[model].values)
+            trt = trts[trt_smr // TWO24]
+            srcfilter = SourceFilter(sitecol, maximum_distance(trt))
             dic[model, trt_smr, trt] = rups
-            smap.submit((rups, trt, slc, srcfilter))
+            smap.submit((rups, trt_smr, trt, srcfilter))
     for key, nsites in smap.reduce().items():
         dic[key]['nsites'] = nsites
     return dic
 
 
-def starmap_from_rups_hdf5(oq, srcfilter, dstore):
+def starmap_from_rups_hdf5(oq, sitecol, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
     """
     ruptures_hdf5 = oq.inputs['rupture_model']
     gsim_lt_dic = logictree.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
-    rups_dic = get_rups_dic(ruptures_hdf5, srcfilter, gsim_lt_dic)
+    rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, gsim_lt_dic)
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
-    extra = srcfilter.sitecol.array.dtype.names
+    extra = sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    for (model, smr_trt, trt), rups in rups_dic.items():
+    for (model, trt_smr, trt), rups in rups_dic.items():
         proxies = get_proxies(ruptures_hdf5, rups)
-        mags = numpy.unique(numpy.round(proxies['mag'], 2))
+        mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
-        rlzs_by_gsim = gsim_lt_dic[model].get_rlzs_by_gsim(smr_trt)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
+        rlzs_by_gsim = gsim_lt_dic[model].get_rlzs_by_gsim_dic()
+        cmaker = ContextMaker(trt, rlzs_by_gsim[trt_smr], oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
-            args = block, cmaker, srcfilter.sitecol, (None, None), dstore
+            args = block, cmaker, sitecol, (None, None), dstore
             smap.submit(args)
     return smap
 
@@ -777,7 +780,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # event_based in parallel
         if oq.ruptures_hdf5:
-            smap = starmap_from_rups_hdf5(oq, self.srcfilter, dstore)
+            smap = starmap_from_rups_hdf5(oq, self.sitecol, dstore)
         else:
             smap = starmap_from_rups(
                 event_based, oq, self.full_lt, self.sitecol, dstore)
