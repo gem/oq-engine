@@ -205,8 +205,8 @@ class RuptureImporter(object):
         n_occ = rup_array['n_occ']        
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
-        self.datastore['trt_smr_start_stop'] = performance.idx_start_stop(
-            rup_array['trt_smr'])
+        self.datastore.create_dset(
+            'trt_smr_start_stop', performance.idx_start_stop(rup_array['trt_smr']))
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)

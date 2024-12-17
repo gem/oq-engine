@@ -21,13 +21,11 @@ import math
 import time
 import os.path
 import logging
-import operator
 import numpy
 import pandas
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
-from openquake.baselib.general import (
-    AccumDict, humansize, groupby, block_splitter)
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -324,7 +322,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     else:
         station_data, station_sites = None, None
 
-    gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     maxw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('maxw = {:_d}'.format(round(maxw)))
@@ -358,7 +355,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
 
     # NB: for conditioned scenarios we are looping on a single trt
     toml_gsims = []
-    for trt_smr, proxies in gb.items():
+    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
+        proxies = allproxies[start:stop]
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)

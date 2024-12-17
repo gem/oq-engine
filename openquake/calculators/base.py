@@ -40,7 +40,7 @@ import collections
 from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, idx_start_stop
 from openquake.hazardlib import (
     InvalidFile, valid, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.site_amplification import Amplifier
@@ -1391,7 +1391,8 @@ def import_sites_hdf5(dstore, fnames):
     return convs
 
 
-def import_ruptures_hdf5(dstore, fnames):
+# tested in scenario_test/case_33
+def import_ruptures_hdf5(h5, fnames):
     """
     Importing the ruptures and the events
     """
@@ -1399,31 +1400,34 @@ def import_ruptures_hdf5(dstore, fnames):
     logging.warning('Importing %d files, %s',
                     len(fnames), general.humansize(size))
     rups = []
-    dstore.create_dataset(
+    h5.create_dataset(
         'events', (0,), rupture.events_dt, maxshape=(None,), chunks=True,
         compression='gzip')
-    dstore.create_dataset(
+    h5.create_dataset(
         'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
-    offset = 0
     E = 0
+    offset = 0
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
+            f['trt_smr_start_stop']
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
             E += len(events)
-            hdf5.extend(dstore['events'], events)
+            hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
-            dstore.save_vlen('rupgeoms', list(arr))
+            h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
             rup['id'] += offset
             rup['geom_id'] += offset
-            offset += len(arr)
+            offset += len(rup)
             rups.extend(rup)
 
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
     ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
-    dstore.create_dataset('ruptures', data=ruptures, compression='gzip')
+    h5.create_dataset('ruptures', data=ruptures, compression='gzip')
+    h5.create_dataset(
+        'trt_smr_start_stop', data=idx_start_stop(ruptures['trt_smr']))
 
 
 def import_gmfs_hdf5(dstore, oqparam):
