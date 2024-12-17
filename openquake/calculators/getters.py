@@ -348,33 +348,16 @@ class MapGetter(object):
         return means
 
 
-def get_rupture_getters(dstore, ct=0):
-    """
-    :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
-    :param ct: number of concurrent tasks
-    :returns: a list of RuptureGetters
-    """
-    full_lt = dstore['full_lt']
-    nr = len(dstore['ruptures'])
-    if nr == 0:
-        raise NotFound('There are no ruptures in %s' % dstore)
-    maxweight = numpy.ceil(nr / (ct / 2 or 1))
-    rgetters = []
-    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
-        rg = RuptureGetter(dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), slice(start, stop))
-        rgetters.extend(rg.split(maxweight))
-    return rgetters
-
-
 def get_ebruptures(dstore):
     """
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    for rgetter in get_rupture_getters(dstore):
-        for proxy in rgetter.get_proxies():
-            ebrs.append(proxy.to_ebr(rgetter.trt))
+    trts = list(dstore['full_lt/gsim_lt'].values)
+    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
+        trt = trts[trt_smr // TWO24]
+        for proxy in get_proxies(dstore.filename, slice(start, stop)):
+            ebrs.append(proxy.to_ebr(trt))
     return ebrs
 
 
@@ -409,42 +392,3 @@ def multiline(array3RC):
     lines = 'MULTILINESTRING(%s)' % ', '.join(
         line(array3RC[:, r, :].T) for r in range(R))
     return lines
-
-
-# this is never called directly; get_rupture_getters is used instead
-class RuptureGetter(object):
-    """
-    :param filename:
-        path to the HDF5 file containing a 'rupgeoms' dataset
-    :param trt_smr:
-        source group index
-    :param trt:
-        tectonic region type string
-    :param slc:
-        slice of indices
-    """
-    def __init__(self, filename, trt_smr, trt, slc):
-        self.filename = filename
-        self.trt_smr = trt_smr
-        self.trt = trt
-        self.slc = slc
-
-    def get_proxies(self, min_mag=0):
-        """
-        :returns: a list of RuptureProxies
-        """
-        return get_proxies(self.filename, self.slc, min_mag)
-
-    def split(self, maxw):
-        rgetters = []
-        for slc in general.gen_slices(self.slc.start, self.slc.stop, maxw):
-            rg = RuptureGetter(self.filename, self.trt_smr, self.trt, slc)
-            rgetters.append(rg)
-        return rgetters
-
-    def __len__(self):
-        return len(self.proxies)
-
-    def __repr__(self):
-        return '<%s trt_smr=%d, %d rupture(s)>' % (
-            self.__class__.__name__, self.trt_smr, len(self))
