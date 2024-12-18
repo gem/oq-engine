@@ -38,6 +38,7 @@ from openquake.qa_tests_data.classical import (
     case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
 <<<<<<< HEAD
+<<<<<<< HEAD
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86, case_87)
@@ -46,6 +47,11 @@ from openquake.qa_tests_data.classical import (
     case_66, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85)
 >>>>>>> daece58ec4 (Adds classical hazard test for Macedo GMM, revises IMT combinations)
+=======
+    case_60, case_61, case_62, case_63, case_64, case_65, case_66,
+    case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
+    case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86)
+>>>>>>> 413b44f8ea (Fixed merge conflict in classical_test, but test_case_85 still failing)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
