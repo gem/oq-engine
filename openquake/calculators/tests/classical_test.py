@@ -899,17 +899,11 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles("expected/rbs.csv", f)
 
     def test_case_85(self):
-        # Conditional GMM (Macedo et al. (2019)) for Arias Intensity
-        self.run_calc(case_85.__file__, "job.ini")
-        [f1] = export(("hcurves/mean", "csv"), self.calc.datastore)
-        self.assertEqualFiles("expected/hazard_curve-mean-IA.csv", f1)
-
-    def test_case_85(self):
         # Conditional GMM (Macedo et al. (2019)) for Arias Inensity
-        self.run_calc(case_85.__file__, "job.ini")
-        [f1] = export(("hcurves/mean", "csv"), self.calc.datastore)
-        self.assertEqualFiles("expected/hazard_curve-mean-IA.csv", f1)
-
+        self.run_calc(case_85.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-IA.csv', f1)
+    
     def test_case_86(self):
         # Comparing the revised indirect GMPE and the direct AvgSA GMPE
         # for AvgSA at multiple spectral periods
