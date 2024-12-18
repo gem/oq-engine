@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2023, GEM Foundation
+# Copyright (C) 2024, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -104,6 +104,7 @@ def main(mosaic_dir, out):
             base.import_ruptures_hdf5(h5, fnames)
             h5['/'].attrs.update(INPUTS)
     print(mon)
+    return fnames
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
