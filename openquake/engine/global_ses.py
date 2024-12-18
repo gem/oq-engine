@@ -104,6 +104,7 @@ def main(mosaic_dir, out):
             base.import_ruptures_hdf5(h5, fnames)
             h5['/'].attrs.update(INPUTS)
     print(mon)
+    return fnames
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'

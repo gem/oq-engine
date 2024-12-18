@@ -18,13 +18,27 @@
 
 import os
 from unittest.mock import patch
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.qa_tests_data import mosaic_for_ses
+from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import read_geometries
 from openquake.calculators import base, event_based
 from openquake.engine import global_ses
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
+RUP_HDF5 = 'rups.hdf5'
+
+
+def check(dstore, fnames):
+    with hdf5.File(RUP_HDF5) as ds, \
+         read(fnames[0]) as ds_EUR, \
+         read(fnames[1]) as ds_MIE:
+        nrup_EUR = len(ds_EUR['ruptures'])
+        nrup_MIE = len(ds_MIE['ruptures'])
+        rups = ds['ruptures'][:]
+        nrup = len(rups)
+        assert nrup == nrup_EUR + nrup_MIE
+        assert dstore['avg_gmf'].shape == (2, 167, 1)
 
 
 def test_EUR_MIE():
@@ -33,9 +47,9 @@ def test_EUR_MIE():
         mdf = read_geometries('mosaic.geojson', 'name', 0.).set_index('code')
         with patch.dict(event_based.__dict__, mosaic_df=mdf):
             try:
-                global_ses.main(MOSAIC_DIR, 'rups.hdf5')
+                fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
                 dstore = base.run_calc('job.ini').datastore
-                assert dstore['avg_gmf'].shape == (2, 167, 1)
+                check(dstore, fnames)                
             finally:
-                if os.path.exists('rups.hdf5'):
-                    os.remove('rups.hdf5')
+                if os.path.exists(RUP_HDF5):
+                    os.remove(RUP_HDF5)
