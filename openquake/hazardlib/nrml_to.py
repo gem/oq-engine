@@ -30,6 +30,7 @@ import os
 import time
 import logging
 import collections
+import numpy
 import shapely.wkt
 from openquake.baselib.writers import write_csv
 from openquake.hazardlib import nrml, sourceconverter
@@ -98,11 +99,16 @@ def to_wkt(geom, coords):
 
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 def appendrow(row, rows, chatty, sections=(), s2i={}):
-    if row.code == 'F':  # row.coords is a multiFaultSource
-        row.coords.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                                   for idxs in row.coords.rupture_idxs]
-        row.coords.set_sections(sections)
-        row.coords = [row.coords.polygon.coords]
+    if row.code == 'F':
+        # row.coords is a multiFaultSource
+        # in this case the gpkg is not a complete representation,
+        # it just contains the top of rupture coordinates
+        rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                        for idxs in row.coords._rupture_idxs]
+        row.coords = []
+        for idxs in rupture_idxs:
+            coos = [sections[idx].tor.coo[:, 0:2] for idx in idxs]
+            row.coords.append(numpy.concatenate(coos))
     row.wkt = wkt = to_wkt(row.geom, row.coords)
     if wkt.startswith('POINT'):
         rows[row.code + '1'].append(row)

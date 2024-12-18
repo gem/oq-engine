@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 import shutil
 import json
 import string
@@ -30,7 +31,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -42,18 +43,22 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.shakemap.validate import (
+    aristotle_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
+from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo
-from openquake.engine.aelo import get_params_from
+from openquake.engine import engine, aelo, aristotle
+from openquake.engine.aelo import (
+    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -91,12 +96,23 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
-AELO_FORM_PLACEHOLDERS = {
+AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30 (fixed at 760 m/s)',
+    'vs30': 'Vs30',
     'siteid': 'Site name',
+    'asce_version': 'ASCE version',
 }
+
+AELO_FORM_PLACEHOLDERS = {
+    'lon': 'max. 5 decimals',
+    'lat': 'max. 5 decimals',
+    'vs30': 'fixed at 760 m/s',
+    'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
+    'asce_version': 'ASCE version',
+}
+
+HIDDEN_OUTPUTS = ['assetcol', 'job']
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -139,9 +155,7 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    tmp = config.directory.custom_tmp or tempfile.mkdtemp()
-    calc_dir = os.path.join(tmp, 'calc_%d' % calc_id)
-    os.mkdir(calc_dir)
+    calc_dir = parallel.scratch_dir(calc_id)
     arch = request_files.get('archive')
     if arch is None:
         # move each file to calc_dir using the upload file names
@@ -352,7 +366,7 @@ def download_png(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     try:
         from PIL import Image
@@ -378,7 +392,7 @@ def calc(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -405,7 +419,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host) in calc_data:
+         parent_id, size_mb, host, start_time) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -416,11 +430,15 @@ def calc_list(request, id=None):
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
+        start_time_str = (
+            start_time.strftime("%Y-%m-%d, %H:%M:%S") + " "
+            + settings.TIME_ZONE)
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable, size_mb=size_mb))
+                 parent_id=parent_id, abortable=abortable, size_mb=size_mb,
+                 start_time=start_time_str))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -499,6 +517,46 @@ def calc_remove(request, calc_id):
                             content_type='text/plain', status=500)
 
 
+def share_job(user_level, calc_id, share):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        message = logs.dbcmd('share_job', calc_id, share)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    if 'success' in message:
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    elif 'error' in message:
+        logging.error(message['error'])
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+    else:
+        raise AssertionError(
+            f"share_job must return 'success' or 'error'!? Returned: {message}")
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_unshare(request, calc_id):
+    """
+    Unshare the calculation of the given id
+    """
+    return share_job(request.user.level, calc_id, share=False)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_share(request, calc_id):
+    """
+    Share the calculation of the given id
+    """
+    return share_job(request.user.level, calc_id, share=True)
+
+
 def log_to_json(log):
     """Convert a log record into a list of strings"""
     return [log.timestamp.isoformat()[:22],
@@ -571,15 +629,67 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+def aelo_callback(
+        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
         return
-    from_email = 'aelonoreply@openquake.org'
+    from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
-    reply_to = 'aelosupport@openquake.org'
-    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
-            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
+    reply_to = settings.EMAIL_SUPPORT
+    lon, lat = inputs['sites'].split()
+    body = (f"Input values: lon = {lon}, lat = {lat},"
+            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
+            f" asce_version = {inputs['asce_version']}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
     if exc:
+        subject = f'Job {job_id} failed'
+        body += f'There was an error running job {job_id}:\n{exc}'
+    else:
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+
+
+def aristotle_callback(
+        job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
+    if not job_owner_email:
+        return
+
+    # Example of body:
+    # Input parameters:
+    # {'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0, 'mag': 7.8, 'rake': 0.0,
+    #  'usgs_id': 'us6000jllz', 'rupture_file': None}
+    # maximum_distance: 20.0
+    # tectonic_region_type: Active Shallow Crust
+    # truncation_level: 3.0
+    # number_of_ground_motion_fields: 100
+    # asset_hazard_distance: 15.0
+    # ses_seed: 42
+    # station_data_file: None
+    # maximum_distance_stations: None
+    # countries: TUR
+    # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
+
+    params_to_print = ''
+    for key, val in params.items():
+        if key not in ['calculation_mode', 'inputs', 'job_ini',
+                       'hazard_calculation_id']:
+            if key == 'rupture_dict':
+                params_to_print += params[key] + '\n'
+            else:
+                params_to_print += f'{key}: {val}\n'
+
+    from_email = settings.EMAIL_HOST_USER
+    to = [job_owner_email]
+    reply_to = settings.EMAIL_SUPPORT
+    body = (f"Input parameters:\n{params_to_print}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
+    if exc:
+        job_id = job_id
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
@@ -591,35 +701,164 @@ def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def aelo_run(request):
+def aristotle_get_rupture_data(request):
     """
-    Run an AELO calculation.
+    Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+        a `django.http.HttpRequest` object containing usgs_id
     """
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    user = request.user
+    user.testdir = None
+    rup, rupdic, _oqparams, err = aristotle_validate(
+        request.POST, user, rupture_path, station_data_file)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
+    if rupdic['shakemap_array'] is not None:
+        shakemap_array = rupdic['shakemap_array']
+        figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
+        rupdic['pga_map_png'] = plot_shakemap(
+            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
+            with_cities=False, return_base64=True, rupture=rup)
+        rupdic['mmi_map_png'] = plot_shakemap(
+            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
+            with_cities=False, return_base64=True, rupture=rup)
+        del rupdic['shakemap_array']
+    elif rup is not None:
+        img_base64 = plot_rupture(rup, figsize=(8, 8), return_base64=True)
+        rupdic['rupture_png'] = img_base64
+    return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
+                        status=200)
+
+
+def copy_to_temp_dir_with_unique_name(source_file_path):
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+    temp_file_path = temp_file.name
+    # Close the NamedTemporaryFile to prevent conflicts on Windows
+    temp_file.close()
+    shutil.copy(source_file_path, temp_file_path)
+    return temp_file_path
+
+
+def get_uploaded_file_path(request, filename):
+    file = request.FILES.get(filename)
+    if file:
+        # NOTE: we could not find a reliable way to avoid the deletion of the
+        # uploaded file right after the request is consumed, therefore we need
+        # to store a copy of it
+        return copy_to_temp_dir_with_unique_name(file.temporary_file_path())
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aristotle_run(request):
+    """
+    Run an ARISTOTLE calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing
+        usgs_id, rupture_file,
+        lon, lat, dep, mag, rake, dip, strike,
+        local_timestamp, time_event,
+        maximum_distance, trt,
+        truncation_level, number_of_ground_motion_fields,
+        asset_hazard_distance, ses_seed,
+        maximum_distance_stations, station_data_file
+    """
+    # NOTE: this is called via AJAX so the context processor isn't automatically
+    # applied, since AJAX calls often do not render templates
+    if request.user.level == 0:
+        return HttpResponseForbidden()
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    user = request.user
+    user.testdir = None
+    _rup, rupdic, params, err = aristotle_validate(
+        request.POST, user, rupture_path, station_data_file)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
+    for key in ['dip', 'strike']:
+        if key in rupdic and rupdic[key] is None:
+            del rupdic[key]
+    user = utils.get_user(request)
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, None, user, None)
+
+    job_owner_email = request.user.email
+    response_data = dict()
+
+    job_id = jobctx.calc_id
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_aristotle', args=[job_id]))
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+    response_data[job_id] = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data[job_id]['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the'
+            ' following link: %s. If the job fails, the error traceback'
+            ' will be accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the Aristotle main process
+    proc = mp.Process(
+        target=aristotle.main_web,
+        args=([params], [jobctx], job_owner_email, outputs_uri_web,
+              aristotle_callback))
+    proc.start()
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
+
+
+def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['lon']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['lon']] = str(exc)
         invalid_inputs.append('lon')
     try:
         lat = valid.latitude(request.POST.get('lat'))
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['lat']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
         vs30 = valid.positivefloat(request.POST.get('vs30'))
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     try:
-        siteid = valid.simple_id(request.POST.get('siteid'))
+        siteid = request.POST.get('siteid')
+        if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
+            raise ValueError(
+                "site name can not be longer than %s characters" %
+                settings.MAX_AELO_SITE_NAME_LEN)
     except Exception as exc:
-        validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
+        validation_errs[AELO_FORM_LABELS['siteid']] = str(exc)
         invalid_inputs.append('siteid')
+    try:
+        asce_version = request.POST.get(
+            'asce_version', oqvalidation.OqParam.asce_version.default)
+        oqvalidation.OqParam.asce_version.validator(asce_version)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
+        invalid_inputs.append('asce_version')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -631,15 +870,36 @@ def aelo_run(request):
                          "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
+    return lon, lat, vs30, siteid, asce_version
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aelo_run(request):
+    """
+    Run an AELO calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid,
+        asce_version
+    """
+    res = aelo_validate(request)
+    if isinstance(res, HttpResponse):  # error
+        return res
+    lon, lat, vs30, siteid, asce_version = res
 
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
+                 asce_version=asce_version),
+            config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
+        logging.error('', exc_info=True)
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     [jobctx] = engine.create_jobs(
@@ -675,8 +935,8 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
-        aelo_callback)).start()
+        lon, lat, vs30, siteid, asce_version, job_owner_email, outputs_uri_web,
+        jobctx, aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
 
@@ -698,15 +958,10 @@ def submit_job(request_files, ini, username, hc_id):
         job_ini = store(request_files, ini, job.calc_id)
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
-        if oq.sensitivity_analysis:
-            logs.dbcmd('set_status', job.calc_id, 'deleted')  # hide it
-            jobs = engine.create_jobs([job_ini], config.distribution.log_level,
-                                      None, username, hc_id, True)
-        else:
-            dic = dict(calculation_mode=oq.calculation_mode,
-                       description=oq.description, hazard_calculation_id=hc_id)
-            logs.dbcmd('update_job', job.calc_id, dic)
-            jobs = [job]
+        dic = dict(calculation_mode=oq.calculation_mode,
+                   description=oq.description, hazard_calculation_id=hc_id)
+        logs.dbcmd('update_job', job.calc_id, dic)
+        jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
@@ -740,8 +995,12 @@ def save_pik(job, dirname):
     """
     pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
     with open(pathpik, 'wb') as f:
-        pickle.dump(job, f)
+        pickle.dump([job], f)
     return pathpik
+
+
+def get_public_outputs(oes):
+    return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
 
 
 @require_http_methods(['GET'])
@@ -760,7 +1019,7 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -770,7 +1029,7 @@ def calc_results(request, calc_id):
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
-                           lambda oes: [e for o, e in oes])
+                           get_public_outputs)
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -835,7 +1094,9 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if not utils.user_has_permission(request, job_user):
+        if ds_key in HIDDEN_OUTPUTS:
+            return HttpResponseForbidden()
+        if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -843,7 +1104,10 @@ def calc_result(request, result_id):
     etype = request.GET.get('export_type')
     export_type = etype or DEFAULT_EXPORT_TYPE
 
-    tmpdir = tempfile.mkdtemp()
+    # NOTE: for some reason, in some cases the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
         exported = core.export_from_db(
             (ds_key, export_type), job_id, datadir, tmpdir)
@@ -887,7 +1151,7 @@ def extract(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -895,8 +1159,12 @@ def extract(request, calc_id, what):
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            # NOTE: for some reason, in some cases the environment
+            # variable TMPDIR is ignored, so we need to use
+            # config.directory.custom_tmp if defined
+            temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
             fd, fname = tempfile.mkstemp(
-                prefix=what.replace('/', '-'), suffix='.npz')
+                prefix=what.replace('/', '-'), suffix='.npz', dir=temp_dir)
             os.close(fd)
             obj = _extract(ds, what + query_string)
             hdf5.save_npz(obj, fname)
@@ -934,7 +1202,7 @@ def calc_datastore(request, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -947,10 +1215,21 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    application_mode = settings.APPLICATION_MODE.upper()
-    params = {'application_mode': application_mode}
+    application_mode = settings.APPLICATION_MODE
+    # NOTE: application_mode is already added by the context processor
+    params = {}
     if application_mode == 'AELO':
+        params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
+        params['asce_versions'] = (
+            oqvalidation.OqParam.asce_version.validator.choices)
+        params['default_asce_version'] = (
+            oqvalidation.OqParam.asce_version.default)
+    elif application_mode == 'ARISTOTLE':
+        params['aristotle_form_labels'] = ARISTOTLE_FORM_LABELS
+        params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
+        params['aristotle_default_usgs_id'] = \
+            settings.ARISTOTLE_DEFAULT_USGS_ID
     return render(
         request, "engine/index.html", params)
 
@@ -958,56 +1237,228 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    application_mode = settings.APPLICATION_MODE.upper()
+    application_mode = settings.APPLICATION_MODE
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
             hcurves = 'hcurves.png' in ds['png']
+            # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
-                             if k.startswith('disagg_by_src-')]
+                             if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
-            hmaps = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = False
+            avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    lon = lat = vs30 = site_name = None
+    if application_mode == 'AELO':
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       hcurves=hcurves,
+                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       application_mode=application_mode))
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
+                  )
 
 
+def is_model_preliminary(ds):
+    # TODO: it would be better having the model written explicitly into the
+    # datastore
+    model = ds['oqparam'].base_path.split(os.path.sep)[-2]
+    if model in PRELIMINARY_MODELS:
+        return True
+    else:
+        return False
+
+
+def get_disp_val(val):
+    # gets the value displayed in the webui according to the rounding rules
+    if val >= 1.0:
+        return '{:.2f}'.format(numpy.round(val, 2))
+    elif val < 0.0001:
+        return f'{val:.1f}'
+    elif val < 0.01:
+        return '{:.4f}'.format(numpy.round(val, 4))
+    elif val < 0.1:
+        return '{:.3f}'.format(numpy.round(val, 3))
+    else:
+        return '{:.2f}'.format(numpy.round(val, 2))
+
+
+# this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce7 = asce41 = None
-    asce7_with_units = {}
+    asce07 = asce41 = None
+    asce07_with_units = {}
     asce41_with_units = {}
+    warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        if 'asce7' in ds:
-            asce7_js = ds['asce7'][()].decode('utf8')
-            asce7 = json.loads(asce7_js)
-            for key, value in asce7.items():
+        if is_model_preliminary(ds):
+            warnings = PRELIMINARY_MODEL_WARNING
+        if 'asce07' in ds:
+            try:
+                asce07_js = ds['asce07'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce07_js = ds['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
+            for key, value in asce07.items():
+                if key not in ('PGA', 'Ss', 'S1'):
+                    continue
                 if not isinstance(value, float):
-                    asce7_with_units[key] = value
-                elif key in ('CRS', 'CR1'):
+                    asce07_with_units[key] = value
+                elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce7_with_units[key + ' (-)'] = value
+                    asce07_with_units[key + ' (-)'] = get_disp_val(value)
                 else:
-                    asce7_with_units[key + ' (g)'] = value
+                    asce07_with_units[key + ' (g)'] = get_disp_val(value)
         if 'asce41' in ds:
-            asce41_js = ds['asce41'][()].decode('utf8')
+            try:
+                asce41_js = ds['asce41'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
-                asce41_with_units[key + ' (g)'] = value
+                if not key.startswith('BSE'):
+                    continue
+                if not isinstance(value, float):
+                    asce41_with_units[key] = value
+                else:
+                    asce41_with_units[key + ' (g)'] = get_disp_val(value)
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
+        if 'warnings' in ds:
+            ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+            if warnings is None:
+                warnings = ds_warnings
+            else:
+                warnings += '\n' + ds_warnings
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
-                       asce7=asce7_with_units, asce41=asce41_with_units))
+                       asce07=asce07_with_units, asce41=asce41_with_units,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       calc_aelo_version=calc_aelo_version,
+                       asce_version=asce_version,
+                       warnings=warnings))
+
+
+def format_time_delta(td):
+    days = td.days
+    seconds = td.seconds
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    # Format without microseconds
+    formatted_time = f'{days} days, {hours:02}:{minutes:02}:{seconds:02}'
+    return formatted_time
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_get_outputs_aristotle(request, calc_id):
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    description = job.description
+    job_start_time = job.start_time
+    job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+    local_timestamp_str = None
+    time_job_after_event = None
+    time_job_after_event_str = None
+    warnings = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        try:
+            losses = views.view('aggrisk', ds)
+        except KeyError:
+            max_avg_gmf = ds['avg_gmf'][0].max()
+            losses = (f'The risk can not be computed since the hazard is too low:'
+                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses_header = None
+        else:
+            losses_header = [header.capitalize().replace('_', ' ')
+                             for header in losses.dtype.names]
+        if 'png' in ds:
+            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            assets = 'assets.png' in ds['png']
+        else:
+            assets = False
+            avg_gmf = []
+        oqparam = ds['oqparam']
+        if hasattr(oqparam, 'local_timestamp'):
+            local_timestamp_str = (
+                oqparam.local_timestamp if oqparam.local_timestamp != 'None'
+                else None)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    if 'warnings' in ds:
+        ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+        if warnings is None:
+            warnings = ds_warnings
+        else:
+            warnings += '\n' + ds_warnings
+    if local_timestamp_str is not None:
+        local_timestamp = datetime.strptime(
+            local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
+        time_job_after_event = (
+            job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
+        time_job_after_event_str = format_time_delta(time_job_after_event)
+    return render(request, "engine/get_outputs_aristotle.html",
+                  dict(calc_id=calc_id, description=description,
+                       local_timestamp=local_timestamp_str,
+                       job_start_time=job_start_time_str,
+                       time_job_after_event=time_job_after_event_str,
+                       size_mb=size_mb, losses=losses,
+                       losses_header=losses_header,
+                       avg_gmf=avg_gmf, assets=assets,
+                       warnings=warnings))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def download_aggrisk(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        losses = views.view('aggrisk', ds)
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(
+        content_type="text/csv",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="aggrisk_%s.csv"' % calc_id
+        },
+    )
+    writer = csv.writer(response)
+    writer.writerow(losses.dtype.names)
+    for row in losses:
+        writer.writerow(row)
+    return response
 
 
 @csrf_exempt
@@ -1041,3 +1492,12 @@ def on_same_fs(request):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
+
+
+@require_http_methods(['GET'])
+def aelo_changelog(request, **kwargs):
+    aelo_changelog = base.get_aelo_changelog()
+    aelo_changelog_html = aelo_changelog.to_html(
+        index=False, escape=False, classes='changelog', border=0)
+    return render(request, "engine/aelo_changelog.html",
+                  dict(aelo_changelog=aelo_changelog_html))

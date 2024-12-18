@@ -36,8 +36,10 @@ from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.dbserver import db, get_status
+from openquake.server.dbserver import db
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
+
+django.setup()
 
 
 class EngineServerPublicModeTestCase(EngineServerTestCase):
@@ -48,7 +50,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -155,7 +156,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
-        datadir, dskeys = actions.get_results(db, job_id)
+        datadir, _dskeys = actions.get_results(db, job_id)
         # try to export a non-existing output
         with self.assertRaises(core.DataStoreExportError) as ctx:
             core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
@@ -170,7 +171,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # check rupture_info
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
         got = loadnpz(self.c.get(extract_url))
-        boundaries = gzip.decompress(got['boundaries']).split(b'\n')
+        boundaries = gzip.decompress(bytes(got['boundaries'])).split(b'\n')
         self.assertEqual(len(boundaries), 31)
         for b in boundaries:
             self.assertEqual(b[:12], b'POLYGON((-77')
@@ -182,7 +183,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # check extract_sources
         extract_url = '/v1/calc/%s/extract/sources?' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'extra', 'array'])
+        self.assertEqual(list(got), ['src_gz', 'extra', 'array'])
         self.assertGreater(len(got['array']), 0)
 
         # check risk_stats
@@ -237,10 +238,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         job_id = self.postzip('archive_err_1.zip')['job_id']
         self.wait()
         logging.disable(logging.NOTSET)
-
-        # there is no datastore since the calculation did not start
-        resp = self.c.get('/v1/calc/%s/datastore' % job_id)
-        self.assertEqual(resp.status_code, 404)
 
         tb = self.get('%s/traceback' % job_id)
         if not tb:

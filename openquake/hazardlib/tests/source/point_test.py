@@ -360,6 +360,11 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                 planar_surface_test_data.TEST_7_RUPTURE_8_CORNERS
             )
         }
+        self._check(actual_ruptures, expected_ruptures, point_source)
+
+    def _check(self, actual_ruptures, expected_ruptures, point_source):
+        tom = point_source.temporal_occurrence_model
+        trt = point_source.tectonic_region_type
         for actual_rupture in actual_ruptures:
             expected_occurrence_rate, expected_corners = expected_ruptures[
                 (actual_rupture.mag, actual_rupture.rake,

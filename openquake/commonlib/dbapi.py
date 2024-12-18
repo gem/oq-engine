@@ -304,6 +304,9 @@ class Db(object):
         try:
             return self.local.conn
         except AttributeError:
+            dname = os.path.dirname(self.args[0])  # empty for :memory:
+            if dname and not os.path.exists(dname):
+                os.makedirs(dname)
             self.local.conn = self.connect(*self.args, **self.kw)
             #  honor ON DELETE CASCADE
             self.local.conn.execute('PRAGMA foreign_keys = ON')
@@ -427,5 +430,5 @@ class Row(collections.abc.Sequence):
 db = Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
         isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
         timeout=20)
-# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
-# OperationalError: "database is locked" disappear in the WebUI tests
+# NB: I am increasing the timeout from 5 to 20 seconds and the random
+# OperationalError: "database is locked" disappears in the WebUI tests

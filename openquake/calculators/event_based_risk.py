@@ -25,14 +25,14 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, general, python3compat
+from openquake.baselib import hdf5, performance, general, python3compat, config
 from openquake.hazardlib import stats, InvalidFile
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
-    PostRiskCalculator, post_aggregate, fix_dtypes)
+    PostRiskCalculator, post_aggregate, fix_dtypes, fix_investigation_time)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -194,6 +194,8 @@ def event_based_risk(df, oqparam, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
+    if os.environ.get('OQ_DEBUG_SITE'):
+        print(df)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
         ideduc = monitor.read('assets/ideductible')
@@ -229,17 +231,33 @@ def gen_outputs(df, crmodel, rng, monitor):
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for taxo in assets.taxonomy.unique():
-            adf = assets[assets.taxonomy == taxo]
+        if 'ID_0' not in assets.columns:
+            assets['ID_0'] = 0
+        for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
+            # multiple countries are tested in aristotle/case_02
+            country = crmodel.countries[id0]
             with fil_mon:
                 # *crucial* for the performance of the next step
                 gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
             if len(gmf_df) == 0:  # common enough
                 continue
             with mon_risk:
-                out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                [out] = crmodel.get_outputs(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
             yield out
+
+
+def _tot_loss_unit_consistency(units, total_losses, loss_types):
+    total_losses_units = set()
+    for separate_lt in total_losses.split('+'):
+        assert separate_lt in loss_types, (separate_lt, loss_types)
+        for unit, lt in zip(units, loss_types):
+            if separate_lt == lt:
+                total_losses_units.add(unit)
+    if len(total_losses_units) != 1:
+        logging.warning(
+            'The units of the single components of the total losses'
+            ' are not homogeneous: %s" ' % total_losses_units)
 
 
 def set_oqparam(oq, assetcol, dstore):
@@ -261,7 +279,12 @@ def set_oqparam(oq, assetcol, dstore):
                 partial(insurance_losses, policy_df=policy_df))
 
     ideduc = assetcol['ideductible'].any()
-    if oq.total_losses:
+    cc = dstore['exposure'].cost_calculator
+    if oq.total_losses and oq.total_loss_types and cc.cost_types:
+        # cc.cost_types is empty in scenario_damage/case_21 (consequences)
+        units = cc.get_units(oq.total_loss_types)
+        _tot_loss_unit_consistency(
+            units.split(), oq.total_losses, oq.total_loss_types)
         sec_losses.append(
             partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
     elif ideduc:
@@ -276,7 +299,7 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def ebrisk(proxies, cmaker, stations, dstore, monitor):
+def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
@@ -287,10 +310,11 @@ def ebrisk(proxies, cmaker, stations, dstore, monitor):
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        dic = event_based.event_based(block, cmaker, stations, dstore, monitor)
-        if len(dic['gmfdata']):
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
-            yield event_based_risk(gmf_df, cmaker.oq, monitor)
+        for dic in event_based.event_based(
+                block, cmaker, sitecol, stations, dstore, monitor):
+            if len(dic['gmfdata']):
+                gmf_df = pandas.DataFrame(dic['gmfdata'])
+                yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -309,12 +333,21 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe().sort_values('taxonomy')
+        adf = self.assetcol.to_dframe().sort_values(['taxonomy', 'ordinal'])
+        # NB: this is subtle! without the second ordering by 'ordinal'
+        # the asset dataframe will be ordered differently on AMD machines
+        # with respect to Intel machines, depending on the machine, thus
+        # causing different losses
         del adf['id']
         monitor.save('assets', adf)
-        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
+        if 'ID_0' in self.assetcol.tagnames:
+            self.crmodel.countries = self.assetcol.tagcol.ID_0
+        else:
+            self.crmodel.countries = ['?']
+
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers in chunks of at most 1 million elements
+        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
         monitor.save('start-stop', compactify3(tss))
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
@@ -338,14 +371,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                          len(parent['ruptures']), ne)
         else:
             self.parent_events = None
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
@@ -358,17 +383,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         set_oqparam(oq, self.assetcol, self.datastore)
-        ct = oq.concurrent_tasks or 1
-        oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
-        if (oq.calculation_mode == 'event_based_risk' and
-                not oq.collect_rlzs and oq.avg_losses):
-            if A * self.R > 10_000_000:
+        ELT = len(oq.ext_loss_types)
+        if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
+            R = 1 if oq.collect_rlzs else self.R
+            logging.info('Transfering %s per core in avg_losses',
+                         general.humansize(A * ELT * 8 * R))
+            if A * ELT * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
-                                 'avg_losses=false or use sampling')
-            elif A * self.R > 100_000:
-                logging.warning('We recommend using sampling for performance')
+                                 'avg_losses=false')
+            elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
+                raise ValueError('For large exposures you must set '
+                                 'collect_rlzs = true')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -391,6 +418,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
+        fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
                 self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
@@ -415,11 +443,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
-        if 'gmf_data' not in self.datastore:  # start from ruptures
+        if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
+            # start from ruptures
             if (oq.ground_motion_fields and
                     'gsim_logic_tree' not in oq.inputs and
                     oq.gsim == '[FromFile]'):
-                raise InvalidFile('Missing gsim or gsim_logic_tree_file in %s'
+                raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
                                   % oq.inputs['job_ini'])
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
@@ -499,12 +528,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     (len(arr) - len(uni), dupl[0, 2]))
 
         if oq.avg_losses:
-            logging.info('Storing avg_losses-rlzs')
             for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]
                 name = 'avg_losses-rlzs/' + lt
+                logging.info(f'Storing {name}')
                 self.datastore[name][:] = al
                 stats.set_rlzs_stats(self.datastore, name,
                                      asset_id=self.assetcol['id'])

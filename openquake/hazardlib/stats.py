@@ -78,12 +78,12 @@ def norm_cdf(x, a, s):
     Gaussian cumulative distribution function; if s=0, returns an
     Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
 
-    >>> norm_cdf(1.2, 1, .1)
-    0.9772498680518208
+    >>> round(norm_cdf(1.2, 1, .1), 10)
+    0.9772498681
     >>> norm_cdf(1.2, 1, 0)
     1.0
-    >>> norm_cdf(.8, 1, .1)
-    0.022750131948179216
+    >>> round(norm_cdf(.8, 1, .1), 10)
+    0.0227501319
     >>> norm_cdf(.8, 1, 0)
     0.0
     >>> norm_cdf(1, 1, .1)
@@ -171,6 +171,8 @@ def std_curve(values, weights=None):
     res = numpy.sqrt(numpy.einsum('i,i...', weights, (m - values) ** 2))
     return res
 
+cw_dt = numpy.dtype([('c', float), ('w', float)])
+
 
 # NB: for equal weights and sorted values the quantile is computed as
 # numpy.interp(q, [1/N, 2/N, ..., N/N], values)
@@ -203,11 +205,12 @@ def quantile_curve(quantile, curves, weights=None):
         assert len(weights) == R, (len(weights), R)
     result = numpy.zeros(curves.shape[1:])
     for idx, _ in numpy.ndenumerate(result):
-        data = curves[(slice(None), ) + idx]
-        sorted_idxs = numpy.argsort(data)
-        cum_weights = numpy.cumsum(weights[sorted_idxs])
+        cw = numpy.zeros(R, cw_dt)  # (curve, weight)
+        cw['c'] = curves[(slice(None), ) + idx]
+        cw['w'] = weights
+        cw.sort(order='c')
         # get the quantile from the interpolated CDF
-        result[idx] = numpy.interp(quantile, cum_weights, data[sorted_idxs])
+        result[idx] = numpy.interp(quantile, cw['w'].cumsum(), cw['c'])
     return result
 
 

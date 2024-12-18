@@ -43,7 +43,7 @@ class LossCurveExporter(object):
         self.dstore = dstore
         self.oq = dstore['oqparam']
         try:
-            self.builder = get_loss_builder(dstore)
+            self.builder = get_loss_builder(dstore, self.oq)
         except KeyError:  # no 'events' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']

@@ -85,6 +85,34 @@ SIGMA_MU_COEFFS = CoeffsTable(sa_damping=5, table="""\
     """)
 
 
+AVGSA_SIGMA_MU_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    imt             sigma_mu_m8_shallow   sigma_mu_m8_intermediate   sigma_mu_m8_deep   sigma_mu_m7p4_shallow   sigma_mu_m7p4_intermediate  sigma_mu_m7p4_deep
+    AvgSA(0.050)             0.36237117                 0.36194128         0.36153721              0.26814685                   0.26770184          0.26728207
+    AvgSA(0.100)             0.37100348                 0.37058454         0.37019017              0.27464169                   0.27420650          0.27379506
+    AvgSA(0.150)             0.37113960                 0.37073150         0.37034714              0.27399830                   0.27357286          0.27317036
+    AvgSA(0.200)             0.36853324                 0.36813709         0.36776392              0.27144161                   0.27102774          0.27063616
+    AvgSA(0.250)             0.36438013                 0.36399264         0.36362762              0.26790615                   0.26750087          0.26711746
+    AvgSA(0.300)             0.36004639                 0.35966739         0.35931043              0.26444337                   0.26404673          0.26367159
+    AvgSA(0.400)             0.34960757                 0.34924208         0.34889809              0.25636041                   0.25597756          0.25561573
+    AvgSA(0.500)             0.34196320                 0.34160761         0.34127316              0.25046920                   0.25009644          0.24974445
+    AvgSA(0.600)             0.33628994                 0.33594377         0.33561851              0.24613837                   0.24577525          0.24543272
+    AvgSA(0.700)             0.33265779                 0.33232082         0.33200448              0.24327786                   0.24292413          0.24259077
+    AvgSA(0.800)             0.33080518                 0.33047781         0.33017078              0.24172055                   0.24137672          0.24105304
+    AvgSA(0.900)             0.33028960                 0.32997162         0.32967376              0.24123027                   0.24089610          0.24058191
+    AvgSA(1.000)             0.33118486                 0.33087499         0.33058504              0.24174675                   0.24142106          0.24111520
+    AvgSA(1.250)             0.33684608                 0.33655872         0.33629100              0.24552957                   0.24522646          0.24494296
+    AvgSA(1.500)             0.34131151                 0.34103635         0.34078037              0.24857633                   0.24828558          0.24801406
+    AvgSA(1.750)             0.34468757                 0.34442002         0.34417138              0.25099193                   0.25070866          0.25044432
+    AvgSA(2.000)             0.34962212                 0.34936230         0.34912098              0.25441729                   0.25414208          0.25388544
+    AvgSA(2.500)             0.35772559                 0.35748828         0.35726965              0.25993600                   0.25968178          0.25944620
+    AvgSA(3.000)             0.38024588                 0.38006170         0.37989860              0.27645421                   0.27624724          0.27606079
+    AvgSA(3.500)             0.37303807                 0.37283697         0.37265703              0.27159333                   0.27137037          0.27116809
+    AvgSA(4.000)             0.37757969                 0.37738041         0.37720210              0.27464125                   0.27442015          0.27421954
+    AvgSA(4.500)             0.39949828                 0.39927571         0.39907300              0.29012395                   0.28988040          0.28965658
+    AvgSA(5.000)             0.40186133                 0.40163856         0.40143559              0.29173110                   0.29148734          0.29126324
+    """)
+
+
 def _get_h(C, hypo_depth):
     """
     Returns the depth-specific coefficient
@@ -98,7 +126,7 @@ def _get_h(C, hypo_depth):
 get_distance_coefficients = CallableDict()
 
 
-@get_distance_coefficients.add("base", "site", "slope")
+@get_distance_coefficients.add("base", "site", "slope", "avgsa_base")
 def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
     """
     Returns either the directly specified c3 value or the c3 from the
@@ -114,7 +142,9 @@ def get_distance_coefficients_1(kind, c3, c3_epsilon, C, imt, sctx):
         return C["c3"] + (c3_epsilon * C["tau_c3"])
 
 
-@get_distance_coefficients.add("ESHM20", "geology")
+@get_distance_coefficients.add("ESHM20", "geology", "avgsa_ESHM20",
+                               "avgsa_ESHM20_geology",
+                               "avgsa_ESHM20_homoskedastic")
 def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     """
     Returns the c3 term. If c3 was input directly into the GMPE then
@@ -137,7 +167,7 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
         # by the original epsilon
         return (c3_ + c3_epsilon * tau_c3) + np.zeros(sctx.region.shape)
     # Some ctx belong to the calibrated regions - loop through them
-    C3_R = C3_REGIONS[imt]
+    C3_R = C3_REGIONS_AVGSA[imt] if kind.startswith("avgsa") else C3_REGIONS[imt]
     for i in range(1, 6):
         idx = sctx.region == i
         c3_[idx] = C3_R["region_{:s}".format(str(i))]
@@ -159,10 +189,11 @@ def get_distance_coefficients_3(att, delta_c3_epsilon, C, imt, sctx):
         prepared_polygon = prep(shape(feature['geometry']))
         contained = list(filter(prepared_polygon.contains, s))
         if contained:
-            l = np.concatenate([np.where((sctx['lon'] == p.x) &
-                               (sctx['lat'] == p.y))[0] for p in contained])
-            delta_c3[l, 0] = feature['properties'][str(imt)]
-            delta_c3[l, 1] = feature['properties'][str(imt)+'_se']
+            ll = np.concatenate([
+                np.where((sctx['lon'] == p.x) &
+                         (sctx['lat'] == p.y))[0] for p in contained])
+            delta_c3[ll, 0] = feature['properties'][str(imt)]
+            delta_c3[ll, 1] = feature['properties'][str(imt)+'_se']
 
     return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
@@ -205,15 +236,16 @@ def get_dl2l(tec, ctx, imt, delta_l2l_epsilon):
         prepared_polygon = prep(shape(feature['geometry']))
         contained = list(filter(prepared_polygon.contains, f))
         if contained:
-            l = np.concatenate([np.where((ctx['hypo_lon'] == p.x) &
-                               (ctx['hypo_lat'] == p.y))[0] for p in contained])
-            dl2l[l, 0] = feature['properties'][str(imt)]
-            dl2l[l, 1] = feature['properties'][str(imt)+'_se']
+            ll = np.concatenate([
+                np.where((ctx['hypo_lon'] == p.x) &
+                         (ctx['hypo_lat'] == p.y))[0] for p in contained])
+            dl2l[ll, 0] = feature['properties'][str(imt)]
+            dl2l[ll, 1] = feature['properties'][str(imt)+'_se']
 
     return dl2l[:, 0] + delta_l2l_epsilon * dl2l[:, 1]
 
 
-def get_sigma_mu_adjustment(C, imt, ctx):
+def get_sigma_mu_adjustment(kind, C, imt, ctx):
     """
     Returns the sigma_mu adjusment factor, which is taken as the
     maximum of tau_L2L and the sigma_mu. For M < 7.4
@@ -222,7 +254,8 @@ def get_sigma_mu_adjustment(C, imt, ctx):
     so we interpolate between the two values and cap sigma statistical
     at M 8.0
     """
-    C_SIG_MU = SIGMA_MU_COEFFS[imt]
+    C_SIG_MU = AVGSA_SIGMA_MU_COEFFS[imt] if kind.startswith("avgsa") else\
+        SIGMA_MU_COEFFS[imt]
     uf = np.full_like(ctx.mag, C_SIG_MU["sigma_mu_m8_intermediate"])
     lf = np.full_like(ctx.mag, C_SIG_MU["sigma_mu_m7p4_intermediate"])
     idx = ctx.hypo_depth < 10.0
@@ -243,7 +276,7 @@ def get_site_amplification(kind, extra, C, ctx, imt):
     """
     Apply the correct site amplification depending on the kind of GMPE
     """
-    if kind == "base":  # no site amplification
+    if kind in {"base", "avgsa_base"}:  # no site amplification
         ampl = 0.
     elif kind in {"site", "regional"}:
         # Render with respect to 800 m/s reference Vs30
@@ -255,7 +288,7 @@ def get_site_amplification(kind, extra, C, ctx, imt):
         sref = np.log(ctx.slope / 0.1)
         ampl = (C["g0_slope"] + C["g1_slope"] * sref +
                 C["g2_slope"] * (sref ** 2.))
-    elif kind == "ESHM20":
+    elif kind in {"ESHM20", "avgsa_ESHM20", "avgsa_ESHM20_homoskedastic"}:
         vs30 = np.copy(ctx.vs30)
         vs30[vs30 > 1100.] = 1100.
         ampl = np.zeros(vs30.shape)
@@ -265,7 +298,7 @@ def get_site_amplification(kind, extra, C, ctx, imt):
         # For inferred Vs30 ctx
         idx = np.logical_not(ctx.vs30measured)
         ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
-    elif kind == "geology":
+    elif kind in {"geology", "avgsa_ESHM20_geology"}:
         C_AMP_FIXED = extra['COEFFS_FIXED'][imt]
         C_AMP_RAND_INT = extra['COEFFS_RANDOM_INT'][imt]
         C_AMP_RAND_GRAD = extra['COEFFS_RANDOM_GRAD'][imt]
@@ -299,21 +332,22 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
         # Get the heteroskedastic tau and phi0
         tau = get_tau(imt, mag)
         phi = get_phi_ss(imt, mag)
+    elif kind in {'avgsa_ESHM20', "avgsa_ESHM20_geology"}:
+        # Get the heteroskedastic tau and phi0 for AvgSA
+        tau, phi = get_heteroskedastic_tau_phi0_avgsa(imt, ctx.mag)
     else:
+        # Get the homoskedastic tau and phi0
         tau = C["tau_event_0"]
         phi = C["phi_0"]
     if ergodic:
-        if kind == 'ESHM20':
-            phi_s2s = np.zeros(ctx.vs30measured.shape, dtype=float)
-            phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
-            phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
+        if kind in {'ESHM20', "geology", "avgsa_ESHM20_geology",
+                    "avgsa_ESHM20", "avgsa_ESHM20_homoskedastic"}:
+            # phi_s2s retrieved in the compute() function of the GMM
             phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
         elif kind in {"site", "regional"}:
             phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
         elif kind == 'slope':
-            phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
-        elif kind == 'geology':
-            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_slope"] ** 2.)
         else:
             phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
     return [np.sqrt(tau ** 2. + phi ** 2.), tau, phi]
@@ -399,12 +433,10 @@ class KothaEtAl2020(GMPE):
     REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, sigma_mu_epsilon=0.0, c3_epsilon=0.0, ergodic=True,
-                 dl2l=None, c3=None, **kwargs):
+                 dl2l=None, c3=None):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
-                         c3_epsilon=c3_epsilon, ergodic=ergodic, **kwargs)
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
@@ -441,11 +473,12 @@ class KothaEtAl2020(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             extra = {}
-            if self.kind == 'ESHM20':
+            if self.kind in {'ESHM20', "avgsa_ESHM20",
+                             "avgsa_ESHM20_homoskedastic"}:
                 phi_s2s = np.zeros(ctx.vs30measured.shape, dtype=float)
                 phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
                 phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
-            elif self.kind == 'geology':
+            elif self.kind in {'geology', "avgsa_ESHM20_geology"}:
                 phi_s2s = self.COEFFS_FIXED[imt]["phi_s2s"]
                 extra['COEFFS_FIXED'] = self.COEFFS_FIXED
                 extra['COEFFS_RANDOM_INT'] = self.COEFFS_RANDOM_INT
@@ -464,7 +497,7 @@ class KothaEtAl2020(GMPE):
             mean[m] = (get_magnitude_scaling(C, ctx.mag) + fp +
                        get_site_amplification(self.kind, extra, C, ctx, imt))
             # GMPE originally in cm/s/s - convert to g
-            if imt.string.startswith(('PGA', 'SA')):
+            if imt.string.startswith(('PGA', 'SA', 'AvgSA')):
                 mean[m] -= np.log(100.0 * g)
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.kind, self.ergodic, phi_s2s, C, ctx, imt)
@@ -479,7 +512,7 @@ class KothaEtAl2020(GMPE):
             elif self.sigma_mu_epsilon:
                 # epistemic uncertainty factor (sigma_mu) multiplied by
                 # the number of standard deviations
-                sigma_mu = get_sigma_mu_adjustment(C, imt, ctx)
+                sigma_mu = get_sigma_mu_adjustment(self.kind, C, imt, ctx)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu
 
     # Coefficients obtained direclty from the regression outputs of
@@ -541,20 +574,20 @@ class KothaEtAl2020regional(KothaEtAl2020):
     kind = "regional"
 
     def __init__(self, delta_l2l_epsilon=0.0, delta_c3_epsilon=0.0,
-                 ergodic=True, c3=None, dl2l=None, **kwargs):
+                 ergodic=True, c3=None, dl2l=None):
         """
         Instantiate setting the dl2l and c3 terms.
         """
-        super().__init__(delta_l2l_epsilon=delta_l2l_epsilon,
-                         delta_c3_epsilon=delta_c3_epsilon,
-                         ergodic=ergodic, **kwargs)
+        super().__init__()  # important
         self.delta_l2l_epsilon = delta_l2l_epsilon
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic
-        attenuation_file = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
-        self.att = np.array(fiona.open(attenuation_file), dtype=object)
-        tectonic_file = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
-        self.tec = np.array(fiona.open(tectonic_file), dtype=object)
+        attenuation_file = os.path.join(
+            DATA_FOLDER, 'kotha_attenuation_regions.geojson')
+        self.att = list(fiona.open(attenuation_file))
+        tectonic_file = os.path.join(
+            DATA_FOLDER, 'kotha_tectonic_regions.geojson')
+        self.tec = list(fiona.open(tectonic_file))
 
 
 class KothaEtAl2020Site(KothaEtAl2020):
@@ -977,3 +1010,81 @@ for stress in list(ICELAND_dL2L)[1:]:
                               [-1.732051, 0.0, 1.732051]):
         alias = "ESHM20Iceland{:s}Stress{:s}Atten".format(stress, c3_key)
         add_alias(alias, KothaEtAl2020ESHM20, dl2l=dl2l, c3_epsilon=c3_eps)
+
+
+C3_REGIONS_AVGSA = CoeffsTable(sa_damping=5, table="""\
+    imt                  region_1      tau_region_1         region_2     tau_region_2         region_3     tau_region_3         region_4     tau_region_4         region_5     tau_region_5
+    AvgSA(0.050)    -0.4656716000      0.1180142000    -0.7133721000     0.0946938000    -0.9685200000     0.1338548000    -0.5888355000     0.1820359000    -0.1240944000     0.1570220000
+    AvgSA(0.100)    -0.5310625000      0.1309543000    -0.8190398000     0.1062527000    -1.1068865000     0.1375049000    -0.7067665000     0.1882153000    -0.1469747000     0.1360697000
+    AvgSA(0.150)    -0.5581186000      0.1317465000    -0.8442356000     0.1110502000    -1.1565822000     0.1337646000    -0.7421298000     0.1763761000    -0.1974244000     0.1813739000
+    AvgSA(0.200)    -0.5529085000      0.1327567000    -0.8229416000     0.1162142000    -1.1460833000     0.1362717000    -0.7302299000     0.1698309000    -0.1933789000     0.1984123000
+    AvgSA(0.250)    -0.5372297000      0.1328342000    -0.7929952000     0.1156845000    -1.1136433000     0.1366984000    -0.7016690000     0.1682029000    -0.1857899000     0.2149315000
+    AvgSA(0.300)    -0.5254234000      0.1334462000    -0.7654788000     0.1150564000    -1.0814921000     0.1377804000    -0.6748147000     0.1734933000    -0.1752417000     0.2206030000
+    AvgSA(0.400)    -0.4898486000      0.1312907000    -0.7025190000     0.1123262000    -1.0049232000     0.1345776000    -0.6052932000     0.1785973000    -0.1397568000     0.2171827000
+    AvgSA(0.500)    -0.4563844000      0.1284697000    -0.6492117000     0.1073397000    -0.9333463000     0.1320078000    -0.5430056000     0.1839070000    -0.1067728000     0.2055740000
+    AvgSA(0.600)    -0.4252573000      0.1246073000    -0.6008299000     0.1033843000    -0.8654133000     0.1245591000    -0.4767390000     0.1872128000    -0.0830896000     0.1956748000
+    AvgSA(0.700)    -0.4001896000      0.1204433000    -0.5650228000     0.0985488000    -0.8101765000     0.1193220000    -0.4274777000     0.1901049000    -0.0532689000     0.1719868000
+    AvgSA(0.800)    -0.3825042000      0.1120253000    -0.5299286000     0.0981232000    -0.7604156000     0.1162526000    -0.3847776000     0.1938995000    -0.0476572000     0.1797690000
+    AvgSA(0.900)    -0.3608326000      0.1070064000    -0.4965110000     0.0951311000    -0.7121393000     0.1103616000    -0.3488966000     0.1921782000    -0.0319083000     0.1744172000
+    AvgSA(1.000)    -0.3445518000      0.1019015000    -0.4680719000     0.0933419000    -0.6699090000     0.1067803000    -0.3119548000     0.1899378000    -0.0231772000     0.1709575000
+    AvgSA(1.250)    -0.3085981000      0.0942465000    -0.4043969000     0.0921493000    -0.5814821000     0.1020569000    -0.2430170000     0.1879356000     0.0096703000     0.1518318000
+    AvgSA(1.500)    -0.2769769000      0.0909386000    -0.3528436000     0.0920438000    -0.5123643000     0.0996129000    -0.1845231000     0.1803464000     0.0388261000     0.1430487000
+    AvgSA(1.750)    -0.2575783000      0.0904296000    -0.3244613000     0.0952487000    -0.4561763000     0.0864028000    -0.1453873000     0.1738825000     0.0564608000     0.1302481000
+    AvgSA(2.000)    -0.2463514000      0.0909783000    -0.3030979000     0.0949550000    -0.4213413000     0.0836152000    -0.1120286000     0.1733245000     0.0705411000     0.1301361000
+    AvgSA(2.500)    -0.2395616000      0.1008508000    -0.2822054000     0.0973938000    -0.3730267000     0.0823939000    -0.0721809000     0.1728203000     0.1038858000     0.1195501000
+    AvgSA(3.000)    -0.2503677000      0.1049288000    -0.2777608000     0.0968775000    -0.3381454000     0.0639946000    -0.0809930000     0.1658070000     0.1030135000     0.1401671000
+    AvgSA(3.500)    -0.2298273000      0.1105661000    -0.2450972000     0.0987783000    -0.2853042000     0.0523550000    -0.0565065000     0.1612552000     0.1442919000     0.0838447000
+    AvgSA(4.000)    -0.2181743000      0.1188117000    -0.2285558000     0.1063640000    -0.2579791000     0.0561007000    -0.0374827000     0.1651242000     0.1518847000     0.0902318000
+    AvgSA(4.500)    -0.2189357000      0.0947278000    -0.2256616000     0.1216485000    -0.2320831000     0.0557586000    -0.0572455000     0.1370899000    -0.0290722000     0.1395083000
+    AvgSA(5.000)    -0.2069729000      0.0981588000    -0.2110292000     0.1268101000    -0.2118488000     0.0593289000    -0.0379903000     0.1392759000    -0.0114503000     0.1387377000
+""")
+
+
+# Coefficients for components of variability for AvgSa based on the indirect
+# variability approach and the ESHM20-based cross-correlation model
+COEFFS_AVGSA_TAU_PHI = CoeffsTable(sa_damping=5, table="""\
+    imt                    tau1          tau2          tau3          tau4         phi0_a        phi0_b    phi_s2s_obs   phi_s2s_inf
+    AvgSA(0.050)    0.450265228   0.425534126   0.385047171   0.349550065    0.469793727   0.373637252    0.422827263   0.533408863
+    AvgSA(0.100)    0.443613368   0.419285824   0.379383631   0.344424617    0.469327412   0.368595315    0.441139506   0.539238447
+    AvgSA(0.150)    0.437547947   0.413317059   0.374115591   0.339638982    0.463561498   0.350760067    0.446779972   0.532620604
+    AvgSA(0.200)    0.433537996   0.409666567   0.370677538   0.336554639    0.456535303   0.338264036    0.443403456   0.521297604
+    AvgSA(0.250)    0.430914023   0.407242752   0.368479157   0.334545957    0.450475499   0.330248213    0.436886715   0.510932860
+    AvgSA(0.300)    0.429339157   0.405793790   0.367079555   0.333355308    0.445321228   0.326114255    0.431313565   0.503221482
+    AvgSA(0.400)    0.426838581   0.403389369   0.364995154   0.331386762    0.433932123   0.317686930    0.426627088   0.493039840
+    AvgSA(0.500)    0.426838581   0.403389369   0.364995154   0.331386762    0.427499912   0.318111364    0.426920015   0.488374099
+    AvgSA(0.600)    0.426838581   0.403389369   0.364995154   0.331386762    0.421075089   0.315927942    0.430202863   0.484867766
+    AvgSA(0.700)    0.426838581   0.403389369   0.364995154   0.331386762    0.415377483   0.315623688    0.433889171   0.481497235
+    AvgSA(0.800)    0.426838581   0.403389369   0.364995154   0.331386762    0.409761405   0.316458809    0.437527308   0.478941984
+    AvgSA(0.900)    0.426838581   0.403389369   0.364995154   0.331386762    0.404749602   0.318527404    0.441076619   0.477263647
+    AvgSA(1.000)    0.426838581   0.403389369   0.364995154   0.331386762    0.400538795   0.319660717    0.444733966   0.476613844
+    AvgSA(1.250)    0.426838581   0.403389369   0.364995154   0.331386762    0.391173979   0.323422526    0.449968173   0.475330279
+    AvgSA(1.500)    0.426838581   0.403389369   0.364995154   0.331386762    0.384207569   0.324736699    0.448480052   0.472810059
+    AvgSA(1.750)    0.426838581   0.403389369   0.364995154   0.331386762    0.378940921   0.324776768    0.444166577   0.469909402
+    AvgSA(2.000)    0.426838581   0.403389369   0.364995154   0.331386762    0.375055253   0.327256765    0.438096814   0.466775537
+    AvgSA(2.500)    0.426838581   0.403389369   0.364995154   0.331386762    0.368731863   0.331137495    0.425405874   0.461923495
+    AvgSA(3.000)    0.426838581   0.403389369   0.364995154   0.331386762    0.362799048   0.333181208    0.412446255   0.456919212
+    AvgSA(3.500)    0.426838581   0.403389369   0.364995154   0.331386762    0.359200676   0.337125666    0.399372262   0.452070311
+    AvgSA(4.000)    0.426838581   0.403389369   0.364995154   0.331386762    0.357004460   0.337999154    0.388331894   0.447539253
+    AvgSA(4.500)    0.426838581   0.403389369   0.364995154   0.331386762    0.355726550   0.340391710    0.379435900   0.442846515
+    AvgSA(5.000)    0.426838581   0.403389369   0.364995154   0.331386762    0.354587686   0.340853193    0.371880106   0.438313782
+    """)
+
+
+def get_heteroskedastic_tau_phi0_avgsa(imt, mag):
+    """Returns the heteroskedastic between-event and single-station within-
+    event variability for AvgSa
+    """
+    C = COEFFS_AVGSA_TAU_PHI[imt]
+    tau = np.full_like(mag, C["tau1"])
+    tau[mag > 6.5] = C["tau4"]
+    idx = (mag > 5.5) & (mag <= 6.5)
+    tau[idx] = ITPL(mag[idx], C["tau4"], C["tau3"], 5.5, 1.0)
+    idx = (mag > 5.0) & (mag <= 5.5)
+    tau[idx] = ITPL(mag[idx], C["tau3"], C["tau2"], 5.0, 0.5)
+    idx = (mag > 4.5) & (mag <= 5.0)
+    tau[idx] = ITPL(mag[idx], C["tau2"], C["tau1"], 4.5, 0.5)
+
+    phi0 = C["phi0_a"] + (mag - 5.0) * ((C["phi0_b"] - C["phi0_a"]) / 1.5)
+    phi0[mag <= 5.0] = C["phi0_a"]
+    phi0[mag > 6.5] = C["phi0_b"]
+    return tau, phi0

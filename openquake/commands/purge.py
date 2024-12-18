@@ -17,7 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+import shutil
 import getpass
+from openquake.baselib import config
 from openquake.baselib.general import humansize
 from openquake.commonlib import logs, datastore
 
@@ -51,6 +53,17 @@ def purge_all(user=None):
             if mo is not None:
                 calc_id = int(mo.group(1))
                 purge_one(calc_id, user, force=True)
+    custom_tmp = config.directory.custom_tmp
+    if custom_tmp and os.path.exists(custom_tmp):
+        for path in os.listdir(custom_tmp):
+            fullpath = os.path.join(custom_tmp, path)
+            if os.path.isdir(fullpath):
+                try:
+                    shutil.rmtree(fullpath)
+                except PermissionError:
+                    pass
+                else:
+                    print(f'Removed {fullpath}')
 
 
 def purge(status, days, force):
@@ -93,7 +106,7 @@ def main(what, force=False):
     calc_id = int(what)
     if calc_id < 0:
         try:
-            calc_id = datastore.get_calc_ids(datadir)[calc_id]
+            calc_id = logs.get_calc_ids(datadir)[calc_id]
         except IndexError:
             print('Calculation %d not found' % calc_id)
             return

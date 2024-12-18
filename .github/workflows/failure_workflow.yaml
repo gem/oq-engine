@@ -8,11 +8,11 @@ on:
       - "hazardlib + engine + server tests"
       - "MacOS Intel install and test"
       - "MacOS M1"
-      - "RockyLinux OS test of OpenQuake Engine"
-      - "RPM build of engine in Fedora Copr"
+      - "Test WebUI on RH based OS"
       - "Ubuntu test of OpenQuake Engine"
       - "Upgrade procedure for engine from 3.16 to Latest Release"
-      - "Windows full tests of OpenQuake Engine"
+      - "Windows amd64 full tests of OpenQuake Engine"
+      - "Test WebUI on RH based OS"
     types:
       - completed
 

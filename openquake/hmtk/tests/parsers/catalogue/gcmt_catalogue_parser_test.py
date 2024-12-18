@@ -62,75 +62,80 @@ import numpy as np
 
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
 
+
 class GCMTCatalogueParserTestCase(unittest.TestCase):
     """
     Unit tests for the GCMT Catalogue Parser Class
     """
 
-    BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'gcmt_data')
+    BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "gcmt_data")
 
     def setUp(self):
         """
         Read a sample catalogue containing 2 events after instantiating
         the CsvCatalogueParser object.
         """
-        filename = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue.txt')
+        filename = os.path.join(self.BASE_DATA_PATH, "test_gcmt_catalogue.txt")
         parser = ParseNDKtoGCMT(filename)
         parser_cent = ParseNDKtoGCMT(filename)
         self.cat = parser.read_file()
-        self.cat_cent = parser_cent.read_file(use_centroid='True')
+        self.cat_cent = parser_cent.read_file(use_centroid="True")
 
     def test_locations(self):
-        """ test locations """
-        fname = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue_01.txt')
+        """test locations"""
+        fname = os.path.join(self.BASE_DATA_PATH, "test_gcmt_catalogue_01.txt")
         prs = ParseNDKtoGCMT(fname)
         cat = prs.read_file(use_centroid=False)
-        self.assertAlmostEqual(cat.data['longitude'][0], 111.72)
-        self.assertAlmostEqual(cat.data['latitude'][0], -10.80)
-        self.assertAlmostEqual(cat.data['longitude'][1], -113.12)
-        self.assertAlmostEqual(cat.data['latitude'][1], 28.74)
+        self.assertAlmostEqual(cat.data["longitude"][0], 111.72)
+        self.assertAlmostEqual(cat.data["latitude"][0], -10.80)
+        self.assertAlmostEqual(cat.data["longitude"][1], -113.12)
+        self.assertAlmostEqual(cat.data["latitude"][1], 28.74)
         cat = prs.read_file(use_centroid=True)
-        self.assertAlmostEqual(cat.data['longitude'][0], 112.44)
-        self.assertAlmostEqual(cat.data['latitude'][0], -10.60)
-        self.assertAlmostEqual(cat.data['longitude'][1], -113.12)
-        self.assertAlmostEqual(cat.data['latitude'][1], 28.81)
+        self.assertAlmostEqual(cat.data["longitude"][0], 112.44)
+        self.assertAlmostEqual(cat.data["latitude"][0], -10.60)
+        self.assertAlmostEqual(cat.data["longitude"][1], -113.12)
+        self.assertAlmostEqual(cat.data["latitude"][1], 28.81)
 
     def test_read_catalogue(self):
         """
         Check that the some fields in the first row of the catalogue are read
         correctly
         """
-        self.assertAlmostEqual(self.cat.data['eventID'][0], 0)
+        self.assertAlmostEqual(self.cat.data["eventID"][0], 0)
         self.assertAlmostEqual(
-            self.cat.data['centroidID'][0], 'S199004281929A  ')
-        self.assertAlmostEqual(self.cat.data['year'][0], 1990.)
-        self.assertAlmostEqual(self.cat.data['month'][0], 04.)
-        self.assertAlmostEqual(self.cat.data['day'][0], 28.)
-        self.assertAlmostEqual(self.cat.data['hour'][0], 19.)
-        self.assertAlmostEqual(self.cat.data['minute'][0], 30.)
-        self.assertAlmostEqual(self.cat.data['second'][0], 0.)
-        self.assertAlmostEqual(self.cat.data['longitude'][0], -72.9)
-        self.assertAlmostEqual(self.cat.data['latitude'][0], 18.46)
-        self.assertAlmostEqual(self.cat.data['depth'][0], 100.)
-        self.assertAlmostEqual(self.cat.data['moment'][0], 3.256 * (10 ** 16))
-        self.assertAlmostEqual(self.cat.data['strike1'][0], 104.)
-        self.assertAlmostEqual(self.cat.data['dip1'][0], 44.)
-        self.assertAlmostEqual(self.cat.data['rake1'][0], 96.)
-        self.assertAlmostEqual(self.cat.data['strike2'][0], 276.)
-        self.assertAlmostEqual(self.cat.data['dip2'][0], 46.)
-        self.assertAlmostEqual(self.cat.data['rake2'][0], 84.)
+            self.cat.data["centroidID"][0], "S199004281929A  "
+        )
+        self.assertAlmostEqual(self.cat.data["year"][0], 1990.0)
+        self.assertAlmostEqual(self.cat.data["month"][0], 04.0)
+        self.assertAlmostEqual(self.cat.data["day"][0], 28.0)
+        self.assertAlmostEqual(self.cat.data["hour"][0], 19.0)
+        self.assertAlmostEqual(self.cat.data["minute"][0], 30.0)
+        self.assertAlmostEqual(self.cat.data["second"][0], 0.0)
+        self.assertAlmostEqual(self.cat.data["longitude"][0], -72.9)
+        self.assertAlmostEqual(self.cat.data["latitude"][0], 18.46)
+        self.assertAlmostEqual(self.cat.data["depth"][0], 100.0)
+        self.assertAlmostEqual(self.cat.data["moment"][0], 3.256 * (10**16))
+        self.assertAlmostEqual(self.cat.data["strike1"][0], 104.0)
+        self.assertAlmostEqual(self.cat.data["dip1"][0], 44.0)
+        self.assertAlmostEqual(self.cat.data["rake1"][0], 96.0)
+        self.assertAlmostEqual(self.cat.data["strike2"][0], 276.0)
+        self.assertAlmostEqual(self.cat.data["dip2"][0], 46.0)
+        self.assertAlmostEqual(self.cat.data["rake2"][0], 84.0)
         self.assertAlmostEqual(
-            self.cat.data['eigenvalue_t'][0], 3.42 * (10 ** 16))
-        self.assertAlmostEqual(self.cat.data['plunge_t'][0], 86.)
-        self.assertAlmostEqual(self.cat.data['azimuth_t'][0], 112.)
+            self.cat.data["eigenvalue_t"][0], 3.42 * (10**16)
+        )
+        self.assertAlmostEqual(self.cat.data["plunge_t"][0], 86.0)
+        self.assertAlmostEqual(self.cat.data["azimuth_t"][0], 112.0)
         self.assertAlmostEqual(
-            self.cat.data['eigenvalue_b'][0], -0.33 * (10 ** 16))
-        self.assertAlmostEqual(self.cat.data['plunge_b'][0], 4.)
-        self.assertAlmostEqual(self.cat.data['azimuth_b'][0], 280.)
+            self.cat.data["eigenvalue_b"][0], -0.33 * (10**16)
+        )
+        self.assertAlmostEqual(self.cat.data["plunge_b"][0], 4.0)
+        self.assertAlmostEqual(self.cat.data["azimuth_b"][0], 280.0)
         self.assertAlmostEqual(
-            self.cat.data['eigenvalue_p'][0], -3.092 * (10 ** 16))
-        self.assertAlmostEqual(self.cat.data['plunge_p'][0], 1.)
-        self.assertAlmostEqual(self.cat.data['azimuth_p'][0], 10.)
+            self.cat.data["eigenvalue_p"][0], -3.092 * (10**16)
+        )
+        self.assertAlmostEqual(self.cat.data["plunge_p"][0], 1.0)
+        self.assertAlmostEqual(self.cat.data["azimuth_p"][0], 10.0)
 
     def test_read_catalogue_num_events(self):
         """
@@ -143,37 +148,42 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         """
         Check the data when chosing use_centroid=True is correct
         """
-        self.assertAlmostEqual(self.cat_cent.data['hour'][0], 19.)
-        self.assertAlmostEqual(self.cat_cent.data['minute'][0], 30.)
-        self.assertAlmostEqual(self.cat_cent.data['second'][0], 3.)
-        self.assertAlmostEqual(self.cat_cent.data['longitude'][0], -72.79)
-        self.assertAlmostEqual(self.cat_cent.data['latitude'][0], 18.58)
-        self.assertAlmostEqual(self.cat_cent.data['depth'][0], 12.0)
+        self.assertAlmostEqual(self.cat_cent.data["hour"][0], 19.0)
+        self.assertAlmostEqual(self.cat_cent.data["minute"][0], 30.0)
+        self.assertAlmostEqual(self.cat_cent.data["second"][0], 3.0)
+        self.assertAlmostEqual(self.cat_cent.data["longitude"][0], -72.79)
+        self.assertAlmostEqual(self.cat_cent.data["latitude"][0], 18.58)
+        self.assertAlmostEqual(self.cat_cent.data["depth"][0], 12.0)
 
     def test_select_events_depth(self):
         """
         Check that the number of earthquakes after filtering by depth is
         correct
         """
-        fdepth = np.logical_and(self.cat.data['depth'] >= 100.,
-                                self.cat.data['depth'] <= 200.)
+        fdepth = np.logical_and(
+            self.cat.data["depth"] >= 100.0, self.cat.data["depth"] <= 200.0
+        )
         self.cat.select_catalogue_events(np.where(fdepth)[0])
         self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
-        self.assertAlmostEqual(self.cat.data['centroidID'][0],
-                                    'S199004281929A  ')
+        self.assertAlmostEqual(
+            self.cat.data["centroidID"][0], "S199004281929A  "
+        )
 
     def test_select_events_mag(self):
         """
         Check that the number of earthquakes after filtering by magnitude is
         correct
         """
-        fmag = np.logical_and(self.cat.data['magnitude'] >= 5.,
-                              self.cat.data['magnitude'] <= 8.)
+        fmag = np.logical_and(
+            self.cat.data["magnitude"] >= 5.0,
+            self.cat.data["magnitude"] <= 8.0,
+        )
         self.cat.select_catalogue_events(np.where(fmag)[0])
         self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
         self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
-        self.assertAlmostEqual(self.cat.data['centroidID'][0],
-                                    'C201001122153A  ')
+        self.assertAlmostEqual(
+            self.cat.data["centroidID"][0], "C201001122153A  "
+        )
 
     def test_without_specifying_years(self):
         """
@@ -181,13 +191,15 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         and end year that the start and end year come from the minimum and
         maximum in the catalogue
         """
-        filename = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue.txt')
+        filename = os.path.join(self.BASE_DATA_PATH, "test_gcmt_catalogue.txt")
         parser = ParseNDKtoGCMT(filename)
         self.cat = parser.read_file()
-        self.assertAlmostEqual(self.cat.start_year,
-                               np.min(self.cat.data['year']))
         self.assertAlmostEqual(
-            self.cat.end_year, np.max(self.cat.data['year']))
+            self.cat.start_year, np.min(self.cat.data["year"])
+        )
+        self.assertAlmostEqual(
+            self.cat.end_year, np.max(self.cat.data["year"])
+        )
 
     def test_read_centroid_from_ndk_string(self):
         import datetime
@@ -195,7 +207,7 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
 
         tmps = """CENTROID:      1.060.0  10.47 0.03  127.42 0.03  15.0  0.0 BDY  O-00000000000000"""
 
-        prs = ParseNDKtoGCMT('pippo')
+        prs = ParseNDKtoGCMT("pippo")
         hypo = GCMTHypocentre()
         hypo.date = datetime.date(2000, 1, 2)
         hypo.time = datetime.time(1, 2, 3)

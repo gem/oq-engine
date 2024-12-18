@@ -44,12 +44,12 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Defines the :class:
 `openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource`, which
 represents the openquake.hmtk defition of a complex fault source. This extends
 the :class:`nrml.models.ComplexFaultSource`
-'''
+"""
 import warnings
 import numpy as np
 from math import fabs
@@ -61,7 +61,7 @@ import openquake.hmtk.sources.source_conversion_utils as conv
 
 
 class mtkComplexFaultSource(object):
-    '''
+    """
     New class to describe the mtk complex fault source object
 
     :param str identifier:
@@ -89,15 +89,23 @@ class mtkComplexFaultSource(object):
     :param catalogue:
         Earthquake catalogue associated to source as instance of
         :class:`openquake.hmtk.seismicity.catalogue.Catalogue` object
-    '''
+    """
 
-    def __init__(self, identifier, name, trt=None, geometry=None,
-                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
-                 rake=None):
-        '''
+    def __init__(
+        self,
+        identifier,
+        name,
+        trt=None,
+        geometry=None,
+        mag_scale_rel=None,
+        rupt_aspect_ratio=None,
+        mfd=None,
+        rake=None,
+    ):
+        """
         Instantiate class with just the basic attributes: identifier and name
-        '''
-        self.typology = 'ComplexFault'
+        """
+        self.typology = "ComplexFault"
         self.id = identifier
         self.name = name
         self.trt = trt
@@ -112,8 +120,8 @@ class mtkComplexFaultSource(object):
         self.catalogue = None
         self.dip = None
 
-    def create_geometry(self, input_geometry,  mesh_spacing=1.0):
-        '''
+    def create_geometry(self, input_geometry, mesh_spacing=1.0):
+        """
         If geometry is defined as a numpy array then create instance of
         nhlib.geo.line.Line class, otherwise if already instance of class
         accept class
@@ -127,33 +135,36 @@ class mtkComplexFaultSource(object):
         :param float mesh_spacing:
             Spacing of the fault mesh (km) {default = 1.0}
 
-        '''
+        """
         if not isinstance(input_geometry, list) or len(input_geometry) < 2:
-            raise ValueError('Complex fault geometry incorrectly defined')
+            raise ValueError("Complex fault geometry incorrectly defined")
 
         self.fault_edges = []
         for edge in input_geometry:
             if not isinstance(edge, Line):
                 if not isinstance(edge, np.ndarray):
-                    raise ValueError('Unrecognised or unsupported geometry '
-                                     'definition')
+                    raise ValueError(
+                        "Unrecognised or unsupported geometry " "definition"
+                    )
                 else:
-                    self.fault_edges.append(Line([Point(row[0], row[1], row[2])
-                                                  for row in edge]))
+                    self.fault_edges.append(
+                        Line([Point(row[0], row[1], row[2]) for row in edge])
+                    )
             else:
                 self.fault_edges.append(edge)
             # Updates the upper and lower sesmogenic depths to reflect geometry
             self._get_minmax_edges(edge)
         # Build fault surface
-        self.geometry = ComplexFaultSurface.from_fault_data(self.fault_edges,
-                                                            mesh_spacing)
+        self.geometry = ComplexFaultSurface.from_fault_data(
+            self.fault_edges, mesh_spacing
+        )
         # Get a mean dip
         self.dip = self.geometry.get_dip()
 
     def _get_minmax_edges(self, edge):
-        '''
+        """
         Updates the upper and lower depths based on the input edges
-        '''
+        """
         if isinstance(edge, Line):
             # For instance of line class need to loop over values
             depth_vals = np.array([node.depth for node in edge.points])
@@ -174,10 +185,15 @@ class mtkComplexFaultSource(object):
             if temp_lower_depth > self.lower_depth:
                 self.lower_depth = temp_lower_depth
 
-    def select_catalogue(self, selector, distance,
-                         distance_metric='joyner-boore', upper_eq_depth=None,
-                         lower_eq_depth=None):
-        '''
+    def select_catalogue(
+        self,
+        selector,
+        distance,
+        distance_metric="joyner-boore",
+        upper_eq_depth=None,
+        lower_eq_depth=None,
+    ):
+        """
         Selects earthquakes within a distance of the fault
 
         :param selector:
@@ -196,31 +212,34 @@ class mtkComplexFaultSource(object):
         :param float lower_eq_depth:
             Lower hypocentral depth of hypocentres to be selected
 
-        '''
+        """
         if selector.catalogue.get_number_events() < 1:
-            raise ValueError('No events found in catalogue!')
+            raise ValueError("No events found in catalogue!")
 
         # If dip is != 90 and 'rupture' distance metric is selected
-        if ('rupture' in distance_metric) and (fabs(self.dip - 90) > 1E-5):
+        if ("rupture" in distance_metric) and (fabs(self.dip - 90) > 1e-5):
             # Use rupture distance
             self.catalogue = selector.within_rupture_distance(
                 self.geometry,
                 distance,
                 upper_depth=upper_eq_depth,
-                lower_depth=lower_eq_depth)
+                lower_depth=lower_eq_depth,
+            )
         else:
             # Use Joyner-Boore distance
             self.catalogue = selector.within_joyner_boore_distance(
                 self.geometry,
                 distance,
                 upper_depth=upper_eq_depth,
-                lower_depth=lower_eq_depth)
+                lower_depth=lower_eq_depth,
+            )
 
         if self.catalogue.get_number_events() < 5:
             # Throw a warning regarding the small number of earthquakes in
             # the source!
-            warnings.warn('Source %s (%s) has fewer than 5 events'
-                          % (self.id, self.name))
+            warnings.warn(
+                "Source %s (%s) has fewer than 5 events" % (self.id, self.name)
+            )
 
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
@@ -239,4 +258,5 @@ class mtkComplexFaultSource(object):
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
             tom,
             self.fault_edges,
-            self.rake)
+            self.rake,
+        )

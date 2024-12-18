@@ -28,7 +28,7 @@ for testing of
 import warnings
 import numpy as np
 
-from openquake.hazardlib import gsim
+from openquake.hazardlib import contexts
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.sharma_2009 import SharmaEtAl2009
 
@@ -77,7 +77,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         """
         Warning should be thrown for normal faulting
         """
-        ctx = gsim.base.RuptureContext()
+        ctx = contexts.RuptureContext()
         # set reasonable default values
         gmpe = self.GSIM_CLASS()
         ctx.mag = np.array([6.5])

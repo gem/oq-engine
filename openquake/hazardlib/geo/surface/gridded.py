@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface, _get_finite_mesh
 
 
 class GriddedSurface(BaseSurface):
@@ -46,7 +46,7 @@ class GriddedSurface(BaseSurface):
 
     def __init__(self, mesh=None):
         self.mesh = mesh
-        self.suid = None
+        self.idx = None
         self.strike = None
         self.dip = None
 
@@ -85,7 +85,8 @@ class GriddedSurface(BaseSurface):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        return utils.get_spherical_bounding_box(self.mesh.lons, self.mesh.lats)
+        return utils.get_spherical_bounding_box(
+            self.mesh.lons.flatten(), self.mesh.lats.flatten())
 
     def get_surface_boundaries(self):
         """
@@ -102,6 +103,21 @@ class GriddedSurface(BaseSurface):
         # FIXME: implement real boundaries, not bounding box
         xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return xs, ys, (0, 0, 0, 0, 0)
+
+    def get_joyner_boore_distance(self, mesh):
+        """
+        Compute and return Joyner-Boore (also known as ``Rjb``) distance
+        to each point of ``mesh``.
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Joyner-Boore distance to.
+        :returns:
+            Numpy array of closest distances between the projections of surface
+            and each point of the ``mesh`` to the earth surface.
+        """
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_joyner_boore_distance(mesh, unstructured=True)
 
     def get_rx_distance(self, mesh):
         """
@@ -149,18 +165,18 @@ class GriddedSurface(BaseSurface):
             return self.strike
 
         # Create a projection centered in the center of the cloud of points
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(
-                self.mesh.lons.flatten(), self.mesh.lats.flatten()))
+        proj = geo_utils.OrthographicProjection.from_(
+            self.mesh.lons.flatten(), self.mesh.lats.flatten())
 
         # Project the coordinates
-        coo = np.zeros((len(self.mesh.lons.flat), 3))
-        tmp = np.transpose(proj(self.mesh.lons.flat, self.mesh.lats.flat))
+        lons, lats = self.mesh.lons.flatten(), self.mesh.lats.flatten()
+        coo = np.zeros((len(lons), 3))
+        tmp = np.transpose(proj(lons, lats))
         coo[:, 0] = tmp[:, 0]
         coo[:, 1] = tmp[:, 1]
-        coo[:, 2] = self.mesh.depths.flat
+        coo[:, 2] = self.mesh.depths.flatten()
         coo[:, 2] *= -1
-        pnt0, vers = geo_utils.plane_fit(coo)
+        _pnt0, vers = geo_utils.plane_fit(coo)
 
         # Find the angle between the surface projection of the unit vector and
         # the north direction
@@ -185,7 +201,6 @@ class GriddedSurface(BaseSurface):
         self.dip = 90 - delta
 
         return self.strike
-
 
     def get_dip(self):
         """

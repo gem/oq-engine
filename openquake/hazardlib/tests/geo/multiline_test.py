@@ -16,7 +16,6 @@
 
 import unittest
 import numpy as np
-import matplotlib.pyplot as plt
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.multiline import MultiLine
@@ -29,19 +28,17 @@ PLOTTING = False
 class OneLineTestCase(unittest.TestCase):
 
     def setUp(self):
-
         self.line = geo.Line([geo.Point(0.2, 0.05), geo.Point(0.0, 0.05)])
         self.ml = MultiLine([self.line])
 
-    def test_max_u(self):
-        self.ml.set_u_max()
+    def test_u_max(self):
         dst = geo.geodetic.geodetic_distance([self.line.points[0].longitude],
                                              [self.line.points[0].latitude],
                                              [self.line.points[1].longitude],
                                              [self.line.points[1].latitude])
-        np.testing.assert_allclose(self.ml.u_max, dst, atol=1e-4)
+        np.testing.assert_allclose(self.ml.get_u_max(), dst, atol=1e-4)
 
-
+  
 class MultiLineTestCase(unittest.TestCase):
     """
     Test the calculation of the strike direction for a list of polylines
@@ -57,73 +54,15 @@ class MultiLineTestCase(unittest.TestCase):
 
         lonsa = np.array([0.0, 0.1, 0.2, loa])
         latsa = np.array([0.0, 0.0, 0.0, laa])
-        linea = geo.Line.from_vectors(lonsa, latsa)
-        linea.keep_corners(4.0)
+        linea = geo.Line.from_vectors(lonsa, latsa).keep_corners(4.0)
 
         lonsb = np.array([loc, lob])
         latsb = np.array([lac, lab])
-        lineb = geo.Line.from_vectors(lonsb, latsb)
-        lineb.keep_corners(4.0)
+        lineb = geo.Line.from_vectors(lonsb, latsb).keep_corners(4.0)
 
         self.lines = [linea, lineb]
 
-    def test_get_strike_01(self):
-        """ get strike 01 """
-
-        # Create the multiline instance and get the prevalent strike
-        ml = MultiLine(self.lines)
-        revert = ml.set_overall_strike()
-
-        # Testing
-        self.assertTrue(ml.strike_to_east)
-        msg = 'Lines to flip are wrong'
-        np.testing.assert_equal(revert, [False, True], msg)
-
-        if PLOTTING:
-            fig, ax = plt.subplots()
-            fig.set_size_inches(6, 4)
-            for line in self.lines:
-                ax.plot(line.coo[:, 0], line.coo[:, 1], '-', color='grey')
-                ax.plot(line.coo[0, 0], line.coo[0, 1], 'or')
-                ax.plot(line.coo[-1, 0], line.coo[-1, 1], 'xb')
-            plt.show()
-
-    def test_set_origin(self):
-        """ test computing origin """
-
-        # Create the multiline instance and get the origin
-        ml = MultiLine(self.lines)
-        ml._set_origin()
-        expected = [0.0, 0.0]
-        np.testing.assert_almost_equal([ml.olon, ml.olat], expected)
-
-    def test_coordinate_shift(self):
-        """ test calculation of coordinate shift """
-
-        # Creating the multiline and computing the shift
-        ml = MultiLine(self.lines)
-        ml._set_coordinate_shift()
-
-        # Computing the distance between the origin and the endnode of the
-        # second polyline
-        ggdst = geo.geodetic.geodetic_distance
-        lo = ml.lines[1].points[0].longitude
-        la = ml.lines[1].points[0].latitude
-        dst = ggdst(0, 0, lo, la)
-
-        # Set the origin and compute the overall strike and the azimuths of
-        # the polylines composing the multiline instance
-        ml._set_origin()
-        ggazi = geo.geodetic.azimuth
-        azim = ggazi(ml.olon, ml.olat, lo, la)
-        delta = abs(ml.overall_strike - azim)
-        computed = dst * np.cos(np.radians(delta))
-
-        # Testing
-        np.testing.assert_almost_equal([0, computed], ml.shift)
-
-    def test_set_tu(self):
-
+    def test_get_tuw(self):
         # Get the coords of the lines composing the multiline
         lons = []
         lats = []
@@ -136,29 +75,18 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
+        ts, us = ml.get_tu(mesh.lons, mesh.lats)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
-            label = 'test_set_tu - U'
+            z = np.reshape(us, plons.shape)
+            label = 'test_get_ut - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
-            label = 'test_set_tu - T'
+            z = np.reshape(ts, plons.shape)
+            label = 'test_get_ut - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
-
-    def test_set_tu_spot_checks(self):
-
-        mesh = geo.Mesh(np.array([0.0]), np.array([0.0]))
-        ml = MultiLine(self.lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
-        np.testing.assert_almost_equal([0.0011659], uupp)
 
     def test_tu_figure09(self):
 
@@ -170,18 +98,16 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
+        ts, us = ml.get_tu(mesh.lons, mesh.lats)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_tu_figure09 - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_tu_figure09 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
@@ -195,20 +121,23 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
+        ts, us = ml.get_tu(mesh.lons, mesh.lats)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_tu_figure08 - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_tu_figure08 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
+
+    def test_string_representation(self):
+        # there is a line with 3 points and then one with 2 points
+        self.assertEqual(str(MultiLine(self.lines)),
+                         '7zzzz_kpbpu_s000m;s003p_s0030')
 
 
 def get_lines_figure09():
@@ -226,19 +155,19 @@ def get_lines_figure09():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Section trace 1
-    px = np.array([8, -9])
-    py = np.array([-15, -11])
+    px = np.array([8, -9.])
+    py = np.array([-15, -11.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)
     lines.append(line)
 
     # Section trace 2
-    px = np.array([6, -9])
-    py = np.array([-10, -5])
+    px = np.array([6., -9.])
+    py = np.array([-10, -5.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)
@@ -262,7 +191,7 @@ def get_lines_figure08():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     px = np.array([-2.1416918, -40.01534, -43.44729])
     py = np.array([13.50913, 47.34280, 55.86207])

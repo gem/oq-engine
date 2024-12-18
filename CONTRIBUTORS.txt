@@ -16,6 +16,7 @@ Christopher MacGown      (@ChristopherMacGown)  November 2010
 Lars Butler              (@larsbutler)          November 2010
 Roland Siegert           (@rolandsiegert)       November 2010
 Andrea Cerisara          (@acerisara)           December 2010
+Vitor Silva              (@vsilva)              December 2010
 Marco Milanesi           (@kpanic)              February 2011
 Muharem Hrnjadovic       (@arbeit)              February 2011
 Damiano Monelli          (@monellid)            May 2011
@@ -58,19 +59,20 @@ Richard Styron           (@cossatot)            July 2019
 Kris Vanneste            (@krisvanneste)        September 2019
 Alberto Chiusole         (@bebosudo)            November 2019
 Iason Grigoratos         (@jasongrig)           April 2020
-Francis Jenner Bernales  (@ftbernales)          August 2020
+Francis Bernales         (@ftbernales)          August 2020
 Athanasios Papadopoulos  (@thpap)               September 2020
 Viktor Polak             (@viktor76525)         November 2020
 Thomas Chartier          (@tomchartier)         December 2020
 Claudia Mascandola       (@mascandola)          December 2020
 Nicolas Schmid           (@schmidni)            March 2021
+Antonio Ettorre          (@antonioettorre)      April 2021
 Stanley Sayson           (@stansays)            July 2021
 Nico Kuehn               (@nikuehn)             July 2021
 Elena Manea              (@manea)               August 2021
 Shreyasvi Chandrasekhar  (@Shreyasvi91)         November 2021
 Giuseppina Tusa          (@gtus23)              December 2021
 Miguel Leonardo-Suárez   (@mleonardos)          December 2021
-Manuela Villani          (@mvillani)            January 2022
+Manuela Villani          (@ManuelaVillani)      January 2022
 Prajakta Jadhav          (@Prajakta-Jadhav-25)  February 2022
 Dharma Wijewickreme      (@Dharma-Wijewickreme) February 2022
 Tom Son                  (@SnowNooDLe)          March 2022
@@ -82,7 +84,14 @@ Claudio Schill           (@claudio525)          June 2023
 Astha Poudel             (@asthapoudel)         July 2023
 Lana Todorovic           (@LanaTodorovic93)     August 2023
 Christopher Brooks       (@CB-quakemodel)       September 2023
-Manuela Villani          (@ManuelaVillani)      September 2023
+Chris di Caprio          (@chrisdicaprio)       January 2024
+Michal Kolaj             (@MichalKolaj)         March 2024
+Fatemeh Alishahiha       (@FatemehAlsh)         May 2024
+Anna Rood                (@AnnaRood)            May 2024
+Kyle Smith               (@kslytherin)          June 2024
+Savvinos Aristeidou      (@Savvinos-Aristeidou) July 2024
+Enrico Abcede            (@emabcede30)          September 2024
+Ilaria Oliveti           (@IlariaOliveti)       October 2024
 
 Project management
 ------------------
@@ -93,3 +102,4 @@ Paul Henshaw             (@pslh)                February 2012
 Documentation
 -------------
 Sandra Giacomini                                June 2022
+Basar Yucel              (@basaryucell)         May 2023

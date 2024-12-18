@@ -91,7 +91,7 @@ def _get_mechanism(ctx, C):
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    SS, NF, TF = utils.get_fault_type_dummy_variables(ctx)
+    SS, _NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
 
 
@@ -420,14 +420,13 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
     COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
     COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
 
-    def __init__(self, **kwargs):
+    def __init__(self, kappa0=None):
         """
         Instantiate the model. When the kappa0 value is provided when
         initializing the class, this overrides the kappa0 value assigned to
         the site.
         """
-        super().__init__(**kwargs)
-        self.kappa0 = kwargs.get('kappa0', None)
+        self.kappa0 = kappa0
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="ex1" category="buildings" taxonomySource="custom">
+		<description>occupants and residents exposure</description>
+		<occupancyPeriods>night</occupancyPeriods>
+		<assets>
+			exposure.csv
+		</assets>
+
+	<exposureFields>
+    <field oq="night" input="total_occupants" />
+    <field oq="residents" input="total_occupants" />
+    </exposureFields>
+
+	</exposureModel>
+</nrml>

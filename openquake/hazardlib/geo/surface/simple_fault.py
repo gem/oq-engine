@@ -27,8 +27,7 @@ import numpy
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo import Point, Line, utils as geo_utils
 from openquake.hazardlib.near_fault import get_plane_equation
 
 
@@ -68,6 +67,17 @@ class SimpleFaultSurface(BaseSurface):
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
+
+    @property
+    def tor(self):
+        """
+        :returns: top of rupture line
+        """
+        lons = self.mesh.lons[0, :]
+        lats = self.mesh.lats[0, :]
+        coo = numpy.array([[lo, la] for lo, la in zip(lons, lats)])
+        line = Line.from_vectors(coo[:, 0], coo[:, 1])
+        return line.keep_corners(1.)
 
     def get_dip(self):
         """
@@ -116,8 +126,8 @@ class SimpleFaultSurface(BaseSurface):
             raise ValueError("the fault trace must have at least two points")
         if not fault_trace.horizontal():
             raise ValueError("the fault trace must be horizontal")
-        tlats = [point.latitude for point in fault_trace.points]
-        tlons = [point.longitude for point in fault_trace.points]
+        tlats = numpy.array([point.latitude for point in fault_trace.points])
+        tlons = numpy.array([point.longitude for point in fault_trace.points])
         if geo_utils.line_intersects_itself(tlons, tlats):
             raise ValueError("fault trace intersects itself")
         if not 0.0 < dip <= 90.0:
@@ -282,12 +292,12 @@ class SimpleFaultSurface(BaseSurface):
         indexlist = []
         dist_list = []
         for i, index in enumerate(range(1, totaln_patch)):
-            p0, p1, p2, p3 = cls.get_fault_patch_vertices(
+            p0, p1, p2, _p3 = cls.get_fault_patch_vertices(
                 rupture_top_edge, upper_seismogenic_depth,
                 lower_seismogenic_depth, dip, index_patch=index)
 
-            [normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
-                                                         hypocentre)
+            [_normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
+                                                          hypocentre)
             indexlist.append(index)
             dist_list.append(dist_to_plane)
             if numpy.allclose(dist_to_plane, 0., atol=25., rtol=0.):

@@ -20,14 +20,16 @@
 Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
+
 import math
 import logging
 import collections
 
 import numpy
+import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-from shapely import geometry
+from shapely import geometry, contains_xy
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -40,12 +42,12 @@ F32 = numpy.float32
 F64 = numpy.float64
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
-EARTH_RADIUS = geo.geodetic.EARTH_RADIUS
+EARTH_RADIUS = 6371.0
 spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
-SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
+SQRT = math.sqrt(2) / 2
 
 
 def get_dist(array, point):
@@ -115,6 +117,44 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
+@compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
+def angular_mean_weighted(degrees, weights):
+    # not using @ to avoid a NumbaPerformanceWarning:
+    # '@' is faster on contiguous arrays
+    mean_sin, mean_cos = 0., 0.
+    for d, w in zip(degrees, weights):
+        r = math.radians(d)
+        mean_sin += math.sin(r) * w
+        mean_cos += math.cos(r) * w
+    mean = numpy.arctan2(mean_sin, mean_cos)
+    return numpy.degrees(mean)
+
+
+def angular_mean(degrees, weights=None):
+    """
+    Given an array of angles in degrees, returns its angular mean.
+    If weights are passed, assume sum(weights) == 1.
+
+    >>> angular_mean([179, -179])
+    180.0
+    >>> angular_mean([-179, 179])
+    180.0
+    >>> angular_mean([-179, 179], [.75, .25])
+    -179.4999619199226
+    """
+    if len(degrees) == 1:
+        return degrees
+    elif weights is None:
+        rads = numpy.radians(degrees)
+        sin = numpy.sin(rads)
+        cos = numpy.cos(rads)
+        return numpy.degrees(numpy.arctan2(sin.mean(), cos.mean()))
+    else:
+        ds, ws = numpy.float64(degrees), numpy.float64(weights)
+        assert len(ws) == len(ds), (len(ws), len(ds))
+        return angular_mean_weighted(ds, ws)
+
+
 class SiteAssociationError(Exception):
     """Raised when there are no sites close enough"""
 
@@ -139,7 +179,7 @@ class _GeographicObjects(object):
             except ValueError:  # no field of name depth
                 depths = numpy.zeros_like(lons)
         else:
-            raise TypeError('%r not supported' % objects)
+            raise TypeError('{} not supported'.format(objects))
         self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
 
     def get_closest(self, lon, lat, depth=0):
@@ -193,7 +233,7 @@ class _GeographicObjects(object):
 
     def assoc2(self, exp, assoc_dist, region, mode):
         """
-        Associated a list of assets by site to the site collection used
+        Associated an exposure to the site collection used
         to instantiate GeographicObjects.
 
         :param exp: Exposure instance
@@ -267,7 +307,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     :param mode:
         if 'strict' fail if at least one site is not associated
         if 'error' fail if all sites are not associated
-    :returns: (filtered site collection, filtered objects)
+    :returns: (filtered site collection, filtered objects, discarded objects)
     """
     return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
@@ -382,6 +422,7 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     return False
 
 
+@numba.vectorize("(f8,f8)")
 def get_longitudinal_extent(lon1, lon2):
     """
     Return the distance between two longitude values as an angular measure.
@@ -423,6 +464,24 @@ def check_extent(lons, lats, msg=''):
     return int(dx), int(dy), int(dz)
 
 
+def get_bbox(lons, lats, xlons=(), xlats=()):
+    """
+    :returns: (minlon, minlat, maxlon, maxlat)
+    """
+    assert len(lons) == len(lats)
+    assert len(xlons) == len(xlats)
+    arr = numpy.empty(len(lons) + len(xlons), [('lon', float), ('lat', float)])
+    if len(xlons):
+        arr['lon'] = numpy.concatenate([lons, xlons])
+    else:
+        arr['lon'] = lons
+    if len(xlats):
+        arr['lat'] = numpy.concatenate([lats, xlats])
+    else:
+        arr['lat'] = lats
+    return get_bounding_box(arr, 0)
+
+
 def get_bounding_box(obj, maxdist):
     """
     Return the dilated bounding box of a geometric object.
@@ -431,6 +490,7 @@ def get_bounding_box(obj, maxdist):
         an object with method .get_bounding_box, or with an attribute .polygon
         or a list of locations
     :param maxdist: maximum distance in km
+    :returns: (minlon, minlat, maxlon, maxlat)
     """
     if hasattr(obj, 'get_bounding_box'):
         return obj.get_bounding_box(maxdist)
@@ -458,6 +518,7 @@ def get_bounding_box(obj, maxdist):
 
 # NB: returns (west, east, north, south) which is DIFFERENT from
 # get_bounding_box return (west, south, east, north)
+@compile(["(f8[:],f8[:])", "(f4[:],f4[:])"])
 def get_spherical_bounding_box(lons, lats):
     """
     Given a collection of points find and return the bounding box,
@@ -480,24 +541,54 @@ def get_spherical_bounding_box(lons, lats):
         lons = lons[ok]
         lats = lats[ok]
 
-    north, south = numpy.max(lats), numpy.min(lats)
-    west, east = numpy.min(lons), numpy.max(lons)
-    assert (-180 <= west <= 180) and (-180 <= east <= 180), (west, east)
+    north, south = lats.max(), lats.min()
+    west, east = lons.min(), lons.max()
     if get_longitudinal_extent(west, east) < 0:
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
-        if hasattr(lons, 'flatten'):
-            # fixes test_surface_crossing_international_date_line
-            lons = lons.flatten()
-        west = min(lon for lon in lons if lon > 0)
-        east = max(lon for lon in lons if lon < 0)
-        if not all((get_longitudinal_extent(west, lon) >= 0
-                    and get_longitudinal_extent(lon, east) >= 0)
-                   for lon in lons):
+        west = lons[lons > 0].min()
+        east = lons[lons < 0].max()
+        ext0 = get_longitudinal_extent(west, lons)
+        ext1 = get_longitudinal_extent(lons, east)
+        if not ((ext0 >= 0) & (ext1 >= 0)).all():
             raise ValueError('points collection has longitudinal extent '
-                             'wider than 180 deg')
-    return SphericalBB(west, east, north, south)
+                             'wider than 180 degrees')
+    return west, east, north, south
+
+
+@compile(['(f8,f8,f8[:],f8[:])', '(f8,f8,f4[:],f4[:])'])
+def project_reverse(lambda0, phi0, lons, lats):
+    sin_phi0, cos_phi0 = math.sin(phi0), math.cos(phi0)
+    # "reverse" mode, arguments are actually abscissae
+    # and ordinates in 2d space
+    xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
+    cos_c = numpy.sqrt(1. - (xx ** 2 + yy ** 2))
+    phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
+    lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
+    xx = numpy.degrees(lambda0 + lambdas)
+    yy = numpy.degrees(phis)
+    # shift longitudes greater than 180 back into the western
+    # hemisphere, that is in range [0, -180], and longitudes
+    # smaller than -180, to the heastern emisphere [0, 180]
+    idx = xx >= 180.
+    xx[idx] = xx[idx] - 360.
+    idx = xx <= -180.
+    xx[idx] = xx[idx] + 360.
+    return xx, yy
+
+
+@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])',
+          '(f8,f8,f4,f4)', '(f8,f8,f4[:],f4[:])', '(f8,f8,f4[:,:],f4[:,:])'])
+def project_direct(lambda0, phi0, lons, lats):
+    lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+    cos_phis = numpy.cos(phis)
+    cos_phi0 = math.cos(phi0)
+    lambdas -= lambda0
+    xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
+    yy = (cos_phi0 * numpy.sin(phis) - math.sin(phi0) * cos_phis
+          * numpy.cos(lambdas)) * EARTH_RADIUS
+    return xx, yy
 
 
 class OrthographicProjection(object):
@@ -538,62 +629,27 @@ class OrthographicProjection(object):
     kilometers (error doesn't exceed 1 km up until then).
     """
     @classmethod
-    def from_lons_lats(cls, lons, lats):
+    def from_(cls, lons, lats):
         idx = numpy.isfinite(lons)
-        lons = lons[idx]
-        lats = lats[idx]
-        return cls(*get_spherical_bounding_box(lons, lats))
+        return cls(*get_spherical_bounding_box(lons[idx], lats[idx]))
 
     def __init__(self, west, east, north, south):
         self.west = west
         self.east = east
         self.north = north
         self.south = south
-        self.lambda0, self.phi0 = numpy.radians(
+        self.lam0, self.phi0 = numpy.radians(
             get_middle_point(west, north, east, south))
-        self.cos_phi0 = numpy.cos(self.phi0)
-        self.sin_phi0 = numpy.sin(self.phi0)
-        self.sin_pi_over_4 = (2 ** 0.5) / 2
 
-    def __call__(self, lons, lats, reverse=False):
-        assert not numpy.isnan(lons).any(), lons
-        if not reverse:
-            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-            cos_phis = numpy.cos(phis)
-            lambdas -= self.lambda0
-            # calculate the sine of the distance between projection center
-            # and each of the points to project
-            sin_dist = numpy.sqrt(
-                numpy.sin((self.phi0 - phis) / 2.0) ** 2.0
-                + self.cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
-            )
-            if (sin_dist > self.sin_pi_over_4).any():
-                raise ValueError('some points are too far from the projection '
-                                 'center lon=%s lat=%s' %
-                                 (numpy.degrees(self.lambda0),
-                                  numpy.degrees(self.phi0)))
-            xx = numpy.cos(phis) * numpy.sin(lambdas)
-            yy = (self.cos_phi0 * numpy.sin(phis) - self.sin_phi0 * cos_phis
-                  * numpy.cos(lambdas))
-            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+    def __call__(self, lons, lats, deps=None, reverse=False):
+        if reverse:
+            xx, yy = project_reverse(self.lam0, self.phi0, lons, lats)
+        else:  # fast lane
+            xx, yy = project_direct(self.lam0, self.phi0, lons, lats)
+        if deps is None:
+            return numpy.array([xx, yy])
         else:
-            # "reverse" mode, arguments are actually abscissae
-            # and ordinates in 2d space
-            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
-            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
-            phis = numpy.arcsin(cos_c * self.sin_phi0 + yy * self.cos_phi0)
-            lambdas = numpy.arctan2(
-                xx, self.cos_phi0 * cos_c - yy * self.sin_phi0)
-            xx = numpy.degrees(self.lambda0 + lambdas)
-            yy = numpy.degrees(phis)
-            # shift longitudes greater than 180 back into the western
-            # hemisphere, that is in range [0, -180], and longitudes
-            # smaller than -180, to the heastern emisphere [0, 180]
-            idx = xx >= 180.
-            xx[idx] = xx[idx] - 360.
-            idx = xx <= -180.
-            xx[idx] = xx[idx] + 360.
-            return xx, yy
+            return numpy.array([xx, yy, deps])
 
 
 def get_middle_point(lon1, lat1, lon2, lat2):
@@ -799,7 +855,7 @@ def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
 
-    >>> arr = geohash(F64([10., 10.]), F64([45., 46.]), length=5)
+    >>> arr = CODE32[geohash(F64([10., 10.]), F64([45., 46.]), length=5)]
     >>> [row.tobytes() for row in arr]
     [b'spzpg', b'u0pje']
     """
@@ -837,8 +893,74 @@ def geohash(lons, lats, length):
             if bit < 4:
                 bit += 1
             else:
-                chars[p, i] = CODE32[ch]
+                chars[p, i] = ch
                 bit = 0
                 ch = 0
                 i += 1
     return chars
+
+
+# corresponds to blocks of 2.4 km
+def geohash5(coords):
+    """
+    :returns: a geohash of length 5*len(points) as a string
+
+    >>> coords = numpy.array([[10., 45.], [11., 45.]])
+    >>> geohash5(coords)
+    'spzpg_spzzf'
+    """
+    arr = CODE32[geohash(coords[:, 0], coords[:, 1], 5)]
+    return b'_'.join(row.tobytes() for row in arr).decode('ascii')
+
+
+# corresponds to blocks of 78 km
+def geohash3(lons, lats):
+    """
+    :returns: a geohash of length 3 as a 16 bit integer
+
+    >>> geohash3(F64([10., 10.]), F64([45., 46.]))
+    array([24767, 26645], dtype=uint16)
+    """
+    arr = geohash(lons, lats, 3)
+    return arr[:, 0] * 1024 + arr[:, 1] * 32 + arr[:, 2]
+
+
+def geolocate(lonlats, geom_df, exclude=()):
+    """
+    :param lonlats: array of shape (N, 2) of (lon, lat)
+    :param geom_df: DataFrame of geometries with a "code" field
+    :param exclude: List of codes to exclude from the results
+    :returns: codes associated to the points
+
+    NB: if the "code" field is not a primary key, i.e. there are
+    different geometries with the same code, performs an "or", i.e.
+    associates the code if at least one of the geometries matches
+    """
+    codes = numpy.array(['???'] * len(lonlats))
+    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
+    for code, df in filtered_geom_df.groupby('code'):
+        ok = numpy.zeros(len(lonlats), bool)
+        for geom in df.geom:
+            ok |= contains_xy(geom, lonlats)
+        codes[ok] = code
+    return codes
+
+
+def geolocate_geometries(geometries, geom_df, exclude=()):
+    """
+    :param geometries: NumPy array of Shapely geometries to check
+    :param geom_df: DataFrame of geometries with a "code" field
+    :param exclude: List of codes to exclude from the results
+    :returns: NumPy array where each element contains a list of codes
+        of geometries that intersect each input geometry
+    """
+    result_codes = numpy.empty(len(geometries), dtype=object)
+    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
+    for i, input_geom in enumerate(geometries):
+        intersecting_codes = set()  # to store intersecting codes for current geometry
+        for code, df in filtered_geom_df.groupby('code'):
+            target_geoms = df['geom'].values  # geometries associated with this code
+            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
+                intersecting_codes.add(code)
+        result_codes[i] = sorted(intersecting_codes)
+    return result_codes

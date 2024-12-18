@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+<logicTree logicTreeID="">
+		<logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Tectonic_Type_A">
+			<logicTreeBranch branchID="b_00_00">
+				<uncertaintyModel>NGAEastUSGSSeedFrankel</uncertaintyModel>
+				<uncertaintyWeight>1.000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+	</logicTree>
+</nrml>

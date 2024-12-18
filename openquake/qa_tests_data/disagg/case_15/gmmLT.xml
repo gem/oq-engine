@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+	<logicTree logicTreeID="">
+			
+		<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+			<logicTreeBranch branchID="b_01_03">
+				<uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+				<uncertaintyWeight>1.0</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+	</logicTree>
+</nrml>

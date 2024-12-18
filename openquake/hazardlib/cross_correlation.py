@@ -131,23 +131,24 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         :returns: a scalar in the range 0..1
         """
         if from_imt == to_imt:
-            return 1
+            return 1.0
 
         T1 = from_imt.period or 0.05  # for PGA
         T2 = to_imt.period or 0.05  # for PGA
 
         Tmin = min(T1, T2)
         Tmax = max(T1, T2)
-        ITmin = 1. if Tmin < 0.25 else 0.
+        ITmin = 1.0 if Tmin < 0.25 else 0.0
 
         theta1 = 1.374
         theta2 = 5.586
         theta3 = 0.728
 
-        angle = np.pi/2. - (theta1 + theta2 * ITmin * (Tmin / Tmax) ** theta3 *
+        angle = np.pi/2.0 - (theta1 + theta2 * ITmin * (Tmin / Tmax) ** theta3 *
                             np.log10(Tmin / 0.25)) * np.log10(Tmax / Tmin)
-        delta = 1 + np.cos(-1.5 * np.log10(Tmax / Tmin))
-        return (1. - np.cos(angle) + delta) / 3.
+        delta = 1.0 + np.cos(-1.5 * np.log10(Tmax / Tmin))
+        corr = (1.0 - np.cos(angle) + delta) / 3.0
+        return min(corr, 1.0)
 
     def get_inter_eps(self, imts, num_events, rng):
         """

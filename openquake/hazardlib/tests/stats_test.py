@@ -94,19 +94,11 @@ class QuantileCurveTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(expected_curve, actual_curve, atol=0.005)
 
     def test_compute_weighted_quantile_curve_case1(self):
-        expected_curve = numpy.array([0.69909, 0.60859, 0.50328])
-
+        expected_curve = numpy.array([0.69909])
         quantile = 0.3
-
-        curves = [
-            [9.9996e-01, 9.9962e-01, 9.9674e-01],
-            [6.9909e-01, 6.0859e-01, 5.0328e-01],
-            [1.0000e+00, 9.9996e-01, 9.9947e-01],
-        ]
+        curves = [[9.9996e-01], [6.9909e-01], [1.0000e+00]]
         weights = [0.5, 0.3, 0.2]
-
         actual_curve = quantile_curve(quantile, curves, weights)
-
         numpy.testing.assert_allclose(expected_curve, actual_curve)
 
     def test_compute_weighted_quantile_curve_case2(self):

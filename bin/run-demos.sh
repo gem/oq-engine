@@ -8,16 +8,18 @@ fi
 oq info venv
 oq info cfg
 
-# run demos with job_hazard.ini and job_risk.ini
+# create .tmp.ini files with oqparam.to_ini()
+python -m openquake.calculators.checkers "$1"
+# run the demos with the generated file
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
-       oq engine --run $demo_dir/job_hazard.ini --exports csv,hdf5
-       oq engine --run $demo_dir/job_risk.ini --hc -1
+       oq engine --run $demo_dir/job_hazard.tmp.ini --exports csv,hdf5
+       oq engine --run $demo_dir/job_risk.tmp.ini --hc -1
    fi
 done
 
 # run the other demos
-for ini in $(find $1 -name job.ini | sort); do
+for ini in $(find $1 -name job.tmp.ini | sort); do
     oq engine --run $ini --exports csv,hdf5
 done
 
@@ -38,7 +40,6 @@ MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1&spec=rlzs' 14
 MPLBACKEND=Agg oq plot 'task_info?kind=classical' 9
 MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
-MPLBACKEND=Agg oq plot sources? 9
 
 # run multi_risk test
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
@@ -58,9 +59,11 @@ oq show agg_values
 oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
 
+# sensitivity to the strike angle
+oq shell $1/risk/ScenarioRisk/sensitivity.py
+
 #echo "Testing csm2rup"
-#commented because missing export_outputs and breaking QGIS
-#OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
 
 # display the calculations
 oq db find %

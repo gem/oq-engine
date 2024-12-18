@@ -19,14 +19,17 @@
 Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
+
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
-from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_site_term
+from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
+from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 from openquake.hazardlib.gsim.nga_east import (
     TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
@@ -72,9 +75,23 @@ def cy14_site_term(ctx, imt, me, si, ta, phi):
     This function adds the CY14 site term to GMMs requiring it
     """
     C = ChiouYoungs2014.COEFFS[imt]
-    fa = _get_site_term(C, ctx.vs30, me)  # ref mean must be in natural log
+    fa = _get_cy14_site_term(C, ctx.vs30, me) # Ref mean must be in natural log
     me[:] += fa
 
+
+def cb14_basin_term(ctx, imt, me, si, ta, phi):
+    """
+    This function adds the CB14 basin term to GMMs requiring it.
+    """
+    me[:] += _get_cb14_basin_term(imt, ctx)
+
+
+def m9_basin_term(ctx, imt, me, si, ta, phi):
+    """
+    This function applies the M9 basin adjustment
+    """
+    me = _apply_m9_basin_term(ctx, imt, me)
+    
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
@@ -208,13 +225,9 @@ def _dict_to_coeffs_table(input_dict, name):
 
 class ModifiableGMPE(GMPE):
     """
-    This is a fully configurable GMPE
-
-    :param string gmpe_name:
-        The name of a GMPE class used for the calculation.
-    :param params:
-        A dictionary where the key defines the required modification and the
-        value is a list with the required parameters.
+    This is a class to modify an underlying GMPE.
+    It should NEVER be instantiated directly; users should call
+    hazardlib.valid.modifiable_gmpe(gmpe, **kwargs) instead.
     """
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -226,8 +239,6 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
@@ -236,7 +247,8 @@ class ModifiableGMPE(GMPE):
             if k not in g:
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
-        self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
+        if hasattr(self.gmpe, 'gmpe_table'):
+            self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
 
         if ('set_between_epsilon' in self.params or
@@ -251,6 +263,12 @@ class ModifiableGMPE(GMPE):
         if 'add_between_within_stds' in self.params:
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
+
+        if ('cb14_basin_term' in self.params or 'm9_basin_term' in self.params
+            ) and ( 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            tmp = list(self.gmpe.REQUIRES_SITES_PARAMETERS)
+            tmp.append('z2pt5')
+            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(tmp)
 
         # This is required by the `sigma_model_alatik2015` function
         key = 'sigma_model_alatik2015'
@@ -296,6 +314,7 @@ class ModifiableGMPE(GMPE):
         Set the .mean_table and .sig_table attributes on the underlying gmpe
         """
         if hasattr(self.gmpe, 'set_tables'):
+            assert len(mags)
             self.gmpe.set_tables(mags, imts)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -304,6 +323,7 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # Set reference Vs30 if required
         if ('nrcan15_site_term' in self.params or
                 'cy14_site_term' in self.params):
             ctx_copy = ctx.copy()
@@ -311,7 +331,7 @@ class ModifiableGMPE(GMPE):
                 rock_vs30 = 760.
             elif 'cy14_site_term' in self.params:
                 rock_vs30 = 1130.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
             ctx_copy = ctx
         g = globals()

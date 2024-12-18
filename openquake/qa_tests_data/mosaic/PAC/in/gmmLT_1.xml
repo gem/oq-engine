@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+	<logicTree logicTreeID="">
+				<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface">
+			<logicTreeBranch branchID="b_01_05">
+				<uncertaintyModel>ParkerEtAl2020SInter</uncertaintyModel>
+				<uncertaintyWeight>1.00000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+			</logicTree>
+</nrml>

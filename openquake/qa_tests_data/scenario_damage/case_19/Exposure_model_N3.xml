@@ -1,0 +1,779 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+   <exposureModel category="buildings" id="ex1" taxonomySource="GEM taxonomy">
+      <description>exposure_model_N2</description>
+      <conversions> 
+         <costTypes/>
+      </conversions>
+      <assets>
+         <asset id="1" number="1" taxonomy="CR/LFM+CDL+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="2" number="1" taxonomy="CR/LFM+CDL+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="3" number="1" taxonomy="CR/LFM+CDM+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="4" number="1" taxonomy="CR/LFM+CDM+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="5" number="1" taxonomy="CR/LFM+CDH+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="6" number="1" taxonomy="CR/LFM+CDH+DUH/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="7" number="1" taxonomy="CR/LDUAL+CDL+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="8" number="1" taxonomy="CR/LDUAL+CDL+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="9" number="1" taxonomy="CR/LDUAL+CDM+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="10" number="1" taxonomy="CR/LDUAL+CDM+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="11" number="1" taxonomy="CR/LDUAL+CDH+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="12" number="1" taxonomy="CR/LDUAL+CDH+DUH/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="13" number="1" taxonomy="CR/LFINF+CDL+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="14" number="1" taxonomy="CR/LFINF+CDL+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="15" number="1" taxonomy="CR/LFINF+CDM+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="16" number="1" taxonomy="CR/LFINF+CDM+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="17" number="1" taxonomy="CR/LFINF+CDH+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="18" number="1" taxonomy="CR/LFINF+CDH+DUH/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="19" number="1" taxonomy="CR/LFINF+DUL/H3/CCA">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="20" number="1" taxonomy="CR/LFINF+DUL/H3/SOS">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="21" number="1" taxonomy="CR/LFINF+CDN+DNO/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="22" number="1" taxonomy="CR/LFINF+CDM+DUH/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="23" number="1" taxonomy="CR/LFINF+CDH+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="24" number="1" taxonomy="CR/LFINF+CDL+DUH/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="25" number="1" taxonomy="CR/LFINF+CDH+DUH/H3/NSCA">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="26" number="1" taxonomy="CR/LFINF+CDM+DUM/H3/NSCA">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="27" number="1" taxonomy="CR/LWAL+CDL+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="28" number="1" taxonomy="CR/LWAL+CDL+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="29" number="1" taxonomy="CR/LWAL+CDM+DUL/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="30" number="1" taxonomy="CR/LWAL+CDM+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="31" number="1" taxonomy="CR/LWAL+CDH+DUM/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="32" number="1" taxonomy="CR/LWAL+CDH+DUH/H3">
+            <location lat="37.1739" lon="36.7345"/> 
+            <costs/>
+         </asset>
+         <asset id="33" number="1" taxonomy="CR/LFM+CDL+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="34" number="1" taxonomy="CR/LFM+CDL+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="35" number="1" taxonomy="CR/LFM+CDM+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="36" number="1" taxonomy="CR/LFM+CDM+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="37" number="1" taxonomy="CR/LFM+CDH+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="38" number="1" taxonomy="CR/LFM+CDH+DUH/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="39" number="1" taxonomy="CR/LDUAL+CDL+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="40" number="1" taxonomy="CR/LDUAL+CDL+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="41" number="1" taxonomy="CR/LDUAL+CDM+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="42" number="1" taxonomy="CR/LDUAL+CDM+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="43" number="1" taxonomy="CR/LDUAL+CDH+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="44" number="1" taxonomy="CR/LDUAL+CDH+DUH/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="45" number="1" taxonomy="CR/LFINF+CDL+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="46" number="1" taxonomy="CR/LFINF+CDL+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="47" number="1" taxonomy="CR/LFINF+CDM+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="48" number="1" taxonomy="CR/LFINF+CDM+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="49" number="1" taxonomy="CR/LFINF+CDH+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="50" number="1" taxonomy="CR/LFINF+CDH+DUH/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="51" number="1" taxonomy="CR/LFINF+DUL/H3/CCA">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="52" number="1" taxonomy="CR/LFINF+DUL/H3/SOS">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="53" number="1" taxonomy="CR/LFINF+CDN+DNO/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="54" number="1" taxonomy="CR/LFINF+CDM+DUH/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="55" number="1" taxonomy="CR/LFINF+CDH+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="56" number="1" taxonomy="CR/LFINF+CDL+DUH/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="57" number="1" taxonomy="CR/LFINF+CDH+DUH/H3/NSCA">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="58" number="1" taxonomy="CR/LFINF+CDM+DUM/H3/NSCA">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="59" number="1" taxonomy="CR/LWAL+CDL+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="60" number="1" taxonomy="CR/LWAL+CDL+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="61" number="1" taxonomy="CR/LWAL+CDM+DUL/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="62" number="1" taxonomy="CR/LWAL+CDM+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="63" number="1" taxonomy="CR/LWAL+CDH+DUM/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="64" number="1" taxonomy="CR/LWAL+CDH+DUH/H3">
+            <location lat="37.1741" lon="36.7352"/> 
+            <costs/>
+         </asset>
+         <asset id="65" number="1" taxonomy="CR/LFM+CDL+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="66" number="1" taxonomy="CR/LFM+CDL+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="67" number="1" taxonomy="CR/LFM+CDM+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="68" number="1" taxonomy="CR/LFM+CDM+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="69" number="1" taxonomy="CR/LFM+CDH+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="70" number="1" taxonomy="CR/LFM+CDH+DUH/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="71" number="1" taxonomy="CR/LDUAL+CDL+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="72" number="1" taxonomy="CR/LDUAL+CDL+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="73" number="1" taxonomy="CR/LDUAL+CDM+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="74" number="1" taxonomy="CR/LDUAL+CDM+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="75" number="1" taxonomy="CR/LDUAL+CDH+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="76" number="1" taxonomy="CR/LDUAL+CDH+DUH/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="77" number="1" taxonomy="CR/LFINF+CDL+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="78" number="1" taxonomy="CR/LFINF+CDL+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="79" number="1" taxonomy="CR/LFINF+CDM+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="80" number="1" taxonomy="CR/LFINF+CDM+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="81" number="1" taxonomy="CR/LFINF+CDH+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="82" number="1" taxonomy="CR/LFINF+CDH+DUH/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="83" number="1" taxonomy="CR/LFINF+DUL/H3/CCA">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="84" number="1" taxonomy="CR/LFINF+DUL/H3/SOS">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="85" number="1" taxonomy="CR/LFINF+CDN+DNO/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="86" number="1" taxonomy="CR/LFINF+CDM+DUH/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="87" number="1" taxonomy="CR/LFINF+CDH+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="88" number="1" taxonomy="CR/LFINF+CDL+DUH/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="89" number="1" taxonomy="CR/LFINF+CDH+DUH/H3/NSCA">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="90" number="1" taxonomy="CR/LFINF+CDM+DUM/H3/NSCA">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="91" number="1" taxonomy="CR/LWAL+CDL+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="92" number="1" taxonomy="CR/LWAL+CDL+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="93" number="1" taxonomy="CR/LWAL+CDM+DUL/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="94" number="1" taxonomy="CR/LWAL+CDM+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="95" number="1" taxonomy="CR/LWAL+CDH+DUM/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="96" number="1" taxonomy="CR/LWAL+CDH+DUH/H3">
+            <location lat="37.1765" lon="36.7404"/> 
+            <costs/>
+         </asset>
+         <asset id="97" number="1" taxonomy="CR/LFM+CDL+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="98" number="1" taxonomy="CR/LFM+CDL+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="99" number="1" taxonomy="CR/LFM+CDM+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="100" number="1" taxonomy="CR/LFM+CDM+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="101" number="1" taxonomy="CR/LFM+CDH+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="102" number="1" taxonomy="CR/LFM+CDH+DUH/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="103" number="1" taxonomy="CR/LDUAL+CDL+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="104" number="1" taxonomy="CR/LDUAL+CDL+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="105" number="1" taxonomy="CR/LDUAL+CDM+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="106" number="1" taxonomy="CR/LDUAL+CDM+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="107" number="1" taxonomy="CR/LDUAL+CDH+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="108" number="1" taxonomy="CR/LDUAL+CDH+DUH/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="109" number="1" taxonomy="CR/LFINF+CDL+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="110" number="1" taxonomy="CR/LFINF+CDL+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="111" number="1" taxonomy="CR/LFINF+CDM+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="112" number="1" taxonomy="CR/LFINF+CDM+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="113" number="1" taxonomy="CR/LFINF+CDH+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="114" number="1" taxonomy="CR/LFINF+CDH+DUH/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="115" number="1" taxonomy="CR/LFINF+DUL/H3/CCA">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="116" number="1" taxonomy="CR/LFINF+DUL/H3/SOS">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="117" number="1" taxonomy="CR/LFINF+CDN+DNO/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="118" number="1" taxonomy="CR/LFINF+CDM+DUH/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="119" number="1" taxonomy="CR/LFINF+CDH+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="120" number="1" taxonomy="CR/LFINF+CDL+DUH/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="121" number="1" taxonomy="CR/LFINF+CDH+DUH/H3/NSCA">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="122" number="1" taxonomy="CR/LFINF+CDM+DUM/H3/NSCA">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="123" number="1" taxonomy="CR/LWAL+CDL+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="124" number="1" taxonomy="CR/LWAL+CDL+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="125" number="1" taxonomy="CR/LWAL+CDM+DUL/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="126" number="1" taxonomy="CR/LWAL+CDM+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="127" number="1" taxonomy="CR/LWAL+CDH+DUM/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="128" number="1" taxonomy="CR/LWAL+CDH+DUH/H3">
+            <location lat="37.1748" lon="36.7359"/> 
+            <costs/>
+         </asset>
+         <asset id="129" number="1" taxonomy="CR/LFM+CDL+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="130" number="1" taxonomy="CR/LFM+CDL+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="131" number="1" taxonomy="CR/LFM+CDM+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="132" number="1" taxonomy="CR/LFM+CDM+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="133" number="1" taxonomy="CR/LFM+CDH+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="134" number="1" taxonomy="CR/LFM+CDH+DUH/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="135" number="1" taxonomy="CR/LDUAL+CDL+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="136" number="1" taxonomy="CR/LDUAL+CDL+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="137" number="1" taxonomy="CR/LDUAL+CDM+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="138" number="1" taxonomy="CR/LDUAL+CDM+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="139" number="1" taxonomy="CR/LDUAL+CDH+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="140" number="1" taxonomy="CR/LDUAL+CDH+DUH/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="141" number="1" taxonomy="CR/LFINF+CDL+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="142" number="1" taxonomy="CR/LFINF+CDL+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="143" number="1" taxonomy="CR/LFINF+CDM+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="144" number="1" taxonomy="CR/LFINF+CDM+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="145" number="1" taxonomy="CR/LFINF+CDH+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="146" number="1" taxonomy="CR/LFINF+CDH+DUH/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="147" number="1" taxonomy="CR/LFINF+DUL/H3/CCA">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="148" number="1" taxonomy="CR/LFINF+DUL/H3/SOS">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="149" number="1" taxonomy="CR/LFINF+CDN+DNO/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="150" number="1" taxonomy="CR/LFINF+CDM+DUH/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="151" number="1" taxonomy="CR/LFINF+CDH+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="152" number="1" taxonomy="CR/LFINF+CDL+DUH/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="153" number="1" taxonomy="CR/LFINF+CDH+DUH/H3/NSCA">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="154" number="1" taxonomy="CR/LFINF+CDM+DUM/H3/NSCA">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="155" number="1" taxonomy="CR/LWAL+CDL+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="156" number="1" taxonomy="CR/LWAL+CDL+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="157" number="1" taxonomy="CR/LWAL+CDM+DUL/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="158" number="1" taxonomy="CR/LWAL+CDM+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="159" number="1" taxonomy="CR/LWAL+CDH+DUM/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="160" number="1" taxonomy="CR/LWAL+CDH+DUH/H3">
+            <location lat="37.1742" lon="36.7335"/> 
+            <costs/>
+         </asset>
+         <asset id="161" number="1" taxonomy="CR/LFM+CDL+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="162" number="1" taxonomy="CR/LFM+CDL+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="163" number="1" taxonomy="CR/LFM+CDM+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="164" number="1" taxonomy="CR/LFM+CDM+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="165" number="1" taxonomy="CR/LFM+CDH+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="166" number="1" taxonomy="CR/LFM+CDH+DUH/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="167" number="1" taxonomy="CR/LDUAL+CDL+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="168" number="1" taxonomy="CR/LDUAL+CDL+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="169" number="1" taxonomy="CR/LDUAL+CDM+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="170" number="1" taxonomy="CR/LDUAL+CDM+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="171" number="1" taxonomy="CR/LDUAL+CDH+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="172" number="1" taxonomy="CR/LDUAL+CDH+DUH/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="173" number="1" taxonomy="CR/LFINF+CDL+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="174" number="1" taxonomy="CR/LFINF+CDL+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="175" number="1" taxonomy="CR/LFINF+CDM+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="176" number="1" taxonomy="CR/LFINF+CDM+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="177" number="1" taxonomy="CR/LFINF+CDH+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="178" number="1" taxonomy="CR/LFINF+CDH+DUH/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="179" number="1" taxonomy="CR/LFINF+DUL/H3/CCA">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="180" number="1" taxonomy="CR/LFINF+DUL/H3/SOS">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="181" number="1" taxonomy="CR/LFINF+CDN+DNO/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="182" number="1" taxonomy="CR/LFINF+CDM+DUH/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="183" number="1" taxonomy="CR/LFINF+CDH+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="184" number="1" taxonomy="CR/LFINF+CDL+DUH/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="185" number="1" taxonomy="CR/LFINF+CDH+DUH/H3/NSCA">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="186" number="1" taxonomy="CR/LFINF+CDM+DUM/H3/NSCA">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="187" number="1" taxonomy="CR/LWAL+CDL+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="188" number="1" taxonomy="CR/LWAL+CDL+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="189" number="1" taxonomy="CR/LWAL+CDM+DUL/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="190" number="1" taxonomy="CR/LWAL+CDM+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="191" number="1" taxonomy="CR/LWAL+CDH+DUM/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+         <asset id="192" number="1" taxonomy="CR/LWAL+CDH+DUH/H3">
+            <location lat="37.1735" lon="36.7301"/> 
+            <costs/>
+         </asset>
+      </assets>
+   </exposureModel>
+</nrml>

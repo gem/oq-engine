@@ -19,9 +19,8 @@
 import unittest
 import numpy
 from openquake.baselib.hdf5 import read_csv
-from openquake.hazardlib.gsim.base import _get_poes
 from openquake.baselib.general import gettemp, DictArray
-from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.contexts import simple_cmaker, _get_poes
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import AmplFunction, get_poes_site

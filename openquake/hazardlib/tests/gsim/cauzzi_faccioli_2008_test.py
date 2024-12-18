@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
     CauzziFaccioli2008, FaccioliEtAl2010)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 

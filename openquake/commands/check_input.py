@@ -23,7 +23,7 @@ from openquake.risklib.asset import Exposure
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base
 from openquake.hazardlib import nrml
-from openquake.risklib import read_nrml  # this is necessary
+from openquake.risklib import read_nrml  # noqa
 
 
 def main(job_ini_or_zip_or_nrmls):

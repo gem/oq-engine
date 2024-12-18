@@ -19,14 +19,14 @@ xmlns:gml="http://www.opengis.net/gml"
                     <profile>
                         <gml:LineString>
                             <gml:posList>
-                                -75.03541 19.85003 0.0 -75.03541 19.85003 20.0
+                                -75.03541 19.85003 0.0 -75.03540 19.85002 20.0
                             </gml:posList>
                         </gml:LineString>
                     </profile>
                     <profile>
                         <gml:LineString>
                             <gml:posList>
-                                -75.55651 19.83347 0.0 -75.55651 19.83347 20.0
+                                -75.55651 19.83347 0.0 -75.55650 19.83346 20.0
                             </gml:posList>
                         </gml:LineString>
                     </profile>

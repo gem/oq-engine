@@ -45,10 +45,10 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Test suite for the class htmk.strain.shift.Shift, the class to implement the
 SHIFT methodology for calculating activity rates from geodetic strain
-'''
+"""
 import os
 import unittest
 import numpy as np
@@ -57,14 +57,14 @@ from openquake.hmtk.strain.strain_utils import moment_function
 from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
 from openquake.hmtk.strain.shift import Shift, BIRD_GLOBAL_PARAMETERS
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'strain_data')
-STRAIN_FILE = os.path.join(BASE_DATA_PATH, 'simple_strain_values.csv')
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "strain_data")
+STRAIN_FILE = os.path.join(BASE_DATA_PATH, "simple_strain_values.csv")
 
 
 class TestShift(unittest.TestCase):
-    '''
+    """
     Test suite for the class openquake.hmtk.strain.shift.Shift
-    '''
+    """
 
     def setUp(self):
         self.model = None
@@ -74,31 +74,39 @@ class TestShift(unittest.TestCase):
         # Tests the basic instantiation of the SHIFT class
         # Instantiatiation with float
         self.model = Shift(5.0)
-        np.testing.assert_array_almost_equal(self.model.target_magnitudes,
-                                             np.array([5.0]))
+        np.testing.assert_array_almost_equal(
+            self.model.target_magnitudes, np.array([5.0])
+        )
         self.assertEqual(self.model.number_magnitudes, 1)
         # Instantiation with a numpy array
-        self.model = Shift(np.arange(5., 8., 0.5))
-        np.testing.assert_array_almost_equal(self.model.target_magnitudes,
-                                             np.arange(5., 8., 0.5))
+        self.model = Shift(np.arange(5.0, 8.0, 0.5))
+        np.testing.assert_array_almost_equal(
+            self.model.target_magnitudes, np.arange(5.0, 8.0, 0.5)
+        )
         self.assertEqual(self.model.number_magnitudes, 6)
         # Instantiation with  list
-        self.model = Shift([5., 6., 7., 8.])
-        np.testing.assert_array_almost_equal(self.model.target_magnitudes,
-                                             np.array([5., 6., 7., 8.]))
+        self.model = Shift([5.0, 6.0, 7.0, 8.0])
+        np.testing.assert_array_almost_equal(
+            self.model.target_magnitudes, np.array([5.0, 6.0, 7.0, 8.0])
+        )
         self.assertEqual(self.model.number_magnitudes, 4)
         # Otherwise raise an error
         with self.assertRaises(ValueError) as ae:
             self.model = Shift(None)
-        self.assertEqual(str(ae.exception),
-                         'Minimum magnitudes must be float, list or array')
+        self.assertEqual(
+            str(ae.exception),
+            "Minimum magnitudes must be float, list or array",
+        )
         # Check regionalisation - assuming defaults
         self.model = Shift(5.0)
         for region in self.model.regionalisation.keys():
-            self.assertDictEqual(BIRD_GLOBAL_PARAMETERS[region],
-                                 self.model.regionalisation[region])
-        np.testing.assert_array_almost_equal(np.log10(self.model.base_rate),
-                                             np.array([-20.74610902]))
+            self.assertDictEqual(
+                BIRD_GLOBAL_PARAMETERS[region],
+                self.model.regionalisation[region],
+            )
+        np.testing.assert_array_almost_equal(
+            np.log10(self.model.base_rate), np.array([-20.74610902])
+        )
 
     def test_reclassify_with_bird_data(self):
         # Tests the re-classification from the Kreemer classification (C, O, S,
@@ -120,23 +128,54 @@ class TestShift(unittest.TestCase):
         self.model = Shift(5.0)
         self.strain_model.data = {
             # IPL SUB OCB CCB   CRB  CTF  CTF  OSRn OSRn  OSR1  OSR2 OCB
-            'err': np.array([0., 0., 0., 1.0, -1.0, 0.1, -0.1, 0.0, 0.0,  0.0,
-                             0.0, 0.0]),
-            'e1h': np.array([0., 0., 0., 0.0, -1.0, 0.0, -1.0, 1.0, 0.0, -1.0,
-                             -1.0, -1.0]),
-            'e2h': np.array([0., 0., 0., 1.0,  0.0, 1.0,  0.0, 1.0, 0.0,  2.0,
-                             0.5, -1.0]),
-            'region': np.array(['IPL', 'S', 'O', 'C', 'C', 'C', 'C', 'R', 'R',
-                                'R', 'R', 'R'], dtype='a13')}
+            "err": np.array(
+                [0.0, 0.0, 0.0, 1.0, -1.0, 0.1, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0]
+            ),
+            "e1h": np.array(
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    -1.0,
+                    0.0,
+                    -1.0,
+                    1.0,
+                    0.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                ]
+            ),
+            "e2h": np.array(
+                [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 2.0, 0.5, -1.0]
+            ),
+            "region": np.array(
+                ["IPL", "S", "O", "C", "C", "C", "C", "R", "R", "R", "R", "R"],
+                dtype="a13",
+            ),
+        }
 
         self.model.strain = self.strain_model
-        expected_regions = [b'IPL', b'SUB', b'OCB', b'CCB', b'CRB', b'CTF',
-                            b'CTF', b'OSRnor', b'OSRnor', b'OSR_special_1',
-                            b'OSR_special_2', b'OCB']
+        expected_regions = [
+            b"IPL",
+            b"SUB",
+            b"OCB",
+            b"CCB",
+            b"CRB",
+            b"CTF",
+            b"CTF",
+            b"OSRnor",
+            b"OSRnor",
+            b"OSR_special_1",
+            b"OSR_special_2",
+            b"OCB",
+        ]
         # Apply Bird Classification
         self.model._reclassify_Bird_regions_with_data()
-        self.assertListEqual(expected_regions,
-                             self.model.strain.data['region'].tolist())
+        self.assertListEqual(
+            expected_regions, self.model.strain.data["region"].tolist()
+        )
 
     def test_continuum_seismicity(self):
         # Tests the function openquake.hmtk.strain.shift.Shift.continuum_seismicity -
@@ -144,26 +183,36 @@ class TestShift(unittest.TestCase):
         # from the Fortran 90 code GSRM.f90
         self.strain_model = GeodeticStrain()
         # Define a simple strain model
-        test_data = {'longitude': np.zeros(3, dtype=float),
-                     'latitude': np.zeros(3, dtype=float),
-                     'exx': np.array([1E-9, 1E-8, 1E-7]),
-                     'eyy': np.array([5E-10, 5E-9, 5E-8]),
-                     'exy': np.array([2E-9, 2E-8, 2E-7])}
+        test_data = {
+            "longitude": np.zeros(3, dtype=float),
+            "latitude": np.zeros(3, dtype=float),
+            "exx": np.array([1e-9, 1e-8, 1e-7]),
+            "eyy": np.array([5e-10, 5e-9, 5e-8]),
+            "exy": np.array([2e-9, 2e-8, 2e-7]),
+        }
         self.strain_model.get_secondary_strain_data(test_data)
         self.model = Shift([5.66, 6.66])
         threshold_moment = moment_function(np.array([5.66, 6.66]))
 
-        expected_rate = np.array([[-14.43624419, -22.48168502],
-                                  [-13.43624419, -21.48168502],
-                                  [-12.43624419, -20.48168502]])
+        expected_rate = np.array(
+            [
+                [-14.43624419, -22.48168502],
+                [-13.43624419, -21.48168502],
+                [-12.43624419, -20.48168502],
+            ]
+        )
         np.testing.assert_array_almost_equal(
             expected_rate,
-            np.log10(self.model.continuum_seismicity(
-                threshold_moment,
-                self.strain_model.data['e1h'],
-                self.strain_model.data['e2h'],
-                self.strain_model.data['err'],
-                BIRD_GLOBAL_PARAMETERS['OSRnor'])))
+            np.log10(
+                self.model.continuum_seismicity(
+                    threshold_moment,
+                    self.strain_model.data["e1h"],
+                    self.strain_model.data["e2h"],
+                    self.strain_model.data["err"],
+                    BIRD_GLOBAL_PARAMETERS["OSRnor"],
+                )
+            ),
+        )
 
     def test_calculate_activity_rate(self):
         # Tests for the calculation of the activity rate. At this point
@@ -174,16 +223,35 @@ class TestShift(unittest.TestCase):
         self.model = Shift([5.0])
         self.model.calculate_activity_rate(self.strain_model)
 
-        expected_rate = np.array([
-            [5.66232696e-14], [5.66232696e-14],
-            [5.66232696e-14], [5.66232696e-14], [2.73091764e-12],
-            [2.80389274e-12], [2.88207458e-12], [6.11293721e-12],
-            [8.19834427e-12], [6.55082175e-12], [7.90822653e-11],
-            [7.85391610e-11], [8.12633607e-11], [7.66785657e-11],
-            [4.07359524e-11], [2.16914046e-10], [4.74341943e-10],
-            [1.99907599e-10], [3.55861556e-11], [1.69536101e-10],
-            [1.69884622e-10], [1.70233341e-10], [5.06642764e-10]])
+        expected_rate = np.array(
+            [
+                [5.66232696e-14],
+                [5.66232696e-14],
+                [5.66232696e-14],
+                [5.66232696e-14],
+                [2.73091764e-12],
+                [2.80389274e-12],
+                [2.88207458e-12],
+                [6.11293721e-12],
+                [8.19834427e-12],
+                [6.55082175e-12],
+                [7.90822653e-11],
+                [7.85391610e-11],
+                [8.12633607e-11],
+                [7.66785657e-11],
+                [4.07359524e-11],
+                [2.16914046e-10],
+                [4.74341943e-10],
+                [1.99907599e-10],
+                [3.55861556e-11],
+                [1.69536101e-10],
+                [1.69884622e-10],
+                [1.70233341e-10],
+                [5.06642764e-10],
+            ]
+        )
 
         np.testing.assert_array_almost_equal(
             np.log10(expected_rate),
-            np.log10(self.model.strain.seismicity_rate))
+            np.log10(self.model.strain.seismicity_rate),
+        )

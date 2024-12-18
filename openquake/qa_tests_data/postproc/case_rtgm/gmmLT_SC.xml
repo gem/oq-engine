@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="ESHM20 Logic Tree - 5 Stress Branch"
+    >
+        <logicTreeBranchSet
+        applyToTectonicRegionType='Shallow Default'
+        branchSetID="Shallow_Def"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="Shallow_Default_VLowStress_FastAtt"
+            >
+                <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

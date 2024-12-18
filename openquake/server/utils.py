@@ -16,18 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import getpass
 import requests
 import logging
-import django
 
 from time import sleep
 from django.conf import settings
+from django.apps import apps
+from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
-
-if settings.LOCKDOWN:
-    django.setup()
-    from django.contrib.auth.models import User
+from openquake.calculators.base import get_aelo_version
 
 
 def is_superuser(request):
@@ -62,6 +61,8 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
+    if settings.LOCKDOWN:
+        User = get_user_model()
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
@@ -87,12 +88,17 @@ def get_acl_on(request):
     return acl_on
 
 
-def user_has_permission(request, owner):
+def user_has_permission(request, owner, job_status):
     """
     Returns `True` if user coming from the request has the permission
-    to view a resource, returns `false` otherwise.
+    to view a job-related resource, returns `False` otherwise.
     """
-    return owner in get_valid_users(request) or not get_acl_on(request)
+    if job_status == 'shared':
+        if settings.LOCKDOWN and hasattr(request, 'user'):
+            return request.user.is_authenticated
+        return True
+    else:
+        return owner in get_valid_users(request) or not get_acl_on(request)
 
 
 def oq_server_context_processor(request):
@@ -101,18 +107,42 @@ def oq_server_context_processor(request):
     context variables.
     """
 
+    # NOTE: defining env variable at runtime, instead of defining it when the
+    # engine imports variable from the server module
+    os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
+
     context = {}
 
+    try:
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
+    except LookupError:
+        announcements = None
+    else:
+        announcements = announcement_model.objects.filter(show=True)
+
     webui_host = request.get_host()
-    context['oq_engine_server_url'] = ('//' +
-                                       (webui_host if webui_host else
-                                        request.META.get('HTTP_HOST',
-                                                        'localhost:8800'))
-                                        + settings.WEBUI_PATHPREFIX)
+    context['oq_engine_server_url'] = (
+        '//' + (webui_host if webui_host else request.META.get(
+            'HTTP_HOST', 'localhost:8800')) + settings.WEBUI_PATHPREFIX)
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
+    context['disable_version_warning'] = settings.DISABLE_VERSION_WARNING
     context['server_name'] = settings.SERVER_NAME
+    context['external_tools'] = settings.EXTERNAL_TOOLS
+    context['application_mode'] = settings.APPLICATION_MODE
+    context['announcements'] = announcements
+    if settings.GOOGLE_ANALYTICS_TOKEN is not None:
+        context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
+    if settings.APPLICATION_MODE == 'AELO':
+        context['aelo_version'] = get_aelo_version()
+    if settings.APPLICATION_MODE == 'ARISTOTLE':
+        # NOTE: it may be useful not only for ARISTOTLE
+        try:
+            context['user_level'] = request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            context['user_level'] = 0
     return context
 
 

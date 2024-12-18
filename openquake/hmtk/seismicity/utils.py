@@ -45,19 +45,19 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Utility functions for seismicity calculations
-'''
+"""
 import numpy as np
 from shapely import geometry
 from openquake.hazardlib.pmf import PRECISION
 from scipy.stats import truncnorm
 
-MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
-                          212, 243, 273, 304, 334])
+MARKER_NORMAL = np.array(
+    [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+)
 
-MARKER_LEAP = np.array([0, 31, 60, 91, 121, 152, 182,
-                        213, 244, 274, 305, 335])
+MARKER_LEAP = np.array([0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335])
 
 SECONDS_PER_DAY = 86400.0
 
@@ -77,11 +77,25 @@ def decimal_year(year, month, day):
     :returns: decimal year column
     :rtype: numpy.ndarray
     """
-    marker = np.array([0., 31., 59., 90., 120., 151., 181.,
-                       212., 243., 273., 304., 334.])
+    marker = np.array(
+        [
+            0.0,
+            31.0,
+            59.0,
+            90.0,
+            120.0,
+            151.0,
+            181.0,
+            212.0,
+            243.0,
+            273.0,
+            304.0,
+            334.0,
+        ]
+    )
     tmonth = (month - 1).astype(int)
-    day_count = marker[tmonth] + day - 1.
-    dec_year = year + (day_count / 365.)
+    day_count = marker[tmonth] + day - 1.0
+    dec_year = year + (day_count / 365.0)
 
     return dec_year
 
@@ -90,8 +104,9 @@ def leap_check(year):
     """
     Returns logical array indicating if year is a leap year
     """
-    return np.logical_and((year % 4) == 0,
-                          np.logical_or((year % 100 != 0), (year % 400) == 0))
+    return np.logical_and(
+        (year % 4) == 0, np.logical_or((year % 100 != 0), (year % 400) == 0)
+    )
 
 
 def decimal_time(year, month, day, hour, minute, second):
@@ -121,15 +136,15 @@ def decimal_time(year, month, day, hour, minute, second):
     #
     # Checking inputs
     if any(month < 1) or any(month > 12):
-        raise ValueError('Month must be in [1, 12]')
+        raise ValueError("Month must be in [1, 12]")
     if any(day < 1) or any(day > 31):
-        raise ValueError('Day must be in [1, 31]')
+        raise ValueError("Day must be in [1, 31]")
     if any(hour < 0) or any(hour > 24):
-        raise ValueError('Hour must be in [0, 24]')
+        raise ValueError("Hour must be in [0, 24]")
     if any(minute < 0) or any(minute > 60):
-        raise ValueError('Minute must be in [0, 60]')
+        raise ValueError("Minute must be in [0, 60]")
     if any(second < 0) or any(second > 60):
-        raise ValueError('Second must be in [0, 60]')
+        raise ValueError("Second must be in [0, 60]")
     #
     # Initialising values
     if any(month):
@@ -149,11 +164,16 @@ def decimal_time(year, month, day, hour, minute, second):
     id_leap = leap_check(year)
     leap_loc = np.where(id_leap)[0]
     day_count[leap_loc] = MARKER_LEAP[tmonth[leap_loc]] + tda[leap_loc] - 1
-    year_secs = ((day_count.astype(float) * SECONDS_PER_DAY) + tse +
-                 (60. * tmi.astype(float)) + (3600. * tho.astype(float)))
-    dtime = year.astype(float) + (year_secs / (365. * 24. * 3600.))
-    dtime[leap_loc] = year[leap_loc].astype(float) + \
-        (year_secs[leap_loc] / (366. * 24. * 3600.))
+    year_secs = (
+        (day_count.astype(float) * SECONDS_PER_DAY)
+        + tse
+        + (60.0 * tmi.astype(float))
+        + (3600.0 * tho.astype(float))
+    )
+    dtime = year.astype(float) + (year_secs / (365.0 * 24.0 * 3600.0))
+    dtime[leap_loc] = year[leap_loc].astype(float) + (
+        year_secs[leap_loc] / (366.0 * 24.0 * 3600.0)
+    )
     return dtime
 
 
@@ -178,7 +198,7 @@ def haversine(lon1, lat1, lon2, lat2, radians=False, earth_rad=6371.227):
     :rtype: numpy.ndarray
     """
     if not radians:
-        cfact = np.pi / 180.
+        cfact = np.pi / 180.0
         lon1 = cfact * lon1
         lat1 = cfact * lat1
         lon2 = cfact * lon2
@@ -204,10 +224,12 @@ def haversine(lon1, lat1, lon2, lat2, radians=False, earth_rad=6371.227):
         # Perform distance calculation
         dlat = lat1 - lat2[i]
         dlon = lon1 - lon2[i]
-        aval = (np.sin(dlat / 2.) ** 2.) + (np.cos(lat1) * np.cos(lat2[i]) *
-                                            (np.sin(dlon / 2.) ** 2.))
-        distance[:, i] = (2. * earth_rad * np.arctan2(np.sqrt(aval),
-                                                      np.sqrt(1 - aval))).T
+        aval = (np.sin(dlat / 2.0) ** 2.0) + (
+            np.cos(lat1) * np.cos(lat2[i]) * (np.sin(dlon / 2.0) ** 2.0)
+        )
+        distance[:, i] = (
+            2.0 * earth_rad * np.arctan2(np.sqrt(aval), np.sqrt(1 - aval))
+        ).T
         i += 1
     return distance
 
@@ -235,22 +257,26 @@ def greg2julian(year, month, day, hour, minute, second):
     month = month.astype(float)
     day = day.astype(float)
 
-    timeut = hour.astype(float) + (minute.astype(float) / 60.0) + \
-        (second / 3600.0)
+    timeut = (
+        hour.astype(float) + (minute.astype(float) / 60.0) + (second / 3600.0)
+    )
 
-    julian_time = ((367.0 * year) -
-                   np.floor(
-                       7.0 * (year + np.floor((month + 9.0) / 12.0)) / 4.0) -
-                   np.floor(3.0 *
-                            (np.floor((year + (month - 9.0) / 7.0) / 100.0) +
-                             1.0) / 4.0) +
-                   np.floor((275.0 * month) / 9.0) +
-                   day + 1721028.5 + (timeut / 24.0))
+    julian_time = (
+        (367.0 * year)
+        - np.floor(7.0 * (year + np.floor((month + 9.0) / 12.0)) / 4.0)
+        - np.floor(
+            3.0 * (np.floor((year + (month - 9.0) / 7.0) / 100.0) + 1.0) / 4.0
+        )
+        + np.floor((275.0 * month) / 9.0)
+        + day
+        + 1721028.5
+        + (timeut / 24.0)
+    )
     return julian_time
 
 
 def piecewise_linear_scalar(params, xval):
-    '''Piecewise linear function for a scalar variable xval (float).
+    """Piecewise linear function for a scalar variable xval (float).
 
     :param params:
         Piecewise linear parameters (numpy.ndarray) in the following form:
@@ -261,25 +287,32 @@ def piecewise_linear_scalar(params, xval):
         Value for evaluation of function (float)
     :returns:
         Piecewise linear function evaluated at point xval (float)
-    '''
+    """
     n_params = len(params)
     n_seg, remainder = divmod(n_params, 2)
     if remainder:
         raise ValueError(
-            'Piecewise Function requires 2 * nsegments parameters')
+            "Piecewise Function requires 2 * nsegments parameters"
+        )
 
     if n_seg == 1:
         return params[1] + params[0] * xval
 
     gradients = params[0:n_seg]
-    turning_points = params[n_seg: -1]
+    turning_points = params[n_seg:-1]
     c_val = np.array([params[-1]])
 
     for iloc in range(1, n_seg):
         c_val = np.hstack(
-            [c_val, (c_val[iloc - 1] + gradients[iloc - 1] *
-                     turning_points[iloc - 1]) - (gradients[iloc] *
-                                                  turning_points[iloc - 1])])
+            [
+                c_val,
+                (
+                    c_val[iloc - 1]
+                    + gradients[iloc - 1] * turning_points[iloc - 1]
+                )
+                - (gradients[iloc] * turning_points[iloc - 1]),
+            ]
+        )
 
     if xval <= turning_points[0]:
         return gradients[0] * xval + c_val[0]
@@ -291,7 +324,7 @@ def piecewise_linear_scalar(params, xval):
 
 
 def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
-    '''
+    """
     Samples a Gaussian distribution subject to boundaries on the data
 
     :param numpy.ndarray data:
@@ -302,7 +335,7 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
         Number of bootstrap samples
     :param tuple bounds:
         (Lower, Upper) bound of data space
-    '''
+    """
     nvals = len(data)
     if bounds:
         # if bounds[0] or (fabs(bounds[0]) < PRECISION):
@@ -319,11 +352,11 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
         sample = truncnorm.rvs(lower_bound, upper_bound, size=nvals)
 
     else:
-        sample = np.random.normal(0., 1., nvals)
+        sample = np.random.normal(0.0, 1.0, nvals)
     return data + uncertainties * sample
 
 
-def hmtk_histogram_1D(values, intervals, offset=1.0E-10):
+def hmtk_histogram_1D(values, intervals, offset=1.0e-10):
     """
     So, here's the problem. We tend to refer to certain data (like magnitudes)
     rounded to the nearest 0.1 (or similar, i.e. 4.1, 5.7, 8.3 etc.). We also
@@ -361,8 +394,9 @@ def hmtk_histogram_1D(values, intervals, offset=1.0E-10):
     return counter
 
 
-def hmtk_histogram_2D(xvalues, yvalues, bins, x_offset=1.0E-10,
-                      y_offset=1.0E-10):
+def hmtk_histogram_2D(
+    xvalues, yvalues, bins, x_offset=1.0e-10, y_offset=1.0e-10
+):
     """
     See the explanation for the 1D case - now applied to 2D.
 
@@ -393,10 +427,15 @@ def hmtk_histogram_2D(xvalues, yvalues, bins, x_offset=1.0E-10,
 
 
 def bootstrap_histogram_1D(
-        values, intervals, uncertainties=None,
-        normalisation=False, number_bootstraps=None, boundaries=None,
-        random_seed=42):
-    '''
+    values,
+    intervals,
+    uncertainties=None,
+    normalisation=False,
+    number_bootstraps=None,
+    boundaries=None,
+    random_seed=42,
+):
+    """
     Bootstrap samples a set of vectors
 
     :param numpy.ndarray values:
@@ -415,7 +454,7 @@ def bootstrap_histogram_1D(
         Seed used in the random number generator
     :param returns:
         1-D histogram of data
-    '''
+    """
     np.random.seed(random_seed)
     if not number_bootstraps or np.all(np.fabs(uncertainties < PRECISION)):
         # No bootstraps or all uncertaintes are zero - return ordinary
@@ -425,12 +464,13 @@ def bootstrap_histogram_1D(
             output /= np.sum(output)
         return output
     else:
-        temp_hist = np.zeros([len(intervals) - 1, number_bootstraps],
-                             dtype=float)
+        temp_hist = np.zeros(
+            [len(intervals) - 1, number_bootstraps], dtype=float
+        )
         for iloc in range(0, number_bootstraps):
-            sample = sample_truncated_gaussian_vector(values,
-                                                      uncertainties,
-                                                      boundaries)
+            sample = sample_truncated_gaussian_vector(
+                values, uncertainties, boundaries
+            )
             output = hmtk_histogram_1D(sample, intervals)
             temp_hist[:, iloc] = output
         output = np.sum(temp_hist, axis=1)
@@ -440,10 +480,18 @@ def bootstrap_histogram_1D(
 
 
 def bootstrap_histogram_2D(
-        xvalues, yvalues, xbins, ybins,
-        boundaries=[None, None], xsigma=None, ysigma=None,
-        normalisation=False, number_bootstraps=None, random_seed=42):
-    '''
+    xvalues,
+    yvalues,
+    xbins,
+    ybins,
+    boundaries=[None, None],
+    xsigma=None,
+    ysigma=None,
+    normalisation=False,
+    number_bootstraps=None,
+    random_seed=42,
+):
+    """
     Calculates a 2D histogram of data, allowing for normalisation and
     bootstrap sampling
 
@@ -470,7 +518,7 @@ def bootstrap_histogram_2D(
         Seed used in the random number generator
     :param returns:
         2-D histogram of data
-    '''
+    """
     np.random.seed(random_seed)
     if xsigma is None and ysigma is None or not number_bootstraps:
         # No sampling - return simple 2-D histrogram
@@ -485,16 +533,18 @@ def bootstrap_histogram_2D(
         if ysigma is None:
             ysigma = np.zeros(len(yvalues), dtype=float)
         temp_hist = np.zeros(
-            [len(xbins) - 1, len(ybins) - 1, number_bootstraps],
-            dtype=float)
+            [len(xbins) - 1, len(ybins) - 1, number_bootstraps], dtype=float
+        )
         for iloc in range(0, number_bootstraps):
-            xsample = sample_truncated_gaussian_vector(xvalues, xsigma,
-                                                       boundaries[0])
-            ysample = sample_truncated_gaussian_vector(yvalues, ysigma,
-                                                       boundaries[0])
-            temp_hist[:, :, iloc] = hmtk_histogram_2D(xsample,
-                                                      ysample,
-                                                      bins=(xbins, ybins))
+            xsample = sample_truncated_gaussian_vector(
+                xvalues, xsigma, boundaries[0]
+            )
+            ysample = sample_truncated_gaussian_vector(
+                yvalues, ysigma, boundaries[0]
+            )
+            temp_hist[:, :, iloc] = hmtk_histogram_2D(
+                xsample, ysample, bins=(xbins, ybins)
+            )
         if normalisation:
             output = np.sum(temp_hist, axis=2)
             output = output / np.sum(output)
@@ -505,26 +555,36 @@ def bootstrap_histogram_2D(
 
 # Parameters of WGS84 projection (in km)
 WGS84 = {"a": 6378.137, "e": 0.081819191, "1/f": 298.257223563}
-WGS84["e2"] = WGS84["e"] ** 2.
+WGS84["e2"] = WGS84["e"] ** 2.0
 # Parameters of WGS84 projection (in m)
-WGS84m = {"a": 6378137., "e": 0.081819191, "1/f": 298.2572221}
-WGS84m["e2"] = WGS84m["e"] ** 2.
+WGS84m = {"a": 6378137.0, "e": 0.081819191, "1/f": 298.2572221}
+WGS84m["e2"] = WGS84m["e"] ** 2.0
 
 
-def TO_Q(lat): return (
-    (1.0 - WGS84["e2"]) * (
-        (np.sin(lat) / (1.0 - (WGS84["e2"] * (np.sin(lat) ** 2.))) -
-         ((1. / (2.0 * WGS84["e"])) *
-          np.log((1.0 - WGS84["e"] * np.sin(lat)) /
-                 (1.0 + WGS84["e"] * np.sin(lat)))))))
+def TO_Q(lat):
+    return (1.0 - WGS84["e2"]) * (
+        np.sin(lat) / (1.0 - (WGS84["e2"] * (np.sin(lat) ** 2.0)))
+        - (
+            (1.0 / (2.0 * WGS84["e"]))
+            * np.log(
+                (1.0 - WGS84["e"] * np.sin(lat))
+                / (1.0 + WGS84["e"] * np.sin(lat))
+            )
+        )
+    )
 
 
-def TO_Qm(lat): return (
-    (1.0 - WGS84m["e2"]) * (
-        (np.sin(lat) / (1.0 - (WGS84m["e2"] * (np.sin(lat) ** 2.))) -
-         ((1. / (2.0 * WGS84m["e"])) *
-          np.log((1.0 - WGS84m["e"] * np.sin(lat)) /
-                 (1.0 + WGS84m["e"] * np.sin(lat)))))))
+def TO_Qm(lat):
+    return (1.0 - WGS84m["e2"]) * (
+        np.sin(lat) / (1.0 - (WGS84m["e2"] * (np.sin(lat) ** 2.0)))
+        - (
+            (1.0 / (2.0 * WGS84m["e"]))
+            * np.log(
+                (1.0 - WGS84m["e"] * np.sin(lat))
+                / (1.0 + WGS84m["e"] * np.sin(lat))
+            )
+        )
+    )
 
 
 def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
@@ -553,21 +613,29 @@ def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
     lon0 = np.radians(lon0)
     lat0 = np.radians(lat0)
     q_0 = TO_Q(lat0)
-    q_p = TO_Q(np.pi / 2.)
+    q_p = TO_Q(np.pi / 2.0)
     q_val = TO_Q(lat)
     beta = np.arcsin(q_val / q_p)
     beta0 = np.arcsin(q_0 / q_p)
-    r_q = WGS84["a"] * np.sqrt(q_p / 2.)
+    r_q = WGS84["a"] * np.sqrt(q_p / 2.0)
     dval = WGS84["a"] * (
-        np.cos(lat0) / np.sqrt(1.0 - (WGS84["e2"] * (np.sin(lat0) ** 2.))) /
-        (r_q * np.cos(beta0)))
+        np.cos(lat0)
+        / np.sqrt(1.0 - (WGS84["e2"] * (np.sin(lat0) ** 2.0)))
+        / (r_q * np.cos(beta0))
+    )
     bval = r_q * np.sqrt(
-        2. / (1.0 + (np.sin(beta0) * np.sin(beta)) + (
-            np.cos(beta) * np.cos(beta0) * np.cos(lon - lon0))))
+        2.0
+        / (
+            1.0
+            + (np.sin(beta0) * np.sin(beta))
+            + (np.cos(beta) * np.cos(beta0) * np.cos(lon - lon0))
+        )
+    )
     easting = f_e + ((bval * dval) * (np.cos(beta) * np.sin(lon - lon0)))
     northing = f_n + (bval / dval) * (
-        (np.cos(beta0) * np.sin(beta)) -
-        (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
+        (np.cos(beta0) * np.sin(beta))
+        - (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0))
+    )
     return easting, northing
 
 

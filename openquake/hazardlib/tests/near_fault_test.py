@@ -143,8 +143,8 @@ class DppParameterTest(unittest.TestCase):
         site_a = Point(10., 44.57, 0.)
         self.pp = projection_pp(site_a, self.normal, self.dist_to_plane,
                                 self.origin)
-        pd, e, idx_nxtp = directp(self.p0, self.p1, self.p2, self.p3,
-                                  self.hypocentre, self.origin, self.pp)
+        _pd, e, idx_nxtp = directp(self.p0, self.p1, self.p2, self.p3,
+                                   self.hypocentre, self.origin, self.pp)
         fs, rd, r_hyp = average_s_rad(site_a, self.hypocentre, self.origin,
                                       self.pp, self.normal, self.dist_to_plane,
                                       e, self.p0, self.p1, self.delta_slip)
@@ -162,8 +162,8 @@ class DppParameterTest(unittest.TestCase):
         site_b = Point(10.639652, 45.333116, 0.)
         self.pp = projection_pp(site_b, self.normal, self.dist_to_plane,
                                 self.origin)
-        pd, e, idx_nxtp = directp(self.p0, self.p1, self.p2, self.p3,
-                                  self.hypocentre, self.origin, self.pp)
+        _pd, e, _idx_nxtp = directp(self.p0, self.p1, self.p2, self.p3,
+                                    self.hypocentre, self.origin, self.pp)
         fs, rd, r_hyp = average_s_rad(site_b, self.hypocentre, self.origin,
                                       self.pp, self.normal, self.dist_to_plane,
                                       e, self.p0, self.p1, self.delta_slip)

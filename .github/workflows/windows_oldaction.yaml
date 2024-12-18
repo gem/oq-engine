@@ -1,0 +1,84 @@
+name: Windows test of OpenQuake Engine
+
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+  push:
+    branches: [ ae-win_numba ]
+
+jobs:
+  install_and_test:
+    runs-on: windows-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+      BRANCH: ${{ github.event.inputs.git-ref }}
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v4
+    # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+    # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Echo env var
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          echo "${Env:environment}"
+          Write-Host $Env:GITHUB_REF
+          echo "Branch environment"
+          Write-Host $Env:BRANCH
+      - name: Install engine on developer mode
+        env: 
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          set PIP_DEFAULT_TIMEOUT=100
+          python -m pip install pip --upgrade
+          #echo Branch to test %BRANCH%
+          #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
+          write-Host "Branch to test $Env:BRANCH " 
+          if ($Env:BRANCH)
+          {
+            Write-Host "Install with workflow_dispatch"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py devel --version ${env:BRANCH}
+          }
+          else
+          {
+            Write-Host "Install on scheduled task"
+            Write-Host "python install.py devel "
+            python install.py devel
+          }
+      - name: Test sep, kotha_2020 and all calculators and run a demo to test installation
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          #
+          #python -c 'import fiona'
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          oq engine --run D:\a\oq-engine\oq-engine\demos\risk\ClassicalDamage\job_hazard.ini
+          python -m pip install pytest
+          pytest -vs --color=yes D:\a\oq-engine\oq-engine\openquake\sep D:\a\oq-engine\oq-engine\openquake\hazardlib\tests\gsim\kotha_2020_test.py D:\a\oq-engine\oq-engine\openquake\calculators

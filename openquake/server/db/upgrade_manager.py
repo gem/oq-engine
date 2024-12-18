@@ -25,6 +25,7 @@ import urllib.request
 import logging
 import importlib
 import sqlite3
+from openquake.commonlib.dbapi import db
 
 
 class DuplicatedVersion(RuntimeError):
@@ -241,7 +242,7 @@ class UpgradeManager(object):
         try:
             curs.execute(query)
             return set(version for version, in curs.fetchall())
-        except:
+        except BaseException:
             raise VersioningNotInstalled('Run oq engine --upgrade-db')
 
     def parse_script_name(self, script_name):
@@ -330,16 +331,18 @@ class UpgradeManager(object):
         return upgrader
 
 
-def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
+def upgrade_db(conn=None, pkg_name='openquake.server.db.schema.upgrades',
                skip_versions=()):
     """
     Upgrade a database by running several scripts in a single transaction.
 
-    :param conn: a DB API 2 connection
+    :param conn: a DB API 2 connection (if None use dbapi.db.conn)
     :param str pkg_name: the name of the package with the upgrade scripts
     :param list skip_versions: the versions to skip
     :returns: the version numbers of the new scripts applied the database
     """
+    if conn is None:
+        conn = db.conn
     upgrader = UpgradeManager.instance(conn, pkg_name)
     t0 = time.time()
     # run the upgrade scripts

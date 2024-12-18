@@ -86,7 +86,7 @@ def _linear_site_response(C, ctx):
     return fsl
 
 
-def _soil_depth_scaling(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """ Compute the soil depth scaling term """
     # Set the c11 coefficient - See eq.13b at page 2093
     c11 = np.ones_like(ctx.vs30) * C['c11a']
@@ -190,7 +190,7 @@ def _get_mean_linear(C, ctx):
             _linear_site_response(C, ctx) +
             _ztor_scaling(C, ctx) +
             _normal_fault_effect(C, ctx) +
-            _soil_depth_scaling(C, ctx))
+            _get_basin_term(C, ctx))
     return mean
 
 
@@ -258,4 +258,5 @@ class BaylessAbrahamson2018(GMPE):
             mean[m] = (lin_component + nl_component)
             sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
 
-    COEFFS = CoeffsTable(table=open(BA_COEFFS).read())
+    with open(BA_COEFFS) as f:
+        COEFFS = CoeffsTable(table=f.read())

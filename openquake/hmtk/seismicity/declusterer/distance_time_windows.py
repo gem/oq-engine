@@ -62,9 +62,12 @@ def time_window_cutoff(sw_time, time_cutoff):
     of which an event of any magnitude is no longer identified as a cluster
     """
     sw_time = np.array(
-        [(time_cutoff / DAYS) if x > (time_cutoff / DAYS)
-            else x for x in sw_time])
-    return(sw_time)
+        [
+            (time_cutoff / DAYS) if x > (time_cutoff / DAYS) else x
+            for x in sw_time
+        ]
+    )
+    return sw_time
 
 
 class BaseDistanceTimeWindow(object):
@@ -72,6 +75,7 @@ class BaseDistanceTimeWindow(object):
     Defines the space and time windows, within which an event is identified
     as a cluster.
     """
+
     @abc.abstractmethod
     def calc(self, magnitude, time_cutoff=None):
         """
@@ -88,22 +92,24 @@ class BaseDistanceTimeWindow(object):
         return
 
 
-@TIME_DISTANCE_WINDOW_FUNCTIONS.add('GardnerKnopoff')
+@TIME_DISTANCE_WINDOW_FUNCTIONS.add("GardnerKnopoff")
 class GardnerKnopoffWindow(BaseDistanceTimeWindow):
     """
     Gardner Knopoff method for calculating distance and time windows
     """
+
     def calc(self, magnitude, time_cutoff=None):
         sw_space = np.power(10.0, 0.1238 * magnitude + 0.983)
         sw_time = np.power(10.0, 0.032 * magnitude + 2.7389) / DAYS
-        sw_time[magnitude < 6.5] = np.power(
-            10.0, 0.5409 * magnitude[magnitude < 6.5] - 0.547) / DAYS
+        sw_time[magnitude < 6.5] = (
+            np.power(10.0, 0.5409 * magnitude[magnitude < 6.5] - 0.547) / DAYS
+        )
         if time_cutoff:
             sw_time = time_window_cutoff(sw_time, time_cutoff)
         return sw_space, sw_time
 
 
-@TIME_DISTANCE_WINDOW_FUNCTIONS.add('Gruenthal')
+@TIME_DISTANCE_WINDOW_FUNCTIONS.add("Gruenthal")
 class GruenthalWindow(BaseDistanceTimeWindow):
     """
     Gruenthal method for calculating distance and time windows
@@ -112,15 +118,17 @@ class GruenthalWindow(BaseDistanceTimeWindow):
     def calc(self, magnitude, time_cutoff=None):
         sw_space = np.exp(1.77 + np.sqrt(0.037 + 1.02 * magnitude))
         sw_time = np.abs(
-            (np.exp(-3.95 + np.sqrt(0.62 + 17.32 * magnitude))) / DAYS)
-        sw_time[magnitude >= 6.5] = np.power(
-            10, 2.8 + 0.024 * magnitude[magnitude >= 6.5]) / DAYS
+            (np.exp(-3.95 + np.sqrt(0.62 + 17.32 * magnitude))) / DAYS
+        )
+        sw_time[magnitude >= 6.5] = (
+            np.power(10, 2.8 + 0.024 * magnitude[magnitude >= 6.5]) / DAYS
+        )
         if time_cutoff:
             sw_time = time_window_cutoff(sw_time, time_cutoff)
         return sw_space, sw_time
 
 
-@TIME_DISTANCE_WINDOW_FUNCTIONS.add('UrhammerWindow')
+@TIME_DISTANCE_WINDOW_FUNCTIONS.add("UrhammerWindow")
 class UhrhammerWindow(BaseDistanceTimeWindow):
     """
     Uhrhammer method for calculating distance and time windows

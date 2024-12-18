@@ -19,6 +19,7 @@
 import io
 import ast
 import html
+import json
 import os.path
 import numbers
 import operator
@@ -31,22 +32,22 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg)
-from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
+    get_array, group_array, fast_agg, sum_records)
+from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc, source
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
-from openquake.hazardlib.gsim.base import ContextMaker, Collapser
+from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
-from openquake.calculators.classical import get_pmaps_gb
-from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.getters import (
+    get_ebrupture, MapGetter, get_pmaps_gb)
 from openquake.calculators.extract import extract
 
+TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
@@ -72,9 +73,9 @@ def form(value):
     >>> form(1003.4)
     '1_003'
     >>> form(103.41)
-    '103.4'
+    '103.4100'
     >>> form(9.3)
-    '9.30000'
+    '9.3000'
     >>> form(-1.2)
     '-1.2'
     """
@@ -83,8 +84,8 @@ def form(value):
             return str(value)
         elif value < .001:
             return '%.3E' % value
-        elif value < 10 and isinstance(value, FLOAT):
-            return '%.5f' % value
+        elif value <= 180 and isinstance(value, FLOAT):
+            return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
         elif numpy.isnan(value):
@@ -163,6 +164,10 @@ class HtmlTable(object):
         yield '</table>\n'
 
 
+def fix_newlines(row):
+    return tuple(col.replace('\n', '\\n') for col in row)
+
+
 def text_table(data, header=None, fmt=None, ext='rst'):
     """
     Build a .rst (or .org) table from a matrix or a DataFrame
@@ -177,7 +182,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'rst org html', ext
+    assert ext in 'csv rst org html', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -202,6 +207,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     fmt = functools.partial(scientificformat, fmt=fmt) if fmt else form
     for row in data:
         tup = tuple(fmt(c) for c in row)
+        if ext in 'rst org':
+            tup = fix_newlines(tup)
         for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
         if len(tup) != len(col_sizes):
@@ -213,18 +220,34 @@ def text_table(data, header=None, fmt=None, ext='rst'):
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
     sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
-    templ = '| %s |' % ' | '.join('%-{}s'.format(size) for size in col_sizes)
+    sep = ',' if ext == 'csv' else ' | '
+    templ = sep.join('%-{}s'.format(size) for size in col_sizes)
+    if ext != 'csv':
+        templ = '| %s |' % templ
     if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
     elif header and ext == 'org':
         lines = [templ % tuple(header), sepline]
+    elif header and ext == 'csv':
+        lines = [','.join(header)]
     else:
         lines = [sepline]
-    for row in body:
-        lines.append(templ % row)
+    for tup in body:
+        lines.append(templ % tup)
         if ext == 'rst':
             lines.append(sepline)
     return '\n'.join(lines)
+
+@view.add('high_hazard')
+def view_high_hazard(token, dstore):
+    """
+    Returns the sites with hazard curve below max(poes)
+    """
+    oq = dstore['oqparam']
+    max_poe= max(oq.poes)
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    high = (max_hazard > max_poe).all(axis=1)
+    return max_hazard[high]
 
 
 @view.add('worst_sources')
@@ -288,6 +311,12 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
+    scratch_dir = dstore['/'].attrs.get('scratch_dir')
+    if scratch_dir:
+        size = 0
+        for fname in os.listdir(scratch_dir):
+            size += os.path.getsize(os.path.join(scratch_dir, fname))
+        rows.append((scratch_dir, humansize(size)))
     return numpy.array(rows, dt('dataset size'))
 
 
@@ -303,7 +332,11 @@ def view_full_lt(token, dstore):
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
-    full_lt.get_trt_rlzs(dstore['trt_smrs'][:])  # set _rlzs_by
+    try:
+        trt_smrs = dstore['trt_smrs'][:]
+    except KeyError:  # scenario
+        trt_smrs = [[0]]
+    full_lt.get_trt_rlzs(trt_smrs)  # set _rlzs_by
     header = ['trt_smr', 'gsim', 'rlzs']
     rows = []
     for trt_smr, rbg in full_lt._rlzs_by.items():
@@ -394,9 +427,8 @@ def view_job_info(token, dstore):
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
         recv = get_array(task_info, taskname=encode(task))['received']
-        data.append((task, ' '.join(sent),
-                     humansize(recv.sum()), humansize(recv.mean())))
-    return numpy.array(data, dt('task sent received mean_recv'))
+        data.append((task, ' '.join(sent), humansize(recv.sum())))
+    return numpy.array(data, dt('task sent received'))
 
 
 @view.add('avglosses_data_transfer')
@@ -511,28 +543,28 @@ def view_portfolio_loss(token, dstore):
         df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
         if (eids >= E).any():  # reduced events
-            weights = ws
+            assert len(set(ws)) == 1, 'Weights must be all equal'
+            weights = ws[:len(eids)]
         else:
             weights = ws[eids]
         avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
+# used in the oq-risk-tests
 @view.add('portfolio_dmgdist')
-def portfolio_dmgdist(token, dstore):
+def view_portfolio_dmgdist(token, dstore):
     """
     The portfolio damages extracted from the first realization of damages-rlzs
     """
-    oq = dstore['oqparam']
-    dstates = ['no_damage'] + oq.limit_states
-    D = len(dstates)
-    arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
-    tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
-    tbl['loss_type'] = oq.loss_types
-    tbl['total'] = arr.sum(axis=1)
-    for dsi, ds in enumerate(dstates):
-        tbl[ds] = arr[:, dsi]
-    return tbl
+    sums = sum_records(dstore['damages-rlzs'][:, 0])
+    acc = AccumDict(accum=[])
+    for name in sums.dtype.names:
+        ltype, dstate = name.split('-')
+        acc[dstate].append(sums[name][0])
+        if dstate == 'no_damage':
+            acc['loss_type'].append(ltype)
+    return pandas.DataFrame(acc)
 
 
 @view.add('portfolio_damage')
@@ -550,15 +582,12 @@ def view_portfolio_damage(token, dstore):
         del df['agg_id']
         del df['return_period']
         return df.set_index('loss_type')
-    # dimensions assets, stat, loss_types, dmg_state
+    # dimensions assets, stat, dmg_state
     if 'damages-stats' in dstore:
-        attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
-        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+        arr = dstore.sel('damages-stats', stat='mean')[:, 0]
     else:
-        attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
-        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
-    rows = [(lt,) + tuple(row) for lt, row in zip(attrs['loss_type'], arr)]
-    return numpy.array(rows, dt(['loss_type'] + list(attrs['dmg_state'])))
+        arr = dstore.sel('damages-rlzs', rlz=0)[:, 0]
+    return sum_records(arr)
 
 
 def sum_table(records):
@@ -632,7 +661,8 @@ def stats(name, array, *extras):
     :returns: (name, mean, rel_std, min, max, len) + extras
     """
     avg = numpy.mean(array)
-    std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
+    std = 'nan' if len(array) == 1 else '%02.0f%%' % (
+        numpy.std(array) / avg * 100)
     max_ = numpy.max(array)
     return (name, len(array), avg, std, numpy.min(array), max_) + extras
 
@@ -694,6 +724,12 @@ def view_required_params_per_trt(token, dstore):
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
 
+def discard_small(values):
+    """
+    Discard values 10x smaller than the mean
+    """
+    return values[values >= .1 * values.mean()]
+
 
 @view.add('task_info')
 def view_task_info(token, dstore):
@@ -717,7 +753,7 @@ def view_task_info(token, dstore):
 
     data = []
     for task, arr in group_array(task_info[()], 'taskname').items():
-        val = arr['duration']
+        val = discard_small(arr['duration'])
         if len(val):
             data.append(stats(task, val, val.max() / val.mean()))
     if not data:
@@ -767,13 +803,16 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-    num_ruptures = sdata.nrupts.sum()
-    eff_sites = sdata.nsites.sum()
-    msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-           'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                 taskno, len(sdata), num_ruptures, eff_sites,
-                 rec['weight'], rec['duration'])
+    if len(dstore['source_data/src_id']):
+        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
+        num_ruptures = sdata.nrupts.sum()
+        eff_sites = sdata.nsites.sum()
+        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
+               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+                     taskno, len(sdata), num_ruptures, eff_sites,
+                     rec['weight'], rec['duration'])
+    else:
+        msg = ''
     return msg
 
 
@@ -953,14 +992,14 @@ def view_extreme_gmvs(token, dstore):
 @view.add('mean_rates')
 def view_mean_rates(token, dstore):
     """
-    Display mean hazard rates for the first site
+    Display mean hazard rates, averaged on the sites
     """
     oq = dstore['oqparam']
-    assert oq.use_rates
-    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
-    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    poes = dstore.sel('hcurves-stats', stat='mean')  # shape (N, 1, M, L1)
+    mean_rates = calc.disagg.to_rates(poes).mean(axis=0)[0]  # shape (M, L1)
+    rates = numpy.zeros(mean_rates.shape[1], dt(oq.imtls))
     for m, imt in enumerate(oq.imtls):
-        rates[imt] = calc.disagg.to_rates(poes[m])
+        rates[imt] = mean_rates[m]
     return rates
 
 
@@ -970,7 +1009,7 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
-    N, M, P = dstore['hmap3'].shape
+    N, _M, P = dstore['hmap3'].shape
     tbl = []
     kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
@@ -987,7 +1026,7 @@ def view_mean_disagg(token, dstore):
 @view.add('disagg')
 def view_disagg(token, dstore):
     """
-    Example: $ oq show disagg Mag
+    Example: $ oq show disagg:Mag
     Returns a table poe, imt, mag, contribution for the first site
     """
     kind = token.split(':')[1]
@@ -1000,7 +1039,7 @@ def view_disagg(token, dstore):
     Ma, M, P = data.shape
     oq = dstore['oqparam']
     imts = list(oq.imtls)
-    dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
+    dtlist = [('poe', float), ('imt', (numpy.bytes_, 10)),
               (kind.lower() + 'bin', int), ('prob', float)]
     lst = []
     for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
@@ -1184,7 +1223,7 @@ def view_calc_risk(token, dstore):
                                 int(oq.asset_correlation))
 
     mon = Monitor()
-    outs = []#ebr.gen_outputs(gmf_df, crmodel, rng, mon)
+    outs = []  # ebr.gen_outputs(gmf_df, crmodel, rng, mon)
     sids = gmf_df.sid.to_numpy()
     assets = assetcol.to_dframe()
     for taxo in assets.taxonomy.unique():
@@ -1194,7 +1233,7 @@ def view_calc_risk(token, dstore):
             continue
         out = crmodel.get_output(adf, df, oq._sec_losses, rng)
         outs.append(out)
-    avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
+    _avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
     del alt['event_id']
     del alt['variance']
     alt['type'] = LOSSTYPE[alt.loss_id]
@@ -1202,7 +1241,7 @@ def view_calc_risk(token, dstore):
     alt['agg_keys'] = decode(agg_keys[alt.agg_id])
     del alt['agg_id']
     return alt
-    
+
 
 @view.add('event_loss_table')
 def view_event_loss_table(token, dstore):
@@ -1225,10 +1264,10 @@ def view_event_loss_table(token, dstore):
 @view.add('risk_by_event')
 def view_risk_by_event(token, dstore):
     """There are two possibilities:
-  
+
     $ oq show risk_by_event:<loss_type>
     $ oq show risk_by_event:<event_id>
-    
+
     In both cases displays the top 30 losses of the aggregate loss
     table as a TSV, for all events or only the given event.
     """
@@ -1270,41 +1309,69 @@ def view_risk_by_rup(token, dstore):
     return df[:30]
 
 
+@view.add('loss_ids')
+def view_loss_ids(token, dstore):
+    """
+    Displays the loss IDs corresponding to nonzero losses
+    """
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id', dict(agg_id=K))
+    loss_ids = df.loss_id.unique()
+    arr = numpy.zeros(len(loss_ids), dt('loss_type loss_id'))
+    for i, loss_id in enumerate(loss_ids):
+        arr[i]['loss_type'] = LOSSTYPE[loss_id]
+        arr[i]['loss_id'] = loss_id
+    return arr
+
+
 @view.add('delta_loss')
 def view_delta_loss(token, dstore):
     """
     Estimate the stocastic error on the loss curve by splitting the events
     in odd and even. Example:
 
-    $ oq show delta_loss  # consider the first loss type
+    $ oq show delta_loss  # default structural
     """
     if ':' in token:
         _, li = token.split(':')
         li = int(li)
     else:
-        li = 0
+        li = 2  # structural
     oq = dstore['oqparam']
-    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
-        dstore['weights'])
-    num_events = len(dstore['events'])
-    num_events0 = num_events // 2 + (num_events % 2)
-    num_events1 = num_events // 2
-    periods = return_periods(efftime, num_events)[1:-1]
-
+    loss_type = LOSSTYPE[li]
     K = dstore['risk_by_event'].attrs.get('K', 0)
     df = dstore.read_df('risk_by_event', 'event_id',
                         dict(agg_id=K, loss_id=li))
-    if len(df) == 0:  # for instance no fatalities
-        return {'delta': numpy.zeros(1)}
-    mod2 = df.index % 2
-    losses0 = df['loss'][mod2 == 0]
-    losses1 = df['loss'][mod2 == 1]
-    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
-    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    if len(df) < 10:  # for instance for fatalities
+        return {'delta': numpy.zeros(1),
+                'loss_types': view_loss_ids(token, dstore),
+                'error': f"There are only {len(df)} events for {loss_type=}"}
+    if oq.calculation_mode == 'scenario_risk':
+        if oq.number_of_ground_motion_fields == 1:
+            return {'delta': numpy.zeros(1),
+                    'error': 'number_of_ground_motion_fields=1'}
+        R = len(dstore['weights'])
+        df['rlz_id'] = dstore['events']['rlz_id'][df.index]
+        c0, c1 = numpy.zeros(R), numpy.zeros(R)
+        for r in range(R):
+            loss = df.loss[df.rlz_id == r]
+            c0[r] = loss[::2].mean()  # even
+            c1[r] = loss[1::2].mean()  # odd
+        dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
+        return pandas.DataFrame(dic)
+    num_events = len(dstore['events'])
+    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
+        dstore['weights'])
+    periods = return_periods(efftime, num_events)[1:-1]
+    losses0 = df.loss[df.index % 2 == 0]
+    losses1 = df.loss.loc[df.index % 2 == 1]
+    c0 = losses_by_period(losses1, periods, len(losses1), efftime / 2)['curve']
+    c1 = losses_by_period(losses0, periods, len(losses0), efftime / 2)['curve']
     ok = (c0 != 0) & (c1 != 0)
     c0 = c0[ok]
     c1 = c1[ok]
-    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    res = losses_by_period(df['loss'], periods, num_events, efftime)
+    losses = res['curve'][ok]
     dic = dict(loss=losses, even=c0, odd=c1,
                delta=numpy.abs(c0 - c1) / (c0 + c1))
     return pandas.DataFrame(dic, periods[ok])
@@ -1324,6 +1391,28 @@ def view_composite_source_model(token, dstore):
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
         lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
     return numpy.array(lst, dt('grp_id trt num_sources'))
+
+
+@view.add('gids')
+def view_gids(token, dstore):
+    """
+    Show the meaning of the gids indices
+    """
+    full_lt = dstore['full_lt']
+    ws = dstore['weights'][:]
+    all_trt_smrs = dstore['trt_smrs'][:]
+    gid = 0
+    data = []
+    for trt_smrs in all_trt_smrs:
+        for g, (gsim, rlzs) in enumerate(
+                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
+            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
+            if len(ts) == 1:
+                ts = ts[0]
+            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
+                         ws[rlzs].sum(), len(rlzs)))
+            gid += 1
+    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
 
 @view.add('branches')
@@ -1417,7 +1506,7 @@ def view_sum(token, dstore):
     """
     _, arrayname = token.split(':')  # called as sum:damages-rlzs
     dset = dstore[arrayname]
-    A, R, L, *D = dset.shape
+    _A, R, L, *D = dset.shape
     cols = ['RL'] + tup2str(itertools.product(*[range(d) for d in D]))
     arr = dset[:].sum(axis=0)  # shape R, L, *D
     z = numpy.zeros(R * L, dt(cols))
@@ -1484,28 +1573,21 @@ def view_rup_stats(token, dstore):
     return numpy.array(out, dt('kind counts mean stddev min max'))
 
 
-@view.add('collapsible')
-def view_collapsible(token, dstore):
+@view.add('rup')
+def view_rup(token, dstore):
     """
-    Show how much the ruptures are collapsed for each site
+    Show the ruptures (contexts) generated by a given source
     """
-    if ':' in token:
-        collapse_level = int(token.split(':')[1])
-    else:
-        collapse_level = 0
-    dist_types = [dt for dt in dstore['rup'] if dt in KNOWN_DISTANCES]
-    vs30 = dstore['sitecol'].vs30
-    ctx_df = dstore.read_df('rup')
-    ctx_df['vs30'] = vs30[ctx_df.sids]
-    has_vs30 = len(numpy.unique(vs30)) > 1
-    c = Collapser(collapse_level, dist_types, has_vs30)
-    ctx_df['mdbin'] = c.calc_mdbin(ctx_df)
-    print('cfactor = %d/%d' % (len(ctx_df), len(ctx_df['mdbin'].unique())))
-    out = []
-    for sid, df in ctx_df.groupby('sids'):
-        n, u = len(df), len(df.mdbin.unique())
-        out.append((sid, u, n, n / u))
-    return numpy.array(out, dt('site_id eff_rups num_rups cfactor'))
+    try:
+        source_id = token.split(':', 1)[1]
+    except IndexError:
+        print('Use the syntax oq show rup:<source_id>')
+        return []
+    source_ids = decode(dstore['source_info']['source_id'])
+    src_id = source_ids.index(source_id)
+    df = dstore.read_df('rup', sel=dict(src_id=src_id))
+    df = df.sort_values(['rup_id', 'sids']).set_index('rup_id')
+    return df
 
 
 # tested in oq-risk-tests etna
@@ -1528,10 +1610,43 @@ def view_relevant_sources(token, dstore):
     """
     imt = token.split(':')[1]
     kw = dstore['oqparam'].postproc_args
-    iml = dict(zip(kw['imts'], kw['imls']))[imt]
+    [iml] = kw['imls_by_sid']['0']
     aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
     rates = aw.array['rate']  # for each source in decreasing order
     return aw.array[rates > .1 * rates[0]]
+
+
+def asce_fix(asce, siteid):
+    dic = json.loads(asce.decode('ascii'))
+    for k, v in dic.items():
+        if v == 'n.a.':
+            dic[k] = numpy.nan
+    dic['siteid'] = siteid
+    return dic
+
+
+@view.add('asce')
+def view_asce(token, dstore):
+    """
+    Returns asce:41 and asce:07 arrays
+    """
+    key = token.replace(':', '')
+    sitecol = dstore['sitecol']
+    model = dstore['oqparam'].description[9:12]
+    dics = [asce_fix(a, model + str(sid))
+            for sid, a in zip(sitecol.sids, dstore[key])]
+    header = dics[0]
+    dtlist = []
+    for k in header:
+        if isinstance(header[k], str):
+            dtlist.append((k, object))
+        else:
+            dtlist.append((k, float))
+    res = numpy.zeros(len(dics), dtlist)
+    for i, dic in enumerate(dics):
+        for k in header:
+            res[i][k] = dic[k]
+    return res
 
 
 def shorten(lst):
@@ -1582,28 +1697,151 @@ def _drate(df, imt, src):
 def _irate(df, imt, src, iml, imls):
     subdf = df[(df.imt == imt) & (df.src_id == src)]
     interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
-                       numpy.log(subdf.value))
+                          numpy.log(subdf.value))
     return numpy.exp(interp)
 
 
 # used only in AELO calculations
+# NB: in presence of !-sources the comparison makes no sense
 @view.add('compare_disagg_rates')
 def compare_disagg_rates(token, dstore):
     oq = dstore['oqparam']
     aw = dstore['mean_disagg_by_src']
+    mrs = dstore['mean_rates_by_src']
+    mean_rates_df = mrs.to_dframe()
     iml_disagg = dict(zip(aw.imt, aw.iml))
     mean_disagg_df = aw.to_dframe()
-    mean_rates_df = dstore['mean_rates_by_src'].to_dframe()
     imts_out, srcs_out, drates, irates = [], [], [], []
     for imt, iml in iml_disagg.items():
         imls = oq.imtls[imt]
         srcs = mean_disagg_df[mean_disagg_df.imt == imt].source_id
         for src in set(srcs):
             imts_out.append(imt)
-            srcs_out.append(src)    
+            srcs_out.append(src)
             drates.append(_drate(mean_disagg_df, imt, src))
             irates.append(_irate(mean_rates_df, imt, src, iml, imls))
-    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 
-                             'disagg_rate': drates, 
+    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out,
+                             'disagg_rate': drates,
                              'interp_rate': irates}
                             ).sort_values(['imt', 'src'])
+
+
+@view.add('gh3')
+def view_gh3(token, dstore):
+    sitecol = dstore['sitecol']
+    gh3 = geo.utils.geohash3(sitecol.lons, sitecol.lats)
+    _uni, cnt = numpy.unique(gh3, return_counts=True)
+    # print(sorted(cnt))
+    return numpy.array([stats('gh3', cnt)],
+                       dt('kind counts mean stddev min max'))
+
+
+@view.add('sites_by_country')
+def view_sites_by_country(token, dstore):
+    """
+    Returns a table with the number of sites per country. The countries
+    are defined as in the file geoBoundariesCGAZ_ADM0.shp
+    """
+    return dstore['sitecol'].by_country()
+
+
+@view.add('aggrisk')
+def view_aggrisk(token, dstore):
+    """
+    Returns a table with the aggregate risk by realization and loss type
+    """
+    oq = dstore['oqparam']
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('aggrisk', sel={'agg_id': K})
+    if 'damage' in oq.calculation_mode:
+        return df
+    dt = [('gsim', vstr), ('weight', float)] + [
+        (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
+    gsim_lt = dstore['full_lt/gsim_lt']
+    rlzs = list(gsim_lt)
+    AVG = len(rlzs)
+    arr = numpy.zeros(AVG + 1, dt)
+    for r, rlz in enumerate(rlzs):
+        arr[r]['gsim'] = repr(rlz.value[0])
+        arr[r]['weight'] = rlz.weight[-1]
+    for r, loss_id, loss in zip(df.rlz_id, df.loss_id, df.loss):
+        rlz = rlzs[r]
+        lt = LOSSTYPE[loss_id]
+        arr[r][lt] = loss
+        arr[AVG][lt] += loss * rlz.weight[-1]
+    arr[AVG]['gsim'] = 'Average'
+    arr[AVG]['weight'] = 1
+    return arr
+
+
+@view.add('fastmean')
+def view_fastmean(token, dstore):
+    """
+    Compute the mean hazard curves for the given site from the rates
+    """
+    site_id = int(token.split(':')[1])
+    oq = dstore['oqparam']
+    ws = dstore['weights'][:]
+    gweights =  dstore['gweights'][:]
+    slicedic = AccumDict(accum=[])
+    for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
+        slicedic[idx].append((start, stop))
+    M = len(oq.imtls)
+    L1 = oq.imtls.size // M
+    array = numpy.zeros(L1, oq.imt_dt(F32))
+    for slices in slicedic.values():
+        pgetter = MapGetter(dstore.filename, gweights, len(ws), slices, oq)
+        pgetter.init()
+        pmap = pgetter.get_fast_mean(gweights)
+        for idx, sid in enumerate(pmap.sids):
+            if sid == site_id:
+                for m, imt in enumerate(oq.imtls):
+                    array[imt] = pmap.array[idx, m]
+    return array
+
+
+@view.add('gw')
+def view_gw(token, dstore):
+    """
+    Display the gweights
+    """
+    return numpy.round(dstore['gweights'][:].sum(), 3)
+
+
+@view.add('long_ruptures')
+def view_long_ruptures(token, dstore):
+    """
+    Display the planar ruptures with maxlen > 900 km
+    """
+    lst = []
+    for src in dstore['_csm'].get_sources():
+        maxlen = source.point.get_rup_maxlen(src)
+        if src.code in b'MPA' and maxlen > 900.:
+            usd = src.upper_seismogenic_depth
+            lsd = src.lower_seismogenic_depth
+            maxmag, _rate = src.get_annual_occurrence_rates()[-1]
+            lst.append((src.source_id, maxlen, maxmag, usd, lsd))
+    arr = numpy.array(lst, [('source_id', object), ('maxlen', float),
+                            ('maxmag', float), ('usd', float), ('lsd', float)])
+    arr.sort(order='maxlen')
+    return arr
+
+@view.add('msr')
+def view_msr(token, dstore):
+    dic = dstore['_csm'].get_msr_by_grp()
+    pairs = list(dic.items())
+    return numpy.array(pairs, dt('grp_id msr'))
+
+
+@view.add('log_median_spectrum')
+def view_log_median_spectrum(token, dstore):
+    if ':' in token:
+        sid = int(token.split(':')[1])
+    else:
+        sid = 0
+    dset = dstore['median_spectra']
+    periods = [imt.period for imt in dstore['oqparam'].imt_periods()]
+    res = numpy.zeros(len(periods), dt('period value'))
+    res['period'] = periods
+    res['value'] = dset[:, sid, :, 0].sum(axis=0)
+    return res

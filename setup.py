@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,8 @@ import re
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 6):
-    sys.exit('Sorry, Python < 3.6 is not supported')
+if sys.version_info < (3, 9):
+    sys.exit('Sorry, Python < 3.9 is not supported')
 
 
 def get_version():
@@ -58,6 +58,7 @@ install_requires = [
     'setuptools',
     'h5py >=2.10',
     'numpy >=1.20',
+    'numba >=0.58',
     'scipy >=1.3',
     'pandas >=0.25',
     'pyzmq >=19.0',
@@ -65,26 +66,22 @@ install_requires = [
     'shapely >=1.7',
     'docutils >=0.11',
     'decorator >=4.3',
-    'django >=3.2',
+    'django >=4.2, <5',
     'matplotlib',
     'requests >=2.20',
     'toml >=0.10.2',
     'pyproj >=1.9',
+    'alpha_shapes >= 1.1.0'
 ]
 
+# NOTE: to build documentation, see doc/requirements.txt
 extras_require = {
-    'osgeo':  [
-        'GDAL >= 2.4',
-    ],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5',
         'pdbpp',
         'ipython',
         'silx',
-        'sphinx==6.2',
-        'sphinx-theme',
-        'pydata-sphinx-theme',
     ]
 }
 
@@ -106,9 +103,9 @@ setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',

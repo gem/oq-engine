@@ -20,9 +20,8 @@ import os
 import shutil
 import numpy
 from openquake.baselib import InvalidFile
-from openquake.qa_tests_data.scenario_damage import case_15
 from openquake.qa_tests_data.infrastructure_risk import (
-    five_nodes_demsup_directed, five_nodes_demsup_directedunweighted,
+    case_1, case_2, five_nodes_demsup_directed, five_nodes_demsup_directedunweighted,
     five_nodes_demsup_multidirected, demand_supply, directed, eff_loss_random,
     multidirected, multigraph, undirected)
 from openquake.calculators.export import export
@@ -50,102 +49,72 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         if replace_expected:
             raise ValueError('Remember to set replace_expected to False!')
 
-    def test_case_15(self):
-        self.run_calc(case_15.__file__, 'job.ini')
-        ds = self.calc.datastore
-
+    def test_case_1(self):
+        self.run_calc(case_1.__file__, 'job.ini')
         outputs_list = (
             'node_el avg_loss event_ccl event_efl event_pcl event_wcl'
             ' dem_cl').split()
+        self._check_csv_outputs(outputs_list, self.calc.datastore, case_1)
 
-        self._check_csv_outputs(outputs_list, ds, case_15)
+    def test_case_2(self):
+        # infrastructure risk for structural, liquefaction and landslides
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        [agg_csv, aggparent_csv] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
+        self.assertEqualFiles('expected/aggrisk-parent.csv', aggparent_csv)
 
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
-        ds = self.calc.datastore
-
         outputs_list = (
             'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
             ' dem_cl').split()
-
-        self._check_csv_outputs(outputs_list, ds, demand_supply)
+        self._check_csv_outputs(outputs_list, self.calc.datastore, demand_supply)
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
-
-        self._check_csv_outputs(outputs_list, ds, directed)
+        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outputs_list, self.calc.datastore, directed)
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
-        ds = self.calc.datastore
+        outputs_list = 'avg_loss event_efl node_el'.split()
 
-        outputs_list = (
-            'avg_loss event_efl node_el').split()
-
-        self._check_csv_outputs(outputs_list, ds, eff_loss_random)
+        self._check_csv_outputs(outputs_list, self.calc.datastore, eff_loss_random)
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
-            ' dem_cl').split()
-
-        self._check_csv_outputs(outputs_list, ds, five_nodes_demsup_directed)
+        outputs_list = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+                        ' dem_cl').split()
+        self._check_csv_outputs(outputs_list, self.calc.datastore, five_nodes_demsup_directed)
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
-            ' dem_cl').split()
-
+        outputs_list = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+                        ' dem_cl').split()
         self._check_csv_outputs(
-            outputs_list, ds, five_nodes_demsup_directedunweighted)
+            outputs_list, self.calc.datastore, five_nodes_demsup_directedunweighted)
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
-            ' dem_cl').split()
-
+        outputs_list = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+                        ' dem_cl').split()
         self._check_csv_outputs(
-            outputs_list, ds, five_nodes_demsup_multidirected)
+            outputs_list, self.calc.datastore, five_nodes_demsup_multidirected)
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
-
-        self._check_csv_outputs(outputs_list, ds, multidirected)
+        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outputs_list, self.calc.datastore, multidirected)
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
-
-        self._check_csv_outputs(outputs_list, ds, multigraph)
+        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outputs_list, self.calc.datastore, multigraph)
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
-        ds = self.calc.datastore
-
-        outputs_list = (
-            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
-
-        self._check_csv_outputs(outputs_list, ds, undirected)
+        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outputs_list, self.calc.datastore, undirected)
 
     def test_missing_mandatory_column(self):
         with self.assertRaises(InvalidFile) as exc:

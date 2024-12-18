@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <!--
+
+Date: 2022-04-05
+Geological Survey of Canada Open File 8924
+Sixth generation seismic hazard model of Canada: 
+Final input files used to generate the 2020 National Building Code of Canada seismic hazard values
+
+     -->
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>
+          CanadaSHM6_NBCC2020_WesternCanada.xml
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>  
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

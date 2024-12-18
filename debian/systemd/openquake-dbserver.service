@@ -9,6 +9,7 @@ Group=openquake
 Environment=
 WorkingDirectory=/usr/share/openquake/engine
 ExecStart=/opt/openquake/bin/oq dbserver start -f
+Type=exec
 Restart=always
 RestartSec=30
 KillMode=control-group

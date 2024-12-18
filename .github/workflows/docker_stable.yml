@@ -20,10 +20,10 @@ jobs:
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
       - name: Clone Repository (Latest)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}

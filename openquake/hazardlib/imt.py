@@ -23,8 +23,9 @@ types.
 import re
 import collections
 import numpy
+from openquake.baselib.general import DictArray
 
-FREQUENCY_PATTERN = '^(EAS|FAS|DRVT)\\((\\d+\\.*\\d*)\\)'
+FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -74,7 +75,12 @@ def from_string(imt, _damping=5.0):
             im = FAS(float(m.group(2)))
         elif m.group(1) == 'DRVT':
             im = DRVT(float(m.group(2)))
+        elif m.group(1) == 'AvgSA':
+            im = AvgSA(float(m.group(2)))
         return im
+    elif re.match(r'^SDi\((\d+\.?\d*),(\d+\.?\d*)\)$', imt):
+        m = re.match(r'^SDi\((\d+\.?\d*),(\d+\.?\d*)\)$', imt)
+        return SDi(float(m.group(1)), float(m.group(2)))
     elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
     return IMT(*imt2tup(imt))
@@ -92,14 +98,24 @@ def sort_by_imt(imtls):
     return {imt: imtls[imt] for imt in imts}
 
 
+def dictarray(imtls):
+    """
+    :returns: a DictArray sorted by IMT
+    """
+    return DictArray(sort_by_imt(imtls))
+
+
 def repr(self):
     if self.period and self.damping != 5.0:
+        if self.string.startswith('SDi'):
+            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
+                                        self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
 
-IMT = collections.namedtuple('IMT', 'string period damping')
-IMT.__new__.__defaults__ = (0., 5.0)
+IMT = collections.namedtuple('IMT', 'string period damping strength_ratio')
+IMT.__new__.__defaults__ = (0., 5.0, None)
 IMT.__lt__ = lambda self, other: self[1] < other[1]
 IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
@@ -164,12 +180,26 @@ def SA(period, damping=5.0):
     return IMT('SA(%s)' % period, period, damping)
 
 
-def AvgSA():
+def SDi(period, strength_ratio, damping=5.0):
+    """
+    Inelastic spectral displacement, defined as the maximum displacement
+    of a damped, single-degree-of-freedom inelastic oscillator. Units
+    are ``cm``.
+    """
+    period = float(period)
+    strength_ratio = float(strength_ratio)
+    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping,
+               strength_ratio)
+
+
+def AvgSA(period=None, damping=5.0):
     """
     Dummy spectral acceleration to compute average ground motion over
-    several spectral ordinates.
+    several spectral ordinates. Depending on the choice of AvgSA GMPE, this
+    can operate as a scalar value or as a vector quantity.
     """
-    return IMT('AvgSA')
+    return IMT('AvgSA(%s)' % period, period, damping)\
+        if period else IMT('AvgSA')
 
 
 def IA():
@@ -246,7 +276,8 @@ def ASH():
     return IMT('ASH')
 
 
-# secondary perils
+# secondary IMTs
+sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
 
 def Disp():
     """
@@ -268,15 +299,17 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+
 def LiqOccur():
     """
     Liquefaction occurrence class
     """
     return IMT('LiqOccur')
 
+
 def LSE():
     """
-    Liquefaction spatial extent as percentage of a pixel area.
+    Liquefaction or Landslide spatial extent.
     """
     return IMT('LSE')
 
@@ -287,12 +320,13 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
-    
+
 def LSD():
     """
-    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    Liquefaction-induced lateral spread displacements measured in units of
+    ``m``.
     """
-    return IMT('LSD')   
+    return IMT('LSD')
 
 
 def PGDGeomMean(vert_settlement, lat_spread):
@@ -300,3 +334,10 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
+
+
+def LsProb():
+    """
+    Probability of landsliding.
+    """
+    return IMT('LsProb')

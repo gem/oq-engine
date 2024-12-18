@@ -200,7 +200,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     if isinstance(value, numpy.bool_):
         return '1' if value else '0'
     elif isinstance(value, bytes):
-        return value.decode('utf8')
+        return value.decode('utf8', 'ignore')
     elif isinstance(value, str):
         return value
     elif hasattr(value, '__len__'):
@@ -750,7 +750,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
     except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
-        if not str(fname) in msg:
+        if str(fname) not in msg:
             msg = '%s in %s' % (msg, fname)
         raise_(etype, msg, tb)
 
@@ -910,7 +910,7 @@ class ValidatingXmlParser(object):
 
     def _start_element(self, longname, attrs):
         try:
-            xmlns, name = longname.split('}')
+            _xmlns, name = longname.split('}')
         except ValueError:  # no namespace in the longname
             name = tag = longname
         else:  # fix the tag with an opening brace

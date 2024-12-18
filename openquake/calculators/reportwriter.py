@@ -28,7 +28,7 @@ import numpy
 import pandas
 
 from openquake.baselib.python3compat import encode, decode
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import logs
 from openquake.calculators import views
 
 
@@ -144,7 +144,8 @@ def build_report(job_ini, output_dir=None):
         # the goal is to extract information about the source management only
         calc.pre_execute()
         if oq.calculation_mode == 'preclassical':
-            calc.execute()
+            csm = calc.execute()
+            calc.post_execute(csm)
         logging.info('Making the .rst report')
         rw = ReportWriter(calc.datastore)
         rw.make_report()
@@ -154,5 +155,4 @@ def build_report(job_ini, output_dir=None):
         rw.save(report)
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
-    readinput.Global.reset()  # ugly hack
     return report

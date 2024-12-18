@@ -26,15 +26,16 @@ from openquake.hazardlib.gsim.atkinson_boore_2006 import (
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+PGA_SA0 = (PGA(), SA(0))
 
 def hawaii_adjust(mean, ctx, imt):
     # Defining frequency
-    if imt == PGA():
-        freq = 50.0
-    elif imt == PGV():
+    if imt == PGV():
         freq = 2.0
+    elif imt.period == 0:
+        freq = 50.0
     else:
-        freq = 1./imt.period
+        freq = 1. / imt.period
 
     # Equation 3 of Atkinson (2010)
     x1 = np.min([-0.18 + 0.17 * np.log10(freq), 0])
@@ -119,7 +120,7 @@ class BooreAtkinson2008(GMPE):
             # in equation (6), that is the sum of a linear term - equation (7)
             # - and a non-linear one - equations (8a) to (8c).
             # Mref, Rref values are given in the caption to table 6, pag 119.
-            if imt == PGA():
+            if imt in PGA_SA0:
                 # avoid recomputing PGA on rock, just add site terms
                 mean[m] = np.log(pga4nl) + \
                     _get_site_amplification_linear(ctx.vs30, C_SR) + \

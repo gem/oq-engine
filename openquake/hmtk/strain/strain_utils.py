@@ -45,42 +45,43 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module :mod:`openquake.hmtk.strain.utils` holds a set of useful
 utility functions for the strain rate model calculations
-'''
+"""
 
 import numpy as np
 from math import exp
 
 
 def moment_function(magnitude):
-    '''
+    """
     Get moment (in Nm) from magnitude using Hanks & Kanamori (1979)
 
     :param float (or numpy.ndarray) magnitude:
         Magnitude of event
     :returns:
         Seismic Moment in Nm
-    '''
-    return 10. ** ((1.5 * magnitude) + 9.05)
+    """
+    return 10.0 ** ((1.5 * magnitude) + 9.05)
 
 
 def moment_magnitude_function(moment):
-    '''
+    """
     For a given moment, get the moment magnitude using the formula
     of Hanks & Kanamori (1979)
 
     :param float or numpy.ndarray magnitude
         Seismic moment in Nm
-    '''
+    """
 
-    return (2. / 3.) * (np.log10(moment) - 9.05)
+    return (2.0 / 3.0) * (np.log10(moment) - 9.05)
 
 
-def calculate_taper_function(obs_threshold_moment, sel_threshold_moment,
-                             corner_moment, beta):
-    '''
+def calculate_taper_function(
+    obs_threshold_moment, sel_threshold_moment, corner_moment, beta
+):
+    """
     Calculates the tapering function of the tapered Gutenberg & Richter model:
     as described in Bird & Liu (2007)::
 
@@ -97,20 +98,21 @@ def calculate_taper_function(obs_threshold_moment, sel_threshold_moment,
         Beta value (b * ln(10.)) of the Tapered Gutenberg-Richter Function
     :returns:
         Relative moment rate
-    '''
-    argument = (obs_threshold_moment - sel_threshold_moment) /\
-        corner_moment
+    """
+    argument = (obs_threshold_moment - sel_threshold_moment) / corner_moment
     if argument < -100.0:
         g_function = 0.0
     else:
-        g_function = ((sel_threshold_moment / obs_threshold_moment) **
-                      -beta) * exp(argument)
+        g_function = (
+            (sel_threshold_moment / obs_threshold_moment) ** -beta
+        ) * exp(argument)
     return g_function
 
 
-def tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
-                                  corner_moment):
-    '''
+def tapered_gutenberg_richter_cdf(
+    moment, moment_threshold, beta, corner_moment
+):
+    """
     Tapered Gutenberg Richter Cumulative Density Function
 
     :param float or numpy.ndarray moment:
@@ -129,14 +131,15 @@ def tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
         Cumulative probability of moment release > moment
 
 
-    '''
+    """
     cdf = np.exp((moment_threshold - moment) / corner_moment)
     return ((moment / moment_threshold) ** (-beta)) * cdf
 
 
-def tapered_gutenberg_richter_pdf(moment, moment_threshold, beta,
-                                  corner_moment):
-    '''
+def tapered_gutenberg_richter_pdf(
+    moment, moment_threshold, beta, corner_moment
+):
+    """
     Tapered Gutenberg-Richter Probability Density Function
 
     :param float or numpy.ndarray moment:
@@ -153,7 +156,9 @@ def tapered_gutenberg_richter_pdf(moment, moment_threshold, beta,
 
     :returns:
         Absolute probability of moment release > moment
-    '''
-    return ((beta / moment + 1. / corner_moment) *
-            tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
-                                          corner_moment))
+    """
+    return (
+        beta / moment + 1.0 / corner_moment
+    ) * tapered_gutenberg_richter_cdf(
+        moment, moment_threshold, beta, corner_moment
+    )

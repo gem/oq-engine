@@ -1,0 +1,96 @@
+---
+name: Demos for a chosen branch/release
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: engine-3.16  # TODO: point to ltr
+        required: true
+  push:
+    # TODO: it would be better to point to ltr and latest
+    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21, engine-3.22 ]
+jobs:
+  demos:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+      GITHUB_INPUT_REF: ${{ github.event.inputs.git-ref }}
+    steps:
+      - name: Check out the codebase (Master)
+        if: github.event.inputs.git-ref == ''
+        uses: actions/checkout@v4
+      - name: Check out the codebase (Custom Ref)
+        if: github.event.inputs.git-ref != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python 3.10  # for compatibility with engine 3.16
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Upgrade pip
+        run: |
+          export PIP_DEFAULT_TIMEOUT=100
+          pip install --default-timeout=100 -U pip
+      - name: Install OpenQuake engine
+        run: |
+          set -x
+          if ${{ github.event_name == 'pull_request' }}
+          then
+              echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
+              python install.py devel --version ${GITHUB_HD_REF}
+          elif ${{ github.event_name == 'push' }}
+          then
+              # split something like refs/heads/BRANCHNAME getting only BRANCHNAME
+              BRANCH=${GITHUB_REF##*\/}
+              echo "It is a push; use the corresponding branch: ${BRANCH}"
+              python install.py devel --version ${BRANCH}
+          else
+              echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
+              python install.py devel --version ${GITHUB_INPUT_REF}
+          fi
+      - name: Run demos and upload to ci.openquake.org
+        # uncomment the line below to avoid running this part when triggering the action manually
+        # if: github.event.inputs.git-ref == ''
+        shell: bash
+        env:
+          DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+          GITHUB_PULL_REQUEST: ${{ github.event.number }}
+          GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+          GITHUB_REF:  ${{ github.ref }}
+          GITHUB_HD_REF:  ${{ github.head_ref }}
+          GITHUB_BS_REF:  ${{ github.base_ref }}
+        run: |
+          source ~/openquake/bin/activate
+          zip -q -r /tmp/demos.zip demos/
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          oq dump /tmp/oqdata.zip
+          oq restore /tmp/oqdata.zip /tmp/oqdata
+          helpers/zipdemos.sh $(pwd)/demos
+          if ${{ github.event_name == 'pull_request' }}
+          then
+              echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
+              GITHUB_BR=${GITHUB_HD_REF}
+          elif ${{ github.event_name == 'push' }}
+          then
+              # split something like refs/heads/BRANCHNAME getting only BRANCHNAME
+              BRANCH=${GITHUB_REF##*\/}
+              echo "It is a push; use the corresponding branch: ${BRANCH}"
+              GITHUB_BR=${BRANCH}
+          else
+              echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
+              GITHUB_BR=${GITHUB_INPUT_REF}
+          fi
+          echo "BRANCH set to $GITHUB_BR"
+          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+          chmod 600 ./.deploy_rsa
+          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+          set -x
+          scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
+          scp -v -o ConnectTimeout=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@docs.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
+          set +x

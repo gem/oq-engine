@@ -140,6 +140,8 @@ class test_factors_of_safety(unittest.TestCase):
 
     @unittest.skip
     def test_rock_slope_static_factor_of_safety(self):
-        rs_sfs = rock_slope_static_factor_of_safety(
-            slope_array, cohesion=20e3, friction_angle=30.0,
+        rock_slope_static_factor_of_safety(
+            slope_array,
+            cohesion=20e3,
+            friction_angle=30.0,
         )

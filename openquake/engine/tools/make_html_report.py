@@ -112,7 +112,7 @@ def make_report(isodate='today'):
         tag_ids.append(job_id)
         tag_status.append(status)
         [stats] = logs.dbcmd('fetch', JOB_STATS, job_id)
-        (job_id, user, start_time, stop_time, status, duration) = stats
+        (job_id, _user, _start_time, _stop_time, status, _duration) = stats
         try:
             ds = datastore.read(job_id, datadir=os.path.dirname(ds_calc))
             txt = view_fullreport('fullreport', ds)

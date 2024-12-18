@@ -44,10 +44,10 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Defines the :class:`openquake.hmtk.sources.mtk_area_source.mtkAreaSource`
 which represents the openquake.hmtk defition of an area source.
-'''
+"""
 import warnings
 import numpy as np
 from openquake.hazardlib.geo.point import Point
@@ -57,7 +57,7 @@ import openquake.hmtk.sources.source_conversion_utils as conv
 
 
 class mtkAreaSource(object):
-    '''
+    """
     Describes the Area Source
 
     :param str identifier:
@@ -89,16 +89,26 @@ class mtkAreaSource(object):
     :param catalogue:
         Earthquake catalogue associated to source as instance of
         openquake.hmtk.seismicity.catalogue.Catalogue object
-    '''
+    """
 
-    def __init__(self, identifier, name, trt=None, geometry=None,
-                 upper_depth=None, lower_depth=None, mag_scale_rel=None,
-                 rupt_aspect_ratio=None, mfd=None, nodal_plane_dist=None,
-                 hypo_depth_dist=None):
-        '''
+    def __init__(
+        self,
+        identifier,
+        name,
+        trt=None,
+        geometry=None,
+        upper_depth=None,
+        lower_depth=None,
+        mag_scale_rel=None,
+        rupt_aspect_ratio=None,
+        mfd=None,
+        nodal_plane_dist=None,
+        hypo_depth_dist=None,
+    ):
+        """
         Instantiates class with two essential attributes: identifier and name
-        '''
-        self.typology = 'Area'
+        """
+        self.typology = "Area"
         self.id = identifier
         self.name = name
         self.trt = trt
@@ -115,7 +125,7 @@ class mtkAreaSource(object):
         self.catalogue = None
 
     def create_geometry(self, input_geometry, upper_depth, lower_depth):
-        '''
+        """
         If geometry is defined as a numpy array then create instance of
         nhlib.geo.polygon.Polygon class, otherwise if already instance of class
         accept class
@@ -130,18 +140,21 @@ class mtkAreaSource(object):
 
         :param float lower_depth:
             Lower seismogenic depth (km)
-        '''
+        """
         self._check_seismogenic_depths(upper_depth, lower_depth)
 
         # Check/create the geometry class
         if not isinstance(input_geometry, Polygon):
             if not isinstance(input_geometry, np.ndarray):
-                raise ValueError('Unrecognised or unsupported geometry '
-                                 'definition')
+                raise ValueError(
+                    "Unrecognised or unsupported geometry " "definition"
+                )
 
             if np.shape(input_geometry)[0] < 3:
-                raise ValueError('Incorrectly formatted polygon geometry -'
-                                 ' needs three or more vertices')
+                raise ValueError(
+                    "Incorrectly formatted polygon geometry -"
+                    " needs three or more vertices"
+                )
             geometry = []
             for row in input_geometry:
                 geometry.append(Point(row[0], row[1], self.upper_depth))
@@ -150,18 +163,20 @@ class mtkAreaSource(object):
             self.geometry = input_geometry
 
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
-        '''
+        """
         Checks the seismic depths for physical consistency
         :param float upper_depth:
             Upper seismogenic depth (km)
         :param float lower_depth:
             Lower seismogenis depth (km)
-        '''
+        """
         # Simple check on depths
         if upper_depth:
-            if upper_depth < 0.:
-                raise ValueError('Upper seismogenic depth must be greater than'
-                                 ' or equal to 0.0!')
+            if upper_depth < 0.0:
+                raise ValueError(
+                    "Upper seismogenic depth must be greater than"
+                    " or equal to 0.0!"
+                )
             else:
                 self.upper_depth = upper_depth
         else:
@@ -169,15 +184,17 @@ class mtkAreaSource(object):
 
         if lower_depth:
             if lower_depth < self.upper_depth:
-                raise ValueError('Lower seismogenic depth must take a greater'
-                                 ' value than upper seismogenic depth')
+                raise ValueError(
+                    "Lower seismogenic depth must take a greater"
+                    " value than upper seismogenic depth"
+                )
             else:
                 self.lower_depth = lower_depth
         else:
             self.lower_depth = np.inf
 
     def select_catalogue(self, selector, distance=None):
-        '''
+        """
         Selects the catalogue of earthquakes attributable to the source
 
         :param selector:
@@ -186,22 +203,26 @@ class mtkAreaSource(object):
         :param float distance:
             Distance (in km) to extend or contract (if negative) the zone for
             selecting events
-        '''
+        """
         if selector.catalogue.get_number_events() < 1:
-            raise ValueError('No events found in catalogue!')
+            raise ValueError("No events found in catalogue!")
 
-        self.catalogue = selector.within_polygon(self.geometry,
-                                                 distance,
-                                                 upper_depth=self.upper_depth,
-                                                 lower_depth=self.lower_depth)
+        self.catalogue = selector.within_polygon(
+            self.geometry,
+            distance,
+            upper_depth=self.upper_depth,
+            lower_depth=self.lower_depth,
+        )
         if self.catalogue.get_number_events() < 5:
             # Throw a warning regarding the small number of earthquakes in
             # the source!
-            warnings.warn('Source %s (%s) has fewer than 5 events'
-                          % (self.id, self.name))
+            warnings.warn(
+                "Source %s (%s) has fewer than 5 events" % (self.id, self.name)
+            )
 
-    def create_oqhazardlib_source(self, tom, mesh_spacing, area_discretisation,
-                                  use_defaults=False):
+    def create_oqhazardlib_source(
+        self, tom, mesh_spacing, area_discretisation, use_defaults=False
+    ):
         """
         Converts the source model into an instance of the :class:
         openquake.hazardlib.source.area.AreaSource
@@ -228,4 +249,5 @@ class mtkAreaSource(object):
             conv.npd_to_pmf(self.nodal_plane_dist, use_defaults),
             conv.hdd_to_pmf(self.hypo_depth_dist, use_defaults),
             self.geometry,
-            area_discretisation)
+            area_discretisation,
+        )

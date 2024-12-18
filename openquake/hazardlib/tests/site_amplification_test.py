@@ -27,8 +27,7 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
-from openquake.hazardlib.probability_map import ProbabilityCurve
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib import valid
 
 aac = numpy.testing.assert_allclose
 
@@ -102,6 +101,25 @@ class AmplifierTestCase(unittest.TestCase):
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # SA(0.2)
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01]]  # SA(0.5)
 
+    def test_missing_defined_for_reference_velocity(self):
+        fname = gettemp(trivial_ampl_func)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        a = Amplifier(self.imtls, df, self.soil_levels)
+        gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
+        vs30_tolerance = -1
+        a.check(self.vs30, vs30_tolerance, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+        vs30_tolerance = 0
+        with self.assertRaises(AttributeError) as ctx:
+            a.check(self.vs30, vs30_tolerance,
+                    {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+        self.assertIn(
+            'The attribute DEFINED_FOR_REFERENCE_VELOCITY is missing in the'
+            ' gsim [CanadaSHM6_ActiveCrust_BooreEtAl2014]. However, at your'
+            ' peril, you can disable the vs30 consistency check by setting'
+            ' vs30_tolerance = -1',
+            str(ctx.exception))
+
     def test_trivial(self):
         # using the heaviside function, i.e. `amplify_one` has contributions
         # only for soil_intensity < a * mid_intensity with a=1
@@ -113,7 +131,7 @@ class AmplifierTestCase(unittest.TestCase):
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
-        gmm = BooreAtkinson2008()
+        gmm = valid.gsim('BooreAtkinson2008')
         a.check(self.vs30, 0, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
@@ -227,8 +245,7 @@ class AmplifierTestCase(unittest.TestCase):
 
         # Create a list with one ProbabilityCurve instance
         poes = numpy.squeeze(df_hc.iloc[0, 3:].to_numpy())
-        tmp = numpy.expand_dims(poes, 1)
-        hcurve = ProbabilityCurve(tmp)
+        hcurve = numpy.expand_dims(poes, 1)
 
         soil_levels = numpy.array(list(numpy.geomspace(0.001, 2, 50)))
         a = Amplifier(imtls, df_af, soil_levels)
@@ -238,7 +255,7 @@ class AmplifierTestCase(unittest.TestCase):
         fname_expected = os.path.join(path, 'data', 'convolution', tmp)
         expected = numpy.loadtxt(fname_expected)
 
-        numpy.testing.assert_allclose(numpy.squeeze(res.array), expected)
+        numpy.testing.assert_allclose(numpy.squeeze(res), expected)
 
     def test_gmf_with_uncertainty(self):
         fname = gettemp(gmf_ampl_func)

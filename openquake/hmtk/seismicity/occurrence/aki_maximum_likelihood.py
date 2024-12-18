@@ -48,13 +48,17 @@
 import warnings
 import numpy as np
 from openquake.hmtk.seismicity.occurrence.base import (
-    SeismicityOccurrence, OCCURRENCE_METHODS)
-from openquake.hmtk.seismicity.occurrence.utils import recurrence_table, input_checks
+    SeismicityOccurrence,
+    OCCURRENCE_METHODS,
+)
+from openquake.hmtk.seismicity.occurrence.utils import (
+    recurrence_table,
+    input_checks,
+)
 
 
-@OCCURRENCE_METHODS.add('calculate', completeness=True)
+@OCCURRENCE_METHODS.add("calculate", completeness=True)
 class AkiMaxLikelihood(SeismicityOccurrence):
-
     def calculate(self, catalogue, config=None, completeness=None):
         """
         Calculation of b-value and its uncertainty for a given
@@ -76,10 +80,12 @@ class AkiMaxLikelihood(SeismicityOccurrence):
             Standard deviation of the GR b-value
         """
         # Input checks
-        _cmag, _ctime, _ref_mag, dmag, config = input_checks(catalogue, config,
-                                                             completeness)
+        _cmag, _ctime, _ref_mag, dmag, config = input_checks(
+            catalogue, config, completeness
+        )
         rt = recurrence_table(
-            catalogue.data['magnitude'], dmag, catalogue.data['year'])
+            catalogue.data["magnitude"], dmag, catalogue.data["year"]
+        )
         bval, sigma_b = self._aki_ml(rt[:, 0], rt[:, 1])
         return bval, sigma_b
 
@@ -109,15 +115,16 @@ class AkiMaxLikelihood(SeismicityOccurrence):
         neq = np.sum(number_obs)
         if neq <= 1:
             # Cannot determine b-value (too few event) return NaNs
-            warnings.warn('Too few events (<= 1) to calculate b-value')
+            warnings.warn("Too few events (<= 1) to calculate b-value")
             return np.nan, np.nan
 
         m_min = np.min(mval)
         m_ave = np.sum(mval * number_obs) / neq
         # Calculate b-value
-        bval = np.log10(np.exp(1.0)) / (m_ave - m_min + (dmag / 2.))
+        bval = np.log10(np.exp(1.0)) / (m_ave - m_min + (dmag / 2.0))
         # Calculate sigma b from Bender estimator
-        sigma_b = np.sum(number_obs * ((mval - m_ave) ** 2.0)) /\
-            (neq * (neq - 1))
-        sigma_b = np.log(10.) * (bval ** 2.0) * np.sqrt(sigma_b)
+        sigma_b = np.sum(number_obs * ((mval - m_ave) ** 2.0)) / (
+            neq * (neq - 1)
+        )
+        sigma_b = np.log(10.0) * (bval**2.0) * np.sqrt(sigma_b)
         return bval, sigma_b

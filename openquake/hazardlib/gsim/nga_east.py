@@ -655,7 +655,9 @@ class NGAEastGMPE(GMPETable):
 
     kind = "nga_east"
 
-    def __init__(self, **kwargs):
+    def __init__(self, gmpe_table, tau_model="global", phi_model="global",
+                 phi_s2ss_model=None, tau_quantile=None, phi_ss_quantile=None,
+                 phi_s2ss_quantile=None, site_epsilon=None):
         """
         Instantiates the class with additional terms controlling which
         type of aleatory uncertainty model is preferred ('global',
@@ -677,9 +679,9 @@ class NGAEastGMPE(GMPETable):
             deviation models. Float in the range 0 to 1, or None (mean value
             used)
         """
-        self.tau_model = kwargs.get('tau_model', "global")
-        self.phi_model = kwargs.get('phi_model', "global")
-        self.phi_s2ss_model = kwargs.get('phi_s2ss_model')
+        self.tau_model = tau_model
+        self.phi_model = phi_model
+        self.phi_s2ss_model = phi_s2ss_model
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
@@ -687,9 +689,9 @@ class NGAEastGMPE(GMPETable):
             self.ergodic = True
         else:
             self.ergodic = False
-        self.tau_quantile = kwargs.get('tau_quantile')
-        self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
-        self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
+        self.tau_quantile = tau_quantile
+        self.phi_ss_quantile = phi_ss_quantile
+        self.phi_s2ss_quantile = phi_s2ss_quantile
         if self.kind != 'usgs':
             # setup tau
             self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
@@ -704,13 +706,11 @@ class NGAEastGMPE(GMPETable):
                     PHI_S2SS_MODEL[self.phi_s2ss_model],
                     self.phi_s2ss_quantile)
 
-        self.site_epsilon = kwargs.get('site_epsilon')
-        fname = kwargs['gmpe_table']
-        if not isinstance(fname, io.BytesIO):  # real path name
-            kwargs['gmpe_table'] = os.path.join(
-                self.PATH, os.path.basename(fname))
-            assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
-        super().__init__(**kwargs)
+        self.site_epsilon = site_epsilon
+        if not isinstance(gmpe_table, io.BytesIO):  # real path name
+            gmpe_table = os.path.join(self.PATH, os.path.basename(gmpe_table))
+            assert os.path.exists(gmpe_table), gmpe_table
+        super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -955,7 +955,10 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    def __init__(self, **kwargs):
+    def __init__(self, gmpe_table, tau_model="global", phi_model="global",
+                 phi_s2ss_model=None, tau_quantile=None, phi_ss_quantile=None,
+                 phi_s2ss_quantile=None, site_epsilon=None,
+                 sigma_quantile=None):
         """
         Instantiates the model call the BaseNGAEastModel to return the
         expected TAU, PHI_SS and PHI_S2SS values then uses these to
@@ -968,13 +971,15 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
             standard deviation. Should be float between 0 and 1, or None (mean
             value taken)
         """
-        super().__init__(**kwargs)
+        super().__init__(gmpe_table, tau_model, phi_model,
+                 phi_s2ss_model, tau_quantile, phi_ss_quantile,
+                 phi_s2ss_quantile, site_epsilon)
         # Upon instantiation the TAU, PHI_SS, and PHI_S2SS objects contain
         # the mean values
         self.SIGMA = None
         self.magnitude_limits = []
         self.tau_keys = []
-        _get_sigma_at_quantile(self, kwargs.get('sigma_quantile'))
+        _get_sigma_at_quantile(self, sigma_quantile)
 
 
 # populate gsim_aliases for the NGA East GMPEs

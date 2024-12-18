@@ -19,58 +19,111 @@
 """
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
+
 import numpy
+import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib.general import not_equal, get_duplicates
+from openquake.baselib import hdf5
+from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian,
-    get_middle_point)
+    fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
+    spherical_to_cartesian, get_middle_point, geolocate)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
-ampcode_dt = (numpy.string_, 4)
+ampcode_dt = (numpy.bytes_, 4)
 param = dict(
     vs30measured='reference_vs30_type',
     vs30='reference_vs30_value',
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
-    backarc='reference_backarc')
+    backarc='reference_backarc',
+    region='region',
+    xvf='xvf')
 
 
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
 # are inside some GSIM implementations, we should avoid duplication
-def calculate_z1pt0(vs30):
+def calculate_z1pt0(vs30, country):
     '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 1.0 km/s velocity horizon (in m)
-    Ref: Chiou & Youngs (2014) California model
+    Reads an array of vs30 values (in m/s) and returns the depth to
+    the 1.0 km/s velocity horizon (in m)
+    Ref: Chiou, B. S.-J. and Youngs, R. R., 2014. 'Update of the 
+    Chiou and Youngs NGA model for the average horizontal component
+    of peak ground motion and response spectra.' Earthquake Spectra,
+    30(3), pp.1117–1153.
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
+
     '''
-    c1 = 571 ** 4.
-    c2 = 1360.0 ** 4.
-    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
+    z1pt0 = numpy.zeros(len(vs30))
+    df = pandas.DataFrame({'codes': country})
+    idx_glo = df.loc[df.codes!='JPN'].index.values
+    idx_jpn = df.loc[df.codes=='JPN'].index.values
+
+    c1_glo = 571 ** 4.
+    c2_glo = 1360.0 ** 4.
+    z1pt0[idx_glo] = numpy.exp((-7.15 / 4.0) * numpy.log(
+        (vs30[idx_glo] ** 4 + c1_glo) / (c2_glo + c1_glo)))
+    
+    c1_jpn = 412 ** 2.
+    c2_jpn = 1360.0 ** 2.
+    z1pt0[idx_jpn] = numpy.exp((-5.23 / 2.0) * numpy.log(
+        (vs30[idx_jpn] ** 2 + c1_jpn) / (c2_jpn + c1_jpn)))
+
+    return z1pt0
 
 
-def calculate_z2pt5(vs30):
+def calculate_z2pt5(vs30, country):
     '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 2.5 km/s velocity horizon (in km)
+    Reads an array of vs30 values (in m/s) and returns the depth
+    to the 2.5 km/s velocity horizon (in km)
     Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
     'NGA-West2 ground motion model for the average horizontal components of
     PGA, PGV, and 5pct damped linear acceleration response spectra.'
     Earthquake Spectra, 30(3), pp.1087–1114.
 
     :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
+                    
     '''
-    c1 = 7.089
-    c2 = -1.144
-    return numpy.exp(c1 + numpy.log(vs30) * c2)
+    z2pt5 = numpy.zeros(len(vs30))
+    df = pandas.DataFrame({'codes': country})
+    idx_glo = df.loc[df.codes!='JPN'].index.values
+    idx_jpn = df.loc[df.codes=='JPN'].index.values
+
+    c1_glo = 7.089
+    c2_glo = -1.144
+    z2pt5[idx_glo] = numpy.exp(c1_glo + numpy.log(vs30[idx_glo]) * c2_glo)
+
+    c1_jpn = 5.359
+    c2_jpn = -1.102    
+    z2pt5[idx_jpn] = numpy.exp(c1_jpn + c2_jpn * numpy.log(vs30[idx_jpn]))
+
+    return z2pt5
 
 
 def rnd5(lons):
     return numpy.round(lons, 5)
+
+
+class TileGetter:
+    """
+    An extractor complete->tile
+    """
+    def __init__(self, tileno, ntiles):
+        self.tileno = tileno
+        self.ntiles = ntiles
+
+    def __call__(self, complete):
+        if self.ntiles == 1:
+            return complete
+        sc = SiteCollection.__new__(SiteCollection)
+        sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
+        sc.complete = complete
+        return sc
 
 
 class Site(object):
@@ -164,8 +217,8 @@ site_param_dt = {
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
-    'siteclass': (numpy.string_, 1),
-    'geohash': (numpy.string_, 6),
+    'siteclass': (numpy.bytes_, 1),
+    'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
@@ -174,10 +227,10 @@ site_param_dt = {
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
-    'ec8': (numpy.string_, 1),
-    'ec8_p18': (numpy.string_, 2),
+    'ec8': (numpy.bytes_, 1),
+    'ec8_p18': (numpy.bytes_, 2),
     'h800': numpy.float64,
-    'geology': (numpy.string_, 20),
+    'geology': (numpy.bytes_, 20),
     'amplfactor': numpy.float64,
     'ch_ampl03': numpy.float64,
     'ch_ampl06': numpy.float64,
@@ -185,7 +238,7 @@ site_param_dt = {
     'ch_phis2s06': numpy.float64,
     'ch_phiss03': numpy.float64,
     'ch_phiss06': numpy.float64,
-    'fpeak': numpy.float64,
+    'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
     'THV': numpy.float64,
     'PHV': numpy.float64,
@@ -197,8 +250,8 @@ site_param_dt = {
     'dry_density': numpy.float64,
     'Fs': numpy.float64,
     'crit_accel': numpy.float64,
-    'unit': (numpy.string_, 5),
-    'liq_susc_cat': (numpy.string_, 2),
+    'unit': (numpy.bytes_, 5),
+    'liq_susc_cat': (numpy.bytes_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
@@ -212,6 +265,8 @@ site_param_dt = {
     'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'lithology': (numpy.bytes_,2),
+    'landcover': (numpy.float64),
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
@@ -221,7 +276,7 @@ site_param_dt = {
     'T_eq': numpy.float64,
 
     # other parameters
-    'custom_site_id': (numpy.string_, 8),
+    'custom_site_id': (numpy.bytes_, 8),
     'region': numpy.uint32,
     'in_cshm': bool  # used in mcverry
 }
@@ -342,7 +397,7 @@ class SiteCollection(object):
         """
         sfc = rup.surface
         if point == 'TC':
-            pnt = sfc._get_top_edge_centroid()
+            pnt = sfc.get_top_edge_centroid()
             lon, lat = pnt.x, pnt.y
         elif point == 'BC':
             lon, lat = get_middle_point(
@@ -379,8 +434,7 @@ class SiteCollection(object):
         return cls.from_points(lons, lats, None, rup, req_site_params)
 
     def _set(self, param, value):
-        if param not in self.array.dtype.names:
-            self.add_col(param, site_param_dt[param])
+        self.add_col(param, site_param_dt[param])
         self.array[param] = value
 
     xyz = Mesh.xyz
@@ -430,17 +484,18 @@ class SiteCollection(object):
 
     def add_col(self, colname, dtype, values=None):
         """
-        Add a column to the underlying array
+        Add a column to the underlying array (if not already there)
         """
         names = self.array.dtype.names
-        dtlist = [(name, self.array.dtype[name]) for name in names]
-        dtlist.append((colname, dtype))
-        arr = numpy.zeros(len(self), dtlist)
-        for name in names:
-            arr[name] = self.array[name]
-        if values is not None:
-            arr[colname] = values
-        self.array = arr
+        if colname not in names:
+            dtlist = [(name, self.array.dtype[name]) for name in names]
+            dtlist.append((colname, dtype))
+            arr = numpy.zeros(len(self), dtlist)
+            for name in names:
+                arr[name] = self.array[name]
+            if values is not None:
+                arr[colname] = values
+            self.array = arr
 
     def make_complete(self):
         """
@@ -533,29 +588,22 @@ class SiteCollection(object):
         """
         return self.split(numpy.ceil(len(self) / max_sites))
 
-    def split(self, ntiles):
+    def split(self, ntiles, minsize=1):
         """
-        :param ntiles: number of tiles to generate (rounded if float)
+        :param ntiles: number of tiles to generate (ceiled if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
-        # if ntiles > nsites produce N tiles with a single site each
-        ntiles = min(int(numpy.ceil(ntiles)), len(self))
-        if ntiles <= 1:
-            return [self]
-        tiles = []
-        for i in range(ntiles):
-            sc = SiteCollection.__new__(SiteCollection)
-            # smart trick to split in "homogenous" tiles
-            sc.array = self.array[self.sids % ntiles == i]
-            sc.complete = self
-            tiles.append(sc)
-        return tiles
+        maxtiles = numpy.ceil(len(self) / minsize)
+        ntiles = min(numpy.ceil(ntiles), maxtiles)
+        return [TileGetter(i, ntiles) for i in range(int(ntiles))]
 
     def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        if hint > len(self):
+        if hint <= 1:
+            return [self]
+        elif hint > len(self):
             hint = len(self)
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
@@ -563,6 +611,21 @@ class SiteCollection(object):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.complete.array[sids]
             sc.complete = self.complete
+            tiles.append(sc)
+        return tiles
+
+    def split_by_gh3(self):
+        """
+        Split a SiteCollection into a set of tiles with the same geohash3
+        """
+        gh3s = geohash3(self.lons, self.lats)
+        gb = pandas.DataFrame(dict(sid=self.sids, gh3=gh3s)).groupby('gh3')
+        tiles = []
+        for gh3, df in gb:
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.complete.array[df.sid]
+            sc.complete = self.complete
+            sc.gh3 = gh3
             tiles.append(sc)
         return tiles
 
@@ -620,19 +683,17 @@ class SiteCollection(object):
 
         :returns: the site model array reduced to the hazard sites
         """
-        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
+        # NB: self != self.complete in the aristotle tests with stations
+        m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self, assoc_dist, 'warn')
+                site_model).assoc(self.complete, assoc_dist, 'warn')
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
             ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
-            self._set(name, site_model[name])
-        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
-            if name == 'vs30measured':
-                self._set(name, 0)  # default
-                # NB: by default reference_vs30_type == 'measured' is 1
-                # but vs30measured is 0 (the opposite!!)
+            vals = site_model[name]
+            self._set(name, vals[self.sids])
+            self.complete._set(name, vals)
 
         # sanity check
         for param in self.req_site_params:
@@ -643,29 +704,6 @@ class SiteCollection(object):
                 raise ValueError('The site parameter %s is always zero: please'
                                  ' check the site model' % param)
         return site_model
-
-    def extend(self, lons, lats):
-        """
-        Extend the site collection to additional (and different) points.
-        Used for station_data in conditioned GMFs.
-        """
-        assert len(lons) == len(lats), (len(lons), len(lats))
-        orig = set(zip(rnd5(self.lons), rnd5(self.lats)))
-        new = set(zip(rnd5(lons), rnd5(lats))) - orig
-        if not new:
-            return self
-        lons, lats = zip(*sorted(new))
-        N1 = len(self)
-        N2 = len(lons)
-        array = numpy.zeros(N1 + N2, self.array.dtype)
-        array[:N1] = self.array
-        array[N1:]['sids'] = numpy.arange(N1, N1+N2)
-        array[N1:]['lon'] = lons
-        array[N1:]['lat'] = lats
-        sitecol = object.__new__(self.__class__)
-        sitecol.array = array
-        sitecol.complete = sitecol
-        return sitecol
 
     def within(self, region):
         """
@@ -693,13 +731,60 @@ class SiteCollection(object):
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
 
+    def extend(self, lons, lats):
+        """
+        Extend the site collection to additional (and different) points.
+        Used for station_data in conditioned GMFs.
+        """
+        assert len(lons) == len(lats), (len(lons), len(lats))
+        complete = self.complete
+        orig = set(zip(rnd5(complete.lons), rnd5(complete.lats)))
+        new = set(zip(rnd5(lons), rnd5(lats))) - orig
+        if not new:
+            return self
+        lons, lats = zip(*sorted(new))
+        N1 = len(complete)
+        N2 = len(new)
+        array = numpy.zeros(N1 + N2, self.array.dtype)
+        array[:N1] = complete.array
+        array[N1:]['sids'] = numpy.arange(N1, N1+N2)
+        array[N1:]['lon'] = lons
+        array[N1:]['lat'] = lats
+        complete.array = array
+
+    @cached_property
+    def countries(self):
+        """
+        Return the countries for each site in the SiteCollection.
+        The boundaries of the countries are defined as in the file
+        geoBoundariesCGAZ_ADM0.shp
+        """
+        from openquake.commonlib import readinput
+        geom_df = readinput.read_countries_df()
+        lonlats = numpy.zeros((len(self), 2), numpy.float32)
+        lonlats[:, 0] = self.lons
+        lonlats[:, 1] = self.lats
+        return geolocate(lonlats, geom_df)
+
+    def by_country(self):
+        """
+        Returns a table with the number of sites per country.
+        """
+        uni, cnt = numpy.unique(self.countries, return_counts=True)
+        out = numpy.zeros(len(uni), [('country', (numpy.bytes_, 3)),
+                                     ('num_sites', int)])
+        out['country'] = uni
+        out['num_sites'] = cnt
+        out.sort(order='num_sites')
+        return out
+
     def geohash(self, length):
         """
         :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
-        l = numpy.uint8(length)
-        arr = geohash(self['lon'], self['lat'], l)
+        ln = numpy.uint8(length)
+        arr = CODE32[geohash(self['lon'], self['lat'], ln)]
         return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):
@@ -711,15 +796,17 @@ class SiteCollection(object):
 
     def calculate_z1pt0(self):
         """
-        Compute the column z1pt0 from the vs30
+        Compute the column z1pt0 from the vs30 using a region-dependent
+        formula for NGA-West2
         """
-        self.array['z1pt0'] = calculate_z1pt0(self.vs30)
+        self.array['z1pt0'] = calculate_z1pt0(self.vs30, self.countries)
 
     def calculate_z2pt5(self):
         """
-        Compute the column z2pt5 from the vs30 using a formula for NGA-West2
+        Compute the column z2pt5 from the vs30 using a region-dependent
+        formula for NGA-West2
         """
-        self.array['z2pt5'] = calculate_z2pt5(self.vs30)
+        self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.countries)
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)
@@ -747,3 +834,86 @@ class SiteCollection(object):
         total_sites = len(self.complete.array)
         return '<SiteCollection with %d/%d sites>' % (
             len(self), total_sites)
+
+
+def check_all_equal(mosaic_model, dicts, *keys):
+    """
+    Check all the dictionaries have the same value for the same key
+    """
+    if not dicts:
+        return
+    dic0 = dicts[0]
+    for key in keys:
+        for dic in dicts[1:]:
+            if dic[key] != dic0[key]:
+                raise RuntimeError('Inconsistent key %s!=%s while processing %s',
+                                   dic[key], dic0[key], mosaic_model)
+
+
+def merge_without_dupl(array1, array2, uniquefield):
+    """
+    >>> dt = [('code', 'S1'), ('value', numpy.int32)]
+    >>> a1 = numpy.array([('a', 1), ('b', 2)], dt)
+    >>> a2 = numpy.array([('b', 2), ('c', 3)], dt)
+    >>> merged, dupl = merge_without_dupl(a1, a2, 'code')
+    >>> merged
+    array([(b'a', 1), (b'b', 2), (b'c', 3)],
+          dtype=[('code', 'S1'), ('value', '<i4')])
+    >>> a2[dupl]
+    array([(b'b', 2)], dtype=[('code', 'S1'), ('value', '<i4')])
+    """
+    dtype = {}
+    for array in (array1, array2):
+        for name in array.dtype.names:
+            dtype[name] = array.dtype[name]
+    dupl = numpy.isin(array2[uniquefield], array1[uniquefield])
+    new = array2[~dupl]
+    N = len(array1) + len(new)
+    array = numpy.zeros(N, [(n, dtype[n]) for n in dtype])
+    for n in dtype:
+        if n in array1.dtype.names:
+            array[n][:len(array1)] = array1[n]
+        if n in array2.dtype.names:
+            array[n][len(array1):] = new[n]
+    return array, dupl
+
+
+def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
+    """
+    Read a number of site collections from the given filenames
+    and returns a single SiteCollection instance, plus a list
+    of site ID arrays, one for each site collection, excluding the duplicates.
+
+    If `check_gmfs` is set, assume there are `gmf_data` groups and
+    make sure the attributes are consistent (i.e. the same over all files).
+    """
+    sitecols = []
+    attrs = []
+    for fname in hdf5fnames:
+        with hdf5.File(fname, 'r') as f:
+            sitecol = f['sitecol']
+            sitecols.append(sitecol)
+            if check_gmfs:
+                attrs.append(dict(f['gmf_data'].attrs))
+    sitecol = sitecols[0]
+    converters = [{sid: i for i, sid in enumerate(sitecol.sids)}]
+    if len(sitecols) == 1:
+        return sitecol, converters
+
+    if attrs:
+        check_all_equal(mosaic_model, attrs, '__pdcolumns__', 'effective_time',
+                        'investigation_time')
+
+    assert 'custom_site_id' in sitecol.array.dtype.names
+    new = object.__new__(sitecol.__class__)
+    new.array = sitecol.array
+    offset = len(sitecol)
+    for sc in sitecols[1:]:
+        new.array, dupl = merge_without_dupl(
+            new.array, sc.array, 'custom_site_id')
+        conv = {sid: offset + i for i, sid in enumerate(sc.sids[~dupl])}
+        converters.append(conv)
+        offset += dupl.sum()
+    new.array['sids'] = numpy.arange(len(new.array))
+    new.complete = new
+    return new, converters

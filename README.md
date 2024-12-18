@@ -2,7 +2,8 @@
 
 ![OpenQuake Logo](https://raw.githubusercontent.com/gem/oq-infrastructure/master/logos/oq-logo.png)
 
-The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
+The **OpenQuake Engine** is an open source software that provides calculation and assessment of seismic hazard, risk and decision-making tools via the data, methods and standards that are being developed by the **[GEM](http://www.globalquakemodel.org)** (Global Earthquake Model) Foundation and its collaborators.
+DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
 -[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
@@ -19,7 +20,6 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 +* [What's new](../engine-2.6/doc/whats-new.md)
 + 
 +## Documentation
--## Documentation (master tree)
 -->
 
 [![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
@@ -30,57 +30,29 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 Current LTS version is the **OpenQuake Engine 3.16** 'Angela':
 
-The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela).
-* [What's new](../engine-3.16/doc/whats-new.md)
-* [Documentation 3.16](https://github.com/gem/oq-engine/tree/engine-3.16#openquake-engine)
-* [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
-
+The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela). [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.16.html)
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.18**.
+Latest stable version is the **OpenQuake Engine 3.21**.* [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.21.html)
 
 <!-- GEM END -->
 
-## General overview
+## Documentation
 
-The OpenQuake Engine software provides calculation and assessment of seismic hazard, risk and decision-making tools via the data, methods and standards that are being developed by **[GEM](http://www.globalquakemodel.org)** (Global Earthquake Model) and its collaborators.
+Since version 3.19 the OpenQuake Engine documentation has been consolidated into a single site: 
+https://docs.openquake.org/oq-engine/master/manual/
 
-* [Installation](doc/installing/README.md)
-* [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
-* [Advanced user manual](https://docs.openquake.org/oq-engine/advanced/master/). _Disclaimer: It includes experimental features and is only recommended for users that are already familiar with the user's manual._
-* [FAQ](doc/faq.md)
-* [Glossary of Terms](doc/glossary.md)
-
-
-## Running the OpenQuake Engine
-
-* Using the command line [on Windows](doc/running/windows.md)
-* Using the command line [on macOS and Linux](doc/running/unix.md)
-* [Using the WebUI](doc/running/server.md)
-
-## Visualizing outputs via QGIS
-
-<img src="https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png" alt="IRMT Logo" width="50" >
-
-A [QGIS plug-in](https://plugins.qgis.org/plugins/svir/) is available for users that would like to visually explore the outputs from the engine. 
-Check the documentation for instructions on how to [drive the engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html) and [visualize outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html). [Source code](https://github.com/gem/oq-irmt-qgis) also available.
-
-## For developers and contributors
-
-* [Architecture](doc/adv-manual/architecture.rst)
-* [Calculation Workflow](doc/calculation-workflow.md)
-* [Continuous integration and testing](doc/testing.md)
-
-#### For contributors
-
-* [Development Philosophy and Coding Guidelines](doc/development-guidelines.md)
-* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [HTTP REST API](doc/web-api.md)
-* [Implementing a new GSIM](doc/implementing-new-gsim.md)
+* [Getting Started](https://docs.openquake.org/oq-engine/master/manual/getting-started/)
+* [User Guide](https://docs.openquake.org/oq-engine/master/manual/user-guide/)
+* [API Reference](https://docs.openquake.org/oq-engine/master/manual/api-reference/)
+* [Underlying Science](https://docs.openquake.org/oq-engine/master/manual/underlying-science/)
+* [Release Notes](https://docs.openquake.org/oq-engine/master/manual/release-notes/)
+* [Contributing](https://docs.openquake.org/oq-engine/master/manual/contributing/)
+* [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq.html)
 
 
-#### Mirrors
+## Mirrors
 
 A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
 
@@ -95,8 +67,6 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](LICEN
 
 * Support forum: https://groups.google.com/forum/#!forum/openquake-users
 * Twitter: [@gem_devs](https://twitter.com/gem_devs)
-* Email: info@openquake.org
-
 
 ## Thanks
 
@@ -104,73 +74,77 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](LICEN
 
 The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)** with the support of
 
-## Public Partners
+## Public Governors
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="18%" align="left"  />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="14%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="19%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="22%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/geoscience_australia.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/gns.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nerc.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nied.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/protezione_civile.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/swiss_agency.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/t_e_m.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/usaid.png" width="20%" />
+
 
 
 ## Private Partners
 
 #### Governors
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Allianz_logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Aon_logo.png" width="14%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Eucentre_logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="25%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="12%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="15%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/allianz.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/aon.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/eucentre.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/fm.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/hannover_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/marsh.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/moodys.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/munich_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/partner_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/swiss_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/verisk.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/wtw.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/governors/zurich.png" width="20%" />
 
 #### Advisors
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="15%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="17%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="24%"/>
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="18%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/axa.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/celsius_pro.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/descartes.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/gallagher_re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/norman_max.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/one_concern.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/private_partners/advisors/safehub.png" width="20%" />
+
+
 
 ## Associate Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/apdim.svg" width="30%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/IASPEI_logo_new_1.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/iaee.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Usgs-logo.jpg" width="18%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="14%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="12%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="30%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/apdim.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/eeri.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/iaee.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/iaspei.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/irdr_icsu.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/undrr.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/unesco.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/associate_partners/usgs.png" width="20%" />
 
 
 
 ## Project Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Servicio-Geol%C3%B3gico-Colombiano.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Sura-new-logos-website.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/edf_governing_board_logo.png" width="18%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/project_partners/edf.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/project_partners/servicio_geologico_colombiano.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/project_partners/sura.png" width="20%" />
 
 
 ## Products Distribution Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/nasdaq.png" width="15%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/imagecat_logo_transparent_600x162.png" width="22%" />  
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/dClimate_logo_semibold_Logo.jpg" width="15%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eigenrisk-logo.png" width="40%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/climate_engine.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/dc_climate.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/eigen_risk.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/imagecat.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/impact_forecasting.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/jupiter_intelligence.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/nasdaq.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/verisk.png" width="20%" />
 
 ***
 

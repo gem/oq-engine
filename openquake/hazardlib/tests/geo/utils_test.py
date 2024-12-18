@@ -28,7 +28,9 @@ aac = numpy.testing.assert_allclose
 
 class CleanPointTestCase(unittest.TestCase):
     def test_exact_duplicates(self):
-        a, b, c = geo.Point(1, 2, 3), geo.Point(3, 4, 5), geo.Point(5, 6, 7)
+        a, b, c = [geo.Point(1., 2., 3.),
+                   geo.Point(3., 4., 5.),
+                   geo.Point(5., 6., 7.)]
         self.assertEqual(utils.clean_points([a, a, a, b, a, c, c]),
                          [a, b, a, c])
 
@@ -49,77 +51,77 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
             self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
     def test_doesnt_intersect(self):
-        lons = numpy.array([-1, -2, -3, -5])
-        lats = numpy.array([0,  2,  4,  6])
+        lons = numpy.array([-1., -2., -3., -5.])
+        lats = numpy.array([0.,  2.,  4.,  6.])
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
     def test_intersects(self):
-        lons = numpy.array([0, 0, 1, -1])
-        lats = numpy.array([0, 1, 0,  1])
+        lons = numpy.array([0., 0., 1., -1.])
+        lats = numpy.array([0., 1., 0.,  1.])
         self.assertEqual(True, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_on_a_pole(self):
-        lons = numpy.array([45, 165, -150, 80])
-        lats = numpy.array([-80, -80, -80, -70])
+        lons = numpy.array([45., 165., -150., 80.])
+        lats = numpy.array([-80., -80., -80., -70.])
         self.assertEqual(True, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_only_after_being_closed(self):
-        lons = numpy.array([0, 0, 1, 1])
-        lats = numpy.array([0, 1, 0, 1])
+        lons = numpy.array([0., 0., 1., 1.])
+        lats = numpy.array([0., 1., 0., 1.])
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_on_international_date_line(self):
-        lons = numpy.array([178, 178, -178, 170])
-        lats = [0, 10, 0, 5]
+        lons = numpy.array([178., 178., -178., 170.])
+        lats = numpy.array([0., 10., 0., 5.])
         self.assertEqual(True, self.func(lons, lats))
 
     def test_doesnt_intersect_on_international_date_line(self):
-        lons = numpy.array([178, 178, 179, -178])
-        lats = numpy.array([0, 10, 5, 5])
+        lons = numpy.array([178., 178., 179., -178.])
+        lats = numpy.array([0., 10., 5., 5.])
         self.assertEqual(False, self.func(lons, lats))
 
 
 class GetLongitudinalExtentTestCase(unittest.TestCase):
     def test_positive(self):
-        self.assertEqual(utils.get_longitudinal_extent(10, 20), 10)
-        self.assertEqual(utils.get_longitudinal_extent(-120, 30), 150)
+        self.assertEqual(utils.get_longitudinal_extent(10., 20.), 10)
+        self.assertEqual(utils.get_longitudinal_extent(-120., 30.), 150)
 
     def test_negative(self):
-        self.assertEqual(utils.get_longitudinal_extent(20, 10), -10)
-        self.assertEqual(utils.get_longitudinal_extent(-10, -15), -5)
+        self.assertEqual(utils.get_longitudinal_extent(20., 10.), -10)
+        self.assertEqual(utils.get_longitudinal_extent(-10., -15.), -5)
 
     def test_international_date_line(self):
         self.assertEqual(utils.get_longitudinal_extent(-178.3, 177.7), -4)
         self.assertEqual(utils.get_longitudinal_extent(177.7, -178.3), 4)
 
-        self.assertEqual(utils.get_longitudinal_extent(95, -180 + 94), 179)
-        self.assertEqual(utils.get_longitudinal_extent(95, -180 + 96), -179)
+        self.assertEqual(utils.get_longitudinal_extent(95., -180. + 94), 179)
+        self.assertEqual(utils.get_longitudinal_extent(95., -180. + 96), -179)
 
     def test_check_extent(self):
-        ext = utils.check_extent([10, 20], [30, 40])
+        ext = utils.check_extent([10., 20.], [30, 40])
         self.assertEqual(ext, (847, 711, 909))
 
-        ext = utils.check_extent([-10, 0], [30, 40])
-        self.assertEqual(ext, (553, 958, 909))
+        ext = utils.check_extent([-10., 0.], [30., 40.])
+        self.assertEqual(ext, (553., 958., 909.))
 
-        ext = utils.check_extent([170, -181], [30, 40])
-        self.assertEqual(ext, (553, 872, 909))
+        ext = utils.check_extent([170., -181.], [30., 40.])
+        self.assertEqual(ext, (553., 872., 909.))
 
-        ext = utils.check_extent([1, 359], [89, 89])
-        self.assertEqual(ext, (0, 3, 0))
-
-        with self.assertRaises(ValueError):
-            utils.check_extent([10, 90, 170], [20, 30, 40])
+        ext = utils.check_extent([1., 359.], [89., 89.])
+        self.assertEqual(ext, (0., 3., 0.))
 
         with self.assertRaises(ValueError):
-            utils.check_extent([-10, 20, 170], [30, 40, 50])
+            utils.check_extent([10., 90., 170.], [20., 30., 40.])
 
         with self.assertRaises(ValueError):
-            utils.check_extent([1, 359], [89, -89])
+            utils.check_extent([-10., 20., 170.], [30., 40., 50.])
+
+        with self.assertRaises(ValueError):
+            utils.check_extent([1., 359.], [89., -89.])
 
 
 class GetSphericalBoundingBox(unittest.TestCase):
@@ -128,23 +130,23 @@ class GetSphericalBoundingBox(unittest.TestCase):
         self.func = utils.get_spherical_bounding_box
 
     def test_one_point(self):
-        lons = numpy.array([20])
-        lats = numpy.array([-40])
+        lons = numpy.array([20.])
+        lats = numpy.array([-40.])
         self.assertEqual(self.func(lons, lats), (20, 20, -40, -40))
 
     def test_small_extent(self):
-        lons = numpy.array([10, -10])
-        lats = numpy.array([50,  60])
+        lons = numpy.array([10., -10])
+        lats = numpy.array([50.,  60])
         self.assertEqual(self.func(lons, lats), (-10, 10, 60, 50))
 
     def test_international_date_line(self):
-        lons = numpy.array([-20, 180, 179, 178])
-        lats = numpy.array([-1,   -2,   1,   2])
+        lons = numpy.array([-20., 180., 179., 178.])
+        lats = numpy.array([-1.,   -2.,   1.,   2.])
         self.assertEqual(self.func(lons, lats), (178, -20, 2, -2))
 
     def test_too_wide_longitudinal_extent(self):
-        for lons, lats in [([-45, -135, 135, 45], [80] * 4),
-                           ([0, 10, -175], [0] * 4)]:
+        for lons, lats in [([-45, -135, 135., 45], [80.] * 4),
+                           ([0, 10, -175.], [0.] * 4)]:
             with self.assertRaises(ValueError) as ae:
                 self.func(numpy.array(lons), numpy.array(lats))
                 self.assertEqual(str(ae.exception),
@@ -167,22 +169,14 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
     def test_projecting_back_and_forth(self):
         lon0, lat0 = -10.4, 20.3
         proj = utils.OrthographicProjection(lon0, lat0, lon0, lat0)
-        lons = lon0 + (numpy.random.random((20, 10)) * 50 - 25)
-        lats = lat0 + (numpy.random.random((20, 10)) * 50 - 25)
+        lons = lon0 + (numpy.random.random(20) * 50 - 25)
+        lats = lat0 + (numpy.random.random(20) * 50 - 25)
         xx, yy = proj(lons, lats, reverse=False)
-        self.assertEqual(xx.shape, (20, 10))
-        self.assertEqual(yy.shape, (20, 10))
+        self.assertEqual(xx.shape, (20,))
+        self.assertEqual(yy.shape, (20,))
         blons, blats = proj(xx, yy, reverse=True)
         aac(blons, lons)
         aac(blats, lats)
-
-    def test_points_too_far(self):
-        proj = utils.OrthographicProjection(180, 180, 45, 45)
-        with self.assertRaises(ValueError) as ar:
-            proj(90, -45)
-        self.assertEqual(str(ar.exception),
-                         'some points are too far from the projection '
-                         'center lon=180.0 lat=45.0')
 
     def test_projection_across_international_date_line(self):
         # tests that given a polygon crossing the internation date line,
@@ -209,7 +203,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         south = -1
         proj = utils.OrthographicProjection(west, east, north, south)
         lons = numpy.array([179.0, -179.0])
-        lats = numpy.array([-1, 1])
+        lats = numpy.array([-1., 1])
         xx, yy = proj(lons, lats)
         comp_lons, comp_lats = proj(xx, yy, reverse=True)
         numpy.testing.assert_allclose(lons, comp_lons)

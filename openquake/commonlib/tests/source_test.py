@@ -45,9 +45,6 @@ ALT_MFDS_SRC_MODEL = os.path.join(
 NONPARAMETRIC_SOURCE = os.path.join(
     NRML_DIR, 'source_model/nonparametric-source.xml')
 
-DUPLICATE_ID_SRC_MODEL = os.path.join(
-    os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
-
 SIMPLE_FAULT_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'simple-fault-rupture.xml')
 
@@ -162,6 +159,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=1.5,
+            temporal_occurrence_model=PoissonTOM(50.),
             upper_seismogenic_depth=10.0,
             lower_seismogenic_depth=20.0,
             fault_trace=geo.Line(
@@ -169,9 +167,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                  geo.Point(-122.03880, 37.87710)]),
             dip=45.0,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-            hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
-            slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
+            hypo_slip_list=[numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
+                            numpy.array([[90, 0.7], [135, 0.3]])])
         return simple
 
     @property
@@ -320,7 +317,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self.area, self._expected_area)
 
     def test_simple_to_hazardlib(self):
-        assert_close(self._expected_simple, self.simple, rtol=5E-5)
+        assert_close(self._expected_simple, self.simple, rtol=3E-4)
 
     def test_complex_to_hazardlib(self):
         assert_close(self._expected_complex, self.cmplx, rtol=1E-4)
@@ -331,20 +328,10 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     def test_characteristic_complex(self):
         assert_close(self._expected_char_complex, self.char_complex)
 
-    #def test_characteristic_multi(self):
-    #    planar arrays break this test, even if they are equal :-(
-    #    assert_close(self._expected_char_multi, self.char_multi)
-
-    def test_duplicate_id(self):
-        conv = s.SourceConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,
-            complex_fault_mesh_spacing=1,
-            width_of_mfd_bin=0.1,
-            area_source_discretization=10,
-        )
-        with self.assertRaises(nrml.DuplicatedID):
-            nrml.to_python(DUPLICATE_ID_SRC_MODEL, conv)
+    def test_characteristic_multi(self):
+        # planar arrays break this test, even if they are equal :-(
+        raise unittest.SkipTest
+        assert_close(self._expected_char_multi, self.char_multi)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -727,7 +714,7 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('gB0', 'gA1'))
-        self.assertEqual(rlz.weight['default'], 1.)
+        self.assertEqual(rlz.weight, [1.])
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')

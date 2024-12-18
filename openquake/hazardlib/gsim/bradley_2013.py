@@ -34,6 +34,7 @@ import shapely
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -43,6 +44,14 @@ cbd_polygon = shapely.geometry.Polygon(
      (172.6505, -43.5399), (172.6124, -43.5400),
      (172.6123, -43.5289), (172.6124, -43.5245),
      (172.6220, -43.5233)])
+
+
+def _get_basin_term(C, ctx, region=None):
+    z1pt0 = ctx.z1pt0
+    fb1 = C['phi5'] * (1.0 - 1.0 / np.cosh(
+        C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
+    fb2 = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
+    return fb1 + fb2
 
 
 def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
@@ -356,11 +365,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
 
     Implements eq. 5
     """
-    # we do not support estimating of basin depth and instead
-    # rely on it being available (since we require it).
-    z1pt0 = ctx.z1pt0
-
-    # we consider random variables being zero since we want
+    # We consider random variables being zero since we want
     # to find the exact mean value.
     eta = epsilon = 0
 
@@ -372,10 +377,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
         # third line
-        + C['phi5']
-        * (1.0 - 1.0 / np.cosh(
-            C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
-        + C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
+        + _get_basin_term(C, ctx)
         # fourth line
         + eta + epsilon)
 
@@ -425,10 +427,10 @@ def _get_v1(imt):
     Calculates Bradley's V1 term. Equation 2 (page 1814) and 6 (page 1816)
     based on SA period
     """
-    if imt == PGA():
+    T = imt.period
+    if T == 0:
         v1 = 1800.
     else:
-        T = imt.period
         v1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
         v1 = np.clip(v1a, -np.inf, 1800.)
     return v1
@@ -491,6 +493,9 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
+    def __init__(self, sigma_mu_epsilon=0.0):
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -510,6 +515,8 @@ class Bradley2013(GMPE):
             # amplification is constant
             v1 = _get_v1(imt)
             mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+
+            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
 

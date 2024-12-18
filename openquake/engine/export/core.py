@@ -57,13 +57,12 @@ def export_from_db(output_key, calc_id, datadir, target):
     """
     makedirs(target)
     export.from_db = True
-    ds_key, fmt = output_key
     with datastore.read(calc_id, datadir=datadir) as dstore:
         dstore.export_dir = target
         try:
             exported = export(output_key, dstore)
         except Exception:
-            etype, err, tb = sys.exc_info()
+            _etype, err, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
             version = check_version(dstore)
             raise DataStoreExportError(

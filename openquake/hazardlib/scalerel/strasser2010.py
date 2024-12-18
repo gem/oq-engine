@@ -103,7 +103,7 @@ class StrasserIntraslab(BaseMSRSigma, BaseASRSigma):
         """
         return 4.054 + 0.981 * log10(area)
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the Strasser et al. (2010)
         area relation.

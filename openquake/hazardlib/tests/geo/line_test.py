@@ -17,13 +17,14 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
+from openquake.hazardlib.geo.line import find_t
 
 PLOTTING = False
 
 
 def _plott(rtra_prj, txy):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1)
+    _fig, ax = plt.subplots(1, 1)
     tt = np.array(rtra_prj)
     plt.plot(txy[:, 0], txy[:, 1], '-')
     plt.plot(txy[:, 0], txy[:, 1], 'x', ms=2.0)
@@ -32,6 +33,7 @@ def _plott(rtra_prj, txy):
         plt.text(t[0], t[1], f'{i}')
     ax.axis('equal')
     plt.show()
+
 
 class LineResampleTestCase(unittest.TestCase):
 
@@ -46,7 +48,8 @@ class LineResampleTestCase(unittest.TestCase):
         p4 = geo.Point(0.0449662998195, 0.172149398777, 21.2132034356)
         p5 = geo.Point(0.0899327195183, 0.217115442616, 28.2842712475)
         p6 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
-        expected = geo.Line([p1, p2, p3, p4, p5, p6])
+        p7 = geo.Point(0.17986642, 0.30704752, 42.42641368)
+        expected = geo.Line([p1, p2, p3, p4, p5, p6, p7])
         self.assertEqual(expected, resampled)
 
     def test_resample_dense_trace(self):
@@ -191,7 +194,7 @@ class RevertPointsTest(unittest.TestCase):
         lats = np.array([3.0, 4.0, 5.])
         deps = np.array([6.0, 7.0, 8.])
         line = geo.Line.from_vectors(lons, lats, deps)
-        line.flip()
+        line = line.flip()
         computed = [p.longitude for p in line.points]
         expected = [3., 2., 1.]
         self.assertEqual(computed, expected)
@@ -217,8 +220,7 @@ class LineKeepCornersTest(unittest.TestCase):
         lod, lad = geo.geodetic.point_at(loc, lac, 53., 10)  # 6
         lons = np.array([0.0, 0.1, 0.2, loa, lob, loc, lod])
         lats = np.array([0.0, 0.0, 0.0, laa, lab, lac, lad])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
         coo = np.array([[p.longitude, p.latitude, p.depth] for p in line])
         idxs = [0, 2, 3, 6]
         expected = lons[idxs]
@@ -233,15 +235,14 @@ class ComputeTUTest(unittest.TestCase):
         # The simplest test. Straight trace going from west to east.
         lons = np.array([0.0, 0.1, 0.2])
         lats = np.array([0.0, 0.0, 0.0])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.2, 0.1]])
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tu(mesh)
+        tupp, uupp, _wei = line.get_tuw(mesh)
         expected_t = geo.geodetic.distance(0.2, 0.0, 0.0,
                                            coo[0, 0], coo[0, 1], 0.0)
         expected_u = geo.geodetic.distance(0.0, 0.0, 0.0,
@@ -257,15 +258,14 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.3, 0.0], [0.2, -0.1], [0.4, 0.3]])
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, u_upp, wei = line.get_tu(mesh)
+        _tupp, _u_upp, _wei = line.get_tuw(mesh)
 
         # TODO add test
 
@@ -275,14 +275,13 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tu(mesh)
+        tupp, uupp, _wei = line.get_tuw(mesh)
 
         # Plotting results
         if PLOTTING:
@@ -303,7 +302,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.6, 0.6, -1.0, 0.4, 0.01)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_tu(mesh)
+        tupp, uupp, _wei = line.get_tuw(mesh)
 
         if PLOTTING:
             num = 10
@@ -336,7 +335,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.get_tu_hat()
+        _slen, uhat, that = line.sut_hat
         np.testing.assert_almost_equal(np.array([[1, 0, 0]]), uhat, decimal=5)
 
         # Now computing ui and ti
@@ -358,7 +357,7 @@ class ComputeUiTiTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.4, 0.6, -0.2, 0.3, 0.005)
 
         # slen, uhat and that as expected
-        slen, uhat, that = line.get_tu_hat()
+        _slen, uhat, that = line.sut_hat
 
         # Now computing ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
@@ -398,7 +397,7 @@ class ComputeWeightsTest(unittest.TestCase):
         ui[0, :] = np.array([-0.1, 30.0, 20.1, 10.0, 30.0])
         ti[0, :] = np.array([5.0, 0.0, -5.0, -10.0, 5.0])
         segl = np.array([20.0])
-        wei, iot = geo.line.get_ti_weights(ui, ti, segl)
+        wei, _iot = geo.line.get_ti_weights(ui, ti, segl)
 
         # Compute weight for site 1
         i = 0
@@ -423,20 +422,19 @@ class ComputeWeightsTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.01)
 
         # slen, uhat and that
-        slen, uhat, that = line.get_tu_hat()
+        slen, uhat, that = line.sut_hat
 
         # Compute ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # Compute weights
-        wei, iot = geo.line.get_ti_weights(ui, ti, slen)
+        wei, _iot = geo.line.get_ti_weights(ui, ti, slen)
 
         # TODO add test
 
@@ -455,13 +453,13 @@ class ComputeWeightsTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.2, 0.6, -0.8, 0.1, 0.0025)
 
         # slen, uhat and that
-        slen, uhat, that = line.get_tu_hat()
+        slen, uhat, that = line.sut_hat
 
         # Compute ui and ti
         ui, ti = line.get_ui_ti(mesh, uhat, that)
 
         # Compute weights
-        wei, iot = geo.line.get_ti_weights(ui, ti, slen)
+        wei, _iot = geo.line.get_ti_weights(ui, ti, slen)
 
         # Total weights
         weit = np.sum(wei, axis=0)
@@ -481,12 +479,10 @@ class LineSphereIntersectionTest(unittest.TestCase):
 
     def test01(self):
         """ See example https://www.geogebra.org/m/mwanwvwj """
-        pnt0 = np.array([13, 2, 9])
-        # pnt1 = np.array([7, -4, 6])
-        pnt1 = np.array([5, -6, 5])
-        ref_pnt = np.array([0, 0, 0])
+        pnt0 = np.array([13., 2., 9.])
+        pnt1 = np.array([5., -6., 5.])
+        ref_pnt = np.array([0., 0., 0.])
         distance = 10.
-        from openquake.hazardlib.geo.line import find_t
         computed = find_t(pnt0, pnt1, ref_pnt, distance)
         expected = np.array([6.92, -4.08, 5.96])
         np.testing.assert_almost_equal(computed, expected, decimal=1)
@@ -504,7 +500,7 @@ def get_figure04_line():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Prepare the section trace
     px = np.array([0.0, 0.0, 12.68, 35.66])
@@ -579,6 +575,3 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     if show:
         plt.show()
     return ax
-
-
-

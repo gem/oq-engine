@@ -1,0 +1,3 @@
+#,,,,,,,"generated_by='OpenQuake engine 3.19.0-git56f9c232ce', start_date='2023-11-16T04:51:33', checksum=3617743749, investigation_time=None, risk_investigation_time=None"
+loss_type,no_damage,uninhabitable,collapsed,fatalities_value,fatalities_ratio,homeless_value,homeless_ratio
+structural,1.00000E+00,1.00000E+00,1.00000E+00,1.00000E+02,3.33333E-01,1.00000E+02,3.33333E-01

@@ -2,7 +2,7 @@ import unittest
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.probability_map import compute_hazard_maps
+from openquake.hazardlib.map_array import compute_hazard_maps
 
 converter = SourceConverter(
     investigation_time=50.,

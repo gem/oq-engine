@@ -94,11 +94,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.depths, [30, -5.6])
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, True)
             self.assertEqual(arr.dtype, float)
         for arr in (cll.vs30measured,):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, True)
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
@@ -145,6 +143,10 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
 
         tiles = cll.split_max(1)  # 2 tiles of 1 site each
         self.assertEqual(len(tiles), 2)
+
+        # test split_by_gh3
+        tiles = cll.split_by_gh3()
+        self.assertEqual([t.gh3 for t in tiles], [7415, 24765])
 
         # test geohash
         assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))

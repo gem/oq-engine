@@ -1,0 +1,90 @@
+              {% csrf_token %}
+              <div class="aristotle_form_row">
+                <label for"lon">{{ aristotle_form_labels.lon }}</label>
+                <input class="aristotle-input" type="text" id="lon" name="lon" placeholder="{{ aristotle_form_placeholders.lon }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"lat">{{ aristotle_form_labels.lat }}</label>
+                <input class="aristotle-input" type="text" id="lat" name="lat" placeholder="{{ aristotle_form_placeholders.lat }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"dep">{{ aristotle_form_labels.dep }}</label>
+                <input class="aristotle-input" type="text" id="dep" name="dep" placeholder="{{ aristotle_form_placeholders.dep }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"mag">{{ aristotle_form_labels.mag }}</label>
+                <input class="aristotle-input" type="text" id="mag" name="mag" placeholder="{{ aristotle_form_placeholders.mag }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"rake">{{ aristotle_form_labels.rake }}</label>
+                <input class="aristotle-input" type="text" id="rake" name="rake" placeholder="{{ aristotle_form_placeholders.rake }}" disabled />
+              </div>
+              <input class="aristotle-input" type="hidden" id="require_dip_strike" name="require_dip_strike"/>
+              <div class="aristotle_form_row">
+                <label for="mosaic_model">{{ aristotle_form_labels.mosaic_model }}</label>
+                <select name="mosaic_model" id="mosaic_model" class="aristotle-select" {% if user_level != 2 %}disabled{% endif %}>
+                </select>
+              </div>
+              <div class="aristotle_form_row">
+                <label for="trt">{{ aristotle_form_labels.trt }}</label>
+                <select name="trt" id="trt" class="aristotle-select" {% if user_level != 2 %}disabled{% endif %}>
+                </select>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"dip">{{ aristotle_form_labels.dip }}</label>
+                <input class="aristotle-input" type="text" id="dip" name="dip" placeholder="{{ aristotle_form_placeholders.dip }}" value="90" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"strike">{{ aristotle_form_labels.strike }}</label>
+                <input class="aristotle-input" type="text" id="strike" name="strike" placeholder="{{ aristotle_form_placeholders.strike }}" value="0" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"local_timestamp">{{ aristotle_form_labels.local_timestamp }}</label>
+                <input class="aristotle-input" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ aristotle_form_placeholders.local_timestamp }}" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"time_event">{{ aristotle_form_labels.time_event }}</label>
+                <select id="time_event" name="time_event" class="aristotle-select" {% if user_level != 2 %}disabled{% endif %}>
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                    <option value="transit">Transit</option>
+                </select>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"maximum_distance">{{ aristotle_form_labels.maximum_distance }}</label>
+                <input class="aristotle-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ aristotle_form_placeholders.maximum_distance }}" value="200" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"truncation_level">{{ aristotle_form_labels.truncation_level }}</label>
+                <input class="aristotle-input" type="text" id="truncation_level" name="truncation_level" placeholder="{{ aristotle_form_placeholders.truncation_level }}" value="3" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"number_of_ground_motion_fields">{{ aristotle_form_labels.number_of_ground_motion_fields }}</label>
+                <input class="aristotle-input" type="text" id="number_of_ground_motion_fields" name="number_of_ground_motion_fields" placeholder="{{ aristotle_form_placeholders.number_of_ground_motion_fields }}" value="100" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"asset_hazard_distance">{{ aristotle_form_labels.asset_hazard_distance }}</label>
+                <input class="aristotle-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ aristotle_form_placeholders.asset_hazard_distance }}" value="15" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"ses_seed">{{ aristotle_form_labels.ses_seed }}</label>
+                <input class="aristotle-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ aristotle_form_placeholders.ses_seed }}" value="42" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="aristotle_form_row">
+                <label for"station_data_file_from_usgs">{{ aristotle_form_labels.station_data_file_from_usgs }}</label>
+                <input class="aristotle-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ aristotle_form_placeholders.station_data_file_from_usgs }}" disabled />
+                <input class="aristotle-input" type="text" id="station_data_file_loaded" name="station_data_file_loaded" disabled />
+              </div>
+              <div class="aristotle_form_row">
+                <label for"station_data_file">{{ aristotle_form_labels.station_data_file }}</label>
+                <input class="aristotle-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ aristotle_form_placeholders.station_data_file }}" {% if user_level != 2 %}disabled{% endif %}>
+                {% if user_level == 2 %}<button type="button" id="clearStationDataFile">Clear File</button>{% endif %}
+              </div>
+              <div class="aristotle_form_row">
+                <label for"maximum_distance_stations">{{ aristotle_form_labels.maximum_distance_stations }}</label>
+                <input class="aristotle-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ aristotle_form_placeholders.maximum_distance_stations }}" value="" disabled/>
+              </div>
+              <div class="aristotle_form_row">
+                <button id="submit_aristotle_calc" type="submit" class="btn" disabled>Launch impact calculation</button>
+                <!-- <input type="submit"> -->
+              </div>

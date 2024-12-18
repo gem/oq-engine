@@ -45,11 +45,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module :mod: 'openquake.hmtk.plotting.seismicity.completeness.plot_stepp_1971'
 creates plot to illustrate outcome of Stepp (1972) method for completeness
 analysis
-'''
+"""
 import os.path
 import itertools
 
@@ -57,13 +57,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # markers which can be filled or empty
-VALID_MARKERS = ['s', 'o', '^', 'D', 'p', 'h', '8',
-                 '*', 'd', 'v', '<', '>', 'H']
+VALID_MARKERS = [
+    "s",
+    "o",
+    "^",
+    "D",
+    "p",
+    "h",
+    "8",
+    "*",
+    "d",
+    "v",
+    "<",
+    ">",
+    "H",
+]
 
 
-def create_stepp_plot(model, figure_size=(8, 6),
-                      filename=None, filetype='png', dpi=300, ax=None):
-    '''
+def create_stepp_plot(
+    model, figure_size=(8, 6), filename=None, filetype="png", dpi=300, ax=None
+):
+    """
     Creates the classic Stepp (1972) plots for a completed Stepp analysis,
     and exports the figure to a file.
 
@@ -76,14 +90,14 @@ def create_stepp_plot(model, figure_size=(8, 6),
         Type of file (from list supported by matplotlib)
     :param int dpi:
         Resolution (dots per inch) of output file
-    '''
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
     if filename and os.path.exists(filename):
-        raise IOError('File already exists!')
+        raise IOError("File already exists!")
 
     # get colours from current axes: thus user can set up before calling
     prop_cycler = ax._get_lines.prop_cycler
@@ -91,44 +105,59 @@ def create_stepp_plot(model, figure_size=(8, 6),
     marker_cyclers = itertools.tee(itertools.cycle(VALID_MARKERS), 3)
 
     # plot observed Sigma lambda
-    for i, (min_mag, max_mag) in enumerate(zip(model.magnitude_bin[:-1],
-                                               model.magnitude_bin[1:])):
-        label = '(%g, %g]: %d' % (min_mag, max_mag,
-                                  model.completeness_table[i, 0])
-        colour = next(prop_cyclers[0])['color']
-        ax.loglog(model.time_values, model.sigma[:, i],
-                  linestyle='none',
-                  marker=next(marker_cyclers[0]),
-                  markersize=3,
-                  markerfacecolor=colour,
-                  markeredgecolor=colour,
-                  label=label)
+    for i, (min_mag, max_mag) in enumerate(
+        zip(model.magnitude_bin[:-1], model.magnitude_bin[1:])
+    ):
+        label = "(%g, %g]: %d" % (
+            min_mag,
+            max_mag,
+            model.completeness_table[i, 0],
+        )
+        colour = next(prop_cyclers[0])["color"]
+        ax.loglog(
+            model.time_values,
+            model.sigma[:, i],
+            linestyle="none",
+            marker=next(marker_cyclers[0]),
+            markersize=3,
+            markerfacecolor=colour,
+            markeredgecolor=colour,
+            label=label,
+        )
 
     # plot expected Poisson rate
     for i in range(0, len(model.magnitude_bin) - 1):
-        ax.loglog(model.time_values, model.model_line[:, i],
-                  color=next(prop_cyclers[1])['color'],
-                  linewidth=0.5)
+        ax.loglog(
+            model.time_values,
+            model.model_line[:, i],
+            color=next(prop_cyclers[1])["color"],
+            linewidth=0.5,
+        )
 
     # mark breaks from expected rate
     for i in range(0, len(model.magnitude_bin) - 1):
-        colour = next(prop_cyclers[2])['color']
+        colour = next(prop_cyclers[2])["color"]
         if np.any(np.isnan(model.model_line[:, i])):
             continue
         xmarker = model.end_year - model.completeness_table[i, 0]
-        knee = model.model_line[:, i] > 0.
-        ymarker = 10.0 ** np.interp(np.log10(xmarker),
-                                    np.log10(model.time_values[knee]),
-                                    np.log10(model.model_line[knee, i]))
-        ax.loglog(xmarker, ymarker,
-                  marker=next(marker_cyclers[2]),
-                  markerfacecolor='white',
-                  markeredgecolor=colour)
+        knee = model.model_line[:, i] > 0.0
+        ymarker = 10.0 ** np.interp(
+            np.log10(xmarker),
+            np.log10(model.time_values[knee]),
+            np.log10(model.model_line[knee, i]),
+        )
+        ax.loglog(
+            xmarker,
+            ymarker,
+            marker=next(marker_cyclers[2]),
+            markerfacecolor="white",
+            markeredgecolor=colour,
+        )
 
-    ax.legend(loc='lower left', frameon=False, fontsize='small')
-    ax.set_xlabel('Time (years)')
+    ax.legend(loc="lower left", frameon=False, fontsize="small")
+    ax.set_xlabel("Time (years)")
     ax.set_ylabel("$\\sigma_{\\lambda} = \\sqrt{\\lambda} / \\sqrt{T}$")
-    ax.autoscale(enable=True, axis='both', tight=True)
+    ax.autoscale(enable=True, axis="both", tight=True)
 
     # save figure to file
     if filename is not None:

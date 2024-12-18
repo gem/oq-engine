@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                applyToTectonicRegionType="Active Shallow Crust">
+
+            <logicTreeBranch branchID="b1_indirect">
+              <uncertaintyModel>
+                [GmpeIndirectAvgSA]
+                gmpe_name = "KothaEtAl2020ESHM20"
+                corr_func = "eshm20"
+                t_low = 0.2
+                t_high = 1.5
+                n_per = 10 
+              </uncertaintyModel>
+              <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b2_direct">
+              <uncertaintyModel>Weatherill2024ESHM20AvgSA</uncertaintyModel>
+              <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+
+        </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>

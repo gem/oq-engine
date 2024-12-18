@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -52,10 +52,12 @@ import unittest
 import os
 import numpy as np
 
-from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import \
-    GardnerKnopoffType1
-from openquake.hmtk.seismicity.declusterer.distance_time_windows import \
-    GardnerKnopoffWindow
+from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import (
+    GardnerKnopoffType1,
+)
+from openquake.hmtk.seismicity.declusterer.distance_time_windows import (
+    GardnerKnopoffWindow,
+)
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
 
 
@@ -64,41 +66,45 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
     Unit tests for the Gardner and Knopoff declustering algorithm class.
     """
 
-    BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+    BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
     def setUp(self):
         """
         Read the sample catalogue
         """
-        flnme = 'gardner_knopoff_test_catalogue.csv'
+        flnme = "gardner_knopoff_test_catalogue.csv"
         filename = os.path.join(self.BASE_DATA_PATH, flnme)
         parser = CsvCatalogueParser(filename)
         self.cat = parser.read_file()
 
     def test_dec_gardner_knopoff(self):
         # Testing the Gardner and Knopoff algorithm
-        config = {'time_distance_window': GardnerKnopoffWindow(),
-                  'fs_time_prop': 1.0}
+        config = {
+            "time_distance_window": GardnerKnopoffWindow(),
+            "fs_time_prop": 1.0,
+        }
         # Instantiate the declusterer and process the sample catalogue
         dec = GardnerKnopoffType1()
         vcl, flagvector = dec.decluster(self.cat, config)
-        print('vcl:', vcl)
-        print('flagvector:', flagvector, self.cat.data['flag'])
-        np.testing.assert_allclose(flagvector, self.cat.data['flag'])
+        print("vcl:", vcl)
+        print("flagvector:", flagvector, self.cat.data["flag"])
+        np.testing.assert_allclose(flagvector, self.cat.data["flag"])
 
     def test_dec_gardner_knopoff_time_cutoff(self):
         """
         Testing the Gardner and Knopoff algorithm using a cutoff
         time of 100 days
         """
-        config = {'time_distance_window' : GardnerKnopoffWindow(),
-                  'fs_time_prop' : 1.0,
-                  'time_cutoff' : 100}
-        # Instantiate the declusterer and process the sample catalogue
+        config = {
+            "time_distance_window": GardnerKnopoffWindow(),
+            "fs_time_prop": 1.0,
+            "time_cutoff": 100,
+        }
+        # Instantiate the declusterer and process the sample catalogue
         dec = GardnerKnopoffType1()
         vcl, flagvector = dec.decluster(self.cat, config)
-        print('vcl:', vcl)
-        catalog_flag = self.cat.data['flag']
-        catalog_flag[4] = 0 # event becomes mainshock when time_cutoff = 100
-        print('flagvector:', catalog_flag)
-        np.testing.assert_allclose(flagvector,self.cat.data['flag'])
+        print("vcl:", vcl)
+        catalog_flag = self.cat.data["flag"]
+        catalog_flag[4] = 0  # event becomes mainshock when time_cutoff = 100
+        print("flagvector:", catalog_flag)
+        np.testing.assert_allclose(flagvector, self.cat.data["flag"])

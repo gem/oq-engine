@@ -16,7 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from django.apps import AppConfig
+from django.conf import settings
+from openquake.baselib import config
 
 
 class ServerConfig(AppConfig):
@@ -30,3 +33,50 @@ class ServerConfig(AppConfig):
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
         import openquake.server.signals  # NOQA
+
+        if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
+            raise ValueError(
+                f'Invalid application mode: "{settings.APPLICATION_MODE}".'
+                f' It must be one of {settings.APPLICATION_MODES}')
+        if settings.APPLICATION_MODE == 'ARISTOTLE':
+            try:
+                # NOTE: optional dependency needed for ARISTOTLE
+                from timezonefinder import TimezoneFinder  # noqa
+            except ImportError:
+                raise ImportError(
+                    'The python package "timezonefinder" is not installed.'
+                    ' It is required in order to convert the UTC time to'
+                    ' the local time of the event. You can install it'
+                    ' running: pip install timezonefinder==6.5.2')
+        if settings.LOCKDOWN and settings.APPLICATION_MODE in (
+                'AELO', 'ARISTOTLE'):
+            # check essential constants are defined
+            try:
+                settings.EMAIL_BACKEND  # noqa
+            except NameError:
+                raise NameError(
+                    f'If APPLICATION_MODE is {settings.APPLICATION_MODE} an'
+                    f' email backend must be defined')
+            if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
+                try:
+                    settings.EMAIL_HOST           # noqa
+                    settings.EMAIL_PORT           # noqa
+                    settings.EMAIL_USE_TLS        # noqa
+                    settings.EMAIL_HOST_USER      # noqa
+                    settings.EMAIL_HOST_PASSWORD  # noqa
+                except NameError:
+                    raise NameError(
+                        f'If APPLICATION_MODE is {settings.APPLICATION_MODE}'
+                        f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
+                        f' must all be defined')
+            if not config.directory.mosaic_dir:
+                raise NameError(
+                    f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
+                    f'mosaic_dir must be specified in openquake.cfg')
+        if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
+            # NOTE: this might be needed also for ARISTOTLE
+            aelo_changelog_path = os.path.join(
+                config.directory.mosaic_dir, 'aelo_changelog.ini')
+            if not os.path.isfile(aelo_changelog_path):
+                raise FileNotFoundError(
+                    f'{aelo_changelog_path} was not found!')

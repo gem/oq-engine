@@ -52,18 +52,19 @@ from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
 
 class BaseFaultGeometry(object):
-    '''
+    """
     Abstract base class to support geometry parameters and methods
-    '''
+    """
+
     @abc.abstractmethod
     def get_area(self):
-        '''
+        """
         Returns the area of the fault surface
-        '''
+        """
 
 
 class SimpleFaultGeometry(BaseFaultGeometry):
-    '''
+    """
     Describes the geometrical propeties of a simple fault surface
 
     :param str typology:
@@ -86,44 +87,47 @@ class SimpleFaultGeometry(BaseFaultGeometry):
     :param float area:
         Length of fault (km)
 
-    '''
+    """
 
     def __init__(self, trace, dip, upper_depth, lower_depth, mesh_spacing=1.0):
-        '''
+        """
         Sets up the fault geometry parameters from the input fault definitions
         :param float mesh_spacing:
             Spacing (km) of the fault surface mesh
-        '''
-        self.typology = 'Simple'
+        """
+        self.typology = "Simple"
         self.trace = trace
         self.dip = dip
         self.upper_depth = upper_depth
         self.lower_depth = lower_depth
-        self.surface = SimpleFaultSurface.from_fault_data(self.trace,
-                                                          self.upper_depth,
-                                                          self.lower_depth,
-                                                          self.dip,
-                                                          mesh_spacing)
+        self.surface = SimpleFaultSurface.from_fault_data(
+            self.trace,
+            self.upper_depth,
+            self.lower_depth,
+            self.dip,
+            mesh_spacing,
+        )
         self.length = trace.get_length()
         self.downdip_width = None
         self.surface_width = None
         self.area = None
 
     def get_area(self):
-        '''
+        """
         Calculates the area of the fault (km ** 2.) as the product of length
         (km) and downdip width (km)
-        '''
+        """
         d_z = self.lower_depth - self.upper_depth
-        self.downdip_width = d_z / np.sin(self.dip * np.pi / 180.)
-        self.surface_width = self.downdip_width * np.cos(self.dip *
-                                                         np.pi / 180.)
+        self.downdip_width = d_z / np.sin(self.dip * np.pi / 180.0)
+        self.surface_width = self.downdip_width * np.cos(
+            self.dip * np.pi / 180.0
+        )
         self.area = self.length * self.downdip_width
         return self.area
 
 
 class ComplexFaultGeometry(BaseFaultGeometry):
-    '''
+    """
     Module openquake.hmtk.faults.fault_model.ComplexFaultGeometry describes the
     geometrical properties of a complex fault surface
 
@@ -147,10 +151,10 @@ class ComplexFaultGeometry(BaseFaultGeometry):
         Down-dip width of fault (km)
     :param float area:
         Length of fault (km)
-    '''
+    """
 
     def __init__(self, traces, mesh_spacing=1.0):
-        '''
+        """
         Set up function an creates complex fault surface
         :param list traces:
             Edges of the complex fault as a list of :class:
@@ -159,18 +163,19 @@ class ComplexFaultGeometry(BaseFaultGeometry):
             for details.
         :param float mesh_spacing:
             Spacing (km) of the fault surface mesh
-        '''
-        self.typology = 'Complex'
+        """
+        self.typology = "Complex"
         self.trace = traces
         self.upper_depth = None
         self.lower_depth = None
-        self.surface = ComplexFaultSurface.from_fault_data(self.trace,
-                                                           mesh_spacing)
+        self.surface = ComplexFaultSurface.from_fault_data(
+            self.trace, mesh_spacing
+        )
         self.dip = self.surface.get_dip()
 
     def get_area(self):
-        '''
+        """
         Calculates the area of the complex fault from the surface mesh uses
         :class: openquake.hazardlib.surface.complex_fault.ComplexFaultSurface
-        '''
+        """
         return self.surface.get_area()

@@ -24,14 +24,9 @@ class:`bahrampouriEtAl2021SSlab`,
 class:`bahrampouriEtAl2021SInter`,
 """
 import numpy as np
-import pandas as pd
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA
-from scipy.interpolate import interp1d
-from math import sin, cos, sqrt, atan2, radians
-from openquake.hazardlib.geo.geodetic import npoints_towards
-from openquake.hazardlib.geo import Point
 import shapely.geometry as sg
 from shapely.geometry import LineString
 

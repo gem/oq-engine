@@ -89,7 +89,7 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         input_lons = [177, 179, -179, -177, -177, -179, 179, 177]
         input_lats = [40, 40, 40, 40, 43, 43, 43, 43]
 
-        lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
+        lons, _lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
         expected_lons = [177, 179, -179, -177, -177, -177, -177, -179, 179,
                          177, 177, 177]

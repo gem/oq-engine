@@ -18,7 +18,6 @@ import unittest
 import numpy
 
 from openquake.hazardlib import geo
-from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from openquake.hazardlib.geo.geodetic import EARTH_RADIUS, EARTH_ELEVATION
 
 

@@ -87,4 +87,5 @@ class CY14SiteTermTestCase(unittest.TestCase):
         aae(sig[0], sig[1], decimal=1)
 
     def test_raise_error(self):
-        self.assertRaises(ValueError, CY14SiteTerm, 'AbrahamsonEtAl2014')
+        self.assertRaises(ValueError, CY14SiteTerm,
+                          gmpe_name='AbrahamsonEtAl2014')

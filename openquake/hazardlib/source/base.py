@@ -17,13 +17,14 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
-import re
 import abc
 import zlib
+from dataclasses import dataclass
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import magstr, split_source
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
@@ -31,6 +32,18 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
+
+
+@dataclass
+class SourceParam:
+    source_id: str
+    name: str
+    tectonic_region_type: str
+    mfd: object
+    rupture_mesh_spacing: float
+    magnitude_scaling_relationship: object
+    rupture_aspect_ratio: float
+    temporal_occurrence_model: object
 
 
 def get_code2cls():
@@ -49,7 +62,7 @@ def is_poissonian(src):
     :returns: True if the underlying source is poissonian, false otherwise
     """
     if src.code == b'F':  # multiFault
-        return hasattr(src, 'occur_rates')
+        return src.infer_occur_rates
     elif src.code == b'N':  # nonParametric
         return False
     return True
@@ -63,7 +76,10 @@ def poisson_sample(src, eff_num_ses, seed):
     :yields: triples (rupture, rup_id, num_occurrences)
     """
     rng = numpy.random.default_rng(seed)
-    tom = src.temporal_occurrence_model
+    if hasattr(src, 'temporal_occurrence_model'):
+        tom = src.temporal_occurrence_model
+    else:  # multifault
+        tom = PoissonTOM(src.investigation_time)
     rupids = src.offset + numpy.arange(src.num_ruptures)
     if not hasattr(src, 'nodal_plane_distribution'):
         if src.code == b'F':  # multifault
@@ -183,6 +199,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     weight = 0.001  # set in contexts
     esites = 0  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
+    trt_smr = -1  # set by the engine
+    num_ruptures = 0  # set by the engine
+    seed = None  # set by the engine
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -200,16 +219,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: a random seed derived from source_id and ses_seed
         """
-        baseid = re.split('!;', self.source_id)[0]
-        return zlib.crc32(baseid.encode('ascii'), ses_seed)
-
-    def __init__(self, source_id, name, tectonic_region_type):
-        self.source_id = source_id
-        self.name = name
-        self.tectonic_region_type = tectonic_region_type
-        self.trt_smr = -1  # set by the engine
-        self.num_ruptures = 0  # set by the engine
-        self.seed = None  # set by the engine
+        return zlib.crc32(self.source_id.encode('ascii'), ses_seed)
 
     def is_gridded(self):
         """
@@ -227,6 +237,17 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             Generator of instances of sublclass of :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
+
+    def iter_meshes(self):
+        """
+        Yields the meshes underlying the ruptures
+        """
+        for rup in self.iter_ruptures():
+            if isinstance(rup.surface, MultiSurface):
+                for surf in rup.surface.surfaces:
+                    yield surf.mesh
+            else:
+                yield rup.surface.mesh
 
     def sample_ruptures(self, eff_num_ses, ses_seed):
         """
@@ -368,7 +389,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id = source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
 
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')

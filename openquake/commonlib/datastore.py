@@ -140,15 +140,31 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def build_dstore_log(description='custom calculation', parent=()):
+def build_dstore_log(description='custom calculation', parent=(), ini=None):
     """
-    :returns: DataStore instance associated to the .calc_id
+    :returns: <DataStore> and <LogContext> associated to the calculation
     """
-    dic = dict(description=description, calculation_mode='custom')
-    log = init('job', dic)
+    if ini is not None:
+        dic = ini
+    else:
+        dic = dict(description=description, calculation_mode='custom')
+    log = init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log
+
+
+def read_hc_id(hdf5):
+    """
+    Getting the hazard_calculation_id, if any
+    """
+    try:
+        oq = hdf5['oqparam']
+    except KeyError:  # oqparam not saved yet
+        return
+    except OSError:  # file open by another process with oqparam not flushed
+        return
+    return oq.hazard_calculation_id
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -204,6 +220,9 @@ class DataStore(collections.abc.MutableMapping):
                 self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
+            hc_id = read_hc_id(self.hdf5)
+            if hc_id:
+                self.parent = read(hc_id)
         return self
 
     @property
@@ -414,7 +433,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         prefix = len(os.path.commonprefix(fnames))
         for fname in fnames:
-            data = gzip.compress(open(fname, 'rb').read())
+            with open(fname, 'rb') as f:
+                data = gzip.compress(f.read())
             self[where + fname[prefix:]] = numpy.void(data)
 
     def retrieve_files(self, prefix='input'):
@@ -477,8 +497,13 @@ class DataStore(collections.abc.MutableMapping):
         :returns: datastore metadata version, date, checksum as a dictionary
         """
         a = self.hdf5.attrs
-        return dict(generated_by='OpenQuake engine %s' % a['engine_version'],
-                    start_date=a['date'], checksum=a['checksum32'])
+        if 'aelo_version' in a:
+            return dict(generated_by='AELO %s' % a['aelo_version'],
+                        start_date=a['date'], checksum=a['checksum32'])
+        else:
+            return dict(
+                generated_by='OpenQuake engine %s' % a['engine_version'],
+                start_date=a['date'], checksum=a['checksum32'])
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed

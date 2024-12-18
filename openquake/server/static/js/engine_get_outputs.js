@@ -37,13 +37,6 @@
                 this.render();
             },
 
-            events: {
-                "click .btn-danger": "remove_calculation",
-                "click .btn-traceback": "show_traceback",
-                "click .btn-file": "on_run_risk_clicked",
-                "change .btn-file input": "on_run_risk_queued"
-            },
-
             render: function() {
                 if (!this.can_be_rendered) {
                     return;
@@ -68,19 +61,10 @@
         });
     var outputs = new Outputs();
 
-    var refresh_outputs;
-
-    function setTimer() {
-        refresh_outputs = setInterval(function() { outputs.fetch({reset: true}) }, 30000);
-    }
-
     /* classic event management */
     $(document).ready(
         function() {
-
             var output_table = new OutputTable({ outputs: outputs });
             outputs.fetch({reset: true});
-            setTimer()
-
         });
 })($, Backbone, _, gem_oq_server_url, gem_calc_id);

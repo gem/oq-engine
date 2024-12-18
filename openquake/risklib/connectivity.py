@@ -28,10 +28,62 @@
 # “New Challenges for Urban Engineering Seismology (URBASIS-EU)”.
 # @author 1 has been funded by this project
 
+from dataclasses import dataclass
 import pandas as pd
 import numpy as np
-import networkx as nx
+try:
+    import networkx as nx
+except ImportError:
+    nx = None
 import logging
+
+
+@dataclass
+class Out:
+    """
+    Connectivity outputs
+    """
+    cl: pd.DataFrame
+    node_el: pd.DataFrame
+    ccl_table: pd.DataFrame
+    pcl_table: pd.DataFrame
+    wcl_table: pd.DataFrame
+    eff_table: pd.DataFrame
+    event_connectivity_loss_ccl: pd.DataFrame
+    event_connectivity_loss_pcl: pd.DataFrame
+    event_connectivity_loss_wcl: pd.DataFrame
+    event_connectivity_loss_eff: pd.DataFrame
+    avg_connectivity_loss_ccl = 0
+    avg_connectivity_loss_pcl = 0
+    avg_connectivity_loss_wcl = 0
+    avg_connectivity_loss_eff = 0
+
+    @classmethod
+    def new(cls, expo_df, nodes, eff_nodes, kind):
+        assert kind in ('taz', 'demand'), kind
+        t0 = expo_df[expo_df['purpose'].str.lower() == kind].iloc[:, 0:1]
+        t1 = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
+
+        t2 = pd.DataFrame({'id': nodes})
+        t2.set_index('id', inplace=True)
+        t3 = pd.DataFrame({'id': nodes})
+        t3.set_index('id', inplace=True)
+        t4 = pd.DataFrame({'id': nodes})
+        t4.set_index('id', inplace=True)
+        t5 = pd.DataFrame({'id': eff_nodes})
+        t5.set_index('id', inplace=True)
+
+        # Create empty dataframes with columns "event_id" and
+        # "CCL"/"PCL"/"WCL"/"EL"
+        t6 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'CCL': pd.Series(dtype=float)})
+        t7 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
+        t8 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
+        t9 = pd.DataFrame(
+            {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
+        return cls(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
 
 
 def get_exposure_df(dstore):
@@ -145,47 +197,45 @@ def get_damage_df(dstore, exposure_df):
 def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
                       damage_df, g_type, calculation_mode):
     taz_nodes_analysis_results = {}
-    (taz_cl, node_el,
-        event_connectivity_loss_pcl,
-        event_connectivity_loss_wcl,
-        event_connectivity_loss_eff) = ELWCLPCLloss_TAZ(
+    o = ELWCLPCLloss_TAZ(
         exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type)
-    sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
-    sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-    sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
+    sum_connectivity_loss_pcl = o.event_connectivity_loss_pcl['PCL'].sum()
+    sum_connectivity_loss_wcl = o.event_connectivity_loss_wcl['WCL'].sum()
+    sum_connectivity_loss_eff = o.event_connectivity_loss_eff['EL'].sum()
 
     if calculation_mode == "event_based_damage":
         inv_time = dstore["oqparam"].investigation_time
         ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
         num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
         eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
-        avg_connectivity_loss_pcl = (
+        o.avg_connectivity_loss_pcl = (
             sum_connectivity_loss_pcl / eff_inv_time)
-        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl/eff_inv_time
-        avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
-        taz_cl["PCL_node"] /= eff_inv_time
-        taz_cl["WCL_node"] /= eff_inv_time
-        node_el["EL"] /= eff_inv_time
+        o.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl/eff_inv_time
+        o.avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
+        o.cl["PCL_node"] /= eff_inv_time
+        o.cl["WCL_node"] /= eff_inv_time
+        o.node_el["EL"] /= eff_inv_time
 
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
-        avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
-        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
-        avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events
-        taz_cl["PCL_node"] /= num_events
-        taz_cl["WCL_node"] /= num_events
-        node_el["EL"] /= num_events
+        o.avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
+        o.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
+        o.avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events
+        o.cl["PCL_node"] /= num_events
+        o.cl["WCL_node"] /= num_events
+        o.node_el["EL"] /= num_events
 
-    taz_cl.drop(columns=['ordinal'], inplace=True)
-    node_el.drop(columns=['ordinal'], inplace=True)
+    o.cl.drop(columns=['ordinal'], inplace=True)
+    o.node_el.drop(columns=['ordinal'], inplace=True)
 
     for result in [
             'avg_connectivity_loss_pcl', 'avg_connectivity_loss_wcl',
             'avg_connectivity_loss_eff',
             'event_connectivity_loss_pcl', 'event_connectivity_loss_wcl',
             'event_connectivity_loss_eff',
-            'taz_cl', 'node_el']:
-        taz_nodes_analysis_results[result] = locals()[result]
+            'cl', 'node_el']:
+        key = 'taz_cl' if result == 'cl' else result
+        taz_nodes_analysis_results[key] = getattr(o, result)
 
     return taz_nodes_analysis_results
 
@@ -194,55 +244,54 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
                          demand_nodes, source_nodes, damage_df, g_type,
                          calculation_mode):
     demand_nodes_analysis_results = {}
-    (dem_cl, node_el, event_connectivity_loss_ccl,
-        event_connectivity_loss_pcl, event_connectivity_loss_wcl,
-        event_connectivity_loss_eff) = ELWCLPCLCCL_demand(
+    o = ELWCLPCLCCL_demand(
         exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
         damage_df, g_type)
-    sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
-    sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
-    sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-    sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
+    sum_connectivity_loss_ccl = o.event_connectivity_loss_ccl['CCL'].sum()
+    sum_connectivity_loss_pcl = o.event_connectivity_loss_pcl['PCL'].sum()
+    sum_connectivity_loss_wcl = o.event_connectivity_loss_wcl['WCL'].sum()
+    sum_connectivity_loss_eff = o.event_connectivity_loss_eff['EL'].sum()
 
     if calculation_mode == "event_based_damage":
         inv_time = dstore["oqparam"].investigation_time
         ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
         num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
         eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
-        avg_connectivity_loss_ccl = (
+        o.avg_connectivity_loss_ccl = (
             sum_connectivity_loss_ccl / eff_inv_time)
-        avg_connectivity_loss_pcl = (
+        o.avg_connectivity_loss_pcl = (
             sum_connectivity_loss_pcl / eff_inv_time)
-        avg_connectivity_loss_wcl = (
+        o.avg_connectivity_loss_wcl = (
             sum_connectivity_loss_wcl / eff_inv_time)
-        avg_connectivity_loss_eff = (
+        o.avg_connectivity_loss_eff = (
             sum_connectivity_loss_eff / eff_inv_time)
-        dem_cl["Isolation_node"] /= eff_inv_time
-        dem_cl["PCL_node"] /= eff_inv_time
-        dem_cl["WCL_node"] /= eff_inv_time
-        node_el["EL"] /= eff_inv_time
+        o.cl["Isolation_node"] /= eff_inv_time
+        o.cl["PCL_node"] /= eff_inv_time
+        o.cl["WCL_node"] /= eff_inv_time
+        o.node_el["EL"] /= eff_inv_time
 
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
-        avg_connectivity_loss_ccl = sum_connectivity_loss_ccl / num_events
-        avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
-        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
-        avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-        dem_cl["Isolation_node"] /= num_events
-        dem_cl["PCL_node"] /= num_events
-        dem_cl["WCL_node"] /= num_events
-        node_el["EL"] /= num_events
+        o.avg_connectivity_loss_ccl = sum_connectivity_loss_ccl / num_events
+        o.avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
+        o.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
+        o.avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
+        o.cl["Isolation_node"] /= num_events
+        o.cl["PCL_node"] /= num_events
+        o.cl["WCL_node"] /= num_events
+        o.node_el["EL"] /= num_events
 
-    dem_cl.drop(columns=['ordinal'], inplace=True)
-    node_el.drop(columns=['ordinal'], inplace=True)
+    o.cl.drop(columns=['ordinal'], inplace=True)
+    o.node_el.drop(columns=['ordinal'], inplace=True)
 
     for result in [
             'avg_connectivity_loss_ccl', 'avg_connectivity_loss_pcl',
             'avg_connectivity_loss_wcl', 'avg_connectivity_loss_eff',
             'event_connectivity_loss_ccl', 'event_connectivity_loss_pcl',
             'event_connectivity_loss_wcl', 'event_connectivity_loss_eff',
-            'dem_cl', 'node_el']:
-        demand_nodes_analysis_results[result] = locals()[result]
+            'cl', 'node_el']:
+        key = 'dem_cl' if result == 'cl' else result
+        demand_nodes_analysis_results[key] = getattr(o, result)
 
     return demand_nodes_analysis_results
 
@@ -364,6 +413,9 @@ def calc_efficiency(graph, N, att, eff_table, eff):
 
 
 def analysis(dstore):
+    """
+    Postprocessor for the connectivity analysis
+    """
     connectivity_results = {}
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
@@ -408,7 +460,7 @@ def analysis(dstore):
     return connectivity_results
 
 
-def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
+def ELWCLPCLCCL_demand(expo_df, G_original, eff_nodes, demand_nodes,
                        source_nodes, damage_df, g_type):
     # Classic one where particular nodes are divided as supply or demand and
     # the main interest is to check the serviceability of supply to demand
@@ -419,153 +471,201 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
 
     # To store the information of the performance indicators at connectivity
     # level
-    dem_cl = exposure_df[
-        exposure_df['purpose'].str.lower() == 'demand'].iloc[:, 0:1]
-    node_el = exposure_df[
-        exposure_df['type'].str.lower() == 'node'].iloc[:, 0:1]
-
-    ccl_table = pd.DataFrame({'id': demand_nodes})
-    pcl_table = pd.DataFrame({'id': demand_nodes})
-    wcl_table = pd.DataFrame({'id': demand_nodes})
-    eff_table = pd.DataFrame({'id': eff_nodes})
-
-    ccl_table.set_index('id', inplace=True)
-    pcl_table.set_index('id', inplace=True)
-    wcl_table.set_index('id', inplace=True)
-    eff_table.set_index('id', inplace=True)
-
-    # Create an empty dataframe with columns "event_id" and
-    # "CCL"/"PCL"/"WCL"/"EL"
-
-    event_connectivity_loss_ccl = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'CCL': pd.Series(dtype=float)})
-    event_connectivity_loss_pcl = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
-    event_connectivity_loss_wcl = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
-    event_connectivity_loss_eff = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
+    o = Out.new(expo_df, demand_nodes, eff_nodes, 'demand')
 
     # To check the the values for each node before the earthquake event
 
     # For calculating complete connectivity Loss
-    ccl_table.loc[demand_nodes, 'CNO'] = [
+    o.ccl_table.loc[demand_nodes, 'CNO'] = [
         1 if any(nx.has_path(G_original, j, i) for j in source_nodes) else 0
         for i in demand_nodes]
 
     # For calculating partial connectivity loss
-    pcl_table.loc[demand_nodes, 'NS0'] = [
+    o.pcl_table.loc[demand_nodes, 'NS0'] = [
         sum(nx.has_path(G_original, j, i) for j in source_nodes)
         for i in demand_nodes]
 
     att = nx.get_edge_attributes(G_original, 'weight')
-    wcl_table = calc_weighted_connectivity_loss(
-        G_original, att, source_nodes, demand_nodes, wcl_table, pcl_table,
+    o.wcl_table = calc_weighted_connectivity_loss(
+        G_original, att, source_nodes, demand_nodes, o.wcl_table, o.pcl_table,
         'WS0', 'NS0')
 
     N = len(G_original)
     att = nx.get_edge_attributes(G_original, 'weight')
-    eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
+    o.eff_table = calc_efficiency(G_original, N, att, o.eff_table, 'Eff0')
 
     logging.info('Checking for every event after earthquake')
     for event_id, event_damage_df in damage_df.groupby("event_id"):
-        G = cleanup_graph(G_original, event_damage_df, g_type)
-
-        # Checking if there is a path between any souce to each demand node.
-        # Some demand nodes and source nodes may have been eliminated from
-        # the network due to damage, so we do not need to check their
-        # functionalities
-        extant_source_nodes = set(source_nodes) & set(G.nodes)
-        extant_demand_nodes = sorted(set(demand_nodes) & set(G.nodes))
-        extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
-
-        # If demand nodes are damaged itself (Example, building collapsed where
-        # demand node is considered)
-
-        ccl_table.loc[~ccl_table.index.isin(extant_demand_nodes), 'CNS'] = 0
-        pcl_table.loc[~pcl_table.index.isin(extant_demand_nodes), 'NS'] = 0
-        wcl_table.loc[~wcl_table.index.isin(extant_demand_nodes), 'WS'] = 0
-        eff_table.loc[~eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
-
-        # To check the the values for each node after the earthquake event
-        # Complete connectivity loss
-        ccl_table.loc[extant_demand_nodes, 'CNS'] = [
-            1 if any(nx.has_path(G, j, i) for j in extant_source_nodes) else 0
-            for i in extant_demand_nodes]
-
-        # Partial Connectivity Loss
-        pcl_table.loc[extant_demand_nodes, 'NS'] = [
-            sum(nx.has_path(G, j, i) for j in extant_source_nodes)
-            for i in extant_demand_nodes]
-
-        wcl_table = calc_weighted_connectivity_loss(
-            G, att, extant_source_nodes, extant_demand_nodes, wcl_table,
-            pcl_table, 'WS', 'NS')
-
-        eff_table = calc_efficiency(G, N, att, eff_table, 'Eff')
-
-        # Connectivity Loss for each node
-        pcl_table['PCL_node'] = 1 - (pcl_table['NS']/pcl_table['NS0'])
-        wcl_table['WCL_node'] = 1 - (wcl_table['WS']/wcl_table['WS0'])
-
-        # Computing the mean of the connectivity loss to consider the overall
-        # performance of the area (at global level)
-        CCL_per_event = 1 - ((ccl_table['CNS'].sum())/ccl_table['CNO'].sum())
-        PCL_mean_per_event = pcl_table['PCL_node'].mean()
-        WCL_mean_per_event = wcl_table['WCL_node'].mean()
-        Glo_eff0_per_event = eff_table['Eff0'].mean()
-        Glo_eff_per_event = eff_table['Eff'].mean()
-        # Calculation of Efficiency loss
-        Glo_effloss_per_event = (
-            Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
-
-        # Storing the value of performance indicators for each event
-        event_connectivity_loss_ccl = pd.concat(
-            [event_connectivity_loss_ccl, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'CCL': CCL_per_event}])],
-            ignore_index=True)
-        event_connectivity_loss_pcl = pd.concat(
-            [event_connectivity_loss_pcl, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
-            ignore_index=True)
-        event_connectivity_loss_wcl = pd.concat(
-            [event_connectivity_loss_wcl, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
-            ignore_index=True)
-        event_connectivity_loss_eff = pd.concat(
-            [event_connectivity_loss_eff, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
-            ignore_index=True)
-
-        # To store the sum of performance indicator at nodal level to calulate
-        # the average afterwards
-        ccl_table['Isolation_node'] = 1 - ccl_table['CNS']
-        ccl_table1 = ccl_table.drop(columns=['CNO', 'CNS'])
-        ccl_table1 = ccl_table1.reset_index()
-        dem_cl = pd.concat((dem_cl, ccl_table1)).groupby(
-            'id', as_index=False).sum()
-
-        pcl_table1 = pcl_table.drop(columns=['NS0', 'NS'])
-        pcl_table1 = pcl_table1.reset_index()
-        dem_cl = pd.concat((dem_cl, pcl_table1)).groupby(
-            'id', as_index=False).sum()
-
-        wcl_table1 = wcl_table.drop(columns=['WS0', 'WS'])
-        wcl_table1 = wcl_table1.reset_index()
-        dem_cl = pd.concat((dem_cl, wcl_table1)).groupby(
-            'id', as_index=False).sum()
-
-        eff_table1 = eff_table.drop(columns=['Eff0', 'Eff'])
-        eff_table1 = eff_table1.reset_index()
-        node_el = pd.concat((node_el, eff_table1)).groupby(
-            'id', as_index=False).sum()
-
-    return (dem_cl, node_el, event_connectivity_loss_ccl,
-            event_connectivity_loss_pcl, event_connectivity_loss_wcl,
-            event_connectivity_loss_eff)
+        update_demand(o, event_id, event_damage_df, G_original, g_type,
+                      source_nodes, demand_nodes, eff_nodes, N, att)
+    return o
 
 
-def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
+def update_demand(o, event_id, event_damage_df, G_original, g_type,
+                  source_nodes, demand_nodes, eff_nodes, N, att):
+    G = cleanup_graph(G_original, event_damage_df, g_type)
+
+    # Checking if there is a path between any souce to each demand node.
+    # Some demand nodes and source nodes may have been eliminated from
+    # the network due to damage, so we do not need to check their
+    # functionalities
+    extant_source_nodes = set(source_nodes) & set(G.nodes)
+    extant_demand_nodes = sorted(set(demand_nodes) & set(G.nodes))
+    extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
+
+    # If demand nodes are damaged itself (Example, building collapsed where
+    # demand node is considered)
+
+    o.ccl_table.loc[~o.ccl_table.index.isin(extant_demand_nodes), 'CNS'] = 0
+    o.pcl_table.loc[~o.pcl_table.index.isin(extant_demand_nodes), 'NS'] = 0
+    o.wcl_table.loc[~o.wcl_table.index.isin(extant_demand_nodes), 'WS'] = 0
+    o.eff_table.loc[~o.eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
+
+    # To check the the values for each node after the earthquake event
+    # Complete connectivity loss
+    o.ccl_table.loc[extant_demand_nodes, 'CNS'] = [
+        1 if any(nx.has_path(G, j, i) for j in extant_source_nodes) else 0
+        for i in extant_demand_nodes]
+
+    # Partial Connectivity Loss
+    o.pcl_table.loc[extant_demand_nodes, 'NS'] = [
+        sum(nx.has_path(G, j, i) for j in extant_source_nodes)
+        for i in extant_demand_nodes]
+
+    o.wcl_table = calc_weighted_connectivity_loss(
+        G, att, extant_source_nodes, extant_demand_nodes, o.wcl_table,
+        o.pcl_table, 'WS', 'NS')
+
+    o.eff_table = calc_efficiency(G, N, att, o.eff_table, 'Eff')
+
+    # Connectivity Loss for each node
+    o.pcl_table['PCL_node'] = 1 - (o.pcl_table['NS']/o.pcl_table['NS0'])
+    o.wcl_table['WCL_node'] = 1 - (o.wcl_table['WS']/o.wcl_table['WS0'])
+
+    # Computing the mean of the connectivity loss to consider the overall
+    # performance of the area (at global level)
+    CCL_per_event = 1 - ((o.ccl_table['CNS'].sum())/
+                         o.ccl_table['CNO'].sum())
+    PCL_mean_per_event = o.pcl_table['PCL_node'].mean()
+    WCL_mean_per_event = o.wcl_table['WCL_node'].mean()
+    Glo_eff0_per_event = o.eff_table['Eff0'].mean()
+    Glo_eff_per_event = o.eff_table['Eff'].mean()
+    # Calculation of Efficiency loss
+    Glo_effloss_per_event = (
+        Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
+
+    # Storing the value of performance indicators for each event
+    o.event_connectivity_loss_ccl = pd.concat(
+        [o.event_connectivity_loss_ccl, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'CCL': CCL_per_event}])],
+        ignore_index=True)
+    o.event_connectivity_loss_pcl = pd.concat(
+        [o.event_connectivity_loss_pcl, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
+        ignore_index=True)
+    o.event_connectivity_loss_wcl = pd.concat(
+        [o.event_connectivity_loss_wcl, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
+        ignore_index=True)
+    o.event_connectivity_loss_eff = pd.concat(
+        [o.event_connectivity_loss_eff, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
+        ignore_index=True)
+
+    # To store the sum of performance indicator at nodal level to calulate
+    # the average afterwards
+    o.ccl_table['Isolation_node'] = 1 - o.ccl_table['CNS']
+    ccl_table1 = o.ccl_table.drop(columns=['CNO', 'CNS'])
+    o.cl = pd.concat((o.cl, ccl_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+    pcl_table1 = o.pcl_table.drop(columns=['NS0', 'NS'])
+    o.cl = pd.concat((o.cl, pcl_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+    wcl_table1 = o.wcl_table.drop(columns=['WS0', 'WS'])
+    o.cl = pd.concat((o.cl, wcl_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+    eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
+    o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+
+def update_taz(o, event_id, event_damage_df, G_original, g_type,
+               TAZ_nodes, eff_nodes, N, att):
+    G = cleanup_graph(G_original, event_damage_df, g_type)
+
+    # Checking if there is a path between any souce to each demand node.
+    # Some demand nodes and source nodes may have been eliminated from
+    # the network due to damage, so we do not need to check their
+    # functionalities
+    extant_TAZ_nodes = sorted(set(TAZ_nodes) & set(G.nodes))
+    extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
+
+    # If demand nodes are damaged itself (Example, building collapsed where
+    # demand node is considered)
+    o.pcl_table.loc[~o.pcl_table.index.isin(extant_TAZ_nodes), 'NS'] = 0
+    o.wcl_table.loc[~o.wcl_table.index.isin(extant_TAZ_nodes), 'WS'] = 0
+    o.eff_table.loc[~o.eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
+
+    for i in extant_TAZ_nodes:
+        count = 0
+        for j in extant_TAZ_nodes:
+            if i != j:
+                if nx.has_path(G, j, i):
+                    count = count + 1
+        o.pcl_table.at[i, 'NS'] = count
+
+    o.wcl_table = calc_weighted_connectivity_loss(
+        G, att, extant_TAZ_nodes, extant_TAZ_nodes,
+        o.wcl_table, o.pcl_table, 'WS', 'NS')
+
+    o.eff_table = calc_efficiency(G, N, att, o.eff_table, 'Eff')
+
+    # Connectivity Loss for each node
+    o.pcl_table['PCL_node'] = 1 - (o.pcl_table['NS'] / o.pcl_table['NS0'])
+    o.wcl_table['WCL_node'] = 1 - (o.wcl_table['WS'] / o.wcl_table['WS0'])
+
+    # Computing the mean of the connectivity loss to consider the overall
+    # performance of the area (at global level)
+    PCL_mean_per_event = o.pcl_table['PCL_node'].mean()
+    WCL_mean_per_event = o.wcl_table['WCL_node'].mean()
+    Glo_eff0_per_event = o.eff_table['Eff0'].mean()
+    Glo_eff_per_event = o.eff_table['Eff'].mean()
+    Glo_effloss_per_event = (
+        Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
+
+    # Storing the value of performance indicators for each event
+    o.event_connectivity_loss_pcl = pd.concat(
+        [o.event_connectivity_loss_pcl, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
+        ignore_index=True)
+    o.event_connectivity_loss_wcl = pd.concat(
+        [o.event_connectivity_loss_wcl, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
+        ignore_index=True)
+    o.event_connectivity_loss_eff = pd.concat(
+        [o.event_connectivity_loss_eff, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
+        ignore_index=True)
+
+    # To store the sum of performance indicator at nodal level to calculate
+    # the average afterwards
+    pcl_table1 = o.pcl_table.drop(columns=['NS0', 'NS'])
+    o.cl = pd.concat((o.cl, pcl_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+    wcl_table1 = o.wcl_table.drop(columns=['WS0', 'WS'])
+    o.cl = pd.concat((o.cl, wcl_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+    eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
+    o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
+        'id', as_index=False).sum()
+
+
+def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
                      eff_nodes, damage_df, g_type):
     # When the nodes acts as both demand and supply.
     # For example, traffic analysis zone in transportation network. This
@@ -574,26 +674,7 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
 
     # To store the information of the performance indicators at connectivity
     # level
-    taz_cl = exposure_df[
-        exposure_df['purpose'].str.lower() == 'taz'].iloc[:, 0:1]
-    node_el = exposure_df[
-        exposure_df['type'].str.lower() == 'node'].iloc[:, 0:1]
-
-    pcl_table = pd.DataFrame({'id': TAZ_nodes})
-    wcl_table = pd.DataFrame({'id': TAZ_nodes})
-    eff_table = pd.DataFrame({'id': eff_nodes})
-    eff_table.set_index('id', inplace=True)
-    pcl_table.set_index('id', inplace=True)
-    wcl_table.set_index('id', inplace=True)
-
-    # Create an empty dataframe with columns "event_id" and
-    # "CCL"/"PCL"/"WCL"/"EL"
-    event_connectivity_loss_pcl = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
-    event_connectivity_loss_wcl = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
-    event_connectivity_loss_eff = pd.DataFrame(
-        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
+    o = Out.new(expo_df, TAZ_nodes, eff_nodes, 'taz')
 
     # To check the the values for each node before the earthquake event
 
@@ -604,104 +685,31 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
             if i != j:
                 if nx.has_path(G_original, j, i):
                     count = count + 1
-        pcl_table.at[i, 'NS0'] = count
+        o.pcl_table.at[i, 'NS0'] = count
 
     att = nx.get_edge_attributes(G_original, 'weight')
-    wcl_table = calc_weighted_connectivity_loss(
-        G_original, att, TAZ_nodes, TAZ_nodes, wcl_table, pcl_table, 'WS0',
+    o.wcl_table = calc_weighted_connectivity_loss(
+        G_original, att, TAZ_nodes, TAZ_nodes, o.wcl_table, o.pcl_table, 'WS0',
         'NS0')
 
     N = len(G_original)
     att = nx.get_edge_attributes(G_original, 'weight')
-    eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
+    o.eff_table = calc_efficiency(G_original, N, att, o.eff_table, 'Eff0')
 
     logging.info('Checking for every event after earthquake')
     for event_id, event_damage_df in damage_df.groupby("event_id"):
-        G = cleanup_graph(G_original, event_damage_df, g_type)
-
-        # Checking if there is a path between any souce to each demand node.
-        # Some demand nodes and source nodes may have been eliminated from
-        # the network due to damage, so we do not need to check their
-        # functionalities
-        extant_TAZ_nodes = sorted(set(TAZ_nodes) & set(G.nodes))
-        extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
-
-        # If demand nodes are damaged itself (Example, building collapsed where
-        # demand node is considered)
-        pcl_table.loc[~pcl_table.index.isin(extant_TAZ_nodes), 'NS'] = 0
-        wcl_table.loc[~wcl_table.index.isin(extant_TAZ_nodes), 'WS'] = 0
-        eff_table.loc[~eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
-
-        for i in extant_TAZ_nodes:
-            count = 0
-            for j in extant_TAZ_nodes:
-                if i != j:
-                    if nx.has_path(G, j, i):
-                        count = count + 1
-            pcl_table.at[i, 'NS'] = count
-
-        wcl_table = calc_weighted_connectivity_loss(
-            G, att, extant_TAZ_nodes, extant_TAZ_nodes, wcl_table, pcl_table,
-            'WS', 'NS')
-
-        eff_table = calc_efficiency(G, N, att, eff_table, 'Eff')
-
-        # Connectivity Loss for each node
-        pcl_table['PCL_node'] = 1 - (pcl_table['NS']/pcl_table['NS0'])
-        wcl_table['WCL_node'] = 1 - (wcl_table['WS']/wcl_table['WS0'])
-
-        # Computing the mean of the connectivity loss to consider the overall
-        # performance of the area (at global level)
-        PCL_mean_per_event = pcl_table['PCL_node'].mean()
-        WCL_mean_per_event = wcl_table['WCL_node'].mean()
-        Glo_eff0_per_event = eff_table['Eff0'].mean()
-        Glo_eff_per_event = eff_table['Eff'].mean()
-        Glo_effloss_per_event = (
-            Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
-
-        # Storing the value of performance indicators for each event
-        event_connectivity_loss_pcl = pd.concat(
-            [event_connectivity_loss_pcl, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
-            ignore_index=True)
-        event_connectivity_loss_wcl = pd.concat(
-            [event_connectivity_loss_wcl, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
-            ignore_index=True)
-        event_connectivity_loss_eff = pd.concat(
-            [event_connectivity_loss_eff, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
-            ignore_index=True)
-
-        # To store the sum of performance indicator at nodal level to calulate
-        # the average afterwards
-        pcl_table1 = pcl_table.drop(columns=['NS0', 'NS'])
-        pcl_table1 = pcl_table1.reset_index()
-        taz_cl = pd.concat(
-            (taz_cl, pcl_table1)).groupby('id', as_index=False).sum()
-
-        wcl_table1 = wcl_table.drop(columns=['WS0', 'WS'])
-        wcl_table1 = wcl_table1.reset_index()
-        taz_cl = pd.concat(
-            (taz_cl, wcl_table1)).groupby('id', as_index=False).sum()
-
-        eff_table1 = eff_table.drop(columns=['Eff0', 'Eff'])
-        eff_table1 = eff_table1.reset_index()
-        node_el = pd.concat(
-            (node_el, eff_table1)).groupby('id', as_index=False).sum()
-
-    return (taz_cl, node_el, event_connectivity_loss_pcl,
-            event_connectivity_loss_wcl, event_connectivity_loss_eff)
+        update_taz(o, event_id, event_damage_df, G_original, g_type,
+                   TAZ_nodes, eff_nodes, N, att)
+    return o
 
 
-def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
+def EL_node(expo_df, G_original, eff_nodes, damage_df, g_type):
     # when no information about supply or demand is given or known,
     # only efficiency loss is calculated for all nodes
 
     # To store the information of the performance indicators at connectivity
     # level
-    node_el = exposure_df[
-        exposure_df['type'].str.lower() == 'node'].iloc[:, 0:1]
+    node_el = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
     eff_table = pd.DataFrame({'id': eff_nodes})
     eff_table.set_index("id", inplace=True)

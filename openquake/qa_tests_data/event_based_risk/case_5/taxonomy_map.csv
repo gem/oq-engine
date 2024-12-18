@@ -1,0 +1,8 @@
+﻿taxonomy,conversion,weight
+Wood,Wood1,1
+Wood/Res,Wood1,.5
+Wood/Res,Wood2,.5
+Adobe/Res,Adobe,1
+Wood/Com,Wood1,.6
+Wood/Com,Wood2,.4
+Adobe/Com,Adobe,1

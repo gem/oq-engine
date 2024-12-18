@@ -20,12 +20,15 @@
 Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
+
+# import warnings
 import numpy
 from scipy.spatial.distance import cdist
 import shapely.geometry
 import shapely.ops
 
-from openquake.baselib.general import cached_property
+from alpha_shapes import Alpha_Shaper
+from openquake.baselib.general import cached_property, gen_slices
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
@@ -33,9 +36,52 @@ from openquake.hazardlib.geo import utils as geo_utils
 F32 = numpy.float32
 
 
+def reduce1d(array, n):
+    """
+    Reduce a 1-dimensional array by `n` times (approximately). For instance
+
+    >>> arr = numpy.arange(0, 1, .1)
+    >>> reduce1d(arr, 2)
+    array([0. , 0.1, 0.3, 0.5, 0.7, 0.9])
+    >>> reduce1d(arr, 5)
+    array([0. , 0.1, 0.6, 0.9])
+    >>> reduce1d(arr, 9)
+    array([0. , 0.1, 0.9])
+    """
+    size, = array.shape
+    if size <= 3:
+        return array
+    reduced = array[1:-1:n]
+    res = numpy.empty(len(reduced) + 2, array.dtype)
+    res[0] = array[0]
+    res[1:-1] = reduced
+    res[-1] = array[-1]
+    return res
+
+
+def reduce2d(array, n):
+    """
+    Reduce a 2-dimensional array by `n^2` times (approximately). For instance
+
+    >>> arr = numpy.array([numpy.arange(0, 1, .1) for _ in range(5)])
+    >>> arr.shape
+    (5, 10)
+    >>> reduce2d(arr, 5)
+    array([[0. , 0.1, 0.6, 0.9],
+           [0. , 0.1, 0.6, 0.9],
+           [0. , 0.1, 0.6, 0.9]])
+    """
+    size0, _ = array.shape
+    rows = []
+    idxs = numpy.arange(size0, dtype=int)
+    for idx in reduce1d(idxs, n):
+        rows.append(reduce1d(array[idx], n))
+    return numpy.array(rows)
+
+
 def debug_plot(polygons):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     pp = geo_utils.PolygonPlotter(ax)
     for i, polygon in enumerate(polygons, 1):
         pp.add(polygon, alpha=i * .1)
@@ -182,8 +228,9 @@ class Mesh(object):
     Mesh object can also be created from a collection of points, see
     :meth:`from_points_list`.
     """
-    #: Tolerance level to be used in various spatial operations when
-    #: approximation is required -- set to 5 meters.
+    # Tolerance level to be used in various spatial operations when
+    # approximation is required -- set to 5 meters.
+    # NB: it affects the rjb distance and therefore nearly every calculation
     DIST_TOLERANCE = 0.005
 
     @property
@@ -349,7 +396,12 @@ class Mesh(object):
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
-        return cdist(self.xyz, mesh.xyz).min(axis=0)
+        # mesh.xyz has shape (N, 3); we split in slices to avoid running out of memory
+        # in the large array of shape len(self)*N
+        dists = []
+        for slc in gen_slices(0, len(mesh), 10_000):
+            dists.append(cdist(self.xyz, mesh.xyz[slc]).min(axis=0))
+        return numpy.concatenate(dists)
 
     def get_closest_points(self, mesh):
         """
@@ -409,17 +461,17 @@ class Mesh(object):
             on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+        proj = geo_utils.OrthographicProjection.from_(
+            self.lons.flatten(), self.lats.flatten())
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flat, self.lats.flat)).copy()
+        coords = proj(self.lons.flatten(), self.lats.flatten()).T
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
 
-    def get_joyner_boore_distance(self, mesh):
+    def get_joyner_boore_distance(self, mesh, unstructured=False):
         """
         Compute and return Joyner-Boore distance to each point of ``mesh``.
         Point's depth is ignored.
@@ -481,12 +533,24 @@ class Mesh(object):
         # to polygon distance, which gives the most accurate value
         # of distance in km (and that value is zero for points inside
         # the polygon).
-        proj, polygon = self._get_proj_enclosing_polygon()
+        if unstructured:
+            proj = geo_utils.OrthographicProjection.from_(self.lons, self.lats)
+            # Points at distances lower than 40 km
+            mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+            # Points representing the surface of the rupture
+            sfc_xx, sfc_yy = proj(self.lons.flatten(), self.lats.flatten())
+            points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
+            shaper = Alpha_Shaper(points)
+            _alpha_opt, polygon = shaper.optimize()
+        else:
+            proj, polygon = self._get_proj_enclosing_polygon()
+
         if not isinstance(polygon, shapely.geometry.Polygon):
             # either line or point is our enclosing polygon. draw
             # a square with side of 10 m around in order to have
             # a proper polygon instead.
             polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
+
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
@@ -511,15 +575,14 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
             lats = self.lats.reshape(len(self.lats), 1)
         else:  # 2D mesh
             lons = self.lons.T
             lats = self.lats.T
-        mesh2d = numpy.array(proj(lons, lats)).T
+        proj = geo_utils.OrthographicProjection.from_(lons, lats)
+        mesh2d = proj(lons, lats).T
         lines = iter(mesh2d)
         # we iterate over horizontal stripes, keeping the "previous"
         # line of points. we keep it reversed, such that together
@@ -567,6 +630,13 @@ class Mesh(object):
         # avoid circular imports
         from openquake.hazardlib.geo.polygon import Polygon
         return Polygon._from_2d(polygon2d, proj)
+
+    def reduce(self, n):
+        """
+        Reduce the mesh by `n` times
+        """
+        return Mesh(reduce1d(self.lons, n), reduce1d(self.lats, n),
+                    reduce1d(self.depths, n))
 
 
 class RectangularMesh(Mesh):
@@ -812,3 +882,11 @@ class RectangularMesh(Mesh):
         # compute and return weighted mean
         return numpy.sum(widths * mean_cell_lengths) / \
             numpy.sum(mean_cell_lengths)
+
+    def reduce(self, n):
+        """
+        Reduce the mesh by `n^2` times
+        """
+        return RectangularMesh(reduce2d(self.lons, n),
+                               reduce2d(self.lats, n),
+                               reduce2d(self.depths, n))

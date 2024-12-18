@@ -20,9 +20,9 @@
 Package :mod:`openquake.hazardlib.geo.surface` contains base and specific
 implementations of earthquake rupture surfaces.
 """
-from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.surface.planar import PlanarSurface
-from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
-from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
-from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface  # noqa
+from openquake.hazardlib.geo.surface.planar import PlanarSurface  # noqa
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface  # noqa
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface  # noqa
+from openquake.hazardlib.geo.surface.multi import MultiSurface  # noqa
+from openquake.hazardlib.geo.surface.kite_fault import KiteSurface  # noqa

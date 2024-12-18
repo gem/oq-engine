@@ -113,7 +113,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = False
+    OVERWRITE_EXPECTED = os.environ.get('OQ_OVERWRITE')
     edir = None  # will be set to a temporary directory
 
     @classmethod
@@ -123,7 +123,7 @@ class CalculatorTestCase(unittest.TestCase):
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
-        os.environ['OQ_DATABASE'] = 'local'
+        os.environ['OQ_DATABASE'] = '127.0.0.1'
         parallel.Starmap.maxtasksperchild = None
 
     def get_calc(self, testfile, job_ini, **kw):
@@ -210,11 +210,13 @@ class CalculatorTestCase(unittest.TestCase):
             open8(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        expected_lines = [line for line in open8(expected)
-                          if not line.startswith('#,')]
+        with open8(expected) as f:
+            expected_lines = [line for line in f if not line.startswith('#,')]
         comments = []
         actual_lines = []
-        for line in open8(actual).readlines()[:lastline]:
+        with open8(actual) as f:
+            lines = f.readlines()[:lastline]
+        for line in lines:
             if line.startswith('#'):
                 comments.append(line)
             else:

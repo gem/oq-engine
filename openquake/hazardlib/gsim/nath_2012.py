@@ -26,7 +26,7 @@ exports
 import numpy as np
 
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import SA, PGA, PGV
+from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 CONSTS = {'ref_mag': 10.}
@@ -67,6 +67,9 @@ class NathEtAl2012Lower(GMPE):
     Verification of mean value data was done by digitizing Figure 11 using
     http://arohatgi.info/WebPlotDigitizer/app/. Note that this independent
     verification did not include magnitude dependence or standard deviations.
+    
+    PGV is not provided in this gsim class because the coefficients within the
+    paper provide physically unrealistic values.
 
     **Reference**
 
@@ -84,7 +87,7 @@ class NathEtAl2012Lower(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from
     #: module :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA, PGA, PGV])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA, PGA])
 
     #: In simulations only the vertical component is estimated (see p. 479)
     #: and the stochastic dataset is what the GMPE is based on, so this model
@@ -147,7 +150,6 @@ class NathEtAl2012Lower(GMPE):
     COEFFS_BEDROCK = CoeffsTable(sa_damping=5., table="""\
      IMT      c1      c2      c3      c4       c5      c6   sigma
      pga  9.1430  0.2470 -0.0140 -2.6700  32.9458  0.0663  0.3300
-     pgv -8.1069  1.2225 -0.0072 -1.1962   0.0004  1.4474  0.3807
      0.1  4.8183  0.3531 -0.0152 -1.7445   5.0087  0.2973  0.3441
      0.2  4.0396  0.3376 -0.0148 -1.6820   3.9925  0.2764  0.3117
      0.5  2.6536  0.5799 -0.0162 -1.8479   1.9570  0.3919  0.3384
@@ -170,7 +172,6 @@ class NathEtAl2012Upper(NathEtAl2012Lower):
     COEFFS_UPPER = CoeffsTable(sa_damping=5., table="""\
      IMT  correction
      pga      0.6169
-     pgv      0.8781
      0.1      0.6249
      0.2      0.6584
      0.5      0.8355

@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -63,12 +63,13 @@ D_VALUE = 1.5
 
 
 class BaseRecurrenceModel(object):
-    '''
+    """
     Abstract base class to implement cumulative value formula
-    '''
+    """
+
     @abc.abstractmethod
     def cumulative_value(self, slip_moment, mmax, mag_value, bbar, dbar):
-        '''
+        """
         Returns the rate of earthquakes with M > mag_value
 
         :param float slip_moment:
@@ -81,7 +82,7 @@ class BaseRecurrenceModel(object):
             \bar{b} parameter (effectively = b * log(10.))
         :param float dbar:
             \bar{d} parameter
-        '''
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -93,13 +94,13 @@ class BaseRecurrenceModel(object):
 
 
 class Type1RecurrenceModel(BaseRecurrenceModel):
-    '''
+    """
     Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
     inverse of formula I.5 of Table 2 in Anderson & Luco (1993).
-    '''
+    """
 
     def cumulative_value(self, slip_moment, mmax, mag_value, bbar, dbar):
-        '''
+        """
         Returns the rate of events with M > mag_value
 
         :param float slip_moment:
@@ -113,7 +114,7 @@ class Type1RecurrenceModel(BaseRecurrenceModel):
             \bar{b} parameter (effectively = b * log(10.))
         :param float dbar:
             \bar{d} parameter
-        '''
+        """
         delta_m = mmax - mag_value
         a_1 = self._get_a1(bbar, dbar, slip_moment, mmax)
         return a_1 * np.exp(bbar * (delta_m)) * (delta_m > 0.0)
@@ -131,20 +132,22 @@ class Type1RecurrenceModel(BaseRecurrenceModel):
         """
         delta_m = mmax - mag_value
         dirac_term = np.zeros_like(mag_value)
-        dirac_term[np.fabs(delta_m) < 1.0E-12] = 1.0
+        dirac_term[np.fabs(delta_m) < 1.0e-12] = 1.0
         a_1 = self._get_a1(bbar, dbar, slip_moment, mmax)
-        return a_1 * (bbar * np.exp(bbar * delta_m) * (delta_m > 0.0)) +\
-            a_1 * dirac_term
+        return (
+            a_1 * (bbar * np.exp(bbar * delta_m) * (delta_m > 0.0))
+            + a_1 * dirac_term
+        )
 
 
 class Type2RecurrenceModel(BaseRecurrenceModel):
-    '''
+    """
     Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
     inverse of formula II.5 of Table 3 in Anderson & Luco (1993).
-    '''
+    """
 
     def cumulative_value(self, slip_moment, mmax, mag_value, bbar, dbar):
-        '''
+        """
         Returns the rate of events with M > mag_value
 
         :param float slip_moment:
@@ -157,10 +160,10 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
             \bar{b} parameter (effectively = b * log(10.))
         :param float dbar:
             \bar{d} parameter
-        '''
+        """
         delta_m = mmax - mag_value
         a_2 = self._get_a2(bbar, dbar, slip_moment, mmax)
-        return a_2 * (np.exp(bbar * delta_m) - 1.) * (delta_m > 0.0)
+        return a_2 * (np.exp(bbar * delta_m) - 1.0) * (delta_m > 0.0)
 
     @staticmethod
     def _get_a2(bbar, dbar, slip_moment, mmax):
@@ -179,13 +182,13 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
 
 
 class Type3RecurrenceModel(BaseRecurrenceModel):
-    '''
+    """
     Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
     inverse of formula III.5 of Table 4 in Anderson & Luco (1993).
-    '''
+    """
 
     def cumulative_value(self, slip_moment, mmax, mag_value, bbar, dbar):
-        '''
+        """
         Returns the rate of events with M > mag_value
 
         :param float slip_moment:
@@ -198,7 +201,7 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
             \bar{b} parameter (effectively = b * log(10.))
         :param float dbar:
             \bar{d} parameter
-        '''
+        """
         delta_m = mmax - mag_value
         a_3 = self._get_a3(bbar, dbar, slip_moment, mmax)
         central_term = np.exp(bbar * delta_m) - 1.0 - (bbar * delta_m)
@@ -209,8 +212,9 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
         """
         Returns the A3 term (III.4 in Table  4)
         """
-        return ((dbar * (dbar - bbar)) / (bbar ** 2.)) * (slip_moment /
-                                                          _scale_moment(mmax))
+        return ((dbar * (dbar - bbar)) / (bbar**2.0)) * (
+            slip_moment / _scale_moment(mmax)
+        )
 
     def incremental_value(self, slip_moment, mmax, mag_value, bbar, dbar):
         """
@@ -221,13 +225,15 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
         return a_3 * bbar * (np.exp(bbar * delta_m) - 1.0) * (delta_m > 0.0)
 
 
-RECURRENCE_MAP = {'First': Type1RecurrenceModel(),
-                  'Second': Type2RecurrenceModel(),
-                  'Third': Type3RecurrenceModel()}
+RECURRENCE_MAP = {
+    "First": Type1RecurrenceModel(),
+    "Second": Type2RecurrenceModel(),
+    "Third": Type3RecurrenceModel(),
+}
 
 
 class AndersonLucoArbitrary(BaseMFDfromSlip):
-    '''
+    """
     Class to implement the fault activity rate calculators of Anderson & Luco
     (1983) referring to the whole fault
 
@@ -255,10 +261,10 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
     :param numpy.ndarray occurrence_rate:
         Activity rates for magnitude in the range mmin to mmax in steps of
         bin_width
-    '''
+    """
 
     def setUp(self, mfd_conf):
-        '''
+        """
         Input core configuration parameters as specified in the
         configuration file
 
@@ -275,20 +281,20 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
             * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum
             magnitude (If not defined and the MSR has a sigma term then this
             will be taken from sigma)
-        '''
-        self.mfd_type = mfd_conf['Model_Type']
-        self.mfd_model = 'Anderson & Luco (Arbitrary) ' + self.mfd_type
-        self.mfd_weight = mfd_conf['Model_Weight']
-        self.bin_width = mfd_conf['MFD_spacing']
-        self.mmin = mfd_conf['Minimum_Magnitude']
+        """
+        self.mfd_type = mfd_conf["Model_Type"]
+        self.mfd_model = "Anderson & Luco (Arbitrary) " + self.mfd_type
+        self.mfd_weight = mfd_conf["Model_Weight"]
+        self.bin_width = mfd_conf["MFD_spacing"]
+        self.mmin = mfd_conf["Minimum_Magnitude"]
         self.mmax = None
         self.mmax_sigma = None
-        self.b_value = mfd_conf['b_value'][0]
-        self.b_value_sigma = mfd_conf['b_value'][1]
+        self.b_value = mfd_conf["b_value"][0]
+        self.b_value_sigma = mfd_conf["b_value"][1]
         self.occurrence_rate = None
 
     def get_mmax(self, mfd_conf, msr, rake, area):
-        '''
+        """
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
 
@@ -303,20 +309,22 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
 
         :param float area:
             Area of the fault surface (km^2)
-        '''
-        if mfd_conf['Maximum_Magnitude']:
-            self.mmax = mfd_conf['Maximum_Magnitude']
+        """
+        if mfd_conf["Maximum_Magnitude"]:
+            self.mmax = mfd_conf["Maximum_Magnitude"]
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        if ('Maximum_Magnitude_Uncertainty' in mfd_conf and
-                mfd_conf['Maximum_Magnitude_Uncertainty']):
-            self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
+        if (
+            "Maximum_Magnitude_Uncertainty" in mfd_conf
+            and mfd_conf["Maximum_Magnitude_Uncertainty"]
+        ):
+            self.mmax_sigma = mfd_conf["Maximum_Magnitude_Uncertainty"]
         else:
             self.mmax_sigma = msr.get_std_dev_mag(None, rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
-        '''
+        """
         Calculates activity rate on the fault
 
         :param float slip:
@@ -332,27 +340,33 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
             * Minimum Magnitude (float)
             * Bin width (float)
             * Occurrence Rates (numpy.ndarray)
-        '''
+        """
 
         # Convert shear modulus GPa -> dyne-cm, area km ** 2 -> cm ** 2 and
         # slip mm/yr -> cm/yr
-        slip_moment = (shear_modulus * 1E10) * (area * 1E10) * (slip / 10.)
+        slip_moment = (shear_modulus * 1e10) * (area * 1e10) * (slip / 10.0)
         dbar = D_VALUE * np.log(10.0)
         bbar = self.b_value * np.log(10.0)
 
-        mags = np.arange(self.mmin - (self.bin_width / 2.),
-                         self.mmax + self.bin_width,
-                         self.bin_width)
+        mags = np.arange(
+            self.mmin - (self.bin_width / 2.0),
+            self.mmax + self.bin_width,
+            self.bin_width,
+        )
         if bbar >= dbar:
-            print('b-value larger than 1.5 will produce invalid results in '
-                  'Anderson & Luco models')
+            print(
+                "b-value larger than 1.5 will produce invalid results in "
+                "Anderson & Luco models"
+            )
             self.occurrence_rate = np.nan * np.ones(len(mags) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
         self.occurrence_rate = np.zeros(len(mags) - 1, dtype=float)
         for ival in range(0, len(mags) - 1):
-            self.occurrence_rate[ival] = \
-                RECURRENCE_MAP[self.mfd_type].cumulative_value(
-                    slip_moment, self.mmax, mags[ival], bbar, dbar) - \
-                RECURRENCE_MAP[self.mfd_type].cumulative_value(
-                    slip_moment, self.mmax, mags[ival + 1], bbar, dbar)
+            self.occurrence_rate[ival] = RECURRENCE_MAP[
+                self.mfd_type
+            ].cumulative_value(
+                slip_moment, self.mmax, mags[ival], bbar, dbar
+            ) - RECURRENCE_MAP[self.mfd_type].cumulative_value(
+                slip_moment, self.mmax, mags[ival + 1], bbar, dbar
+            )
         return self.mmin, self.bin_width, self.occurrence_rate

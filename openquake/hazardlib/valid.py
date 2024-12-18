@@ -34,8 +34,9 @@ from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
-from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, floatdict)  # needed
+from openquake.hazardlib.calc.filters import (  # noqa
+    IntegrationDistance, floatdict
+)
 
 PRECISION = pmf.PRECISION
 
@@ -187,6 +188,18 @@ def gsim(value, basedir=''):
     return gs
 
 
+def modified_gsim(gmpe, **kwargs):
+    """
+    Builds a ModifiableGMPE from a gmpe. Used for instance in the GEESE project
+    as follows:
+
+    mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
+    """
+    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
+    text += toml.dumps({'ModifiableGMPE': kwargs})
+    return gsim(text)
+
+
 def occurrence_model(value):
     """
     Converts a TOML string into a TOM instance
@@ -314,6 +327,11 @@ name = Regex(r'^[a-zA-Z_]\w*$')
 
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
+# e.g. 2023-02-06 04:17:34+03:00
+# +03:00 indicates the time zone offset from Coordinated Universal Time (UTC)
+local_timestamp = Regex(
+    r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})$")
+
 
 class SimpleId(object):
     """
@@ -332,16 +350,16 @@ class SimpleId(object):
             raise ValueError('Invalid ID: can not be empty')
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
-                % value)
+                'Invalid ID %r: the only accepted chars are %s' % (
+                    value, self.regex))
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
                              (value, self.length))
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:"
-            % value)
+            "Invalid ID '%s': the only accepted chars are %s" % (
+                value, self.regex))
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -351,6 +369,7 @@ simple_id = SimpleId(MAX_ID_LENGTH)
 branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\-_:]+$')
+three_letters = SimpleId(3, r'^[A-Z]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
 mod_func = SimpleId(MAX_ID_LENGTH, r'[\w_]+\.[\w_]+')
@@ -499,6 +518,8 @@ def nonzero(value):
     return value
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def longitude(value):
     """
     :param value: input string
@@ -507,7 +528,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = round(float_(value), 5)
+    lon = numpy.round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -515,6 +536,8 @@ def longitude(value):
     return lon
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def latitude(value):
     """
     :param value: input string
@@ -523,7 +546,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = round(float_(value), 5)
+    lat = numpy.round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -557,8 +580,10 @@ def lon_lat(value):
 
     >>> lon_lat('12 14')
     (12.0, 14.0)
+    >>> lon_lat('12,14')
+    (12.0, 14.0)
     """
-    lon, lat = value.split()
+    lon, lat = value.replace(',', ' ').split()
     return longitude(lon), latitude(lat)
 
 
@@ -731,10 +756,11 @@ def probabilities(value, rows=0, cols=0):
     [1.0]
     >>> probabilities('0.1 0.2')
     [0.1, 0.2]
-    >>> probabilities('0.1, 0.2')  # commas are ignored
+    >>> probabilities('[0.1, 0.2]')  # commas and brackets are ignored
     [0.1, 0.2]
     """
-    probs = list(map(probability, value.replace(',', ' ').split()))
+    val = value.replace('[', '').replace(']', '').replace(',', ' ')
+    probs = list(map(probability, val.split()))
     if rows and cols:
         probs = numpy.array(probs).reshape((len(rows), len(cols)))
     return probs
@@ -834,6 +860,8 @@ def check_levels(imls, imt, min_iml=1E-10):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
+    if imls == [0]:  # corresponds to intensity_measure_levels
+        return
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
@@ -901,6 +929,23 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
+def linscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min <= 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    return numpy.linspace(x_min, x_max, num=n)
+
+
 def dictionary(value):
     """
     :param value:
@@ -923,18 +968,23 @@ def dictionary(value):
     """
     if not value:
         return {}
-    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+
+    if 'logscale' in value:
+        value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+    if 'linscale' in value:
+        value = value.replace('linscale(', '("linscale", ')  # dirty but quick
+
     try:
         dic = dict(ast.literal_eval(value))
     except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
+
     for key, val in dic.items():
-        try:
-            has_logscale = (val[0] == 'logscale')
-        except Exception:  # no val[0]
-            continue
-        if has_logscale:
-            dic[key] = list(logscale(*val[1:]))
+        if isinstance(val, tuple):
+            if val[0] == 'logscale':
+                dic[key] = list(logscale(*val[1:]))
+            elif val[0] == 'linscale':
+                dic[key] = list(linscale(*val[1:]))
     return dic
 
 
@@ -1120,6 +1170,23 @@ def positiveints(value):
     return ints
 
 
+def tile_spec(value):
+    """
+    Specify a tile with a string of format "no:nt"
+    where `no` is an integer in the range `1..nt` and `nt`
+    is the total number of tiles.
+
+    >>> tile_spec('[1,2]')
+    [1, 2]
+    >>> tile_spec('[2,2]')
+    [2, 2]
+    """
+    no, ntiles = ast.literal_eval(value)
+    assert ntiles > 0, ntiles
+    assert no > 0 and no <= ntiles, no
+    return [no, ntiles]
+
+
 def simple_slice(value):
     """
     >>> simple_slice('2:5')
@@ -1157,15 +1224,13 @@ def host_port(value=None):
     If value is missing returns the parameters in openquake.cfg
     """
     if not value:
-        return (config.dbserver.host, config.dbserver.port)
+        host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+        return (host, config.dbserver.port)
     host, port = value.split(':')
     return socket.gethostbyname(host), int(port)
 
 
 # used for the exposure validation
-cost_type = Choice('structural', 'nonstructural', 'contents',
-                   'business_interruption')
-
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 
 
@@ -1392,3 +1457,41 @@ class RjbEquivalent(object):
             repi_idx = numpy.abs(dist - self.repi).argmin()
             dists.append(self.reqv[repi_idx, mag_idx])
         return numpy.array(dists)
+
+
+def basename(src, splitchars='.:'):
+    """
+    :returns: the base name of a split source
+
+    >>> basename('SC:10;0')
+    'SC;0'
+    """
+    src_id = src if isinstance(src, str) else src.source_id
+    for char in splitchars:
+        src_id = re.sub(r'\%s\d+' % char, '', src_id)
+    return src_id
+
+
+def corename(src):
+    """
+    :param src: source object or source name
+    :returns: the core name of a source
+    """
+    src = src if isinstance(src, str) else src.source_id
+    # @ section of multifault source
+    # ! source model logic tree branch
+    # : component of mutex source
+    # ; alternate logictree version of a source
+    # . component of split source
+    return re.split('[!:;.]', src)[0]
+
+
+def fragmentno(src):
+    "Postfix after :.; as an integer"
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!b16'
+    fragments = re.split('[:.;]', src.source_id)
+    if len(fragments) == 1:  # no fragment number, like in AELO for NZL
+        return -1
+    fragment = fragments[1].split('!')[0]  # strip !b16
+    return int(fragment)
+

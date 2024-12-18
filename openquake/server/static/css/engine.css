@@ -10,6 +10,44 @@ h2 {
 
 .content-wrap {
     padding-top: 10px;
+    width: 1080px;
+}
+@media (min-width: 640px) and (max-width: 1120px) {
+    .content-wrap {
+        width: 90%;
+    }
+}
+
+@media (min-width: 1070px) and (max-width: 1120px) {
+    .aelo-input,
+    .aelo-select {
+        width: 170px!important;
+    }
+}
+
+@media (min-width: 960px) and (max-width: 1069px) {
+    .aelo-input,
+    .aelo-select {
+        width: 160px!important;
+    }
+}
+
+@media (min-width: 760px) and (max-width: 959px) {
+    .aelo-input {
+        width: 80%!important;
+    }
+    .aelo-select {
+        width: 170px!important;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 759px) {
+    .aelo-input {
+        width: 80%!important;
+    }
+    .aelo-select {
+        width: 140px!important;
+    }
 }
 
 .container,
@@ -21,6 +59,11 @@ h2 {
 
 .navbar .nav.account-bar {
     margin-top: 0;
+}
+
+.span12 {
+    width: 100%;
+    margin-left: 0;
 }
 
 .span10 {
@@ -156,19 +199,26 @@ nav.main-nav ul li.tools {
 
 footer.footer {
     background: #bebebe;
-    font-size: 12px;
+    font-size: 14px;
     position: fixed;
     bottom: 0;
-    padding-left: 10%;
-    padding-right: 10%;
     float: left;
     width: 80%;
     height: auto;
-    padding-top: 0;
+    color: rgb(0, 0, 0, 0.8);
+    padding: 0.2rem 10%;
 }
 
 footer.footer form label {
     color: #fff;
+}
+
+footer.footer a {
+    color: rgb(0, 0, 0, 0.8);
+}
+
+footer.footer .pull-left span {
+    font-weight: bold;
 }
 
 #new-release-box {
@@ -229,4 +279,186 @@ tr.asce_output {
 .asce-value {
     font-weight: normal;
     float: left;
+}
+
+.announcements-box {
+    padding: 10px 20px 20px;
+    background-color: #ff9800;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.announcement {
+    margin: 0.5rem 0;
+}
+
+.announcement h2 {
+    margin: 0!important;
+    padding: 0;
+    color: #fff;
+    text-decoration: underline;
+}
+
+.aelo-input {
+    width: 193px;
+    vertical-align: top!important;
+    height: 11px!important;
+    padding-bottom: 10px!important;
+}
+
+.aelo-label {
+    font-weight: bold;
+}
+
+.aelo-select {
+    height: 33px!important;
+}
+
+.table-aelo-form {
+    margin-bottom: 0;
+}
+
+.table-aelo-form tr th {
+    padding: 0;
+}
+
+.table-aelo-form td {
+    padding: 0;
+    border-top: 0;
+}
+
+.aristotle_form_row label {
+    margin-bottom: 10px;
+}
+
+.aristotle_form_row label {
+    display: inline-block;
+    width: 225px;
+}
+
+.aristotle_form_row input {
+    /* width: calc(100% - 110px); /1* Adjust according to label width *1/ */
+    box-sizing: border-box;
+}
+
+.aristotle-select {
+    width: 206px;
+}
+
+
+/* customization of bootstrap button hover, to avoid turning to black */
+.btn:hover, .btn:focus {
+    color: #fff!important;
+}
+
+.btn {
+    border: none!important;
+}
+
+.output-action-btn {
+    width: 90px;
+}
+
+.my-pngs a {
+    width: 190px;
+}
+.my-pngs {
+    margin-bottom: 3px;
+}
+
+.outputs-general-btns-left,
+.outputs-general-btns-center,
+.outputs-general-btns-right {
+    width: calc(100% / 3);
+    float: left;
+    min-height: 100px;
+    display: block;
+}
+
+.outputs-general-btns-left {
+    text-align: left;
+}
+
+.outputs-general-btns-center {
+    text-align: center;
+}
+
+.outputs-general-btns-right {
+    text-align: right;
+}
+
+.calc-list-btn {
+    width: 56px;
+}
+
+.aristotle-losses-container {
+    width: 100%;
+    display: block;
+    overflow-x: scroll;
+    position: relative;
+}
+
+table#aristotle-losses {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table#aristotle-losses th td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+#aristotle-losses-download {
+  margin-top: 10px;
+}
+
+.changelog {
+    width: 80%;
+    margin: 50px auto;
+    border-collapse: collapse;
+}
+.changelog th, .changelog td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+}
+.changelog th {
+    background-color: #f2f2f2;
+}
+
+.changelog td:nth-child(1), .changelog th:nth-child(1) {
+    width: 15%;
+}
+.changelog td:nth-child(2), .changelog th:nth-child(2) {
+    width: 15%;
+}
+.changelog td:nth-child(3), .changelog th:nth-child(3) {
+    width: 70%;
+}
+
+.shakemap-image-container {
+    float: left;
+    /* If we want to adjust the size of images instead of making them of the suitable size
+    /* width: 50%; */
+}
+
+/* If we want to adjust the size of images instead of making them of the suitable size
+/* .shakemap-image-container img{ */
+/*     width: 600px; */
+/* } */
+
+.shakemap-clear-float {
+    clear: both;
+    margin-bottom: 30px;
+}
+
+/* Hide all form elements except the submit button */
+.hidden_except_submit input:not([type="submit"]),
+.hidden_except_submit select,
+.hidden_except_submit textarea,
+.hidden_except_submit button:not([type="submit"]),
+.hidden_except_submit label {
+  display: none;
 }

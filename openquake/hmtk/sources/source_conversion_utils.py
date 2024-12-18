@@ -54,7 +54,7 @@ SCALE_RELS = get_available_scalerel()
 
 
 def render_aspect_ratio(aspect_ratio, use_default=False):
-    '''
+    """
     Returns the aspect ratio if one is defined for the source, otherwise
     if defaults are accepted a default value of 1.0 is returned or else
     a ValueError is raised
@@ -65,15 +65,15 @@ def render_aspect_ratio(aspect_ratio, use_default=False):
     :param bool use_default:
         If true, when aspect_ratio is undefined will return default value of
         1.0, otherwise will raise an error.
-    '''
+    """
     if aspect_ratio:
-        assert aspect_ratio > 0.
+        assert aspect_ratio > 0.0
         return aspect_ratio
     else:
         if use_default:
             return 1.0
         else:
-            raise ValueError('Rupture aspect ratio not defined!')
+            raise ValueError("Rupture aspect ratio not defined!")
 
 
 def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
@@ -84,9 +84,10 @@ def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
     if isinstance(mag_scale_rel, BaseMSR):
         return mag_scale_rel
     elif isinstance(mag_scale_rel, str):
-        if not mag_scale_rel in SCALE_RELS.keys():
-            raise ValueError('Magnitude scaling relation %s not supported!'
-                             % mag_scale_rel)
+        if mag_scale_rel not in SCALE_RELS:
+            raise ValueError(
+                "Magnitude scaling relation %s not supported!" % mag_scale_rel
+            )
         else:
             return SCALE_RELS[mag_scale_rel]()
     else:
@@ -94,7 +95,7 @@ def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
             # Returns the Wells and Coppersmith string
             return WC1994()
         else:
-            raise ValueError('Magnitude Scaling Relation Not Defined!')
+            raise ValueError("Magnitude Scaling Relation Not Defined!")
 
 
 def npd_to_pmf(nodal_plane_dist, use_default=False):
@@ -108,13 +109,13 @@ def npd_to_pmf(nodal_plane_dist, use_default=False):
         if use_default:
             return PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))])
         else:
-            raise ValueError('Nodal Plane distribution not defined')
+            raise ValueError("Nodal Plane distribution not defined")
 
 
 def hdd_to_pmf(hypo_depth_dist, use_default=False):
     """
     Returns the hypocentral depth distribtuion as an instance of the :class:
-    openquake.hazardlib.pmf. 
+    openquake.hazardlib.pmf.
     """
     if isinstance(hypo_depth_dist, PMF):
         # Is already instance of PMF
@@ -125,11 +126,11 @@ def hdd_to_pmf(hypo_depth_dist, use_default=False):
             return PMF([(1.0, 10.0)])
         else:
             # Out of options - raise error!
-            raise ValueError('Hypocentral depth distribution not defined!')
+            raise ValueError("Hypocentral depth distribution not defined!")
 
 
 def simple_trace_to_wkt_linestring(trace):
-    '''
+    """
     Coverts a simple fault trace to well-known text format
 
     :param trace:
@@ -137,16 +138,16 @@ def simple_trace_to_wkt_linestring(trace):
 
     :returns:
         Well-known text (WKT) Linstring representation of the trace
-    '''
+    """
     trace_str = ""
     for point in trace:
-        trace_str += ' %s %s,' % (point.longitude, point.latitude)
-    trace_str = trace_str.lstrip(' ')
-    return 'LINESTRING (' + trace_str.rstrip(',') + ')'
+        trace_str += " %s %s," % (point.longitude, point.latitude)
+    trace_str = trace_str.lstrip(" ")
+    return "LINESTRING (" + trace_str.rstrip(",") + ")"
 
 
 def simple_edge_to_wkt_linestring(edge):
-    '''
+    """
     Coverts a simple fault trace to well-known text format
 
     :param trace:
@@ -154,10 +155,13 @@ def simple_edge_to_wkt_linestring(edge):
 
     :returns:
         Well-known text (WKT) Linstring representation of the trace
-    '''
+    """
     trace_str = ""
     for point in edge:
-        trace_str += ' %s %s %s,' % (point.longitude, point.latitude,
-                                     point.depth)
-    trace_str = trace_str.lstrip(' ')
-    return 'LINESTRING (' + trace_str.rstrip(',') + ')'
+        trace_str += " %s %s %s," % (
+            point.longitude,
+            point.latitude,
+            point.depth,
+        )
+    trace_str = trace_str.lstrip(" ")
+    return "LINESTRING (" + trace_str.rstrip(",") + ")"

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2023 GEM Foundation
+# Copyright (C) 2020-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -46,7 +46,7 @@ import platform
 import subprocess
 from urllib.request import urlopen
 try:
-    import ensurepip
+    import ensurepip  # noqa
 except ImportError:
     sys.exit("ensurepip is missing; on Ubuntu the solution is to install "
              "python3-venv with apt")
@@ -65,7 +65,14 @@ except ImportError:
             sys.exit('venv is missing! Please see the documentation of your '
                      'Operating System to install it')
 
+PYVER = sys.version_info
+if PYVER < (3, 9, 0):
+    sys.exit('Error: you need at least Python 3.9, but you have %s' %	
+             '.'.join(map(str, sys.version_info)))
 CDIR = os.path.dirname(os.path.abspath(__file__))
+REMOVE_VENV = '''Found pre-existing venv %s
+If you proceeed you will have to reinstall manually any software other
+than the engine that you may have there. Proceed? [y/N]'''
 
 
 class server:
@@ -80,6 +87,7 @@ class server:
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
+    host = localhost
     port = %d
     file = %s
     [directory]
@@ -107,6 +115,7 @@ class devel_server:
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
+    host = localhost
     port = %d
     file = %s
     [directory]
@@ -168,6 +177,7 @@ Group=openquake
 Environment=
 WorkingDirectory={OQDATA}
 ExecStart=/opt/openquake/venv/bin/oq {command}
+Type=exec
 Restart=always
 RestartSec=30
 KillMode=control-group
@@ -176,8 +186,6 @@ TimeoutStopSec=10
 [Install]
 WantedBy=multi-user.target
 '''
-
-PYVER = sys.version_info
 PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'darwin': ('macos',),
             'win32': ('win64',)}
@@ -192,6 +200,12 @@ def ensure(pip=None, pyvenv=None):
     """
     try:
         if pyvenv:
+            if os.path.exists(pyvenv):
+                answer = input(REMOVE_VENV % pyvenv)
+                if answer.lower() == 'y':
+                    shutil.rmtree(pyvenv)
+                else:
+                    sys.exit(0)
             venv.EnvBuilder(with_pip=True).create(pyvenv)
         else:
             subprocess.check_call([pip, '-m', 'ensurepip', '--upgrade'])
@@ -265,17 +279,6 @@ def before_checks(inst, venv, port, remove, usage):
         inst.VENV = os.path.abspath(os.path.expanduser(venv))
     if port:
         inst.DBPORT = int(port)
-
-    # check python version
-    if sys.platform == 'linux':
-        # requires Python >= 3.8.0
-        if PYVER < (3, 8, 0):
-            sys.exit('Error: you need at least Python 3.8, but you have %s' %
-                     '.'.join(map(str, sys.version_info)))
-    elif PYVER < (3, 10, 6):
-        # requires Python >= 3.10.6
-        sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
-                 '.'.join(map(str, sys.version_info)))
 
     # check platform
     if ((inst is server and sys.platform != 'linux') or (
@@ -368,10 +371,9 @@ def install(inst, version, from_fork):
         if inst is server or inst is devel_server:
             subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
-    # create the openquake venv if necessary
-    if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
-        ensure(pyvenv=inst.VENV)
-        print('Created %s' % inst.VENV)
+    # recreate the openquake venv
+    ensure(pyvenv=inst.VENV)
+    print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
         if os.path.exists('python\\python._pth.old'):
@@ -389,11 +391,11 @@ def install(inst, version, from_fork):
     else:
         if os.path.exists('python\\python._pth.old'):
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
         else:
             subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)
@@ -449,8 +451,7 @@ def install(inst, version, from_fork):
     subprocess.run([oqreal, '--version'])  # compile numba
 
     if inst in (user, devel):  # create/upgrade the db in the default location
-        # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
-        subprocess.run([oqreal, 'dbserver', 'upgrade'])
+        subprocess.run([oqreal, 'engine', '--upgrade-db'])
 
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):

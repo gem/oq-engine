@@ -661,7 +661,7 @@ def build_multi_fault_source_node(multi_fault_source):
     """
     rup_nodes = []  # multiPlanesRupture
     for rup_idxs, prbs, mag, rake in zip(
-            multi_fault_source.rupture_idxs,
+            multi_fault_source._rupture_idxs,
             multi_fault_source.probs_occur,
             multi_fault_source.mags,
             multi_fault_source.rakes):

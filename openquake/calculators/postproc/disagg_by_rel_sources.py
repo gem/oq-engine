@@ -21,17 +21,18 @@ import numpy
 import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
-from openquake.calculators import extract, views
+from openquake.calculators import extract
 
 
 def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     """
     Compute mag, dist, eps, sig for each (src, imt) combination.
 
-    :param mean_disagg_by_src: ArrayWrapper of rates (src, mag, dst, eps, imt)
+    :param mean_disagg_by_src:
+        ArrayWrapper of rates (sid, src, mag, dst, eps, imt)
     :param src_mutex: array grp_id -> boolean
     :param src_info: source_info dataset
     :returns: a DataFrame with columns src, imt, mag, dst, eps, sig
@@ -42,20 +43,23 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     grp = {}
     for src_id, grp_id in zip(src_info['source_id'], src_info['grp_id']):
-        src = basename(src_id.decode('utf8'), ':;')
+        src = basename(src_id.decode('utf8'), ':;').split('!')[0]
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
             rates = mean_disagg_by_src[s, :, :, :, m]
+            dic['src'].append(src)
+            dic['imt'].append(imt)
             if (rates == 0).all():
+                dic['mag'].append(numpy.nan)
+                dic['dst'].append(numpy.nan)
+                dic['eps'].append(numpy.nan)
                 continue  # no contribution from this imt
             rates_mag = rates.sum((1, 2))
             rates_dst = rates.sum((0, 2))
             rates_eps = rates.sum((0, 1))
-            dic['src'].append(src)
-            dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
-            if not src_mutex[grp[src]]:  # compute the mean
+            if not src_mutex[grp[src.split('!')[0]]]:  # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
                 mdst = numpy.average(dst, weights=rates_dst)
                 meps = numpy.average(eps, weights=rates_eps)
@@ -69,22 +73,24 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     return pandas.DataFrame(dic)
 
 
-def get_rel_source_ids(dstore, imts, imls, threshold):
+def get_rel_source_ids(dstore, imts, imls, site_id, threshold):
     """
     :param dstore: a DataStore instance with a dataset `mean_rates_by_src`
     :param imts: a list of IMTs
     :param imls: a list of IMLs
+    :param site_id: site index
     :param threshold: fraction of the max rate, used to discard sources
     :returns: dictionary IMT -> relevant source IDs
     """
     source_ids = general.AccumDict(accum=set())  # IMT -> src_ids
     for imt, iml in zip(imts, imls):
         aw = extract.extract(
-            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}&site_id={site_id}')
         rates = aw.array['rate']  # for each source in decreasing order
         max_rate = rates[0]
         rel = aw.array[rates > threshold * max_rate]
-        source_ids[imt].update(rel['src_id'])
+        srcids = numpy.unique([s.split(b'!')[0] for s in rel['src_id']])
+        source_ids[imt].update(srcids)
     return source_ids
 
 
@@ -95,58 +101,72 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
-    """
-    Disaggregate by relevant sources.
-
-    :returns: mean_disagg_by_src and sigma_by_src
-    """
-    edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    imldic = dict(zip(imts, imls))
-    src2idx = {}
+def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
-    weights = {}  # src_id -> weights
-    for idx, source_id in enumerate(rel_ids):
-        src2idx[source_id] = idx
-        smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
-        gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-        weights[source_id] = [rlz.weight['weight'] for rlz in gslt]
-        relt = FullLogicTree(smlt, gslt)
-        Z = relt.get_num_paths()
-        assert Z, relt  # sanity check
-        logging.info('Considering source %s (%d realizations)', source_id, Z)
-        groups = relt.reduce_groups(csm.src_groups)
-        assert groups, 'No groups for %s' % source_id
-        smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
-    mags, dists, lons, lats, eps, trts = edges
-    Ns, M1 = len(rel_ids), len(imldic)
-    rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
-    std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
-    rates2D = 0.  # (Ns, M1)
-    for srcid, std4D, rates4D, _rates2D in smap:
-        idx = src2idx[srcid]
-        rates[idx] += rates4D
-        std[idx] += std4D @ weights[srcid]  # shape (Ma, D, M, G) -> (Ma, D, M)
-        rates2D += _rates2D
-    dic = dict(
-        shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-        source_id=rel_ids, mag=middle(mags), dist=middle(dists),
-        eps=middle(eps), imt=imts, iml=imls, view=rates.sum(axis=(1, 2, 3)),
-        rates2D=rates2D)
-    mean_disagg_by_src = hdf5.ArrayWrapper(rates, dic)
-    dic2 = dict(
-        shape_descr=['source_id', 'mag', 'dist', 'imt'],
-        source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
-    sigma_by_src = hdf5.ArrayWrapper(std, dic2)
-    dstore.close()
-    dstore.open('r+')
-    dstore['mean_disagg_by_src'] = mean_disagg_by_src
-    dstore['sigma_by_src'] = sigma_by_src
-    return mean_disagg_by_src, sigma_by_src
+    rel_ids_by_imt = general.AccumDict(accum={})
+    src2idx = {}  # sid, src_id -> src
+    weights = {}  # sid, src_id -> weights
+    for site in sites:
+        sid = site.id
+        lon = site.location.x
+        lat = site.location.y
+        imls = imls_by_sid[sid]
+        dic = get_rel_source_ids(dstore, imts, imls, sid, threshold=.1)
+        for imt, ids in dic.items():
+            rel_ids_by_imt[sid][imt] = ids = python3compat.decode(sorted(ids))
+            logging.info('(%.1f,%.1f) relevant source for %s: %s',
+                         lon, lat, imt, ' '.join(ids))
+        rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
+        imldic = dict(zip(imts, imls))
+        for idx, source_id in enumerate(rel_ids):
+            src2idx[sid, source_id] = idx
+            smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
+            gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
+            weights[sid, source_id] = [rlz.weight[-1] for rlz in gslt]
+            relt = FullLogicTree(smlt, gslt)
+            Z = relt.get_num_paths()
+            assert Z, relt  # sanity check
+            logging.info('(%.1f,%.1f) source %s (%d realizations)',
+                         lon, lat, source_id, Z)
+            groups = relt.reduce_groups(csm.src_groups)
+            assert groups, 'No groups for %s' % source_id
+            smap.submit((groups, site, relt, (edges, shp), oq, imldic))
+    return smap, rel_ids_by_imt, src2idx, weights
+
+
+def collect_results(smap, src2idx, weights, edges, shp,
+                    rel_ids_by_imt, imts, imls_by_imt):
+    """
+    :returns: sid -> (mean_disagg_by_src, sigma_by_src)
+    """
+    out = {}
+    mags, dists, _lons, _lats, eps, _trts = edges
+    for sid in sorted(rel_ids_by_imt):
+        rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
+        Ns, M1 = len(rel_ids), len(imts)
+        zrates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
+        zstd = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
+        dic = dict(
+            shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
+            source_id=rel_ids, mag=middle(mags), dist=middle(dists),
+            eps=middle(eps), imt=imts, iml=imls_by_imt[sid])
+        mean_disagg_by_src = hdf5.ArrayWrapper(zrates, dic)
+        dic2 = dict(
+            shape_descr=['source_id', 'mag', 'dist', 'imt'],
+            source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
+        sigma_by_src = hdf5.ArrayWrapper(zstd, dic2)
+        out[sid] = (mean_disagg_by_src, sigma_by_src)
+    for sid, srcid, std4D, rates4D, _ in smap:
+        mean_disagg_by_src, sigma_by_src = out[sid]
+        idx = src2idx[sid, srcid]
+        mean_disagg_by_src[idx] += rates4D
+        sigma_by_src[idx] += std4D @ weights[sid, srcid]
+        # the dot product change the shape from (Ma, D, M, G) -> (Ma, D, M)
+    return out
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls):
+def main(dstore, csm, imts, imls_by_sid):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -154,7 +174,7 @@ def main(dstore, csm, imts, imls):
     :param dstore: a DataStore instance
     :param csm: a CompositeSourceModel instance
     :param imts: a list of IMTs (subset of the IMTs in the job.ini)
-    :param imls: a list of IMLs (Risk Targeted Ground Motion in AELO)
+    :param imls_by_sid: a dictionary site ID -> IMLs
     """
     oq = dstore['oqparam']
     for imt in imts:
@@ -163,31 +183,35 @@ def main(dstore, csm, imts, imls):
                               (oq.inputs['job_ini'], imt))
 
     parent = dstore.parent or dstore
-    oq.mags_by_trt = {
-                trt: python3compat.decode(dset[:])
-                for trt, dset in parent['source_mags'].items()}
+    oq.mags_by_trt = {trt: python3compat.decode(dset[:])
+                      for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
-    assert len(sitecol) == 1, sitecol
-    rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
-    for imt, ids in rel_ids_by_imt.items():
-        rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
-        logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
-
-    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
-    mean_disagg_by_src, sigma_by_src = disagg_sources(
-        csm, rel_ids, imts, imls, oq, sitecol, dstore)
-    df = views.view('compare_disagg_rates',  dstore)
-    logging.info(df)
+    sites = [site for site in sitecol if site.id in imls_by_sid]
     src_mutex = dstore['mutex_by_grp']['src_mutex']
-    mag_dist_eps = get_mag_dist_eps_df(
-        mean_disagg_by_src, src_mutex, dstore['source_info'])
-    out = []
-    for imt, src_ids in rel_ids_by_imt.items():
-        df = mag_dist_eps[mag_dist_eps.imt == imt]
-        out.append(df[numpy.isin(df.src, src_ids)])
-    mag_dist_eps = pandas.concat(out)
-    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    return mag_dist_eps.to_numpy(), sigma_by_src
+    edges, shp = disagg.get_edges_shapedic(oq, sitecol)
+    smap, rel_ids_by_imt, src2idx, weights = submit_sources(
+        dstore, csm, edges, shp, imts, imls_by_sid, oq, sites)
+    out = collect_results(
+        smap, src2idx, weights, edges, shp, rel_ids_by_imt, imts, imls_by_sid)
+    dstore.close()
+    dstore.open('r+')
+    # replace mean_disagg_by_src with mag_dist_eps in the output
+    for i, site in enumerate(sites):
+        mean_disagg_by_src, sigma_by_src = out[site.id]
+        if i == 0:  # store only the first site
+            dstore['mean_disagg_by_src'] = mean_disagg_by_src
+            dstore['sigma_by_src'] = sigma_by_src
+        mag_dist_eps = get_mag_dist_eps_df(
+            mean_disagg_by_src, src_mutex, dstore['source_info'])
+        dfs = []
+        for imt, src_ids in rel_ids_by_imt[site.id].items():
+            df = mag_dist_eps[mag_dist_eps.imt == imt]
+            dfs.append(df[numpy.isin(df.src, src_ids)])
+        mag_dist_eps_df = pandas.concat(dfs)
+        logging.info('(%.1f,%.1f) mag_dist_eps=\n%s',
+                     site.location.x, site.location.y, mag_dist_eps_df)
+        out[site.id] = mag_dist_eps_df.to_numpy(), sigma_by_src
+    return out
 
 
 if __name__ == '__main__':

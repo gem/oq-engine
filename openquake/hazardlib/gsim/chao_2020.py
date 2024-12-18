@@ -123,7 +123,7 @@ def _fvs30(geology, C, ctx):
                     C['c27'] if geology else C['c28'])
 
 
-def _fz1pt0(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     z1pt0 factor.
     """
@@ -178,13 +178,7 @@ class ChaoEtAl2020SInter(GMPE):
 
     REQUIRES_ATTRIBUTES = {'manila', 'aftershocks', 'geology'}
 
-    def __init__(self, manila=False, aftershocks=False, geology=True,
-                 **kwargs):
-        """
-        Aditional parameters.
-        """
-        super().__init__(manila=manila, aftershocks=aftershocks,
-                         geology=geology, **kwargs)
+    def __init__(self, manila=False, aftershocks=False, geology=True):
         # Manila or Ryukyu subduction zone
         self.manila = manila
         # aftershocks or mainshocks
@@ -223,7 +217,7 @@ class ChaoEtAl2020SInter(GMPE):
             sa1180 = np.exp(med + math.log(1180/s['vs30_ref']) * C['c24'])
             med += _fc(C, imt, ctx.vs30, sa1180)
             med += np.log(ctx.vs30 / s['vs30_ref']) * C['c24']
-            med += _fz1pt0(C, ctx)
+            med += _get_basin_term(C, ctx)
 
             sig[m], tau[m], phi[m] = get_stddevs(self.SBCR, C, ctx.mag)
 

@@ -111,19 +111,14 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
-from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.gmf import GmfComputer, exp
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.gsim.base import ContextMaker
 
 U32 = numpy.uint32
 F32 = numpy.float32
-
 
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
@@ -136,7 +131,7 @@ that defines only the total standard deviation. If you wish to use the
 conditioned ground shaking module you have to select a GSIM that provides
 the inter and intra event standard deviations, or use the ModifiableGMPE
 with `add_between_within_stds.with_betw_ratio`.
-""" % self.gsim.__class__.__name_
+""" % self.gsim.__class__.__name__
 
 
 class IterationLimitWarning(Warning):
@@ -189,6 +184,8 @@ class ConditionedGmfComputer(GmfComputer):
             observed_imt_strs, cmaker, spatial_correl=None,
             cross_correl_between=None, ground_motion_correlation_params=None,
             number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
+        assert len(station_data) == len(station_sitecol), (
+            len(station_data), len(station_sitecol))
         GmfComputer.__init__(
             self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
             correlation_model=spatial_correl,
@@ -212,79 +209,16 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_mean_covs(self):
+    def get_mea_tau_phi(self):
         """
         :returns: a list of arrays [mea, sig, tau, phi]
         """
         return get_mean_covs(
-            self.rupture, self.cmaker.gsims,
+            self.rupture, self.cmaker,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
-            self.spatial_correl,
-            self.cross_correl_between, self.cross_correl_within,
-            self.cmaker.maximum_distance)
-
-    def compute_all(
-            self, dstore, rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
-        """
-        :returns: (dict with fields eid, sid, gmv_X, ...), dt
-        """
-        self.init_eid_rlz_sig_eps()
-        data = AccumDict(accum=[])
-        rng = numpy.random.default_rng(self.seed)
-        for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
-            with rmon:
-                mea = dstore['conditioned/gsim_%d/mea' % g][:]
-                tau = dstore['conditioned/gsim_%d/tau' % g][:]
-                phi = dstore['conditioned/gsim_%d/phi' % g][:]
-            with cmon:
-                array = self.compute(gsim,rlzs, mea, tau, phi, rng)
-            with umon:
-                self.update(data, array, rlzs, [mea, tau+phi, tau, phi])
-        with umon:
-            return self.strip_zeros(data)
-
-    def compute(self, gsim, rlzs, mea, tau, phi, rng):
-        """
-        :param gsim: GSIM used to compute mean_stds
-        :param rlzs: realizations associated to the gsim
-        :param mea: array of shape (M, N, 1)
-        :param tau: array of shape (M, N, N)
-        :param phi: array of shape (M, N, N)
-        :returns: a 32 bit array of shape (N, M, E)
-        """
-        M, N, _ = mea.shape
-        E = numpy.isin(self.rlz, rlzs).sum()
-        result = numpy.zeros((M, N, E), F32)
-        for m, im in enumerate(self.cmaker.imtls):
-            mu_Y_yD = mea[m]
-            cov_WY_WY_wD = tau[m]
-            cov_BY_BY_yD = phi[m]
-            try:
-                result[m] = self._compute(
-                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, E, rng)
-            except Exception as exc:
-                raise RuntimeError(
-                    "(%s, %s, source_id=%r) %s: %s"
-                    % (gsim, im, decode(self.source_id),
-                       exc.__class__.__name__, exc)
-                ).with_traceback(exc.__traceback__)
-        if self.amplifier:
-            self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, self.imts, self.seed)
-        return result.transpose(1, 0, 2)
-
-    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
-        if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt != "MMI")
-            gmf = gmf.repeat(num_events, axis=1)
-        else:
-            cov_Y_Y = cov_WY_WY + cov_BY_BY
-            arr = rng.multivariate_normal(
-                mu_Y.flatten(), cov_Y_Y, size=num_events,
-                check_valid="warn", tol=1e-5, method="eigh")
-            gmf = exp(arr, imt != "MMI").T
-        return gmf  # shapes (N, E)
+            self.spatial_correl, self.cross_correl_between, self.cross_correl_within,
+            sigma=False)
 
 
 @dataclass
@@ -342,8 +276,8 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
         if num_null_values:
             raise ValueError(
                 f"The station data contains {num_null_values}"
-                f"null values for {target_imt.string}."
-                "Please fill or discard these rows.")
+                f" null values for {target_imt.string}."
+                " Please fill or discard these rows.")
     t = TempResult(conditioning_imts=conditioning_imts,
                    bracketed_imts=bracketed_imts,
                    native_data_available=native_data_available)
@@ -452,12 +386,12 @@ def compute_spatial_cross_covariance_matrix(
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
-        rupture, gsims, station_sitecol, station_data,
+        rupture, cmaker, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
-        maximum_distance):
+        sigma=True):
     """
-    :returns: a list of arrays [mea, sig, tau, phi]
+    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
 
     if hasattr(rupture, 'rupture'):
@@ -473,9 +407,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = ContextMaker(
-        rupture.tectonic_region_type, gsims,
-        dict(imtls=observed_imtls, maximum_distance=maximum_distance))
+    cmaker_D = cmaker.copy(imtls=observed_imtls)
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
@@ -483,10 +415,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = ContextMaker(
-        rupture.tectonic_region_type, gsims, dict(
-            imtls={target_imts[0].string: [0]},
-            maximum_distance=maximum_distance))
+    cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
     mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
@@ -500,14 +429,13 @@ def get_mean_covs(
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
 
-    G = len(gsims)
+    G = len(cmaker.gsims)
     M = len(target_imts)
     N = len(ctx_Y)
     me = numpy.zeros((G, M, N, 1))
-    si = numpy.zeros((G, M, N, N))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
-    for g, gsim in enumerate(gsims):
+    for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
                     and "add_between_within_stds" in gsim.kwargs):
@@ -533,11 +461,14 @@ def get_mean_covs(
                 sdata, target, station_filtered,
                 compute_cov, result)
             me[g, m] = mu
-            si[g, m] = tau + phi
             ta[g, m] = tau
             ph[g, m] = phi
 
-    return [me, si, ta, ph]
+    if sigma:
+        return [me, ta + ph, ta, ph]
+    else:
+        # save memory since sigma = tau + phi is not needed
+        return [me, ta, ph]
 
 
 # In scenario/case_21 one has

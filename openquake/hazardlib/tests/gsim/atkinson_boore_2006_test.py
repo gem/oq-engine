@@ -18,7 +18,7 @@
 
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006, AtkinsonBoore2006Modified2011)
-from openquake.hazardlib.gsim.base import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 

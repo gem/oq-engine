@@ -1,0 +1,187 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2023, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import logging
+import pandas
+import numpy
+from openquake.baselib import sap, general, performance, hdf5
+from openquake.hazardlib import nrml, gsim_lt, site
+from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
+from openquake.commonlib.datastore import build_dstore_log
+from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib import expo_to_hdf5
+from openquake.qa_tests_data import mosaic
+
+U16 = numpy.uint16
+MOSAIC_DIR = os.path.dirname(mosaic.__file__)
+F32 = numpy.float32
+dt = [('model', '<S3'), ('trt', '<61'), ('gsim', hdf5.vstr), ('weight', float)]
+
+
+def collect_exposures(grm_dir):
+    """
+    Collect the files of kind Exposure_<Country>.xml.
+
+    :returns: xmlfiles
+    """
+    out = []
+    for region in os.listdir(grm_dir):
+        expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
+        if not os.path.exists(expodir):
+            continue
+        for fname in os.listdir(expodir):
+            if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
+                fullname = os.path.join(expodir, fname)
+                out.append(fullname)
+    return out
+
+
+def read_world_vulnerability(grm_dir, dstore):
+    """
+    Store the world CompositeRiskModel
+    """
+    kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
+             'fatalities', 'residents']
+    vfuncs = RiskFuncList()
+    for kind in kinds:
+        name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
+        fname = os.path.join(grm_dir, name)
+        for vf in nrml.to_python(fname).values():
+            vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+            vf.kind = 'vulnerability'
+            vfuncs.append(vf)
+    oq = OqParam(calculation_mode='custom')
+    crmodel = CompositeRiskModel(oq, vfuncs)
+    dstore.create_df('crm', crmodel.to_dframe(),
+                     'gzip', **crmodel.get_attrs())
+    return len(vfuncs)
+
+
+def read_world_tmap(grm_dir, dstore):
+    """
+    Store the world taxonomy mapping
+    """
+    # get the names of the files to read
+    tmap_df = pandas.read_csv(os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv'),
+                              index_col=['country'])
+    dic = {}
+    for fname, df in tmap_df.groupby('fname'):
+        dic[fname] = '_'.join(sorted(df.index))
+    n = len(dic)
+    assert len(set(dic.values())) == n, sorted(dic.values())
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f in dic:
+                df = pandas.read_csv(os.path.join(cwd, f))
+                try:
+                    dstore.create_df('tmap/' + dic[f], df)
+                except ValueError:  # exists already
+                    print('Repeated %s' % dic[f])
+    return n
+
+
+def get_gsim_lt(cwd):
+    """
+    :returns: a GsimLogicTree instance
+    """
+    f1 = os.path.join(cwd, 'gmmLTrisk.xml')
+    if os.path.exists(f1):
+        return gsim_lt.GsimLogicTree(f1)
+    f2 = os.path.join(cwd, 'gmmLT.xml')
+    return gsim_lt.GsimLogicTree(f2)
+
+
+def build_site_model(grm_dir):
+    """
+    Build the global site model starting from the CSV files in the
+    global_risk_model directory
+    """
+    factor = float(os.environ.get('OQ_SAMPLE_ASSETS', 1))
+    dfs = []
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f.startswith('Site_model_') and f.endswith('.csv'):
+                print('Reading %s' % f)
+                df = pandas.read_csv(os.path.join(cwd, f))
+                if factor < 1:
+                    df = general.random_filter(df, factor*10)
+                if len(df):
+                    dfs.append(df)
+    columns = set()
+    n = 0
+    for df in dfs:
+        columns.update(df.columns)
+        n += len(df)
+    dt = [(col, site.site_param_dt[col]) for col in sorted(columns)]
+    sm = numpy.zeros(n, dt)
+    row = 0
+    for df in dfs:
+        n = len(df)
+        recs = sm[row:row + n]
+        for col in df.columns:
+            recs[col] = df[col]
+        row += n
+    return sm
+
+
+def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
+    """
+    Storing the global site_model and gsim table
+    """
+    rows = []
+    for cwd, dirs, files in os.walk(mosaic_dir):
+        for f in files:
+            if f == 'job_vs30.ini':
+                model = cwd.split('/')[-2]
+                gsim_lt = get_gsim_lt(cwd)
+                for trt, gsims in gsim_lt.values.items():
+                    for gsim in gsims:
+                        q = (model, trt, str(gsim), gsim.weight['default'])
+                        rows.append(q)
+    smodel = build_site_model(grm_dir)
+    dstore['site_model'] = smodel
+    dstore['model_trt_gsim_weight'] = numpy.array(rows, dt)
+    return len(smodel)
+
+
+def main(mosaic_dir, grm_dir):
+    """
+    Storing global exposure
+    """
+    mon = performance.Monitor(measuremem=True)
+    dstore, log = build_dstore_log()
+    with dstore, log:
+        with mon:
+            n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)
+            logging.info('Stored {:_d} sites'.format(n))
+            n = read_world_vulnerability(grm_dir, dstore)
+            logging.info('Read %d vulnerability functions', n)
+            n = read_world_tmap(grm_dir, dstore)
+            logging.info('Read %d taxonomy mappings', n)
+            fnames = collect_exposures(grm_dir)
+            expo_to_hdf5.store(fnames, dstore)
+        logging.info(mon)
+
+main.mosaic_dir = 'Directory containing the hazard mosaic'
+main.grm_dir = 'Directory containing the global risk model'
+
+
+if __name__ == '__main__':
+    sap.run(main)

@@ -24,7 +24,6 @@ from openquake.baselib import hdf5
 from openquake.hazardlib.stats import norm_cdf, truncnorm_sf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
 
 
@@ -261,11 +260,21 @@ class Amplifier(object):
         """
         for gsims in gsims_by_trt.values():
             for gsim in gsims:
+                if vs30_tolerance < 0:
+                    continue
+                elif not hasattr(gsim, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+                    raise AttributeError(
+                        f'The attribute DEFINED_FOR_REFERENCE_VELOCITY is'
+                        f' missing in the gsim {gsim}. However, at your peril,'
+                        f' you can disable the vs30 consistency check by'
+                        f' setting vs30_tolerance = -1')
                 gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
                 if gsim_ref and gsim_ref < self.vs30_ref:
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
                         % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
+        if vs30_tolerance < 0:
+            return
         if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
             raise ValueError('Some vs30 in the site collection is different '
                              'from vs30_ref=%d over the tolerance of %d' %
@@ -341,12 +350,12 @@ class Amplifier(object):
     def amplify(self, ampl_code, hcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param hcurve: a ProbabilityCurve of shape (L*M, R)
-        :returns: amplified ProbabilityCurve of shape (A*M, R)
+        :param hcurve: an array of shape (L*M, R)
+        :returns: amplified array of shape (A*M, R)
         """
-        new = [self.amplify_one(ampl_code, imt, hcurve.array[self.imtls(imt)])
+        new = [self.amplify_one(ampl_code, imt, hcurve[self.imtls(imt)])
                for imt in self.imtls]
-        return ProbabilityCurve(numpy.concatenate(new))
+        return numpy.concatenate(new)
 
     def _interp(self, ampl_code, imt_str, imls, coeff=None):
         # returns ialpha, isigma for the given levels

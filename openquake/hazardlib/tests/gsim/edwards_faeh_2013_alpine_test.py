@@ -19,7 +19,6 @@ from openquake.hazardlib.gsim.edwards_fah_2013a import (
     EdwardsFah2013Alpine20Bars,
     EdwardsFah2013Alpine30Bars,
     EdwardsFah2013Alpine50Bars,
-    EdwardsFah2013Alpine60Bars,
     EdwardsFah2013Alpine75Bars,
     EdwardsFah2013Alpine90Bars,
     EdwardsFah2013Alpine120Bars)

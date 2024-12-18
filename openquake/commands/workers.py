@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -19,11 +20,12 @@
 import sys
 import getpass
 from openquake.baselib import config, workerpool, parallel as p
+from openquake.commonlib import logs
 
 CHOICES = 'start stop status restart wait kill debug'.split()
 
 
-def main(cmd):
+def main(cmd, job_id: int=-1):
     """
     start/stop the workers, or return their status
     """
@@ -34,8 +36,13 @@ def main(cmd):
     if dist == 'zmq':
         master = workerpool.WorkerMaster(config.zworkers)
         print(getattr(master, cmd)())
+    elif dist == 'slurm':
+        job = logs.dbcmd('get_job', job_id)
+        master = workerpool.WorkerMaster(job.id)
+        print(getattr(master, cmd)())
     else:
         print('Nothing to do: oq_distribute=%s' % dist)
 
 
 main.cmd = dict(help='command', choices=CHOICES)
+main.job_id = dict(help='running job')
