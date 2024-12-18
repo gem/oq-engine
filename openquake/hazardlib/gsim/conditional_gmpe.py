@@ -75,7 +75,8 @@ class ConditionalGMPE(GMPE):
                 if k not in g:
                     raise ValueError('Unknown %r in ModifiableGMPE' % k)
             self.gmpe = registry[gmpe_name](**kw)
-            self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
+            if hasattr(self.gmpe, 'gmpe_table'):
+                self.gmpe_table = self.gmpe.gmpe_table
             self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES |
                                                 self.gmpe.REQUIRES_DISTANCES)
             self.REQUIRES_RUPTURE_PARAMETERS = frozenset(
@@ -89,7 +90,6 @@ class ConditionalGMPE(GMPE):
                 self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
         else:
             self.gmpe = None
-            self.gmpe_table = None
 
     def get_conditioning_ground_motions(
         self,
