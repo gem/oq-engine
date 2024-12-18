@@ -1707,7 +1707,7 @@ def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
-    fname = os.path.join(os.path.dirname(mosaic.__file__), 'global_zonation.geojson')
+    fname = os.path.join(os.path.dirname(mosaic.__file__), 'mosaic.geojson')
     if os.path.exists(fname):
         return read_geometries(fname, 'name', buffer)
 
