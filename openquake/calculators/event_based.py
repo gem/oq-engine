@@ -247,6 +247,9 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    if isinstance(dstore, str):
+        # when passing ruptures.hdf5
+        dstore = hdf5.File(dstore)
     oq = cmaker.oq
     rmon = monitor('reading sites and ruptures', measuremem=True)
     fmon = monitor('instantiating GmfComputer', measuremem=False)
@@ -298,7 +301,7 @@ def get_nsites(rups, trt_smr, trt, srcfilter):
     return {(model, trt_smr, trt): srcfilter.get_nsites(rups, trt)}
 
 
-def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, gsim_lt_dic):
+def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, trts):
     dic = {}
     smap = parallel.Starmap(get_nsites)
     with hdf5.File(ruptures_hdf5) as f:
@@ -306,8 +309,7 @@ def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, gsim_lt_dic):
             slc = slice(start, stop)
             rups = f['ruptures'][slc]
             model = rups[0]['model'].decode('ascii')
-            trts = list(gsim_lt_dic[model].values)
-            trt = trts[trt_smr // TWO24]
+            trt = trts[model][trt_smr // TWO24]
             srcfilter = SourceFilter(sitecol, maximum_distance(trt))
             dic[model, trt_smr, trt] = rups
             smap.submit((rups, trt_smr, trt, srcfilter))
@@ -321,31 +323,34 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     :returns: a Starmap instance sending event_based tasks
     """
     ruptures_hdf5 = oq.inputs['rupture_model']
-    gsim_lt_dic = logictree.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+    trts = {}
     rlzs_by_gsim = {}
-    for model in gsim_lt_dic:
-        logging.info('Building rlzs_by_gsim for %s', model)
-        gslt = gsim_lt_dic[model]
-        trts = list(gslt.values)
-        for trt_smr, rbg in gslt.get_rlzs_by_gsim_dic().items():
-            rlzs_by_gsim[model, trts[trt_smr // TWO24]] = rbg
-    rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, gsim_lt_dic)
+    with hdf5.File(ruptures_hdf5) as r:
+        for model in r['full_lt']:
+            full_lt = r[f'full_lt/{model}']
+            trts[model] = full_lt.trts
+            logging.info('Building rlzs_by_gsim for %s', model)
+            for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
+                rlzs_by_gsim[model, trt_smr] = rbg
+        dstore['full_lt'] = full_lt  # saving the last lt (hackish)
+        r.copy('events', dstore.hdf5) # saving the events
+        R = full_lt.num_samples
+        dstore['weights'] = numpy.ones(R) / R
+    rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, trts)
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
     extra = sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     for (model, trt_smr, trt), rups in rups_dic.items():
-        if model not in gsim_lt_dic:
-            continue
         proxies = get_proxies(ruptures_hdf5, rups)
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
-        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt],
+        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
-            args = block, cmaker, sitecol, (None, None), dstore
+            args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
     return smap
 
@@ -814,7 +819,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 ' not computing avg_gmf')
             return
 
-        rlzs = self.datastore['events']['rlz_id']
+        rlzs = self.datastore['events'][:]['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sec_imt in self.oqparam.sec_imts:  # ignore secondary perils
@@ -854,7 +859,8 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         # check seed dependency unless the number of GMFs is huge
         size = self.datastore.getsize('gmf_data/gmv_0')
-        if 'gmf_data' in self.datastore and size < 4E9:
+        if 'gmf_data' in self.datastore and size < 4E9 and not oq.ruptures_hdf5:
+            # TODO: check why there is an error for ruptures_hdf5
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
             logging.info(msg)
