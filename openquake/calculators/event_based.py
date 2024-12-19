@@ -83,7 +83,7 @@ def build_hcurves(calc):
     oq = calc.oqparam
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
-    weights = calc.full_lt.weights[:, -1]
+    weights = calc.datastore['weights'][:]
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
