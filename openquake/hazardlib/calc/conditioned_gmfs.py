@@ -210,7 +210,8 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_mea_tau_phi(self):
+    # parallelized
+    def get_mea_tau_phi(self, h5):
         """
         :returns: a list of arrays [mea, sig, tau, phi]
         """
@@ -219,7 +220,7 @@ class ConditionedGmfComputer(GmfComputer):
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
             self.spatial_correl, self.cross_correl_between, self.cross_correl_within,
-            sigma=False)
+            sigma=False, h5=h5)
 
 
 @dataclass
@@ -387,8 +388,8 @@ def compute_spatial_cross_covariance_matrix(
 
 def compute_mu_tau_phi(cmaker, sdata, observed_imts, target_imts,
                        mean_stds_D, mean_stds_Y, target, station_filtered,
-                       compute_cov, cross_correl_between):
-    smap = parallel.Starmap(get_mu_tau_phi)
+                       compute_cov, cross_correl_between, h5):
+    smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -417,10 +418,9 @@ def compute_mu_tau_phi(cmaker, sdata, observed_imts, target_imts,
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
-        rupture, cmaker, station_sitecol, station_data,
-        observed_imt_strs, target_sitecol, target_imts,
-        spatial_correl, cross_correl_between, cross_correl_within,
-        sigma=True):
+        rupture, cmaker, station_sitecol, station_data, observed_imt_strs,
+        target_sitecol, target_imts, spatial_correl, cross_correl_between,
+        cross_correl_within, sigma, h5):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
@@ -468,7 +468,7 @@ def get_mean_covs(
     dic = compute_mu_tau_phi(
         cmaker, station_data[mask].copy(), observed_imts, target_imts,
         mean_stds_D, mean_stds_Y, target, station_filtered,
-        compute_cov, cross_correl_between)
+        compute_cov, cross_correl_between, h5)
     for (g, m), (mu, tau, phi) in dic.items():
         me[g, m] = mu
         ta[g, m] = tau
