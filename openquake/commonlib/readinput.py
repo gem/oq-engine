@@ -689,7 +689,8 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = oqparam.req_site_params
         if oqparam.ruptures_hdf5:
             assoc_dist = (oqparam.region_grid_spacing * 1.414
-                          if oqparam.region_grid_spacing else 5)  # Graeme's 5km
+                          if oqparam.region_grid_spacing else 10)
+            # 10 km is a bit larger than the grid spacing used in the mosaic
             sc = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
             logging.info('Associating the mesh to the site parameters')

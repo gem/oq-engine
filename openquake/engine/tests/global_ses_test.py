@@ -51,9 +51,8 @@ def test_EUR_MIE():
                 dstore = base.run_calc('job.ini').datastore
                 check(dstore, fnames)
 
-                # only 1 site is associated to the site params
                 dstore = base.run_calc('job_sites.ini').datastore
-                assert dstore['avg_gmf'].shape == (2, 1, 1)
+                assert dstore['avg_gmf'].shape == (2, 6, 1)  # 6 sites
             finally:
                 if os.path.exists(RUP_HDF5):
                     os.remove(RUP_HDF5)
