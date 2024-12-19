@@ -172,7 +172,11 @@ def get_proxies(filename, rup_array, min_mag=0):
     :returns: a list of RuptureProxies
     """
     proxies = []
-    with datastore.read(filename) as h5:
+    try:
+        h5 = datastore.read(filename)
+    except ValueError: # cannot extract calc_id
+        h5 = hdf5.File(filename)
+    with h5:
         rupgeoms = h5['rupgeoms']
         if hasattr(rup_array, 'start'):  # is a slice
             recs = h5['ruptures'][rup_array]
@@ -219,6 +223,8 @@ class RuptureImporter(object):
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
+        self.datastore['rup_start_stop'] = performance.idx_start_stop(
+            rup_array['trt_smr'])
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'

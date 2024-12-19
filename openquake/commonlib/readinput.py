@@ -669,7 +669,10 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5:
+    if oqparam.ruptures_hdf5:
+        with hdf5.File(oqparam.ruptures_hdf5) as r:
+            rup_sitecol = r['sitecol']
+    elif h5 and 'sitecol' in h5:
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -684,7 +687,18 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:
+        if oqparam.ruptures_hdf5:
+            assoc_dist = (oqparam.region_grid_spacing * 1.414
+                          if oqparam.region_grid_spacing else 10)
+            # 10 km is around the grid spacing used in the mosaic
+            sc = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+            logging.info('Associating the mesh to the site parameters')
+            sitecol, _array, _discarded = geo.utils.assoc(
+                sc, rup_sitecol, assoc_dist, 'filter')
+            sitecol.make_complete()
+            return _get_sitecol(sitecol, exp, oqparam, h5)
+        elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.aristotle and (
                     not oqparam.infrastructure_connectivity_analysis):
@@ -709,7 +723,10 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        return _get_sitecol(sitecol, exp, oqparam, h5)
 
+
+def _get_sitecol(sitecol, exp, oqparam, h5):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
@@ -1651,10 +1668,10 @@ def get_checksum32(oqparam, h5=None):
 
 # NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
 @functools.lru_cache(maxsize=4)
-def read_geometries(fname, code, buffer=0):
+def read_geometries(fname, name, buffer=0):
     """
     :param fname: path of the file containing the geometries
-    :param code: name of the primary key field
+    :param name: name of the primary key field
     :param buffer: shapely buffer in degrees
     :returns: data frame with codes and geometries
     """
@@ -1663,9 +1680,13 @@ def read_geometries(fname, code, buffer=0):
         geoms = []
         for feature in f:
             props = feature['properties']
-            codes.append(props[code])
-            geom = geometry.shape(feature['geometry'])
-            geoms.append(geom.buffer(buffer))
+            geom = feature['geometry']
+            code = props[name]
+            if code and geom:
+                codes.append(code)
+                geoms.append(geometry.shape(geom).buffer(buffer))
+            else:
+                logging.error(f'{code=}, {geom=} in {fname}')
     return pandas.DataFrame(dict(code=codes, geom=geoms))
 
 
@@ -1687,6 +1708,11 @@ def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
+    '''
+    fname = os.path.join(os.path.dirname(mosaic.__file__), 'mosaic.geojson')
+    if os.path.exists(fname):
+        return read_geometries(fname, 'name', buffer)
+    '''
     fname = os.path.join(os.path.dirname(mosaic.__file__),
                          'ModelBoundaries.shp')
     return read_geometries(fname, 'code', buffer)

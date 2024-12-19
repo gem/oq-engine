@@ -1061,7 +1061,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('station_data', self.station_data)
             oq.observed_imts = self.observed_imts
 
-        if hasattr(self, 'sitecol') and self.sitecol:
+        if hasattr(self, 'sitecol') and self.sitecol and not oq.ruptures_hdf5:
             if 'site_model' in oq.inputs or oq.aristotle:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
@@ -1409,7 +1409,7 @@ def import_ruptures_hdf5(h5, fnames):
     offset = 0
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
-            f['trt_smr_start_stop']
+            oq = f['oqparam']
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
@@ -1422,6 +1422,8 @@ def import_ruptures_hdf5(h5, fnames):
             rup['geom_id'] += offset
             offset += len(rup)
             rups.extend(rup)
+            if oq.mosaic_model and 'full_lt' in f:
+                h5[f'full_lt/{oq.mosaic_model}'] = f['full_lt']
 
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
     ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]

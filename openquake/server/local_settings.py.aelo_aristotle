@@ -25,13 +25,12 @@ EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
 
-# NOTE: the following variables are needed to send pasword reset emails
-#       using the createnormaluser Django command. They should be the same
-#       specified in /etc/nginx/conf.d/webui.conf
+# NOTE: the following variable is needed to send pasword reset emails
+#       using the createnormaluser Django command.
+#       It should be the same specified in /etc/nginx/conf.d/webui.conf
 SERVER_NAME = <localhost>
-SERVER_PORT = <8800>
-USE_HTTPS = <True|False>
 
 # Set to True if using NGINX or some other reverse proxy
 # Externally visible url and port number is different from Django visible
@@ -44,5 +43,8 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
-# system time zone.
+# system time zone. Aelo or Aristotle services are expected to run on linux only.
+# NOTE: the default value in settings.py is 'UTC'
 # TIME_ZONE =
+
+DEBUG = False

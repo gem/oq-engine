@@ -137,10 +137,12 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Products Distribution Partners
 
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/climate_engine.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/dc_climate.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/eigen_risk.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/imagecat.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/impact_forecasting.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/jupiter_intelligence.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/nasdaq.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/verisk.png" width="20%" />
 

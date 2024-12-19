@@ -1884,6 +1884,12 @@ class OqParam(valid.ParamSet):
                 self.inputs['rupture_model'].endswith('.xml'))
 
     @property
+    def ruptures_hdf5(self):
+        if ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.hdf5')):
+            return self.inputs['rupture_model']
+
+    @property
     def aristotle(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5

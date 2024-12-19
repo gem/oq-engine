@@ -1,6 +1,10 @@
+  [Michele Simionato]
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
+  * Parallelized `get_mean_covs` when conditioning the GMFs
+
   [Christopher Brooks]
   * Added Seattle Basin classes of Kuehn et al. (2020) NGASUB GMM (uses
-    Cascadia coeffs except for basin term). 
+    Cascadia coeffs except for basin term).
   * Added USGS basin scaling and CyberShake adjustments to the NGAWest2
     GMMs + ability to pass base gsim arguments within the NSHMP2014 gsim class.
 
