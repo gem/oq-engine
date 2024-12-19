@@ -50,7 +50,10 @@ def test_EUR_MIE():
                 fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
                 dstore = base.run_calc('job.ini').datastore
                 check(dstore, fnames)
+
+                # only 1 site is associated to the site params
                 dstore = base.run_calc('job_sites.ini').datastore
+                assert dstore['avg_gmf'].shape == (2, 1, 1)
             finally:
                 if os.path.exists(RUP_HDF5):
                     os.remove(RUP_HDF5)

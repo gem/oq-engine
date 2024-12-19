@@ -687,7 +687,17 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:
+        if oqparam.ruptures_hdf5:
+            assoc_dist = (oqparam.region_grid_spacing * 1.414
+                          if oqparam.region_grid_spacing else 5)  # Graeme's 5km
+            sc = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+            logging.info('Associating the mesh to the site parameters')
+            sitecol, _array, _discarded = geo.utils.assoc(
+                sc, rup_sitecol, assoc_dist, 'filter')
+            sitecol.make_complete()
+            return _get_sitecol(sitecol, exp, oqparam, h5)
+        elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.aristotle and (
                     not oqparam.infrastructure_connectivity_analysis):
@@ -702,16 +712,6 @@ def get_site_collection(oqparam, h5=None):
             sm = get_site_model(oqparam, h5)
             if len(sm) > len(mesh):  # the association will happen in base.py
                 sm = oqparam
-        elif oqparam.ruptures_hdf5:
-            assoc_dist = (oqparam.region_grid_spacing * 1.414
-                          if oqparam.region_grid_spacing else 5)  # Graeme's 5km
-            sc = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-            logging.info('Associating the mesh to the site parameters')
-            sitecol, _array, _discarded = geo.utils.assoc(
-                sc, rup_sitecol, assoc_dist, 'filter')
-            sitecol.make_complete()
-            return _get_sitecol(sitecol, exp, oqparam, h5)
         elif 'site_model' not in oqparam.inputs:
             # check the required site parameters are not NaN
             sm = oqparam
