@@ -34,6 +34,7 @@ import functools
 import configparser
 import collections
 import itertools
+import json
 
 import numpy
 import pandas
@@ -45,7 +46,7 @@ from shapely import wkt, geometry
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, get_duplicates, gettemp, AccumDict)
+    random_filter, countby, get_duplicates, check_extension, gettemp, AccumDict)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -59,6 +60,7 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
+from openquake.hazardlib.shakemap.parsers import convert_to_oq_rupture
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -152,7 +154,18 @@ def normpath(fnames, base_path):
     return vals
 
 
-def normalize(key, fnames, base_path):
+def _normalize(key, fnames, base_path):
+    # returns (input_type, filenames)
+
+    # check that all the fnames have the same extension
+    # NB: for consequences fnames is a list of lists
+    flatten = []
+    for fname in fnames:
+        if isinstance(fname, list):
+            flatten.extend(fname)
+        else:
+            flatten.append(fname)
+    check_extension(flatten)
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
     for val in fnames:
@@ -191,18 +204,19 @@ def update(params, items, base_path):
     """
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
+                   'gmfs_csv', 'gmfs_file',
                    'site_model_csv', 'site_model_file',
                    'exposure_csv', 'exposure_file'):
-            input_type, fnames = normalize(key, value.split(), base_path)
+            input_type, fnames = _normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
-                input_type, fnames = normalize(key, dic.values(), base_path)
+                input_type, fnames = _normalize(key, dic.values(), base_path)
                 params['inputs'][input_type] = dict(zip(dic, fnames))
                 params[input_type] = ' '.join(dic)
             elif value:
-                input_type, fnames = normalize(key, [value], base_path)
+                input_type, fnames = _normalize(key, [value], base_path)
                 assert len(fnames) in (0, 1)
                 for fname in fnames:
                     params['inputs'][input_type] = fname
@@ -210,7 +224,8 @@ def update(params, items, base_path):
                 # remove the key if the value is empty
                 basekey, _file = key.rsplit('_', 1)
                 params['inputs'].pop(basekey, None)
-        elif isinstance(value, str) and value.endswith('.hdf5'):
+        elif (isinstance(value, str) and value.endswith('.hdf5')
+              and key != 'description'):
             logging.warning('The [reqv] syntax has been deprecated, see '
                             'https://github.com/gem/oq-engine/blob/master/doc/'
                             'adv-manual/equivalent-distance-app for the new '
@@ -654,7 +669,10 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if h5 and 'sitecol' in h5:
+    if oqparam.ruptures_hdf5:
+        with hdf5.File(oqparam.ruptures_hdf5) as r:
+            rup_sitecol = r['sitecol']
+    elif h5 and 'sitecol' in h5:
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -669,7 +687,18 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:
+        if oqparam.ruptures_hdf5:
+            assoc_dist = (oqparam.region_grid_spacing * 1.414
+                          if oqparam.region_grid_spacing else 10)
+            # 10 km is around the grid spacing used in the mosaic
+            sc = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+            logging.info('Associating the mesh to the site parameters')
+            sitecol, _array, _discarded = geo.utils.assoc(
+                sc, rup_sitecol, assoc_dist, 'filter')
+            sitecol.make_complete()
+            return _get_sitecol(sitecol, exp, oqparam, h5)
+        elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.aristotle and (
                     not oqparam.infrastructure_connectivity_analysis):
@@ -694,7 +723,10 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        return _get_sitecol(sitecol, exp, oqparam, h5)
 
+
+def _get_sitecol(sitecol, exp, oqparam, h5):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
@@ -796,12 +828,17 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rupture_model = oqparam.inputs.get('rupture_model')
-    if rupture_model:
-        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+    rup = None
+    if rupture_model and rupture_model.endswith('.xml'):
+        [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
-    else:  # assume rupture_dict
+    elif rupture_model and rupture_model.endswith('.json'):
+        with open(rupture_model) as f:
+            rup_data = json.load(f)
+        rup = convert_to_oq_rupture(rup_data)
+    if rup is None:  # assume rupture_dict
         r = oqparam.rupture_dict
         hypo = Point(r['lon'], r['lat'], r['dep'])
         rup = source.rupture.build_planar(
@@ -1066,21 +1103,54 @@ def get_exposure(oqparam, h5=None):
     return exposure
 
 
-def read_df(fname, lon, lat, id):
+def concat_if_different(values):
+    unique_values = values.dropna().unique().astype(str)
+    # If all values are identical, return the single unique value,
+    # otherwise join with "|"
+    return '|'.join(unique_values)
+
+
+def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
-    Read a DataFrame containing lon-lat-id fields and raise an error
-    for duplicate sites, if any
+    Read a DataFrame containing lon-lat-id fields.
+    In case of rows having the same coordinates, duplicates_strategy
+    determines how to manage duplicates:
+
+    - 'error': raise an error (default)
+    - 'keep_first': keep the first occurrence
+    - 'keep_last': keep the last occurrence
+    - 'avg': calculate the average numeric values
     """
-    dframe = pandas.read_csv(fname)
+    assert duplicates_strategy in (
+        'error', 'keep_first', 'keep_last', 'avg'), duplicates_strategy
+    # NOTE: the id field has to be treated as a string even if it contains numbers
+    dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
     dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
-    for key, df in dframe.groupby([lon, lat]):
-        if len(df) > 1:
-            raise InvalidFile('%s: has duplicate sites %s' % (fname, list(df[id])))
+    duplicates = dframe[dframe.duplicated(subset=[lon, lat], keep=False)]
+    if not duplicates.empty:
+        msg = '%s: has duplicate sites %s' % (fname, list(duplicates[id]))
+        if duplicates_strategy == 'error':
+            raise InvalidFile(msg)
+        msg += f' (duplicates_strategy: {duplicates_strategy})'
+        logging.warning(msg)
+        if duplicates_strategy == 'keep_first':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='first')
+        elif duplicates_strategy == 'keep_last':
+            dframe = dframe.drop_duplicates(subset=[lon, lat], keep='last')
+        elif duplicates_strategy == 'avg':
+            string_columns = dframe.select_dtypes(include='object').columns
+            numeric_columns = dframe.select_dtypes(include='number').columns
+            # Group by lon and lat, averaging numeric columns and concatenating by "|"
+            # the different contents of string columns
+            dframe = dframe.groupby([lon, lat], as_index=False).agg(
+                {**{col: concat_if_different for col in string_columns},
+                 **{col: 'mean' for col in numeric_columns}}
+            )
     return dframe
 
 
-def get_station_data(oqparam, sitecol):
+def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     """
     Read the station data input file and build a list of
     ground motion stations and recorded ground motion values
@@ -1090,14 +1160,15 @@ def get_station_data(oqparam, sitecol):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
+    :param duplicates_strategy: either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
     if parallel.oq_distribute() == 'zmq':
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'],
-                 'LONGITUDE', 'LATITUDE', 'STATION_ID')
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+                 duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
@@ -1597,10 +1668,10 @@ def get_checksum32(oqparam, h5=None):
 
 # NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
 @functools.lru_cache(maxsize=4)
-def read_geometries(fname, code, buffer=0):
+def read_geometries(fname, name, buffer=0):
     """
     :param fname: path of the file containing the geometries
-    :param code: name of the primary key field
+    :param name: name of the primary key field
     :param buffer: shapely buffer in degrees
     :returns: data frame with codes and geometries
     """
@@ -1609,16 +1680,39 @@ def read_geometries(fname, code, buffer=0):
         geoms = []
         for feature in f:
             props = feature['properties']
-            codes.append(props[code])
-            geom = geometry.shape(feature['geometry'])
-            geoms.append(geom.buffer(buffer))
+            geom = feature['geometry']
+            code = props[name]
+            if code and geom:
+                codes.append(code)
+                geoms.append(geometry.shape(geom).buffer(buffer))
+            else:
+                logging.error(f'{code=}, {geom=} in {fname}')
     return pandas.DataFrame(dict(code=codes, geom=geoms))
+
+
+@functools.lru_cache()
+def read_cities(fname, lon_name, lat_name, label_name):
+    """
+    Reading coordinates and names of populated places from a CSV file
+
+    :returns: a Pandas DataFrame
+    """
+    data = pandas.read_csv(fname)
+    expected_colnames_set = {lon_name, lat_name, label_name}
+    if not expected_colnames_set.issubset(data.columns):
+        raise ValueError(f"CSV file must contain {expected_colnames_set} columns.")
+    return data
 
 
 def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
+    '''
+    fname = os.path.join(os.path.dirname(mosaic.__file__), 'mosaic.geojson')
+    if os.path.exists(fname):
+        return read_geometries(fname, 'name', buffer)
+    '''
     fname = os.path.join(os.path.dirname(mosaic.__file__),
                          'ModelBoundaries.shp')
     return read_geometries(fname, 'code', buffer)
@@ -1631,6 +1725,18 @@ def read_countries_df(buffer=0.1):
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)
+
+
+def read_cities_df(lon_field='longitude', lat_field='latitude',
+                             label_field='name'):
+    """
+    Reading from a 'worldcities.csv' file in the mosaic_dir, if present, or returning
+    None otherwise
+
+    :returns: a DataFrame of coordinates and names of populated places
+    """
+    fname = os.path.join(os.path.dirname(mosaic.__file__), 'worldcities.csv')
+    return read_cities(fname, lon_field, lat_field, label_field)
 
 
 def read_source_models(fnames, hdf5path='', **converterparams):

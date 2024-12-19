@@ -29,6 +29,7 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
+from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
@@ -57,6 +58,7 @@ def make_figure_magdist(extractors, what):
         ax.grid(True)
         ax.legend()
     return plt
+
 
 def make_figure_hcurves(extractors, what):
     """
@@ -508,6 +510,22 @@ def make_figure_rupture_info(extractors, what):
     if tot == 1:
         # print the full geometry
         print(ex.get('rupture/%d' % rec['rupid']).toml())
+    return plt
+
+
+def make_figure_ebruptures(extractors, what):
+    """
+    $ oq plot "ebruptures?min_mag=6"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    hypo = ex.get(what)['hypo']
+    _fig, ax = plt.subplots()
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    ax.grid(True)
+    ax.scatter(hypo[:, 0], hypo[:, 1])
+    ax.set_title('%d ruptures' % len(hypo))
     return plt
 
 
@@ -1042,7 +1060,8 @@ def make_figure_rupture(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    return plot_rupture(dstore)
+    ebr = get_ebrupture(dstore, rup_id=0)
+    return plot_rupture(ebr.rupture)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1051,7 +1070,8 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    return plot_rupture_3d(dstore)
+    ebr = get_ebrupture(dstore, rup_id=0)
+    return plot_rupture_3d(ebr.rupture)
 
 
 def plot_wkt(wkt_string):

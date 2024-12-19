@@ -788,15 +788,15 @@ class RiskComputerTestCase(unittest.TestCase):
             'sid': [0, 0],
             'gmv_0': [.098234, .165975],
             'DispProb': [.335, .335]})
-        dd4 = rc.get_dd4(asset_df, gmf_df)  # (A, E, L, D)
-        dd0 = dd4[0, 0, 0, 1:]
-        dd1 = dd4[0, 1, 0, 1:]
+        dd5 = rc.get_dd5(asset_df, gmf_df)  # (P, A, E, L, D)
+        dd0 = dd5[0, 0, 0, 0, 1:]
+        dd1 = dd5[0, 0, 1, 0, 1:]
         aac(dd0, [14.538632, 8.006071, 1.669978, 0.343819], atol=1e-6)
         aac(dd1, [24.564302, 13.526962, 2.821575, 0.580912], atol=1e-6)
 
         rng = scientific.MultiEventRNG(master_seed=42, eids=gmf_df.eid)
-        dd4 = rc.get_dd4(asset_df, gmf_df, rng)  # (A, E, L, D)
-        dd0 = dd4[0, 0, 0, 1:]
-        dd1 = dd4[0, 1, 0, 1:]
+        dd5 = rc.get_dd5(asset_df, gmf_df, rng)  # (A, E, L, D)
+        dd0 = dd5[0, 0, 0, 0, 1:]
+        dd1 = dd5[0, 0, 1, 0, 1:]
         aac(dd0, [10, 8, 4, 0])
         aac(dd1, [31, 14, 3, 0], atol=1e-8)

@@ -34,10 +34,10 @@ CONSTS = {
     "Mw1": 16.0}
 
 
-def _get_basin_term(C, z1pt4):
+def _get_basin_term(C, ctx, region=None):
     d0 = CONSTS["D0"]
-    tmp = np.ones_like(z1pt4) * C['Dlmin']
-    return C['pd'] * np.log10(np.maximum(tmp, z1pt4)/d0)
+    tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
+    return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
 def _get_intensity_correction_term(C, region, xvf, focal_depth):
@@ -135,7 +135,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 msg = "Model not supported"
                 raise ValueError(msg)
 
-            mean[m] = (mag_term + _get_basin_term(C, ctx.z1pt4) +
+            mean[m] = (mag_term + _get_basin_term(C, ctx) +
                        _get_shallow_amplification_term(C, ctx.vs30) +
                        _get_intensity_correction_term(
                            C, self.region, ctx.xvf, ctx.hypo_depth))

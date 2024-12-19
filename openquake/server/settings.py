@@ -31,9 +31,16 @@ except ImportError:
     STANDALONE = False
     STANDALONE_APPS = ()
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 TEST = 'test' in sys.argv
 
-INSTALLED_APPS = ('openquake.server.db',)
+# NOTE: the UserProfile class makes it more complicated to add
+# the apps django.contrib.auth and django.contrib.contenttypes conditionally
+# to the fact that the authentication is required. However, it is not a problem
+# to exclude AuthenticationMiddleware and LoginRequiredMiddleware in PUBLIC mode
+INSTALLED_APPS = ('openquake.server.db', 'django.contrib.auth',
+                  'django.contrib.contenttypes')
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
@@ -123,6 +130,8 @@ SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # NOTE: the following can be useful for debugging
+    # 'openquake.server.middleware.PrintHeadersMiddleware',
 )
 
 # Authentication is not enabled by default
@@ -265,8 +274,7 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
 if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent
-    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent',):
+    for app in ('cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
@@ -278,12 +286,17 @@ if APPLICATION_MODE not in ('PUBLIC',):
     COOKIE_CONSENT_LOG_ENABLED = False
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+    elif APPLICATION_MODE == 'AELO':
+        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
     #        parallel
-    EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
+    EMAIL_FILE_PATH = os.path.join(
+        config.directory.custom_tmp or tempfile.gettempdir(),
+        'app-messages')
 
 if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
@@ -291,6 +304,12 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
 if LOCKDOWN:
+
+    # NOTE: the following variables are needed to send pasword reset emails
+    #       using the createnormaluser Django command.
+    USE_HTTPS = True
+    SERVER_PORT = 443
+
     # do not log to file unless running through the webui
     if getpass.getuser() == 'openquake':  # the user that runs the webui
         try:
@@ -330,8 +349,7 @@ if LOCKDOWN:
         'openquake.server.middleware.LoginRequiredMiddleware',
     )
 
-    for app in ('django.contrib.auth',
-                'django.contrib.contenttypes',
+    for app in (
                 'django.contrib.messages',
                 'django.contrib.sessions',
                 'django.contrib.admin',

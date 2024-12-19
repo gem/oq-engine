@@ -1,3 +1,41 @@
+  [Michele Simionato]
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
+  * Parallelized `get_mean_covs` when conditioning the GMFs
+
+  [Christopher Brooks]
+  * Added Seattle Basin classes of Kuehn et al. (2020) NGASUB GMM (uses
+    Cascadia coeffs except for basin term).
+  * Added USGS basin scaling and CyberShake adjustments to the NGAWest2
+    GMMs + ability to pass base gsim arguments within the NSHMP2014 gsim class.
+
+  [Michele Simionato]
+  * Saving the rupture geometries as 32 bit floats to save memory
+  * Internal: added a command `oq filter_around lon lat csvfile`
+  * Added a command `oq plot ebruptures?min_mag=XXX`
+  * Added a script `utils/build_global_ses`
+  * Removed the ability to read GMFs generated with engine <= 3.11
+  * Fixed the filtering of the site collection in event_based with --hc
+  * Internal: writeability check for datadir and scratch_dir (if any)
+
+  [Christopher Brooks]
+  * Added instantiation-level arguments for contextually applying
+    the M9 basin term, the CB14 basin term and the USGS basin scaling
+    model to the AbrahamsonGulerce2020, KuehnEtAl2020, ParkerEtAl2020,
+    ZhaoEtAl2006 and AtkinsonMacias2009 GMMs as required for the 2023
+    US NSHM model's subduction interface GMC. Unit tests are also
+    provided for these GMM adjustments
+
+  [Michele Simionato]
+  * Internal: forcing the signature (C, ctx, region, ...) for _get_basin_term
+    in hazardlib
+  * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
+    disjoint sites and events
+
+  [Paolo Tormene]
+  * Added a `duplicates_strategy` argument to `read_df` and changed the
+    approach used while reading station data, to calculate the average values
+    of stations having the same coordinates instead of raising an error
+
   [Christopher Brooks]
   * Added epistemic uncertainty scaling capabilities to
     the Parker et al. (2020) NGASUB GMM.

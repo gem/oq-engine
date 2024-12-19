@@ -34,6 +34,8 @@ urlpatterns = [
     re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log, name="log"),
     re_path(r'^result/(\d+)$', views.calc_result),
     re_path(r'^(\d+)/result/list$', views.calc_results),
+    re_path(r'^(\d+)/share$', views.calc_share),
+    re_path(r'^(\d+)/unshare$', views.calc_unshare),
 ]
 if settings.APPLICATION_MODE == 'AELO':
     urlpatterns.extend([

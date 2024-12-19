@@ -276,4 +276,4 @@ class SharedArrayTestCase(unittest.TestCase):
                                   for index, value in zip([0, 1], [.1, .2])]
         ).reduce()
         with self.s_array as arr:
-            print(arr)
+            numpy.testing.assert_allclose(arr, [[.1, .1], [.2, .2]])

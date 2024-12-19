@@ -31,6 +31,7 @@ import getpass
 import logging
 import platform
 import functools
+#import multiprocessing.pool
 from os.path import getsize
 from datetime import datetime
 import psutil
@@ -89,7 +90,10 @@ def set_concurrent_tasks_default(calc):
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
         num_workers = parallel.Starmap.num_cores
-    logging.warning('Using %d %s workers', num_workers, dist)
+    if dist == 'no':
+        logging.warning('Disabled distribution')
+    else:
+        logging.warning('Using %d %s workers', num_workers, dist)
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -108,8 +112,7 @@ def manage_signals(job_id, signum, _stack):
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
-        stop_workers(job_id)
-        raise SystemExit('Terminated')
+        sys.exit(f'Killed {job_id}')
 
     if hasattr(signal, 'SIGHUP'):
         # kill the calculation only if os.getppid() != _PPID, i.e. the
@@ -121,7 +124,7 @@ def manage_signals(job_id, signum, _stack):
 
 
 def register_signals(job_id):
-    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
+    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP;
     # when using the Django development server this module is imported by a
     # thread, so one gets a `ValueError: signal only works in main thread` that
     # can be safely ignored
@@ -218,6 +221,19 @@ def run_calc(log):
     return calc
 
 
+def check_directories(calc_id):
+    """
+    Make sure that the datadir and the scratch_dir (if any) are writeable
+    """
+    datadir = logs.get_datadir()
+    scratch_dir = parallel.scratch_dir(calc_id)
+    for dir in (datadir, scratch_dir):
+        assert os.path.exists(dir), dir
+        fname = os.path.join(dir, 'check')
+        open(fname, 'w').close()  # check writeable
+        os.remove(fname)
+
+
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                 user_name=USER, hc_id=None, host=None):
     """
@@ -240,6 +256,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             dic = readinput.get_params(job_ini)
         jobs.append(logs.init(dic, None, log_level, log_file,
                               user_name, hc_id, host))
+    check_directories(jobs[0].calc_id)
     return jobs
 
 
@@ -281,8 +298,10 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                              max_cores // parallel.Starmap.num_cores)
 
     if concurrent_jobs is None:
-        # // 10 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 10 or 1
+        # // 8 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 8 or 1
+        if dist in ('slurm', 'zmq'):
+            print(f'{concurrent_jobs=}')
 
     job_id = jobctxs[0].calc_id
     if precalc:
@@ -336,6 +355,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
+            #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
+            #    pool.starmap(run_calc, args)
             parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:

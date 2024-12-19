@@ -50,6 +50,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
@@ -841,6 +842,21 @@ def extract_agg_losses(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
+# TODO: extend to multiple perils
+def _dmg_get(array, loss_type):
+    # array of shape (A, R)
+    out = []
+    for name in array.dtype.names:
+        try:
+            ltype, _dstate = name.split('-')
+        except ValueError:
+            # ignore secondary perils
+            continue
+        if ltype == loss_type:
+            out.append(array[name])
+    return numpy.array(out).transpose(1, 2, 0)  # shape (A, R, Dc)
+
+
 @extract.add('agg_damages')
 def extract_agg_damages(dstore, what):
     """
@@ -859,9 +875,7 @@ def extract_agg_damages(dstore, what):
         loss_type = what
         tags = []
     if 'damages-rlzs' in dstore:
-        oq = dstore['oqparam']
-        li = oq.lti[loss_type]
-        damages = dstore['damages-rlzs'][:, :, li]
+        damages = _dmg_get(dstore['damages-rlzs'][:], loss_type)
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)
@@ -979,9 +993,8 @@ def extract_gmf_npz(dstore, what):
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
-        imts = list(oq.imtls)
-        sec_imts = oq.sec_imts
-        gmfa = _gmf(df, n, imts, sec_imts)
+        prim_imts = list(oq.get_primary_imtls())
+        gmfa = _gmf(df, n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
@@ -1046,53 +1059,28 @@ def build_damage_dt(dstore):
     """
     oq = dstore['oqparam']
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    perils = attrs['peril']
     limit_states = list(dstore.get_attr('crm', 'limit_states'))
     csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
-    dt_list = [(ds, F32) for ds in ['no_damage'] + limit_states + csqs]
+    dt_list = []
+    for peril in perils:
+        for ds in ['no_damage'] + limit_states + csqs:
+            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
-def build_csq_dt(dstore):
-    """
-    :param dstore: a datastore instance
-    :returns:
-       a composite dtype (csq1, csq2, ...)
-    """
-    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
-    limit_states = list(dstore.get_attr('crm', 'limit_states'))
-    csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
-    dt = numpy.dtype([(csq, F32) for csq in csqs])
-    return dt
-
-
-def build_damage_array(data, damage_dt):
-    """
-    :param data: an array of shape (A, L, D)
-    :param damage_dt: a damage composite data type loss_type -> states
-    :returns: a composite array of length N and dtype damage_dt
-    """
-    A, _L, _D = data.shape
-    dmg = numpy.zeros(A, damage_dt)
-    for a in range(A):
-        for li, lt in enumerate(damage_dt.names):
-            dmg[lt][a] = tuple(data[a, li])
-    return dmg
-
-
 @extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
     oq = dstore['oqparam']
-    damage_dt = build_damage_dt(dstore)
     R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
         R = 1
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for r in range(R):
-        damages = build_damage_array(data[:, r], damage_dt)
-        yield 'rlz-%03d' % r, util.compose_arrays(assets, damages)
+        yield 'rlz-%03d' % r, util.compose_arrays(assets, data[:, r])
 
 
 # tested on oq-risk-tests event_based/etna
@@ -1380,6 +1368,21 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+@extract.add('ebruptures')
+def extract_ebruptures(dstore, what):
+    """
+    Extract the hypocenter of the ruptures.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ebruptures?min_mag=6
+    """
+    qdict = parse(what)
+    rups = dstore['ruptures'][:]
+    if 'min_mag' in qdict:
+        [min_mag] = qdict['min_mag']
+        rups = rups[rups['mag'] >= min_mag]
+    return rups
+
+
 # used in the rupture exporter and in the plugin
 @extract.add('rupture_info')
 def extract_rupture_info(dstore, what):
@@ -1404,13 +1407,21 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.get_rupture_getters(dstore):
-        proxies = rgetter.get_proxies(min_mag)
+    full_lt = dstore['full_lt']
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
+    try:
+        tss = dstore['trt_smr_start_stop']
+    except KeyError:
+        # when starting from GMFs there are no ruptures
+        raise getters.NotFound
+    for trt_smr, start, stop in tss:
+        proxies = calc.get_proxies(dstore.filename, slice(start, stop), min_mag)
+        trt = full_lt.trts[trt_smr // TWO24]
         if 'source_mags' not in dstore:  # ruptures import from CSV
             mags = numpy.unique(dstore['ruptures']['mag'])
         else:
-            mags = dstore[f'source_mags/{rgetter.trt}'][:]
-        rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
+            mags = dstore[f'source_mags/{trt}'][:]
+        rdata = RuptureData(trt, rlzs_by_gsim[trt_smr], mags)
         arr = rdata.to_array(proxies)
         for r in arr:
             if source_id is None:
@@ -1426,7 +1437,7 @@ def extract_rupture_info(dstore, what):
             rows.append(
                 (r['rup_id'], srcid, r['multiplicity'],
                  r['mag'], r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake']))
+                 trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
@@ -1504,12 +1515,11 @@ def extract_ruptures(dstore, what):
         if 'threshold' in qdict:
             [threshold] = qdict['threshold']
             rup_ids = get_relevant_rup_ids(dstore, threshold)
+            ebrups = [ebr for ebr in getters.get_ebruptures(dstore)
+                      if ebr.id in rup_ids and ebr.mag >= min_mag]
         else:
-            rup_ids = None
-        ebrups = []
-        for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
-            ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
-                          for proxy in rgetter.get_proxies(min_mag))
+            ebrups = [ebr for ebr in getters.get_ebruptures(dstore)
+                      if ebr.mag >= min_mag]
     if 'slice' in qdict:
         s0, s1 = qdict['slice']
         slc = slice(s0, s1)

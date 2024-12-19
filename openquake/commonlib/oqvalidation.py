@@ -1404,10 +1404,10 @@ class OqParam(valid.ParamSet):
             
     def check_hazard(self):
         # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv')
+        if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
             self.raise_invalid('You forgot to specify a site_model')
-        elif self.inputs.get('gmfs', '').endswith('.xml'):
+        elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
             self.raise_invalid('GMFs in XML are not supported anymore')
 
         # checks for event_based
@@ -1697,9 +1697,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.sec_imts) or self.inputs.get('multi_peril', ())
         return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in sec_imts}
+                if imt not in self.sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -1840,6 +1839,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a list of secondary outputs
         """
+        mp = self.inputs.get('multi_peril', ())
+        if mp:
+            return list(mp)  # ASH, PYRO, etc
         outs = []
         for sp in self.get_sec_perils():
             outs.extend(sp.outputs)
@@ -1880,6 +1882,12 @@ class OqParam(valid.ParamSet):
     def rupture_xml(self):
         return ('rupture_model' in self.inputs and
                 self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
+    def ruptures_hdf5(self):
+        if ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.hdf5')):
+            return self.inputs['rupture_model']
 
     @property
     def aristotle(self):

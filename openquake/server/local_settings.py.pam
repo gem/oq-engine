@@ -6,8 +6,8 @@ from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
 
 # Enable authentication
 APPLICATION_MODE = 'RESTRICTED'
-# Disable sharing of results across users
-ACL_ON = True
+# Disable sharing of results across users (default True)
+# ACL_ON = True
 
 INSTALLED_APPS += (
     'django_pam',
@@ -36,4 +36,7 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-# TIME_ZONE = 
+# TIME_ZONE =
+
+# This is reasonable in an internal installation, otherwise set it to False
+DEBUG = True

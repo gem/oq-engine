@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 import time
 import os
 import sys
@@ -25,26 +24,26 @@ import tempfile
 import string
 import unittest
 import secrets
-import logging
 import io
 import numpy
-import pathlib
 
 import django
 # from django.apps import apps
-from django.test import Client
-from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.utils.datastructures import MultiValueDict
+from django.test import Client, override_settings
+from django.conf import settings
 from django.http import HttpResponseNotFound
-# from django.conf import settings
-from openquake.commonlib.logs import dbcmd
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
+from openquake.commonlib.dbapi import db
+from openquake.commonlib.logs import dbcmd
+from openquake.engine.engine import create_jobs
 
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
 
 # NOTE: before importing User or any other model, django.setup() is needed,
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+
 
 django.setup()
 try:
@@ -71,6 +70,23 @@ def get_email_content(directory, search_string):
                     return content
     raise FileNotFoundError(
         f'No email was found containing the string {search_string}')
+
+
+def get_or_create_user(level):
+    # creating/getting a user of the given level
+    # and returning the user object and its plain password
+    username = f'django-test-user-level-{level}'
+    email = f'django-test-user-level-{level}@email.test'
+    password = ''.join((secrets.choice(
+        string.ascii_letters + string.digits + string.punctuation)
+        for i in range(8)))
+    user, created = User.objects.get_or_create(username=username, email=email)
+    if created:
+        user.set_password(password)
+    user.save()
+    user.profile.level = level
+    user.profile.save()
+    return user, password  # user.password is the hashed password instead
 
 
 class EngineServerTestCase(django.test.TestCase):
@@ -119,27 +135,16 @@ class EngineServerTestCase(django.test.TestCase):
                 time.sleep(2)
                 return
 
-
-class EngineServerAristotleModeTestCase(EngineServerTestCase):
-
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        username = 'django-test-user'
-        email = 'django-test-user@email.test'
-        password = ''.join((secrets.choice(
-            string.ascii_letters + string.digits + string.punctuation)
-            for i in range(8)))
-        cls.user, created = User.objects.get_or_create(
-            username=username, email=email)
-        if created:
-            cls.user.set_password(password)
-            cls.user.save()
+        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
         cls.c = Client()
-        cls.c.login(username=username, password=password)
+        cls.c.login(username=cls.user1.username, password=cls.password1)
         cls.maxDiff = None
 
     @classmethod
@@ -147,17 +152,13 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
         try:
             cls.wait()
         finally:
-            cls.user.delete()
+            cls.user1.delete()
+        super().tearDownClass()
 
     def aristotle_run_then_remove(
             self, data, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
-            email_backend = 'django.core.mail.backends.filebased.EmailBackend'
-            with self.settings(
-                    APPLICATION_MODE='ARISTOTLE',
-                    WEBUI_ACCESS_LOG_DIR='/home/openquake',
-                    EMAIL_FILE_PATH=email_dir,  # FIXME: this is ignored!
-                    EMAIL_BACKEND=email_backend):
+            with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
                 resp = self.post('aristotle_run', data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
@@ -173,8 +174,9 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                     raise ValueError(
                         b'Invalid JSON response: %r' % resp.content)
                 self.wait()
-                app_msgs_dir = os.path.join(tempfile.gettempdir(),
-                                            'app-messages')
+                app_msgs_dir = os.path.join(
+                    config.directory.custom_tmp or tempfile.gettempdir(),
+                    'app-messages')
                 for job_id in js:
                     if failure_reason:
                         tb = self.get('%s/traceback' % job_id)
@@ -223,12 +225,12 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                         self.assertIn('failed', email_content)
                     else:
                         self.assertIn('finished correctly', email_content)
-                    self.assertIn('From: aristotlenoreply@openquake.org',
+                    email_from = settings.EMAIL_HOST_USER
+                    email_to = settings.EMAIL_SUPPORT
+                    self.assertIn(f'From: {email_from}', email_content)
+                    self.assertIn('To: django-test-user-level-1@email.test',
                                   email_content)
-                    self.assertIn('To: django-test-user@email.test',
-                                  email_content)
-                    self.assertIn('Reply-To: aristotlesupport@openquake.org',
-                                  email_content)
+                    self.assertIn(f'Reply-To: {email_to}', email_content)
                     if failure_reason:
                         self.assertIn(failure_reason, email_content)
                     else:
@@ -241,137 +243,6 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
             if ret.status_code != 200:
                 raise RuntimeError(
                     'Unable to remove job %s:\n%s' % (job_id, ret))
-
-    def test_get_rupture_data_from_shakemap_conversion_error(self):
-        usgs_id = 'us6000jllz'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'rupture_file', 'rupture_file_from_usgs', 'error',
-            'station_data_file_from_usgs', 'mosaic_models', 'trts']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
-        self.assertEqual(ret_dict['rupture_file'], None)
-        self.assertEqual(ret_dict['local_timestamp'],
-                         '2023-02-06 04:17:34+03:00')
-        self.assertEqual(ret_dict['time_event'], 'night')
-        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
-        self.assertEqual(ret_dict['trts'], {
-            'ARB': ['TECTONIC_REGION_1',
-                    'TECTONIC_REGION_2',
-                    'TECTONIC_REGION_3',
-                    'TECTONIC_REGION_4',
-                    'Active Shallow Crust EMME',
-                    'Stable Shallow Crust EMME',
-                    'Subduction Interface EMME',
-                    'Subduction Inslab EMME',
-                    'Deep Seismicity EMME'],
-            'MIE': ['Active Shallow Crust',
-                    'Stable Shallow Crust',
-                    'Subduction Interface',
-                    'Subduction Inslab',
-                    'Deep Seismicity']})
-        self.assertIn('Unable to convert the rupture from the USGS format',
-                      ret_dict['error'])
-        self.assertEqual(ret_dict['is_point_rup'], True)
-        self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
-
-    def test_get_rupture_data_from_shakemap_correctly_converted(self):
-        usgs_id = 'us7000n7n8'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'rupture_file', 'rupture_file_from_usgs',
-            'station_data_error',
-            'station_data_file_from_usgs', 'trts', 'mosaic_models', 'trt']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
-        rupfile = ret_dict['rupture_file']
-        self.assertTrue(
-            pathlib.Path(rupfile).resolve().is_file(),
-            f'Rupture file {rupfile} does not exist')
-        self.assertEqual(ret_dict['rupture_file'],
-                         ret_dict['rupture_file_from_usgs'])
-        self.assertEqual(
-            ret_dict['station_data_error'],
-            'Unable to collect station data for rupture'
-            ' identifier "us7000n7n8": stationlist.json was'
-            ' downloaded, but it contains no features')
-        self.assertEqual(ret_dict['local_timestamp'],
-                         '2024-08-18 07:10:26+12:00')
-        self.assertEqual(ret_dict['time_event'], 'transit')
-        self.assertEqual(ret_dict['mosaic_models'], ['NEA'])
-        self.assertEqual(ret_dict['trts'], {
-            'NEA': ['Cratonic Crust', 'Stable Continental Crust',
-                    'Active Shallow Crust', 'Subduction Interface',
-                    'Subduction IntraSlab']})
-        self.assertEqual(ret_dict['trt'], 'Active Shallow Crust')
-        self.assertEqual(ret_dict['is_point_rup'], False)
-        self.assertEqual(ret_dict['usgs_id'], 'us7000n7n8')
-
-    def test_get_point_rupture_data_from_shakemap(self):
-        usgs_id = 'us7000n05d'
-        data = dict(usgs_id=usgs_id)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'rupture_file', 'rupture_file_from_usgs',
-            'station_data_file_from_usgs', 'trts',
-            'mosaic_models']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
-        self.assertEqual(ret_dict['rupture_file'], None)
-        self.assertEqual(ret_dict['is_point_rup'], True)
-        self.assertEqual(ret_dict['usgs_id'], 'us7000n05d')
-        self.assertEqual(ret_dict['mosaic_models'], ['SAM'])
-
-    def test_get_rupture_data_from_finite_fault(self):
-        usgs_id = 'us6000jllz'
-        data = dict(usgs_id=usgs_id, ignore_shakemap=True)
-        ret = self.post('aristotle_get_rupture_data', data=data)
-        ret_dict = json.loads(ret.content)
-        # NOTE: values returned by the USGS often change with time, so we check
-        # only that all the expected keys are present and a subset of stable
-        # values
-        expected_keys = [
-            'is_point_rup', 'local_timestamp', 'time_event', 'lon', 'lat',
-            'dep', 'mag', 'rake', 'usgs_id',
-            'rupture_file', 'rupture_file_from_usgs',
-            'station_data_file_from_usgs', 'trts',
-            'mosaic_models']
-        self.assertEqual(sorted(ret_dict.keys()), sorted(expected_keys))
-        self.assertEqual(ret_dict['rupture_file'], None)
-        self.assertEqual(ret_dict['usgs_id'], 'us6000jllz')
-        self.assertEqual(ret_dict['mosaic_models'], ['ARB', 'MIE'])
-        self.assertEqual(ret_dict['trts'], {
-            'ARB': ['TECTONIC_REGION_1',
-                    'TECTONIC_REGION_2',
-                    'TECTONIC_REGION_3',
-                    'TECTONIC_REGION_4',
-                    'Active Shallow Crust EMME',
-                    'Stable Shallow Crust EMME',
-                    'Subduction Interface EMME',
-                    'Subduction Inslab EMME',
-                    'Deep Seismicity EMME'],
-            'MIE': ['Active Shallow Crust',
-                    'Stable Shallow Crust',
-                    'Subduction Interface',
-                    'Subduction Inslab',
-                    'Deep Seismicity']})
 
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',
@@ -387,96 +258,123 @@ class EngineServerAristotleModeTestCase(EngineServerTestCase):
                     maximum_distance_stations='')
         self.aristotle_run_then_remove(data)
 
-    def get_data(self):
-        data = {'usgs_id': ['FromFile'], 'lon': ['84.4'], 'lat': ['27.6'],
-                'dep': ['30'], 'mag': ['7'], 'rake': ['90'], 'dip': ['90'],
-                'strike': ['0'],
-                'time_event': ['day'],
-                'maximum_distance': ['100'],
-                'trt': ['active shallow crust normal'],
-                'truncation_level': ['3'],
-                'number_of_ground_motion_fields': ['2'],
-                'asset_hazard_distance': ['15'], 'ses_seed': ['42'],
-                'local_timestamp': [''],
-                'maximum_distance_stations': [''],
-                'mosaic_model': ['IND']}  # close to both 'CHN' and 'IND'
-        return data
-
-    def get_path_and_content(self, filename):
-        curr_file_path = os.path.abspath(__file__)
-        folder_path = os.path.dirname(curr_file_path)
-        file_path = os.path.join(
-            folder_path, 'data', filename)
-        with open(file_path, 'rb') as file:
-            file_content = file.read()
-        return file_path, file_content
-
-    def create_temporary_uploaded_file(self, name, content, content_type):
-        temp_file = TemporaryUploadedFile(
-            name=name,
-            content_type=content_type,
-            size=len(content),
-            charset='utf-8'
-        )
-        temp_file.write(content)
-        temp_file.seek(0)  # Ensure the file pointer is at the beginning
-        return temp_file
-
-    def test_run_by_rupture_model_then_remove_calc(self):
-        data = self.get_data()
-        rupture_file_path, rupture_file_content = self.get_path_and_content(
-            'fault_rupture.xml')
-        rupture_uploaded_file = self.create_temporary_uploaded_file(
-            rupture_file_path, rupture_file_content, 'text/xml')
-        files = MultiValueDict({"rupture_file": rupture_uploaded_file})
-        data.update(files)
-        self.aristotle_run_then_remove(data)
-
-    def test_run_by_rupture_model_with_stations_then_remove_calc(self):
-        data = self.get_data()
-        data['maximum_distance_stations'] = '100'
-        rupture_file_path, rupture_file_content = self.get_path_and_content(
-            'fault_rupture.xml')
-        stations_file_path, stations_file_content = self.get_path_and_content(
-            'stationlist_seismic.csv')
-        rupture_uploaded_file = self.create_temporary_uploaded_file(
-            rupture_file_path, rupture_file_content, 'text/xml')
-        stations_uploaded_file = self.create_temporary_uploaded_file(
-            stations_file_path, stations_file_content, 'text/csv')
-        files = MultiValueDict({
-            'rupture_file': rupture_uploaded_file,
-            'station_data_file': stations_uploaded_file})
-        data.update(files)
-        self.aristotle_run_then_remove(data)
-
-    @unittest.skip("TODO: to be implemented")
-    def test_failing_site_association_error(self):
-        pass
-
-    def invalid_input(self, params, expected_error):
-        # NOTE: avoiding to print the expected traceback
-        logging.disable(logging.CRITICAL)
-        resp = self.post('aristotle_run', params)
-        logging.disable(logging.NOTSET)
-        self.assertEqual(resp.status_code, 400)
-        resp_dict = json.loads(resp.content.decode('utf8'))
-        print(resp_dict)
-        self.assertIn(expected_error, resp_dict['error_msg'])
-
-    @unittest.skip("TODO: to be implemented")
-    def test_invalid_latitude(self):
-        pass
-
-    @unittest.skip("TODO: to be implemented")
-    def test_invalid_longitude(self):
-        pass
-
+    # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', dict(archive=a))
-        assert resp.status_code == 404, resp
+        self.assertEqual(resp.status_code, 404, resp)
 
+    # check that the URL 'validate_zip' cannot be accessed in ARISTOTLE mode
     def test_can_not_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
-        assert resp.status_code == 404, resp
+        self.assertEqual(resp.status_code, 404, resp)
+
+
+class ShareJobTestCase(django.test.TestCase):
+
+    @classmethod
+    def post(cls, path, data=None):
+        return cls.c.post('/v1/calc/%s' % path, data)
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user0, cls.password0 = get_or_create_user(0)  # level 0
+        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.user2, cls.password2 = get_or_create_user(2)  # level 2
+        cls.c = Client()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.user0.delete()
+        cls.user1.delete()
+        cls.user2.delete()
+        super().tearDownClass()
+
+    def test_share_complete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_share_complete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.json(),
+                         {'success': f'The status of calculation {job.calc_id} was'
+                                     f' changed from "complete" to "shared"'})
+
+    def test_share_incomplete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_share_incomplete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'created', 'is_running': 1}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.json(),
+                         {'error': f'Can not share calculation {job.calc_id} from'
+                                   f' status "created"'})
+
+    def test_share_shared_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_share_shared_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.json(),
+                         {'success': f'Calculation {job.calc_id} was already shared'})
+
+    def test_unshare_complete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_complete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.json(),
+                         {'success': f'Calculation {job.calc_id} was already complete'})
+
+    def test_unshare_incomplete_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_incomplete_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'created', 'is_running': 1}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.json(),
+                         {'error': f'Can not force the status of calculation'
+                                   f' {job.calc_id} from "created" to "complete"'})
+
+    def test_unshare_shared_job(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.json(),
+                         {'success': f'The status of calculation {job.calc_id} was'
+                                     f' changed from "shared" to "complete"'})
+
+    def test_share_or_unshare_user_level_below_2(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_unshare_job')
+        [job] = create_jobs([job_dic])
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)
+        self.c.login(username=self.user0.username, password=self.password0)
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)

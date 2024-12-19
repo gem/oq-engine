@@ -179,7 +179,7 @@ class _GeographicObjects(object):
             except ValueError:  # no field of name depth
                 depths = numpy.zeros_like(lons)
         else:
-            raise TypeError('%r not supported' % objects)
+            raise TypeError('{} not supported'.format(objects))
         self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
 
     def get_closest(self, lon, lat, depth=0):
@@ -307,7 +307,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     :param mode:
         if 'strict' fail if at least one site is not associated
         if 'error' fail if all sites are not associated
-    :returns: (filtered site collection, filtered objects)
+    :returns: (filtered site collection, filtered objects, discarded objects)
     """
     return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 

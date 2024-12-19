@@ -23,9 +23,8 @@ import numpy
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
-from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, get_ebr)
-from openquake.commonlib import datastore
+from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
+from openquake.commonlib.calc import get_proxies
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -349,41 +348,34 @@ class MapGetter(object):
         return means
 
 
-def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
-    """
-    :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
-    :param ct: number of concurrent tasks
-    :returns: a list of RuptureGetters
-    """
-    full_lt = dstore['full_lt'].init()
-    rup_array = dstore['ruptures'][:]
-    if rupids is not None:
-        rup_array = rup_array[numpy.isin(rup_array['id'], rupids)]
-    if len(rup_array) == 0:
-        raise NotFound('There are no ruptures in %s' % dstore)
-    proxies = [RuptureProxy(rec) for rec in rup_array]
-    maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
-    rgetters = []
-    for block in general.block_splitter(
-            proxies, maxweight, operator.itemgetter('n_occ'),
-            key=operator.itemgetter('trt_smr')):
-        trt_smr = block[0]['trt_smr']
-        rbg = full_lt.get_rlzs_by_gsim(trt_smr)
-        rg = RuptureGetter(block, dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), rbg)
-        rgetters.append(rg)
-    return rgetters
-
-
 def get_ebruptures(dstore):
     """
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    for rgetter in get_rupture_getters(dstore):
-        for proxy in rgetter.get_proxies():
-            ebrs.append(proxy.to_ebr(rgetter.trt))
+    trts = list(dstore['full_lt/gsim_lt'].values)
+    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
+        trt = trts[trt_smr // TWO24]
+        for proxy in get_proxies(dstore.filename, slice(start, stop)):
+            ebrs.append(proxy.to_ebr(trt))
     return ebrs
+
+
+def get_ebrupture(dstore, rup_id):  # used in show rupture
+    """
+    This is EXTREMELY inefficient, since it reads all ruptures.
+    NB: it assumes rup_is is unique
+    """
+    rups = dstore['ruptures'][:]  # read everything in memory
+    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
+    idxs, = numpy.where(rups['id'] == rup_id)
+    if len(idxs) == 0:
+        raise ValueError(f"Missing {rup_id=}")
+    [rec] = rups[idxs]
+    trts = dstore.getitem('full_lt').attrs['trts']
+    trt = trts[rec['trt_smr'] // TWO24]
+    geom = rupgeoms[rec['geom_id']]
+    return get_ebr(rec, geom, trt)
 
 
 def line(points):
@@ -400,92 +392,3 @@ def multiline(array3RC):
     lines = 'MULTILINESTRING(%s)' % ', '.join(
         line(array3RC[:, r, :].T) for r in range(R))
     return lines
-
-
-def get_ebrupture(dstore, rup_id):  # used in show rupture
-    """
-    This is EXTREMELY inefficient, so it must be used only when you are
-    interested in a single rupture.
-    """
-    rups = dstore['ruptures'][:]  # read everything in memory
-    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
-    idxs, = numpy.where(rups['id'] == rup_id)
-    if len(idxs) == 0:
-        raise ValueError(f"Missing {rup_id=}")
-    [rec] = rups[idxs]
-    trts = dstore.getitem('full_lt').attrs['trts']
-    trt = trts[rec['trt_smr'] // TWO24]
-    geom = rupgeoms[rec['geom_id']]
-    return get_ebr(rec, geom, trt)
-
-
-# this is never called directly; get_rupture_getters is used instead
-class RuptureGetter(object):
-    """
-    :param proxies:
-        a list of RuptureProxies
-    :param filename:
-        path to the HDF5 file containing a 'rupgeoms' dataset
-    :param trt_smr:
-        source group index
-    :param trt:
-        tectonic region type string
-    :param rlzs_by_gsim:
-        dictionary gsim -> rlzs for the group
-    """
-    def __init__(self, proxies, filename, trt_smr, trt, rlzs_by_gsim):
-        self.proxies = proxies
-        self.weight = sum(proxy['n_occ'] for proxy in proxies)
-        self.filename = filename
-        self.trt_smr = trt_smr
-        self.trt = trt
-        self.rlzs_by_gsim = rlzs_by_gsim
-        self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
-
-    @property
-    def num_ruptures(self):
-        return len(self.proxies)
-
-    @property
-    def seeds(self):
-        return [p['seed'] for p in self.proxies]
-
-    def get_proxies(self, min_mag=0):
-        """
-        :returns: a list of RuptureProxies
-        """
-        proxies = []
-        with datastore.read(self.filename) as dstore:
-            rupgeoms = dstore['rupgeoms']
-            for proxy in self.proxies:
-                if proxy['mag'] < min_mag:
-                    # discard small magnitudes
-                    continue
-                proxy.geom = rupgeoms[proxy['geom_id']]
-                proxies.append(proxy)
-        return proxies
-
-    # called in ebrisk calculations
-    def split(self, srcfilter, maxw):
-        """
-        :returns: RuptureProxies with weight < maxw
-        """
-        proxies = []
-        for proxy in self.proxies:
-            sids = srcfilter.close_sids(proxy.rec, self.trt)
-            if len(sids):
-                proxies.append(proxy)
-        rgetters = []
-        for block in general.block_splitter(proxies, maxw, weight):
-            rg = RuptureGetter(block, self.filename, self.trt_smr, self.trt,
-                               self.rlzs_by_gsim)
-            rgetters.append(rg)
-        return rgetters
-
-    def __len__(self):
-        return len(self.proxies)
-
-    def __repr__(self):
-        wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
-        return '<%s trt_smr=%d, %d rupture(s)%s>' % (
-            self.__class__.__name__, self.trt_smr, len(self), wei)

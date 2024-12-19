@@ -1859,6 +1859,42 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
 
+    def test_multiple(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="EUR">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                            ToroEtAl2002
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        <logicTree logicTreeID="MIE">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="ASC">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        """)
+        lts = logictree.GsimLogicTree.read_dict(gettemp(xml))
+        self.assertEqual(list(lts), ['EUR', 'MIE'])
+
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
     def setUp(self):

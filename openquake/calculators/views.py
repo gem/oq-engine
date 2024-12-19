@@ -32,12 +32,11 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg)
-from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
+    get_array, group_array, fast_agg, sum_records)
+from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -554,20 +553,18 @@ def view_portfolio_loss(token, dstore):
 
 # used in the oq-risk-tests
 @view.add('portfolio_dmgdist')
-def portfolio_dmgdist(token, dstore):
+def view_portfolio_dmgdist(token, dstore):
     """
     The portfolio damages extracted from the first realization of damages-rlzs
     """
-    oq = dstore['oqparam']
-    dstates = ['no_damage'] + oq.limit_states
-    D = len(dstates)
-    arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
-    tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
-    tbl['loss_type'] = oq.loss_types
-    tbl['total'] = arr.sum(axis=1)
-    for dsi, ds in enumerate(dstates):
-        tbl[ds] = arr[:, dsi]
-    return tbl
+    sums = sum_records(dstore['damages-rlzs'][:, 0])
+    acc = AccumDict(accum=[])
+    for name in sums.dtype.names:
+        ltype, dstate = name.split('-')
+        acc[dstate].append(sums[name][0])
+        if dstate == 'no_damage':
+            acc['loss_type'].append(ltype)
+    return pandas.DataFrame(acc)
 
 
 @view.add('portfolio_damage')
@@ -587,13 +584,10 @@ def view_portfolio_damage(token, dstore):
         return df.set_index('loss_type')
     # dimensions assets, stat, dmg_state
     if 'damages-stats' in dstore:
-        attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
-        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+        arr = dstore.sel('damages-stats', stat='mean')[:, 0]
     else:
-        attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
-        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))  # shape D
-    rows = [(lt,) + tuple(row) for lt, row in zip(attrs['loss_type'], arr)]        
-    return numpy.array(rows, dt(['loss_type'] + attrs['dmg_state']))
+        arr = dstore.sel('damages-rlzs', rlz=0)[:, 0]
+    return sum_records(arr)
 
 
 def sum_table(records):
@@ -1594,20 +1588,6 @@ def view_rup(token, dstore):
     df = dstore.read_df('rup', sel=dict(src_id=src_id))
     df = df.sort_values(['rup_id', 'sids']).set_index('rup_id')
     return df
-
-
-@view.add('usgs_rupture')
-def view_usgs_rupture(token, dstore):
-    """
-    Show the parameters of a rupture downloaded from the USGS site.
-    $ oq show usgs_rupture:us70006sj8
-    {'lon': 74.628, 'lat': 35.5909, 'dep': 13.8, 'mag': 5.6, 'rake': 0.0}
-    """
-    try:
-        usgs_id = token.split(':', 1)[1]
-    except IndexError:
-        return 'Example: oq show usgs_rupture:us70006sj8'
-    return download_rupture_dict(usgs_id)
 
 
 # tested in oq-risk-tests etna

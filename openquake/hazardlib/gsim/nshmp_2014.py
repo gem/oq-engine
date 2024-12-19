@@ -20,6 +20,7 @@
 Module exports :class:`AtkinsonMacias2009NSHMP2014` and :class:`NSHMP2014`
 """
 import numpy as np
+import inspect
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
 
@@ -61,7 +62,7 @@ class NSHMP2014(base.GMPE):
     REQUIRES_RUPTURE_PARAMETERS = ()
     REQUIRES_SITES_PARAMETERS = ()
 
-    def __init__(self, gmpe_name, sgn):
+    def __init__(self, gmpe_name, sgn, **kwargs):
         self.gmpe_name = gmpe_name
         self.sgn = sgn
         if self.sgn == 0:
@@ -75,6 +76,19 @@ class NSHMP2014(base.GMPE):
         # are given in terms of Rrup, so both are required in the subclass
         self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES | {'rrup'})
         self.gsim = cls()  # underlying gsim
+        # Add any GMM specific inputs from kwargs
+        exp_kwargs = inspect.signature(cls.__init__).parameters.keys()
+        for kwarg in kwargs:
+            if kwarg not in exp_kwargs: # Prevent silently passing incorrect argument
+                raise ValueError(
+                    f'{kwarg} is not a recognised argument for {cls.__name__}')
+            # Add z1pt0 if basin variant of BSSA14 (usually added 
+            # in BSSA14's init method but inherently omitted here)
+            if (self.gmpe_name == 'BooreEtAl2014' and kwarg == 'region'
+                and kwargs[kwarg] != "nobasin"):
+                self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
+            setattr(self.gsim, kwarg, kwargs[kwarg])
+            
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
