@@ -34,7 +34,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SSlabNewZealand`,
                :class:`KuehnEtAl2020SSlabSouthAmerica`,
                :class:`KuehnEtAl2020SSlabTaiwan`,
-               :class:`KuehnEtAl2020SSSlabCascadiaSeattleBasin`,
+               :class:`KuehnEtAl2020SSlabCascadiaSeattleBasin`,
 """
 import numpy as np
 import os
@@ -494,8 +494,9 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
     # is included
     if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "Sea"):
         
-        # Get USGS basin scaling factor if required (can only be for 
-        # CAS region)
+        # Get USGS basin scaling factor if required (checks during
+        # init ensure can only be applied to the CAS or Sea regions
+        # which use z2pt5
         if usgs_bs:
             usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
         else:
@@ -511,7 +512,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
             if imt.period >= 1.9:
                 fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # M9 term instead
 
-         # Now add the basin term to pre-basin amp mean
+        # Now add the basin term to pre-basin amp mean
         mean += fb * usgs_baf
 
     return mean
@@ -737,15 +738,12 @@ class KuehnEtAl2020SInter(GMPE):
         self.region = region
 
         # For some regions a basin depth term is defined
-        if self.region in ("CAS", "JPN"):
-            # If region is CAS or JPN then the GMPE needs Z2.5
-            self.REQUIRES_SITES_PARAMETERS = \
-                 self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
+        if self.region in ("CAS", "JPN", "Sea"):
+            # If region is CAS, JPN or Sea then the GMPE needs Z2.5
+            self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
-        else:
-            pass # Seattle Basin uses imt-dependent fixed theta_c11_Sea
 
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
