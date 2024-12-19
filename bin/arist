@@ -2,4 +2,5 @@
 import sys
 from openquake.engine.aristotle import main_cmd
 if __name__ == '__main__':
-    main_cmd(sys.argv[1], loglevel='info', userlevel=2)  # us7000k9f0
+    # us7000k9f0
+    main_cmd(sys.argv[1], maximum_distance='200', loglevel='info', userlevel=2)
