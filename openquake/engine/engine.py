@@ -90,7 +90,10 @@ def set_concurrent_tasks_default(calc):
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
         num_workers = parallel.Starmap.num_cores
-    logging.warning('Using %d %s workers', num_workers, dist)
+    if dist == 'no':
+        logging.warning('Disabled distribution')
+    else:
+        logging.warning('Using %d %s workers', num_workers, dist)
 
 
 class MasterKilled(KeyboardInterrupt):

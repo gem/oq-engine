@@ -409,9 +409,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
-                'You must reduce the number of sites i.e. enlarge '
-                'region_grid_spacing)')
-        mea, tau, phi = computer.get_mea_tau_phi()
+                'You must reduce the number of sites i.e. maximum_distance')
+        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
     dstore.swmr_on()
