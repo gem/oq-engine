@@ -1714,8 +1714,8 @@ def read_mosaic_df(buffer):
         return read_geometries(fname, 'name', buffer)
     '''
     fname = os.path.join(os.path.dirname(mosaic.__file__),
-                         'ModelBoundaries.shp')
-    return read_geometries(fname, 'code', buffer)
+                         'mosaic.geojson')
+    return read_geometries(fname, 'name', buffer)
 
 
 def read_countries_df(buffer=0.1):
