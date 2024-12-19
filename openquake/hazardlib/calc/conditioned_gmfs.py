@@ -384,6 +384,36 @@ def compute_spatial_cross_covariance_matrix(
     return numpy.linalg.multi_dot([diag1, rho, diag2])
 
 
+def gen_mu_tau_phi(cmaker, sdata, observed_imts, target_imts,
+                   mean_stds_D, mean_stds_Y, target, station_filtered,
+                   compute_cov, cross_correl_between):
+    for g, gsim in enumerate(cmaker.gsims):
+        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+            if not (type(gsim).__name__ == "ModifiableGMPE"
+                    and "add_between_within_stds" in gsim.kwargs):
+                raise NoInterIntraStdDevs(gsim)
+
+        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
+        # so, unlike the regular gsim get_mean_std, a numpy ndarray
+        # won't work well as the 4 components will be non-homogeneous
+        for m, o_imt in enumerate(observed_imts):
+            im = o_imt.string
+            sdata[im + "_median"] = mean_stds_D[0, g, m]
+            sdata[im + "_sigma"] = mean_stds_D[1, g, m]
+            sdata[im + "_tau"] = mean_stds_D[2, g, m]
+            sdata[im + "_phi"] = mean_stds_D[3, g, m]
+        for m, target_imt in enumerate(target_imts):
+            result = create_result(
+                target_imt, target_imts, observed_imts,
+                sdata, target, station_filtered,
+                compute_cov, cross_correl_between)
+            mu, tau, phi = get_mu_tau_phi(
+                target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
+                sdata, target, station_filtered,
+                compute_cov, result)
+            yield g, m, mu, tau, phi
+
+
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
         rupture, cmaker, station_sitecol, station_data,
@@ -393,7 +423,6 @@ def get_mean_covs(
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
-
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
 
@@ -435,34 +464,13 @@ def get_mean_covs(
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
-    for g, gsim in enumerate(cmaker.gsims):
-        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-            if not (type(gsim).__name__ == "ModifiableGMPE"
-                    and "add_between_within_stds" in gsim.kwargs):
-                raise NoInterIntraStdDevs(gsim)
-
-        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
-        # so, unlike the regular gsim get_mean_std, a numpy ndarray
-        # won't work well as the 4 components will be non-homogeneous
-        sdata = station_data[mask].copy()    
-        for m, o_imt in enumerate(observed_imts):
-            im = o_imt.string
-            sdata[im + "_median"] = mean_stds_D[0, g, m]
-            sdata[im + "_sigma"] = mean_stds_D[1, g, m]
-            sdata[im + "_tau"] = mean_stds_D[2, g, m]
-            sdata[im + "_phi"] = mean_stds_D[3, g, m]
-        for m, target_imt in enumerate(target_imts):
-            result = create_result(
-                target_imt, target_imts, observed_imts,
-                sdata, target, station_filtered,
-                compute_cov, cross_correl_between)
-            mu, tau, phi = get_mu_tau_phi(
-                target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
-                sdata, target, station_filtered,
-                compute_cov, result)
-            me[g, m] = mu
-            ta[g, m] = tau
-            ph[g, m] = phi
+    for g, m, mu, tau, phi in gen_mu_tau_phi(
+            cmaker, station_data[mask].copy(), observed_imts, target_imts,
+            mean_stds_D, mean_stds_Y, target, station_filtered,
+            compute_cov, cross_correl_between):
+        me[g, m] = mu
+        ta[g, m] = tau
+        ph[g, m] = phi
 
     if sigma:
         return [me, ta + ph, ta, ph]
