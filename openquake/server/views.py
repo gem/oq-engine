@@ -442,6 +442,7 @@ def calc_list(request, id=None):
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
+        response_data = [job for job in response_data if str(job['id']) == id]
         if not response_data:
             return HttpResponseNotFound()
         [response_data] = response_data

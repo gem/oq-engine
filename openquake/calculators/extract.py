@@ -50,6 +50,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
@@ -1406,13 +1407,21 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.get_rupture_getters(dstore):
-        proxies = rgetter.get_proxies(min_mag)
+    full_lt = dstore['full_lt']
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
+    try:
+        tss = dstore['trt_smr_start_stop']
+    except KeyError:
+        # when starting from GMFs there are no ruptures
+        raise getters.NotFound
+    for trt_smr, start, stop in tss:
+        proxies = calc.get_proxies(dstore.filename, slice(start, stop), min_mag)
+        trt = full_lt.trts[trt_smr // TWO24]
         if 'source_mags' not in dstore:  # ruptures import from CSV
             mags = numpy.unique(dstore['ruptures']['mag'])
         else:
-            mags = dstore[f'source_mags/{rgetter.trt}'][:]
-        rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
+            mags = dstore[f'source_mags/{trt}'][:]
+        rdata = RuptureData(trt, rlzs_by_gsim[trt_smr], mags)
         arr = rdata.to_array(proxies)
         for r in arr:
             if source_id is None:
@@ -1428,7 +1437,7 @@ def extract_rupture_info(dstore, what):
             rows.append(
                 (r['rup_id'], srcid, r['multiplicity'],
                  r['mag'], r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake']))
+                 trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
@@ -1506,12 +1515,11 @@ def extract_ruptures(dstore, what):
         if 'threshold' in qdict:
             [threshold] = qdict['threshold']
             rup_ids = get_relevant_rup_ids(dstore, threshold)
+            ebrups = [ebr for ebr in getters.get_ebruptures(dstore)
+                      if ebr.id in rup_ids and ebr.mag >= min_mag]
         else:
-            rup_ids = None
-        ebrups = []
-        for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
-            ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
-                          for proxy in rgetter.get_proxies(min_mag))
+            ebrups = [ebr for ebr in getters.get_ebruptures(dstore)
+                      if ebr.mag >= min_mag]
     if 'slice' in qdict:
         s0, s1 = qdict['slice']
         slc = slice(s0, s1)

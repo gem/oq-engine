@@ -78,11 +78,8 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/geoscience_australia.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/gns.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nanyang.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nerc.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nied.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nrcan.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/nset.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/protezione_civile.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/swiss_agency.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/public_governors/t_e_m.png" width="20%" align="left" />
@@ -140,10 +137,12 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Products Distribution Partners
 
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/climate_engine.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/dc_climate.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/eigen_risk.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/imagecat.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/impact_forecasting.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/jupiter_intelligence.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/nasdaq.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners_logo_website/product_distribution_partners/verisk.png" width="20%" />
 

@@ -610,9 +610,19 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/event_based_mfd.csv', fname, delta=1E-6)
 
     def test_30(self):
+        # build the ruptures, then the GMFs
         out = self.run_calc(case_30.__file__, 'job.ini', exports='csv')
+        hc_id = self.calc.datastore.calc_id
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+
+        # make sure starting from ruptures without logic tree is possible
+        self.run_calc(case_30.__file__, 'job.ini', sites='-123 49',
+                      ground_motion_fields='true',
+                      intensity_measure_types='PGA',
+                      gsim_logic_tree_file='',
+                      source_model_logic_tree_file='',
+                      hazard_calculation_id=hc_id)
 
     def test_31(self):
         # HM2018CorrelationModel with filtered site collection

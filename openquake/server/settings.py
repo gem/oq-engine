@@ -304,6 +304,12 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
 if LOCKDOWN:
+
+    # NOTE: the following variables are needed to send pasword reset emails
+    #       using the createnormaluser Django command.
+    USE_HTTPS = True
+    SERVER_PORT = 443
+
     # do not log to file unless running through the webui
     if getpass.getuser() == 'openquake':  # the user that runs the webui
         try:
