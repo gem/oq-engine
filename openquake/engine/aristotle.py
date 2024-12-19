@@ -64,7 +64,8 @@ def main_cmd(usgs_id, rupture_file=None,
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None, station_data_file=None,
              maximum_distance_stations='',
-             loglevel='warn'):
+             loglevel='warn',
+             userlevel=2):
     """
     This script is meant to be called from the command-line
     """
@@ -81,7 +82,7 @@ def main_cmd(usgs_id, rupture_file=None,
     post['usgs_id'] = usgs_id
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = aristotle_validate(
-        post, User(), rupture_file, station_data_file, monitor)
+        post, User(level=userlevel), rupture_file, station_data_file, monitor)
     if err:
         callback(None, oqparams, exc=err)
         return
@@ -116,6 +117,7 @@ main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.loglevel = 'Log level'
+main_cmd.userlevel = 'User level'
 
 if __name__ == '__main__':
     sap.run(main_cmd)

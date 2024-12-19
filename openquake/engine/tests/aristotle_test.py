@@ -23,8 +23,8 @@ import pytest
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
-
 cd = pathlib.Path(__file__).parent
+
 
 def check_export_job(dstore):
     fnames = export(('job', 'zip'), dstore)
@@ -46,6 +46,7 @@ def check_export_job(dstore):
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_aristotle(n):
+    # NB: expecting exposure in oq-engine and not in mosaic_dir!
     if not os.path.exists(cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest('Please download exposure.hdf5')
     calc = check(cd / f'aristotle{n}/job.ini', what='aggrisk')
