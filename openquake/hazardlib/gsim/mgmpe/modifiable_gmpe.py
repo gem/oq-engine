@@ -20,7 +20,9 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 
+import copy
 import numpy as np
+from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
@@ -70,6 +72,41 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     me[:] = np.log(exp_mean * fa)
 
 
+def ceus2020_site_term(ctx, imt, me, si, ta, ph, wimp, ref_vs30, ref_pga):
+    """
+    This function adds the Stewart et al. (2020; EQS) site term that uses as
+    a reference 760 m/s.
+
+    :param ctx:
+    :param imt:
+    :param me:
+    :param si:
+    :param ta:
+    :param ph:
+    :param wimp:
+    :param ref_vs30:
+    :param ref_pga:
+    """
+
+    from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
+        stewart2020_linear_scaling)
+    from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
+        hashash2020_non_linear_scaling)
+
+    # Original value of ground motion
+    exp_mean = np.exp(me)
+
+    # Compute the linear term
+    slin = stewart2020_linear_scaling(imt, ctx.vs30, wimp)
+
+    # Compute the nonlinear term
+    snlin = hashash2020_non_linear_scaling(imt, ctx.vs30, ref_pga, ref_vs30)
+
+    # Final mean
+    # me = me + slin + snlin
+    me[:] += (slin + snlin)
+
+
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CY14 site term to GMMs requiring it
@@ -91,7 +128,7 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     This function applies the M9 basin adjustment
     """
     me = _apply_m9_basin_term(ctx, imt, me)
-    
+
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
@@ -331,7 +368,7 @@ class ModifiableGMPE(GMPE):
                 rock_vs30 = 760.
             elif 'cy14_site_term' in self.params:
                 rock_vs30 = 1130.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
         else:
             ctx_copy = ctx
         g = globals()
@@ -339,8 +376,20 @@ class ModifiableGMPE(GMPE):
         # Compute the original mean and standard deviations
         self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
+        # Here we compute (if needed) ground-motion for PGA
+        if ('ceus2020_site_term' in self.params):
+            ref = copy.copy(mean)
+            tmp = copy.copy(sig)
+            tctx = ctx.copy()
+            tctx.vs30 = self.params['ceus2020_site_term']['ref_vs30']
+            timt = (PGA(),)
+            self.gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
+            ref = np.squeeze(ref)
+
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
+            if methname in ['ceus2020_site_term']:
+                kw['ref_pga'] = np.exp(ref)
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)
