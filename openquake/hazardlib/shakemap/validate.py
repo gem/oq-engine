@@ -254,7 +254,7 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
 
     # NOTE: in level 1 interface there is no checkbox and the ShakeMap has to be used.
     #       in level 2 interface the checkbox is unchecked by default
-    use_shakemap = True
+    use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
 
