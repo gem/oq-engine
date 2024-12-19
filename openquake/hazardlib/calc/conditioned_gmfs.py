@@ -509,7 +509,7 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
 def get_mean_covs(
         rupture, cmaker, station_sitecol, station_data, observed_imt_strs,
         target_sitecol, target_imts, spatial_correl, cross_correl_between,
-        cross_correl_within, sigma, h5):
+        cross_correl_within, sigma=True, h5=None):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
