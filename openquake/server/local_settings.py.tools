@@ -1,3 +1,6 @@
+import sys
+import os
+
 APPLICATION_MODE = 'TOOLS_ONLY'
 
 # Disable sharing of results across users (default True)
@@ -24,4 +27,8 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # system time zone.
 # TIME_ZONE =
 
-DEBUG = False
+# Set debug if the installation is dev mode
+try:
+    DEBUG = True if os.environ['TOOLS_DEV'] == 'True' else False
+except KeyError:
+    DEBUG = False
