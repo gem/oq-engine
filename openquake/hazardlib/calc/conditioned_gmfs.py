@@ -417,10 +417,9 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     nominal_bias_mean = numpy.mean(mu_BD_yD)
     nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
 
-    logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
-                 "Nominal bias stddev: %.3f",
-                 gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
-                 target_imt, nominal_bias_mean, nominal_bias_stddev)
+    msg = ("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f"
+           % (gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
+              target_imt, nominal_bias_mean, nominal_bias_stddev))
 
     # Predicted mean at the target sites, from GSIM
     mu_Y = mean_stds[0, 0][:, None]
@@ -462,7 +461,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero, shape (nsites, nsites)
     phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
-    return {(r.g, r.m): (mu, tau, phi)}
+    return {(r.g, r.m): (mu, tau, phi, msg)}
 
 
 def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
@@ -498,10 +497,11 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
             smap.submit(
                 (target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                  sdata, target, station_filtered, compute_cov, result))
-    for (g, m), (mu, tau, phi) in smap.reduce().items():
+    for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau
         ph[g, m] = phi
+        logging.info(msg)
     return me, ta, ph
 
 
