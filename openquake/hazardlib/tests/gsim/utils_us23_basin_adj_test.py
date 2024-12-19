@@ -160,14 +160,14 @@ z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"\n'
 z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
 
 # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
-k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"')
-k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="Sea"\n'
+k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="SEA"')
+k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="SEA"\n'
                              'm9_basin_term="true"\n'
                              'usgs_basin_scaling="true"')
 
 # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
-k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"')
-k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="Sea"\n'
+k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="SEA"')
+k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="SEA"\n'
                                 'm9_basin_term="true"\n'
                                 'usgs_basin_scaling="true"')
 

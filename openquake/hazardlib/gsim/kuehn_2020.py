@@ -54,11 +54,11 @@ BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020_tables")
 # Path to the model coefficients
 KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
 
-# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (Sea) 
+# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
 SUPPORTED_REGIONS = ["GLO",
-                     "USA-AK", "CAS", "Sea", 
+                     "USA-AK", "CAS", "SEA", 
                      "CAM", "JPN", "NZL", "SAM", "TWN"]
 
 # Define inputs according to 3-letter codes
@@ -136,7 +136,7 @@ REGION_TERMS_IF = {
         "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",
         },
     # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
-    "Sea": {
+    "SEA": {
         "c1": "c_1_if_reg_Ca",
         "c6": "c_6_2_reg_Ca",
         "c7": "c_7_reg_Ca",
@@ -222,7 +222,7 @@ REGION_TERMS_SLAB = {
         "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",
         },
     # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
-    "Sea": {
+    "SEA": {
         "c1": "c_1_slab_reg_Ca",
         "c6": "c_6_2_reg_Ca",
         "c7": "c_7_reg_Ca",
@@ -434,11 +434,11 @@ def _get_basin_term(C, ctx, region):
     """
     # Basin term only defined for the four regions: Cascadia, Japan,
     # New Zealand and Taiwan
-    assert region in ("CAS", "JPN", "NZL", "TWN", "Sea")
+    assert region in ("CAS", "JPN", "NZL", "TWN", "SEA")
 
     # If region is Seattle retrieve theta_11 as basin term (this coeff
     # is imt-dependent but are the same for interface and inslab)
-    if region == "Sea":
+    if region == "SEA":
         theta_11 = C[REGION_TERMS_IF[region]["theta_11"]]
         return np.full_like(ctx.vs30, theta_11) 
 
@@ -492,10 +492,10 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "Sea"):
+    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "SEA"):
         
         # Get USGS basin scaling factor if required (checks during
-        # init ensure can only be applied to the CAS or Sea regions
+        # init ensure can only be applied to the CAS or SEA regions
         # which use z2pt5
         if usgs_bs:
             usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
@@ -661,7 +661,7 @@ class KuehnEtAl2020SInter(GMPE):
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
-    - Seattle (Sea)
+    - Seattle (SEA)
 
     In the original model defined by the authors, three of the regions
     (JPN, CAM, SAM) define a forearc/backarc dependent anelastic attenuation
@@ -738,8 +738,8 @@ class KuehnEtAl2020SInter(GMPE):
         self.region = region
 
         # For some regions a basin depth term is defined
-        if self.region in ("CAS", "JPN", "Sea"):
-            # If region is CAS, JPN or Sea then the GMPE needs Z2.5
+        if self.region in ("CAS", "JPN", "SEA"):
+            # If region is CAS, JPN or SEA then the GMPE needs Z2.5
             self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
@@ -750,7 +750,7 @@ class KuehnEtAl2020SInter(GMPE):
         # USGS basin scaling and M9 basin term is only
         # applied when the region param is set to Cascadia.
         if self.usgs_basin_scaling or self.m9_basin_term:
-            if self.region not in ["CAS", "Sea"]:
+            if self.region not in ["CAS", "SEA"]:
                 raise ValueError('To apply the USGS basin scaling or the M9 '
                                  'basin adjustment to KuehnEtAl2020 the '
                                  'Cascadia region or the Seattle Basin '
@@ -865,7 +865,7 @@ REGION_ALIASES = {
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
     "TWN": "Taiwan",
-    "Sea": "CascadiaSeattleBasin",
+    "SEA": "CascadiaSeattleBasin",
 }
 
 
