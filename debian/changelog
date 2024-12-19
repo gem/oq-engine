@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Reduced `conditioned_gmfs_gb` to 9 GB by default
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
   * Parallelized `get_mean_covs` when conditioning the GMFs
 
   [Christopher Brooks]
