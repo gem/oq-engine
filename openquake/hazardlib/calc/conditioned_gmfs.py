@@ -111,6 +111,7 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
+from openquake.baselib import parallel
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -226,6 +227,8 @@ class TempResult:
     """
     Temporary data structure used inside get_mean_covs
     """
+    g: int
+    m: int
     bracketed_imts: list
     conditioning_imts: list
     native_data_available: bool
@@ -236,8 +239,8 @@ class TempResult:
     zD: numpy.ndarray = 0
 
 
-def _create_result(target_imt, observed_imts, station_data_filtered):
-    # returns (conditioning_imts, bracketed_imts, native_data_available)
+def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
+    # returns (g, m, conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
 
@@ -278,19 +281,17 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
                 f"The station data contains {num_null_values}"
                 f" null values for {target_imt.string}."
                 " Please fill or discard these rows.")
-    t = TempResult(conditioning_imts=conditioning_imts,
-                   bracketed_imts=bracketed_imts,
-                   native_data_available=native_data_available)
+    t = TempResult(g, m, bracketed_imts, conditioning_imts, native_data_available)
     return t
 
 
-def create_result(target_imt, target_imts, observed_imts,
+def create_result(g, m, target_imt, target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
                   compute_cov, cross_correl_between):
     """
     :returns: a TempResult
     """
-    t = _create_result(target_imt, observed_imts, station_data)
+    t = _create_result(g, m, target_imt, observed_imts, station_data)
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -384,9 +385,10 @@ def compute_spatial_cross_covariance_matrix(
     return numpy.linalg.multi_dot([diag1, rho, diag2])
 
 
-def gen_mu_tau_phi(cmaker, sdata, observed_imts, target_imts,
-                   mean_stds_D, mean_stds_Y, target, station_filtered,
-                   compute_cov, cross_correl_between):
+def compute_mu_tau_phi(cmaker, sdata, observed_imts, target_imts,
+                       mean_stds_D, mean_stds_Y, target, station_filtered,
+                       compute_cov, cross_correl_between):
+    smap = parallel.Starmap(get_mu_tau_phi)
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -404,14 +406,13 @@ def gen_mu_tau_phi(cmaker, sdata, observed_imts, target_imts,
             sdata[im + "_phi"] = mean_stds_D[3, g, m]
         for m, target_imt in enumerate(target_imts):
             result = create_result(
-                target_imt, target_imts, observed_imts,
+                g, m, target_imt, target_imts, observed_imts,
                 sdata, target, station_filtered,
                 compute_cov, cross_correl_between)
-            mu, tau, phi = get_mu_tau_phi(
-                target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
-                sdata, target, station_filtered,
-                compute_cov, result)
-            yield g, m, mu, tau, phi
+            smap.submit(
+                (target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
+                 sdata, target, station_filtered, compute_cov, result))
+    return smap.reduce()
 
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
@@ -464,10 +465,11 @@ def get_mean_covs(
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
-    for g, m, mu, tau, phi in gen_mu_tau_phi(
-            cmaker, station_data[mask].copy(), observed_imts, target_imts,
-            mean_stds_D, mean_stds_Y, target, station_filtered,
-            compute_cov, cross_correl_between):
+    dic = compute_mu_tau_phi(
+        cmaker, station_data[mask].copy(), observed_imts, target_imts,
+        mean_stds_D, mean_stds_Y, target, station_filtered,
+        compute_cov, cross_correl_between)
+    for (g, m), (mu, tau, phi) in dic.items():
         me[g, m] = mu
         ta[g, m] = tau
         ph[g, m] = phi
@@ -555,7 +557,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero, shape (nsites, nsites)
     phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
-    return mu, tau, phi
+    return {(t.g, t.m): (mu, tau, phi)}
 
 
 def _compute_spatial_cross_correlation_matrix(
