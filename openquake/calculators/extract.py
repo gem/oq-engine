@@ -239,20 +239,24 @@ def extract_realizations(dstore, dummy):
     scenario = 'scenario' in oq.calculation_mode
     full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
-    bpaths = encode(rlzs['branch_path'])
+    if scenario and len(full_lt.trts) == 1:  # only one TRT
+        gsims = decode(dstore.getitem('full_lt/gsim_lt')['uncertainty'])
+        if 'shakemap' in oq.inputs:
+            gsims = ["[FromShakeMap]"]
+        bplen = max(len(gsim) for gsim in gsims)
+    else:
+        bpaths = encode(rlzs['branch_path'])
+        bplen = max(len(bp) for bp in bpaths)
+
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
-    bplen = max(len(bp) for bp in bpaths)
     dt = [('rlz_id', U32), ('branch_path', '<S%d' % bplen), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario and len(full_lt.trts) == 1:  # only one TRT
-        gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
-        if 'shakemap' in oq.inputs:
-            gsims = ["[FromShakeMap]"]
         # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
-        arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
+        arr['branch_path'] = [gsim.replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:  # use the compact representation for the branch paths
         arr['branch_path'] = bpaths
