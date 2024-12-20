@@ -1899,6 +1899,15 @@ class OqParam(valid.ParamSet):
         return exposures and exposures[0].endswith('.hdf5')
 
     @property
+    def aelo(self):
+        """
+        Return True if we are in AELO mode, i.e. if
+        postproc_func = 'compute_rtgm.main'
+        """
+        breakpoint()
+        return self.postproc_func == 'compute_rtgm.main'
+
+    @property
     def fastmean(self):
         """
         Return True if it is possible to use the fast mean algorithm
