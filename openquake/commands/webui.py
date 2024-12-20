@@ -27,6 +27,7 @@ from openquake.server.utils import check_webserver_running
 
 commands = ['start']
 
+
 def runserver(hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
     # the reload functionality of the Django development server interferes

@@ -19,6 +19,7 @@
 import os
 from django.apps import AppConfig
 from django.conf import settings
+from django.db import OperationalError
 from openquake.baselib import config
 from openquake.server import dbserver, db
 
@@ -36,7 +37,11 @@ class ServerConfig(AppConfig):
         import openquake.server.signals  # NOQA
 
         # reset any computation left in the 'executing' state
-        db.actions.reset_is_running(dbserver.db)
+        try:
+            db.actions.reset_is_running(dbserver.db)
+        except OperationalError:
+            # in the action "docs" the database does not exist
+            pass
 
         if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
             raise ValueError(
