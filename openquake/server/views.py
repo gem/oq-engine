@@ -986,7 +986,9 @@ def submit_job(request_files, ini, username, hc_id):
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        mp.Process(target=engine.run_jobs, args=(jobs,)).start()
+        proc = mp.Process(target=engine.run_jobs, args=([job],))
+        proc.start()
+        mp.Process(target=engine.watchdog, args=(job.calc_id, proc.pid)).start()
     return job.calc_id
 
 
