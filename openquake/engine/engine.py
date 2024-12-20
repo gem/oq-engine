@@ -279,13 +279,12 @@ def stop_workers(job_id):
     print(w.WorkerMaster(job_id).stop())
 
 
-def watchdog(calc_id, pid):
+def watchdog(calc_id, pid, timeout):
     """
     If the job takes longer than the timeout, kills it
     """
-    timeout = int(config.webapi.calc_timeout)
     while True:
-        time.sleep(3)
+        time.sleep(30)
         [(start, status)] = logs.dbcmd(
             'SELECT start_time, status FROM job WHERE id=?x', calc_id)
         if status != 'executing':

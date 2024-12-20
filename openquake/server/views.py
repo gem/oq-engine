@@ -988,7 +988,11 @@ def submit_job(request_files, ini, username, hc_id):
     else:
         proc = mp.Process(target=engine.run_jobs, args=([job],))
         proc.start()
-        mp.Process(target=engine.watchdog, args=(job.calc_id, proc.pid)).start()
+        if config.webapi.calc_timeout:
+            mp.Process(
+                target=engine.watchdog,
+                args=(job.calc_id, proc.pid, int(config.webapi.calc_timeout))
+            ).start()
     return job.calc_id
 
 
