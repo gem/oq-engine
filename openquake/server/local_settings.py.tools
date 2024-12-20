@@ -28,7 +28,4 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # TIME_ZONE =
 
 # Set debug if the installation is dev mode
-try:
-    DEBUG = True if os.environ['TOOLS_DEV'] == 'True' else False
-except KeyError:
-    DEBUG = False
+DEBUG = os.environ.get('TOOLS_DEV', False) == 'True'
