@@ -431,6 +431,23 @@ function capitalizeFirstLetter(val) {
         refresh_calcs = clearInterval(refresh_calcs);
     }
 
+    function use_shakemap() {
+        approach_selector = $('input[name="aristotle_approach"]');
+        if (approach_selector.length > 0) {
+            return $('input[name="aristotle_approach"]:checked').val() === 'use_shakemap_from_usgs';
+        } else {
+            // in interface level 1 the approach selector doesn't exist and we always use the ShakeMap
+            return true;
+        }
+    }
+
+    const approaches_requiring_usgs_id = [
+        'use_shakemap_from_usgs',
+        'use_pnt_src_from_usgs',
+        'build_rup_from_usgs',
+        'use_finite_rup_from_usgs'
+    ];
+
     /* classic event management */
     $(document).ready(
         function () {
@@ -535,14 +552,6 @@ function capitalizeFirstLetter(val) {
             }
             toggleRunCalcBtnState();
 
-            $(document).on('change', '#use_shakemap', function () {
-                if ($(this).is(':checked')) {
-                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
-                } else {
-                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
-                }
-            });
-
             $('input[name="aristotle_approach"]').change(function () {
                 const selected_approach = $(this).val();
                 const approaches_requiring_usgs_id = [
@@ -575,8 +584,7 @@ function capitalizeFirstLetter(val) {
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
-                    // if the checkbox use_shakemap does not exist or is checked
+                if (use_shakemap()) {
                     $('#submit_aristotle_get_rupture').text(
                         'Retrieving ShakeMap data (it may take more than 10 seconds)');
                 } else {
@@ -585,8 +593,19 @@ function capitalizeFirstLetter(val) {
                 }
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
-                formData.append('usgs_id', $("#usgs_id").val());
-                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
+
+                const usgs_id = $.trim($("#usgs_id").val());
+                approach_selector = $('input[name="aristotle_approach"]');
+                if (approach_selector.length) {
+                    const selected_approach = $('input[name="aristotle_approach"]:checked').val();
+                    if (approaches_requiring_usgs_id.includes(selected_approach)) {
+                        formData.append('usgs_id', usgs_id);
+                    }
+                } else {
+                    formData.append('usgs_id', usgs_id);
+                }
+
+                formData.append('use_shakemap', use_shakemap());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
@@ -711,12 +730,7 @@ function capitalizeFirstLetter(val) {
                     $('#shakemap-image-row').hide();
                 }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
-                        // if the checkbox use_shakemap does not exist or is checked
-                        $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
-                    } else {
-                        $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
-                    }
+                    $('#submit_aristotle_get_rupture').text('Retrieve data');
                 });
                 event.preventDefault();
             });
@@ -749,7 +763,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
-                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
+                formData.append('use_shakemap', use_shakemap());
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
                 formData.append('dep', $("#dep").val());
