@@ -62,7 +62,6 @@ TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
-mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
 
 
 def rup_weight(rup):
@@ -583,6 +582,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
+            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
         g_index = 0
