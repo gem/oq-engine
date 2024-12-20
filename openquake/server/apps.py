@@ -19,7 +19,7 @@
 import os
 from django.apps import AppConfig
 from django.conf import settings
-from django.db import OperationalError
+from sqlite3 import OperationalError
 from openquake.baselib import config
 from openquake.server import dbserver, db
 
