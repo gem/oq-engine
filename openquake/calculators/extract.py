@@ -255,9 +255,8 @@ def extract_realizations(dstore, dummy):
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario and len(full_lt.trts) == 1:  # only one TRT
-        # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
-        arr['branch_path'] = [gsim.replace('"', '""')
-                              for gsim in gsims]  # quotes Excel-friendly
+        # quotes Excel-friendly
+        arr['branch_path'] = encode([gsim.replace('"', '""') for gsim in gsims])
     else:  # use the compact representation for the branch paths
         arr['branch_path'] = bpaths
     return arr
