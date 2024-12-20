@@ -20,6 +20,7 @@ import os
 from django.apps import AppConfig
 from django.conf import settings
 from openquake.baselib import config
+from openquake.server import dbserver, db
 
 
 class ServerConfig(AppConfig):
@@ -33,6 +34,9 @@ class ServerConfig(AppConfig):
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
         import openquake.server.signals  # NOQA
+
+        # reset any computation left in the 'executing' state
+        db.actions.reset_is_running(dbserver.db)
 
         if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
             raise ValueError(

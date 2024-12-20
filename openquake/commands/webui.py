@@ -22,7 +22,7 @@ import subprocess
 import webbrowser
 
 from openquake.baselib import config, general
-from openquake.server import dbserver, db
+from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
 commands = ['start']
@@ -56,8 +56,6 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     dbserver.ensure_on()  # start the dbserver in a subprocess
-    # reset any computation left in the 'executing' state
-    db.actions.reset_is_running(dbserver.db)
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 
