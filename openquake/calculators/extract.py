@@ -240,12 +240,12 @@ def extract_realizations(dstore, dummy):
     full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
     if scenario and len(full_lt.trts) == 1:  # only one TRT
-        gsims = decode(dstore.getitem('full_lt/gsim_lt')['uncertainty'])
+        gsims = encode(dstore.getitem('full_lt/gsim_lt')['uncertainty'])
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
-        bplen = max(len(gsim) for gsim in gsims)
+        bplen = max(len(gsim) for gsim in gsims)  # list of bytes
     else:
-        bpaths = encode(rlzs['branch_path'])
+        bpaths = encode(rlzs['branch_path'])  # list of bytes
         bplen = max(len(bp) for bp in bpaths)
 
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
@@ -256,7 +256,7 @@ def extract_realizations(dstore, dummy):
     arr['weight'] = rlzs['weight']
     if scenario and len(full_lt.trts) == 1:  # only one TRT
         # quotes Excel-friendly
-        arr['branch_path'] = encode([gsim.replace('"', '""') for gsim in gsims])
+        arr['branch_path'] = [gsim.replace(b'"', b'""') for gsim in gsims]
     else:  # use the compact representation for the branch paths
         arr['branch_path'] = bpaths
     return arr
