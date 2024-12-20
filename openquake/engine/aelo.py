@@ -22,6 +22,7 @@ import os
 import sys
 import getpass
 import logging
+import functools
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
 from openquake.commonlib import readinput, oqvalidation
@@ -29,19 +30,22 @@ from openquake.engine import engine
 from openquake.qa_tests_data import mosaic
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 PRELIMINARY_MODELS = ['CEA', 'CHN', 'NEA']
 PRELIMINARY_MODEL_WARNING = (
     'Results are preliminary. The seismic hazard model used for the site'
     ' is under review and will be updated' ' during Year 3.')
 
 
+@functools.lru_cache
 def get_mosaic_df(buffer):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    fname = os.path.join(MOSAIC_DIR, 'ModelBoundaries.shp')
-    return readinput.read_geometries(fname, 'code', buffer=.1).set_index('code')
+    fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries.shp')
+    if not os.path.exists(fname):
+        fname = os.path.join(os.path.dirname(mosaic.__file__), 'ModelBoundaries.shp')
+    df = readinput.read_geometries(fname, 'code', buffer)
+    return df
 
 
 def get_params_from(inputs, mosaic_dir, exclude=()):

@@ -1902,9 +1902,8 @@ class OqParam(valid.ParamSet):
     def aelo(self):
         """
         Return True if we are in AELO mode, i.e. if
-        postproc_func = 'compute_rtgm.main'
+        postproc_func == 'compute_rtgm.main'
         """
-        breakpoint()
         return self.postproc_func == 'compute_rtgm.main'
 
     @property
