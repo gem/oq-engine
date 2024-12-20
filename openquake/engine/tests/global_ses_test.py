@@ -17,12 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from unittest.mock import patch
 from openquake.baselib import general, hdf5
 from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
-from openquake.commonlib.readinput import read_geometries
-from openquake.calculators import base, event_based
+from openquake.calculators import base
 from openquake.engine import global_ses
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
@@ -44,15 +42,13 @@ def check(dstore, fnames):
 def test_EUR_MIE():
     global_ses.MODELS = ['EUR', 'MIE']
     with general.chdir(MOSAIC_DIR):
-        mdf = read_geometries('mosaic.geojson', 'name', 0.).set_index('code')
-        with patch.dict(event_based.__dict__, mosaic_df=mdf):
-            try:
-                fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
-                dstore = base.run_calc('job.ini').datastore
-                check(dstore, fnames)
-
-                dstore = base.run_calc('job_sites.ini').datastore
-                assert dstore['avg_gmf'].shape == (2, 6, 1)  # 6 sites
-            finally:
-                if os.path.exists(RUP_HDF5):
-                    os.remove(RUP_HDF5)
+        try:
+            fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
+            dstore = base.run_calc('job.ini').datastore
+            check(dstore, fnames)
+            
+            dstore = base.run_calc('job_sites.ini').datastore
+            assert dstore['avg_gmf'].shape == (2, 6, 1)  # 6 sites
+        finally:
+            if os.path.exists(RUP_HDF5):
+                os.remove(RUP_HDF5)
