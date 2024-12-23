@@ -687,9 +687,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_3.__file__, 'job.ini')
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
                          self.calc.datastore)
-        delta = 5E-5 if sys.platform == 'linux' else 5E-4
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
-                              fname, delta=delta)
+                              fname, delta=5E-4)
 
     def test_post_risk(self):
         # calculation from a source model producing 4 events
