@@ -20,12 +20,19 @@ Module exports :class:`NGAEastUSGSGMPE`
 """
 import os
 import numpy as np
+import pandas as pd
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
     ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
+from openquake.hazardlib.gsim.utils_chapman_guo_2021 import get_fcpa, get_zscale
+
+
+# Path to excel containing the Coastal Plains PSA ratios
+# required for Chapman and Guo (2021) site amplification
+PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.xlsx')
 
 
 # Coefficients for period-dependent bias adjustment provided by
@@ -116,47 +123,68 @@ pga     0.4436   0.4169   0.3736   0.3415   0.5423   0.3439   0.533   0.566
 7.500   0.4436   0.4169   0.3736   0.3415   0.3482   0.3481   0.378   0.201
 10.00   0.4436   0.4169   0.3736   0.3415   0.3472   0.3471   0.319   0.193
 """)
-
-
-def get_zscale(z_sed):
-    """
-    Provide the depth scaling factor for application of reference site
-    scaling. The scaling factor increases to 1.0 as z_sed approaches a
-    value of 1 km.
-
-    :param z_sed: Depth to sediment site parameter considered in the
-                  2023 Conterminous US NSHMP for CENA Coastal Plains
-                  sites.
-    """
-    Z_CUT = 2.
-    s = 1. - np.exp(z_sed / Z_CUT)
-    return s ** 4
     
 
-def get_uadj(ctx, imt):
+def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
     """
-    Get the period-dependent bias correction required for the 2023
-    Conterminous US NSHMP.
+    This function assists with applying the CEUS GMM adjustments
+    required for the 2023 Conterminous US NSHMP (if specified):
+    
+    1) Computes the period-dependent bias correction factor of
+       Ramos-Sepulveda et al. (2023).
+    
+    2) Computes the f_cpa parameter required for the Coastal Plains
+       amplification model of Chapman and Guo (2021).
+
+    :param bias_adj: Bool determining if the period-dependent bias
+                     adjustment is applied. 
+
+    :param cpa: Bool determining if the coastal plains amplification
+                model is applied. 
+
+    :param psa_df: Pandas DataFrame containing the PSA ratios (table
+                   for mag, rrup, z_sed combinations for the given IMT.
     """
-    # If sedimentary depth site param get scaling factor
+    ctx.z_sed = np.full(len(ctx.vs30), 0.8) #TODO remove
+
+    # First get sediment depth scaling factor
     if hasattr(ctx, 'z_sed'):
         z_scale = get_zscale(ctx.z_sed)
     else:
-        z_scale = np.full(len(ctx.vs30), 1.)
-    b_coeffs = COEFFS_USGS_2023_ADJ[imt]
-    b_adj = np.full(len(ctx.vs30), b_coeffs['nga_adj'])
-    mask = ctx.vs30 > 1000.
-    if mask.any():
-        vs30 = ctx.vs30[mask]
-        vs30[vs30 > 2000.] = 2000.
-        b_adj[mask] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
-    return (1.0 - z_scale) * b_adj
+        z_scale = np.full(len(ctx.vs30), 0.) # Turn off z_sed influence 
+                                             # if not in site params
+
+    # If period-dependent bias adjustment 
+    if bias_adj:
+        b_coeffs = COEFFS_USGS_2023_ADJ[imt]
+        b_adj = np.full(len(ctx.vs30), b_coeffs['nga_adj'])
+        mask_vs30 = ctx.vs30 > 1000.
+        if mask_vs30.any():
+            vs30 = ctx.vs30[mask_vs30]
+            vs30[vs30 > 2000.] = 2000.
+            b_adj[mask_vs30] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
+        u_adj = (1.0 - z_scale) * b_adj
+    else:
+        u_adj = None
+
+    # If Coastal Plains site amp get required params
+    if cpa:
+        # First check a dataframe of PSA ratios
+        # has been admitted for the given IMT
+        assert isinstance(psa_df, pd.DataFrame)
+        # Then get required params for the site amp model
+        coastal = get_fcpa(ctx, imt, z_scale, psa_df)
+    else:
+        coastal = None
+
+    return u_adj, coastal
 
 
 def get_epri_tau_phi(imt, mag):
     """
     Returns the inter-event (tau) and intra_event standard deviation (phi)
-    according to the updated EPRI (2013) model"""
+    according to the updated EPRI (2013) model
+    """
     C = COEFFS_USGS_SIGMA_EPRI[imt]
     if mag <= 5.0:
         tau = C["tau_M5"]
@@ -292,7 +320,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     kind = "usgs"
 
     def __init__(self, gmpe_table="", sigma_model="COLLAPSED",
-                 epistemic_site=True, usgs_2023_bias_adj=False):
+                 epistemic_site=True, usgs_2023_bias_adj=False,
+                 coastal_plains_site_amp=False):
         self.sigma_model = sigma_model
         self.epistemic_site = epistemic_site
         if self.sigma_model not in ("EPRI", "PANEL", "COLLAPSED"):
@@ -302,7 +331,11 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # In the case of the collapsed model only the total standard
             # deviation can be defined
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-        self.usgs_2023_bias_adj = usgs_2023_bias_adj
+        self.usgs_2023_bias_adj = usgs_2023_bias_adj # US 2023 NSHMP adjustment
+        self.coastal_plains_site_amp = coastal_plains_site_amp # US 2023 NSHMP adjustment
+        if self.coastal_plains_site_amp:
+            with open(PSAS) as f:
+                self.psa_ratios = pd.read_excel(PSAS, sheet_name=None)
         super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -312,14 +345,19 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         [mag] = np.unique(np.round(ctx.mag, 2))
         for m, imt in enumerate(imts):
 
-            # Apply 2023 US NSHMP bias adj if required
-            if self.usgs_2023_bias_adj:
-                u_adj = get_uadj(ctx, imt)
+            # Apply required 2023 US NSHMP adjustments if specified
+            if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
+                if self.coastal_plains_site_amp:
+                    psa_df = self.psa_ratios[str(imt)]
+                else:
+                    psa_df = None
+                u_adj, cstl = get_us23_adjs(ctx, imt, self.usgs_2023_bias_adj,
+                                            self.coastal_plains_site_amp, psa_df)
             else:
-                u_adj = None
+                u_adj, cstl = None, None
 
             # Get mean
-            imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt, u_adj)
+            imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt, u_adj, cstl)
 
             # Get the coefficients for the IMTs
             C_LIN = self.COEFFS_LINEAR[imt]

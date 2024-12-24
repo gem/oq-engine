@@ -185,7 +185,7 @@ cy14_def = valid.gsim('[ChiouYoungs2014]')
 nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
                                'sgn=0\nusgs_basin_scaling="true"')
 
-# US NHSMP 2013 GMMs with Cybershake basin adjustments
+# US NSHMP 2014 GMMs with Cybershake basin adjustments
 ask14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
                       'sgn=0\ncybershake_basin_adj="true"')
 bssa14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="BooreEtAl2014"\n'
@@ -195,8 +195,24 @@ cb14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="CampbellBozorgnia2014"\n'
 cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
                      'sgn=0\ncybershake_basin_adj="true"')
 
+# NGAEast GMM with Ramos-Sepulveda et al. (2023) bias adjustment
+ngaeast_bias = valid.gsim('[NGAEastUSGSGMPE]\n'
+                          'gmpe_table="nga_east_usgs_17.hdf5"\n'
+                          'usgs_2023_bias_adj="true"')
 
-class USBasinAdjustmentTestCase(unittest.TestCase):       
+# NGAEast GMM with Chapman and Guo (2021) Coastal Plains site amp
+ngaeast_cpa = valid.gsim('[NGAEastUSGSGMPE]\n'
+                          'gmpe_table="nga_east_usgs_17.hdf5"\n'
+                          'coastal_plains_site_amp="true"')
+
+# NGAEast GMM with both US 2023 adjustments
+ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
+                          'gmpe_table="nga_east_usgs_17.hdf5"\n'
+                          'usgs_2023_bias_adj="true"\n'
+                          'coastal_plains_site_amp="true"')
+
+
+class US23AdjustmentTestCase(unittest.TestCase):       
 
     def test_all(self):
         """
@@ -220,7 +236,10 @@ class USBasinAdjustmentTestCase(unittest.TestCase):
                                 cy14_adj, cy14_def,
                                 nshmp14_ask14_adj,
                                 ask14_cy, bssa14_cy,
-                                cb14_cy, cy14_cy],
+                                cb14_cy, cy14_cy,
+                                ngaeast_bias,
+                                ngaeast_cpa,
+                                ngaeast_both],
                                 imts)                       
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.

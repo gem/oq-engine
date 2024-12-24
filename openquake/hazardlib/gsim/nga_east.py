@@ -548,7 +548,19 @@ def _get_phi(self, imt, mag):
     return phi
 
 
-def get_mean_amp(self, mag, ctx, imt, u_adj=None):
+def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
+    """
+    Compute mean ground-motion.
+
+    :param u_adj: Array containing the period-dependent bias
+                  adjustment as required for the 2023 Conterminous
+                  US NSHMP.
+
+    :param cstl: Dictionary containing parameters required for the
+                 computation of the Coastal Plains site amplification
+                 model of Chapman and Guo (2021) as required for the
+                 2023 Conterminous US NSHMP.
+    """
     # Get the PGA on the reference rock condition
     if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
         rock_imt = PGA()
@@ -572,8 +584,18 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None):
         # Avoid re-calculating PGA if that was already done!
         mean = np.copy(pga_r)
 
+    # Get site amplification
     amp = get_site_amplification(self, imt, np.exp(pga_r), ctx)
-    mean += amp
+
+    # Apply Coastal Plains amp adj of Chapman and Guo (2021) if req
+    cpa_term = np.full(len(ctx.vs30), 0.)
+    if isinstance(cstl, dict) and isinstance(cstl['f_cpa'], np.ndarray):
+        breakpoint()
+        corr = get_cpa_corr()
+        cpa_term = cstl['f_cpa'] - corr * cstl['z_scale'] 
+
+    # Add the site term
+    mean += amp + cpa_term
 
     return mean, amp, pga_r
 
