@@ -143,7 +143,7 @@ def get_uadj(ctx, imt):
     else:
         z_scale = np.full(len(ctx.vs30), 1.)
     b_coeffs = COEFFS_USGS_2023_ADJ[imt]
-    b_adj = np.full(len(ctx), b_coeffs['nga_adj'])
+    b_adj = np.full(len(ctx.vs30), b_coeffs['nga_adj'])
     mask = ctx.vs30 > 1000.
     if mask.any():
         vs30 = ctx.vs30[mask]
