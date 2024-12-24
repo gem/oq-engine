@@ -277,7 +277,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
 
             # Apply 2023 US NSHMP bias adj if required
             if self.usgs_2023_bias_adj:
-                z_scale = 0.
+                z_scale = 0. #TODO remove once added Coastal Plains site amp
                 b_coeffs = COEFFS_USGS_2023_ADJ[imt]
                 b_adj = np.full(len(ctx), b_coeffs['nga_adj'])
                 mask = ctx.vs30 > 1000.
