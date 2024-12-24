@@ -27,9 +27,10 @@ from openquake.hazardlib.gsim.nga_east import (
     ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
 
+
 # Coefficients for period-dependent bias adjustment provided by
 # Ramos-Sepulveda et al.(2023). These are required for the 2023
-# Conterminous US model and are taken froms:
+# Conterminous US model and are taken from:
 # https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-adj-2023.csv?ref_type=heads 
 COEFFS_USGS_2023_ADJ = CoeffsTable(sa_damping=5, table="""\
 imt     nga_adj  vs30_b 
@@ -117,7 +118,7 @@ pga     0.4436   0.4169   0.3736   0.3415   0.5423   0.3439   0.533   0.566
 """)
 
 
-def get_z_scale(z_sed):
+def get_zscale(z_sed):
     """
     Provide the depth scaling factor for application of reference site
     scaling. The scaling factor increases to 1.0 as z_sed approaches a
@@ -139,7 +140,7 @@ def get_uadj(ctx, imt):
     """
     # If sedimentary depth site param get scaling factor
     if hasattr(ctx, 'z_sed'):
-        z_scale = get_z_scale(ctx.z_sed)
+        z_scale = get_zscale(ctx.z_sed)
     else:
         z_scale = np.full(len(ctx.vs30), 1.)
     b_coeffs = COEFFS_USGS_2023_ADJ[imt]
@@ -317,6 +318,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             else:
                 u_adj = None
 
+            # Get mean
             imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt, u_adj)
 
             # Get the coefficients for the IMTs
