@@ -27,8 +27,9 @@ from openquake.hazardlib.gsim.nga_east import (
     ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
 
-# Coefficients for period-dependent bias adjustment required for 2023
-# Conterminous US model. Taken from the UGSS NSHMP java code repository:
+# Coefficients for period-dependent bias adjustment provided by
+# Ramos-Sepulveda et al.(2023). These are required for the 2023
+# Conterminous US model and are taken froms:
 # https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-adj-2023.csv?ref_type=heads 
 COEFFS_USGS_2023_ADJ = CoeffsTable(sa_damping=5, table="""\
 imt     nga_adj  vs30_b 
@@ -114,6 +115,41 @@ pga     0.4436   0.4169   0.3736   0.3415   0.5423   0.3439   0.533   0.566
 7.500   0.4436   0.4169   0.3736   0.3415   0.3482   0.3481   0.378   0.201
 10.00   0.4436   0.4169   0.3736   0.3415   0.3472   0.3471   0.319   0.193
 """)
+
+
+def get_z_scale(z_sed):
+    """
+    Provide the depth scaling factor for application of reference site
+    scaling. The scaling factor increases to 1.0 as z_sed approaches a
+    value of 1 km.
+
+    :param z_sed: Depth to sediment site parameter considered in the
+                  2023 Conterminous US NSHMP for CENA Coastal Plains
+                  sites.
+    """
+    Z_CUT = 2.
+    s = 1. - np.exp(z_sed / Z_CUT)
+    return s ** 4
+    
+
+def get_uadj(ctx, imt):
+    """
+    Get the period-dependent bias correction required for the 2023
+    Conterminous US NSHMP.
+    """
+    # If sedimentary depth site param get scaling factor
+    if hasattr(ctx, 'z_sed'):
+        z_scale = get_z_scale(ctx.z_sed)
+    else:
+        z_scale = np.full(len(ctx.vs30), 1.)
+    b_coeffs = COEFFS_USGS_2023_ADJ[imt]
+    b_adj = np.full(len(ctx), b_coeffs['nga_adj'])
+    mask = ctx.vs30 > 1000.
+    if mask.any():
+        vs30 = ctx.vs30[mask]
+        vs30[vs30 > 2000.] = 2000.
+        b_adj[mask] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
+    return (1.0 - z_scale) * b_adj
 
 
 def get_epri_tau_phi(imt, mag):
@@ -277,15 +313,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
 
             # Apply 2023 US NSHMP bias adj if required
             if self.usgs_2023_bias_adj:
-                z_scale = 0. #TODO remove once added Coastal Plains site amp
-                b_coeffs = COEFFS_USGS_2023_ADJ[imt]
-                b_adj = np.full(len(ctx), b_coeffs['nga_adj'])
-                mask = ctx.vs30 > 1000.
-                if mask.any():
-                    vs30 = ctx.vs30[mask]
-                    vs30[vs30 > 2000.] = 2000.
-                    b_adj[mask] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
-                u_adj = (1.0 - z_scale) * b_adj
+                u_adj = get_uadj(ctx, imt)
             else:
                 u_adj = None
 
