@@ -20,11 +20,43 @@ Module exports :class:`NGAEastUSGSGMPE`
 """
 import os
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
     ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
+
+# Coefficients for period-dependent bias adjustment required for 2023
+# Conterminous US model. Taken from the UGSS NSHMP java code repository:
+# https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-adj-2023.csv?ref_type=heads 
+COEFFS_USGS_2023_ADJ = CoeffsTable(sa_damping=5, table="""\
+imt     nga_adj  vs30_b 
+pgv     -0.085   -0.250
+pga     -0.040   -0.346 
+0.010   -0.070   -0.352 
+0.020   -0.210   -0.305 
+0.030   -0.211   -0.261 
+0.050   -0.212   -0.220 
+0.075   -0.205   -0.220 
+0.100   -0.205   -0.220 
+0.150   -0.192   -0.220
+0.200   -0.149   -0.220
+0.250   -0.132   -0.220
+0.300   -0.121   -0.220
+0.400   -0.097   -0.220
+0.500   -0.090   -0.220
+0.750   -0.040   -0.205
+1.000   -0.010   -0.175
+1.500    0.045   -0.173
+2.000    0.140   -0.173
+3.000    0.270   -0.173
+4.000    0.315   -0.173
+5.000    0.377   -0.173
+7.500    0.448   -0.173
+10.00    0.401   -0.173
+""")
+
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
 # (2017)
@@ -222,8 +254,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
     kind = "usgs"
 
-    def __init__(self, gmpe_table="",  sigma_model="COLLAPSED",
-                 epistemic_site=True):
+    def __init__(self, gmpe_table="", sigma_model="COLLAPSED",
+                 epistemic_site=True, usgs_2023_bias_adj=False):
         self.sigma_model = sigma_model
         self.epistemic_site = epistemic_site
         if self.sigma_model not in ("EPRI", "PANEL", "COLLAPSED"):
@@ -233,6 +265,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # In the case of the collapsed model only the total standard
             # deviation can be defined
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+        self.usgs_2023_bias_adj = usgs_2023_bias_adj
         super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -241,9 +274,24 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         """
         [mag] = np.unique(np.round(ctx.mag, 2))
         for m, imt in enumerate(imts):
-            imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt)
 
-            # Get the coefficients for the IMT
+            # Apply 2023 US NSHMP bias adj if required
+            if self.usgs_2023_bias_adj:
+                z_scale = 0.
+                b_coeffs = COEFFS_USGS_2023_ADJ[imt]
+                b_adj = np.full(len(ctx), b_coeffs['nga_adj'])
+                mask = ctx.vs30 > 1000.
+                if mask.any():
+                    vs30 = ctx.vs30[mask]
+                    vs30[vs30 > 2000.] = 2000.
+                    b_adj[mask] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
+                u_adj = (1.0 - z_scale) * b_adj
+            else:
+                u_adj = None
+
+            imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt, u_adj)
+
+            # Get the coefficients for the IMTs
             C_LIN = self.COEFFS_LINEAR[imt]
             C_F760 = self.COEFFS_F760[imt]
             C_NL = self.COEFFS_NONLINEAR[imt]

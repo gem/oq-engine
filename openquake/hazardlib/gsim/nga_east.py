@@ -548,7 +548,7 @@ def _get_phi(self, imt, mag):
     return phi
 
 
-def get_mean_amp(self, mag, ctx, imt):
+def get_mean_amp(self, mag, ctx, imt, u_adj=None):
     # Get the PGA on the reference rock condition
     if PGA in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
         rock_imt = PGA()
@@ -556,11 +556,18 @@ def get_mean_amp(self, mag, ctx, imt):
         rock_imt = SA(0.01)
     pga_r = get_hard_rock_mean(self, mag, ctx, rock_imt)
 
+    # Apply US 2023 period-dep bias adj if required
+    if isinstance(u_adj, np.ndarray):
+        pga_r += u_adj
+
     # Get the desired spectral acceleration on rock
     if imt.string != "PGA":
         # Calculate the ground motion at required spectral period for
         # the reference rock
         mean = get_hard_rock_mean(self, mag, ctx, imt)
+        # Again apply US 2023 period-dep bias adj if required
+        if isinstance(u_adj, np.ndarray):
+            mean += u_adj
     else:
         # Avoid re-calculating PGA if that was already done!
         mean = np.copy(pga_r)
