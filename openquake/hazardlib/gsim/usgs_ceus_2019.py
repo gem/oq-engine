@@ -331,11 +331,11 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # In the case of the collapsed model only the total standard
             # deviation can be defined
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-        self.usgs_2023_bias_adj = usgs_2023_bias_adj # US 2023 NSHMP adjustment
-        self.coastal_plains_site_amp = coastal_plains_site_amp # US 2023 NSHMP adjustment
+        self.usgs_2023_bias_adj = usgs_2023_bias_adj # US 2023 NSHMP
+        self.coastal_plains_site_amp = coastal_plains_site_amp # US 2023 NSHMP
         if self.coastal_plains_site_amp:
             with open(PSAS) as f:
-                self.psa_ratios = pd.read_excel(PSAS, sheet_name=None)
+                self.psa_ratios = pd.read_excel(f.name, sheet_name=None)
         super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
