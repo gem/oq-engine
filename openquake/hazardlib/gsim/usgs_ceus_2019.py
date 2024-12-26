@@ -150,15 +150,8 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
     :param psa_df: Pandas DataFrame containing the PSA ratios (table
                    for mag, rrup, z_sed combinations for the given IMT.
     """
-    # First get sed. depth dependent scaling factor if available 
-    if hasattr(ctx, 'z_sed'):
-        z_scale = get_zscale(ctx.z_sed)
-    elif cpa:
-        raise ValueError('The Chapman and Guo (2021) Coastal Plains site '
-                         'amp. adjustments require the z_sed site param.')
-    else:
-        z_scale = np.full(len(ctx.vs30), 0.) # Turn off z_sed influence 
-                                             # if not in site params
+    # First get sed. depth dependent scaling factor
+    z_scale = get_zscale(ctx.z_sed)
 
     # If period-dependent bias adjustment 
     if bias_adj:
@@ -339,6 +332,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         if self.coastal_plains_site_amp:
             with open(PSAS) as f:
                 self.psa_ratios = pd.read_excel(f.name, sheet_name=None)
+        # Add sediment depth site param if Conterminous US 2023 adjustments
+        if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
+            self.REQUIRES_SITES_PARAMETERS |= {"z_sed"}
         super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

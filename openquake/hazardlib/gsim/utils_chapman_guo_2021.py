@@ -103,7 +103,7 @@ def get_data(psa_df):
     # Create empty ndarray
     data = np.zeros((len(Z), len(M), len(R)))
 
-    # Per z_sed, mag, rrup...
+    # Per z_sed, mag, rrup
     for zi in range(len(Z)):
         for mi in range(len(M)):
             for ri in range(len(R)):
