@@ -171,10 +171,7 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
 
     # If Coastal Plains site amp get required params
     if cpa:
-        # First check a dataframe of PSA ratios
-        # has been admitted for the given IMT
-        assert isinstance(psa_df, pd.DataFrame)
-        # Then get required params for the site amp model
+        # Get required params for the site amp model
         coastal = get_fcpa(ctx, imt, z_scale, psa_df)
     else:
         coastal = None
