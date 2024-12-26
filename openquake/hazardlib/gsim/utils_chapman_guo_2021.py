@@ -82,34 +82,6 @@ def get_fcpa(ctx, imt, z_scale, psa_df):
 
     return coastal
 
-    
-def array_index(data, value):
-    """
-    Get index of admitted value within given array.
-    """
-    # First try to find the idx of an exact match
-    low, high = 0, len(data) - 1
-    while low <= high:
-        mid = (low + high) // 2
-        if data[mid] == value:
-            return mid
-        elif data[mid] < value:
-            low = mid + 1
-        else:
-            high = mid - 1
-    
-    # Exact value not found so spec. insertion point
-    i = low
-    
-    # Now adjust
-    if i == len(data):  # If value is larger than any element in the array
-        return i - 1
-    elif data[i] != value:  # If value not found at insertion point 
-        i = max(i - 1, 0)   # adjust idx to the previous element
-    
-    # Adjust high idx to the next to last idx
-    return min(i, len(data) - 2)
-
 
 def get_fraction(lo, hi, value):
     """
@@ -125,8 +97,8 @@ def get_fraction(lo, hi, value):
 
 def get_data(psa_df):
     """
-    Get the z_sed for each z_sed, mag and rrup combination
-    within an ndarray
+    Get the z_sed for each z_sed, mag and rrup combination within
+    an ndarray.
     """
     # Create empty ndarray
     data = np.zeros((len(Z), len(M), len(R)))
@@ -147,7 +119,7 @@ def get_data(psa_df):
 
 def interpolate(lo, hi, fraction):
     """
-    Interpolate given the fraction between the lower and upper values.
+    Perform weighted interpolation between the lower and upper values.
     """
     return lo + fraction * (hi - lo)
 
