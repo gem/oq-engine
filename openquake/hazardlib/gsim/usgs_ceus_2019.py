@@ -131,7 +131,9 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
     required for the 2023 Conterminous US NSHMP (if specified):
     
     1) Computes the period-dependent bias correction factor of
-       Ramos-Sepulveda et al. (2023).
+       Ramos-Sepulveda et al. (2023). If sediment depth (z_sed)
+       is available for the sites the adjustment is scaled by
+       z_scale (z_sed dependent scaling factor).
     
     2) Computes the f_cpa parameter required for the Coastal Plains
        amplification model of Chapman and Guo (2021).
@@ -147,7 +149,7 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
     """
     ctx.z_sed = np.full(len(ctx.vs30), 0.8) #TODO remove
 
-    # First get sediment depth scaling factor
+    # First get sed. depth dependent scaling factor if available 
     if hasattr(ctx, 'z_sed'):
         z_scale = get_zscale(ctx.z_sed)
     else:
@@ -162,8 +164,8 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
         if mask_vs30.any():
             vs30 = ctx.vs30[mask_vs30]
             vs30[vs30 > 2000.] = 2000.
-            b_adj[mask_vs30] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
-        u_adj = (1.0 - z_scale) * b_adj
+            b_adj[mask_vs30] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)    
+        u_adj = (1.0 - z_scale) * b_adj # Scale by z_sed factor
     else:
         u_adj = None
 
@@ -369,7 +371,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             if self.epistemic_site:
                 f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
                 site_amp_sigma = get_site_amplification_sigma(
-                    self, ctx, f_rk, C_LIN, C_F760, C_NL)
+                    self, ctx.vs30, f_rk, C_LIN, C_F760, C_NL)
                 mean[m] = np.log(
                     0.185 * np.exp(imean - site_amp_sigma) +
                     0.63 * np.exp(imean) +

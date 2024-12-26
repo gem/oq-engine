@@ -365,28 +365,28 @@ def _get_f760(C_F760, vs30, CONSTANTS, is_stddev=False):
         return wimp * C_F760["f760i"] + wgr * C_F760["f760g"]
 
 
-def _get_fv(C_LIN, sites, f760, CONSTANTS):
+def _get_fv(C_LIN, vs30s, f760, CONSTANTS):
     """
     Returns the Vs30-dependent component of the mean linear amplification
     model, as defined in equation 3 of Stewart et al. (2019)
     """
     const1 = C_LIN["c"] * np.log(C_LIN["v1"] / CONSTANTS["vref"])
     const2 = C_LIN["c"] * np.log(C_LIN["v2"] / CONSTANTS["vref"])
-    f_v = C_LIN["c"] * np.log(sites.vs30 / CONSTANTS["vref"])
-    f_v[sites.vs30 <= C_LIN["v1"]] = const1
-    f_v[sites.vs30 > C_LIN["v2"]] = const2
-    idx = sites.vs30 > CONSTANTS["vU"]
+    f_v = C_LIN["c"] * np.log(vs30s / CONSTANTS["vref"])
+    f_v[vs30s <= C_LIN["v1"]] = const1
+    f_v[vs30s > C_LIN["v2"]] = const2
+    idx = vs30s > CONSTANTS["vU"]
     if np.any(idx):
         const3 = np.log(3000. / CONSTANTS["vU"])
         f_v[idx] = const2 - (const2 + f760[idx]) *\
-            (np.log(sites.vs30[idx] / CONSTANTS["vU"]) / const3)
-    idx = sites.vs30 >= 3000.
+            (np.log(vs30s[idx] / CONSTANTS["vU"]) / const3)
+    idx = vs30s >= 3000.
     if np.any(idx):
         f_v[idx] = -f760[idx]
     return f_v + f760
 
 
-def get_fnl(C_NL, pga_rock, vs30, period):
+def get_fnl(C_NL, pga_rock, vs30, period, us23):
     """
     Returns the nonlinear mean amplification according to equation 2
     of Hashash et al. (2019)
@@ -403,7 +403,11 @@ def get_fnl(C_NL, pga_rock, vs30, period):
         # according to equation 3 of Hashash et al., (2019)
         c_vs = np.copy(vs30[idx])
         c_vs[c_vs > vref] = vref
-        f_2 = C_NL["f4"] * (np.exp(C_NL["f5"] * (c_vs - 360.)) -
+        if us23:
+            f_4 = C_NL["f4_mod"]
+        else:
+            f_4 = C_NL["f4"]
+        f_2 = f_4 * (np.exp(C_NL["f5"] * (c_vs - 360.)) -
                             np.exp(C_NL["f5"] * (vref - 360.)))
         f_nl[idx] = f_2 * f_rk[idx]
     return f_nl, f_rk
@@ -465,7 +469,7 @@ def get_hard_rock_mean(self, mag, ctx, imt):
     return np.log(_get_mean(self.kind, imls, dst, dists))
 
 
-def get_site_amplification(self, imt, pga_r, sites):
+def get_site_amplification(self, imt, pga_r, vs30s, us23=False):
     """
     Returns the sum of the linear (Stewart et al., 2019) and non-linear
     (Hashash et al., 2019) amplification terms
@@ -481,11 +485,11 @@ def get_site_amplification(self, imt, pga_r, sites):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, sites.vs30, self.CONSTANTS)
+    f760 = _get_f760(C_F760, vs30s, self.CONSTANTS)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, sites, f760, self.CONSTANTS)
+    f_lin = _get_fv(C_LIN, vs30s, f760, self.CONSTANTS)
     # Get the nonlinear amplification from Hashash et al., (2017)
-    f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
+    f_nl, f_rk = get_fnl(C_NL, pga_r, vs30s, period, us23)
     # Mean amplification
     ampl = f_lin + f_nl
 
@@ -493,26 +497,26 @@ def get_site_amplification(self, imt, pga_r, sites):
     # sigma of both models and multiply by the input epsilon
     if self.site_epsilon:
         site_epistemic = get_site_amplification_sigma(
-            self, sites, f_rk, C_LIN, C_F760, C_NL)
+            self, vs30s, f_rk, C_LIN, C_F760, C_NL)
         ampl += self.site_epsilon * site_epistemic
     return ampl
 
 
-def get_site_amplification_sigma(self, sites, f_rk, C_LIN, C_F760, C_NL):
+def get_site_amplification_sigma(self, vs30s, f_rk, C_LIN, C_F760, C_NL):
     """
     Returns the epistemic uncertainty on the site amplification factor
     """
     # In the case of the linear model sigma_f760 and sigma_fv are
     # assumed independent and the resulting sigma_flin is the root
     # sum of squares (SRSS)
-    f760_stddev = _get_f760(C_F760, sites.vs30,
+    f760_stddev = _get_f760(C_F760, vs30s,
                             self.CONSTANTS, is_stddev=True)
     f_lin_stddev = np.sqrt(
         f760_stddev ** 2. +
-        get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
+        get_linear_stddev(C_LIN, vs30s, self.CONSTANTS) ** 2)
     # Likewise, the epistemic uncertainty on the linear and nonlinear
     # model are assumed independent and the SRSS is taken
-    f_nl_stddev = get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
+    f_nl_stddev = get_nonlinear_stddev(C_NL, vs30s) * f_rk
     return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
 
 
@@ -584,18 +588,33 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
         # Avoid re-calculating PGA if that was already done!
         mean = np.copy(pga_r)
 
+    # If applying US 2023 NSHMP bias adjustment OR Coastal Plains
+    # site amp adjustment use the alternative f4 coeff (f4_mod)
+    # for non-linear site term as within USGS' NGAEast java code
+    if isinstance(cstl, dict) or isinstance(u_adj, np.ndarray):
+        us23 = True
+    else:
+        us23 = False
+
     # Get site amplification
-    amp = get_site_amplification(self, imt, np.exp(pga_r), ctx)
+    amp = get_site_amplification(self, imt, np.exp(pga_r), ctx.vs30, us23)
 
     # Apply Coastal Plains amp adj of Chapman and Guo (2021) if req
     cpa_term = np.full(len(ctx.vs30), 0.)
     if isinstance(cstl, dict) and isinstance(cstl['f_cpa'], np.ndarray):
-        breakpoint()
-        corr = get_cpa_corr()
-        cpa_term = cstl['f_cpa'] - corr * cstl['z_scale'] 
+        
+        # Compute site amp with vs ref of 1000 m/s
+        vs_co = np.full(len(ctx.vs30), 1000.)
+        amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_co)
+
+        # Get the coastal plains adjustment factor
+        cpa_term = cstl['f_cpa'] - amp_cpa * cstl['z_scale'] 
+
+        # Apply the adjustment factor
+        amp += cpa_term
 
     # Add the site term
-    mean += amp + cpa_term
+    mean += amp
 
     return mean, amp, pga_r
 
@@ -785,32 +804,34 @@ class NGAEastGMPE(GMPETable):
     """)
 
     # Coefficients for the nonlinear model, taken from Table 2.1 of
-    # Hashash et al., (2017)
+    # Hashash et al., (2017). The alternative f4 coefficients (f4_mod)
+    # are required for the US 2023 NSHMP and are taken from USGS repo:
+    # https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-siteamp.csv?ref_type=heads
     COEFFS_NONLINEAR = CoeffsTable(sa_damping=5, table="""\
-    imt          f3         f4         f5     Vc   sigma_c
-    pgv     0.06089   -0.08344   -0.00667   2257.0   0.120
-    pga     0.07520   -0.43755   -0.00131   2990.0   0.120
-    0.010   0.07520   -0.43755   -0.00131   2990.0   0.120
-    0.020   0.05660   -0.41511   -0.00098   2990.0   0.120
-    0.030   0.10360   -0.49871   -0.00127   2990.0   0.120
-    0.050   0.16781   -0.58073   -0.00187   2990.0   0.120
-    0.075   0.17386   -0.53646   -0.00259   2990.0   0.120
-    0.100   0.15083   -0.44661   -0.00335   2990.0   0.120
-    0.150   0.14272   -0.38264   -0.00410   2335.0   0.120
-    0.200   0.12815   -0.30481   -0.00488   1533.0   0.120
-    0.250   0.13286   -0.27506   -0.00564   1318.0   0.135
-    0.300   0.13070   -0.22825   -0.00655   1152.0   0.150
-    0.400   0.09414   -0.11591   -0.00872   1018.0   0.150
-    0.500   0.09888   -0.07793   -0.01028    939.0   0.150
-    0.750   0.06101   -0.01780   -0.01456    835.0   0.125
-    1.000   0.04367   -0.00478   -0.01823    951.0   0.060
-    1.500   0.00480   -0.00086   -0.02000    882.0   0.050
-    2.000   0.00164   -0.00236   -0.01296    879.0   0.040
-    3.000   0.00746   -0.00626   -0.01043    894.0   0.040
-    4.000   0.00269   -0.00331   -0.01215    875.0   0.030
-    5.000   0.00242   -0.00256   -0.01325    856.0   0.020
-    7.500   0.04219   -0.00536   -0.01418    832.0   0.020
-    10.00   0.05329   -0.00631   -0.01403    837.0   0.020
+    imt          f3         f4         f5     Vc   sigma_c  f4_mod 
+    pgv     0.06089   -0.08344   -0.00667   2257.0   0.120  -0.08344
+    pga     0.07520   -0.43755   -0.00131   2990.0   0.120  -0.43755
+    0.010   0.07520   -0.43755   -0.00131   2990.0   0.120  -0.43755
+    0.020   0.05660   -0.41511   -0.00098   2990.0   0.120  -0.41511
+    0.030   0.10360   -0.49871   -0.00127   2990.0   0.120  -0.49871
+    0.050   0.16781   -0.58073   -0.00187   2990.0   0.120  -0.58073
+    0.075   0.17386   -0.53646   -0.00259   2990.0   0.120  -0.53646
+    0.100   0.15083   -0.44661   -0.00335   2990.0   0.120  -0.44661
+    0.150   0.14272   -0.38264   -0.00410   2335.0   0.120  -0.38264
+    0.200   0.12815   -0.30481   -0.00488   1533.0   0.120  -0.30481
+    0.250   0.13286   -0.27506   -0.00564   1318.0   0.135  -0.27506
+    0.300   0.13070   -0.22825   -0.00655   1152.0   0.150  -0.22825
+    0.400   0.09414   -0.11591   -0.00872   1018.0   0.150  -0.13060
+    0.500   0.09888   -0.07793   -0.01028    939.0   0.150  -0.09571
+    0.750   0.06101   -0.01780   -0.01456    835.0   0.125  -0.02909
+    1.000   0.04367   -0.00478   -0.01823    951.0   0.060  -0.01057
+    1.500   0.00480   -0.00086   -0.02000    882.0   0.050  -0.00253
+    2.000   0.00164   -0.00236   -0.01296    879.0   0.040  -0.00236
+    3.000   0.00746   -0.00626   -0.01043    894.0   0.040  -0.00626
+    4.000   0.00269   -0.00331   -0.01215    875.0   0.030  -0.00331
+    5.000   0.00242   -0.00256   -0.01325    856.0   0.020  -0.00256
+    7.500   0.04219   -0.00536   -0.01418    832.0   0.020  -0.00536
+    10.00   0.05329   -0.00631   -0.01403    837.0   0.020  -0.00631
     """)
 
     # Note that the coefficient values at 0.1 s have been smoothed with respect

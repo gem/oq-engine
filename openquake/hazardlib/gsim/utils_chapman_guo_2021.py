@@ -28,7 +28,7 @@ The majority of the USGS java code for implementing this model is available here
 https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/java/gov/usgs/earthquake/nshmp/gmm/ChapmanGuo_2021.java?ref_type=heads
 
 The code for obtaining the f_cpa parameter is available within
-the USGS java code for the NGAEast GMMs which is available here:
+the USGS java code for the NGAEast GMMs which is taken from here:
 https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/java/gov/usgs/earthquake/nshmp/gmm/NgaEast.java
 """
 import numpy as np
@@ -51,8 +51,7 @@ def get_zscale(z_sed):
 
 def get_fcpa(ctx, imt, z_scale, psa_df):
     """
-    Get f_cpa param for the given sediment depth, Mw and rjb. This parameter
-    is required for the Chapman and Guo (2021) Coastal Plains site amp model.
+    Get f_cpa param for the given sediment depth, Mw and rjb.
 
     This function returns both f_cpa and z_scale within a dictionary which is
     passed into the nga_east functions for computation of mean ground-motions.
