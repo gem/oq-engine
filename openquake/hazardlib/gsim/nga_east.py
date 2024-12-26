@@ -404,7 +404,7 @@ def get_fnl(C_NL, pga_rock, vs30, period, us23):
         c_vs = np.copy(vs30[idx])
         c_vs[c_vs > vref] = vref
         if us23:
-            f_4 = C_NL["f4_mod"]
+            f_4 = C_NL["f4_mod"] # 2023 US NSHMP uses f4_mod
         else:
             f_4 = C_NL["f4"]
         f_2 = f_4 * (np.exp(C_NL["f5"] * (c_vs - 360.)) -
