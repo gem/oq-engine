@@ -31,7 +31,10 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import get_fcpa, get_zscale
 
 
 # Path to excel containing the Coastal Plains PSA ratios
-# required for Chapman and Guo (2021) site amplification
+# required for Chapman and Guo (2021) site amplification.
+# NOTE: values for SA(0.6) have been computed through a
+# weighted interpolation of SA(0.5) and SA(0.75) values
+# as required for GEM Global Hazard Maps/Mosaic.
 PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.xlsx')
 
 
@@ -141,17 +144,18 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
     :param bias_adj: Bool determining if the period-dependent bias
                      adjustment is applied. 
 
-    :param cpa: Bool determining if the coastal plains amplification
-                model is applied. 
+    :param cpa: Bool determining if the Coastal Plains amplification
+                adjustment model is applied. 
 
     :param psa_df: Pandas DataFrame containing the PSA ratios (table
                    for mag, rrup, z_sed combinations for the given IMT.
     """
-    ctx.z_sed = np.full(len(ctx.vs30), 0.8) #TODO remove
-
     # First get sed. depth dependent scaling factor if available 
     if hasattr(ctx, 'z_sed'):
         z_scale = get_zscale(ctx.z_sed)
+    elif cpa:
+        raise ValueError('The Chapman and Guo (2021) Coastal Plains site '
+                         'amp. adjustments require the z_sed site param.')
     else:
         z_scale = np.full(len(ctx.vs30), 0.) # Turn off z_sed influence 
                                              # if not in site params
@@ -174,7 +178,7 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
         # Get required params for the site amp model
         coastal = get_fcpa(ctx, imt, z_scale, psa_df)
     else:
-        coastal = None
+        coastal = None, None
 
     return u_adj, coastal
 
@@ -347,7 +351,11 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # Apply required 2023 US NSHMP adjustments if specified
             if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
                 if self.coastal_plains_site_amp:
-                    psa_df = self.psa_ratios[str(imt)]
+                    try:
+                        psa_df = self.psa_ratios[str(imt)]
+                    except:
+                        raise ValueError(f'Chapman and Guo (2021) Coastal Plains '
+                                         f'PSA ratios are not provided for {imt}.')
                 else:
                     psa_df = None
                 u_adj, cstl = get_us23_adjs(ctx, imt, self.usgs_2023_bias_adj,

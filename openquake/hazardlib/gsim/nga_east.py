@@ -607,10 +607,10 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
         vs_co = np.full(len(ctx.vs30), 1000.)
         amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_co)
 
-        # Get the coastal plains adjustment factor
+        # Get the coastal plains site amp adjustment
         cpa_term = cstl['f_cpa'] - amp_cpa * cstl['z_scale'] 
 
-        # Apply the adjustment factor
+        # Apply the adjustment factor to pre-existing site amp term
         amp += cpa_term
 
     # Add the site term
