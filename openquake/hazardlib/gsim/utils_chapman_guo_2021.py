@@ -165,7 +165,7 @@ def get_psa_ratio(ctx, psa_df):
     z1 = interpolate(z1m1, z1m2, mf)
     z2 = interpolate(z2m1, z2m2, mf)
 
-    # Get the interpolate PSA ratios
+    # Get the interpolated PSA ratios
     psa_ratios = interpolate(z1, z2, zf)
 
     return np.log(psa_ratios) # Into log space
