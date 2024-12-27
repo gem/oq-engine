@@ -150,8 +150,13 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
     :param psa_df: Pandas DataFrame containing the PSA ratios (table
                    for mag, rrup, z_sed combinations for the given IMT.
     """
-    # First get sed. depth dependent scaling factor
-    z_scale = get_zscale(ctx.z_sed)
+    # Get sed. depth scaling
+    if hasattr(ctx, 'z_sed'):
+        # If z_sed_scaling is True
+        z_scale = get_zscale(ctx.z_sed)
+    else:
+        # Turn off z_sed scaling
+        z_scale = np.full(len(ctx.vs30), 0)
 
     # If period-dependent bias adjustment 
     if bias_adj:
@@ -168,7 +173,6 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
 
     # If Coastal Plains site amp get required params
     if cpa:
-        # Get required params for the site amp model
         coastal = get_fcpa(ctx, imt, z_scale, psa_df)
     else:
         coastal = None, None
@@ -317,7 +321,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
 
     def __init__(self, gmpe_table="", sigma_model="COLLAPSED",
                  epistemic_site=True, usgs_2023_bias_adj=False,
-                 coastal_plains_site_amp=False):
+                 coastal_plains_site_amp=False, z_sed_scaling=False):
         self.sigma_model = sigma_model
         self.epistemic_site = epistemic_site
         if self.sigma_model not in ("EPRI", "PANEL", "COLLAPSED"):
@@ -330,11 +334,14 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         self.usgs_2023_bias_adj = usgs_2023_bias_adj # US 2023 NSHMP
         self.coastal_plains_site_amp = coastal_plains_site_amp # US 2023 NSHMP
         if self.coastal_plains_site_amp:
+            # Get the PSA ratio tables per IMT
             with open(PSAS) as f:
                 self.psa_ratios = pd.read_excel(f.name, sheet_name=None)
-        # Add sediment depth site param if Conterminous US 2023 adjustments
-        if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
+        # Only scaling bias adj or Coastal Plains site amp adj
+        # by sediment depth scaling if specified by user)
+        if z_sed_scaling:
             self.REQUIRES_SITES_PARAMETERS |= {"z_sed"}
+
         super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

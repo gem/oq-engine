@@ -199,19 +199,22 @@ cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
 # NGAEast GMM with Ramos-Sepulveda et al. (2023) bias adjustment
 ngaeast_bias = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
-                          'usgs_2023_bias_adj="true"')
+                          'usgs_2023_bias_adj="true"\n'
+                          'z_sed_scaling="true"')
 
 # NGAEast GMM with Chapman and Guo (2021) Coastal Plains site amp
 ngaeast_cpa = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
-                          'coastal_plains_site_amp="true"')
+                          'coastal_plains_site_amp="true"\n'
+                          'z_sed_scaling="true"')
 
 # NGAEast GMM with both US 2023 adjustments (not used together in
 # the US 2023 model because have similar effects but checked for QA).
 ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
                           'usgs_2023_bias_adj="true"\n'
-                          'coastal_plains_site_amp="true"')
+                          'coastal_plains_site_amp="true"\n'
+                          'z_sed_scaling="true"')
 
 
 class US23AdjustmentTestCase(unittest.TestCase):       
