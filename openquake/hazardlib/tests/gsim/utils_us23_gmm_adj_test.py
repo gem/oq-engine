@@ -205,7 +205,8 @@ ngaeast_cpa = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
                           'coastal_plains_site_amp="true"')
 
-# NGAEast GMM with both US 2023 adjustments
+# NGAEast GMM with both US 2023 adjustments (not required for 2023
+# US NSHMP but best to check both work together)
 ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
                           'usgs_2023_bias_adj="true"\n'
@@ -246,6 +247,7 @@ class US23AdjustmentTestCase(unittest.TestCase):
         ctx.rake = 90.
         ctx.z1pt0 = np.array([72.1, 457.77, 522.32])
         ctx.z2pt5 = np.array([0.69, 1.75, 6.32])
+        ctx.z_sed = np.array([1.20, 4.50, 8.40])
         ctx.rrup = np.array([50., 200., 500.])
         ctx.vs30 = np.array([800., 400., 200.])
         ctx.vs30measured = 1
