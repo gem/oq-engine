@@ -360,7 +360,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 u_adj, cstl = None, None
 
             # Get mean
-            imean, _site_amp, pga_r = get_mean_amp(self, mag, ctx, imt, u_adj, cstl)
+            imean, _site_amp, pga_r, cpa_term = get_mean_amp(self, mag, ctx,
+                                                             imt, u_adj, cstl)
 
             # Get the coefficients for the IMTs
             C_LIN = self.COEFFS_LINEAR[imt]
@@ -376,9 +377,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 mean[m] = np.log(
                     0.185 * np.exp(imean - site_amp_sigma) +
                     0.63 * np.exp(imean) +
-                    0.185 * np.exp(imean + site_amp_sigma))
+                    0.185 * np.exp(imean + site_amp_sigma)) + cpa_term
             else:
-                mean[m] = imean
+                mean[m] = imean + cpa_term
 
             # Get standard deviation model
             sig[m], tau[m], phi[m] = _get_stddevs(

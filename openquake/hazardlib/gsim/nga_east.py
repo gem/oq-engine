@@ -556,6 +556,12 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
     """
     Compute mean ground-motion.
 
+    NOTE: If a non-zero cpa_term is computed we apply this adjustment
+    post-application of the collapsed epistemic uncertainty site model
+    to replicate the USGS java code. Therefore the cpa_term adjustment
+    is added to the (collapsed) site-adjusted mean within the compute
+    method of the NGAEastUSGSGMPE class (found in usgs_ceus_2019.py).
+
     :param u_adj: Array containing the period-dependent bias
                   adjustment as required for the 2023 Conterminous
                   US NSHMP.
@@ -599,24 +605,20 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
     # Get site amplification
     amp = get_site_amplification(self, imt, np.exp(pga_r), ctx.vs30, us23)
 
-    # Apply Coastal Plains amp adj of Chapman and Guo (2021) if req
-    cpa_term = np.full(len(ctx.vs30), 0.)
-    if isinstance(cstl, dict) and isinstance(cstl['f_cpa'], np.ndarray):
-        
-        # Compute site amp with vs ref of 1000 m/s
-        vs_cg21 = np.full(len(ctx.vs30), 1000.)
-        amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_cg21)
-
-        # Get the coastal plains site amp adjustment
-        cpa_term = cstl['f_cpa'] - amp_cpa * cstl['z_scale'] 
-
-        # Apply the adjustment factor to pre-existing site amp term
-        amp += cpa_term
-
-    # Add the site term
+    # Add the site term to the mean
     mean += amp
 
-    return mean, amp, pga_r
+    # Get the Chapman and Guo (2021) Coastal Plains adjustment if req.
+    if isinstance(cstl, dict) and isinstance(cstl['f_cpa'], np.ndarray):
+        # Get site amp term with vs30 ref of 1000 m/s
+        vs_cg21 = np.full(len(ctx.vs30), 1000.) 
+        amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_cg21)
+        # Then compute adjustment per site
+        cpa_term = cstl['f_cpa'] - amp_cpa * cstl['z_scale']
+    else:
+        cpa_term = np.full(len(ctx.vs30), 0.) # Turn off adjustment
+
+    return mean, amp, pga_r, cpa_term
 
 
 class NGAEastGMPE(GMPETable):
@@ -766,7 +768,7 @@ class NGAEastGMPE(GMPETable):
         """
         [mag] = np.unique(np.round(ctx.mag, 2))  # by construction
         for m, imt in enumerate(imts):
-            mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
+            mean[m], _, _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
             sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
