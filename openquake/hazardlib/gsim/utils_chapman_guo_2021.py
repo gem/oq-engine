@@ -76,7 +76,7 @@ def get_fcpa(ctx, imt, z_scale, psa_df):
     # For these sites recompute f_cpa parameter
     if np.any(mask_z):
         f_cpa[mask_z] = get_psa_ratio(ctx, psa_df)
-
+        
     # Put Coastal Plain params into a dict for passing into nga_east functions
     coastal = {'f_cpa': f_cpa, 'z_scale': z_scale}
 

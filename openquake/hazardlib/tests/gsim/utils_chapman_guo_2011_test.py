@@ -73,5 +73,3 @@ class ChapmanGuo2021TestCase(unittest.TestCase):
 
         # Check observed matches expected
         aae(obs, exp)
-
-
