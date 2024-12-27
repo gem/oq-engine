@@ -347,9 +347,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # Apply required 2023 US NSHMP adjustments if specified
             if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
                 if self.coastal_plains_site_amp:
-                    try:
+                    if str(imt) in self.psa_ratios.keys():
                         psa_df = self.psa_ratios[str(imt)]
-                    except:
+                    else:
                         raise ValueError(f'Chapman and Guo (2021) Coastal Plains '
                                          f'PSA ratios are not provided for {imt}.')
                 else:
