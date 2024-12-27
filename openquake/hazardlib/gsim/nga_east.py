@@ -403,8 +403,8 @@ def get_fnl(C_NL, pga_rock, vs30, period, us23):
         # according to equation 3 of Hashash et al., (2019)
         c_vs = np.copy(vs30[idx])
         c_vs[c_vs > vref] = vref
-        if us23:
-            f_4 = C_NL["f4_mod"] # 2023 US NSHMP uses f4_mod
+        if us23: # US 2023 NSHMP
+            f_4 = C_NL["f4"] * 0.5 + C_NL["f4_mod"] * 0.5
         else:
             f_4 = C_NL["f4"]
         f_2 = f_4 * (np.exp(C_NL["f5"] * (c_vs - 360.)) -
@@ -604,8 +604,8 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
     if isinstance(cstl, dict) and isinstance(cstl['f_cpa'], np.ndarray):
         
         # Compute site amp with vs ref of 1000 m/s
-        vs_co = np.full(len(ctx.vs30), 1000.)
-        amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_co)
+        vs_cg21 = np.full(len(ctx.vs30), 1000.)
+        amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_cg21)
 
         # Get the coastal plains site amp adjustment
         cpa_term = cstl['f_cpa'] - amp_cpa * cstl['z_scale'] 

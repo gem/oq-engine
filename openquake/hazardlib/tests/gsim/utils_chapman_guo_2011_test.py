@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2024 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -44,6 +44,7 @@ class ChapmanGuo2021TestCase(unittest.TestCase):
     def test_chapman_guo_psa_ratios(self):
         
         # NGAEast GMM with Chapman and Guo (2021) Coastal Plains site amp
+        # which requires z_sed site param
         ngaeast_mod = valid.gsim('[NGAEastUSGSGMPE]\n'
                                  'gmpe_table="nga_east_usgs_17.hdf5"\n'
                                  'coastal_plains_site_amp="true"')
