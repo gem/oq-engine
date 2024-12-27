@@ -50,7 +50,10 @@ class ChapmanGuo2021TestCase(unittest.TestCase):
         
         # Make the ctx
         imts = ['SA(0.2)', 'SA(1.0)', 'SA(2.0)']
-        cmaker = simple_cmaker([ngaeast_mod], imts)                       
+        mags = [6.0, 6.0, 6.0]
+        oqp = {'imtls': {k: [] for k in imts},
+               'mags': [f'{k:.2f}' for k in mags]}
+        cmaker = simple_cmaker([ngaeast_mod], imts, **oqp)                       
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 90.
         ctx.rake = 0.
