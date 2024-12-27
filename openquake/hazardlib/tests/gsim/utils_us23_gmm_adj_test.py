@@ -206,7 +206,7 @@ ngaeast_cpa = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'coastal_plains_site_amp="true"')
 
 # NGAEast GMM with both US 2023 adjustments (not required for 2023
-# US NSHMP but best to check both work together)
+# US NSHMP but best to check both work together regardless of this)
 ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
                           'usgs_2023_bias_adj="true"\n'

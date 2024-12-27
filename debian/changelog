@@ -1,3 +1,12 @@
+  [Christopher Brooks]
+  * Added ability to specify period-dependent bias adjustment for USGS
+    classes of NGAEast GMMs (US 2023 NSHMP). Unit tests also added.
+  * Added ability to specify Chapman and Guo (2021) Coastal Plains site
+    amplification adjustment for USGS classes of NGAEast GMMs (US 2023
+    NSHMP). Unit tests also added.
+  * Added sediment depth site param (z_sed) to sites module as required
+    for Chapman and Guo (2021) Coastal Plains site amp. adjustment.
+
   [Michele Simionato]
   * Fixed a bug while exporting realizations.csv for scenario calculations
   * Added `webapi.calc_timeout` configuration parameter

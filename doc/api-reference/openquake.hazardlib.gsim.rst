@@ -1219,6 +1219,14 @@ utils
     :undoc-members:
     :show-inheritance:
 
+utils_usgs_chapman_guo_2021
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.utils_chapman_guo_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 utils_swiss_gmpe
 ------------------------------------------------
 
