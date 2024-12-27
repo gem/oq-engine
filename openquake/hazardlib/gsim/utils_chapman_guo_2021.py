@@ -60,7 +60,7 @@ def get_zscale(z_sed):
     return s ** 4
 
 
-def get_fcpa(ctx, imt, z_scale, psa_df):
+def get_fcpa(ctx, z_scale, psa_df):
     """
     Get f_cpa param for the given sediment depth, Mw and rjb.
 

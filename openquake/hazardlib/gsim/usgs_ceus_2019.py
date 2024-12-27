@@ -173,7 +173,7 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
 
     # If Coastal Plains site amp get required params
     if cpa:
-        coastal = get_fcpa(ctx, imt, z_scale, psa_df)
+        coastal = get_fcpa(ctx, z_scale, psa_df)
     else:
         coastal = None, None
 
@@ -337,11 +337,10 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # Get the PSA ratio tables per IMT
             with open(PSAS) as f:
                 self.psa_ratios = pd.read_excel(f.name, sheet_name=None)
-        # Only scaling bias adj or Coastal Plains site amp adj
-        # by sediment depth scaling if specified by user)
+        # Only scale bias adjustment or Coastal Plains site amp
+        # by sediment depth scaling factor if specified by user
         if z_sed_scaling:
             self.REQUIRES_SITES_PARAMETERS |= {"z_sed"}
-
         super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
