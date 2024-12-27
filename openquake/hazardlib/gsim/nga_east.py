@@ -557,10 +557,10 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
     Compute mean ground-motion.
 
     NOTE: If a non-zero cpa_term is computed we apply this adjustment
-    post-application of the collapsed epistemic uncertainty site model
-    to replicate the USGS java code. Therefore the cpa_term adjustment
-    is added to the (collapsed) site-adjusted mean within the compute
-    method of the NGAEastUSGSGMPE class (found in usgs_ceus_2019.py).
+    post-application of the collapsed epistemic uncertainty site ampl
+    model to replicate the USGS java code. Therefore the cpa_term adj
+    is added to the collapsed site epi. uncertainty adjusted mean in
+    the compute meth of the NGAEastUSGSGMPE class (usgs_ceus_2019.py).
 
     :param u_adj: Array containing the period-dependent bias
                   adjustment as required for the 2023 Conterminous
