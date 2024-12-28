@@ -47,6 +47,7 @@ class ChapmanGuo2021TestCase(unittest.TestCase):
         # which requires z_sed site param
         ngaeast_mod = valid.gsim('[NGAEastUSGSGMPE]\n'
                                  'gmpe_table="nga_east_usgs_17.hdf5"\n'
+                                 'z_sed_scaling="true"\n'
                                  'coastal_plains_site_amp="true"')
         
         # Make the ctx
