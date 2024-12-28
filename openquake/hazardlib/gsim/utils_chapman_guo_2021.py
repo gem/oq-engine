@@ -33,14 +33,14 @@ https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/java/gov/usgs/ea
 """
 import numpy as np
 
-# z_sed
+# z_sed bins
 Z = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0, 1.5, 2.5,
               3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5])
 
-# Mw
+# Mw bins
 M = np.array([4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.2])
 
-# rrup
+# rrup bins
 R = np.array([0.0, 25.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0,
               400.0, 500.0, 600.0, 700.0, 800.0, 900.0, 1000.0,
               1100.0, 1200.0, 1350.0, 1500.0])
