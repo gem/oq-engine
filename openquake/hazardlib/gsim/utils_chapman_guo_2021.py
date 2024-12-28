@@ -31,6 +31,7 @@ The code for obtaining the f_cpa parameter is available within
 the USGS java code for the NGAEast GMMs which is taken from here:
 https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/java/gov/usgs/earthquake/nshmp/gmm/NgaEast.java
 """
+import pandas as pd
 import numpy as np
 
 # z_sed bins
@@ -92,22 +93,21 @@ def get_fraction(lo, hi, value):
 
 def get_data(psa_df):
     """
-    Get the z_sed for each z_sed, mag and rrup combination within
-    an ndarray.
+    Get the z_sed for each z_sed, mag and rrup combination within an ndarray.
     """
-    # Create empty ndarray
-    data = np.zeros((len(Z), len(M), len(R)))
+    # Make multi-idx
+    idx = pd.MultiIndex.from_product(
+        [Z, M, R], names=['zsed', 'magnitude', 'distance'])
 
-    # Per z_sed, mag, rrup
-    for zi in range(len(Z)):
-        for mi in range(len(M)):
-            for ri in range(len(R)):
-                # Get the row associated with the combination
-                row = (psa_df[(psa_df['zsed'] == Z[zi]) &
-                      (psa_df['magnitude'] == M[mi]) &
-                      (psa_df['distance'] == R[ri])])
-                # Store within the ndarray
-                data[zi][mi][ri] = row.psa_ratio.values[0]
+    # Set df idx to match multi-idx
+    print(psa_df.columns)
+    psa_df.set_index(['zsed', 'magnitude', 'distance'], inplace=True)
+
+    # Align the df with multi-idxto match the rows
+    psa_df_aligned = psa_df.reindex(idx)
+
+    # Get PSA ratios into ndarray
+    data = psa_df_aligned['psa_ratio'].values.reshape(len(Z), len(M), len(R))
 
     return data
 
