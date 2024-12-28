@@ -87,12 +87,7 @@ def get_fraction(lo, hi, value):
     """
     Get fraction of admitted value between lower and upper values.
     """
-    if value < lo:
-        return 0.0
-    elif value > hi:
-        return 1.0
-    else:
-        return (value - lo) / (hi - lo)
+    return np.clip((value - lo) / (hi - lo), 0.0, 1.0)
 
 
 def get_data(psa_df):
@@ -129,7 +124,7 @@ def get_psa_ratio(ctx, psa_df):
     Get the PSA ratio for each ctx's sediment depth, M and rrup for the
     given IMT.
     """
-    # Get psa data into ndarray first
+    # Get psa data into ndarray
     data = get_data(psa_df)
 
     # Get values per ctx into arrays
@@ -137,17 +132,17 @@ def get_psa_ratio(ctx, psa_df):
     m = np.array([cx.mag for cx in ctx])
     r = np.array([cx.rrup for cx in ctx])
 
-    # Get nearest idx per ctx
+    # Index search per ctx value
     i = np.searchsorted(Z, z) - 1
     j = np.searchsorted(M, m) - 1
     k = np.searchsorted(R, r) - 1
 
-    # Get fractions between neighbouring idx
-    zf = (z - Z[i]) / (Z[i + 1] - Z[i])
-    mf = (m - M[j]) / (M[j + 1] - M[j])
-    rf = (r - R[k]) / (R[k + 1] - R[k])
+    # Compute fractions for interp
+    zf = get_fraction(Z[i], Z[i + 1], z)
+    mf = get_fraction(M[j], M[j + 1], m)
+    rf = get_fraction(R[k], R[k + 1], r)
 
-    # Get PSA ratios from data ndarray
+    # Get neighbouring PSA values
     z1m1r1 = data[i, j, k]
     z1m1r2 = data[i, j, k + 1]
     z1m2r1 = data[i, j + 1, k]
@@ -157,15 +152,15 @@ def get_psa_ratio(ctx, psa_df):
     z2m2r1 = data[i + 1, j + 1, k]
     z2m2r2 = data[i + 1, j + 1, k + 1]
 
+    # Interp
     z1m1 = interpolate(z1m1r1, z1m1r2, rf)
     z1m2 = interpolate(z1m2r1, z1m2r2, rf)
     z2m1 = interpolate(z2m1r1, z2m1r2, rf)
     z2m2 = interpolate(z2m2r1, z2m2r2, rf)
-
     z1 = interpolate(z1m1, z1m2, mf)
     z2 = interpolate(z2m1, z2m2, mf)
 
-    # Get the interpolated PSA ratios
+    # Final interpolation
     psa_ratios = interpolate(z1, z2, zf)
 
-    return np.log(psa_ratios) # Into log space
+    return np.log(psa_ratios)  # Return in log space
