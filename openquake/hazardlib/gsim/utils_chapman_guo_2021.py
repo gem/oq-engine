@@ -100,7 +100,6 @@ def get_data(psa_df):
         [Z, M, R], names=['zsed', 'magnitude', 'distance'])
 
     # Set df idx to match multi-idx
-    print(psa_df.columns)
     psa_df.set_index(['zsed', 'magnitude', 'distance'], inplace=True)
 
     # Align the df with multi-idx to match the rows
