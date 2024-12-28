@@ -103,7 +103,7 @@ def get_data(psa_df):
     print(psa_df.columns)
     psa_df.set_index(['zsed', 'magnitude', 'distance'], inplace=True)
 
-    # Align the df with multi-idxto match the rows
+    # Align the df with multi-idx to match the rows
     psa_df_aligned = psa_df.reindex(idx)
 
     # Get PSA ratios into ndarray
