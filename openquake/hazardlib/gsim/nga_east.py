@@ -386,7 +386,7 @@ def _get_fv(C_LIN, vs30s, f760, CONSTANTS):
     return f_v + f760
 
 
-def get_fnl(C_NL, pga_rock, vs30, period, us23):
+def get_fnl(C_NL, pga_rock, vs30, period, us23=None):
     """
     Returns the nonlinear mean amplification according to equation 2
     of Hashash et al. (2019)
