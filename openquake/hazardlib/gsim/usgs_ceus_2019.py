@@ -359,6 +359,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             
             # Apply required 2023 US NSHMP adjustments if specified
             if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
+                # Get PSA ratios if Coastal Plains site amp model
                 if self.coastal_plains_site_amp:
                     if str(imt) in CPA_IMTS:
                         psa_df = pd.read_excel(self.psa_str, sheet_name=str(imt))
@@ -367,6 +368,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                                          f'PSA ratios are not provided for {imt}.')
                 else:
                     psa_df = None
+                # Get the adjustment params
                 u_adj, cstl = get_us23_adjs(ctx, imt, self.usgs_2023_bias_adj,
                                             self.coastal_plains_site_amp, psa_df)
             else:
