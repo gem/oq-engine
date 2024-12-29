@@ -5,7 +5,8 @@
     amplification adjustment for USGS classes of NGAEast GMMs (US 2023
     NSHMP). Unit tests also added.
   * Added sediment depth site param (z_sed) to sites module as required
-    for Chapman and Guo (2021) Coastal Plains site amp. adjustment.
+    for Chapman and Guo (2021) Coastal Plains site amp. adjustment. QA
+    is provided through unit tests and qa_tests_data/classical/case_87.
 
   [Michele Simionato]
   * Fixed a bug while exporting realizations.csv for scenario calculations
