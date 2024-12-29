@@ -341,8 +341,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         self.usgs_2023_bias_adj = usgs_2023_bias_adj # US 2023 NSHMP
         self.coastal_plains_site_amp = coastal_plains_site_amp # US 2023 NSHMP
         if self.coastal_plains_site_amp:
-            # Add the path to Chapman and Guo 2021 PSA ratios and load as req.
-            # per imt (use of super init creates overwriting issues otherwise)
+            # Add the path to CG21 PSA ratios and load as req. within compute
             with open(PSAS, 'rb') as f:
                 self.psa_str = f.read()
         # Only scale bias adjustment or Coastal Plains site amp
