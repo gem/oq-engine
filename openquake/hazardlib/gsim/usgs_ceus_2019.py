@@ -38,6 +38,13 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import get_fcpa, get_zscale
 PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.xlsx')
 
 
+# IMTs supported by Chapman and Guo (2021) site amp model
+CPA_IMTS = ['PGA', 'PGV', 'SA(0.01)', 'SA(0.02)', 'SA(0.03)', 'SA(0.05)',
+            'SA(0.075)', 'SA(0.1)', 'SA(0.15)', 'SA(0.2)', 'SA(0.25)', 'SA(0.3)',
+            'SA(0.4)', 'SA(0.5)', 'SA(0.6)', 'SA(0.75)', 'SA(1.0)', 'SA(1.5)',
+            'SA(2.0)', 'SA(3.0)', 'SA(4.0)', 'SA(5.0)', 'SA(7.5)', 'SA(10.0)']
+
+
 # Coefficients for period-dependent bias adjustment provided by
 # Ramos-Sepulveda et al.(2023). These are required for the 2023
 # Conterminous US model and are taken from:
@@ -334,9 +341,10 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         self.usgs_2023_bias_adj = usgs_2023_bias_adj # US 2023 NSHMP
         self.coastal_plains_site_amp = coastal_plains_site_amp # US 2023 NSHMP
         if self.coastal_plains_site_amp:
-            # Get the PSA ratio tables per IMT
-            with open(PSAS) as f:
-                self.psa_ratios = pd.read_excel(f.name, sheet_name=None)
+            # Add the path to Chapman and Guo 2021 PSA ratios and load as req.
+            # per imt (use of super init creates overwriting issues otherwise)
+            with open(PSAS, 'rb') as f:
+                self.psa_str = f.read()
         # Only scale bias adjustment or Coastal Plains site amp
         # by sediment depth scaling factor if specified by user
         if z_sed_scaling:
@@ -349,12 +357,12 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         """
         [mag] = np.unique(np.round(ctx.mag, 2))
         for m, imt in enumerate(imts):
-
+            
             # Apply required 2023 US NSHMP adjustments if specified
             if self.usgs_2023_bias_adj or self.coastal_plains_site_amp:
                 if self.coastal_plains_site_amp:
-                    if str(imt) in self.psa_ratios.keys():
-                        psa_df = self.psa_ratios[str(imt)]
+                    if str(imt) in CPA_IMTS:
+                        psa_df = pd.read_excel(self.psa_str, sheet_name=str(imt))
                     else:
                         raise ValueError(f'Chapman and Guo (2021) Coastal Plains '
                                          f'PSA ratios are not provided for {imt}.')
