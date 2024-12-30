@@ -32,8 +32,8 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
                                                              get_zscale)
 
 
-# Path to file containing the Coastal Plains PSA ratios required for Chapman and
-# Guo (2021) site amplification.
+# Path to CSV containing the Coastal Plains PSA ratios required for Chapman and
+# Guo (2021) site amplification model.
 # NOTE: values for SA(0.6) have been computed through a weighted interpolation
 # of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
 PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.csv')
@@ -46,9 +46,9 @@ CPA_IMTS = ['PGA', 'PGV', 'SA(0.01)', 'SA(0.02)', 'SA(0.03)', 'SA(0.05)',
             'SA(2.0)', 'SA(3.0)', 'SA(4.0)', 'SA(5.0)', 'SA(7.5)', 'SA(10.0)']
 
 
-# Coefficients for period-dependent bias adjustment provided by
-# Ramos-Sepulveda et al.(2023). These are required for the 2023
-# Conterminous US model and are taken from:
+# Coefficients for period-dependent bias adjustment provided by Ramos-Sepulveda
+# et al.(2023). These are required for the 2023 Conterminous US model and are
+# taken from:
 # https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-adj-2023.csv?ref_type=heads 
 COEFFS_USGS_2023_ADJ = CoeffsTable(sa_damping=5, table="""\
 imt     nga_adj  vs30_b 
@@ -345,8 +345,8 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # Add CG21 PSA ratios
             with open(PSAS, 'rb') as f:
                 self.psa_tab = pd.read_csv(f)
-        # Only scale bias adjustment or Coastal Plains site amp
-        # by sediment depth scaling factor if specified by user
+        # Only scale bias adjustment or Coastal Plains site amp by sediment
+        # depth scaling factor if specified by user
         if z_sed_scaling:
             self.REQUIRES_SITES_PARAMETERS |= {"z_sed"}
         super().__init__(gmpe_table)
