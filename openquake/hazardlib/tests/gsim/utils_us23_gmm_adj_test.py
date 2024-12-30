@@ -238,7 +238,8 @@ class US23AdjustmentTestCase(unittest.TestCase):
         """
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
-        mags = [6.0, 6.0, 6.0]
+        mags = [6.0, 6.0, 6.0] # simple cmaker default mags are 6 but here need
+                               # to create mag strings spec. for NGAEast GMMs
         oqp = {'imtls': {k: [] for k in imts},
                'mags': [f'{k:.2f}' for k in mags]}
         cmaker = simple_cmaker([ag_adj, ag_def,
