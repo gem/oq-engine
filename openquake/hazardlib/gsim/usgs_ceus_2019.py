@@ -30,11 +30,10 @@ from openquake.hazardlib.gsim.gmpe_table import _get_mean
 from openquake.hazardlib.gsim.utils_chapman_guo_2021 import get_fcpa, get_zscale
 
 
-# Path to excel containing the Coastal Plains PSA ratios
-# required for Chapman and Guo (2021) site amplification.
-# NOTE: values for SA(0.6) have been computed through a
-# weighted interpolation of SA(0.5) and SA(0.75) values
-# as required for GEM Global Hazard Maps/Mosaic.
+# Path to file containing the Coastal Plains PSA ratios required for Chapman and
+# Guo (2021) site amplification.
+# NOTE: values for SA(0.6) have been computed through a weighted interpolation
+# of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
 PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.xlsx')
 
 
