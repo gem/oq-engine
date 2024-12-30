@@ -47,6 +47,18 @@ R = np.array([0.0, 25.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0,
               1100.0, 1200.0, 1350.0, 1500.0])
 
 
+def get_psa_df(psa_df, imt):
+    """
+    Get the subset of the PSA ratio DataFrame for the given imt 
+    """
+    cols = []
+    for col in psa_df.columns:
+        if str(imt) in col:
+            cols.append(col)
+    assert len(cols) == 4
+    return psa_df[cols]
+
+
 def get_zscale(z_sed):
     """
     Provide the depth scaling factor for application of reference site
@@ -61,7 +73,7 @@ def get_zscale(z_sed):
     return s ** 4
 
 
-def get_fcpa(ctx, z_scale, psa_df):
+def get_fcpa(ctx, imt, z_scale, psa_df):
     """
     Get f_cpa param for the given sediment depth, Mw and rjb.
 
@@ -76,7 +88,7 @@ def get_fcpa(ctx, z_scale, psa_df):
 
     # For these sites recompute f_cpa parameter
     if np.any(mask_z):
-        f_cpa[mask_z] = get_psa_ratio(ctx, psa_df)
+        f_cpa[mask_z] = get_psa_ratio(ctx, imt, psa_df)
         
     # Put Coastal Plain params into a dict for passing into nga_east functions
     coastal = {'f_cpa': f_cpa, 'z_scale': z_scale}
@@ -91,22 +103,26 @@ def get_fraction(lo, hi, value):
     return np.clip((value - lo) / (hi - lo), 0.0, 1.0)
 
 
-def get_data(psa_df):
+def get_data(psa_df, imt):
     """
     Get the z_sed for each z_sed, mag and rrup combination within an ndarray.
     """
+    # Append columns with given imt
+    cols = [f'zsed_{imt}', f'magnitude_{imt}', f'distance_{imt}']
+    
     # Make multi-idx
     idx = pd.MultiIndex.from_product(
-        [Z, M, R], names=['zsed', 'magnitude', 'distance'])
+        [Z, M, R], names=cols)
 
     # Set df idx to match multi-idx
-    psa_df.set_index(['zsed', 'magnitude', 'distance'], inplace=True)
+    psa_df.set_index(cols, inplace=True)
 
     # Align the df with multi-idx to match the rows
     psa_df_aligned = psa_df.reindex(idx)
 
     # Get PSA ratios into ndarray
-    data = psa_df_aligned['psa_ratio'].values.reshape(len(Z), len(M), len(R))
+    data = psa_df_aligned[f'psa_ratio_{imt}'].values.reshape(
+        len(Z), len(M), len(R))
 
     return data
 
@@ -118,13 +134,13 @@ def interpolate(lo, hi, fraction):
     return lo + fraction * (hi - lo)
 
 
-def get_psa_ratio(ctx, psa_df):
+def get_psa_ratio(ctx, imt, psa_df):
     """
     Get the PSA ratio for each ctx's sediment depth, M and rrup for the
     given IMT.
     """
     # Get psa data into ndarray
-    data = get_data(psa_df)
+    data = get_data(psa_df, imt)
 
     # Get values per ctx into arrays
     z = np.array([cx.z_sed for cx in ctx])

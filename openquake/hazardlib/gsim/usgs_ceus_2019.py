@@ -27,14 +27,16 @@ from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nga_east import (
     ITPL, NGAEastGMPE, get_mean_amp, get_site_amplification_sigma)
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
-from openquake.hazardlib.gsim.utils_chapman_guo_2021 import get_fcpa, get_zscale
+from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
+                                                             get_fcpa,
+                                                             get_zscale)
 
 
 # Path to file containing the Coastal Plains PSA ratios required for Chapman and
 # Guo (2021) site amplification.
 # NOTE: values for SA(0.6) have been computed through a weighted interpolation
 # of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
-PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.xlsx')
+PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.csv')
 
 
 # IMTs supported by Chapman and Guo (2021) site amp model
@@ -179,7 +181,7 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
 
     # If Coastal Plains site amp get required params
     if cpa:
-        coastal = get_fcpa(ctx, z_scale, psa_df)
+        coastal = get_fcpa(ctx, imt, z_scale, psa_df)
     else:
         coastal = None, None
 
@@ -342,7 +344,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         if self.coastal_plains_site_amp:
             # Add the path to CG21 PSA ratios and load as req. within compute
             with open(PSAS, 'rb') as f:
-                self.psa_str = f.read()
+                self.psa_tab = pd.read_csv(f)
         # Only scale bias adjustment or Coastal Plains site amp
         # by sediment depth scaling factor if specified by user
         if z_sed_scaling:
@@ -361,7 +363,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 # Get PSA ratios if Coastal Plains site amp model
                 if self.coastal_plains_site_amp:
                     if str(imt) in CPA_IMTS:
-                        psa_df = pd.read_excel(self.psa_str, sheet_name=str(imt))
+                        psa_df = get_psa_df(self.psa_tab, imt)
                     else:
                         raise ValueError(f'Chapman and Guo (2021) Coastal Plains '
                                          f'PSA ratios are not provided for {imt}.')

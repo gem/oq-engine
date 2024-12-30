@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim import utils_chapman_guo_2021 as utils
 aae = np.testing.assert_almost_equal
 
 PSAS= os.path.join(os.path.dirname(__file__), '..', '..',
-                  'gsim', 'chapman_guo_2021_psa_ratios.xlsx')
+                  'gsim', 'chapman_guo_2021_psa_ratios.csv')
 
 # PSA ratios to be retrieved from Chapman and Guo (2021) tables
 exp = [np.array([-0.34285433, -0.53569485, -1.40974221]), # SA(0.2)
@@ -63,15 +63,18 @@ class ChapmanGuo2021TestCase(unittest.TestCase):
         ctx.rrup = np.array([50., 100., 200.])
         ctx.vs30 = np.array([800., 400., 200.])
 
+        # Load the csv
+        df = pd.read_csv(PSAS)
+
         # Get the PSA values for the ctx
         obs = []
         for imt in imts:
 
             # Table of PSA ratios per mag, rrup, z_sed
-            psa_df = pd.read_excel(PSAS, sheet_name=imt)
+            psa_df = utils.get_psa_df(df, imt)
 
             # Retrieve PSA ratios in log space for given ctx
-            psa_ratios = utils.get_psa_ratio(ctx, psa_df)
+            psa_ratios = utils.get_psa_ratio(ctx, imt, psa_df)
 
             # Store into single array
             obs.append(psa_ratios)
