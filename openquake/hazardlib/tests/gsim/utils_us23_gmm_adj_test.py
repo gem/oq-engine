@@ -257,9 +257,7 @@ class US23AdjustmentTestCase(unittest.TestCase):
                                 nshmp14_ask14_adj,
                                 ask14_cy, bssa14_cy,
                                 cb14_cy, cy14_cy,
-                                ngaeast_bias,
-                                ngaeast_cpa,
-                                ngaeast_both],
+                                ngaeast_bias, ngaeast_cpa, ngaeast_both],
                                 imts, **oqp)                     
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 60.
