@@ -29,7 +29,8 @@ from openquake.hazardlib.gsim.nga_east import (
 from openquake.hazardlib.gsim.gmpe_table import _get_mean
 from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
                                                              get_fcpa,
-                                                             get_zscale)
+                                                             get_zscale,
+                                                             CPA_IMTS)
 
 
 # Path to CSV containing the Coastal Plains PSA ratios required for Chapman and
@@ -37,13 +38,6 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
 # NOTE: values for SA(0.6) have been computed through a weighted interpolation
 # of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
 PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.csv')
-
-
-# IMTs supported by Chapman and Guo (2021) site amp model
-CPA_IMTS = ['PGA', 'PGV', 'SA(0.01)', 'SA(0.02)', 'SA(0.03)', 'SA(0.05)',
-            'SA(0.075)', 'SA(0.1)', 'SA(0.15)', 'SA(0.2)', 'SA(0.25)', 'SA(0.3)',
-            'SA(0.4)', 'SA(0.5)', 'SA(0.6)', 'SA(0.75)', 'SA(1.0)', 'SA(1.5)',
-            'SA(2.0)', 'SA(3.0)', 'SA(4.0)', 'SA(5.0)', 'SA(7.5)', 'SA(10.0)']
 
 
 # Coefficients for period-dependent bias adjustment provided by Ramos-Sepulveda
@@ -383,7 +377,6 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             C_LIN = self.COEFFS_LINEAR[imt]
             C_F760 = self.COEFFS_F760[imt]
             C_NL = self.COEFFS_NONLINEAR[imt]
-
             # Get collapsed amplification model for -sigma, 0, +sigma
             # with weights of 0.185, 0.63, 0.185 respectively
             if self.epistemic_site:
