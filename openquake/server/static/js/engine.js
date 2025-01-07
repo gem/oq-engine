@@ -569,6 +569,8 @@ function capitalizeFirstLetter(val) {
                 }
                 if (selected_approach == 'provide_rup_params') {
                     $('#rup_params').removeClass('hidden');
+                    $('#dip').prop('disabled', false);
+                    $('#strike').prop('disabled', false);
                     $('#submit_aristotle_get_rupture').text('Build rupture');
                 } else {
                     $('#rup_params').addClass('hidden');
