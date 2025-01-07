@@ -579,6 +579,7 @@ function capitalizeFirstLetter(val) {
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
+                $('input[name="aristotle_approach"]').prop('disabled', true);
                 if (use_shakemap()) {
                     $('#submit_aristotle_get_rupture').text(
                         'Retrieving ShakeMap data (it may take more than 10 seconds)');
@@ -725,6 +726,7 @@ function capitalizeFirstLetter(val) {
                     $('#shakemap-image-row').hide();
                 }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
+                    $('input[name="aristotle_approach"]').prop('disabled', false);
                     $('#submit_aristotle_get_rupture').text('Retrieve data');
                 });
                 event.preventDefault();
