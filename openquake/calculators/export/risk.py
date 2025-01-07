@@ -742,13 +742,13 @@ def export_assetcol_csv(ekey, dstore):
     df = pandas.DataFrame(assetcol)
     tagcol = dstore['assetcol'].tagcol
     tagnames = sorted(tagcol.tagnames)
-    unsorted_cols = [col for col in df.columns if col not in tagnames]
-    df = df[unsorted_cols + tagnames]
+    df = df[[col for col in df.columns if col not in tagnames]]
     for tagname in tagnames:
+        tags = []
         for asset_idx in range(len(assetcol)):
             tag_id = assetcol[tagname][asset_idx]
-            tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
-            df.loc[asset_idx, tagname] = tag_str
+            tags.append(tagcol.get_tag(tagname, tag_id).split('=')[1])
+        df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
     dest_csv = dstore.export_path('%s.%s' % ekey)
