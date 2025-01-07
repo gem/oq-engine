@@ -746,7 +746,7 @@ def export_assetcol_csv(ekey, dstore):
     df = df[unsorted_cols + tagnames]
     for tagname in tagnames:
         for asset_idx in range(len(assetcol)):
-            tag_id = df[tagname][asset_idx]
+            tag_id = assetcol[tagname][asset_idx]
             tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
             df.loc[asset_idx, tagname] = tag_str
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
