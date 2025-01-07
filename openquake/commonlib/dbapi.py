@@ -428,10 +428,10 @@ class Row(collections.abc.Sequence):
         return '<Row(%s)>' % ', '.join(items)
 
 
-sqlite3.register_adapter(
-    datetime.datetime, lambda val: val.isoformat())
-sqlite3.register_converter(
-    "datetime", lambda val: datetime.datetime.fromisoformat(val.decode()))
+# sqlite3.register_adapter(
+#     datetime.datetime, lambda val: val.isoformat())
+# sqlite3.register_converter(
+#     "datetime", lambda val: datetime.datetime.fromisoformat(val.decode()))
 db = Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
         isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
         timeout=20)
