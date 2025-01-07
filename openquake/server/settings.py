@@ -209,11 +209,7 @@ APPLICATION_MODE = 'PUBLIC'
 ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
 # ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
 
-
-try:
-    EXTERNAL_TOOLS = True if os.environ['EXTERNAL_TOOLS'] == 'True' else False
-except KeyError:
-    EXTERNAL_TOOLS = False
+EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
 
 # If False, a warning is displayed in case a newer version of the engine has
 # been released
