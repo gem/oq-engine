@@ -18,7 +18,7 @@
 import os
 import getpass
 import operator
-from datetime import datetime
+from datetime import datetime, UTC
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
@@ -293,7 +293,7 @@ def finish(db, job_id, status):
         a string such as 'successful' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
-       dict(is_running=False, status=status, stop_time=datetime.utcnow()),
+       dict(is_running=False, status=status, stop_time=datetime.now(UTC)),
        job_id)
 
 

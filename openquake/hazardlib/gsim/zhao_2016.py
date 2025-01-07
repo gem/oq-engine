@@ -519,7 +519,7 @@ def get_volc_zones(volc_polygons):
         for i, f in enumerate(inp):
             
             # Get zone_id
-            zone_id[i] = pd.Series(f['properties'])[0]
+            zone_id[i] = pd.Series(f['properties']).iloc[0]
             
             # Per zone get lat and lon of each polygon vertices
             for c, coo in enumerate(f['geometry']['coordinates'][0]):
