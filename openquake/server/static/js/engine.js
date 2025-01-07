@@ -448,6 +448,17 @@ function capitalizeFirstLetter(val) {
         'use_finite_rup_from_usgs'
     ];
 
+    function require_usgs_id() {
+        approach_selector = $('input[name="aristotle_approach"]');
+        if (approach_selector.length > 0) {
+            const selected_approach = $('input[name="aristotle_approach"]:checked').val();
+            return approaches_requiring_usgs_id.includes(selected_approach);
+        } else {
+            // in interface level 1 the approach selector doesn't exist and we always use the ShakeMap
+            return true;
+        }
+    }
+
     /* classic event management */
     $(document).ready(
         function () {
@@ -593,13 +604,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
 
                 const usgs_id = $.trim($("#usgs_id").val());
-                approach_selector = $('input[name="aristotle_approach"]');
-                if (approach_selector.length) {
-                    const selected_approach = $('input[name="aristotle_approach"]:checked').val();
-                    if (approaches_requiring_usgs_id.includes(selected_approach)) {
-                        formData.append('usgs_id', usgs_id);
-                    }
-                } else {
+                if (require_usgs_id()) {
                     formData.append('usgs_id', usgs_id);
                 }
 
