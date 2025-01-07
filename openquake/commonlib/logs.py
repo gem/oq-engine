@@ -257,8 +257,11 @@ class LogContext:
 
     def __exit__(self, etype, exc, tb):
         if tb:
-            logging.critical(traceback.format_exc())
-            dbcmd('finish', self.calc_id, 'failed')
+            if etype is SystemExit:
+                dbcmd('finish', self.calc_id, 'aborted')
+            else:
+                logging.error(traceback.format_exc())
+                dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:

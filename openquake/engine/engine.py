@@ -279,6 +279,22 @@ def stop_workers(job_id):
     print(w.WorkerMaster(job_id).stop())
 
 
+def watchdog(calc_id, pid, timeout):
+    """
+    If the job takes longer than the timeout, kills it
+    """
+    while True:
+        time.sleep(30)
+        [(start, status)] = logs.dbcmd(
+            'SELECT start_time, status FROM job WHERE id=?x', calc_id)
+        if status != 'executing':
+            break
+        elif (datetime.now() - start).seconds > timeout:
+            os.kill(pid, signal.SIGTERM)
+            logs.dbcmd('finish', calc_id, 'aborted')
+            break
+
+
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
     """
     Run jobs using the specified config file and other options.
@@ -361,13 +377,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
-    except Exception:
-        ids = [jc.calc_id for jc in jobctxs]
-        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
-                          "AND status IN ('created', 'executing')", ids)
-        for jid, in rows:
-            logs.dbcmd("set_status", jid, 'failed')
-        raise
     finally:
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)

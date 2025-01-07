@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug while exporting realizations.csv for scenario calculations
+  * Added `webapi.calc_timeout` configuration parameter
   * Reduced `conditioned_gmfs_gb` to 8 GB by default
   * Parallelized `get_mean_covs` when conditioning the GMFs
 
