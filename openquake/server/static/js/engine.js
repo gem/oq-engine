@@ -452,6 +452,10 @@ function capitalizeFirstLetter(val) {
         approach_selector = $('input[name="aristotle_approach"]');
         if (approach_selector.length > 0) {
             const selected_approach = $('input[name="aristotle_approach"]:checked').val();
+            if (selected_approach == 'provide_rup') {
+                // usgs_id is expected to be 'FromFile'
+                return true;
+            }
             return approaches_requiring_usgs_id.includes(selected_approach);
         } else {
             // in interface level 1 the approach selector doesn't exist and we always use the ShakeMap
@@ -575,6 +579,7 @@ function capitalizeFirstLetter(val) {
                 }
                 if (selected_approach == 'provide_rup') {
                     $('#upload_rupture_grp').removeClass('hidden');
+                    $("#usgs_id").val('FromFile');
                 } else {
                     $('#upload_rupture_grp').addClass('hidden');
                 }
