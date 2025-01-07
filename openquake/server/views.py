@@ -31,7 +31,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
-from datetime import datetime, timezone
+from datetime import datetime, UTC, timezone
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -965,7 +965,7 @@ def submit_job(request_files, ini, username, hc_id):
         jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
-        logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
+        logs.dbcmd('log', job.calc_id, datetime.now(UTC), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         exc.job_id = job.calc_id
