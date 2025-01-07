@@ -189,7 +189,7 @@ NotFound
 import os
 import re
 import sqlite3
-import datetime
+# import datetime
 import threading
 import collections
 from openquake.baselib import config
