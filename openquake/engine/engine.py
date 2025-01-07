@@ -33,7 +33,7 @@ import platform
 import functools
 #import multiprocessing.pool
 from os.path import getsize
-from datetime import datetime
+from datetime import datetime, UTC
 import psutil
 import h5py
 import numpy
@@ -352,7 +352,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
             raise
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
-               'start_time': datetime.utcnow()}
+               'start_time': datetime.now(UTC)}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
