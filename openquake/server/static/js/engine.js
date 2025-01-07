@@ -443,7 +443,7 @@ function capitalizeFirstLetter(val) {
 
     const approaches_requiring_usgs_id = [
         'use_shakemap_from_usgs',
-        'use_pnt_src_from_usgs',
+        'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
         'use_finite_rup_from_usgs'
     ];

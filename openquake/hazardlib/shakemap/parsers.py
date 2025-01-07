@@ -69,6 +69,7 @@ FIELDMAP = {
 }
 REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
 
+
 @dataclass
 class User:
     level: int = 0
