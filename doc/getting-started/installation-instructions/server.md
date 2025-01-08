@@ -173,7 +173,7 @@ Before=slices.target
 
 [Slice]
 MemoryAccounting=true
-MemoryLimit=10G
+MemoryMax=10G
 CPUAccounting=true
 CPUQuota=50%
 TasksMax=4096

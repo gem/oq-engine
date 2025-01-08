@@ -87,7 +87,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['station_data_issue'],
                          '3 stations were found, but none of them are seismic')
 
-
 """
 NB: to profile a test you can use
 
