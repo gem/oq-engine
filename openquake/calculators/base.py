@@ -1589,7 +1589,9 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete))
+            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+        calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
+        calc.datastore['weights'] = numpy.ones(1)
 
 
 def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
@@ -1642,7 +1644,9 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+        if oq.aristotle:
+            gmf_dict = {'kind': 'basic'}  # possibly add correlation
+        elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
             # cross correlation and/or spatial correlation after S&H
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatialcorr': oq.spatial_correlation,

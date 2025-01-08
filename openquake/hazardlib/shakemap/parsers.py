@@ -69,7 +69,7 @@ FIELDMAP = {
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
-REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA06', 'PSA10'}
+REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
 
 @dataclass
 class User:
