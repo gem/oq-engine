@@ -31,7 +31,7 @@ import zlib
 import urllib.parse as urlparse
 import re
 import psutil
-from datetime import datetime, UTC, timezone
+from datetime import datetime, timezone
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -70,6 +70,7 @@ from wsgiref.util import FileWrapper
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
+UTC = timezone.utc
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501

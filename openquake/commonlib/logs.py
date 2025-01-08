@@ -23,10 +23,11 @@ import re
 import getpass
 import logging
 import traceback
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
 
+UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,

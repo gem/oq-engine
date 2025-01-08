@@ -190,4 +190,5 @@ class ShakemapTestCase(unittest.TestCase):
         uridict = dict(kind='usgs_xml', grid_url=f, uncertainty_url=None)
         with self.assertRaises(RuntimeError) as ctx:
             get_sitecol_shakemap(uridict, ['PGA', 'PSA03', 'PSA10'])
-        self.assertIn("Missing ['PSA03', 'PSA10']", str(ctx.exception))
+        self.assertIn("is required but not in the available set",
+                      str(ctx.exception))
