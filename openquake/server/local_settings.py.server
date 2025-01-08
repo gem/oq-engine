@@ -17,8 +17,11 @@ STATIC_ROOT = '/var/www/webui'
 # the path must start with ``/`` and ending without it (e.g. ``'/path/prefix'``)
 # WEBUI_PATHPREFIX='/path/prefix'
 
+# By default it is 'openquake'
+# WEBUI_USER =
+
 # Configure the directory to store the server user access log
-# Furthermore, the user `openquake` must own that directory.
+# Furthermore, the user WEBUI_USER must own that directory.
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # Local time zone for this installation. Choices can be found here:

@@ -37,6 +37,11 @@ SERVER_NAME = <localhost>
 # values
 USE_REVERSE_PROXY = <True|False>
 
+# By default it is 'openquake'
+# WEBUI_USER =
+
+# Configure the directory to store the server user access log
+# Furthermore, the user WEBUI_USER must own that directory.
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # Local time zone for this installation. Choices can be found here:

@@ -33,6 +33,7 @@ except ImportError:
     STANDALONE_APPS = ()
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+WEBUI_USER = 'openquake'
 
 TEST = 'test' in sys.argv
 
@@ -325,7 +326,7 @@ if LOCKDOWN:
     SERVER_PORT = 443
 
     # do not log to file unless running through the webui
-    if getpass.getuser() == 'openquake':  # the user that runs the webui
+    if getpass.getuser() == WEBUI_USER:
         try:
             log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
                                         'webui-access.log')
