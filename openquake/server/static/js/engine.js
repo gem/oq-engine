@@ -557,7 +557,7 @@ function capitalizeFirstLetter(val) {
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
-                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
+                formData.append('use_shakemap', $("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked'));
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
@@ -720,7 +720,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
-                formData.append('use_shakemap', $("#use_shakemap").is(':checked'));
+                formData.append('use_shakemap', $("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked'));
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
                 formData.append('dep', $("#dep").val());
