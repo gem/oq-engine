@@ -49,8 +49,8 @@ US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL MMI PGA PSA03 PSA10 PSA30 '
-    'STDMMI STDPGA STDPSA03 STDPSA10 STDPSA30'
+    'LON LAT SVEL MMI PGA PSA03 PSA06 PSA10 PSA30 '
+    'STDMMI STDPGA STDPSA03 STDPSA06 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
     'LON': 'lon',
@@ -59,15 +59,17 @@ FIELDMAP = {
     'MMI': ('val', 'MMI'),
     'PGA': ('val', 'PGA'),
     'PSA03': ('val', 'SA(0.3)'),
+    'PSA06': ('val', 'SA(0.6)'),
     'PSA10': ('val', 'SA(1.0)'),
     'PSA30': ('val', 'SA(3.0)'),
     'STDMMI': ('std', 'MMI'),
     'STDPGA': ('std', 'PGA'),
     'STDPSA03': ('std', 'SA(0.3)'),
+    'STDPSA06': ('std', 'SA(0.6)'),
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
-REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
+REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA06', 'PSA10'}
 
 
 @dataclass
@@ -804,18 +806,22 @@ def _get_shakemap_array(xml_file):
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
     missing = sorted(REQUIRED_IMTS - set(out))
-    if not uncertainty and missing:
-        raise RuntimeError('Missing %s in %s' % (missing, fname))
+    if 'PSA06' in missing:  # old shakemap
+        fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
+    else:  # new shakemap
+        fieldmap = FIELDMAP
+        if not uncertainty and missing:
+            raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:
         i = idx[name]
-        if name in FIELDMAP:
+        if name in fieldmap:
             out[name].append([float(row[i]) for row in rows])
-    dt = sorted((imt[1], F32) for key, imt in FIELDMAP.items()
+    dt = sorted((imt[1], F32) for key, imt in fieldmap.items()
                 if imt[0] == 'val')
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
-    for name, field in sorted(FIELDMAP.items()):
+    for name, field in sorted(fieldmap.items()):
         if name not in out:
             continue
         if isinstance(field, tuple):
