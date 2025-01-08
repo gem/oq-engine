@@ -21,6 +21,7 @@ import os
 import socket
 import getpass
 import tempfile
+import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
@@ -193,6 +194,8 @@ LOGGING = {
     },
 }
 
+SUPPRESS_PERMISSION_DENIED_WARNINGS = False
+
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 
@@ -263,6 +266,21 @@ except ImportError:
         # If a local_setting.py does not exist
         # settings in this file only will be used
         pass
+
+if SUPPRESS_PERMISSION_DENIED_WARNINGS:
+    class SuppressPermissionDeniedWarnings(logging.Filter):
+        def filter(self, record):
+            if 'Forbidden' in record.getMessage():
+                # Avoid warnings like "WARNING Forbidden: /v1/calc/list"
+                return False
+            return True
+
+    LOGGING['filters'] = {
+        'suppress_403_warnings': {
+            '()': SuppressPermissionDeniedWarnings,
+        },
+    }
+    LOGGING['handlers']['console']['filters'] = ['suppress_403_warnings']
 
 # NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
 # both the default setting and the one specified in the local settings

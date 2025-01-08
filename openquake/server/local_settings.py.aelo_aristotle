@@ -48,3 +48,5 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # TIME_ZONE =
 
 DEBUG = False
+
+SUPPRESS_PERMISSION_DENIED_WARNINGS = True
