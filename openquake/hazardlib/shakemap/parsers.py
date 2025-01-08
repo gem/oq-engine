@@ -59,15 +59,17 @@ FIELDMAP = {
     'MMI': ('val', 'MMI'),
     'PGA': ('val', 'PGA'),
     'PSA03': ('val', 'SA(0.3)'),
+    'PSA06': ('val', 'SA(0.6)'),
     'PSA10': ('val', 'SA(1.0)'),
     'PSA30': ('val', 'SA(3.0)'),
     'STDMMI': ('std', 'MMI'),
     'STDPGA': ('std', 'PGA'),
     'STDPSA03': ('std', 'SA(0.3)'),
+    'STDPSA06': ('std', 'SA(0.6)'),
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
-REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
+REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA06', 'PSA10'}
 
 @dataclass
 class User:
