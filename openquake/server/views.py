@@ -788,7 +788,7 @@ def aristotle_run(request):
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
     [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level)
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
 
     job_owner_email = request.user.email
     response_data = dict()
