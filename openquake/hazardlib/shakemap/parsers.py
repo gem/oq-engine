@@ -805,18 +805,22 @@ def _get_shakemap_array(xml_file):
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
     missing = sorted(REQUIRED_IMTS - set(out))
-    if not uncertainty and missing:
-        raise RuntimeError('Missing %s in %s' % (missing, fname))
+    if 'PSA06' in missing:  # old shakemap
+        fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
+    else:  # new shakemap
+        fieldmap = FIELDMAP
+        if not uncertainty and missing:
+            raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:
         i = idx[name]
-        if name in FIELDMAP:
+        if name in fieldmap:
             out[name].append([float(row[i]) for row in rows])
-    dt = sorted((imt[1], F32) for key, imt in FIELDMAP.items()
+    dt = sorted((imt[1], F32) for key, imt in fieldmap.items()
                 if imt[0] == 'val')
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
-    for name, field in sorted(FIELDMAP.items()):
+    for name, field in sorted(fieldmap.items()):
         if name not in out:
             continue
         if isinstance(field, tuple):

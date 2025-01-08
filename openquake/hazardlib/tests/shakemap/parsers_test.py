@@ -19,7 +19,7 @@
 import os
 import unittest
 from urllib.error import URLError
-from openquake.hazardlib.shakemap.parsers import get_rup_dic, User, REQUIRED_IMTS
+from openquake.hazardlib.shakemap.parsers import get_rup_dic, User
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
@@ -33,7 +33,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
             raise unittest.SkipTest('Missing timezonefinder')
         else:
             del timezonefinder
-        REQUIRED_IMTS.remove('PSA06')
 
     def test_1(self):
         # wrong usgs_id
@@ -87,10 +86,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['require_dip_strike'], False)
         self.assertEqual(dic['station_data_issue'],
                          '3 stations were found, but none of them are seismic')
-
-    @classmethod
-    def tearDown(cls):
-        REQUIRED_IMTS.add('PSA06')
 
 """
 NB: to profile a test you can use
