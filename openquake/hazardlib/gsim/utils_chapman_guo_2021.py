@@ -77,11 +77,7 @@ def get_psa_df(psa_df, imt):
     """
     Get the subset of the PSA ratio DataFrame for the given imt 
     """
-    cols = []
-    for col in psa_df.columns:
-        if str(imt) in col:
-            cols.append(col)
-    assert len(cols) == 4
+    cols = ['zsed', 'magnitude', 'distance', f'psa_ratio_{imt}']
     return psa_df[cols]
 
 
@@ -134,7 +130,7 @@ def get_data(psa_df, imt):
     Get the z_sed for each z_sed, mag and rrup combination within an ndarray.
     """
     # Append columns with given imt
-    cols = [f'zsed_{imt}', f'magnitude_{imt}', f'distance_{imt}']
+    cols = ['zsed', 'magnitude', 'distance']
     
     # Make multi-idx
     idx = pd.MultiIndex.from_product(
