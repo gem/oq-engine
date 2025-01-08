@@ -484,7 +484,7 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
 
 def read_gsim_lt(oq):
     # in aristotle mode the gsim_lt is read from the exposure.hdf5 file
-    if oq.aristotle:
+    if oq.aristotle and not oq.shakemap_uri:
         if not oq.mosaic_model:
             if oq.rupture_dict:
                 lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
@@ -509,8 +509,7 @@ def read_gsim_lt(oq):
             raise ValueError(
                 'The tectonic_region_type parameter must be specified')
         gsim_lt = logictree.GsimLogicTree.from_hdf5(
-            expo_hdf5, oq.mosaic_model,
-            oq.tectonic_region_type.encode('utf8'))
+            expo_hdf5, oq.mosaic_model, oq.tectonic_region_type.encode('utf8'))
     else:
         gsim_lt = readinput.get_gsim_lt(oq)
     return gsim_lt
@@ -745,6 +744,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
+        if oq.aristotle and oq.shakemap_uri:
+            # this is creating gmf_data
+            base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
+            return {}
         dstore = self.datastore
         E = None
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:

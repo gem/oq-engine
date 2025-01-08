@@ -968,7 +968,7 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
-                self.sitecol, self.assetcol = read_shakemap(
+                self.sitecol, self.assetcol = store_gmfs_from_shakemap(
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
@@ -1561,7 +1561,7 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
         dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
 
 
-def store_shakemap(calc, sitecol, shakemap, gmf_dict):
+def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
@@ -1589,12 +1589,14 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete))
+            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+        calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
+        calc.datastore['weights'] = numpy.ones(1)
 
 
-def read_shakemap(calc, haz_sitecol, assetcol):
+def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
-    Enabled only if there is a shakemap_id parameter in the job.ini.
+    Enabled only if there is a shakemap parameter in the job.ini.
     Download, unzip, parse USGS shakemap files and build a corresponding
     set of GMFs which are then filtered with the hazard site collection
     and stored in the datastore.
@@ -1642,7 +1644,9 @@ def read_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+        if oq.aristotle:
+            gmf_dict = {'kind': 'basic'}  # possibly add correlation
+        elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
             # cross correlation and/or spatial correlation after S&H
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatialcorr': oq.spatial_correlation,
@@ -1651,7 +1655,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    store_shakemap(calc, sitecol, shakemap, gmf_dict)
+    store_gmfs(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 
