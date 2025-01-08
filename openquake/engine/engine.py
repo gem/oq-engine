@@ -33,7 +33,7 @@ import platform
 import functools
 #import multiprocessing.pool
 from os.path import getsize
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import psutil
 import h5py
 import numpy
@@ -51,6 +51,7 @@ from openquake.calculators import base
 from openquake.calculators.base import expose_outputs
 
 
+UTC = timezone.utc
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
 
