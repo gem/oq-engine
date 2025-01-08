@@ -24,7 +24,7 @@ import getpass
 import tempfile
 import functools
 import subprocess
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import psutil
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
@@ -33,6 +33,8 @@ try:
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+UTC = timezone.utc
 
 
 def init_workers():
