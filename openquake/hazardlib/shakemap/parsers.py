@@ -69,7 +69,7 @@ FIELDMAP = {
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
-REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA06', 'PSA10'}
+REQUIRED_IMTS = {'PGA', 'PSA03', 'PSA10'}
 
 @dataclass
 class User:
@@ -638,7 +638,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     shakemap = _get_preferred_shakemap(properties['products']['shakemap'])
     contents = shakemap['contents']
 
-    if ((user.level == 1 or use_shakemap) and 'download/grid.xml' in contents):
+    if (user.level == 1 or use_shakemap) and 'download/grid.xml' in contents:
         # only for Aristotle users try to download the shakemap
         url = contents.get('download/grid.xml')['url']
         # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')

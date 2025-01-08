@@ -22,7 +22,7 @@ from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.commonlib import logs
 from openquake.hazardlib import logictree
 from openquake.commonlib.readinput import get_site_collection
-from openquake.calculators.base import calculators, store_shakemap
+from openquake.calculators.base import calculators, store_gmfs
 
 
 # see qa_tests_data/scenario/case_21
@@ -73,7 +73,7 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                       'spatialcorr': spatialcorr,
                       'crosscorr': crosscorr,
                       'cholesky_limit': cholesky_limit}
-            store_shakemap(calc, sitecol, shakemap, gmfdic)
+            store_gmfs(calc, sitecol, shakemap, gmfdic)
     gmv_0 = calc.datastore.read_df('gmf_data').gmv_0.max()
     print(f'Maximum {gmv_0=}')
     print('See the output with silx view %s' % calc.datastore.filename)
