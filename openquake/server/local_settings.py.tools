@@ -5,8 +5,16 @@ APPLICATION_MODE = 'TOOLS_ONLY'
 # Disable sharing of results across users (default True)
 # ACL_ON = True
 
-#Static Folder
+# By default it is 'openquake'
+# WEBUI_USER =
+
+# Folder STATIC_ROOT is the full, absolute path to your static files folder.
+# Furthermore, the user WEBUI_USER must own that directory.
 STATIC_ROOT = '/var/www/webui'
+
+# Configure the directory to store the server user access log
+# Furthermore, the user WEBUI_USER must own that directory.
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # WEBUI config uncomment and set properly if needed
 # WEBUIURL = 'http://localhost:8800/'
@@ -17,13 +25,6 @@ STATIC_ROOT = '/var/www/webui'
 # enable WEBUI_PATHPREFIX to place webui pages below a specific path
 # WEBUI_PATHPREFIX='/path/prefix'
 
-# By default it is 'openquake'
-# WEBUI_USER =
-
-# Configure the directory to store the server user access log
-# Furthermore, the user WEBUI_USER must own that directory.
-WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
-
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -33,3 +34,5 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # Set debug if the installation is dev mode
 DEBUG = os.environ.get('TOOLS_DEV', False) == 'True'
+
+SUPPRESS_PERMISSION_DENIED_WARNINGS = True
