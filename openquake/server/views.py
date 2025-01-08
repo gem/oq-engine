@@ -70,6 +70,7 @@ from wsgiref.util import FileWrapper
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
+UTC = timezone.utc
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -965,7 +966,7 @@ def submit_job(request_files, ini, username, hc_id):
         jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
-        logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
+        logs.dbcmd('log', job.calc_id, datetime.now(UTC), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         exc.job_id = job.calc_id

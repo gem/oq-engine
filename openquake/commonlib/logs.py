@@ -23,10 +23,11 @@ import re
 import getpass
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
 
+UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
@@ -85,7 +86,7 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     Log on the database
     """
     task = 'task #%d' % task_no
-    return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
+    return dbcmd('log', job_id, datetime.now(UTC), level, task, msg)
 
 
 def get_datadir():
@@ -182,7 +183,7 @@ class LogDatabaseHandler(logging.Handler):
         self.job_id = job_id
 
     def emit(self, record):
-        dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+        dbcmd('log', self.job_id, datetime.now(UTC), record.levelname,
               '%s/%s' % (record.processName, record.process),
               record.getMessage())
 
