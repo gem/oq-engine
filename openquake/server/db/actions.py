@@ -18,7 +18,7 @@
 import os
 import getpass
 import operator
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
@@ -28,6 +28,7 @@ from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
 from openquake.calculators.export import DISPLAY_NAME
 
+UTC = timezone.utc
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
 OR calculation_mode LIKE '%bcr'
