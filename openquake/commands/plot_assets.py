@@ -77,7 +77,7 @@ def main(calc_id: int = -1, site_model=False,
                       label='discarded', s=markersize_discarded)
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
-        use_shakemap = hasattr(dstore['oqparam'], 'shakemap_uri')
+        use_shakemap = len(getattr(dstore['oqparam'], 'shakemap_uri', [])) > 0
         if use_shakemap:
             lon, lat = oq.rupture_dict['lon'], oq.rupture_dict['lat']
         else:
