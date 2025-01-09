@@ -262,8 +262,10 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
 
-    rup, rupdic = get_rup_dic(
+    rup, rupdic, err = get_rup_dic(
         dic['usgs_id'], user, use_shakemap, rupture_file, station_data_file, monitor)
+    if err:
+        return None, None, None, err
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
