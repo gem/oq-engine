@@ -77,12 +77,16 @@ def main(calc_id: int = -1, site_model=False,
                       label='discarded', s=markersize_discarded)
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
-        rec = dstore['ruptures'][0]
-        lon, lat, _dep = rec['hypo']
+        use_shakemap = dstore['oqparam'].shakemap_uri
+        if use_shakemap:
+            lon, lat = oq.rupture_dict['lon'], oq.rupture_dict['lat']
+        else:
+            rec = dstore['ruptures'][0]
+            lon, lat, _dep = rec['hypo']
+            dist = sitecol.get_cdist(rec)
+            print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        dist = sitecol.get_cdist(rec)
-        print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE' and not use_shakemap:
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
             ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
