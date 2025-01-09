@@ -19,12 +19,12 @@
 """
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
-import logging
+
 import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib import hdf5, python3compat
+from openquake.baselib import hdf5
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
@@ -159,6 +159,7 @@ class Site(object):
             raise ValueError('z1pt0 must be positive')
         if not numpy.isnan(z2pt5) and z2pt5 <= 0:
             raise ValueError('z2pt5 must be positive')
+
         self.location = location
         self.vs30 = vs30
         self.z1pt0 = z1pt0
@@ -217,6 +218,7 @@ site_param_dt = {
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
+    'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
@@ -269,9 +271,8 @@ site_param_dt = {
     'landcover': (numpy.float64),
     'hratio': (numpy.float64),
     'tslope': (numpy.float64),
-    'slab_thickness': (numpy.float64), 
+    'slab_thickness': (numpy.float64),
 
-        
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
     'T_15': numpy.float64,
@@ -840,7 +841,7 @@ class SiteCollection(object):
             len(self), total_sites)
 
 
-def check_all_equal(dicts, *keys):
+def check_all_equal(mosaic_model, dicts, *keys):
     """
     Check all the dictionaries have the same value for the same key
     """
@@ -849,14 +850,45 @@ def check_all_equal(dicts, *keys):
     dic0 = dicts[0]
     for key in keys:
         for dic in dicts[1:]:
-            assert dic[key] == dic0[key], (dic[key], dic0[key])
+            if dic[key] != dic0[key]:
+                raise RuntimeError('Inconsistent key %s!=%s while processing %s',
+                                   dic[key], dic0[key], mosaic_model)
 
-    
-def merge_sitecols(hdf5fnames, check_gmfs=False):
+
+def merge_without_dupl(array1, array2, uniquefield):
+    """
+    >>> dt = [('code', 'S1'), ('value', numpy.int32)]
+    >>> a1 = numpy.array([('a', 1), ('b', 2)], dt)
+    >>> a2 = numpy.array([('b', 2), ('c', 3)], dt)
+    >>> merged, dupl = merge_without_dupl(a1, a2, 'code')
+    >>> merged
+    array([(b'a', 1), (b'b', 2), (b'c', 3)],
+          dtype=[('code', 'S1'), ('value', '<i4')])
+    >>> a2[dupl]
+    array([(b'b', 2)], dtype=[('code', 'S1'), ('value', '<i4')])
+    """
+    dtype = {}
+    for array in (array1, array2):
+        for name in array.dtype.names:
+            dtype[name] = array.dtype[name]
+    dupl = numpy.isin(array2[uniquefield], array1[uniquefield])
+    new = array2[~dupl]
+    N = len(array1) + len(new)
+    array = numpy.zeros(N, [(n, dtype[n]) for n in dtype])
+    for n in dtype:
+        if n in array1.dtype.names:
+            array[n][:len(array1)] = array1[n]
+        if n in array2.dtype.names:
+            array[n][len(array1):] = new[n]
+    return array, dupl
+
+
+def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
     """
     Read a number of site collections from the given filenames
-    and returns a single SiteCollection instance. Raise an error
-    if there are duplicate sites (by looking at the custom_site_id).
+    and returns a single SiteCollection instance, plus a list
+    of site ID arrays, one for each site collection, excluding the duplicates.
+
     If `check_gmfs` is set, assume there are `gmf_data` groups and
     make sure the attributes are consistent (i.e. the same over all files).
     """
@@ -864,24 +896,29 @@ def merge_sitecols(hdf5fnames, check_gmfs=False):
     attrs = []
     for fname in hdf5fnames:
         with hdf5.File(fname, 'r') as f:
-            sitecols.append(f['sitecol'])
+            sitecol = f['sitecol']
+            sitecols.append(sitecol)
             if check_gmfs:
                 attrs.append(dict(f['gmf_data'].attrs))
+    sitecol = sitecols[0]
+    converters = [{sid: i for i, sid in enumerate(sitecol.sids)}]
     if len(sitecols) == 1:
-        return sitecols[0]
+        return sitecol, converters
 
     if attrs:
-        check_all_equal(attrs, '__pdcolumns__', 'effective_time', 'investigation_time')
+        check_all_equal(mosaic_model, attrs, '__pdcolumns__', 'effective_time',
+                        'investigation_time')
 
-    new = object.__new__(sitecols[0].__class__)
-    new.array = numpy.concatenate([sc.array for sc in sitecols])
+    assert 'custom_site_id' in sitecol.array.dtype.names
+    new = object.__new__(sitecol.__class__)
+    new.array = sitecol.array
+    offset = len(sitecol)
+    for sc in sitecols[1:]:
+        new.array, dupl = merge_without_dupl(
+            new.array, sc.array, 'custom_site_id')
+        conv = {sid: offset + i for i, sid in enumerate(sc.sids[~dupl])}
+        converters.append(conv)
+        offset += dupl.sum()
     new.array['sids'] = numpy.arange(len(new.array))
     new.complete = new
-    if 'custom_site_id' in new.array.dtype.names:
-        ids, counts = numpy.unique(new['custom_site_id'], return_counts=1)
-        if (counts > 1).any():
-            dupl =  ' '.join(python3compat.decode(ids[counts > 1]))
-            raise RuntimeError(f'{dupl} are duplicated')
-    elif len(sitecols) > 1:
-        logging.warning('There is no custom_site_id, not checking for duplicates')
-    return new
+    return new, converters
