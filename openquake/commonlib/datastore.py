@@ -394,7 +394,7 @@ class DataStore(collections.abc.MutableMapping):
             self.parent.flush()
             self.parent.close()
         if self.hdf5:  # is open
-            self.hdf5.flush()
+            # self.hdf5.flush()
             self.hdf5.close()
             self.hdf5 = ()
 
