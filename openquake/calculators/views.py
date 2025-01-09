@@ -1771,6 +1771,8 @@ def view_aggrisk(token, dstore):
         arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
+    if len(arr) == 2:  # only one gsim, equal to the average
+        arr = numpy.delete(arr, 1, axis=0)
     return arr
 
 

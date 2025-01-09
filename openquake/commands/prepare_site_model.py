@@ -102,7 +102,7 @@ def main(
     generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
     which may be needed by your hazard model, depending on the required GSIMs.
     """
-    hdf5, log = datastore.build_dstore_log("prepare site model")
+    log, hdf5 = datastore.create_job_dstore("prepare site model")
     with hdf5, log:
         req_site_params = {'vs30'}
         fields = ['lon', 'lat', 'vs30']

@@ -21,7 +21,7 @@ import logging
 from dataclasses import dataclass
 import numpy
 
-from openquake.baselib import config, hdf5, performance
+from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
@@ -47,7 +47,7 @@ class AristotleParam:
     station_data_file: str = None
     maximum_distance_stations: float = None
 
-    def get_oqparams(self, mosaic_models, trts):
+    def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
         :returns: job_ini dictionary
         """
@@ -55,8 +55,6 @@ class AristotleParam:
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
-        if 'shakemap_array' in rupdic:
-            del rupdic['shakemap_array']
         if self.rupture_file:
             inputs['rupture_model'] = self.rupture_file
         if self.station_data_file:
@@ -69,6 +67,7 @@ class AristotleParam:
         if not self.trt:
             # NOTE: using the first tectonic region type
             self.trt = next(iter(trts[self.mosaic_model]))
+        shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
@@ -81,6 +80,11 @@ class AristotleParam:
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
             inputs=inputs)
+        if use_shakemap:
+            fname = general.gettemp(suffix='.npy')
+            numpy.save(fname, shakemap_array)
+            params['shakemap_uri'] = str(dict(kind='file_npy', fname=fname))
+            params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:
             params['local_timestamp'] = self.local_timestamp
         if self.maximum_distance_stations is not None:
@@ -258,8 +262,10 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
 
-    rup, rupdic = get_rup_dic(
+    rup, rupdic, err = get_rup_dic(
         dic['usgs_id'], user, use_shakemap, rupture_file, station_data_file, monitor)
+    if err:
+        return None, None, None, err
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
@@ -279,7 +285,9 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
         with monitor('get_oqparams'):
-            oqparams = AristotleParam(**params).get_oqparams(mosaic_models, trts)
+            ap = AristotleParam(**params)
+            oqparams = ap.get_oqparams(
+                dic['usgs_id'], mosaic_models, trts, use_shakemap)
         return rup, rupdic, oqparams, err
     else:  # called by aristotle_get_rupture_data
         return rup, rupdic, params, err

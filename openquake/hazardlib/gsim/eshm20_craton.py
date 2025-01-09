@@ -84,7 +84,7 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     f760 = _get_f760(C_F760, ctx.vs30,
                      NGAEastGMPE.CONSTANTS)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, ctx, f760,
+    f_lin = _get_fv(C_LIN, ctx.vs30, f760,
                     NGAEastGMPE.CONSTANTS)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, ctx.vs30, period)
@@ -254,7 +254,7 @@ class ESHM20Craton(GMPE):
             else:
                 # Avoid re-calculating PGA if that was already done!
                 mean[m] = np.copy(pga_r)
-
+            
             mean[m] += get_site_amplification(
                 self.site_epsilon, imt, np.exp(pga_r), ctx)
 

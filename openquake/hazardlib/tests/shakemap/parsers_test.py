@@ -18,7 +18,6 @@
 
 import os
 import unittest
-from urllib.error import URLError
 from openquake.hazardlib.shakemap.parsers import get_rup_dic, User
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -36,19 +35,19 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_1(self):
         # wrong usgs_id
-        with self.assertRaises(URLError) as ctx:
-            get_rup_dic('usp0001cc', User(level=2, testdir=''), use_shakemap=True)
+        _rup, _rupdic, err = get_rup_dic(
+            'usp0001cc', User(level=2, testdir=''), use_shakemap=True)
         self.assertIn('Unable to download from https://earthquake.usgs.gov/fdsnws/'
-                      'event/1/query?eventid=usp0001cc&', str(ctx.exception))
+                      'event/1/query?eventid=usp0001cc&', err['error_msg'])
 
     def test_2(self):
-        _rup, dic = get_rup_dic('usp0001ccb', user=user, use_shakemap=True)
+        _rup, dic, _err = get_rup_dic('usp0001ccb', user=user, use_shakemap=True)
         self.assertIsNotNone(dic['shakemap_array'])
-        _rup, dic = get_rup_dic('usp0001ccb', user=user, use_shakemap=False)
+        _rup, dic, _err = get_rup_dic('usp0001ccb', user=user, use_shakemap=False)
         self.assertIsNone(dic['shakemap_array'])
 
     def test_3(self):
-        _rup, dic = get_rup_dic('us6000f65h', user=user, use_shakemap=True)
+        _rup, dic, _err = get_rup_dic('us6000f65h', user=user, use_shakemap=True)
         self.assertEqual(dic['lon'], -73.475)
         self.assertEqual(dic['lat'], 18.408)
         self.assertEqual(dic['dep'], 10.0)
@@ -66,7 +65,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_4(self):
         # point_rup
-        _rup, dic = get_rup_dic('us6000jllz', user=user, use_shakemap=True)
+        _rup, dic, _err = get_rup_dic('us6000jllz', user=user, use_shakemap=True)
         self.assertEqual(dic['lon'], 37.0143)
         self.assertEqual(dic['lat'], 37.2256)
         self.assertEqual(dic['dep'], 10.)
@@ -74,14 +73,14 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_5(self):
         # 12 vertices instead of 4 in rupture.json
-        rup, dic = get_rup_dic('us20002926', user=user, use_shakemap=True)
+        rup, dic, _err = get_rup_dic('us20002926', user=user, use_shakemap=True)
         self.assertIsNone(rup)
         self.assertEqual(dic['require_dip_strike'], True)
         self.assertEqual(dic['rupture_issue'],
                          'Unable to convert the rupture from the USGS format')
 
     def test_6(self):
-        rup, dic = get_rup_dic('usp0001ccb', user=user, use_shakemap=True)
+        rup, dic, _err = get_rup_dic('usp0001ccb', user=user, use_shakemap=True)
         self.assertEqual(rup.mag, 6.7)
         self.assertEqual(dic['require_dip_strike'], False)
         self.assertEqual(dic['station_data_issue'],

@@ -49,8 +49,8 @@ US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL MMI PGA PSA03 PSA10 PSA30 '
-    'STDMMI STDPGA STDPSA03 STDPSA10 STDPSA30'
+    'LON LAT SVEL MMI PGA PSA03 PSA06 PSA10 PSA30 '
+    'STDMMI STDPGA STDPSA03 STDPSA06 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
     'LON': 'lon',
@@ -59,11 +59,13 @@ FIELDMAP = {
     'MMI': ('val', 'MMI'),
     'PGA': ('val', 'PGA'),
     'PSA03': ('val', 'SA(0.3)'),
+    'PSA06': ('val', 'SA(0.6)'),
     'PSA10': ('val', 'SA(1.0)'),
     'PSA30': ('val', 'SA(3.0)'),
     'STDMMI': ('std', 'MMI'),
     'STDPGA': ('std', 'PGA'),
     'STDPSA03': ('std', 'SA(0.3)'),
+    'STDPSA06': ('std', 'SA(0.6)'),
     'STDPSA10': ('std', 'SA(1.0)'),
     'STDPSA30': ('std', 'SA(3.0)'),
 }
@@ -616,6 +618,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
+    err = {}
     if user.testdir:  # in parsers_test
         fname = os.path.join(user.testdir, usgs_id + '.json')
         text = open(fname).read()
@@ -627,7 +630,9 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
                 text = urlopen(url).read()
         except URLError as exc:
             # in parsers_test
-            raise URLError(f'Unable to download from {url}: {exc}')
+            err_msg = f'Unable to download from {url}: {exc}'
+            err = {"status": "failed", "error_msg": err_msg}
+            return None, None, None, err
 
     js = json.loads(text)
     properties = js['properties']
@@ -636,7 +641,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     shakemap = _get_preferred_shakemap(properties['products']['shakemap'])
     contents = shakemap['contents']
 
-    if ((user.level == 1 or use_shakemap) and 'download/grid.xml' in contents):
+    if (user.level == 1 or use_shakemap) and 'download/grid.xml' in contents:
         # only for Aristotle users try to download the shakemap
         url = contents.get('download/grid.xml')['url']
         # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
@@ -649,7 +654,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
         shakemap_array = get_shakemap_array(grid_fname)
     else:
         shakemap_array = None
-    return contents, properties, shakemap_array
+    return contents, properties, shakemap_array, err
 
 
 def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_file=None,
@@ -663,10 +668,11 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
     :param use_shakemap: download the ShakeMap only if True
     :param rupture_file: None
     :param station_data_file: None
-    :returns: (rupture object or None, rupture dictionary)
+    :returns: (rupture object or None, rupture dictionary, error dictionary or {})
     """
     rupdic = {}
     rup_data = {}
+    err = {}
     if rupture_file and rupture_file.endswith('.xml'):
         [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
                                if user.testdir else rupture_file)
@@ -682,7 +688,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
                       rupture_file=rupture_file,
                       station_data_file=station_data_file)
         if usgs_id == 'FromFile':
-            return rup, rupdic
+            return rup, rupdic, err
     elif rupture_file and rupture_file.endswith('.json'):
         with open(rupture_file) as f:
             rup_data = json.load(f)
@@ -690,11 +696,13 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
             rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
             rupdic['station_data_file'] = station_data_file
             rup = convert_to_oq_rupture(rup_data)
-            return rup, rupdic
+            return rup, rupdic, err
 
     assert usgs_id
-    contents, properties, shakemap = _contents_properties_shakemap(
+    contents, properties, shakemap, err = _contents_properties_shakemap(
         usgs_id, user, use_shakemap, monitor)
+    if err:
+        return None, None, err
 
     if 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
@@ -718,7 +726,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
         rupdic['station_data_file_from_usgs'] = False
     if not rup_data or rupdic['require_dip_strike']:
         # in parsers_test
-        return None, rupdic
+        return None, rupdic, err
 
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:
@@ -726,7 +734,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
         rupdic['rupture_issue'] = 'Unable to convert the rupture from the USGS format'
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
-    return rup, rupdic
+    return rup, rupdic, err
 
 
 def get_array_usgs_id(kind, usgs_id):
@@ -803,18 +811,22 @@ def _get_shakemap_array(xml_file):
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
     missing = sorted(REQUIRED_IMTS - set(out))
-    if not uncertainty and missing:
-        raise RuntimeError('Missing %s in %s' % (missing, fname))
+    if 'PSA06' in missing:  # old shakemap
+        fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
+    else:  # new shakemap
+        fieldmap = FIELDMAP
+        if not uncertainty and missing:
+            raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:
         i = idx[name]
-        if name in FIELDMAP:
+        if name in fieldmap:
             out[name].append([float(row[i]) for row in rows])
-    dt = sorted((imt[1], F32) for key, imt in FIELDMAP.items()
+    dt = sorted((imt[1], F32) for key, imt in fieldmap.items()
                 if imt[0] == 'val')
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
-    for name, field in sorted(FIELDMAP.items()):
+    for name, field in sorted(fieldmap.items()):
         if name not in out:
             continue
         if isinstance(field, tuple):

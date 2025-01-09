@@ -2003,8 +2003,8 @@ class OqParam(valid.ParamSet):
                     'Error in shakemap_uri: Expected parameters %s, '
                     'valid parameters %s, got %s' %
                     (params, all_params, list(self.shakemap_uri)))
-        return self.hazard_calculation_id if (
-            self.shakemap_id or self.shakemap_uri) else True
+            return True
+        return self.hazard_calculation_id if self.shakemap_id else True
 
     def is_valid_truncation_level(self):
         """
