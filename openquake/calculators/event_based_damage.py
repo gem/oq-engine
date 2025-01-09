@@ -232,7 +232,9 @@ class DamageCalculator(EventBasedRiskCalculator):
         if hasattr(self, 'exported'):
             prc.exported = self.exported
         with prc.datastore:
-            prc.run(exports='')
+            prc.pre_execute()
+            res = prc.execute()
+            prc.post_execute(res)
 
         P, _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
