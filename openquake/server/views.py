@@ -721,7 +721,7 @@ def aristotle_get_rupture_data(request):
                             status=400 if 'invalid_inputs' in err else 500)
     if rupdic['shakemap_array'] is not None:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
+        figsize = (6.2, 6.2)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
