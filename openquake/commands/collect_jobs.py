@@ -83,7 +83,7 @@ def main(job_ids: int, save=False):
         if len(complete) == len(rows):
             print('All jobs completed correctly')
             if save:
-                log, dstore = datastore.build_log_dstore(
+                log, dstore = datastore.build_job_dstore(
                     '-'.join(map(str, job_ids)))
                 with dstore, log:
                     collect(job_ids, dstore)

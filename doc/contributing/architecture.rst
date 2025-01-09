@@ -202,7 +202,7 @@ How to use openquake.baselib.parallel
 
 Suppose you want to code a character-counting algorithm, which is a textbook exercise in parallel computing and suppose 
 that you want to store information about the performance of the algorithm. Then you should use the OpenQuake Monitor 
-class, as well as the utility ``openquake.baselib.commonlib.build_log_dstore`` that builds an empty datastore for you. Having done
+class, as well as the utility ``openquake.baselib.commonlib.build_job_dstore`` that builds an empty datastore for you. Having done
 that, the ``openquake.baselib.parallel.Starmap`` class can take care of the parallelization for you as in the following 
 example::
 
@@ -212,7 +212,7 @@ example::
 	import collections
 	from openquake.baselib.performance import Monitor
 	from openquake.baselib.parallel import Starmap
-	from openquake.commonlib.datastore import build_log_dstore
+	from openquake.commonlib.datastore import build_job_dstore
 	
 		
 	def count(text):
@@ -224,7 +224,7 @@ example::
 	
 	def main(dirname):
 	    dname = pathlib.Path(dirname)
-            log, dstore = build_log_dstore()
+            log, dstore = build_job_dstore()
             # create a log context object and a new datastore
 	    with dstore, log:
 	        monitor = Monitor('count', dstore)  # create a new monitor
@@ -256,7 +256,7 @@ Here is how you would write the same example by using ``.submit``::
 
 	def main(dirname):
 	    dname = pathlib.Path(dirname)
-            log, dstore = build_log_dstore()
+            log, dstore = build_job_dstore()
 	    with dstore, log:
 	        smap = Starmap(count, monitor=Monitor('count', dstore))
 	        for fname in os.listdir(dname):
