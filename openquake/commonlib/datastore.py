@@ -25,26 +25,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
-from openquake.commonlib.logs import (
-    get_datadir, get_last_calc_id, CALC_REGEX, dbcmd, init)
-
-
-# FIXME: you should never use this
-def hdf5new(datadir=None):
-    """
-    Return a new `hdf5.File by` instance with name determined by the last
-    calculation in the datadir (plus one). Set the .path attribute to the
-    generated filename.
-    """
-    datadir = datadir or get_datadir()
-    if not os.path.exists(datadir):
-        os.makedirs(datadir)
-    calc_id = get_last_calc_id(datadir) + 1
-    fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
-    new = hdf5.File(fname, 'w')
-    new.path = fname
-    performance.init_performance(new)
-    return new
+from openquake.commonlib.logs import get_datadir, CALC_REGEX, dbcmd, init
 
 
 def extract_calc_id_datadir(filename):
@@ -134,13 +115,14 @@ def new(calc_id, oqparam, datadir=None, mode=None):
         a DataStore instance associated to the given calc_id
     """
     dstore = _read(calc_id, mode, datadir)
-    dstore['oqparam'] = oqparam
+    if 'oqparam' not in dstore:
+        dstore['oqparam'] = oqparam
     if oqparam.hazard_calculation_id:
         dstore.ppath = read(calc_id, 'r', datadir).ppath
     return dstore
 
 
-def build_dstore_log(description='custom calculation', parent=(), ini=None):
+def create_job_dstore(description='custom calculation', parent=(), ini=None):
     """
     :returns: <DataStore> and <LogContext> associated to the calculation
     """
@@ -151,7 +133,7 @@ def build_dstore_log(description='custom calculation', parent=(), ini=None):
     log = init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
-    return dstore, log
+    return log, dstore
 
 
 def read_hc_id(hdf5):
@@ -174,7 +156,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> dstore, log = build_dstore_log()
+    >>> log, dstore = create_job_dstore()
     >>> with dstore, log:
     ...     dstore['example'] = 42
     ...     print(dstore['example'][()])

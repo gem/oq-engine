@@ -39,7 +39,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_86)
+    case_78, case_80, case_81, case_82, case_83, case_84, case_86, case_87)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -795,3 +795,12 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-rlz-001-AvgSA(0.75).csv',
             'hazard_curve-rlz-001-AvgSA(2.0).csv'],
             case_86.__file__)
+
+    def test_case_87(self):
+        # Check execution of NGAEastUSGSGMPE with the Coastal Plains
+        # site amplification model within a classical PSHA calculation
+        self.assert_curves_ok([
+            'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_87.__file__)

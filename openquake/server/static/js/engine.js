@@ -607,12 +607,10 @@ function capitalizeFirstLetter(val) {
                 }
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
-
                 const usgs_id = $.trim($("#usgs_id").val());
                 if (require_usgs_id()) {
                     formData.append('usgs_id', usgs_id);
                 }
-
                 formData.append('use_shakemap', use_shakemap());
                 $.ajax({
                     type: "POST",

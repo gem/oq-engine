@@ -88,9 +88,9 @@ def main_cmd(usgs_id, rupture_file=None,
         return
 
     # in  testing mode create new job contexts
-    user = getpass.getuser()
-    [job] = engine.create_jobs([oqparams], loglevel, None, user, None)
+    [job] = engine.create_jobs([oqparams], loglevel, None, getpass.getuser(), None)
     with job:
+        # store performance info about the download/validate phase
         monitor.log_data()
     try:
         engine.run_jobs([job])

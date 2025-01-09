@@ -19,7 +19,9 @@
 import os
 from django.apps import AppConfig
 from django.conf import settings
+from sqlite3 import OperationalError
 from openquake.baselib import config
+from openquake.server import dbserver, db
 
 
 class ServerConfig(AppConfig):
@@ -33,6 +35,13 @@ class ServerConfig(AppConfig):
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
         import openquake.server.signals  # NOQA
+
+        # reset any computation left in the 'executing' state
+        try:
+            db.actions.reset_is_running(dbserver.db)
+        except OperationalError:
+            # in the action "docs" the database does not exist
+            pass
 
         if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
             raise ValueError(

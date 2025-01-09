@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
-from openquake.commonlib.datastore import build_dstore_log
+from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure
 
 U16 = numpy.uint16
@@ -203,7 +203,7 @@ def main(exposures_xml):
     NB: works only for the exposures of the global risk model, having
     field names like LONGITUDE, LATITUDE, etc
     """
-    dstore, log = build_dstore_log()
+    log, dstore = create_job_dstore()
     with dstore, log:
         store(exposures_xml, dstore)
     return dstore.filename
