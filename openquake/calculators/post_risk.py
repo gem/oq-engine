@@ -242,7 +242,7 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types):
+def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types, monitor):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
@@ -295,6 +295,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
             if len(year):
                 data['year'] = year[df.event_id.to_numpy()]
             items.append([(agg_id, rlz_id, loss_id), data])
+    dstore.swmr_on()
     dic = parallel.Starmap.apply(
         build_aggcurves, (items, builder, num_events, aggtypes),
         concurrent_tasks=oq.concurrent_tasks,
