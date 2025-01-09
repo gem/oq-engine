@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim import utils_chapman_guo_2021 as utils
 
 aae = np.testing.assert_almost_equal
 
-PSAS= os.path.join(os.path.dirname(__file__), '..', '..',
+PSAS = os.path.join(os.path.dirname(__file__), '..', '..',
                   'gsim', 'chapman_guo_2021_psa_ratios.csv')
 
 # PSA ratios to be retrieved from Chapman and Guo (2021) tables

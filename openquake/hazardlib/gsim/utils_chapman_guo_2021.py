@@ -77,8 +77,7 @@ def get_psa_df(psa_df, imt):
     """
     Get the subset of the PSA ratio DataFrame for the given imt 
     """
-    cols = ['zsed', 'magnitude', 'distance', f'psa_ratio_{imt}']
-    return psa_df[cols]
+    return psa_df['zsed', 'magnitude', 'distance', f'psa_ratio_{imt}']
 
 
 def get_zscale(z_sed):
