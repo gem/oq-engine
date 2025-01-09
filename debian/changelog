@@ -9,6 +9,8 @@
     is provided through unit tests and qa_tests_data/classical/case_87.
 
   [Michele Simionato]
+  * Removed the deprecated function `openquake.commonlib.datastore.hdf5new`
+    and changed `build_dstore_log` into `build_job_dstore`;
   * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
   * Fixed a bug while exporting realizations.csv for scenario calculations
   * Added `webapi.calc_timeout` configuration parameter

@@ -196,6 +196,8 @@ class LogContext:
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, tag=''):
+        if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
+            raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
