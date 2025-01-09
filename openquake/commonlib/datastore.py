@@ -122,7 +122,7 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def build_dstore_log(description='custom calculation', parent=(), ini=None):
+def build_log_dstore(description='custom calculation', parent=(), ini=None):
     """
     :returns: <DataStore> and <LogContext> associated to the calculation
     """
@@ -133,7 +133,7 @@ def build_dstore_log(description='custom calculation', parent=(), ini=None):
     log = init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
-    return dstore, log
+    return log, dstore
 
 
 def read_hc_id(hdf5):
@@ -156,7 +156,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> dstore, log = build_dstore_log()
+    >>> dstore, log = build_log_dstore()
     >>> with dstore, log:
     ...     dstore['example'] = 42
     ...     print(dstore['example'][()])

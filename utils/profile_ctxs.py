@@ -46,7 +46,7 @@ def main(job_ini):
     something like OQ_SAMPLE_SITES=.0001 too.
     """
     logging.basicConfig(level=logging.INFO)
-    dstore, log = datastore.build_dstore_log()
+    log, dstore = datastore.build_log_dstore()
     with dstore, log:
         prof = cProfile.Profile()
         pstat = dstore.filename + '.pstat'

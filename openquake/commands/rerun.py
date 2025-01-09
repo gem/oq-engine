@@ -31,7 +31,7 @@ def main(calc_id: int, calculation_mode=None, pdb=False):
     oq.hazard_calculation_id = calc_id
     oq._amplifier = None
     oq._sec_perils = ()
-    dstore, log = datastore.build_dstore_log(oq.description, parent)
+    log, dstore = datastore.build_log_dstore(oq.description, parent)
     with dstore, log:
         calc = base.calculators(oq, log.calc_id)
         calc.sitecol = parent['sitecol']
