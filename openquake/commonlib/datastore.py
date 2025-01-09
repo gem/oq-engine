@@ -122,7 +122,7 @@ def new(calc_id, oqparam, datadir=None, mode=None):
     return dstore
 
 
-def build_job_dstore(description='custom calculation', parent=(), ini=None):
+def create_job_dstore(description='custom calculation', parent=(), ini=None):
     """
     :returns: <DataStore> and <LogContext> associated to the calculation
     """
@@ -156,7 +156,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> log, dstore = build_job_dstore()
+    >>> log, dstore = create_job_dstore()
     >>> with dstore, log:
     ...     dstore['example'] = 42
     ...     print(dstore['example'][()])
