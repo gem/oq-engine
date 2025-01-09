@@ -672,6 +672,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
     """
     rupdic = {}
     rup_data = {}
+    err = {}
     if rupture_file and rupture_file.endswith('.xml'):
         [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
                                if user.testdir else rupture_file)
@@ -687,7 +688,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
                       rupture_file=rupture_file,
                       station_data_file=station_data_file)
         if usgs_id == 'FromFile':
-            return rup, rupdic, {}
+            return rup, rupdic, err
     elif rupture_file and rupture_file.endswith('.json'):
         with open(rupture_file) as f:
             rup_data = json.load(f)
@@ -695,7 +696,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
             rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
             rupdic['station_data_file'] = station_data_file
             rup = convert_to_oq_rupture(rup_data)
-            return rup, rupdic, {}
+            return rup, rupdic, err
 
     assert usgs_id
     contents, properties, shakemap, err = _contents_properties_shakemap(
@@ -725,7 +726,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
         rupdic['station_data_file_from_usgs'] = False
     if not rup_data or rupdic['require_dip_strike']:
         # in parsers_test
-        return None, rupdic, {}
+        return None, rupdic, err
 
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:
@@ -733,7 +734,7 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
         rupdic['rupture_issue'] = 'Unable to convert the rupture from the USGS format'
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
-    return rup, rupdic, {}
+    return rup, rupdic, err
 
 
 def get_array_usgs_id(kind, usgs_id):
