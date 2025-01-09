@@ -341,7 +341,12 @@ class Monitor(object):
         data = self.get_data()
         if len(data):
             hdf5.extend(h5['performance_data'], data)
-            h5['performance_data'].flush()  # notify the reader
+            try:
+                h5['performance_data'].flush()  # notify the reader
+            except RuntimeError:
+                # sometimes on macos we can get the error
+                # Can't decrement id ref count (slist already enabled?)
+                logging.error('Could not flush performance_data')
             self.reset()
 
     # TODO: rename this as spawn; see what will break
