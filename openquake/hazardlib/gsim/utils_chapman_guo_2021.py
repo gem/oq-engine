@@ -163,10 +163,10 @@ def get_psa_ratio(ctx, imt, psa_df):
     # Get psa data into ndarray
     data = get_data(psa_df, imt)
 
-    # Get values per ctx into arrays
-    z = np.array([cx.z_sed for cx in ctx])
-    m = np.array([cx.mag for cx in ctx])
-    r = np.array([cx.rrup for cx in ctx])
+    # Get z_sed, mag and rrup dists
+    z = ctx.z_sed
+    m = ctx.mag
+    r = ctx.rrup
 
     # Index search per ctx value
     i = np.searchsorted(Z, z) - 1
