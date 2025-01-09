@@ -156,7 +156,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> dstore, log = build_log_dstore()
+    >>> log, dstore = build_log_dstore()
     >>> with dstore, log:
     ...     dstore['example'] = 42
     ...     print(dstore['example'][()])
