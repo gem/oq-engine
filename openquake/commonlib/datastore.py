@@ -29,7 +29,7 @@ from openquake.commonlib.logs import (
     get_datadir, get_last_calc_id, CALC_REGEX, dbcmd, init)
 
 
-# FIXME: you should never use this
+# FIXME: you should never use this, but unfortunately it is documented :-(
 def hdf5new(datadir=None):
     """
     Return a new `hdf5.File by` instance with name determined by the last
@@ -134,7 +134,8 @@ def new(calc_id, oqparam, datadir=None, mode=None):
         a DataStore instance associated to the given calc_id
     """
     dstore = _read(calc_id, mode, datadir)
-    dstore['oqparam'] = oqparam
+    if 'oqparam' not in dstore:
+        dstore['oqparam'] = oqparam
     if oqparam.hazard_calculation_id:
         dstore.ppath = read(calc_id, 'r', datadir).ppath
     return dstore
