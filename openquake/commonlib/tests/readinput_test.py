@@ -477,7 +477,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
-        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
+        h5, _ = datastore.build_dstore_log()
+        with h5, mock.patch('logging.error') as error:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
                 readinput.get_composite_source_model(oq, h5)
                 os.remove(h5.filename)

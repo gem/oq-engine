@@ -25,26 +25,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
-from openquake.commonlib.logs import (
-    get_datadir, get_last_calc_id, CALC_REGEX, dbcmd, init)
-
-
-# FIXME: you should never use this, but unfortunately it is documented :-(
-def hdf5new(datadir=None):
-    """
-    Return a new `hdf5.File by` instance with name determined by the last
-    calculation in the datadir (plus one). Set the .path attribute to the
-    generated filename.
-    """
-    datadir = datadir or get_datadir()
-    if not os.path.exists(datadir):
-        os.makedirs(datadir)
-    calc_id = get_last_calc_id(datadir) + 1
-    fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
-    new = hdf5.File(fname, 'w')
-    new.path = fname
-    performance.init_performance(new)
-    return new
+from openquake.commonlib.logs import get_datadir, CALC_REGEX, dbcmd, init
 
 
 def extract_calc_id_datadir(filename):

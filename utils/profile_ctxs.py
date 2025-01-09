@@ -46,11 +46,12 @@ def main(job_ini):
     something like OQ_SAMPLE_SITES=.0001 too.
     """
     logging.basicConfig(level=logging.INFO)
-    with datastore.hdf5new() as h5:
+    dstore, log = datastore.build_dstore_log()
+    with dstore, log:
         prof = cProfile.Profile()
-        pstat = h5.filename + '.pstat'
+        pstat = dstore.filename + '.pstat'
         oq = readinput.get_oqparam(job_ini)
-        csm = readinput.get_composite_source_model(oq, h5)
+        csm = readinput.get_composite_source_model(oq, dstore)
         sitecol = readinput.get_site_collection(oq)
         logging.info(sitecol)
         cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)

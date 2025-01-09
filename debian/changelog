@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the deprecated function `openquake.commonlib.datastore.hdf5new`
   * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
   * Fixed a bug while exporting realizations.csv for scenario calculations
   * Added `webapi.calc_timeout` configuration parameter

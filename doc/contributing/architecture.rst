@@ -202,7 +202,7 @@ How to use openquake.baselib.parallel
 
 Suppose you want to code a character-counting algorithm, which is a textbook exercise in parallel computing and suppose 
 that you want to store information about the performance of the algorithm. Then you should use the OpenQuake Monitor 
-class, as well as the utility ``openquake.baselib.commonlib.hdf5new`` that builds an empty datastore for you. Having done 
+class, as well as the utility ``openquake.baselib.commonlib.build_dstore_log`` that builds an empty datastore for you. Having done
 that, the ``openquake.baselib.parallel.Starmap`` class can take care of the parallelization for you as in the following 
 example::
 
@@ -212,7 +212,7 @@ example::
 	import collections
 	from openquake.baselib.performance import Monitor
 	from openquake.baselib.parallel import Starmap
-	from openquake.commonlib.datastore import hdf5new
+	from openquake.commonlib.datastore import build_dstore_log
 	
 		
 	def count(text):
@@ -224,8 +224,10 @@ example::
 	
 	def main(dirname):
 	    dname = pathlib.Path(dirname)
-	    with hdf5new() as hdf5:  # create a new datastore
-	        monitor = Monitor('count', hdf5)  # create a new monitor
+            dstore, log = build_dstore_log()
+            # create a log context object and a new datastore
+	    with dstore, log:
+	        monitor = Monitor('count', dstore)  # create a new monitor
 	        iterargs = ((open(dname/fname, encoding='utf-8').read(),)
 	                    for fname in os.listdir(dname)
 	                    if fname.endswith('.rst'))  # read the docs
@@ -233,7 +235,7 @@ example::
 	        for counter in Starmap(count, iterargs, monitor):
 	            c += counter
 	        print(c)  # total counts
-	        print('Performance info stored in', hdf5)
+	        print('Performance info stored in', dstore)
 	
 	
 	if __name__ == '__main__':
@@ -254,8 +256,9 @@ Here is how you would write the same example by using ``.submit``::
 
 	def main(dirname):
 	    dname = pathlib.Path(dirname)
-	    with hdf5new() as hdf5:
-	        smap = Starmap(count, monitor=Monitor('count', hdf5))
+            dstore, log = build_dstore_log()
+	    with dstore, log:
+	        smap = Starmap(count, monitor=Monitor('count', dstore))
 	        for fname in os.listdir(dname):
 	            if fname.endswith('.rst'):
 	                smap.submit(open(dname/fname, encoding='utf-8').read())
