@@ -548,4 +548,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-        prc.run(exports='')
+        prc.pre_execute()
+        res = prc.execute()
+        prc.post_execute(res)
