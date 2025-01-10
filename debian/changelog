@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed HDF5 bug when storing the avg_losses, visible on MacOS with a large
+    number of assets (say over a million)
+
   [Christopher Brooks]
   * Added ability to specify period-dependent bias adjustment for USGS
     classes of NGAEast GMMs (US 2023 NSHMP). Unit tests also added.
