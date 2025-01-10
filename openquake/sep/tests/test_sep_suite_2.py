@@ -53,11 +53,11 @@ class test_landslides_cali_small(unittest.TestCase):
         self.sites = sites
 
         self.sites["Fs"] = static_factor_of_safety(
-            slope=sites.slope,
-            cohesion=sites.cohesion_mid,
-            friction_angle=sites.friction_mid,
-            saturation_coeff=sites.saturation,
-            soil_dry_density=sites.dry_density,
+            slope=sites.slope.to_numpy(),
+            cohesion=sites.cohesion_mid.to_numpy(),
+            friction_angle=sites.friction_mid.to_numpy(),
+            saturation_coeff=sites.saturation.to_numpy(),
+            soil_dry_density=sites.dry_density.to_numpy(),
         )
 
         self.sites["Fs_rs"] = rock_slope_static_factor_of_safety(

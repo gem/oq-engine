@@ -489,6 +489,99 @@ Finally, the coseismic displacements are estimated using the sliding block displ
 `Jibson (2007) <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_.
 
 
+*******************
+Cho & Rathje (2022)
+*******************
+
+`Cho & Rathje (2022) <https://ascelibrary.org/doi/abs/10.1061/%28ASCE%29GT.1943-5606.0002757?af=R>`_ have proposed predictive models
+for the maximum earthquake-induced displacement along the surface of slope failures subjected to shallow crustal earthquakes.
+The dataset used to derive the predictive models consists of displacement values calculated by finite element numerical modelling for 49 slope models
+and 1051 earthquakes. The most efficient model developed by the authors computes earthquake-induced displacements (:math:`D`, in cm) as a function of the 
+landslide critical acceleration (:math:`k_{y}`, in g units), the :math:`PGV`(in cm/s), the natural period of the slope (:math:`T_{slope}`, in s) and the :math:`H ratio`, i.e., the ratio
+between the landslide thickness and the slope height:
+
+.. math::
+
+    \ln(D) = a_{0} + a_{1} \cdot \ln(PGV) \\ (22)
+
+If :math:`H_{ratio} \leq 0.6`:
+
+.. math::
+
+    a_{0} = -1.01 + 1.57 \cdot \ln(T_{slope}) - 0.25 \cdot \ln(k_{y}) \\ (23)
+    a_{1} = 0.81 - 1.05 \cdot \ln(T_{slope}) - 0.60 \cdot (\ln(T_{slope}))^2 \\ (24)
+
+If :math:`H_{ratio} > 0.6`:
+
+.. math::
+
+    a_{0} = -4.50 - 1.37 \cdot \ln(k_{y}) \\ (25)
+    a_{1} = 1.51 + 0.10 \cdot \ln(k_{y}) \\ (26)
+	
+
+Displacements displaied by openquake are expressed in m.
+
+
+*****************************
+Fotopoulou & Pitilakis (2015)
+*****************************
+
+`Fotopoulou & Pitilakis (2015) <https://link.springer.com/article/10.1007/s10518-015-9768-4>`_ have correlated the average horizontal 
+earthquake-induced displacement (:math:`D`, in m) of landslides to several intensity measures. The linear regression analyses performed to derive the predictive models 
+were based on seismically induced displacement values computed through finited difference numerical modelling on 12 slope models and 40 seismic inputs.
+
+.. math::
+
+   \ln(D) = -9.891 + 1.873 \ln{(PGV)} - 5.964 k_{y} + 0.285 M \\ (27)
+
+   \ln(D) = -2.965 + 2.127 \ln{(PGA)} - 6.583 k_{y} + 0.535 M \\ (28)
+
+   \ln(D) = -10.246 - 2.165 \ln{\left(\frac{k_{y}}{PGA}\right)} + 7.844 k_{y} + 0.654 M \\ (29)
+
+   \ln(D) = -8.360 + 1.873 \ln{(PGV)} - 0.347 \ln{\left(\frac{k_{y}}{PGA}\right)} - 5.964 k_{y} \\ (30)
+   
+where :math:`PGA` is in g units, :math:`PGV` is in cm/s, :math:`k_{y}` is the landslide critical acceleration in g and :math:`M` is the moment magnitude.
+
+
+***********************
+Saygili & Rathje (2008)
+***********************
+
+`Saygili & Rathje (2008) <https://ascelibrary.org/doi/10.1061/%28ASCE%291090-0241%282008%29134%3A6%28790%29>`_ have proposed predictive models for
+earthquake-induced displacements of landslides based on the rigid-block hypothesis by `Newmark (1965) <https://www.icevirtuallibrary.com/doi/pdf/10.1680/geot.1965.15.2.139>`_.
+The models were defined by using displacement values computed assuming critical acceleration values (:math:`k_{y}`, in g units) from 0.05g and 0.3g and
+2383 ground-motions. The authors reccomend to use the predictive model that computes displacements as a function of :math:`PGA` and :math:`PGV`, as considering simultaneously these 
+ground-motion parameters reduces the standard deviation.
+
+.. math::
+
+   \ln D = -1.56 - 4.58 \cdot \left(\frac{k_{y}}{PGA}\right) 
+   - 20.84 \cdot \left(\frac{k_{y}}{PGA}\right)^2 
+   + 44.75 \cdot \left(\frac{k_{y}}{PGA}\right)^3 
+   - 30.50 \cdot \left(\frac{k_{y}}{PGA}\right)^4 
+   - 0.64 \cdot \ln(PGA) + 1.55 \cdot \ln(PGV) \\ (31)
+   
+where :math:`D` is the earthquake-induced displacement in cm (expressed in m in openquake), :math:`PGA` is g units, :math:`k_{y}` is the landslide critical acceleration in g and 
+:math:`PGV` is in cm/s.
+
+***********************
+Rathje & Saygili (2009)
+***********************
+
+`Rathje & Saygili (2009) <https://bulletin.nzsee.org.nz/index.php/bnzsee/article/view/312>`_ have updated the PGA predictive model previously proposed
+by `Saygili & Rathje (2008) <https://ascelibrary.org/doi/10.1061/%28ASCE%291090-0241%282008%29134%3A6%28790%29>`_ by introducing an additional term
+dependent from the moment magnitude :math:`M` of the earthquake.
+
+.. math::
+
+   \ln D = 4.89 - 4.85 \left(\frac{k_{y}}{PGA}\right) - 19.64 \left(\frac{k_{y}}{PGA}\right)^2 
+   + 42.49 \left(\frac{k_{y}}{PGA}\right)^3 - 29.06 \left(\frac{k_{y}}{PGA}\right)^4 
+   + 0.72 \ln(PGA) + 0.89 (M - 6) \\ (32)
+   
+where :math:`D` is the earthquake-induced displacement in cm (expressed in m in openquake), :math:`PGA` is g units, :math:`k_{y}` is the landslide critical acceleration in g and 
+:math:`M` is the moment magnitude of the earthquake
+
+
 ****************************
 Nowicki Jessee et al. (2018)
 ****************************
@@ -512,7 +605,7 @@ Explanatory variable :math:`X` is calculated as:
 
 .. math:: 
 
-   + \beta \cdot landcover + 0.03 CTI - 0.01 \ln(PGV) \cdot Slope \\ (22)
+   + \beta \cdot landcover + 0.03 CTI - 0.01 \ln(PGV) \cdot Slope \\ (33)
 
 Coefficients \alpha and \beta values are estimated for several rock and landcover classes. The 
 reader is reffered to the original study by `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_, 
@@ -522,13 +615,13 @@ Probability of landsliding is then evaluated using logistic regression.
 
 .. math::
 
-	P(L) = \frac{1}{1+e^X} \\ (23)
+	P(L) = \frac{1}{1+e^X} \\ (34)
 
 These probabilities are converted to areal percentages to unbias the predictions.
 
 .. math::
 
-	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (24)
+	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (35)
 
 Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
 and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
@@ -590,16 +683,29 @@ Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.
 [15] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide
 hazard assessment. Engineering Geology, 212, 146-160. https://doi.org/10.1016/j.enggeo.2016.08.005
 
-[16] Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018).
+[16] Cho, Y., & Rathje, E. M. (2022). Generic predictive model of earthquake-induced slope displacements 
+derived from finite-element analysis. Journal of Geotechnical and Geoenvironmental Engineering, 148(4), 04022010.
+https://doi.org/10.1061/(ASCE)GT.1943-5606.0002757
+
+[17] Fotopoulou, S. D., & Pitilakis, K. D. (2015). Predictive relationships for seismically induced slope displacements 
+using numerical analysis results. Bulletin of Earthquake Engineering, 13, 3207-3238. https://doi.org/10.1007/s10518-015-9768-4
+
+[18] Saygili, G., & Rathje, E. M. (2008). Empirical predictive models for earthquake-induced sliding displacements of slopes. 
+Journal of geotechnical and geoenvironmental engineering, 134(6), 790-803. https://doi.org/10.1061/(ASCE)1090-0241(2008)134:6(790)
+
+[19] Rathje, E. M., & Saygili, G. (2009). Probabilistic assessment of earthquake-induced sliding displacements of natural slopes. 
+Bulletin of the New Zealand Society for Earthquake Engineering, 42(1), 18-27. https://doi.org/10.5459/bnzsee.42.1.18-27
+
+[20] Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018).
 A global empirical model for near-real-time assessment of seismically induced landslides. Journal of Geophysical
 Research: Earth Surface, 123, 1835–1859. https://doi.org/10.1029/2017JF004494
 
-[17] Danielson, J.J., and Gesch, D.B., 2011, Global multi-resolution terrain elevation data 2010 (GMTED2010): 
+[21] Danielson, J.J., and Gesch, D.B., 2011, Global multi-resolution terrain elevation data 2010 (GMTED2010): 
 U.S. Geological Survey Open-File Report 2011–1073, 26 p.
 
-[18] Hartmann, J., and N. Moosdorf (2012), The new global lithological map database GLiM: A representation of rock
+[22] Hartmann, J., and N. Moosdorf (2012), The new global lithological map database GLiM: A representation of rock
 properties atthe Earth surface, Geochem. Geophys. Geosyst., 13, Q12004, doi:10.1029/2012GC004370.
 
-[19] Arino, O., Ramos Perez, J.J., Kalogirou, V., Bontemps, S., Defourny, P., Van Bogaert, E. (2012): Global Land Cover 
-Map for 2009 (GlobCover 2009), https://doi.org/10.1594/PANGAEA.787668
+[23] Arino, O., Ramos Perez, J.J., Kalogirou, V., Bontemps, S., Defourny, P., Van Bogaert, E. (2012): Global Land Cover 
+Map for 2009 (GlobCover 2009), https://doi.org/10.1594/PANGAEA.787668.
 
