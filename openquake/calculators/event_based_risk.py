@@ -418,6 +418,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
+        S = len(oq.hazard_stats())
         fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
@@ -434,8 +435,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.avg_losses[lt] = numpy.zeros((self.A, R), F32)
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
-            self.datastore.set_shape_descr(
-                'avg_losses-rlzs/' + lt, asset_id=self.assetcol['id'], rlz=R)
+            if S and R > 1:
+                self.datastore.create_dset(
+                    'avg_losses-stats/' + lt, F32, (self.A, S))
 
     def execute(self):
         """
@@ -527,16 +529,21 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'risk_by_event contains %d duplicates for event %s' %
                     (len(arr) - len(uni), dupl[0, 2]))
 
+        s = oq.hazard_stats()
+        if s:
+            _statnames, statfuncs = zip(*s.items())
+            weights = self.datastore['weights'][:]
         if oq.avg_losses:
             for lt in self.xtypes:
-                al = self.avg_losses[lt]
+                al = self.avg_losses[lt]  # shape (A, R)
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]
                 name = 'avg_losses-rlzs/' + lt
                 logging.info(f'Storing {name}')
                 self.datastore[name][:] = al
-                stats.set_rlzs_stats(self.datastore, name,
-                                     asset_id=self.assetcol['id'])
+                if s and self.R > 1:
+                    self.datastore[name.replace('-rlzs', '-stats')][:] = \
+                        stats.compute_stats2(al, statfuncs, weights)
 
         self.build_aggcurves()
         if oq.reaggregate_by:
