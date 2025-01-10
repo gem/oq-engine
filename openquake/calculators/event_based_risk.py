@@ -531,7 +531,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         s = oq.hazard_stats()
         if s:
-            statnames, statfuncs = zip(*s.items())
+            _statnames, statfuncs = zip(*s.items())
             weights = self.datastore['weights'][:]
         if oq.avg_losses:
             for lt in self.xtypes:
