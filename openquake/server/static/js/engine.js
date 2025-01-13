@@ -446,7 +446,6 @@ function capitalizeFirstLetter(val) {
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
         'use_finite_rup_from_usgs',
-        'provide_rup_params'
     ];
 
     function require_usgs_id() {
@@ -622,7 +621,8 @@ function capitalizeFirstLetter(val) {
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 const usgs_id = $.trim($("#usgs_id").val());
-                if (require_usgs_id()) {
+                if (require_usgs_id() || get_selected_approach() == 'provide_rup_params') {
+                    // when providing rupture parameters, usgs_id is set to 'UserProvided'
                     formData.append('usgs_id', usgs_id);
                 }
                 formData.append('use_shakemap', use_shakemap());
