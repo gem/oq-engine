@@ -448,6 +448,27 @@ function capitalizeFirstLetter(val) {
         'use_finite_rup_from_usgs',
     ];
 
+    const retrieve_data_btn_txt_map = {
+        'use_shakemap_from_usgs': {
+            'initial': 'Retrieve ShakeMap data',
+            'running': 'Retrieving ShakemapData (it may take more than 10 seconds)...'},
+        'use_pnt_rup_from_usgs': {
+            'initial': 'Retrieve rupture data',
+            'running': 'Retrieving rupture data...'},
+        'build_rup_from_usgs': {
+            'initial': 'Build rupture',
+            'running': 'Building rupture...'},
+        'use_finite_rup_from_usgs': {
+            'initial': 'Retrieve finite rupture',
+            'running': 'Retrieving finite rupture...'},
+        'provide_rup': {
+            'initial': 'Retrieve rupture data',
+            'running': 'Retrieving rupture data...'},
+        'provide_rup_params': {
+            'initial': 'Build rupture',
+            'running': 'Building rupture...'}
+    }
+
     function require_usgs_id() {
         approach_selector = $('input[name="aristotle_approach"]');
         if (approach_selector.length > 0) {
@@ -473,6 +494,12 @@ function capitalizeFirstLetter(val) {
             selected_approach = 'use_shakemap_from_usgs';
         }
         return selected_approach;
+    }
+
+    function set_retrieve_data_btn_txt(state) { // state can be 'initial' or 'running'
+        const approach = get_selected_approach();
+        const btn_txt = retrieve_data_btn_txt_map[approach][state];
+        $('#submit_aristotle_get_rupture').text(btn_txt);
     }
 
     /* classic event management */
@@ -581,6 +608,7 @@ function capitalizeFirstLetter(val) {
 
             $('input[name="aristotle_approach"]').change(function () {
                 const selected_approach = $(this).val();
+                set_retrieve_data_btn_txt('initial');
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
                     $('#usgs_id_grp').removeClass('hidden');
@@ -599,11 +627,9 @@ function capitalizeFirstLetter(val) {
                     $('#rup_params').removeClass('hidden');
                     $('#dip').prop('disabled', false);
                     $('#strike').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Build rupture');
                     $('#usgs_id').val('UserProvided');
                 } else {
                     $('#rup_params').addClass('hidden');
-                    $('#submit_aristotle_get_rupture').text('Retrieve data');
                 }
             });
 
@@ -611,13 +637,7 @@ function capitalizeFirstLetter(val) {
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
                 $('input[name="aristotle_approach"]').prop('disabled', true);
-                if (use_shakemap()) {
-                    $('#submit_aristotle_get_rupture').text(
-                        'Retrieving ShakeMap data (it may take more than 10 seconds)');
-                } else {
-                    $('#submit_aristotle_get_rupture').text(
-                        'Retrieving rupture data (it may take more than 10 seconds)');
-                }
+                set_retrieve_data_btn_txt('running');
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 const usgs_id = $.trim($("#usgs_id").val());
@@ -760,7 +780,7 @@ function capitalizeFirstLetter(val) {
                 }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
                     $('input[name="aristotle_approach"]').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve data');
+                    set_retrieve_data_btn_txt('initial');
                 });
                 event.preventDefault();
             });
