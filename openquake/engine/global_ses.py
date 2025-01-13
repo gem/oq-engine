@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-This first version of the global_ses script, available engine-3.22, is
+This first version of the global_ses script, available from engine-3.22, is
 able to generate the Global Stochastic Event Set for the entire world
 from the GEM mosaic of hazard models. The workflow is a follows:
 
@@ -49,7 +49,7 @@ in a CSV with longitude and latitudes, or as a region in the job.ini.
 The site parameters are inferreded from the site parameters in the mosaic
 via an association with the closest site in the site model;
 the GSIMs to use are also inferred from the GSIMs in the mosaic via an
-association table `model_trt_gsim_weight`.
+association table (model, trt_smr) -> rlzs_by_gsim.
 
 Note 1: the GLD model is excluded since it has no vs30 data.
 Note 2: for JPN and KOR instead of using 50 ses x 1 year,
