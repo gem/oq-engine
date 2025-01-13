@@ -639,6 +639,8 @@ function capitalizeFirstLetter(val) {
                 $('input[name="aristotle_approach"]').prop('disabled', true);
                 set_retrieve_data_btn_txt('running');
                 var formData = new FormData();
+                const selected_approach = get_selected_approach();
+                formData.append('approach', selected_approach);
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 const usgs_id = $.trim($("#usgs_id").val());
                 if (require_usgs_id() || get_selected_approach() == 'provide_rup_params') {
@@ -646,7 +648,7 @@ function capitalizeFirstLetter(val) {
                     formData.append('usgs_id', usgs_id);
                 }
                 formData.append('use_shakemap', use_shakemap());
-                if (get_selected_approach() == 'provide_rup_params') {
+                if (selected_approach == 'provide_rup_params') {
                     formData.append('lon', $("#lon").val());
                     formData.append('lat', $("#lat").val());
                     formData.append('dep', $("#dep").val());
@@ -810,6 +812,8 @@ function capitalizeFirstLetter(val) {
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = new FormData();
+                const selected_approach = get_selected_approach();
+                formData.append('approach', selected_approach);
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());

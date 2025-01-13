@@ -658,14 +658,16 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     return contents, properties, shakemap_array, err
 
 
-def get_rup_dic(dic, user, use_shakemap, rupture_file=None, station_data_file=None,
-                monitor=performance.Monitor()):
+def get_rup_dic(dic, user, approach, use_shakemap, rupture_file=None,
+                station_data_file=None, monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
 
     :param dic: dictionary with ShakeMap ID and other parameters
     :param user: User instance
+    :param approach: the workflow selected by the user
+        (default: 'use_shakemap_from_usgs')
     :param use_shakemap: download the ShakeMap only if True
     :param rupture_file: None
     :param station_data_file: None
@@ -675,7 +677,7 @@ def get_rup_dic(dic, user, use_shakemap, rupture_file=None, station_data_file=No
     rup_data = {}
     err = {}
     usgs_id = dic['usgs_id']
-    if usgs_id == 'UserProvided':
+    if approach == 'provide_rup_params':
         rupdic = dic.copy()
         rupdic.update(rupture_file=rupture_file,
                       station_data_file=station_data_file,
