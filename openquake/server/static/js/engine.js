@@ -445,7 +445,8 @@ function capitalizeFirstLetter(val) {
         'use_shakemap_from_usgs',
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
-        'use_finite_rup_from_usgs'
+        'use_finite_rup_from_usgs',
+        'provide_rup_params'
     ];
 
     function require_usgs_id() {
@@ -461,6 +462,18 @@ function capitalizeFirstLetter(val) {
             // in interface level 1 the approach selector doesn't exist and we always use the ShakeMap
             return true;
         }
+    }
+
+    function get_selected_approach() {
+        approach_selector = $('input[name="aristotle_approach"]');
+        var selected_approach;
+        if (approach_selector.length > 0) {
+            selected_approach = $('input[name="aristotle_approach"]:checked').val();
+        }
+        else {
+            selected_approach = 'use_shakemap_from_usgs';
+        }
+        return selected_approach;
     }
 
     /* classic event management */
@@ -588,6 +601,7 @@ function capitalizeFirstLetter(val) {
                     $('#dip').prop('disabled', false);
                     $('#strike').prop('disabled', false);
                     $('#submit_aristotle_get_rupture').text('Build rupture');
+                    $('#usgs_id').val('UserProvided');
                 } else {
                     $('#rup_params').addClass('hidden');
                     $('#submit_aristotle_get_rupture').text('Retrieve data');
@@ -612,6 +626,15 @@ function capitalizeFirstLetter(val) {
                     formData.append('usgs_id', usgs_id);
                 }
                 formData.append('use_shakemap', use_shakemap());
+                if (get_selected_approach() == 'provide_rup_params') {
+                    formData.append('lon', $("#lon").val());
+                    formData.append('lat', $("#lat").val());
+                    formData.append('dep', $("#dep").val());
+                    formData.append('mag', $("#mag").val());
+                    formData.append('rake', $("#rake").val());
+                    formData.append('dip', $("#dip").val());
+                    formData.append('strike', $("#strike").val());
+                }
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",

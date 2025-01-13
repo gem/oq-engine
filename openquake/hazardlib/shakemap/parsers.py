@@ -658,13 +658,13 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     return contents, properties, shakemap_array, err
 
 
-def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_file=None,
+def get_rup_dic(dic, user, use_shakemap, rupture_file=None, station_data_file=None,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
 
-    :param usgs_id: ShakeMap ID
+    :param dic: dictionary with ShakeMap ID and other parameters
     :param user: User instance
     :param use_shakemap: download the ShakeMap only if True
     :param rupture_file: None
@@ -674,6 +674,15 @@ def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_fil
     rupdic = {}
     rup_data = {}
     err = {}
+    usgs_id = dic['usgs_id']
+    if usgs_id == 'UserProvided':
+        rupdic = dic.copy()
+        rupdic.update(rupture_file=rupture_file,
+                      station_data_file=station_data_file,
+                      require_dip_strike=True)
+        rup = None
+        return rup, rupdic, err
+
     if rupture_file and rupture_file.endswith('.xml'):
         [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
                                if user.testdir else rupture_file)
