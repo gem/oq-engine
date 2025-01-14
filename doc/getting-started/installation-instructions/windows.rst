@@ -28,18 +28,14 @@ Installation Procedure
 
 Download the installer from
 https://downloads.openquake.org/pkgs/windows/oq-engine/ Double-click on
-the installer to start the installation. You will probably be presented
-with a popup message similar to the one shown below:
+the installer to start the installation. Depend on your PC settings it is 
+possible to  be presented with a popup message similar to the one shown below:
 
 .. image:: _images/windows/01_Windows_warning.png
 
-Click on the “More info” link inside the popup:
+As you can see the Publisher of the package is Fondazione GEM and you can click on the “Run” button to continue:
 
-.. image:: _images/windows/02_Run_anyway.png
-
-Check that the App string starts with “OpenQuake_Engine” and ends with
-the desired version number. If all is in order, click on the “Run
-anyway” button to continue. You will be presented with an installer
+You will be presented with an installer
 dialog similar to the one depicted below:
 
 .. image:: _images/windows/03_Installer_start.png
