@@ -401,6 +401,13 @@ It is also possible to perform calculations with point-like ruptures
 0  0.541180    0    0    0
 1  0.247199    1    0    0
 
+The event based calculator is able to generate a set of ruptures
+from the source models and to store then on the datastore.
+Then it is possible to read the ruptures, filter them and perform
+calculations; the function to use is
+`openquake.calculators.getters.get_ebruptures` which takes in input
+a DataStore object and returns a list of `EBRupture` instances.
+
 Working with verification tables
 --------------------------------
 
