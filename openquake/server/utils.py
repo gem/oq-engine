@@ -148,7 +148,8 @@ def oq_server_context_processor(request):
     else:
         # NOTE: only in ARISTOTLE mode we restrict functionalities based on the
         # user level. In other application modes (at least for now) the user interface
-        # can assume the user to have the maximum level.
+        # can assume the user to have the maximum level, even if the actual default
+        # level is 0
         context['user_level'] = 2
 
     # NOTE: the 'Share' functionality makes sense only when authentication is required,
