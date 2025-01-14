@@ -208,9 +208,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
     ):
-        self.region = region
-        self.m_b = m_b
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
@@ -290,7 +288,5 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
-    """ """
-
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
