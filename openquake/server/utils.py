@@ -152,9 +152,6 @@ def oq_server_context_processor(request):
         # level is 0
         context['user_level'] = 2
 
-    # NOTE: the 'Share' functionality makes sense only when authentication is required,
-    # even for level 2 users
-    context['lockdown'] = settings.LOCKDOWN
     return context
 
 

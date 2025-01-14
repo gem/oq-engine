@@ -80,7 +80,7 @@
                 {% endif %}
                 <% if (calc.get('status') == 'complete' || calc.get('status') == 'shared') { %>
 
-                {% if application_mode != 'READ_ONLY' and user_level == 2 and lockdown %}
+                {% if application_mode != 'READ_ONLY' and user_level == 2 %}
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-share" style="margin: 2px 0 2px 0;">Share</a>
                 <% } else if (calc.get('status') == 'shared') { %>
