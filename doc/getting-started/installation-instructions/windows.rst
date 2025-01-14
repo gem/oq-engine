@@ -31,22 +31,20 @@ https://downloads.openquake.org/pkgs/windows/oq-engine/ Double-click on
 the installer to start the installation. Depend on your PC settings it is 
 possible to  be presented with a popup message similar to the one shown below:
 
-.. image:: _images/windows/01_Windows_warning.png
+.. image:: _images/windows/00_Open.png
 
-As you can see the Publisher of the package is Fondazione GEM and you can click on the “Run” button to continue:
+As you can see the Publisher of the package is "Fondazione GEM" and you can click on the “Run” button to continue:
 
-You will be presented with an installer
-dialog similar to the one depicted below:
+You will be presented with an installer dialog similar to the one depicted below:
 
-.. image:: _images/windows/03_Installer_start.png
-
+.. image:: _images/windows/01_Run.png
 
 Press the “Next” button.
 
 The AGPL v3 license terms will be displayed - you must accept these
 terms in order to install the OpenQuake engine:
 
-.. image:: _images/windows/04_License.png
+.. image:: _images/windows/02_License.png
 
 Press the “I Agree” button.
 
@@ -58,7 +56,7 @@ Windows installer, you will be presented with a message similar to the
 one depicted below:
 Already installed
 
-.. image:: _images/windows/05_Uninstall.png
+.. image:: _images/windows/03_Uninstall.png
 
 **IMPORTANT** even if you have installed the OpenQuake engine via the
 universal installer, git or some other means, you must ensure that no
@@ -73,7 +71,7 @@ Components <#install-components>`__
 
 Press Next to continue. You will be presented with a reminder message:
 
-.. image:: _images/windows/06_Stop_Processes.png
+.. image:: _images/windows/04_Stop.png
 
 
 Once you have stopped any running OpenQuake Engine processes and closed
@@ -81,11 +79,11 @@ all associated files, press OK to continue. The uninstaller will now
 remove the previous OpenQuake engine installation. This may take some
 time to complete:
 
-.. image:: _images/windows/07_Uninstalling.png
+.. image:: _images/windows/05_Remove.png
 
 Once finished, the uninstaller will look like this:
 
-.. image:: _images/windows/08_Uninstall_Complete.png
+.. image:: _images/windows/06_DoneRemove.png
 
 Press the “Close” button to close the uninstaller.
 
@@ -96,7 +94,7 @@ Install OpenQuake Engine Components
 
 We are now ready to install the OpenQuake engine components:
 
-.. image:: _images/windows/09_Installer_Components.png
+.. image:: _images/windows/07_Installing.png
 
 Press the “Next” button to continue
 
