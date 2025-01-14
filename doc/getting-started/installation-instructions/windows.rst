@@ -94,7 +94,7 @@ Install OpenQuake Engine Components
 
 We are now ready to install the OpenQuake engine components:
 
-.. image:: _images/windows/07_Installing.png
+.. image:: _images/windows/07_Choose.png
 
 Press the “Next” button to continue
 
@@ -104,21 +104,21 @@ unless you have a compelling reason to use something else - please note
 that changing the installation location may make it more difficult to
 provide support.
 
-.. image:: _images/windows/10_Install_Location.png
+.. image:: _images/windows/07_Destination.png
 
 Press the “Install” button to continue.
 
 The installer will now execute. This may take some time to complete.
 
-.. image:: _images/windows/11_Installing.png
+.. image:: _images/windows/07_Installing.png
 
 Once the installer has completed. It will look something like this:
 
-.. image:: _images/windows/12_Complete.png
+.. image:: _images/windows/08_Complete.png
 
 Press Finish to close the installer. You should now see two OpenQuake Engine icons on your Windows desktop:
 
-.. image:: _images/windows/13_Desktop_Icons.png
+.. image:: _images/windows/09_icons.png
 
 It should also be possible to find the OpenQuake Engine by pressing the Windows key and typing “OpenQuake”:
 
