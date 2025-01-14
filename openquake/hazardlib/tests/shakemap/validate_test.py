@@ -46,14 +46,14 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         # no rupture, yes stations
-        POST = {'usgs_id': 'us6000jllz'}
+        POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
         _rup, rupdic, _params, err = aristotle_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_2(self):
-        POST = {'usgs_id': 'us7000n05d'}
+        POST = {'usgs_id': 'us7000n05d', 'approach': 'use_shakemap_from_usgs'}
         _rup, rupdic, _params, err = aristotle_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], False)
         self.assertEqual(rupdic['require_dip_strike'], True)
@@ -81,7 +81,8 @@ class AristotleValidateTestCase(unittest.TestCase):
             'time_event': 'day',
             'trt': 'active shallow crust normal',
             'truncation_level': '3',
-            'usgs_id': 'FromFile'}
+            'usgs_id': 'FromFile',
+            'approach': 'provide_rup'}
 
         for stations in (None, 'stationlist_seismic.csv'):
             _rup, rupdic, params, err = aristotle_validate(
@@ -126,7 +127,7 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
-        POST = {'usgs_id': 'us7000n7n8'}
+        POST = {'usgs_id': 'us7000n7n8', 'approach': 'use_shakemap_from_usgs'}
         _rup, rupdic, _oqparams, err = aristotle_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)
