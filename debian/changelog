@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Fixed HDF5 bug when storing the avg_losses, visible on MacOS with a large
-    number of assets (say over a million)
+    number of assets (say over a million). Fixed the same bug for damages too.
 
   [Christopher Brooks]
   * Added ability to specify period-dependent bias adjustment for USGS
