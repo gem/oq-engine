@@ -146,12 +146,13 @@ def oq_server_context_processor(request):
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
             context['user_level'] = 0
     else:
-        # NOTE: the behavior of user level 2 is the standard one before introducing
-        # user levels. Besides in ARISTOTLE mode, we don't want to restrict anything
-        # based on the user level.
+        # NOTE: only in ARISTOTLE mode we restrict functionalities based on the
+        # user level. In other application modes (at least for now) the user interface
+        # can assume the user to have the maximum level.
         context['user_level'] = 2
 
-    # NOTE:
+    # NOTE: the 'Share' functionality makes sense only when authentication is required,
+    # even for level 2 users
     context['lockdown'] = settings.LOCKDOWN
     return context
 
