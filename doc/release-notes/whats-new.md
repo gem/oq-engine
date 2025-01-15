@@ -158,11 +158,12 @@ National Seismic Model for the United States. In particular, we
 had to extend several GMMs to accept quite advanced basin terms.
 
 After a general refactoring of the basin terms, we implemented the
-USGS basin scaling + m9 basin adjustments for several GMMs such as the
-NGAWest2 GMMs and the NGASub GMMs. For the NGAWest2 GMMs we also
-implemented the CyberShake adjustments. For the NGAEast GMMs we added
-the ability to apply a period-dependent bias adjustment and the
-Coastal Plains amplification adjustment.
+USGS basin scaling for several GMMs such as the NGAWest2 GMMs and the
+NGASub GMMs. For the NGASUB GMMs we also provided the ability to use
+the M9 basin term. For the NGAWest2 GMMs we also implemented the
+CyberShake adjustments. For the NGAEast GMMs we added the ability to
+apply a period-dependent bias adjustment and the Coastal Plains
+amplification adjustment.
 
 [Ilaria Oliveti](https://github.com/IlariaOliveti) contributed a 
 fix ([#9994](https://github.com/gem/oq-engine/pull/9994))
