@@ -124,9 +124,9 @@ compute ground motion fields and risk on specific regions.
 In the context of this project, a new functionality has been
 implemented in the event based calculator: it is now possible
 to specify in the `job.ini` file a parameter
-
+```
 rupture_model_file = file-with-ruptures.hdf5
-
+```
 pointing to an HDF5 file containing a set of ruptures, site parameters
 and Ground Motion Models and then perform the calculation of the GMFs.
 The functionality is still experimental and the details will change
@@ -142,12 +142,12 @@ Our users at USGS requested an easy way to override coefficients in
 the coefficient table, to be used in the NGA-West2 and NGA-Sub
 ground motion models. We implemented a classmethod
 `CoeffsTable.from_toml` to be used in code like the following
-
+```python
 self.COEFFS = self.COEFFS | CoeffsTable.fromtoml('''\
 ["SA(0.01)"]
 a1 = 0.11
 ''')
-
+```
 which is overriding the coefficient `a1` for the IMT `SA(0.01)`.
 Using this new feature the implementation of several GMMs in hazardlib
 could be simplified and we refactored most of them.
@@ -278,7 +278,8 @@ as "custom".
 We added the commands `oq plot ebruptures` and `oq filter_around`. Use the --help
 flag to see their documentation.
 
-* QGIS plugin
+QGIS plugin
+-----------
 
 We changed the workflow for displaying ground motion fields in the
 plugin: before it was necessary to specify first the event and then
