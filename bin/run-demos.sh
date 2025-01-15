@@ -62,8 +62,11 @@ oq engine --list-outputs -1
 # sensitivity to the strike angle
 oq shell $1/risk/ScenarioRisk/sensitivity.py
 
-#echo "Testing csm2rup"
+echo "Testing csm2rup"
 OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+
+echo "Testing oq info usgs_rupture"
+oq info usgs_rupture:us70006sj8
 
 # display the calculations
 oq db find %

@@ -154,6 +154,7 @@ def print_geohash(what):
     print(gh.decode('ascii'))
 
 
+# tested in run-demos.sh
 def print_usgs_rupture(what):
     """
     Show the parameters of a rupture downloaded from the USGS site.
