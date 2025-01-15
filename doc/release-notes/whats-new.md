@@ -12,7 +12,7 @@ https://github.com/gem/oq-engine/blob/engine-3.22/debian/changelog
 
 A summary is given below.
 
-Rapid Impact Assessment platform
+Rapid Impact Assessment Platform
 --------------------------------
 
 Most of the work went into our internal platform for Rapid Impact
@@ -92,7 +92,7 @@ the calculation, making sure that the same files are not downloaded twice.
 We are properly getting the parameters `from_email` and `reply_to email`
 from the WebUI settings: they are used in password reset functionality.
 
-Hazard new features
+New hazard features
 -------------------
 
 In the context of a project with WSP Canada we implemented a median spectrum post-processor.
