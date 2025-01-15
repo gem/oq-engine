@@ -264,7 +264,7 @@ If the installation is missing the geospatial libraries, there is now a clear er
 point the user to the GEM wheelhouse. This happens to users not using
 the GEM installer.
 
-We improved the validation of OqParam objects and there is not a method
+We improved the validation of OqParam objects and there is now a method
 `oqparam.to_ini()` which is able to generate .ini files from a dictionary
 of parameters, tested with the demos.
 
