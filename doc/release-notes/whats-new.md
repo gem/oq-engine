@@ -12,6 +12,10 @@ https://github.com/gem/oq-engine/blob/engine-3.22/debian/changelog
 
 A summary is given below.
 
+Note: this is the first release to support Python 3.12. Python 3.9
+still works but we are not testing it anymore and therefore is
+deprecated and will be forbidden in the future.
+
 Rapid Impact Assessment Platform
 --------------------------------
 
@@ -101,10 +105,6 @@ from the WebUI settings: they are used in password reset functionality.
 New hazard features
 -------------------
 
-In the context of a project with WSP Canada we implemented a median spectrum post-processor.
-Currently it is not documented, however there is a demo (see demos/hazard/MedianSpectrum/job.ini)
-showing how to use it.
-
 We extended the rupture exporter to also export the source IDs,
 a much requested feature. This source IDs are also visible in the QGIS plugin.
 
@@ -116,9 +116,6 @@ the logic tree structure.
 
 There is now an official and documented getter to read event based ruptures from the datastore,
 the function `openquake.calculators.getters.get_ebruptures(dstore)`.
-
-This is the first release to support Python 3.12. Python 3.9 still works but we are
-not testing it anymore and therefore is deprecated and will be forbidden in the future.
 
 Global Stochastic Event Set
 ---------------------------
