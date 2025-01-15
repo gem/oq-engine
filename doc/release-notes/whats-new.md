@@ -25,7 +25,7 @@ depending on the kind of user:
                  calculations with conditioned GMFs, etc.
 
 Many new features have been added, such as the possibility of sharing/unsharing calculations
-from level 2 users to level 0 users.
+from level 2 users to level 0 users. The level 2 interface is still under active development, with additional features/customizations being expected.
 
 For ShakeMap-based calculations, by default the engine takes the most recent ShakeMap
 if more than one version is available.
@@ -51,6 +51,12 @@ Now we manage the `time_event` field, i.e. by looking at the date of the event
 and at the local time zone we are able to determine if `time_event` is "day", "night"
 of "transit"; moreover, the user can override this value with a dropdown menu
 in the WebUI. That required a new dependency, the `timezonefinder` wheel.
+
+On top of the page displaying the outputs for a calculation, we are
+also reporting the date and time of the event and the amount of time
+passed between the event itself and when the job results were
+computed. This makes it easier to compare results computed before and
+after new data become available from the USGS service.
 
 Now an event affecting assets belonging to countries with
 different taxonomy mappings can be managed with a single calculation, while before
