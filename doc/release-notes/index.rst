@@ -18,7 +18,7 @@ is the OpenQuake Engine 3.22.
 .. toctree::
    :maxdepth: 1
 
-   whats-new-3.22
+   whats-new
    whats-new-3.21
    whats-new-3.20
    whats-new-3.19
