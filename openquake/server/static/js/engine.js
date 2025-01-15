@@ -530,7 +530,10 @@ function capitalizeFirstLetter(val) {
 
 
             function toggleRunCalcBtnState() {
-                const lonValue = $('#lon').val().trim();
+                var lonValue = $('#lon').val();
+                if (typeof lonValue !== 'undefined') {
+                    lonValue = lonValue.trim();
+                }
                 $('#submit_aristotle_calc').prop('disabled', lonValue === '');
             }
             toggleRunCalcBtnState();
