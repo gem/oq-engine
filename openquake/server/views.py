@@ -546,7 +546,11 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    return share_job(request.user.level, calc_id, share=False)
+    if settings.LOCKDOWN:
+        user_level = request.user.level
+    else:  # if no authentication is required, we grant permission
+        user_level = 2
+    return share_job(user_level, calc_id, share=False)
 
 
 @csrf_exempt
@@ -556,7 +560,11 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    return share_job(request.user.level, calc_id, share=True)
+    if settings.LOCKDOWN:
+        user_level = request.user.level
+    else:  # if no authentication is required, we grant permission
+        user_level = 2
+    return share_job(user_level, calc_id, share=True)
 
 
 def log_to_json(log):

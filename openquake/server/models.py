@@ -17,10 +17,20 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
 
 
-User.level = property(lambda self: getattr(self.profile, 'level', 0))
+def get_level(self):
+    if settings.LOCKDOWN:
+        return getattr(self.profile, 'level', 0)
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
+        return 2
+
+
+User.level = property(get_level)
 
 
 class UserProfile(models.Model):

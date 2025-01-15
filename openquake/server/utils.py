@@ -139,17 +139,14 @@ def oq_server_context_processor(request):
         context['aelo_version'] = get_aelo_version()
 
     # setting user_level
-    if settings.APPLICATION_MODE == 'ARISTOTLE':
-        # NOTE: it may be useful not only for ARISTOTLE
+    if settings.LOCKDOWN:
         try:
             context['user_level'] = request.user.level
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
             context['user_level'] = 0
     else:
-        # NOTE: only in ARISTOTLE mode we restrict functionalities based on the
-        # user level. In other application modes (at least for now) the user interface
-        # can assume the user to have the maximum level, even if the actual default
-        # level is 0
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
         context['user_level'] = 2
 
     return context
