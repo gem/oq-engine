@@ -149,6 +149,8 @@ def oq_server_context_processor(request):
         # can assume the user to have the maximum level
         context['user_level'] = 2
 
+    context['lockdown'] = settings.LOCKDOWN
+
     return context
 
 
