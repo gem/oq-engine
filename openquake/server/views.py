@@ -539,6 +539,18 @@ def share_job(user_level, calc_id, share):
             f"share_job must return 'success' or 'error'!? Returned: {message}")
 
 
+def get_user_level(request):
+    if settings.LOCKDOWN:
+        try:
+            return request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            return 0
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
+        return 2
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -546,7 +558,8 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    return share_job(request.user.level, calc_id, share=False)
+    user_level = get_user_level(request)
+    return share_job(user_level, calc_id, share=False)
 
 
 @csrf_exempt
@@ -556,7 +569,8 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    return share_job(request.user.level, calc_id, share=True)
+    user_level = get_user_level(request)
+    return share_job(user_level, calc_id, share=True)
 
 
 def log_to_json(log):
