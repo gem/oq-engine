@@ -545,7 +545,9 @@ def get_user_level(request):
             return request.user.level
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
             return 0
-    else:  # if no authentication is required, we grant permission
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
         return 2
 
 
