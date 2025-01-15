@@ -12,7 +12,8 @@ https://github.com/gem/oq-engine/blob/engine-3.20/debian/changelog
 
 A summary is given below.
 
-# New Hazard Models
+New Hazard Models
+-----------------
 
 Last year we integrated the UCERF3 model inside the USA model by
 reimplementing it in terms of multifault sources. We recently realized
@@ -48,7 +49,8 @@ realizations - on a single machine. Computing the quantiles is still
 impossible in practice, since you will run out of memory during the
 postprocessing phase.
 
-# hazardlib
+hazardlib
+---------
 
 The major thing in hazardlib was a refactoring removing `**kwargs`
 from the signature of hundreds of GMPEs. As a consequence, now each
@@ -86,7 +88,8 @@ specified by Boore et al. (2022).
 classical Abrahamson Silva GMPE and also an entirely new class
 `GhasemiEtAl2009` implementing the Ghasemi et Al. GMPE for Iran.
 
-# Risk
+Risk
+----
 
 We saved a lot of memory and disk space in conditioned GMFs scenarios,
 making them also faster in many situations. This is a HUGE improvement
@@ -100,7 +103,8 @@ See https://github.com/gem/oq-engine/issues/9633 for more.
 We fixed the `avg_losses-stats` exporter in the case of a single realization
 for classical_risk calculation: [#9579](https://github.com/gem/oq-engine/issues/9579)
 
-# Bug fixes
+Bug fixes
+---------
 
 We fixed a bug when importing a file `gmf_data.csv`: in rare situations
 with filtered site collections one could end up with site IDs in
@@ -142,7 +146,8 @@ It is now fixed.
 Finally, we removed two error-prone caches for the gsim logic tree and
 the exposure, by avoiding the need for them.
 
-# New checks
+New checks
+----------
 
 In the presence of millions of assets and events, calculating the
 average losses can send the server out of memory; there is now
@@ -177,7 +182,8 @@ contain probabilities, i.e. floats in the range 0 to 1. However, that
 was not checked, causing NaN values to be generated in the outputs.
 Now the user gets a clear error message at import time.
 
-# Aristotle project
+Aristotle project
+-----------------
 
 [Aristotle](https://www.globalquakemodel.org/proj/aristotle) is a
 project to provide Multi-Hazard advice to the European Research
@@ -205,7 +211,8 @@ Moreover, it is possible to upload a custom file `rupture_model.xml`,
 if the user possesses additional or different information than the USGS
 or is interested in trying alternative models.
 
-# `oq` commands
+`oq` commands
+-------------
 
 We added a command `oq mosaic aristotle`, which is used
 to run multiple ARISTOTLE calculations in a batch in our
@@ -230,7 +237,8 @@ The command `oq show delta_loss` has been enhanced and documented in the manual.
 We now raise a clear `NotImplementedError` when trying to convert
 griddedSurfaces with the command `oq nrml to csv|gpkg`.
 
-# Documentation
+Documentation
+-------------
 
 There was a lot of work on the documentation, in particular about
 Windows installations and event-based outputs, which were both
@@ -247,7 +255,8 @@ GMFs are computed.
 A demo ScenarioCase3 documenting the new feature `rupture_dict` (introduced
 in engine-3.19) has been added.
 
-# Other
+Other
+-----
 
 There was as usual some work for the
 [AELO](https://www.globalquakemodel.org/proj/aelo) project. In
