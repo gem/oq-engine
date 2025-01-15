@@ -19,7 +19,7 @@ Most of the work went into our internal platform for Rapid Impact
 Assessment. There is a single codebase with three different interfaces
 depending on the kind of user:
 
-- level 0 users: can only see results of computations performed by other users and published
+- level 0 users: can only see results of computations performed by other users and shared
 - level 1 users: can only perform ShakeMap-based damage and loss calculations starting from a ShakeMap ID
 - level 2 users: can do everything including uploading custom ruptures, performing
                  calculations with conditioned GMFs, etc.
