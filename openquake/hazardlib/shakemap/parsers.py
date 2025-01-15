@@ -657,7 +657,8 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     return contents, properties, shakemap_array, err
 
 
-def get_rup_dic(usgs_id, user, use_shakemap, rupture_file=None, station_data_file=None,
+def get_rup_dic(usgs_id, user=User(), use_shakemap=False,
+                rupture_file=None, station_data_file=None,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given

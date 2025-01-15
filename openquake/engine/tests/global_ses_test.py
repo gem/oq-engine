@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -46,7 +46,7 @@ def test_EUR_MIE():
             fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
             dstore = base.run_calc('job.ini').datastore
             check(dstore, fnames)
-            
+
             dstore = base.run_calc('job_sites.ini').datastore
             assert dstore['avg_gmf'].shape == (2, 6, 1)  # 6 sites
         finally:

@@ -297,9 +297,9 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
         and code duplication.
         """
         super().__init__(
-            region=region,  saturation_region=saturation_region, basin=basin)
+            region=region, saturation_region=saturation_region, basin=basin,
+            sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
-        self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

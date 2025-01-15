@@ -22,7 +22,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, general
-from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore, calc
 from openquake.calculators import base
@@ -231,8 +231,10 @@ class DamageCalculator(EventBasedRiskCalculator):
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-        with prc.datastore:
-            prc.run(exports='')
+
+        prc.pre_execute()
+        res = prc.execute()
+        prc.post_execute(res)
 
         P, _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
@@ -247,8 +249,13 @@ class DamageCalculator(EventBasedRiskCalculator):
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
 
         assert (self.dmgcsq >= 0).all()  # sanity check
-        self.datastore['damages-rlzs'] = self.crmodel.to_multi_damage(self.dmgcsq)
-        set_rlzs_stats(self.datastore, 'damages-rlzs', asset_id=self.assetcol['id'])
+        self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(self.dmgcsq)
+        s = oq.hazard_stats()
+        if s and self.R > 1:
+            _statnames, statfuncs = zip(*s.items())
+            weights = self.datastore['weights'][:]
+            self.datastore.hdf5.create_dataset(
+                'damages-stats', data=compute_stats2(arr, statfuncs, weights))
 
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
