@@ -594,6 +594,19 @@ def _fix(col):
     return col
 
 
+@export.add(('agg_keys', 'csv'))
+def export_agg_values_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    df = extract(dstore, 'agg_keys?')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, fname, comment=dstore.metadata)
+    return [fname]
+
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
