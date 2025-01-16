@@ -10,6 +10,7 @@ from openquake.server.user_profile.models import UserProfile
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
+    verbose_name_plural = 'profile'
 
 
 # NOTE: this customization adds the UserProfileInline and moves the email to a more
@@ -35,6 +36,17 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('username', 'password1', 'password2', 'email')}
          ),
     )
+
+    def save_model(self, request, obj, form, change):
+        """
+        When saving a new user avoid duplicating profile creation.
+        """
+        if not change:  # New user creation
+            super().save_model(request, obj, form, change)
+            if not hasattr(obj, 'profile'):  # Ensure profile doesn't already exist
+                UserProfile.objects.create(user=obj)
+        else:
+            super().save_model(request, obj, form, change)
 
 
 try:

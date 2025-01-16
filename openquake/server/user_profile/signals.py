@@ -23,8 +23,9 @@ from .models import UserProfile
 
 
 @receiver(post_save, sender=get_user_model())
-def create_or_update_user_profile(sender, instance, created, **kwargs):
-    if created:
+def create_user_profile(sender, instance, created, **kwargs):
+    """
+    Create a Profile for the User only if it doesn't already exist.
+    """
+    if created and not hasattr(instance, 'profile'):
         UserProfile.objects.create(user=instance)
-    else:
-        instance.profile.save()
