@@ -35,7 +35,8 @@ class ServerConfig(AppConfig):
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
         import openquake.server.signals  # NOQA
-        import openquake.server.user_profile.signals  # NOQA
+        if settings.LOCKDOWN:
+            import openquake.server.user_profile.signals  # NOQA
 
         # reset any computation left in the 'executing' state
         try:
