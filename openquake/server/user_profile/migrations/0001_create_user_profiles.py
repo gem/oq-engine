@@ -7,13 +7,13 @@ import django.db.models.deletion
 
 def create_user_profiles(apps, schema_editor):
     User = apps.get_model('auth', 'User')
-    UserProfile = apps.get_model('server', 'UserProfile')
+    UserProfile = apps.get_model('user_profile', 'UserProfile')
     for user in User.objects.all():
         UserProfile.objects.get_or_create(user=user, defaults={'level': 0})
 
 
 def delete_user_profiles(apps, schema_editor):
-    UserProfile = apps.get_model("server", "UserProfile")
+    UserProfile = apps.get_model('user_profile', 'UserProfile')
     UserProfile.objects.all().delete()
 
 

@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from openquake.server.announcements.models import Announcement
-from openquake.server.models import UserProfile
+from openquake.server.user_profile.models import UserProfile
 
 
 class UserProfileInline(admin.StackedInline):
