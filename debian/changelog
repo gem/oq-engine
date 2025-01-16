@@ -1,3 +1,5 @@
+python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed HDF5 bug when storing the avg_losses, visible on MacOS with a large
     number of assets (say over a million). Fixed the same bug for damages too.
@@ -105,6 +107,8 @@
 
   [Michele Simionato]
   * Fixed the `assert(losses)` error in the view delta_loss in the case of few events
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 16 Jan 2025 15:15:22 +0000
 
 python3-oq-engine (3.21.0-1~xenial01) xenial; urgency=low
 
