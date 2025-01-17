@@ -44,6 +44,8 @@ from openquake.engine.engine import create_jobs
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 
+CALC_RUN_TIMEOUT = 30
+
 
 django.setup()
 try:
@@ -124,8 +126,8 @@ class EngineServerTestCase(django.test.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        for i in range(300):  # 300 seconds of timeout
-            time.sleep(1)
+        for i in range(CALC_RUN_TIMEOUT):
+            time.sleep(1)  # sec
             # NOTE: is_running is True both for 'submitted' and 'executing'
             #       job status
             running_calcs = cls.get('list', is_running='true')
@@ -188,7 +190,7 @@ class EngineServerTestCase(django.test.TestCase):
                     #       so email_dir would contain only the files
                     #       created to notify about the jobs created in
                     #       the test
-                    for i in range(300):  # 300 seconds of timeout
+                    for i in range(CALC_RUN_TIMEOUT):
                         try:
                             results = self.get('%s/result/list' % job_id)
                         except AssertionError as exc:
@@ -207,7 +209,7 @@ class EngineServerTestCase(django.test.TestCase):
                     else:
                         raise RuntimeError(
                             f'Unable to retrieve results for job {job_id}')
-                    for i in range(300):  # 300 seconds of timeout
+                    for i in range(CALC_RUN_TIMEOUT):
                         try:
                             email_content = get_email_content(
                                 app_msgs_dir, f'Job {job_id} ')
