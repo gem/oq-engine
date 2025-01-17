@@ -819,20 +819,22 @@ def extract_agg_curves(dstore, what):
 def extract_agg_keys(dstore, what):
     """
     Aggregate the exposure values (one for each loss type) by tag. Use it as
-    /extract/agg_values?
+    /extract/agg_keys?
     """
     aggby = dstore['oqparam'].aggregate_by[0]
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
     values = dstore['agg_values'][:-1]  # discard the total aggregation
+    ok = values['structural'] > 0
+    okvalues = values[ok]
     dic = {}
     for i, tag in enumerate(aggby):
-        dic[tag] = keys[:, i]
+        dic[tag] = keys[ok, i]
     for name in values.dtype.names:
-        dic[name] = values[name]
+        dic[name] = okvalues[name]
     return pandas.DataFrame(dic)
 
-    
+
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
