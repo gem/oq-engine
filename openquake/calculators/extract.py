@@ -828,7 +828,7 @@ def _agg_keys(dstore):
     for name in values.dtype.names:
         dic[name] = okvalues[name]
     df = pandas.DataFrame(dic)
-    return df, len(keys), ok, aggby
+    return df, ok
 
 
 @extract.add('agg_keys')
@@ -845,7 +845,8 @@ def extract_aggrisk_keys(dstore, what):
     """
     Aggregates risk by tag. Use it as /extract/aggrisk_keys?
     """
-    df, K, ok, aggby = _agg_keys(dstore)
+    df, ok = _agg_keys(dstore)
+    K = len(ok)
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
     acc = {lt: numpy.zeros(K) for lt in LOSSTYPE[adf.loss_id.unique()]}
