@@ -239,6 +239,9 @@ class EngineServerTestCase(django.test.TestCase):
                         self.assertIn(f'engine/{job_id}/outputs_aristotle',
                                       email_content)
         for job_id in js:
+            ret = self.get('%s/aggrisk_keys' % job_id)
+            assert ret.status_code == 200
+            self.assertIn('ID_1', ret.content)
             ret = self.post('%s/remove' % job_id)
             if ret.status_code != 200:
                 raise RuntimeError(
