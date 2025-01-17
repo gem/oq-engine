@@ -34,7 +34,7 @@ from scipy.cluster.vq import kmeans2
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -816,7 +816,10 @@ def extract_agg_curves(dstore, what):
 
 
 def _agg_keys(dstore):
-    aggby = dstore['oqparam'].aggregate_by[0]
+    oq = dstore['oqparam']
+    if not oq.aggregate_by:
+        raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
+    aggby = oq.aggregate_by[0]
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
     values = dstore['agg_values'][:-1]  # discard the total aggregation
