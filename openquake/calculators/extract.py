@@ -769,7 +769,7 @@ def extract_agg_curves(dstore, what):
     tagvalues = [tagdict[t][0] for t in tagnames]
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
-        agg_id = lst.index(','.join(tagvalues))
+        agg_id = lst.index('\t'.join(tagvalues))
     else:
         agg_id = 0  # total aggregation
     ep_fields = dstore.get_attr('aggcurves', 'ep_fields')
@@ -813,6 +813,26 @@ def extract_agg_curves(dstore, what):
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
+
+
+@extract.add('agg_keys')
+def extract_agg_keys(dstore, what):
+    """
+    Aggregate the exposure values (one for each loss type) by tag. Use it as
+    /extract/agg_keys?
+    """
+    aggby = dstore['oqparam'].aggregate_by[0]
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    ok = values['structural'] > 0
+    okvalues = values[ok]
+    dic = {}
+    for i, tag in enumerate(aggby):
+        dic[tag] = keys[ok, i]
+    for name in values.dtype.names:
+        dic[name] = okvalues[name]
+    return pandas.DataFrame(dic)
 
 
 @extract.add('agg_losses')

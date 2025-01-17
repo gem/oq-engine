@@ -1524,7 +1524,7 @@ def view_agg_id(token, dstore):
     Show the available aggregations
     """
     [aggby] = dstore['oqparam'].aggregate_by
-    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = [key.decode('utf8').split('\t') for key in dstore['agg_keys'][:]]
     keys = numpy.array(keys)  # shape (N, A)
     dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
     df = pandas.DataFrame(dic)

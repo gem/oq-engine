@@ -99,6 +99,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
 
+        # testing agg_keys
+        [fname] = export(('agg_keys', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         # testing the view agg_id
         agg_id = view('agg_id', self.calc.datastore)
         self.assertEqual(str(agg_id), '''\
