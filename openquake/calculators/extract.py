@@ -815,12 +815,7 @@ def extract_agg_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
-@extract.add('agg_keys')
-def extract_agg_keys(dstore, what):
-    """
-    Aggregate the exposure values (one for each loss type) by tag. Use it as
-    /extract/agg_keys?
-    """
+def _agg_keys(dstore):
     aggby = dstore['oqparam'].aggregate_by[0]
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
@@ -832,7 +827,35 @@ def extract_agg_keys(dstore, what):
         dic[tag] = keys[ok, i]
     for name in values.dtype.names:
         dic[name] = okvalues[name]
-    return pandas.DataFrame(dic)
+    df = pandas.DataFrame(dic)
+    return df, len(keys), ok, aggby
+
+
+@extract.add('agg_keys')
+def extract_agg_keys(dstore, what):
+    """
+    Aggregate the exposure values (one for each loss type) by tag. Use it as
+    /extract/agg_keys?
+    """
+    return _agg_keys(dstore)[0]
+
+
+@extract.add('aggrisk_keys')
+def extract_aggrisk_keys(dstore, what):
+    """
+    Aggregates risk by tag. Use it as /extract/aggrisk_keys?
+    """
+    df, K, ok, aggby = _agg_keys(dstore)
+    ws = dstore['weights'][:]
+    adf = dstore.read_df('aggrisk')
+    acc = {lt: numpy.zeros(K) for lt in LOSSTYPE[adf.loss_id.unique()]}
+    for agg_id, rlz_id, loss, loss_id in zip(
+            adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
+        if agg_id < K:
+            acc[LOSSTYPE[loss_id]][agg_id] += loss * ws[rlz_id]
+    for name in acc:
+        df[name + '_risk'] = acc[name][ok]
+    return df
 
 
 @extract.add('agg_losses')
