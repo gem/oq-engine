@@ -1896,7 +1896,10 @@ class OqParam(valid.ParamSet):
         exposure with a known structure
         """
         exposures = self.inputs.get('exposure', [])
-        return exposures and exposures[0].endswith('.hdf5')
+        yes = exposures and exposures[0].endswith('.hdf5')
+        if yes:
+            self.avg_losses = False
+        return yes
 
     @property
     def aelo(self):
