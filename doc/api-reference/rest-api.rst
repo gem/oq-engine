@@ -121,7 +121,7 @@ GET /v1/calc/:calc_id/aggrisk_keys
 Get risk results aggregated by tag, together with the corresponding exposure values.
 
 NB: this URL is valid only for risk calculations with an aggregate_by parameter.
-Otherwise it returns a BarRequest error with HTTP code 400.
+Otherwise it returns a BadRequest error with HTTP code 400.
 
 Parameters: None
 
