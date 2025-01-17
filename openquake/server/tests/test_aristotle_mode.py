@@ -240,8 +240,8 @@ class EngineServerTestCase(django.test.TestCase):
                                       email_content)
         for job_id in js:
             ret = self.get('%s/aggrisk_keys' % job_id)
-            assert ret.status_code == 200
-            self.assertIn('ID_1', ret.content)
+            # NOTE: the get utility decodes the json and returns a dict
+            self.assertIn('ID_1', ret)
             ret = self.post('%s/remove' % job_id)
             if ret.status_code != 200:
                 raise RuntimeError(
