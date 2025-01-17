@@ -1,4 +1,4 @@
-python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
+python3-oq-engine (3.22.1-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
   * Fixed HDF5 bug when storing the avg_losses, visible on MacOS with a large
