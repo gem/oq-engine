@@ -37,6 +37,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -804,13 +805,15 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
-        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-        num_ruptures = sdata.nrupts.sum()
-        eff_sites = sdata.nsites.sum()
-        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                     taskno, len(sdata), num_ruptures, eff_sites,
-                     rec['weight'], rec['duration'])
+        sdata = dstore.read_df('source_data')
+        sdata = sdata[sdata.taskno == taskno]
+        del sdata['grp_id']
+        del sdata['impact']
+        del sdata['taskno']
+        def bname(i):
+            return basename(sdata.loc[i].src_id, ';:.')
+        gb = sdata.groupby(bname).sum().set_index('src_id')
+        return gb
     else:
         msg = ''
     return msg
