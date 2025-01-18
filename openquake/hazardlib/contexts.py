@@ -1289,6 +1289,8 @@ class ContextMaker(object):
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
+            src.esites = 0
+            src.weight = .01
             return 0, 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
