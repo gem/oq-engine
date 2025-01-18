@@ -1291,6 +1291,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return .001, 0
         src.nsites = len(sites)
+        G = len(self.gsims)
         N = len(srcfilter.sitecol.complete)  # total sites
         step = 100 if src.code == b'F' else 10
         t0 = time.time()
@@ -1300,7 +1301,9 @@ class ContextMaker(object):
             return src.num_ruptures if N == 1 else 0.001, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
-        weight = esites / N  # the weight is the effective number of ruptures
+        weight = src.dt * G
+        if src.code != b'p':  # CollapsedPointSource
+            weight *= 10.
         return weight or .001, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
