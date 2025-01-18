@@ -1309,7 +1309,6 @@ class ContextMaker(object):
         """
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        G = len(self.gsims)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
                 src.esites = 0
