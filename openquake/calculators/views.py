@@ -806,14 +806,16 @@ def view_task_hazard(token, dstore):
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
         sdata = dstore.read_df('source_data')
-        sdata = sdata[sdata.taskno == taskno]
-        del sdata['grp_id']
-        del sdata['impact']
-        del sdata['taskno']
-        def bname(i):
-            return basename(sdata.loc[i].src_id, ';:.')
-        gb = sdata.groupby(bname).sum().set_index('src_id')
-        return gb
+        sd = sdata[sdata.taskno == taskno]
+        acc = AccumDict(accum=numpy.zeros(5))
+        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+            acc[basename(src_id, ';:.')] += numpy.array(
+                [nsites, esites, nrupts, weight, ctimes])
+        df = pandas.DataFrame(dict(src_id=list(acc)))
+        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+            df[name] = [arr[i] for arr in acc.values()]
+        return df.set_index('src_id')
     else:
         msg = ''
     return msg
