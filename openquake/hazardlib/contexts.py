@@ -1289,9 +1289,7 @@ class ContextMaker(object):
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            src.esites = 0
-            src.weight = .01
-            return 0, 0
+            return .01, 0
         src.nsites = len(sites)
         N = len(srcfilter.sitecol.complete)  # total sites
         step = 100 if src.code == b'F' else 10
@@ -1313,8 +1311,8 @@ class ContextMaker(object):
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.esites = 0
                 src.weight = .01
+                src.esites = 0
             else:
                 with mon:
                     src.weight, src.esites = self.estimate_weight(
