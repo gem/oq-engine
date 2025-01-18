@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -137,12 +137,20 @@ def oq_server_context_processor(request):
         context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
     if settings.APPLICATION_MODE == 'AELO':
         context['aelo_version'] = get_aelo_version()
-    if settings.APPLICATION_MODE == 'ARISTOTLE':
-        # NOTE: it may be useful not only for ARISTOTLE
+
+    # setting user_level
+    if settings.LOCKDOWN:
         try:
             context['user_level'] = request.user.level
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
             context['user_level'] = 0
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
+        context['user_level'] = 2
+
+    context['lockdown'] = settings.LOCKDOWN
+
     return context
 
 

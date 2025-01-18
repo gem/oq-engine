@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024 GEM Foundation
+# Copyright (C) 2024-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -83,7 +83,7 @@ def main(job_ids: int, save=False):
         if len(complete) == len(rows):
             print('All jobs completed correctly')
             if save:
-                dstore, log = datastore.build_dstore_log(
+                log, dstore = datastore.create_job_dstore(
                     '-'.join(map(str, job_ids)))
                 with dstore, log:
                     collect(job_ids, dstore)

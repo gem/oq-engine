@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -70,6 +70,7 @@ from wsgiref.util import FileWrapper
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
+UTC = timezone.utc
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -538,6 +539,18 @@ def share_job(user_level, calc_id, share):
             f"share_job must return 'success' or 'error'!? Returned: {message}")
 
 
+def get_user_level(request):
+    if settings.LOCKDOWN:
+        try:
+            return request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            return 0
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
+        return 2
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -545,7 +558,8 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    return share_job(request.user.level, calc_id, share=False)
+    user_level = get_user_level(request)
+    return share_job(user_level, calc_id, share=False)
 
 
 @csrf_exempt
@@ -555,7 +569,8 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    return share_job(request.user.level, calc_id, share=True)
+    user_level = get_user_level(request)
+    return share_job(user_level, calc_id, share=True)
 
 
 def log_to_json(log):
@@ -787,9 +802,8 @@ def aristotle_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    user = utils.get_user(request)
     [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, None, user, None)
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
 
     job_owner_email = request.user.email
     response_data = dict()
@@ -965,7 +979,7 @@ def submit_job(request_files, ini, username, hc_id):
         jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
-        logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
+        logs.dbcmd('log', job.calc_id, datetime.now(UTC), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         exc.job_id = job.calc_id
@@ -1146,6 +1160,50 @@ def calc_result(request, result_id):
         'attachment; filename=%s' % os.path.basename(fname))
     response['Content-Length'] = str(os.path.getsize(exported))
     return response
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
+def aggrisk_keys(request, calc_id):
+    """
+    Return aggrisk_keys, by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object similar to:
+        {
+          ID_1: {0: "RUS-ADM1", 1: "RUS-ADM1", 2: "RUS-ADM1"},
+          OCCUPANCY: {0: "Com", 1: "Ind", 2: "Res"},
+          number: {0: 3409, 1: 1515, 2: 9987},
+          structural: {0: 1100932352, 1: 233680832, 2: 6464446976},
+          residents: {0: 0, 1: 0, 2: 304202.40625},
+          occupants_avg: {0: 53872.5703125, 1: 20316.19921875, 2: 158342.40625},
+          structural_risk: {0: 23865734.5, 1: 1670122.25, 2: 68231988.5},
+          occupants_risk: {0: 1.888562547, 1: 0.0612079581, 2: 4.717694154},
+          number_risk: {0: 14.8953637928, 1: 1.9196949974, 2: 36.6349875927},
+          residents_risk: {0: 0, 1: 0, 2: 1412.8637619019}
+        }
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(ds, 'aggrisk_keys')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'aggrisk_keys', tb),
+            content_type='text/plain', status=400)
+
+    return HttpResponse(content=df.to_json(),
+                        content_type=JSON, status=200)
 
 
 @cross_domain_ajax

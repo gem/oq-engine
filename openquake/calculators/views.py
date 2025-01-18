@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1524,7 +1524,7 @@ def view_agg_id(token, dstore):
     Show the available aggregations
     """
     [aggby] = dstore['oqparam'].aggregate_by
-    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = [key.decode('utf8').split('\t') for key in dstore['agg_keys'][:]]
     keys = numpy.array(keys)  # shape (N, A)
     dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
     df = pandas.DataFrame(dic)
@@ -1771,6 +1771,8 @@ def view_aggrisk(token, dstore):
         arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
+    if len(arr) == 2:  # only one gsim, equal to the average
+        arr = numpy.delete(arr, 1, axis=0)
     return arr
 
 

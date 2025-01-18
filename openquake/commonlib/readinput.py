@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1571,7 +1571,7 @@ def get_input_files(oqparam):
     fnames = set()  # files entering in the checksum
     uri = oqparam.shakemap_uri
     if isinstance(uri, dict) and uri:
-        # local files
+        # local files, like .npy arrays
         for key, val in uri.items():
             if key == 'fname' or key.endswith('_url'):
                 val = val.replace('file://', '')
@@ -1579,6 +1579,7 @@ def get_input_files(oqparam):
                 if os.path.exists(fname):
                     uri[key] = fname
                     fnames.add(fname)
+
         # additional separate shapefiles
         if uri['kind'] == 'shapefile' and not uri['fname'].endswith('.zip'):
             fnames.update(get_shapefiles(os.path.dirname(fname)))

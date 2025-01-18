@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -159,6 +159,7 @@ class Site(object):
             raise ValueError('z1pt0 must be positive')
         if not numpy.isnan(z2pt5) and z2pt5 <= 0:
             raise ValueError('z2pt5 must be positive')
+
         self.location = location
         self.vs30 = vs30
         self.z1pt0 = z1pt0
@@ -217,6 +218,7 @@ site_param_dt = {
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
+    'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,

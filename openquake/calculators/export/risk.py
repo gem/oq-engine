@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -594,6 +594,19 @@ def _fix(col):
     return col
 
 
+@export.add(('agg_keys', 'csv'))
+def export_agg_keys_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    df = extract(dstore, ekey[0] + '?')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, fname, comment=dstore.metadata)
+    return [fname]
+
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -741,15 +754,14 @@ def export_assetcol_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     df = pandas.DataFrame(assetcol)
     tagcol = dstore['assetcol'].tagcol
-    tagnames = tagcol.tagnames
-    sorted_cols = sorted([col for col in tagnames if col in df.columns])
-    unsorted_cols = [col for col in df.columns if col not in tagnames]
-    df = df[unsorted_cols + sorted_cols]
-    for asset_idx in range(len(assetcol)):
-        for tagname in tagnames:
-            tag_id = df[tagname][asset_idx]
-            tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
-            df.loc[asset_idx, tagname] = tag_str
+    tagnames = sorted(tagcol.tagnames)
+    df = df[[col for col in df.columns if col not in tagnames]]
+    for tagname in tagnames:
+        tags = []
+        for asset_idx in range(len(assetcol)):
+            tag_id = assetcol[tagname][asset_idx]
+            tags.append(tagcol.get_tag(tagname, tag_id).split('=')[1])
+        df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
     dest_csv = dstore.export_path('%s.%s' % ekey)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024 GEM Foundation
+# Copyright (C) 2024-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,22 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import UserProfile
 
 
-User.level = property(lambda self: getattr(self.profile, 'level', 0))
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    LEVEL_CHOICES = [
-        (0, 'View Only'),
-        (1, 'Simplified'),
-        (2, 'Advanced'),
-    ]
-    level = models.IntegerField(
-        choices=LEVEL_CHOICES,
-        default=0,
-        help_text="Choose the level for the user"
-    )
+@receiver(post_save, sender=get_user_model())
+def create_user_profile(sender, instance, created, **kwargs):
+    """
+    Create a Profile for the User only if it doesn't already exist.
+    """
+    if created and not hasattr(instance, 'profile'):
+        UserProfile.objects.create(user=instance)

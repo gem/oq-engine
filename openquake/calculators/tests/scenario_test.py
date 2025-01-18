@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33, case_34)
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
@@ -391,5 +391,11 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(evs['id'], [0, 1])
         aae(evs['rup_id'], [0, 1])
         aae(evs['rlz_id'], [0, 0])
+
+    def test_case_34(self):
+        # NZNSHM2022 gsims
+        self.run_calc(case_34.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
 
         

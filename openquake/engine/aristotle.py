@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -88,9 +88,9 @@ def main_cmd(usgs_id, rupture_file=None,
         return
 
     # in  testing mode create new job contexts
-    user = getpass.getuser()
-    [job] = engine.create_jobs([oqparams], loglevel, None, user, None)
+    [job] = engine.create_jobs([oqparams], loglevel, None, getpass.getuser(), None)
     with job:
+        # store performance info about the download/validate phase
         monitor.log_data()
     try:
         engine.run_jobs([job])

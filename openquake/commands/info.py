@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -154,6 +154,7 @@ def print_geohash(what):
     print(gh.decode('ascii'))
 
 
+# tested in run-demos.sh
 def print_usgs_rupture(what):
     """
     Show the parameters of a rupture downloaded from the USGS site.

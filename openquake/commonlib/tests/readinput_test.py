@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -477,7 +477,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
-        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
+        _, h5 = datastore.create_job_dstore()
+        with h5, mock.patch('logging.error') as error:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
                 readinput.get_composite_source_model(oq, h5)
                 os.remove(h5.filename)

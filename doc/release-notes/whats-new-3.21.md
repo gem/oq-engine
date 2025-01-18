@@ -13,7 +13,8 @@ https://github.com/gem/oq-engine/blob/engine-3.21/debian/changelog
 
 A summary is given below.
 
-# Classical calculations
+Classical calculations
+----------------------
 
 We significantly reduced the memory consumption in classical calculations:
 now all the models in the GEM mosaic run with less than 2 GB per core
@@ -63,7 +64,8 @@ Finally, logging the progress of the calculation now works much better (previous
 often the progress went from 0 to 50% abruptly and then from 50% to 100%
 equally abruptly).
 
-# Event based/scenario calculations
+Event based/scenario calculations
+---------------------------------
 
 In event based calculations we were able to spectacularly reduce the
 memory consumption in situations with millions of sites. For instance,
@@ -104,7 +106,8 @@ We changed the scenario calculator to discard sites over the integration
 distance from the rupture, for consistency with the event based calculator
 and for consistency with the algorithm used in Aristotle calculations.
 
-# hazardlib
+hazardlib
+---------
 
 Enrico Abcede and Francis Bernales extended the Campbell and Bozorgnia (2014)
 GMPEs to work with the intensity measure types IA and CAV.
@@ -150,7 +153,8 @@ any test coverage. Moreover, we added a check forbidding CSV files
 larger than 600k to keep the problem from reappearing in the near
 future.
 
-# AELO project
+AELO project
+------------
 
 Work on the [AELO project](https://www.globalquakemodel.org/proj/aelo)
 continued with various AELO year 3 updates. We can now
@@ -174,7 +178,8 @@ International Date Line.
 As a consequence, a point exactly in the middle of two mosaic models
 can be associated differently than before.
 
-# Aristotle project
+Aristotle project
+-----------------
 
 We continued the work on the
 [Aristotle project](https://www.globalquakemodel.org/proj/aristotle).
@@ -233,7 +238,8 @@ rupture.
 We added a method `GsimLogicTree.to_node`, useful to produce an XML
 representation of the gsim logic tree used by an Aristotle calculation.
 
-# Secondary perils
+Secondary perils
+----------------
 
 Lana Torodović implemented the Nowicki Jessee et al. (2018) landslide
 model, which is part of the USGS Ground Failure Product. It is documented here: 
@@ -244,7 +250,8 @@ values, if present. Technically they are not GMFs, just fields induced by the GM
 but it is convenient to keep them in the `gmf_data` table, also for visualization
 purposes via the QGIS plugin.
 
-# Bug fixes
+Bug fixes
+---------
 
 There were various fixes to the conditioned GMFs calculator:
 
@@ -282,7 +289,8 @@ We removed the exporter for the output `disagg-stats-traditional` since it was
 incorrect, with no easy way to fix it. We kept the exporter for
 `disagg-rlzs-traditional`, which was correct.
 
-# Using half the memory on Windows
+Using half the memory on Windows
+--------------------------------
 
 Recent processors have significantly more threads than in the past,
 however the typical amount of RAM on consumer machines has not
@@ -307,7 +315,8 @@ processors with hyperthreading) while Linux is mostly used for servers
 that typically have more memory than a consumer machine, so there is no
 pressing need to save memory.
 
-# HPC support via SLURM
+HPC support via SLURM
+---------------------
 
 Since version 3.18 the engine has experimental support for HPC clusters
 using the SLURM scheduler. However, the original logic required spawning a SLURM
@@ -361,7 +370,8 @@ node. The second will show how many workers are active for each
 node. The third will generate a script that will launch a SLURM job
 for each combination of parameters in the sensitivity analysis.
 
-# Other `oq` commands
+Other `oq` commands
+-------------------
 
 After a major effort we were able to extend the command
 `oq plot sources?` to work with all kinds of sources.
@@ -388,7 +398,8 @@ We added a debugging command `oq compare rates` and a `oq compare asce` function
 
 We changed `oq run` to automatically generate the db in single user mode.
 
-# Other
+Other
+-----
 
 There were a few cosmetic improvements to the WebUI and we added
 a cookie consent functionality for compliance with the European law.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ from scipy.cluster.vq import kmeans2
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -769,7 +769,7 @@ def extract_agg_curves(dstore, what):
     tagvalues = [tagdict[t][0] for t in tagnames]
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
-        agg_id = lst.index(','.join(tagvalues))
+        agg_id = lst.index('\t'.join(tagvalues))
     else:
         agg_id = 0  # total aggregation
     ep_fields = dstore.get_attr('aggcurves', 'ep_fields')
@@ -813,6 +813,53 @@ def extract_agg_curves(dstore, what):
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
+
+
+def _agg_keys(dstore):
+    oq = dstore['oqparam']
+    if not oq.aggregate_by:
+        raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
+    aggby = oq.aggregate_by[0]
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    ok = values['structural'] > 0
+    okvalues = values[ok]
+    dic = {}
+    for i, tag in enumerate(aggby):
+        dic[tag] = keys[ok, i]
+    for name in values.dtype.names:
+        dic[name] = okvalues[name]
+    df = pandas.DataFrame(dic)
+    return df, ok
+
+
+@extract.add('agg_keys')
+def extract_agg_keys(dstore, what):
+    """
+    Aggregate the exposure values (one for each loss type) by tag. Use it as
+    /extract/agg_keys?
+    """
+    return _agg_keys(dstore)[0]
+
+
+@extract.add('aggrisk_keys')
+def extract_aggrisk_keys(dstore, what):
+    """
+    Aggregates risk by tag. Use it as /extract/aggrisk_keys?
+    """
+    df, ok = _agg_keys(dstore)
+    K = len(ok)
+    ws = dstore['weights'][:]
+    adf = dstore.read_df('aggrisk')
+    acc = {lt: numpy.zeros(K) for lt in LOSSTYPE[adf.loss_id.unique()]}
+    for agg_id, rlz_id, loss, loss_id in zip(
+            adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
+        if agg_id < K:
+            acc[LOSSTYPE[loss_id]][agg_id] += loss * ws[rlz_id]
+    for name in acc:
+        df[name + '_risk'] = acc[name][ok]
+    return df
 
 
 @extract.add('agg_losses')

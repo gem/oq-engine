@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1401,7 +1401,7 @@ class OqParam(valid.ParamSet):
                 self.ground_motion_fields = False
             if self.hazard_curves_from_gmfs:
                 self.raise_invalid('hazard_curves_from_gmfs=true is invalid in ebrisk')
-            
+
     def check_hazard(self):
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
@@ -1454,7 +1454,7 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 self.raise_invalid('you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time')
-        
+
         # check compute_rtgm will run
         if 'rtgm' in self.postproc_func:
             if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
@@ -1896,7 +1896,11 @@ class OqParam(valid.ParamSet):
         exposure with a known structure
         """
         exposures = self.inputs.get('exposure', [])
-        return exposures and exposures[0].endswith('.hdf5')
+        yes = exposures and exposures[0].endswith('.hdf5')
+        if yes:
+            self.avg_losses = False
+            self.aggregate_by = [['ID_1', 'OCCUPANCY']]
+        return yes
 
     @property
     def aelo(self):
@@ -2003,8 +2007,8 @@ class OqParam(valid.ParamSet):
                     'Error in shakemap_uri: Expected parameters %s, '
                     'valid parameters %s, got %s' %
                     (params, all_params, list(self.shakemap_uri)))
-        return self.hazard_calculation_id if (
-            self.shakemap_id or self.shakemap_uri) else True
+            return True
+        return self.hazard_calculation_id if self.shakemap_id else True
 
     def is_valid_truncation_level(self):
         """
@@ -2294,7 +2298,7 @@ class OqParam(valid.ParamSet):
         del dic['req_site_params']
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
             dic.pop(k, None)
-        
+
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
         if 'aggregate_by' in dic:

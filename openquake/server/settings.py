@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2024 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import os
 import socket
 import getpass
 import tempfile
+import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
@@ -32,15 +33,11 @@ except ImportError:
     STANDALONE_APPS = ()
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+WEBUI_USER = 'openquake'
 
 TEST = 'test' in sys.argv
 
-# NOTE: the UserProfile class makes it more complicated to add
-# the apps django.contrib.auth and django.contrib.contenttypes conditionally
-# to the fact that the authentication is required. However, it is not a problem
-# to exclude AuthenticationMiddleware and LoginRequiredMiddleware in PUBLIC mode
-INSTALLED_APPS = ('openquake.server.db', 'django.contrib.auth',
-                  'django.contrib.contenttypes')
+INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
@@ -193,6 +190,8 @@ LOGGING = {
     },
 }
 
+SUPPRESS_PERMISSION_DENIED_WARNINGS = False
+
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 
@@ -264,13 +263,29 @@ except ImportError:
         # settings in this file only will be used
         pass
 
+if SUPPRESS_PERMISSION_DENIED_WARNINGS:
+    class SuppressPermissionDeniedWarnings(logging.Filter):
+        def filter(self, record):
+            if 'Forbidden' in record.getMessage():
+                # Avoid warnings like "WARNING Forbidden: /v1/calc/list"
+                return False
+            return True
+
+    LOGGING['filters'] = {
+        'suppress_403_warnings': {
+            '()': SuppressPermissionDeniedWarnings,
+        },
+    }
+    LOGGING['handlers']['console']['filters'] = ['suppress_403_warnings']
+
 # NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
 if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent
-    for app in ('cookie_consent',):
+    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'openquake.server.user_profile', 'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
@@ -307,7 +322,7 @@ if LOCKDOWN:
     SERVER_PORT = 443
 
     # do not log to file unless running through the webui
-    if getpass.getuser() == 'openquake':  # the user that runs the webui
+    if getpass.getuser() == WEBUI_USER:
         try:
             log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
                                         'webui-access.log')
@@ -345,7 +360,9 @@ if LOCKDOWN:
         'openquake.server.middleware.LoginRequiredMiddleware',
     )
 
-    for app in (
+    for app in ('django.contrib.auth',
+                'django.contrib.contenttypes',
+                'openquake.server.user_profile',
                 'django.contrib.messages',
                 'django.contrib.sessions',
                 'django.contrib.admin',

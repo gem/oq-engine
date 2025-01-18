@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -80,8 +80,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # check damages-rlzs
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
-        self.assertEqual(list(df.columns), ['rlz', 'value'])
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
