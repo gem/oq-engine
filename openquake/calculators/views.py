@@ -815,7 +815,10 @@ def view_task_hazard(token, dstore):
         df = pandas.DataFrame(dict(src_id=list(acc)))
         for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
-        return df.set_index('src_id')
+        time = df.ctimes.sum()
+        weight = df.weight.sum()
+        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df.set_index('src_id')
+        return msg
     else:
         msg = ''
     return msg
