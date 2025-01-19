@@ -65,6 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
+EPS = 1E-3
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1289,21 +1290,20 @@ class ContextMaker(object):
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return .001, 0
+            return EPS, 0
         src.nsites = len(sites)
-        N = len(srcfilter.sitecol.complete)  # total sites
         step = 40 if src.code == b'F' else 4
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=step))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
-            return src.num_ruptures if N == 1 else 0.001, 0
+            return EPS, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         #if weight and src.code == b'p':  # CollapsedPointSource
         #    breakpoint()
-        return weight or .001, int(esites)
+        return weight or EPS, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
@@ -1313,7 +1313,7 @@ class ContextMaker(object):
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
         for src in sources:
             if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = .001
+                src.weight = EPS
                 src.esites = 0
             else:
                 with mon:
