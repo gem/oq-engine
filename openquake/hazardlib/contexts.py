@@ -1292,9 +1292,8 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS, 0
         src.nsites = len(sites)
-        step = 40 if src.code == b'F' else 4
         t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=step))  # reduced
+        ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
             return EPS, 0
