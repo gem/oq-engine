@@ -981,8 +981,13 @@ class ContextMaker(object):
             '''
             rparams = self.get_rparams(rup)
             dd = self.defaultdict.copy()
-            np = len(rparams.get('probs_occur', []))
-            dd['probs_occur'] = numpy.zeros(np)
+            try:
+                po = rparams['probs_occur']
+            except KeyError:
+                dd['probs_occur'] = numpy.zeros(0)
+            else:
+                L = len(po) if len(po.shape) == 1 else po.shape[1]
+                dd['probs_occur'] = numpy.zeros(L)
             ctx = RecordBuilder(**dd).zeros(len(r_sites))
             for par, val in rparams.items():
                 ctx[par] = val
@@ -1287,6 +1292,8 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
+        if src.nsites == 0:  # was discarded by the prefiltering
+            return EPS, 0
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
@@ -1300,8 +1307,6 @@ class ContextMaker(object):
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
-        #if weight and src.code == b'p':  # CollapsedPointSource
-        #    breakpoint()
         return weight or EPS, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
@@ -1310,14 +1315,10 @@ class ContextMaker(object):
         """
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        for src in sources:
-            if src.nsites == 0:  # was discarded by the prefiltering
-                src.weight = EPS
-                src.esites = 0
-            else:
-                with mon:
-                    src.weight, src.esites = self.estimate_weight(
-                        src, srcfilter, multiplier)
+        with mon:
+            for src in sources:
+                src.weight, src.esites = self.estimate_weight(
+                    src, srcfilter, multiplier)
 
 
 def by_dists(gsim):
