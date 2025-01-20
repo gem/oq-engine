@@ -1553,7 +1553,7 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
     if aggby:
         aggids, aggtags = assetcol.build_aggids(aggby, maxagg)
         logging.info('Storing %d aggregation keys', len(aggids))
-        agg_keys = [','.join(tags) for tags in aggtags]
+        agg_keys = ['\t'.join(tags) for tags in aggtags]
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol

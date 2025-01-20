@@ -1164,6 +1164,50 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
+def aggrisk_keys(request, calc_id):
+    """
+    Return aggrisk_keys, by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object similar to:
+        {
+          ID_1: {0: "RUS-ADM1", 1: "RUS-ADM1", 2: "RUS-ADM1"},
+          OCCUPANCY: {0: "Com", 1: "Ind", 2: "Res"},
+          number: {0: 3409, 1: 1515, 2: 9987},
+          structural: {0: 1100932352, 1: 233680832, 2: 6464446976},
+          residents: {0: 0, 1: 0, 2: 304202.40625},
+          occupants_avg: {0: 53872.5703125, 1: 20316.19921875, 2: 158342.40625},
+          structural_risk: {0: 23865734.5, 1: 1670122.25, 2: 68231988.5},
+          occupants_risk: {0: 1.888562547, 1: 0.0612079581, 2: 4.717694154},
+          number_risk: {0: 14.8953637928, 1: 1.9196949974, 2: 36.6349875927},
+          residents_risk: {0: 0, 1: 0, 2: 1412.8637619019}
+        }
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(ds, 'aggrisk_keys')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'aggrisk_keys', tb),
+            content_type='text/plain', status=400)
+
+    return HttpResponse(content=df.to_json(),
+                        content_type=JSON, status=200)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
     Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true

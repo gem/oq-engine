@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.commonlib import logs, readinput
@@ -98,6 +99,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
+
+        # testing agg_keys and aggrisk_keys
+        [fname] = export(('agg_keys', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+        df = extract(self.calc.datastore, 'aggrisk_keys')
+        fname = self.calc.datastore.export_path('aggrisk_keys.csv')
+        CsvWriter(fmt=FIVEDIGITS).save(df, fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # testing the view agg_id
         agg_id = view('agg_id', self.calc.datastore)
