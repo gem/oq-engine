@@ -494,7 +494,8 @@ function capitalizeFirstLetter(val) {
             $('#asce_version').on('change', function() {
                 const asce_version = $(this).val();
                 if (asce_version === 'ASCE7-16') {
-                    $('#vs30').prop('readonly', true).attr('placeholder', 'fixed at 760 m/s');
+                    // NOTE: if vs30 is empty, it is read as 760 and the placeholder is displayed (see below)
+                    $('#vs30').prop('readonly', true).attr('placeholder', 'fixed at 760 m/s').val('');
                 } else if (asce_version === 'ASCE7-22') {
                     $('#vs30').prop('readonly', false).attr('placeholder', 'm/s');
                 }
