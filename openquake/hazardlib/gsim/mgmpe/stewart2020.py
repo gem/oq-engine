@@ -33,8 +33,9 @@ def _get_sigma(vs30):
 
 
 def _get_f760_imp_weights(vs30, vw1=600., vw2=400., w1=0.767, w2=0.1):
-    # Computes the weight for the large impedance contrast case. The default
-    # values used are specified at page 62 of Stewart et al. (2020)
+    # Computes the weights for the large impedance contrast case. The default
+    # values of the parameters are specified at page 62 of Stewart et al.
+    # (2020)
     #
     # param vs30
     #   A 1D :class:`numpy.ndarray` with Vs30 values
@@ -124,7 +125,7 @@ def stewart2020_linear_scaling(imt, vs30, wimp=None, usgs=False):
 
     NOTE a similar function is embedded in the NGA East implementation
     `nga_east.py`.  For the time being we retain this implementation as this
-    code better fit the purpouse of being used within the modifiable GMPE.
+    code better fits the purpouse of being used within the modifiable GMPE.
 
     :param imt:
         Intensity measure type
@@ -148,7 +149,7 @@ def stewart2020_linear_scaling(imt, vs30, wimp=None, usgs=False):
         C = COEFFS_F760[imt]
 
     # Set weights for high impedance case
-    if not hasattr(wimp, '__len__') :
+    if not hasattr(wimp, '__len__') and wimp is not None:
         wimp = np.ones_like(vs30) * wimp
     else:
         wimp = _get_f760_imp_weights(vs30)

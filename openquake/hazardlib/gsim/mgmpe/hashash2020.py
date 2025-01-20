@@ -63,8 +63,8 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     f2 = C['f4'] * (exp1 - exp2)
 
     # Compute the median nonlinear amplification term using eq.2
-    assert np.all(coeff > 0.0)
-    fnl[idx] = f2 * np.log(coeff)
+    assert np.all(coeff[idx] > 0.0)
+    fnl[idx] = f2 * np.log(coeff[idx])
 
     return fnl
 
