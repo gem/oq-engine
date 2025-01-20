@@ -352,8 +352,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
 
      >>> items = 'ABCDE'
      >>> list(split_in_blocks(items, 3))
-     [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
-
+     [<WeightedSequence ['A'], weight=1>, <WeightedSequence ['B'], weight=1>, <WeightedSequence ['C'], weight=1>, <WeightedSequence ['D'], weight=1>, <WeightedSequence ['E'], weight=1>]
     """
     if isinstance(sequence, pandas.DataFrame):
         num_elements = len(sequence)
