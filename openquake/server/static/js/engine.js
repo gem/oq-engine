@@ -491,6 +491,16 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            $('#asce_version').on('change', function() {
+                const asce_version = $(this).val();
+                if (asce_version === 'ASCE7-16') {
+                    // NOTE: if vs30 is empty, it is read as 760 and the placeholder is displayed (see below)
+                    $('#vs30').prop('readonly', true).attr('placeholder', 'fixed at 760 m/s').val('');
+                } else if (asce_version === 'ASCE7-22') {
+                    $('#vs30').prop('readonly', false).attr('placeholder', 'm/s');
+                }
+            });
+
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
