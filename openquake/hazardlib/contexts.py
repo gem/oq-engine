@@ -65,6 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
+EPS = 1E-3
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -980,8 +981,13 @@ class ContextMaker(object):
             '''
             rparams = self.get_rparams(rup)
             dd = self.defaultdict.copy()
-            np = len(rparams.get('probs_occur', []))
-            dd['probs_occur'] = numpy.zeros(np)
+            try:
+                po = rparams['probs_occur']
+            except KeyError:
+                dd['probs_occur'] = numpy.zeros(0)
+            else:
+                L = len(po) if len(po.shape) == 1 else po.shape[1]
+                dd['probs_occur'] = numpy.zeros(L)
             ctx = RecordBuilder(**dd).zeros(len(r_sites))
             for par, val in rparams.items():
                 ctx[par] = val
@@ -1061,9 +1067,9 @@ class ContextMaker(object):
                 allrups = sorted([rup for rup in allrups
                                   if minmag < rup.mag < maxmag],
                                  key=bymag)
+                self.num_rups = len(allrups) or 1
                 if not allrups:
                     return iter([])
-                self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 rups_sites = [(rups, sitecol) for rups in split_array(
@@ -1279,26 +1285,6 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    def estimate_sites(self, src, sites):
-        """
-        :param src: a (Collapsed)PointSource
-        :param sites: a filtered SiteCollection
-        :returns: how many sites are impacted overall
-        """
-        magdist = {mag: self.maximum_distance(mag)
-                   for mag, rate in src.get_annual_occurrence_rates()}
-        nphc = src.count_nphc()
-        dists = sites.get_cdist(src.location)
-        planardict = src.get_planar(iruptures=True)
-        esites = 0
-        for m, (mag, [planar]) in enumerate(planardict.items()):
-            rrup = dists[dists < magdist[mag]]
-            nclose = (rrup < src.get_psdist(m, mag, self.pointsource_distance,
-                                            magdist)).sum()
-            nfar = len(rrup) - nclose
-            esites += nclose * nphc + nfar
-        return esites
-
     # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter, multiplier=1):
         """
@@ -1306,25 +1292,22 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
+        if src.nsites == 0:  # was discarded by the prefiltering
+            return EPS, 0
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return 0, 0
+            return EPS, 0
         src.nsites = len(sites)
-        N = len(srcfilter.sitecol.complete)  # total sites
-        if (hasattr(src, 'location') and src.count_nphc() > 1 and
-                self.pointsource_distance < 1000):
-            # cps or pointsource with nontrivial nphc
-            esites = self.estimate_sites(src, sites) * multiplier
-        else:
-            step = 100 if src.code == b'F' else 10
-            ctxs = list(self.get_ctx_iter(src, sites, step=step))  # reduced
-            if not ctxs:
-                return src.num_ruptures if N == 1 else 0, 0
-            esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
-                      self.num_rups * multiplier)  # num_rups from get_ctx_iter
-        weight = esites / N  # the weight is the effective number of ruptures
-        return weight, int(esites)
+        t0 = time.time()
+        ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
+        src.dt = time.time() - t0
+        if not ctxs:
+            return EPS, 0
+        esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
+                  self.num_rups * multiplier)  # num_rups from get_ctx_iter
+        weight = src.dt * src.num_ruptures / self.num_rups
+        return weight or EPS, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
@@ -1332,26 +1315,10 @@ class ContextMaker(object):
         """
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        G = len(self.gsims)
-        for src in sources:
-            if src.nsites == 0:  # was discarded by the prefiltering
-                src.esites = 0
-                src.weight = .01
-            else:
-                with mon:
-                    src.weight, src.esites = self.estimate_weight(
-                        src, srcfilter, multiplier)
-                    if src.weight == 0:
-                        src.weight = 0.001
-                    src.weight *= G
-                    if src.code == b'P':
-                        src.weight += .1
-                    elif src.code == b'C':
-                        src.weight += 10.
-                    elif src.code == b'F':
-                        src.weight += .25  * src.num_ruptures
-                    else:
-                        src.weight += 1.
+        with mon:
+            for src in sources:
+                src.weight, src.esites = self.estimate_weight(
+                    src, srcfilter, multiplier)
 
 
 def by_dists(gsim):

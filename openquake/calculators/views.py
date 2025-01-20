@@ -37,6 +37,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -804,13 +805,20 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
-        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-        num_ruptures = sdata.nrupts.sum()
-        eff_sites = sdata.nsites.sum()
-        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                     taskno, len(sdata), num_ruptures, eff_sites,
-                     rec['weight'], rec['duration'])
+        sdata = dstore.read_df('source_data')
+        sd = sdata[sdata.taskno == taskno]
+        acc = AccumDict(accum=numpy.zeros(5))
+        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+            acc[basename(src_id, ';:.')] += numpy.array(
+                [nsites, esites, nrupts, weight, ctimes])
+        df = pandas.DataFrame(dict(src_id=list(acc)))
+        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+            df[name] = [arr[i] for arr in acc.values()]
+        time = df.ctimes.sum()
+        weight = df.weight.sum()
+        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df.set_index('src_id')
+        return msg
     else:
         msg = ''
     return msg
