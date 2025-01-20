@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024 GEM Foundation
+# Copyright (C) 2024-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,9 @@ def main(job_ini, toml_args):
             '%s=%s' % item for item in zip(analysis, map(str, values)))
         allparams = params + " description=\"%s [%s]\" job_id=${job_id[%d]}" % (
             descr, params, i)
-        lines.append(config.distribution.submit_cmd + f" {job_ini} -p {allparams}")
+        line = (f'OQ_DISTRIBUTE=processpool {config.distribution.submit_cmd} '
+                f'{job_ini} -p {allparams}')
+        lines.append(line)
     print(script % dict(n=len(lines), lines='\n'.join(lines)))
 
 

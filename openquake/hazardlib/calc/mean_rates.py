@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_cmakers
 
+F32 = numpy.float32
 CUTOFF = 1E-12
 
 
@@ -60,22 +61,17 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     oq.disagg_by_src = False
     L = oq.imtls.size
     cmakers = get_cmakers(src_groups, full_lt, oq)
-    gids = full_lt.get_gids([cm.trt_smrs for cm in cmakers])
     Gt = sum(len(cm.gsims) for cm in cmakers)
     logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
                  len(sitecol), oq.imtls.size, Gt)
     rmap = MapArray(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
-        G = len(cmaker.gsims)
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
-        rates = to_rates(dic['pmap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        for i, gid in enumerate(gids[cmaker.grp_id]):
-            # += tested in logictree/case_05
-            rmap.array[:, :, gid] += rates[:, :, i % G]
+        rmap += dic['rmap']  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
 

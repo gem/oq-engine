@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_10, case_11, occupants, case_master,
+    case_6a, case_7, case_8, case_9, case_10, case_11, occupants, case_master,
     case_shakemap, case_shapefile, reinsurance, conditioned)
 
 
@@ -162,6 +162,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # check aggrisk
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        
         # extract losses by taxonomy
         extract(self.calc.datastore, 'agg_losses/structural?'
                 'taxonomy=*').array  # shape (T, R) = (3, 2)
@@ -215,6 +219,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
 
+    def test_case_9(self):
+        # scenario_risk from GMFs with intensity_measure_types
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/assetcol.csv', fname)
+
     def test_case_10(self):
         # missing occupants in the exposure
         with self.assertRaises(InvalidFile):
@@ -228,6 +240,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles(
             'expected/avg_losses-rlz-000_443.csv', fname)
+        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/assetcol.csv', fname)
 
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')

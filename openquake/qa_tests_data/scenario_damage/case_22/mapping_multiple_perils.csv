@@ -1,0 +1,7 @@
+taxonomy,conversion,weight,peril
+Wood1,Wood,1,earthquake
+Concrete1,Concrete,1,earthquake
+Wood1,Wood,1,liquefaction
+Concrete1,Concrete,1,liquefaction
+Wood1,Wood,1,landslide
+Concrete1,Concrete,1,landslide

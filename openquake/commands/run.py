@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,22 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import time
 import logging
 import os.path
 import socket
 import cProfile
 import warnings
 import getpass
-import subprocess
 from pandas.errors import SettingWithCopyWarning
 
-from openquake.baselib import performance, general, parallel, config, zeromq as z
+from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
+from openquake.commonlib import dbapi
 from openquake.engine.engine import create_jobs, run_jobs
+from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -80,13 +79,21 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         nodes: int = 0):
+         nodes: int = 1):
     """
     Run a calculation
     """
     # os.environ['OQ_DISTRIBUTE'] = 'processpool'
     warnings.filterwarnings("error", category=SettingWithCopyWarning)
     user_name = getpass.getuser()
+
+    # automatically create the user db if missing
+    if (config.dbserver.host == '127.0.0.1' and
+        config.dbserver.file == '~/oqdata/db.sqlite3'
+        and user_name != 'openquake'):
+        dbfile = os.path.expanduser(config.dbserver.file)
+        if not os.path.exists(dbfile):
+            db.actions.upgrade_db(dbapi.db)
     try:
         host = socket.gethostname()
     except Exception:  # gaierror
@@ -99,7 +106,11 @@ def main(job_ini,
     else:
         params = {}
     if hc:
+        if hc == -1:
+            hc = logs.dbcmd('get_job', -1, user_name).id
         params['hazard_calculation_id'] = str(hc)
+    if concurrent_tasks is not None:
+        params['concurrent_tasks'] = str(concurrent_tasks)
     if slowest:
         prof = cProfile.Profile()
         prof.runctx('_run(job_ini[0], None, pdb, reuse_input, loglevel, '
@@ -115,91 +126,13 @@ def main(job_ini,
     for dic in dics:
         dic.update(params)
         dic['exports'] = ','.join(exports)
-        if concurrent_tasks:
-            dic['concurrent_tasks'] = str(concurrent_tasks)
-        elif nodes and 'concurrent_tasks' not in dic:
-            ct = int(config.distribution.num_cores) * nodes
-            dic['concurrent_tasks'] = str(ct)
-    jobs = create_jobs(dics, loglevel, hc_id=hc,
-                       user_name=user_name, host=host, multi=False)
+        if 'job_id' in dic:  # in sensitivity analysis
+            logs.dbcmd('update_job', dic['job_id'],
+                       {'calculation_mode': dic['calculation_mode']})
+    jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name, host=host)
     job_id = jobs[0].calc_id
-    if nodes:
-        dist = parallel.oq_distribute()
-        if dist != 'slurm':
-            raise ValueError('The --nodes option requires oq_distribute=slurm')
-        if nodes > 1:
-            start_workers(nodes - 1, str(job_id))
-        subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
-                          str(config.distribution.num_cores), str(job_id)])
-        wait_workers(nodes, job_id)
-    try:
-        run_jobs(jobs)
-    finally:
-        if nodes:
-            stop_workers(str(job_id))
+    run_jobs(jobs, nodes=nodes, precalc=True)
     return job_id
-
-# ########################## SLURM support ############################## #
-
-SLURM_BATCH = '''\
-#!/bin/bash
-#SBATCH --job-name=workerpool
-#SBATCH --time=10:00:00
-#SBATCH --cpus-per-task={num_cores}
-srun {python} -m openquake.baselib.workerpool {num_cores} {job_id}
-'''
-def start_workers(n, job_id: str):
-    """
-    Start n workerpools which will store their hostname on scratch_dir/hostnames)
-    """
-    calc_dir = parallel.scratch_dir(job_id)
-    slurm_sh = os.path.join(calc_dir, 'slurm.sh')
-    with open(slurm_sh, 'w') as f:
-        f.write(SLURM_BATCH.format(python=config.zworkers.remote_python,
-                                   num_cores=config.distribution.num_cores,
-                                   job_id=job_id))
-
-    submit_cmd = config.distribution.submit_cmd.split()
-    assert submit_cmd[0] == 'sbatch', submit_cmd
-    # for instance ['sbatch', '-p', 'rome', 'oq', 'run']
-    cmd = submit_cmd[:-2] + [slurm_sh]
-    for n in range(n):
-        subprocess.run(cmd)
-
-
-def wait_workers(n, job_id):
-    """
-    Wait until the hostnames file is filled with n names
-    """
-    calc_dir = parallel.scratch_dir(job_id)
-    fname = os.path.join(calc_dir, 'hostnames')
-    while True:
-        if not os.path.exists(fname):
-            time.sleep(1)
-            print(f'Waiting for {fname}')
-            continue
-        with open(fname) as f:
-            hosts = f.readlines()
-        if len(hosts) == n:
-            break
-        else:
-            print('%d/%d workerpools started' % (len(hosts), n))
-            time.sleep(1)
-
-
-def stop_workers(job_id: str):
-    """
-    Stop all the started workerpools (read from the file scratch_dir/hostnames)
-    """
-    fname = os.path.join(parallel.scratch_dir(job_id), 'hostnames')
-    with open(fname) as f:
-        hostcores = f.readlines()
-    for line in hostcores:
-        host, _ = line.split()
-        ctrl_url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
-        print('Stopping %s' % host)
-        with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-            sock.send('stop')
 
 
 main.job_ini = dict(help='calculation configuration file '

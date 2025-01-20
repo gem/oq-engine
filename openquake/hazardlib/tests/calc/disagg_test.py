@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -101,21 +101,22 @@ class DisaggregateTestCase(unittest.TestCase):
         cls.gsims = {cls.trt: gsim}
         mags = cls.sources[0].get_mags()
         maxdist = filters.IntegrationDistance.new('200.')
-        oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
-                                investigation_time=50.,
-                                imtls={'PGA': [cls.iml]},
-                                rlz_index=[0, 1],
-                                poes=[None],
-                                num_epsilon_bins=3,
-                                mag_bin_width=.075,
-                                distance_bin_width=10,
-                                coordinate_bin_width=100,
-                                maximum_distance=maxdist,
-                                mags_by_trt={cls.trt: mags},
-                                disagg_bin_edges={})
+        oq = dict(truncation_level=cls.truncation_level,
+                  investigation_time=50.,
+                  imtls={'PGA': [cls.iml]},
+                  rlz_index=[0, 1],
+                  poes=[None],
+                  epsilon_star=False,
+                  num_epsilon_bins=3,
+                  mag_bin_width=.075,
+                  distance_bin_width=10,
+                  coordinate_bin_width=100,
+                  maximum_distance=maxdist,
+                  mags_by_trt={cls.trt: mags},
+                  disagg_bin_edges={})
         sitecol = SiteCollection([cls.site])
-        cls.bin_edges, _ = disagg.get_edges_shapedic(oq, sitecol)
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
+        cls.bin_edges, _ = disagg.get_edges_shapedic(cls.cmaker.oq, sitecol)
         cls.sources[0].grp_id = 0
         cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]

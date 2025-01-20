@@ -114,10 +114,8 @@ Because of this requirement, we abandoned *concurrent.futures*, which is also in
 the ability to kill the pool of processes, which is instead available in multiprocessing with the *Pool.shutdown* method. 
 For the same reason, we discarded *dask*.
 
-Using a real cluster scheduling mechanism (like SLURM) would be of course better, but we do not want to impose on our 
-users a specific cluster architecture. Zeromq has the advantage of being simple to install and manage. Still, the 
-architecture of the engine parallelization library is such that it is very simple to replace zeromq with other 
-parallelization mechanisms: people interested in doing so should just contact us.
+zeromq has the advantage of being simple to install and manage. Still, the
+architecture of the engine parallelization library is such that it is very simple to interface zeromq with other parallelization mechanisms: for instance, we recently integrated zeromq with SLURM for calculations running on HPC clusters.
 
 Another tricky aspect of parallelizing large scientific calculations is that the amount of data returned can exceed the 
 4 GB limit of Python pickles: in this case one gets ugly runtime errors. The solution we found is to make it possible 
@@ -204,7 +202,7 @@ How to use openquake.baselib.parallel
 
 Suppose you want to code a character-counting algorithm, which is a textbook exercise in parallel computing and suppose 
 that you want to store information about the performance of the algorithm. Then you should use the OpenQuake Monitor 
-class, as well as the utility ``openquake.baselib.commonlib.hdf5new`` that builds an empty datastore for you. Having done 
+class, as well as the utility ``openquake.baselib.commonlib.create_job_dstore`` that builds an empty datastore for you. Having done
 that, the ``openquake.baselib.parallel.Starmap`` class can take care of the parallelization for you as in the following 
 example::
 
@@ -214,7 +212,7 @@ example::
 	import collections
 	from openquake.baselib.performance import Monitor
 	from openquake.baselib.parallel import Starmap
-	from openquake.commonlib.datastore import hdf5new
+	from openquake.commonlib.datastore import create_job_dstore
 	
 		
 	def count(text):
@@ -226,8 +224,10 @@ example::
 	
 	def main(dirname):
 	    dname = pathlib.Path(dirname)
-	    with hdf5new() as hdf5:  # create a new datastore
-	        monitor = Monitor('count', hdf5)  # create a new monitor
+            log, dstore = create_job_dstore()
+            # create a log context object and a new datastore
+	    with dstore, log:
+	        monitor = Monitor('count', dstore)  # create a new monitor
 	        iterargs = ((open(dname/fname, encoding='utf-8').read(),)
 	                    for fname in os.listdir(dname)
 	                    if fname.endswith('.rst'))  # read the docs
@@ -235,7 +235,7 @@ example::
 	        for counter in Starmap(count, iterargs, monitor):
 	            c += counter
 	        print(c)  # total counts
-	        print('Performance info stored in', hdf5)
+	        print('Performance info stored in', dstore)
 	
 	
 	if __name__ == '__main__':
@@ -256,8 +256,9 @@ Here is how you would write the same example by using ``.submit``::
 
 	def main(dirname):
 	    dname = pathlib.Path(dirname)
-	    with hdf5new() as hdf5:
-	        smap = Starmap(count, monitor=Monitor('count', hdf5))
+            log, dstore = create_job_dstore()
+	    with dstore, log:
+	        smap = Starmap(count, monitor=Monitor('count', dstore))
 	        for fname in os.listdir(dname):
 	            if fname.endswith('.rst'):
 	                smap.submit(open(dname/fname, encoding='utf-8').read())

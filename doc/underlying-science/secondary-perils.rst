@@ -78,7 +78,7 @@ The equation that describes this probability is:
 
 .. math::
 
-	P(L) = \frac{P(L | PGA=a) \cdot P_{ml}}{K_m K_w} \quad (1)
+	P(L) = \frac{P(L | PGA=a) \cdot P_{ml}}{K_m K_w} \\ (1)
 
 :math:`P(L|PGA=a)` is the conditional probability that a site will fail based on the :math:`PGA` and the :math:`LSC`. 
 :math:`P_{ml}` is the fraction of the total mapped area that will experience liquefaction if :math:`P(L|PGA=a)` reaches
@@ -120,20 +120,20 @@ Zhu et al. (2015)
 
 The model by `Zhu et al. (2015) <https://journals.sagepub.com/doi/abs/10.1193/121912EQS353M>`_, is a logistic 
 regression model requiring specification of the :math:`V_{s30} \, [\text{m/s}]`, the Compound Topographic 
-Index, :math:`CTI`, a proxy for soil wetness or groundwater depth :math:`gwd \, [\text{m}]`, 
+Index, :math:`CTI`, a proxy for soil wetness or groundwater depth, :math:`gwd \, [\text{m}]`, 
 the :math:`PGA_{M,SM} \, [\text{g}]` experienced at a site, and the magnitude of the causative earthquake.
 
 The model is quite simple. An explanatory variable :math:`X` is calculated as:
 
 .. math::
 
-	X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, V_{s30} \quad (2)
+	X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, V_{s30} \\ (2)
 
 and the final probability is the logistic function:
 
 .. math::
 
-	P(L) = \frac{1}{1+e^X} \quad (3)
+	P(L) = \frac{1}{1+e^X} \\ (3)
 
 The term :math:`PGA_{M,SM}` is the :math:`PGA` corrected by magnitude scaling factor, :math:`MSF`, that serves as proxy
 for earthquake duration. The :math:`MSF` is calculated as per `Youd et al. (2001) 
@@ -141,7 +141,7 @@ for earthquake duration. The :math:`MSF` is calculated as per `Youd et al. (2001
 
 .. math::
 
-	MSF = \frac{10^{2.24}}{M^{2.56}} \quad (4)
+	MSF = \frac{10^{2.24}}{M^{2.56}} \\ (4)
 
 Both the :math:`CTI` and the :math:`V_{s30}` may be derived from digital elevation data. The :math:`Vs30` may be
 estimated from the topographic slope through the equations of `Wald and Allen (2007) 
@@ -157,7 +157,7 @@ relation:
 
 .. math::
 
-	CTI = \ln (d_a / \tan \delta) \quad (5)
+	CTI = \ln (d_a / \tan \delta) \\ (5)
 
 where :math:`d_{a}` is the upstream drainage area per unit width through the flow direction (i.e. relating to the DEM 
 resolution). It ranges from :math:`0` to :math:`20`. It was developed for hillslopes, and is not meaningful in certain
@@ -179,7 +179,7 @@ with the ADASYN sampling algorithm. The explanatory variable :math:`X` is comput
 
 .. math::
 
-	X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, V_{s30} \quad (6)
+	X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, V_{s30} \\ (6)
 
 and the probability of liquefaction in calculated using equation (3).
 
@@ -216,7 +216,7 @@ Model 1:
 
 .. math:: 
 
-   -0.0287 \sqrt{d_{c}} + 0.0666 d_{r} - 0.0369 \sqrt{d_{c}} \cdot d_{r} \quad (7)
+   -0.0287 \sqrt{d_{c}} + 0.0666 d_{r} - 0.0369 \sqrt{d_{c}} \cdot d_{r} \\ (7)
 
 
 Model 2: 
@@ -227,7 +227,7 @@ Model 2:
 
 .. math:: 
 
-   -0.2054 d_{w} - 0.0333 wtd \quad (8)
+   -0.2054 d_{w} - 0.0333 wtd \\ (8)
 
 and the probability of liquefaction is calculated using equation (3). Zero probability is heuristically assigned if 
 :math:`PGV < 3 \, \text{cm/s}` or :math:`V_{s30} > 620 \, \text{m/s}`.
@@ -241,10 +241,11 @@ improve the fit. The regression coefficients are given in Table 2.:
 
 .. math::
 
-	L(P) = \frac{a}{1+b\,e^{-c\,P}}^2 \quad (9)
+	L(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
+
 .. raw:: latex
 
-   \vspace{10pt}
+   \vspace{15pt}
 
 +----------------+-------------+-------------+
 | **Parameters** | **Model 1** | **Model 2** |
@@ -297,7 +298,7 @@ Model 1:
 
 .. math:: 
 
-   -0.309 \ln(d_{r} + 1) - 0.164 \sqrt{Z_{wb}} \quad (10)
+   -0.309 \ln(d_{r} + 1) - 0.164 \sqrt{Z_{wb}} \\ (10)
 
 
 Model 2: 
@@ -308,7 +309,7 @@ Model 2:
 
 .. math:: 
 
-   -0.291 \ln(d_{r} + 1) - 0.205 \sqrt{Z_{wb}} \quad (11)
+   -0.291 \ln(d_{r} + 1) - 0.205 \sqrt{Z_{wb}} \\ (11)
 
 
 and the probability of liquefaction is calculated using equation (3). Zero probability is heuristically assigned if 
@@ -355,29 +356,29 @@ The expected permanent displacement due to lateral spreading given the susceptib
 
 .. math::
 
-	E[PGD_{sc}] = K_{\Delta} \, E[PGD|(PGA/PL_{sc}) = a] \quad (12)
+	E[PGD_{sc}] = K_{\Delta} \, E[PGD|(PGA/PL_{sc}) = a] \\ (12)
 
 Where: :math:`E[PGD|(PGA/PL_{SC})=a]` is the expected ground displacement given the susceptibility category under a 
 specified level of normalised shaking, and is calculated as: 
 
 .. math:: 
 
-   12\, x - 12\ for\ 1 < PGA/PGA(t) < 2 \quad (13) 
+   12\, x - 12\ for\ 1 < PGA/PGA(t) < 2 \\ (13) 
 
 .. math:: 
 
-   18\, x - 24\ for\ 2 < PGA/PGA(t) < 3 \quad (14)
+   18\, x - 24\ for\ 2 < PGA/PGA(t) < 3 \\ (14)
 
 .. math:: 
 
-   70\, x - 180\ for\ 3 < PGA/PGA(t) < 4 \quad (15)
+   70\, x - 180\ for\ 3 < PGA/PGA(t) < 4 \\ (15)
 
 :math:`PGA(t)` is theminimum shaking level to induce liquefaction (see Table 1) :math:`K_{\Delta}` is the 
 displacement correction factor given that modify the displacement term for magnitudes other than :math:`M7.5`: 
 
 .. math:: 
 
-   K_{Delta} = 0.0086M^3\ - 0.0914M^2\ + 0.4698M\ - 0.9835 \quad (16)
+   K_{Delta} = 0.0086M^3\ - 0.0914M^2\ + 0.4698M\ - 0.9835 \\ (16)
 
 ############################
 Vertical settlements (Hazus)
@@ -406,9 +407,9 @@ characteristic settlement amplitude corresponding to the liquefaction susceptibi
 
 Table 3: Ground settlements amplitudes for liquefaction susceptibility categories.
 
-****************
+
 Landslide models
-****************
+----------------
 
 Landslides are considered as one of the most damaging secondary perils associated with earthquakes. Earthquake-induced 
 landslides occurs when the static and inertia forces within the sliding mass reduces the factor of safety below 1. 
@@ -423,14 +424,14 @@ sliding surface, and is calculated as:
 
 .. math:: 
 
-   a_{c} =(F_{s}-1)\ - \sin(\alpha)\cdot g \quad (17)
+   a_{c} =(F_{s}-1)\ - \sin(\alpha)\cdot g \\ (17)
 
 The lower bound of :math:`a_{c}` is set to 0.05 to avoid unrealistically large displacements. The static factor of 
 safety is calculated as:
 
 .. math::
 
-    F_s = \frac{c'}{\gamma t \sin(\alpha)} + \frac{\tan(\phi')}{\tan(\alpha)} - \frac{m \gamma_{w} \tan(\phi')}{\gamma \tan(\alpha)} \quad(18)
+    F_s = \frac{c'}{\gamma t \sin(\alpha)} + \frac{\tan(\phi')}{\tan(\alpha)} - \frac{m \gamma_{w} \tan(\phi')}{\gamma \tan(\alpha)} \\(18)
 
 where: :math:`c \, [\text{Pa}]` is the effective cohession with typical values ranging from :math:`20 \text{kPa}` for
 soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`\alpha^\circ` is the slope angle. :math:`\phi'^\circ` is 
@@ -457,7 +458,7 @@ equation can be used to estimate the probability of slope failure as a function 
 
 .. math:: 
 
-    P(f) = 0.335\ [1 - e^{-0.048 \cdot D^{1.565}}] \quad (19)
+    P(f) = 0.335\ [1 - e^{-0.048 \cdot D^{1.565}}] \\ (19)
 
 The rock-slope failures are the other common effect observed in earthquakes. The methodology proposed by `Grant et al., 
 (2016) <https://www.sciencedirect.com/science/article/abs/pii/S0013795216302460?via%3Dihub>`_ captures the brittle 
@@ -466,28 +467,74 @@ is computed as:
 
 .. math:: 
 
-    F_s = \frac{2 c \sin(\beta)}{\gamma h (\beta-\alpha) \sin(\alpha)} + \frac{\tan(\phi}{\tan(\alpha} \quad (20)
+    F_s = \frac{2 c \sin(\beta)}{\gamma h (\beta-\alpha) \sin(\alpha)} + \frac{\tan(\phi)}{\tan(\alpha)} \\ (20)
 
 where: :math:`c \, [\text{Pa}]` is the cohession with typical values ranging from :math:`20 \, {kPa}` for soils up to 
 :math:`20 \, {MPa}` for unfaulted rocks. The cohesion provided by the root systems of vegetated hillslopes, 
 :math:`c_{r}`, is adopted as 0. :math:`\alpha^\circ` is the slope angle. :math:`\gamma \, [\text{kg/m^3}]` is the dry 
 density of the soil or rock. It ranges from :math:`1500 \, \text{kg/m^3}` for soils to 
-:math:`2500 - 3200 \, \text{kg/m^3}`. :math:`[m]` is the vertical height of the failure mass and it corresponds to 1/4 
+:math:`2500 \text{ to } 3200 \, \text{kg/m^3}`. :math:`[m]` is the vertical height of the failure mass and it corresponds to 1/4 
 of the local relief :math:`H` calculated based on the moving window analysis. :math:`\phi^\circ` is the effective 
 friction angle with typical values ranging from :math:`30^\circ` to :math:`40^\circ`. :math:`\beta` is the slope's 
 critical angle calculated as: 
 
 .. math:: 
 
-   \beta = \frac{\alpha + \phi}{0.5}\ (21)
+   \beta = \frac{\alpha + \phi}{0.5} \\ (21)
 
-The critical acceleration is computed similarly to equation (1). For rock- slope failures, the :math:`\alpha` term is 
+The critical acceleration is computed similarly to equation (17). For rock- slope failures, the :math:`\alpha` term is 
 replaced with :math:`\beta`.
 
 Finally, the coseismic displacements are estimated using the sliding block displacement regression equation proposed by
 `Jibson (2007) <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_.
 
 
+****************************
+Nowicki Jessee et al. (2018)
+****************************
+
+A geospatial model used to predict probability of landsliding using globally available geospatial variables was proposed by 
+`Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_. The level of shaking is 
+characterised by Peak Ground Velocity , :math:`PGV`. Slope steepness affects slope stability, and here, the topographic 
+slope, :math:`slope`, has been derived from the median elevation value from the 7.5 arc sec Global Multi-resolution Terrain 
+Elevation Data (`Danielson and Gesch, 2011 <https://pubs.usgs.gov/of/2011/1073/>`_). The model uses lithology, as a proxy for 
+the strength of the shaken material. The global lithology map is available in `Hartman and Moosdort, 2012 <https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2012GC004370>`_. 
+Slope stability is further controlled by the composite strength of the soil-vegetation root matrix. The Globcover 2009 data, 
+available at 300-m resolution and separated into 20 classes has been used. More details on this database is available in 
+`Arino et al. (2012) <https://doi.pangaea.de/10.1594/PANGAEA.787668>`_. Finally, the Compound Topographic Index, :math:`CTI`, 
+has been used to characterise the wetness of the material. 
+
+Explanatory variable :math:`X` is calculated as:
+
+.. math:: 
+
+   X = -6.30 + 1.65 \ln(PGV) - 0.06 Slope + \alpha \cdot lithology \quad
+
+.. math:: 
+
+   + \beta \cdot landcover + 0.03 CTI - 0.01 \ln(PGV) \cdot Slope \\ (22)
+
+Coefficients \alpha and \beta values are estimated for several rock and landcover classes. The 
+reader is reffered to the original study by `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_, 
+where the coefficient values are reported in Table 3. 
+
+Probability of landsliding is then evaluated using logistic regression.
+
+.. math::
+
+	P(L) = \frac{1}{1+e^X} \\ (23)
+
+These probabilities are converted to areal percentages to unbias the predictions.
+
+.. math::
+
+	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (24)
+
+Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
+and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
+the combination of other predictor variables, areas with slopes less than :math:`2^\circ` are excluded.  Zero probability is 
+heuristically assigned if :math:`PGA = 0.02 \, \text{g}`. Finally, we adopted the USGS recommendation for modifying the 
+regression coefficient for unconsolidated sediments. The new proposed value is set to :math:`-1.36`. 
 
 
 Reference
@@ -542,3 +589,17 @@ Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.
 
 [15] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide
 hazard assessment. Engineering Geology, 212, 146-160. https://doi.org/10.1016/j.enggeo.2016.08.005
+
+[16] Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018).
+A global empirical model for near-real-time assessment of seismically induced landslides. Journal of Geophysical
+Research: Earth Surface, 123, 1835–1859. https://doi.org/10.1029/2017JF004494
+
+[17] Danielson, J.J., and Gesch, D.B., 2011, Global multi-resolution terrain elevation data 2010 (GMTED2010): 
+U.S. Geological Survey Open-File Report 2011–1073, 26 p.
+
+[18] Hartmann, J., and N. Moosdorf (2012), The new global lithological map database GLiM: A representation of rock
+properties atthe Earth surface, Geochem. Geophys. Geosyst., 13, Q12004, doi:10.1029/2012GC004370.
+
+[19] Arino, O., Ramos Perez, J.J., Kalogirou, V., Bontemps, S., Defourny, P., Van Bogaert, E. (2012): Global Land Cover 
+Map for 2009 (GlobCover 2009), https://doi.org/10.1594/PANGAEA.787668
+

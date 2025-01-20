@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,11 +18,13 @@
 import sys
 import collections
 import numpy
+import pandas
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
 aac = numpy.testing.assert_allclose
+F64 = numpy.float64
 
 
 def get_diff_idxs(array, rtol, atol):
@@ -103,14 +105,18 @@ class Comparator(object):
         extractor = self.extractors[0]
         what = 'hmaps?kind=mean'  # shape (N, M, P)
         arrays = [get_mean(extractor, what, sids, oq0.imtls, p)]
+        high_sites = [extractor.get('high_sites').array]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             aac(oq.imtls.array, oq0.imtls.array, rtol, atol)
             aac(oq.poes, oq0.poes, rtol, atol)
+            high_sites.append(extractor.get('high_sites').array)
             arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
-        return numpy.array(arrays)  # shape (C, N, M*P)
+        hsites = numpy.logical_and(*high_sites)
+        sids, = numpy.where(hsites)
+        return numpy.array([a[hsites] for a in arrays]), sids  # shape (C, N, M*P)
 
     def getgmf(self, what, imt, sids):
         extractor = self.extractors[0]
@@ -131,7 +137,7 @@ class Comparator(object):
     def compare(self, what, imt, files, samplesites, rtol, atol):
         sids = self.getsids(samplesites)
         if what == 'uhs':  # imt is -1, the last poe
-            arrays = self.getuhs(what, imt, sids, rtol, atol)
+            arrays, sids = self.getuhs(what, imt, sids, rtol, atol)
         elif what.startswith('avg_gmf'):
             arrays = self.getgmf(what, imt, sids)
         else:
@@ -150,7 +156,7 @@ class Comparator(object):
         if len(diff_idxs) == 0:
             print('There are no differences within the tolerances '
                   'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
-            return arrays
+            return (), ()
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
             # each array has shape (C, L)
@@ -168,6 +174,8 @@ class Comparator(object):
                 print('Generated %s' % f.name)
         else:
             print(views.text_table(rows['all'], header, ext='org'))
+        if what == 'uhs':
+            return arrays, sids
         return arrays
 
 
@@ -214,13 +222,13 @@ def compare_uhs(calc_ids: int, files=False, *, poe_id: int = -1,
     Compare the uniform hazard spectra of two or more calculations.
     """
     c = Comparator(calc_ids)
-    arrays = c.compare('uhs', poe_id, files, samplesites, rtol, atol)
+    arrays, sids = c.compare('uhs', poe_id, files, samplesites, rtol, atol)
     if len(arrays) and len(calc_ids) == 2:
         # each array has shape (N, M)
         rms = numpy.sqrt(numpy.mean((arrays[0] - arrays[1])**2))
         delta = numpy.abs(arrays[0] - arrays[1]).max(axis=1)
         amax = delta.argmax()
-        row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], amax)
+        row = ('%.5f' % c.oq.poes[poe_id], rms, delta[amax], sids[amax])
         print(views.text_table([row], ['poe', 'rms-diff', 'max-diff', 'site'],
                                ext='org'))
 
@@ -259,8 +267,9 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
     arrays = c.compare('avg_gmf', imt, files, samplesites, rtol, atol)
     if len(calc_ids) == 2:  # print rms-diff
         gmf1, gmf2 = arrays
-        sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))
-        print('rms-diff =', sigma)
+        if len(gmf1):
+            sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))
+            print('rms-diff =', sigma)
 
 
 def compare_med_gmv(imt, calc_ids: int, *,
@@ -354,14 +363,18 @@ def delta(a, b):
     return res
 
 
-def compare_column_values(array0, array1, what):
-    if isinstance(array0[0], (float, numpy.float32, numpy.float64)):
-        diff_idxs = numpy.where(delta(array0, array1) > 1E-5)[0]
-    else:
+def compare_column_values(array0, array1, what, atol=0, rtol=1E-5):
+    try:
+        array0 = F64(array0)
+        array1 = F64(array1)
+    except ValueError:
         diff_idxs = numpy.where(array0 != array1)[0]
+    else:
+        diff = numpy.abs(array0 - array1)
+        diff_idxs = numpy.where(diff > atol + (array0+array1)/2 * rtol)[0]
     if len(diff_idxs) == 0:
         print(f'The column {what} is okay')
-        return
+        return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
     print(array0[diff_idxs], array1[diff_idxs])
@@ -456,10 +469,39 @@ def compare_oqparam(calc_ids: int):
     ds1 = datastore.read(calc_ids[1])
     dic0 = vars(ds0['oqparam'])
     dic1 = vars(ds1['oqparam'])
-    common = sorted(set(dic0) & set(dic1))
-    for key in common:
+    common = set(dic0) & set(dic1) - {'hdf5path'}
+    for key in sorted(common):
         if dic0[key] != dic1[key]:
             print('%s: %s != %s' % (key, dic0[key], dic1[key]))
+
+
+def strip(values):
+    if isinstance(values[0], str):
+        return numpy.array([s.strip() for s in values])
+    return values
+
+
+def read_org_df(fname):
+    df = pandas.read_csv(fname, delimiter='|',
+                          skiprows=lambda r: r == 1)
+    df = df[df.columns[1:-1]]
+    return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
+
+
+def compare_asce(file1_org: str, file2_org: str, atol=1E-3, rtol=1E-3):
+    """
+    compare_asce('asce07.org', 'asce07_expected.org') exits with 0
+    if all values are equal within the tolerance, otherwise with 1.
+    """
+    df1 = read_org_df(file1_org)
+    df2 = read_org_df(file2_org)
+    equal = []
+    for col in df1.columns:
+        ok = compare_column_values(strip(df1[col].to_numpy()),
+                                   strip(df2[col].to_numpy()),
+                                   col, atol, rtol)
+        equal.append(ok)
+    sys.exit(not all(equal))
 
 
 main = dict(rups=compare_rups,
@@ -475,7 +517,8 @@ main = dict(rups=compare_rups,
             events=compare_events,
             assetcol=compare_assetcol,
             sitecol=compare_sitecol,
-            oqparam=compare_oqparam)
+            oqparam=compare_oqparam,
+            asce=compare_asce)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,

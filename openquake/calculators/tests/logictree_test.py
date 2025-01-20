@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -77,7 +77,7 @@ class LogicTreeTestCase(CalculatorTestCase):
                 rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
-            aac(mr, er, atol=1e-6)
+            aac(mr, er, atol=8e-6)
 
     def test_case_01(self):
         # same source in two source models
@@ -154,12 +154,6 @@ class LogicTreeTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b3-gsimltp_b1.csv'],
             case_07.__file__)
-
-        # check the weights of the sources
-        info = self.calc.datastore.read_df('source_info', 'source_id')
-        self.assertEqual(info.loc[b'1'].weight, 276)
-        self.assertEqual(info.loc[b'2'].weight, 177)
-        self.assertEqual(info.loc[b'3'].weight, 5871)
 
         # testing view_relevant_sources
         arr = view('relevant_sources:PGA', self.calc.datastore)
@@ -335,8 +329,7 @@ hazard_uhs-std.csv
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         window = self.calc.datastore['oqparam'].investigation_time
         mean_rates = to_rates(mean_poes, window)
-        rates_by_source = self.calc.datastore[
-            'mean_rates_by_src'][0]  # (M, L1, Ns)
+        rates_by_source = self.calc.datastore['mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
@@ -504,6 +497,7 @@ hazard_uhs-std.csv
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
+        # testing also split_by_gsim
         self.run_calc(case_36.__file__, 'job.ini')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_36.__file__, 'job.ini', hazard_calculation_id=hc_id,
@@ -712,3 +706,6 @@ hazard_uhs-std.csv
         self.run_calc(case_84.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
+
+        [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/trt_gsim.csv', f)

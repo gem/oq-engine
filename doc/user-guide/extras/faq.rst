@@ -21,22 +21,23 @@ and :ref:`FAQ related to cluster deployments <faq-cluster>`.
 Help! Should I disable hyperthreading on my laptop/desktop?
 ***********************************************************
 
-Disabling hyperthreading - when possible - is recommended since it
-will save memory. Suppose for instance that you have a laptop with a
-i9 processor with 20 threads and 16 GB of RAM. It seems a lot at the
-time of this writing (early 2022). In reality it is not. The operating
-system will consume some memory, the browser will consume a lot of
-memory, you may have other applications open and you may end up with
-less than 10 GB of available memory. If hyperthreading is enabled the
-engine will see 10x2 = 20 cores; running parallel computations may
-easily consume 0.5 GB per core, i.e. 10 GB, so you will run out of
-memory. With hyperthreading disabled you will still have 5 GB of
-available RAM.
-
-**Note**: on a linux machine you can try disable hyperthreading temporarily with the command ``sudo echo off >
-/sys/devices/system/cpu/smt/control``: however, this setting will not survive a reboot. Also, on some systems this
-command will not work. If you cannot disable hyperthreading just make sure that if you have enough memory: we
-recommend at least 2 GB per thread.
+While in old versions of the engine we recommended to disable hyperthreading
+- which was often difficult for our users and sometimes impossible -
+since version 3.21 the engine on Windows, by default, will only use half of
+your threads, which is a simple and efficient way to save
+memory. Consider for instance a laptop with an i7
+processor with 8 cores, 16 threads and 16 GB of RAM. It seems a lot:
+in reality it is not. The operating system will consume some memory,
+the browser will consume a lot of memory, you may have other
+applications open and you may end up with less than 8 GB of available
+memory. Running even small computations may easily consume 0.5 GB per
+thread, i.e. 8 GB, so you will run out of memory. However, since
+engine v3.21, the engine by default will only use 8 threads, thus each one
+will have 1 GB of RAM available. This is still not much (we recommend
+2 GB) but enough to run most calculations. If you want more control, by setting
+the parameter ``num_cores`` in the file `openquake.cfg` (as explained
+below) it is possible to specify precisely the number of threads to
+use and this will work on every operating system.
 
 *******************************************************
 Help! My windows server with 32/64 or more cores hangs!
@@ -301,6 +302,64 @@ model on a computer with an i7 processor you will see something like this::
 
 The estimate is rather rough, so do not take it at the letter. The runtime can be reduced by orders of magnitude by
 tuning parameters like the ``pointsource_distance`` and ``ps_grid_spacing``, discussed at length in the advanced manual.
+
+****************************************************
+Is the hazard reliable for all sites?
+****************************************************
+
+Users should be aware that there is a situation were hazard curves
+are necessarily **unreliable**, i.e. very sensitive to small variations
+in parameters such as the maximum distance and the minimum magnitude.
+
+This happens when the low intensity part of the hazard curves is
+well below 1. In an ideal world, for extremely small intensities
+the probability of exceedence should tend to one; in the real
+world, however, there is minimum magnitude and there is a
+finite maximum distance, so ruptures are discarded from the
+calculation. If enough ruptures are discarded, the probability of
+exceedence will stay under 1, no matter how small the intensity is.
+For poissonian curves the hazard curve is given by the formula
+
+.. math::
+
+  poe(iml) = 1 - e^{-(Σ r_i p_i(iml)) t}
+
+where the sum is over the ruptures, :math:`r_i` is the occurrence rate,
+:math:`p_i(iml)` is the probability of exceeding the intensity level
+:math:`iml` and :math:`t` is the investigation time. For low
+intensities the probabilities :math:`p_i(iml)` are at most 1
+and the maximum poe can be approximated with
+
+.. math::
+
+  poe_{max} ~ (Σ r_i) t
+
+which can be much smaller than 1 if the occurrence rate times the
+investigation time is small and there are not many ruptures.  In this
+situation a small change in the maximum distance or the minimum
+magnitude can cause a large variation in the number of ruptures and
+therefore a large change in :math:`poe_{max}`.  The worst case is when
+:math:`poe_{max}` is below the reference `poe` used to compute the
+hazard map. By definition, in this case the hazard map is zero and the
+UHS contains at least a point of zero value. This situation is very
+instable numerically: it is enough to slightly increase the
+`maximum_distance` and a rupture that before was discarded can give a
+small contribution, produce a hazard curve over the reference `poe`
+and therefore a nonzero hazard map value.  The same will happen if you
+change the geometry discretization step or the magnitude step. It is
+even worse than that. Low hazard curves, in the region of small
+intensities, tend to be flat, so even if the curve is slightly over
+the reference poe, a small change to the curve will correspond to a
+huge change in the intensity and therefore the hazard maps cannot be
+reliably computed. This is unavoidable, low intensities are affected
+by far away ruptures and low magnitude ruptures, and therefore very
+sensitive to the way the engine (or the hazard modeler) cuts such
+ruptures. Luckily, this has no practical effect on the risk, since the
+assets on sites of low hazard are subjected to very low
+damages. Still, the hazard scientist must be aware that hazard maps
+and uniform hazard spectra cannot be trusted when the corresponding
+hazard curves are below or close to the reference `poe` in the low
+intensity region.
 
 *************************************************
 How should I interpret the "Realizations" output?

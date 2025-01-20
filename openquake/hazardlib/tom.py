@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -197,7 +197,7 @@ class ClusterPoissonTOM(PoissonTOM):
         self.occurrence_rate = occurrence_rate
 
 
-@compile(["(float64, float64[:], float64[:], float64)",
+@compile(["(float64, float64[:], float32[:], float64)",
           "(float64, float64[:], float64[:,:,:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """
@@ -211,9 +211,9 @@ def get_pnes(rate, probs, poes, time_span):
     """
     # NB: the NegativeBinomialTOM creates probs_occur with a rate not NaN
     if time_span == 0.:  # FatedTOM
-        return 1. - poes
+        return numpy.float32(1) - poes
     elif len(probs) == 0:  # poissonian
-        return numpy.exp(-rate * time_span * poes)
+        return numpy.exp(- numpy.float32(rate * time_span) * poes)
     else:
         # Uses the formula
         #

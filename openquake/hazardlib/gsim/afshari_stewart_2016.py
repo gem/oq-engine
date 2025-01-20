@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -132,15 +132,21 @@ def get_magnitude_term(C, ctx):
     return term
 
 
+def _get_basin_term(C, ctx, region):
+    """
+    Return the basin term (equation 9)
+    """
+    dz1 = ctx.z1pt0 - np.exp(_get_lnmu_z1(region, ctx.vs30))
+    fb = C['c5'] * dz1
+    fb[dz1 > CONSTANTS["dz1ref"]] = (C["c5"] * CONSTANTS["dz1ref"])
+    return fb
+
+
 def get_site_amplification(region, C, ctx):
     """
     Returns the site amplification term
     """
-    # Gets delta normalised z1
-    dz1 = ctx.z1pt0 - np.exp(_get_lnmu_z1(region, ctx.vs30))
-    f_s = C["c5"] * dz1
-    # Calculates site amplification term
-    f_s[dz1 > CONSTANTS["dz1ref"]] = (C["c5"] * CONSTANTS["dz1ref"])
+    f_s = _get_basin_term(C, ctx, region) # First get basin term
     idx = ctx.vs30 > CONSTANTS["v1"]
     f_s[idx] += (C["c4"] * np.log(CONSTANTS["v1"] / C["vref"]))
     idx = np.logical_not(idx)

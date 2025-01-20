@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,8 +26,7 @@ from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
-from openquake.hazardlib.geo.surface.multi import build_secparams
-from openquake.hazardlib.source.point import grid_point_sources, msr_name
+from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import (
@@ -123,8 +122,6 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-            if (src.msparams['area'] == 0).all():
-                continue # all ruptures are far away
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -150,49 +147,60 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             dic['before'] = len(srcs)
             dic['after'] = len(splits)
             yield dic
-        else:
-            cnt = 0
-            for msr, block in groupby(splits, msr_name).items():
-                dic = grid_point_sources(block, spacing, msr, cnt, monitor)
-                cnt = dic.pop('cnt')
-                for src in dic[grp_id]:
-                    src.num_ruptures = src.count_ruptures()
-                # this is also prefiltering the split sources
-                cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-                # print(f'{mon.task_no=}, {mon.duration=}')
-                dic['before'] = len(block)
-                dic['after'] = len(dic[grp_id])
-                yield dic
+        elif splits:
+            dic = grid_point_sources(splits, spacing, monitor)
+            for src in dic[grp_id]:
+                src.num_ruptures = src.count_ruptures()
+            # this is also prefiltering the split sources
+            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+            # print(f'{mon.task_no=}, {mon.duration=}')
+            dic['before'] = len(splits)
+            dic['after'] = len(dic[grp_id])
+            yield dic
 
 
-def store_num_tiles(dstore, csm, sitecol, cmakers, oq):
+def store_tiles(dstore, csm, sitecol, cmakers):
     """
-    Store a `num_tiles` array if the calculation is large enough.
+    Store a `tiles` array if the calculation is large enough.
     :returns: a triple (max_weight, trt_rlzs, gids)
     """
     N = len(sitecol)
+    oq = cmakers[0].oq
+    fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
-    max_gb = float(config.memory.pmap_max_gb)
+
+    # build source_groups
+    quartets = csm.split(cmakers, sitecol, max_weight, tiling=oq.tiling)
+    data = numpy.array(
+        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
+          len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
+         for cm, tgets, blocks, splits in quartets],
+        [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
+         ('splits', U16), ('size_mb', F32), ('weight', F32),
+         ('codes', '<S8'), ('trt', '<S32')])
+
+    # determine light groups and tiling
+    light, = numpy.where(data['blocks'] == 1)
+    logging.info('There are %d light groups out of %d', len(light), len(data))
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
-    dstore['rates_max_gb'] = req_gb
-    regular = (oq.disagg_by_src or N < oq.max_sites_disagg or req_gb < max_gb
-               or oq.tile_spec)
-    if not regular:  # tiling
-        num_tiles = []
-        for cm in cmakers:
-            sg = csm.src_groups[cm.grp_id]
-            size_gb = len(cm.gsims) * oq.imtls.size * N * 8 / 1024**3
-            ntiles = numpy.ceil(sg.weight / max_weight)
-            if size_gb / ntiles > max_gb:
-                ntiles = numpy.ceil(size_gb / max_gb)
-            tiles = sitecol.split(ntiles, minsize=oq.max_sites_disagg)
-            num_tiles.append(len(tiles))
-        dstore.create_dset('num_tiles', U32(num_tiles))
-        ntasks = sum(num_tiles)
-        logging.info('This will be a tiling calculation with %d tasks', ntasks)
-        if req_gb >= 30 and (not config.directory.custom_tmp or
-                             not config.distribution.save_on_tmp):
-            logging.info('We suggest to set custom_tmp and save_on_tmp')
+    mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
+    if len(light):
+        logging.info('mem_gb = %.2f', mem_gb)
+    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores/8)
+    regular = (mem_gb < max_gb or oq.disagg_by_src or
+               N < oq.max_sites_disagg or oq.tile_spec)
+    if oq.tiling is None:
+        # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
+        ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
+        tiling = ss and N > 10_000 or not regular
+    else:
+        tiling = oq.tiling
+
+    # store source_groups
+    dstore.create_dset('source_groups', data, fillvalue=None,
+                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
+    if req_gb >= 30 and not config.directory.custom_tmp:
+        logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs, gids
 
 
@@ -236,7 +244,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull(trt_smrs)
-        gweights = self.full_lt.g_weights(trt_smrs)
+        gweights = numpy.concatenate([cm.wei for cm in self.cmakers])
         self.datastore['gweights'] = gweights
 
         Gt = len(gweights)
@@ -269,9 +277,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifaults:
-            # this is ultra-fast
-            sections = multifaults[0].get_sections()
-            secparams = build_secparams(sections)
+            with hdf5.File(multifaults[0].hdf5path, 'r') as h5:
+                secparams = h5['secparams'][:]
             logging.warning(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))
@@ -389,7 +396,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                        for row in self.csm.source_info.values())
         if totsites == 0:
             if self.N == 1:
-                logging.warning('There are no sources close to the site!')
+                logging.error('There are no sources close to the site!')
             else:
                 raise RuntimeError(
                     'There are no sources close to the site(s)! '
@@ -402,10 +409,16 @@ class PreClassicalCalculator(base.HazardCalculator):
             deltas = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
-        # save 'ntiles' if the calculation is large
+        # save 'source_groups'
         self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-            store_num_tiles(self.datastore, self.csm, self.sitecol,
-                            self.cmakers, self.oqparam))
+            store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+
+        # save gsims
+        toml = []
+        for cmaker in self.cmakers:
+            for gsim in cmaker.gsims:
+                toml.append(gsim._toml)
+        self.datastore['gsims'] = numpy.array(toml)
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':

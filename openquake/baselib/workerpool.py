@@ -24,15 +24,17 @@ import getpass
 import tempfile
 import functools
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 from openquake.baselib import (
-    zeromq as z, general, performance, parallel, config, sap, InvalidFile)
+    DotDict, zeromq as z, general, performance, parallel, config, sap)
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+UTC = timezone.utc
 
 
 def init_workers():
@@ -40,12 +42,30 @@ def init_workers():
     setproctitle('oq-zworker')
 
 
+def get_zworkers(job_id):
+    """
+    :returns: DotDict str->str with keys ctrl_port and host_cores
+    """
+    dist = parallel.oq_distribute()
+    if dist == 'zmq':
+        return config.zworkers
+    elif dist == 'slurm':
+        calc_dir = parallel.scratch_dir(job_id)
+        try:
+            with open(os.path.join(calc_dir, 'hostcores')) as f:
+                hostcores = f.read()
+        except FileNotFoundError:
+            hostcores = ''
+        return DotDict(ctrl_port=config.zworkers.ctrl_port,
+                       host_cores=hostcores.replace('\n', ',').rstrip(','))
+    return {}
+
+
 def ssh_args(zworkers):
     """
     :yields: triples (hostIP, num_cores, [ssh remote python command])
     """
-    remote_python = zworkers.remote_python or sys.executable
-    remote_user = zworkers.remote_user or getpass.getuser()
+    user = getpass.getuser()
     if zworkers.host_cores.strip():
         for hostcores in zworkers.host_cores.split(','):
             host, cores = hostcores.split()
@@ -53,28 +73,23 @@ def ssh_args(zworkers):
                 yield host, cores, [sys.executable]
             else:
                 yield host, cores, [
-                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
+                    'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
 class WorkerMaster(object):
     """
-    :param ctrl_port: port on which the worker pools listen
-    :param host_cores: names of the remote hosts and number of cores to use
-    :param remote_python: path of the Python executable on the remote hosts
+    :param zworkers: dictionary with keys host_keys and ctrl_port
     """
-    def __init__(self, zworkers=config.zworkers, receiver_ports=None):
-        self.zworkers = zworkers
+    def __init__(self, zworkers, receiver_ports=None):
+        if isinstance(zworkers, int):  # passed job_id
+            self.zworkers = get_zworkers(zworkers)
+        else:  # passed dictionary of strings
+            self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
-        self.ctrl_port = int(zworkers.ctrl_port)
+        self.ctrl_port = int(self.zworkers.ctrl_port)
         self.host_cores = (
-            [hc.split() for hc in zworkers.host_cores.split(',')]
-            if zworkers.host_cores else [])
-        for host, cores in self.host_cores:
-            if int(cores) < -1:
-                raise InvalidFile('openquake.cfg: found %s %s' %
-                                  (host, cores))
-        self.remote_python = zworkers.remote_python or sys.executable
-        self.remote_user = zworkers.remote_user or getpass.getuser()
+            [hc.split() for hc in self.zworkers.host_cores.split(',')]
+            if self.zworkers.host_cores else [])
         self.popens = []
 
     def start(self):
@@ -104,7 +119,10 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send('stop')
+                try:
+                    print(sock.send('stop'))
+                except z.TimeoutError:
+                    pass  # workerpool dead for some reason
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
@@ -144,6 +162,15 @@ class WorkerMaster(object):
                 executing.append((host, running, total))
         return executing
 
+    def send_jobs(self):
+        """
+        Send an asynchronous "run_jobs" command to the first WorkerPool
+        """
+        host, _cores = self.host_cores[0]
+        ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+        with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+            return sock.send('run_jobs')
+
     def wait(self, seconds=120):
         """
         Wait until all workers are active
@@ -156,7 +183,7 @@ class WorkerMaster(object):
                     total for host, running, total in status):
                 break
         else:
-            raise TimeoutError(status)
+            raise z.TimeoutError(status)
         return status
 
     def restart(self):
@@ -220,7 +247,7 @@ def debug_task(msg, mon):
 
 
 def call(func, args, taskno, mon, executing):
-    fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
+    fname = os.path.join(executing, f'{mon.calc_id}-{taskno}')
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
@@ -231,7 +258,7 @@ def call(func, args, taskno, mon, executing):
 def errback(job_id, task_no, exc):
     # NB: job_id can be None if the Starmap was invoked without h5
     from openquake.commonlib.logs import dbcmd
-    dbcmd('log', job_id, datetime.utcnow(), 'ERROR',
+    dbcmd('log', job_id, datetime.utcnow(UTC), 'ERROR',
           '%s/%s' % (job_id, task_no), str(exc))
     e = exc.__class__('in job %d, task %d' % (job_id, task_no))
     raise e.with_traceback(exc.__traceback__)
@@ -254,7 +281,12 @@ class WorkerPool(object):
                 self.num_workers = psutil.cpu_count()
         else:
             self.num_workers = num_workers
-        self.executing = tempfile.mkdtemp()
+        self.scratch = parallel.scratch_dir(job_id)
+        self.executing = tempfile.mkdtemp(dir=self.scratch)
+        try:
+            os.mkdir(self.executing)
+        except FileExistsError:  # already created by another WorkerPool
+            pass
         self.pid = os.getpid()
 
     def start(self):
@@ -263,20 +295,18 @@ class WorkerPool(object):
         """
         self.hostname = socket.gethostname()
         if self.job_id:
-            # save the hostname in calc_XXX/hostnames
-            calc_dir = os.path.join(
-                config.directory.custom_tmp, 'calc_%s' % self.job_id)
-            try:
-                os.mkdir(calc_dir)
-            except FileExistsError:  # somebody else created it
-                pass
-            fname = os.path.join(calc_dir, 'hostnames')
-            with open(fname, 'a') as f:
-                f.write(f'{self.hostname} {self.num_workers}\n')
+            # save the hostname in calc_XXX/hostcores
+            if parallel.oq_distribute() == 'slurm':
+                fname = os.path.join(self.scratch, 'hostcores')
+                line = f'{self.hostname} {self.num_workers}'
+                print(f'Writing {line} on {fname}')
+                with open(fname, 'a') as f:
+                    f.write(line + '\n')
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
         self.pool = general.mp.Pool(self.num_workers, init_workers)
+        pids = [proc.pid for proc in self.pool._pool]
         # start control loop accepting the commands stop
         try:
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
@@ -296,6 +326,13 @@ class WorkerPool(object):
                     elif cmd == 'get_executing':
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
+                    elif cmd == 'run_jobs':
+                        pik = os.path.join(self.scratch, 'jobs.pik')
+                        lst = ['python', '-m', 'openquake.engine.engine', pik]
+                        subprocess.Popen(lst)
+                        ctrlsock.send("started %d" % self.job_id)
+                    elif cmd == 'memory_gb':
+                        ctrlsock.send(performance.memory_gb(pids))
                     elif isinstance(cmd, tuple):
                         _func, _args, taskno, mon = cmd
                         self.pool.apply_async(

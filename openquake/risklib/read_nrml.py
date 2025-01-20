@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4#
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -352,8 +352,8 @@ def get_fragility_model_04(fmodel, fname):
 # ######################## validators ######################## #
 
 
-valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
-                                'business_interruption', 'occupants')
+valid_loss_type = valid.Choice(*[lt for lt in scientific.LOSSTYPE
+                                 if '+' not in lt and '_ins' not in lt])
 
 
 def asset_mean_stddev(value, assetRef, mean, stdDev):
@@ -386,9 +386,9 @@ def update_validators():
         'vulnerabilityFunction.id': valid.risk_id,  # taxonomy
         'consequenceFunction.id': valid.risk_id,  # taxonomy
         'asset.id': valid.asset_id,
-        'costType.name': valid.cost_type,
+        'costType.name': valid_loss_type,
         'costType.type': valid.cost_type_type,
-        'cost.type': valid.cost_type,
+        'cost.type': valid_loss_type,
         'area.type': valid.name,
         'isAbsolute': valid.boolean,
         'insuranceLimit': valid.positivefloat,
@@ -416,14 +416,14 @@ def update_validators():
         'maxIML': valid.positivefloat,
         'limitStates': valid.namelist,
         'noDamageLimit': valid.NoneOr(valid.positivefloat),
-        'loss_type': valid_loss_types,
+        'loss_type': valid_loss_type,
         'losses': valid.positivefloats,
         'averageLoss': valid.positivefloat,
         'stdDevLoss': valid.positivefloat,
         'ffs.type': valid.ChoiceCI('lognormal'),
         'assetLifeExpectancy': valid.positivefloat,
         'interestRate': valid.positivefloat,
-        'lossType': valid_loss_types,
+        'lossType': valid_loss_type,
         'aalOrig': valid.positivefloat,
         'aalRetr': valid.positivefloat,
         'ratio': valid.positivefloat,

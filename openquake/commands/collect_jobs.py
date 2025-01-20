@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024 GEM Foundation
+# Copyright (C) 2024-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,7 +69,7 @@ def collect(job_ids, dstore):
                 dstore[name].attrs['json'] = js
 
 
-def main(job_ids: int):
+def main(job_ids: int, save=False):
     """
     Wait for the given jobs to finish and then collect the results
     """
@@ -81,11 +81,15 @@ def main(job_ids: int):
             sys.exit('Job %d failed' % failed[0].id)
         complete = [row for row in rows if row.status == 'complete']
         if len(complete) == len(rows):
-            dstore, log = datastore.build_dstore_log('-'.join(map(str, job_ids)))
-            with dstore, log:
-                collect(job_ids, dstore)
-            print('All jobs completed correctly, saved result in', dstore.filename)
+            print('All jobs completed correctly')
+            if save:
+                log, dstore = datastore.create_job_dstore(
+                    '-'.join(map(str, job_ids)))
+                with dstore, log:
+                    collect(job_ids, dstore)
+                    print('Saved result in', dstore.filename)
             break
         time.sleep(30.)
 
 main.job_ids = dict(help='number of jobs to create in the database', nargs='+')
+main.save = 'save in a single datastore (only for classical calculations)'

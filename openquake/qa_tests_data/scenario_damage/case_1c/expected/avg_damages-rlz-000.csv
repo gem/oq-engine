@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.10.0-gitc5935f7279', start_date='2020-05-21T06:50:48', checksum=584471896"
+#,,,,"generated_by='OpenQuake engine 3.22.0-git513b65764c', start_date='2024-11-07T08:01:17', checksum=2967236628"
 asset_id,taxonomy,lon,lat,modal-ds-structural
-a2,"Wood",-122.00000,38.00000,no_damage
-a1,"Wood",-122.00000,38.11300,no_damage
+a2,Wood,-122.00000,38.00000,slight
+a1,Wood,-122.00000,38.11300,slight

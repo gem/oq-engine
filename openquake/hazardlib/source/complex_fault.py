@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -185,6 +185,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         step = kwargs.get('step', 1)
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
+        if step > 1:  # do the expensive check only in preclassical
+            whole_fault_surface.check_proj_polygon()
         whole_fault_mesh = whole_fault_surface.mesh
         _cell_center, cell_length, _cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())

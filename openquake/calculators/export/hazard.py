@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ import collections
 import numpy
 import pandas
 
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
 from openquake.calculators.views import view, text_table
@@ -318,6 +318,71 @@ def export_cond_spectra(ekey, dstore):
     return fnames
 
 
+@export.add(('median_spectra', 'csv'))
+def export_median_spectra(ekey, dstore):
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fnames = []
+    for n in sitecol.sids:
+        for p, poe in enumerate(oq.poes):
+            aw = extract(dstore, f'median_spectra?site_id={n}&poe_id={p}')
+            Gt = len(aw.array)
+            aggr = aw.array.sum(axis=0) # shape (3, P)
+            df = aw.to_dframe().sort_values(['grp_id', 'period'])
+            comment = dstore.metadata.copy()
+            comment['site_id'] = n
+            comment['lon'] = sitecol.lons[n]
+            comment['lat'] = sitecol.lats[n]
+            comment['poe'] = poe
+            if Gt > 1:
+                fname = dstore.export_path('median_spectra-%d-%d.csv' % (n, p))
+                writer.save(df, fname, comment=comment)
+                fnames.append(fname)
+            fname = dstore.export_path('median_spectrum-%d-%d.csv' % (n, p))
+            aggdf = pandas.DataFrame(dict(
+                period=aw.period, spec=numpy.exp(aggr[0]),
+                mea=aggr[0], sig=aggr[1], wei=aggr[2]))
+            writer.save(aggdf, fname, comment=comment)
+            fnames.append(fname)
+    return fnames
+
+
+
+@export.add(('median_spectrum_disagg', 'csv'))
+def export_median_spectrum_disagg(ekey, dstore):
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fnames = []
+    totw = AccumDict(accum=0)
+    for grp_id, dset in dstore['median_spectrum_disagg'].items():
+        array = dset[:]
+        dtlist = [tup[:2] for tup in array.dtype.descr]
+        for m, imt in enumerate(oq.imtls):
+            arr = numpy.empty(len(array), dtlist)
+            for col in arr.dtype.names:
+                if col.startswith(('mea', 'sig', 'wei')):
+                    arr[col] = array[col][:, m]
+                else:
+                    arr[col] = array[col]
+                if col.startswith('wei'):
+                    totw[imt] += arr[col].sum()        
+            comment = dstore.metadata.copy()
+            comment['site_id'] = 0
+            comment['lon'] = sitecol.lons[0]
+            comment['lat'] = sitecol.lats[0]
+            fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            writer.save(arr, fname, comment=comment)
+            fnames.append(fname)
+
+    # sanity check on the weights
+    for imt in totw:
+        print('tot weight for', imt, totw[imt])
+    #    assert abs(totw[imt] - 1) < .01, (imt, totw[imt])
+    return fnames
+
+
 # TODO: see if I can remove this
 def _extract(hmap, imt, j):
     # hmap[imt] can be a tuple or a scalar if j=0
@@ -391,6 +456,16 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, f]
 
 
+@export.add(('site_model', 'csv'))
+def export_site_model_csv(ekey, dstore):
+    sitecol = dstore['sitecol']
+    fname = dstore.build_fname(ekey[0], '', ekey[1])
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+        sitecol.array, fname, comment=dstore.metadata)
+    return [fname]
+
+
+
 @export.add(('gmf_data', 'hdf5'))
 def export_gmf_data_hdf5(ekey, dstore):
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
@@ -424,11 +499,14 @@ def export_relevant_gmfs(ekey, dstore):
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    if 'complete' in dstore:
-        sitecol.complete = dstore['complete']
-    elif 'complete' in dstore.parent:
-        sitecol.complete = dstore.parent['complete']
+    if dstore.parent:
+        sitecol = dstore.parent['sitecol']
+        if 'complete' in dstore.parent:
+            sitecol.complete = dstore.parent['complete']
+    else:
+        sitecol = dstore['sitecol']
+        if 'complete' in dstore:
+            sitecol.complete = dstore['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
         dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
     else:
@@ -695,4 +773,24 @@ def export_mag_dst_eps_sig(ekey, dstore):
     comment['vs30'] = sitecol.vs30[0]
     comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
     writer.save(data, fname, comment=comment)
+    return [fname]
+
+
+@export.add(('trt_gsim', 'csv'))
+def export_trt_gsim(ekey, dstore):
+    """
+    Export a CSV with fields (grp_id, trt, gsim)
+    """
+    rows = []
+    gsims = dstore['gsims'][:]
+    data = dstore['source_groups'][:][['grp_id', 'trt', 'gsims']]
+    g = 0
+    for grp_id, trt, G in data:
+        for gsim in gsims[g:g + G]:
+            rows.append((grp_id, trt, gsim.replace(b'\n', b'\\n')))
+        g += G
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    writer = writers.CsvWriter()
+    writer.save(rows, fname, ['grp_id', 'trt', 'gsim'],
+                comment=dstore.metadata)
     return [fname]

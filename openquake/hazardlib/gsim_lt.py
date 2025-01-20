@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import os
 import ast
 import copy
@@ -39,6 +38,8 @@ from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
+U32 = numpy.uint32
+TWO24 = 2**24
 
 @dataclass
 class GsimBranch:
@@ -203,6 +204,18 @@ class GsimLogicTree(object):
                         nodes=ltbranches)])
         return cls('fake', [trt], ltnode=lt)
 
+    @classmethod
+    def read_dict(cls, fname, tectonic_region_types=['*']):
+        """
+        Read a file containing multiple logic trees and returns a dictionary
+        ID -> <GsimLogicTree> where the ID is usually a mosaic model
+        """
+        dic = {}
+        for ltnode in nrml.read(fname).nodes:
+            dic[ltnode['logicTreeID']] = cls(
+                fname, tectonic_region_types, ltnode)
+        return dic
+
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
         self.filename = fname
@@ -359,13 +372,6 @@ class GsimLogicTree(object):
                 branch = fix_bytes(branch)
                 br_id = branch['branch']
                 gsim = valid.gsim(branch['uncertainty'], dirname)
-                for k, v in gsim.kwargs.items():
-                    if k.endswith(('_file', '_table')):
-                        if v is None:  # if volc_arc_file is None
-                            pass
-                        else:
-                            arr = numpy.asarray(dic[os.path.basename(v)][()])
-                            gsim.kwargs[k] = io.BytesIO(bytes(arr))
                 self.values[branch['trt']].append(gsim)
                 weight = object.__new__(ImtWeight)
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -530,15 +536,13 @@ class GsimLogicTree(object):
         branches.sort(key=lambda b: b.trt)
         return branches
 
-    def get_weights(self, trt, imt='weight'):
+    def get_weight(self, trt, gsim, imt='weight'):
         """
-        Branch weights for the given TRT
+        Branch weights for the given TRT and gsim
         """
-        weights = []
         for br in self.branches:
-            if br.trt == trt:
-                weights.append(br.weight[imt])
-        return numpy.array(weights)
+            if br.trt == trt and br.gsim._toml == gsim._toml:
+                return br.weight[imt]
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
@@ -568,7 +572,7 @@ class GsimLogicTree(object):
             rlzs.append(rlz)
         return rlzs
 
-    def get_rlzs_by_gsim_trt(self, samples=0, seed=42,
+    def get_rlzs_by_gsim_dic(self, samples=0, seed=42,
                              sampling_method='early_weights'):
         """
         :param samples:
@@ -578,7 +582,7 @@ class GsimLogicTree(object):
         :param sampling_method:
             sampling method, by default 'early_weights'
         :returns:
-            dictionary trt -> gsim -> all_rlz_ordinals for each gsim in the trt
+            dictionary trt_smr -> gsim -> rlz_ordinals
         """
         if samples:
             rlzs = self.sample(samples, seed, sampling_method)
@@ -586,9 +590,9 @@ class GsimLogicTree(object):
             rlzs = list(self)
         ddic = {}
         for i, trt in enumerate(self.values):
-            ddic[trt] = {gsim: [rlz.ordinal for rlz in rlzs
-                                if rlz.value[i] == gsim]
-                         for gsim in self.values[trt]}
+            ddic[i*TWO24] = {gsim: U32([rlz.ordinal for rlz in rlzs
+                                        if rlz.value[i] == gsim])
+                             for gsim in self.values[trt]}
         return ddic
 
     def __iter__(self):

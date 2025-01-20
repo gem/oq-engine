@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,10 +23,11 @@ import re
 import getpass
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
 
+UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
@@ -59,8 +60,8 @@ def dbcmd(action, *args):
     if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # access the database directly
         if action.startswith('workers_'):
-            master = w.WorkerMaster()  # zworkers
-            return getattr(master, action[8:])()
+            master = w.WorkerMaster(-1)  # current job
+            return getattr(master, action[8:])()  # workers_(stop|kill)
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -85,7 +86,7 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     Log on the database
     """
     task = 'task #%d' % task_no
-    return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
+    return dbcmd('log', job_id, datetime.now(UTC), level, task, msg)
 
 
 def get_datadir():
@@ -182,7 +183,7 @@ class LogDatabaseHandler(logging.Handler):
         self.job_id = job_id
 
     def emit(self, record):
-        dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+        dbcmd('log', self.job_id, datetime.now(UTC), record.levelname,
               '%s/%s' % (record.processName, record.process),
               record.getMessage())
 
@@ -191,11 +192,12 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    multi = False
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, tag=''):
+        if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
+            raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
@@ -203,7 +205,8 @@ class LogContext:
         if 'inputs' not in self.params:  # for reaggregate
             self.tag = tag
         else:
-            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
+            inputs = self.params['inputs']
+            self.tag = tag or get_tag(inputs.get('job_ini', '<in-memory>'))
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         calc_id = int(params.get('job_id', 0))
@@ -257,8 +260,11 @@ class LogContext:
 
     def __exit__(self, etype, exc, tb):
         if tb:
-            logging.critical(traceback.format_exc())
-            dbcmd('finish', self.calc_id, 'failed')
+            if etype is SystemExit:
+                dbcmd('finish', self.calc_id, 'aborted')
+            else:
+                logging.error(traceback.format_exc())
+                dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:

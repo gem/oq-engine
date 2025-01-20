@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2023 GEM Foundation
+# Copyright (c) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,13 +15,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import math
+
 import copy
+import logging
 import warnings
 import numpy
 import pandas
-from openquake.baselib.general import cached_property
-from openquake.baselib.performance import numba, compile
+import numba
+from openquake.baselib.general import cached_property, humansize
+from openquake.baselib.performance import compile
 from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
@@ -29,23 +31,19 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+TWO20 = 2 ** 20  # 1 MB
 TWO24 = 2 ** 24
 rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
                         ('rate', F32)])
 
 
-if numba:
-    @compile("void(float64[:, :], float64[:], uint32[:])")
-    def combine_probs(array, other, rlzs):
-        for li in range(len(array)):
-            for ri in rlzs:
-                if other[li] != 0.:
-                    array[li, ri] = (
-                        1. - (1. - array[li, ri]) * (1. - other[li]))
-else:
-    def combine_probs(array, other, rlzs):
-        for r in rlzs:
-            array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
+@compile("(float64[:, :], float64[:], uint32[:])")
+def combine_probs(array, other, rlzs):
+    for li in range(len(array)):
+        for ri in rlzs:
+            if other[li] != 0.:
+                array[li, ri] = (
+                    1. - (1. - array[li, ri]) * (1. - other[li]))
 
 
 def get_mean_curve(dstore, imt, site_id=0):
@@ -143,6 +141,39 @@ def compute_hmaps(curvesNML, imtls, poes):
     return iml3
 
 
+def check_hmaps(hcurves, imtls, poes):
+    """
+    :param hcurves: hazard curves of shape (N, M, L1)
+    :param imtls: a dictionary imt -> imls
+    :param poes: a list of poes
+    :param poes: P poes
+    """
+    N, M, _L1 = hcurves.shape
+    assert M == len(imtls), (M, len(imtls))
+    all_poes = []
+    for poe in poes:
+        all_poes.extend([poe, poe * .99])
+    for m, (imt, imls) in enumerate(imtls.items()):
+        hmaps = compute_hazard_maps(hcurves[:, m], imls, all_poes)  # (N, 2*P)
+        for site_id in range(N):
+            for p, poe in enumerate(poes):
+                iml = hmaps[site_id, p*2]
+                iml99 = hmaps[site_id, p*2+1]
+                if iml + iml99 == 0:  # zero curve
+                    logging.error(f'The {imt} hazard curve for {site_id=} cannot '
+                                  f'be inverted around {poe=}')
+                    continue
+                rel_err = abs(iml - iml99) / abs(iml + iml99)
+                if  rel_err > .05:
+                    raise ValueError(f'The {imt} hazard curve for {site_id=} cannot '
+                                     f'be inverted reliably around {poe=}')
+                elif rel_err > .01:
+                    logging.warning(
+                        f'The {imt} hazard curve for {site_id=} cannot be '
+                        f'inverted reliably around {poe=}: {iml=}, {iml99=}')
+
+
+# not used right now
 def get_lvl(hcurve, imls, poe):
     """
     :param hcurve: a hazard curve, i.e. array of L1 PoEs
@@ -164,50 +195,55 @@ def get_lvl(hcurve, imls, poe):
     iml -= 1E-10  # small buffer
     return numpy.searchsorted(imls, iml)
 
-
 # ############################# probability maps ##############################
 
-# numbified below
-def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
-    levels = range(arr.shape[1])
-    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
-        if itime == 0:  # FatedTOM
-            arr[idx] *= 1. - poes[i]
-        elif len(probs) == 0 and numba is not None:
-            # looping is faster than building arrays
-            for lvl in levels:
-                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
-        else:
-            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
+t = numba.types
+sig_i = t.void(t.float32[:, :, :],                     # pmap
+               t.float32[:, :, :],                     # poes
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
+
+sig_m = t.void(t.float32[:, :, :],                     # pmap
+               t.float32[:, :, :],                     # poes
+               t.float64[:],                           # rates
+               t.float64[:, :],                        # probs_occur
+               t.float64[:],                           # weights
+               t.uint32[:],                            # sids
+               t.float64)                              # itime
 
 
-# numbified below
-def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
-    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
-        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
-        arr[idx] += (1. - pne) * w
+@compile(sig_i)
+def update_pmap_i(arr, poes, rates, probs_occur, sidxs, itime):
+    G = arr.shape[2]
+    for poe, rate, probs, sidx in zip(poes, rates, probs_occur, sidxs):
+        no_probs = len(probs) == 0
+        for g in range(G):
+            if no_probs:
+                arr[sidx, :, g] *= numpy.exp(-rate * poe[:, g] * itime)
+            else:  # nonparametric rupture
+                arr[sidx, :, g] *= get_pnes(rate, probs, poe[:, g], itime)  # shape L
 
 
-if numba:
-    t = numba.types
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.float64[:, :],                        # poes
-                 t.uint32[:],                            # invs
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_i = compile(sig)(update_pmap_i)
+@compile(sig_i)
+def update_pmap_r(arr, poes, rates, probs_occur, sidxs, itime):
+    G = arr.shape[2]
+    for poe, rate, probs, sidx in zip(poes, rates, probs_occur, sidxs):
+        if len(probs) == 0:
+            for g in range(G):
+                arr[sidx, :, g] += rate * poe[:, g] * itime
+        else:  # nonparametric rupture
+            for g in range(G):
+                arr[sidx, :, g] += -numpy.log(get_pnes(rate, probs, poe[:, g], itime))
 
-    sig = t.void(t.float64[:, :],                        # pmap
-                 t.float64[:, :],                        # poes
-                 t.uint32[:],                            # invs
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.float64[:],                           # weights
-                 t.uint32[:],                            # sids
-                 t.float64)                              # itime
-    update_pmap_m = compile(sig)(update_pmap_m)
+
+@compile(sig_m)
+def update_pmap_m(arr, poes, rates, probs_occur, weights, sidxs, itime):
+    G = arr.shape[2]
+    for poe, rate, probs, w, sidx in zip(poes, rates, probs_occur, weights, sidxs):
+        for g in range(G):
+            arr[sidx, :, g] += (1. - get_pnes(rate, probs, poe[:, g], itime)) * w
 
 
 def fix_probs_occur(probs_occur):
@@ -228,9 +264,10 @@ class MapArray(object):
     """
     Thin wrapper over a 3D-array of probabilities.
     """
-    def __init__(self, sids, shape_y, shape_z):
+    def __init__(self, sids, shape_y, shape_z, rates=False):
         self.sids = sids
         self.shape = (len(sids), shape_y, shape_z)
+        self.rates = rates
 
     @cached_property
     def sidx(self):
@@ -242,20 +279,26 @@ class MapArray(object):
             idxs[sid] = idx
         return idxs
 
-    def new(self, array):
+    @property
+    def size_mb(self):
+        return self.array.nbytes / TWO20
+            
+    def new(self, arr):
         new = copy.copy(self)
-        new.array = array
+        new.array = arr
         return new
 
     def split(self):
         """
         :yields: G MapArrays of shape (N, L, 1)
         """
-        _N, L, G = self.array.shape
+        _N, L, G = self.shape
         for g in range(G):
-            yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            new = self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+            new.gids = [g]
+            yield new
 
-    def fill(self, value, dt=F64):
+    def fill(self, value):
         """
         :param value: a scalar probability
 
@@ -263,7 +306,7 @@ class MapArray(object):
         and build the .sidx array
         """
         assert 0 <= value <= 1, value
-        self.array = numpy.empty(self.shape, dt)
+        self.array = numpy.empty(self.shape, F32)
         self.array.fill(value)
         return self
 
@@ -282,7 +325,7 @@ class MapArray(object):
         N, L, Gt = self.array.shape
         assert Gt == len(trt_rlzs), (Gt, len(trt_rlzs))
         R = full_lt.get_num_paths()
-        out = MapArray(range(N), L, R).fill(0.)
+        out = MapArray(range(N), L, R).fill(0., F32)
         for g, trs in enumerate(trt_rlzs):
             for sid in range(N):
                 for rlz in trs % TWO24:
@@ -310,6 +353,11 @@ class MapArray(object):
         return curves
 
     def to_rates(self, itime=1.):
+        """
+        Convert into a map containing rates unless the map already contains rates
+        """
+        if self.rates:
+            return self
         pnes = self.array
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence,however that probability
@@ -319,22 +367,22 @@ class MapArray(object):
         # Here we solve the issue by replacing the unphysical probabilities
         # 1 with .9999999999999999 (the float64 closest to 1).
         pnes[pnes == 0.] = 1.11E-16
-        rates = -numpy.log(pnes).astype(F32)
-        return self.new(rates / itime)
+        return self.new(-numpy.log(pnes) / itime)
 
-    def to_array(self, gid=0):
+    def to_array(self, gid):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        rates = self.array
-        idxs, lids, gids = rates.nonzero()
-        out = numpy.zeros(len(idxs), rates_dt)
-        out['sid'] = self.sids[idxs]
-        out['lid'] = lids
-        out['gid'] = gids + gid
-        out['rate'] = rates[idxs, lids, gids]
-        return out
+        if len(gid) == 0:
+            return numpy.array([], rates_dt)
+        outs = []
+        for i, g in enumerate(gid):
+            rates_g = self.array[:, :, i]
+            outs.append(from_rates_g(rates_g, g, self.sids))
+        if len(outs) == 1:
+            return outs[0]
+        return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
         """
@@ -358,9 +406,7 @@ class MapArray(object):
     # dangerous since it changes the shape by removing sites
     def remove_zeros(self):
         ok = self.array.sum(axis=(1, 2)) > 0
-        if ok.sum() == 0:  # avoid empty array
-            ok = slice(0, 1)
-        new = self.__class__(self.sids[ok], self.shape[1], self.shape[2])
+        new = self.__class__(self.sids[ok], self.shape[1], self.shape[2], self.rates)
         new.array = self.array[ok]
         return new
 
@@ -369,26 +415,31 @@ class MapArray(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        arr = self.to_rates().to_array()
+        G = self.array.shape[2]
+        arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update(self, poes, invs, ctxt, itime, mutex_weight):
+    def update_indep(self, poes, ctxt, itime):
         """
-        Update probabilities
+        Update probabilities for independent ruptures
+        """
+        rates = ctxt.occurrence_rate
+        sidxs = self.sidx[ctxt.sids]
+        if self.rates:
+            update_pmap_r(self.array, poes, rates, ctxt.probs_occur, sidxs, itime)
+        else:
+            update_pmap_i(self.array, poes, rates, ctxt.probs_occur, sidxs, itime)
+
+    def update_mutex(self, poes, ctxt, itime, mutex_weight):
+        """
+        Update probabilities for mutex ruptures
         """
         rates = ctxt.occurrence_rate
         probs_occur = fix_probs_occur(ctxt.probs_occur)
-        idxs = self.sidx[ctxt.sids]
-        for i in range(self.shape[-1]):  # G indices
-            if len(mutex_weight) == 0:  # indep
-                update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
-                              probs_occur, idxs, itime)
-            else:  # mutex
-                weights = [mutex_weight[src_id, rup_id]
-                           for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
-                update_pmap_m(self.array[:, :, i], poes[:, :, i],
-                              invs, rates, probs_occur,
-                              numpy.array(weights), idxs, itime)
+        sidxs = self.sidx[ctxt.sids]
+        weights = numpy.array([mutex_weight[src_id, rup_id]
+                               for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)])
+        update_pmap_m(self.array, poes, rates, probs_occur, weights, sidxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)
@@ -396,5 +447,74 @@ class MapArray(object):
     def __pow__(self, n):
         return self.new(self.array ** n)
 
+    def __iadd__(self, other):
+        # used in calc.mean_rates
+        sidx = self.sidx[other.sids]
+        G = other.array.shape[2]  # NLG
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
+        return self
+
     def __repr__(self):
-        return '<MapArray(%d, %d, %d)>' % self.shape
+        tup = self.shape + (humansize(self.array.nbytes),)
+        return f'<{self.__class__.__name__}(%d, %d, %d)[%s]>' % tup
+
+
+@compile("(float32[:, :], float32[:, :], uint32[:])")
+def iadd(arr, array, sidx):
+    for i, sid in enumerate(sidx):
+        arr[sid] += array[i]
+
+
+def from_rates_g(rates_g, g, sids):
+    """
+    :param rates_g: an array of shape (N, L)
+    :param g: an integer representing a GSIM index
+    :param sids: an array of site IDs
+    """
+    outs = []
+    for lid, rates in enumerate(rates_g.T):
+        idxs, = rates.nonzero()
+        if len(idxs):
+            out = numpy.zeros(len(idxs), rates_dt)
+            out['sid'] = sids[idxs]
+            out['lid'] = lid
+            out['gid'] = g
+            out['rate'] = rates[idxs]
+            outs.append(out)
+    if not outs:
+        return numpy.array([], rates_dt)
+    elif len(outs) == 1:
+        return outs[0]
+    return numpy.concatenate(outs, dtype=rates_dt)
+
+
+class RateMap:
+    """
+    A kind of MapArray specifically for rates
+    """
+    sidx = MapArray.sidx
+    size_mb = MapArray.size_mb
+    __repr__ = MapArray.__repr__
+
+    def __init__(self, sids, L, gids):
+        self.sids = sids
+        self.shape = len(sids), L, len(gids)
+        self.array = numpy.zeros(self.shape, F32)
+        self.jid = {g: j for j, g in enumerate(gids)}
+
+    def __iadd__(self, other):
+        G = self.shape[2]
+        sidx = self.sidx[other.sids]
+        for i, g in enumerate(other.gid):
+            iadd(self.array[:, :, self.jid[g]],
+                 other.array[:, :, i % G], sidx)
+        return self
+
+    def to_array(self, g):
+        """
+        Assuming self contains an array of rates,
+        returns a composite array with fields sid, lid, gid, rate
+        """
+        rates_g = self.array[:, :, self.jid[g]]
+        return from_rates_g(rates_g, g, self.sids)

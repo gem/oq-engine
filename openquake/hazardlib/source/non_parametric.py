@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,7 +57,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __init__(self, source_id, name, tectonic_region_type, data,
                  weights=None):
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id = source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
         self.data = data
         if weights is not None:
             assert len(weights) == len(data), (len(weights), len(data))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,8 +23,9 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 import math
 import logging
 import numpy
+import numba
 from openquake.baselib.node import Node
-from openquake.baselib.performance import numba, compile
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import (
     point_at, spherical_to_cartesian, fast_spherical_to_cartesian)
 from openquake.hazardlib.geo import Point, Line
@@ -39,7 +40,7 @@ from openquake.hazardlib.geo import utils as geo_utils
 # as well as maximum offset of a bottom left corner from a line drawn
 # downdip perpendicular to top edge from top left corner, expressed
 # as a fraction of the surface's area.
-IMPERFECT_RECTANGLE_TOLERANCE = 0.002
+IMPERFECT_RECTANGLE_TOLERANCE = 0.004
 
 planar_array_dt = numpy.dtype([
     ('corners', (float, 4)),
@@ -153,20 +154,19 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, hdd, lon, lat):
     return corners
 
 
-if numba:
-    F8 = numba.float64
-    build_corners = compile(F8[:, :, :, :, :](
-        F8,              # usd
-        F8,              # lsd
-        F8[:, :],        # mag
-        F8[:, :, :],     # dims
-        F8[:, :],        # strike
-        F8[:, :],        # dip
-        F8[:, :],        # rake
-        F8[:, :],        # hdd
-        F8,              # lon
-        F8,              # lat
-    ))(build_corners)
+F8 = numba.float64
+build_corners = compile(F8[:, :, :, :, :](
+    F8,              # usd
+    F8,              # lsd
+    F8[:, :],        # mag
+    F8[:, :, :],     # dims
+    F8[:, :],        # strike
+    F8[:, :],        # dip
+    F8[:, :],        # rake
+    F8[:, :],        # hdd
+    F8,              # lon
+    F8,              # lat
+))(build_corners)
 
 
 # not numbified but fast anyway
@@ -581,25 +581,24 @@ def get_rvolc(planar, points):
     return numpy.zeros((len(planar), len(points)))
 
 
-if numba:
-    planar_nt = numba.from_dtype(planar_array_dt)
-    project = compile(numba.float64[:, :, :](
-        planar_nt[:, :],
-        numba.float64[:, :]
-    ))(project)
-    project_back = compile(numba.float64[:, :, :](
-        planar_nt[:, :],
-        numba.float64[:, :],
-        numba.float64[:, :]
-    ))(project_back)
-    comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
-    get_rjb = comp(get_rjb)
-    get_rx = comp(get_rx)
-    get_ry0 = comp(get_ry0)
-    get_rhypo = comp(get_rhypo)
-    get_repi = comp(get_repi)
-    get_azimuth = comp(get_azimuth)
-    get_rvolc = comp(get_rvolc)
+planar_nt = numba.from_dtype(planar_array_dt)
+project = compile(numba.float64[:, :, :](
+    planar_nt[:, :],
+    numba.float64[:, :]
+))(project)
+project_back = compile(numba.float64[:, :, :](
+    planar_nt[:, :],
+    numba.float64[:, :],
+    numba.float64[:, :]
+))(project_back)
+comp = compile(numba.float64[:, :](planar_nt[:, :], numba.float64[:, :]))
+get_rjb = comp(get_rjb)
+get_rx = comp(get_rx)
+get_ry0 = comp(get_ry0)
+get_rhypo = comp(get_rhypo)
+get_repi = comp(get_repi)
+get_azimuth = comp(get_azimuth)
+get_rvolc = comp(get_rvolc)
 
 
 def get_distances_planar(planar, sites, dist_type):
@@ -1030,9 +1029,7 @@ class PlanarSurface(BaseSurface):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-
-        return geo_utils.get_spherical_bounding_box(self.corner_lons,
-                                                    self.corner_lats)
+        return geo_utils.get_spherical_bounding_box(self.corner_lons, self.corner_lats)
 
     def get_middle_point(self):
         """

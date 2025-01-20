@@ -173,10 +173,11 @@ def _fvs30(C, vs30):
                     C['cv2'] * np.log10(vs30 / s['vref']), fvs30)
 
 
-def _fz2pt5(C, z2pt5):
+def _get_basin_term(C, ctx, region=None):
     """
     Z2pt5 factor.
     """
+    z2pt5 = ctx.z2pt5
     s = CONSTANTS
     fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
 
@@ -288,7 +289,7 @@ class HassaniAtkinson2020SInter(GMPE):
             clf = _clf(self.SUFFIX, C, mag)
             fsnonlin = _fsnonlin_ss14(C, ctx.vs30, pga_rock)
             fvs30 = _fvs30(C, ctx.vs30)
-            fz2pt5 = _fz2pt5(C, ctx.z2pt5)
+            fz2pt5 = _get_basin_term(C, ctx)
             ff0 = _ff0(C, imt, ctx.f0)
 
             mean[m] = 10 ** (fm + fdsigma + fz + fkappa + fgamma

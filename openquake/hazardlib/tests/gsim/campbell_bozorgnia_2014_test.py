@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Implements the comprehensive test suite for the Campbell & Bozorgnia (2014)
 NGA-West2 GMPE
@@ -29,70 +28,39 @@ https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
 #     (Basin Response Term) should refer to the Sj flag instead of the Sji flag
 #   * A1100 should refer to Z2.5 (VS30=1100) in Cell B48, not constant in A48.
 """
-
+import pytest
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    CampbellBozorgnia2014,
-    CampbellBozorgnia2014HighQ,
-    CampbellBozorgnia2014LowQ,
-    CampbellBozorgnia2014JapanSite,
-    CampbellBozorgnia2014HighQJapanSite,
-    CampbellBozorgnia2014LowQJapanSite)
-
+    CampbellBozorgnia2014, CampbellBozorgnia2019, coeffs_high, coeffs_low)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CampbellBozorgnia2014
-    MEAN_FILE = 'CB14/CB2014_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_STD_TOTAL.csv'
-
-    def test_all(self):
-        self.check(self.MEAN_FILE,
-                   self.STD_INTRA_FILE,
-                   self.STD_INTER_FILE,
-                   self.STD_TOTAL_FILE,
-                   max_discrep_percentage=0.1)
+    MEAN_FILE = 'CB14/CB2014%s_MEAN.csv'
+    STD_INTRA_FILE = 'CB14/CB2014%s_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB14/CB2014%s_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB14/CB2014%s_STD_TOTAL.csv'
 
 
-class CampbellBozorgnia2014HighQTestCase(CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014HighQ
-    MEAN_FILE = 'CB14/CB2014_HIGHQ_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_HIGHQ_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_HIGHQ_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_HIGHQ_STD_TOTAL.csv'
+class CampbellBozorgnia2019TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = CampbellBozorgnia2019
+    MEAN_FILE = 'CB19/CB2019%s_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019%s_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019%s_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019%s_STD_TOTAL.csv'
 
 
-class CampbellBozorgnia2014LowQTestCase(CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014LowQ
-    MEAN_FILE = 'CB14/CB2014_LOWQ_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_LOWQ_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_LOWQ_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_LOWQ_STD_TOTAL.csv'
-
-
-class CampbellBozorgnia2014JapanSiteTestCase(CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014JapanSite
-    MEAN_FILE = 'CB14/CB2014_JAPAN_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_JAPAN_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_JAPAN_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_JAPAN_STD_TOTAL.csv'
-
-
-class CampbellBozorgnia2014HighQJapanSiteTestCase(
-        CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014HighQJapanSite
-    MEAN_FILE = 'CB14/CB2014_HIGHQ_JAPAN_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_HIGHQ_JAPAN_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_HIGHQ_JAPAN_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_HIGHQ_JAPAN_STD_TOTAL.csv'
-
-
-class CampbellBozorgnia2014LowQJapanSiteTestCase(
-        CampbellBozorgnia2014TestCase):
-    GSIM_CLASS = CampbellBozorgnia2014LowQJapanSite
-    MEAN_FILE = 'CB14/CB2014_LOWQ_JAPAN_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014_LOWQ_JAPAN_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014_LOWQ_JAPAN_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014_LOWQ_JAPAN_STD_TOTAL.csv'
+coeffs = {'': None, '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
+params = [(cls, name, SJ)
+          for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]
+          for cls in [CampbellBozorgnia2014TestCase, CampbellBozorgnia2019TestCase]]
+@pytest.mark.parametrize('cls, name, SJ', params)
+def test_all(cls, name, SJ):
+    self = cls()
+    tag = name + ('_JAPAN' if SJ else '')
+    self.check(self.MEAN_FILE % tag,
+               self.STD_INTRA_FILE % tag,
+               self.STD_INTER_FILE % tag,
+               self.STD_TOTAL_FILE % tag,
+               max_discrep_percentage=0.1,
+               coeffs=coeffs[name], SJ=SJ)

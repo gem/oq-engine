@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,10 +31,12 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
-from openquake.hazardlib.geo.surface.multi import MultiSurface, build_msparams
+from openquake.hazardlib.geo.surface.multi import (
+    MultiSurface, build_msparams, build_secparams)
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.filters import FilteredAway
 
 U16 = np.uint16
 U32 = np.uint32
@@ -92,7 +94,9 @@ class MultiFaultSource(BaseSeismicSource):
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id =source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
 
     @property
     def occur_rates(self):
@@ -123,7 +127,8 @@ class MultiFaultSource(BaseSeismicSource):
         """
         self.sections = sections
         dic = {i: sec for i, sec in enumerate(sections)}
-        save_and_split([self], dic, f'{self.source_id}.hdf5', del_rupture_idxs=False)
+        save_and_split([self], dic, f'{self.source_id}.hdf5',
+                       del_rupture_idxs=False)
 
     def set_msparams(self, secparams, close_sec=None, ry0=False,
                      mon1=performance.Monitor(),
@@ -251,6 +256,8 @@ class MultiFaultSource(BaseSeismicSource):
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
         p = self.msparams[self.msparams['area'] > 0]  # non-discarded
+        if len(p) == 0:
+            raise FilteredAway
         lons = np.concatenate([p['west'], p['east']])
         lats = np.concatenate([p['north'], p['south']])
         west, east, north, south = get_spherical_bounding_box(lons, lats)
@@ -271,10 +278,12 @@ def _set_tags(mfsources, allsections, sitecol1, s2i):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path and possibly .tags
-def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idxs=True):
+def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
+                   del_rupture_idxs=True):
     """
     Serialize MultiFaultSources
     """
+    assert mfsources
     assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_rids = []
@@ -299,6 +308,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idx
 
     # save split sources
     split_dic = general.AccumDict(accum=[])
+
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rids in zip(mfsources, all_rids):
             if hasattr(src, 'tags'):
@@ -328,6 +338,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None, del_rupture_idx
                 split_dic[src.source_id].append(split)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
+        h5['secparams'] = build_secparams(src.get_sections())
 
     return split_dic
 
@@ -339,7 +350,7 @@ def load(hdf5path):
     srcs = []
     with hdf5.File(hdf5path, 'r') as h5:
         for key in list(h5):
-            if key == 'multi_fault_sections':
+            if key in ('multi_fault_sections', 'secparams'):
                 continue
             data = h5[key]
             name = data.attrs['name']

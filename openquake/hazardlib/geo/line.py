@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -301,7 +301,7 @@ class Line(object):
 
     def init(self, coo):
         self.coo = coo
-        self.proj = utils.OrthographicProjection.from_lons_lats(
+        self.proj = utils.OrthographicProjection.from_(
             self.coo[:, 0], self.coo[:, 1])
         if len(coo) == 2:  # segment
             p0, p1 = self.points

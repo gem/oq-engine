@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -500,7 +500,7 @@ def get_figure04_line():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Prepare the section trace
     px = np.array([0.0, 0.0, 12.68, 35.66])

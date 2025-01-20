@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024 GEM Foundation
+# Copyright (C) 2024-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ from openquake.commonlib import readinput
 script = '''#!/bin/bash
 job_id=(`oq create_jobs %(n)d`)
 %(lines)s
-time oq collect_jobs ${job_id[@]}
+time oq collect_jobs --save ${job_id[@]}
 '''
 
 

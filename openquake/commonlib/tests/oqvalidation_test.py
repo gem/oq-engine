@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import unittest.mock as mock
 import unittest
 import tempfile
 import pytest
-from openquake.qa_tests_data import classical
+from openquake.qa_tests_data import event_based
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib import readinput
@@ -47,6 +47,8 @@ GST = {'gsim_logic_tree': gettemp('''\
        "source_model_logic_tree": "fake"}
 
 fakeinputs = {"job_ini": "job.ini", "source_model_logic_tree": "fake"}
+fakeinputs_risk = {"job_ini": "job.ini", "source_model_logic_tree": "fake",
+                   "structural_vulnerability": "fake"}
 
 
 class OqParamTestCase(unittest.TestCase):
@@ -95,14 +97,14 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical_risk',
                 truncation_level='3',
                 hazard_calculation_id=None, hazard_output_id=None,
-                inputs=fakeinputs, maximum_distance='10', sites='',
+                inputs=fakeinputs_risk, maximum_distance='10', sites='',
                 hazard_maps='true',  poes='').validate()
         with self.assertRaises(ValueError):
             OqParam(
                 calculation_mode='classical_risk',
                 truncation_level='3',
                 hazard_calculation_id=None, hazard_output_id=None,
-                inputs=fakeinputs, maximum_distance='10', sites='',
+                inputs=fakeinputs_risk, maximum_distance='10', sites='',
                 uniform_hazard_spectra='true',  poes='').validate()
 
     def test_site_model(self):
@@ -315,7 +317,7 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
-        inputs['gmfs'] = 'fake.csv'
+        inputs['gmfs'] = ['fake.csv']
         with self.assertRaises(InvalidFile) as ctx:
             OqParam(
                 calculation_mode='scenario_damage',
@@ -351,13 +353,13 @@ class OqParamTestCase(unittest.TestCase):
                 iml_disagg="{'PGV': 0.1}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')
-        self.assertIn("poes_disagg != poes: [0.1]!=[0.2] in job.ini",
+        self.assertIn("poes_disagg != poes: [0.1]!=[0.2]",
                       str(ctx.exception))
 
 
 ###################### test conversion to .ini format #####################
 inis = []
-base = os.path.dirname(classical.__file__)
+base = os.path.dirname(event_based.__file__)
 for case in os.listdir(base):
     job_ini = os.path.os.path.join(base, case, 'job.ini')
     if os.path.exists(job_ini):

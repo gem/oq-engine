@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import gzip
 import tempfile
@@ -36,9 +37,9 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
-    case_60, case_61, case_62, case_63, case_64, case_65,
-    case_66, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_86)
+    case_60, case_61, case_62, case_63, case_64, case_65, case_66,
+    case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
+    case_78, case_80, case_81, case_82, case_83, case_84, case_86, case_87)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -80,7 +81,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
-            self.assertIn('duration', slow)
+            self.assertIn('time', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -168,13 +169,17 @@ class ClassicalTestCase(CalculatorTestCase):
         with open(tmp, 'wb') as f:
             nrml.write([gnode], f)
 
+    def getLG(self):
+        return self.calc.datastore['hcurves-stats'][3, 0]
+
     def test_case_22(self):
-        # crossing date line calculation for Alaska
-        # this also tests the splitting in two tiles
+        # crossing date line calculation for Alaska testing full tiling
+        # NB: requires disabling the parallelization otherwise the
+        # workers would read the real custom_tmp and not the mocked one
         tmp = tempfile.gettempdir()
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': tmp}), \
-             mock.patch.dict(config.distribution, {'save_on_tmp': 'true'}):
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
+             mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -183,7 +188,33 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertGreater(max(self.calc.ntiles), 2)
+        data = self.calc.datastore['source_groups']
+        self.assertTrue(data.attrs['tiling'])
+        self.assertEqual(data['gsims'], 4)
+        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['blocks'], 2)
+
+    def test_case_22_bis(self):
+        # crossing date line calculation for Alaska
+        # this also tests full tiling without custom_dir
+        # NB: requires disabling the parallelization otherwise the
+        # workers would read the real custom_tmp and not the mocked one
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(config.directory, {'custom_tmp': ''}), \
+             mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
+            self.assert_curves_ok([
+                '/hazard_curve-mean-PGA.csv',
+                'hazard_curve-mean-SA(0.1)',
+                'hazard_curve-mean-SA(0.2).csv',
+                'hazard_curve-mean-SA(0.5).csv',
+                'hazard_curve-mean-SA(1.0).csv',
+                'hazard_curve-mean-SA(2.0).csv',
+        ], case_22.__file__, delta=1E-6)
+        data = self.calc.datastore['source_groups']
+        self.assertTrue(data.attrs['tiling'])
+        self.assertEqual(data['gsims'], 4)
+        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['blocks'], 2)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -204,9 +235,8 @@ class ClassicalTestCase(CalculatorTestCase):
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [502, 1560, 5])
-        # test that the number of ruptures is at max 1/3 of the the total
-        # due to the collapsing of the hypocenters (rjb is depth-independent)
+        numpy.testing.assert_equal(self.calc.cfactor, [1560, 5])
+        # (rjb is depth-independent, there should be collapsing of the hypocenters
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -610,6 +640,12 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical')
         self.assertEqual(self.calc.sitecol.vs30, [810.])
 
+    def test_case_67(self):
+        # filtered away multiFaultSource
+        self.run_calc(case_67.__file__, 'job.ini')
+        hcurves = self.calc.datastore['hcurves-stats'][:]
+        self.assertEqual(hcurves.sum(), 0)
+
     def test_case_69(self):
         # collapse areaSource with no nodal planes/hypocenters
         self.run_calc(case_69.__file__, 'job.ini')
@@ -654,26 +690,27 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
-        oq = self.calc.oqparam
-        L = oq.imtls.size  # 25 levels x 9 IMTs
-        L1 = L // len(oq.imtls)
-        branches = self.calc.datastore['full_lt/gsim_lt'].branches
-        gsims = [br.gsim for br in branches]
-        df = self.calc.datastore.read_df('_rates')
-        del df['sid']
-        for g, gsim in enumerate(gsims):
-            curve = numpy.zeros(L1, oq.imt_dt())
-            df_for_g = df[df.gid == g]
-            poes = numpy.zeros(L)
-            poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
-            for im in oq.imtls:
-                curve[im] = poes[oq.imtls(im)]
-            gs = gsim.__class__.__name__
-            if 'submodel' in gsim._toml:
-                gs += '_' + gsim.kwargs['submodel']
-            got = general.gettemp(text_table(curve, ext='org'))
-            delta = .0003 if sys.platform == 'darwin' else 1E-5
-            self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
+        if not config.directory.custom_tmp:
+            oq = self.calc.oqparam
+            L = oq.imtls.size  # 25 levels x 9 IMTs
+            L1 = L // len(oq.imtls)
+            branches = self.calc.datastore['full_lt/gsim_lt'].branches
+            gsims = [br.gsim for br in branches]
+            df = self.calc.datastore.read_df('_rates')
+            del df['sid']
+            for g, gsim in enumerate(gsims):
+                curve = numpy.zeros(L1, oq.imt_dt())
+                df_for_g = df[df.gid == g]
+                poes = numpy.zeros(L)
+                poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
+                for im in oq.imtls:
+                    curve[im] = poes[oq.imtls(im)]
+                gs = gsim.__class__.__name__
+                if 'submodel' in gsim._toml:
+                    gs += '_' + gsim.kwargs['submodel']
+                got = general.gettemp(text_table(curve, ext='org'))
+                delta = .0003 if sys.platform == 'darwin' else 1E-5
+                self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
@@ -758,3 +795,12 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-rlz-001-AvgSA(0.75).csv',
             'hazard_curve-rlz-001-AvgSA(2.0).csv'],
             case_86.__file__)
+
+    def test_case_87(self):
+        # Check execution of NGAEastUSGSGMPE with the Coastal Plains
+        # site amplification model within a classical PSHA calculation
+        self.assert_curves_ok([
+            'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_87.__file__)

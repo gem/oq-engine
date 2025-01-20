@@ -7,8 +7,8 @@ import logging
 import operator
 import numpy
 from openquake.baselib import sap, parallel, general, hdf5
-from openquake.commonlib import logs
 from openquake.calculators import base
+from openquake.calculators.base import expose_outputs
 
 rupfields = dict(
     mag=numpy.float32,
@@ -73,7 +73,7 @@ def main(job_ini):
     """
     calc = base.run_calc(job_ini, calculation_mode='preclassical')
     csm2rup(calc.csm, calc.datastore)
-
+    expose_outputs(calc.datastore)
 
 if __name__ == '__main__':
     sap.run(main)

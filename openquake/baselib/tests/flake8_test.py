@@ -23,6 +23,7 @@ import io
 import os
 import sys
 import ast
+import inspect
 import importlib
 import unittest
 from contextlib import redirect_stdout
@@ -45,8 +46,8 @@ def _long_funcs(module, maxlen):
         if isinstance(node, ast.FunctionDef):
             dotname = '%s.%s' % (module.__name__, node.name)
             args = node.args.args
-            if len(args) > 16:
-                raise SyntaxError('%s has more than 16 arguments: %s'
+            if len(args) > 15:
+                raise SyntaxError('%s has more than 15 arguments: %s'
                                   % (dotname, [a.arg for a in args]))
             doc = ast.get_docstring(node)
             doclines = 0 if doc is None else doc.count('\n') + 1
@@ -190,3 +191,17 @@ def test_forbid_long_funcs():
                                  ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)
+
+
+def test_get_basin_term():
+    # make sure the basin terms have the right signature
+    from openquake.hazardlib.gsim import registry
+    modules = set(cls.__module__ for cls in registry.values())
+    for name in modules:
+        mod = importlib.import_module(name)
+        if hasattr(mod, '_get_basin_term'):
+            args = inspect.getfullargspec(mod._get_basin_term).args[:3]
+            if args != ['C', 'ctx', 'region']:
+                msg = f'{mod.__name__}._get_basin_term has a wrong signature '
+                raise RuntimeError(msg + str(args))
+                    

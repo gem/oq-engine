@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,6 +19,7 @@ seismic sources.
 """
 import abc
 import zlib
+from dataclasses import dataclass
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
@@ -31,6 +32,18 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
+
+
+@dataclass
+class SourceParam:
+    source_id: str
+    name: str
+    tectonic_region_type: str
+    mfd: object
+    rupture_mesh_spacing: float
+    magnitude_scaling_relationship: object
+    rupture_aspect_ratio: float
+    temporal_occurrence_model: object
 
 
 def get_code2cls():
@@ -186,6 +199,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     weight = 0.001  # set in contexts
     esites = 0  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
+    trt_smr = -1  # set by the engine
+    num_ruptures = 0  # set by the engine
+    seed = None  # set by the engine
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -204,14 +220,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns: a random seed derived from source_id and ses_seed
         """
         return zlib.crc32(self.source_id.encode('ascii'), ses_seed)
-
-    def __init__(self, source_id, name, tectonic_region_type):
-        self.source_id = source_id
-        self.name = name
-        self.tectonic_region_type = tectonic_region_type
-        self.trt_smr = -1  # set by the engine
-        self.num_ruptures = 0  # set by the engine
-        self.seed = None  # set by the engine
 
     def is_gridded(self):
         """
@@ -381,7 +389,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id = source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
 
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')

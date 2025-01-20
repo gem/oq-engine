@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -111,14 +111,12 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
-from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor
+from openquake.baselib import parallel
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.gmf import GmfComputer, exp
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.contexts import ContextMaker
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -134,7 +132,7 @@ that defines only the total standard deviation. If you wish to use the
 conditioned ground shaking module you have to select a GSIM that provides
 the inter and intra event standard deviations, or use the ModifiableGMPE
 with `add_between_within_stds.with_betw_ratio`.
-""" % self.gsim.__class__.__name_
+""" % self.gsim.__class__.__name__
 
 
 class IterationLimitWarning(Warning):
@@ -201,7 +199,6 @@ class ConditionedGmfComputer(GmfComputer):
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
-        self.correlation_cutoff = cmaker.oq.correlation_cutoff
         self.rupture = rupture
         self.sitecol = sitecol
         self.station_sitecol = station_sitecol
@@ -213,73 +210,17 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_mea_tau_phi(self):
+    # parallelized
+    def get_mea_tau_phi(self, h5):
         """
         :returns: a list of arrays [mea, sig, tau, phi]
         """
         return get_mean_covs(
-            self.rupture, self.cmaker.gsims,
+            self.rupture, self.cmaker,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
-            self.spatial_correl,
-            self.cross_correl_between, self.cross_correl_within,
-            self.cmaker.maximum_distance, sigma=False)
-
-    def compute_all(self, mea_tau_phi, cmon=Monitor(), umon=Monitor()):
-        """
-        :returns: (dict with fields eid, sid, gmv_X, ...), dt
-        """
-        self.init_eid_rlz_sig_eps()
-        data = AccumDict(accum=[])
-        rng = numpy.random.default_rng(self.seed)
-        for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
-            mea = mea_tau_phi[0][g]
-            tau = mea_tau_phi[1][g]
-            phi = mea_tau_phi[2][g]
-            with cmon:
-                array = self.compute(gsim, rlzs, mea, tau, phi, rng)
-            with umon:
-                self.update(data, array, rlzs, [mea])
-        with umon:
-            df = self.strip_zeros(data)
-            return df
-
-    def compute(self, gsim, rlzs, mea, tau, phi, rng):
-        """
-        :param gsim: GSIM used to compute mean_stds
-        :param rlzs: realizations associated to the gsim
-        :param mea: array of shape (M, N, 1)
-        :param tau: array of shape (M, N, N)
-        :param phi: array of shape (M, N, N)
-        :returns: a 32 bit array of shape (N, M, E)
-        """
-        M, N, _ = mea.shape
-        E = numpy.isin(self.rlz, rlzs).sum()
-        result = numpy.zeros((M, N, E), F32)
-        for m, im in enumerate(self.cmaker.imtls):
-            mu_Y_yD = mea[m]
-            cov_WY_WY_wD = tau[m]
-            cov_BY_BY_yD = phi[m]
-            result[m] = self._compute(
-                mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, E, rng)
-        if self.amplifier:
-            self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, self.imts, self.seed)
-        return result.transpose(1, 0, 2)
-
-    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
-        eps = self.correlation_cutoff
-        if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt != "MMI")
-            gmf = gmf.repeat(num_events, axis=1)
-        else:
-            # add a cutoff to remove negative eigenvalues
-            cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
-            arr = rng.multivariate_normal(
-                mu_Y.flatten(), cov_Y_Y, size=num_events,
-                check_valid="raise", tol=1e-5, method="cholesky")
-            gmf = exp(arr, imt != "MMI").T
-        return gmf  # shapes (N, E)
+            self.spatial_correl, self.cross_correl_between, self.cross_correl_within,
+            sigma=False, h5=h5)
 
 
 @dataclass
@@ -287,6 +228,8 @@ class TempResult:
     """
     Temporary data structure used inside get_mean_covs
     """
+    g: int
+    m: int
     bracketed_imts: list
     conditioning_imts: list
     native_data_available: bool
@@ -297,8 +240,8 @@ class TempResult:
     zD: numpy.ndarray = 0
 
 
-def _create_result(target_imt, observed_imts, station_data_filtered):
-    # returns (conditioning_imts, bracketed_imts, native_data_available)
+def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
+    # returns (g, m, conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
 
@@ -337,21 +280,19 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
         if num_null_values:
             raise ValueError(
                 f"The station data contains {num_null_values}"
-                f"null values for {target_imt.string}."
-                "Please fill or discard these rows.")
-    t = TempResult(conditioning_imts=conditioning_imts,
-                   bracketed_imts=bracketed_imts,
-                   native_data_available=native_data_available)
+                f" null values for {target_imt.string}."
+                " Please fill or discard these rows.")
+    t = TempResult(g, m, bracketed_imts, conditioning_imts, native_data_available)
     return t
 
 
-def create_result(target_imt, target_imts, observed_imts,
+def create_result(g, m, target_imt, target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
                   compute_cov, cross_correl_between):
     """
     :returns: a TempResult
     """
-    t = _create_result(target_imt, observed_imts, station_data)
+    t = _create_result(g, m, target_imt, observed_imts, station_data)
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -445,16 +386,133 @@ def compute_spatial_cross_covariance_matrix(
     return numpy.linalg.multi_dot([diag1, rho, diag2])
 
 
+# In scenario/case_21 one has
+# target_imt = PGA = target_imts = observed_imts
+# ctx_Y with 571 elements, like target_sitecol
+# station_data has 140 elements like station_sitecol
+# 18 sites are discarded
+# the total sitecol has 571 + 140 + 18 = 729 sites
+# NB: this is run in parallel
+def get_mu_tau_phi(target_imt, gsim, mean_stds,
+                   target_imts, observed_imts, station_data,
+                   target_sitecol, station_sitecol, compute_cov, r, monitor):
+    # Using Bayes rule, compute the posterior distribution of the
+    # normalized between-event residual H|YD=yD, employing
+    # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
+    # H|Y2=y2 is normally distributed with mean and covariance:
+    cov_HD_HD_yD = numpy.linalg.pinv(
+        numpy.linalg.multi_dot([r.T_D.T, r.cov_WD_WD_inv, r.T_D])
+        + numpy.linalg.pinv(r.corr_HD_HD))
+
+    mu_HD_yD = numpy.linalg.multi_dot(
+        [cov_HD_HD_yD, r.T_D.T, r.cov_WD_WD_inv, r.zD])
+
+    # Compute the distribution of the conditional between-event
+    # residual B|Y2=y2
+    mu_BD_yD = r.T_D @ mu_HD_yD
+    cov_BD_BD_yD = numpy.linalg.multi_dot([r.T_D, cov_HD_HD_yD, r.T_D.T])
+
+    # Get the nominal bias and its standard deviation as the means of the
+    # conditional between-event residual mean and standard deviation
+    nominal_bias_mean = numpy.mean(mu_BD_yD)
+    nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
+
+    msg = ("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f"
+           % (gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
+              target_imt, nominal_bias_mean, nominal_bias_stddev))
+
+    # Predicted mean at the target sites, from GSIM
+    mu_Y = mean_stds[0, 0][:, None]
+
+    # Predicted uncertainty components at the target sites, from GSIM
+    tau_Y = mean_stds[2, 0][:, None]
+    Y = numpy.diag(mean_stds[3, 0])
+
+    # Compute the mean of the conditional between-event residual B|YD=yD
+    # for the target sites; the shapes are (nsites, nstations),
+    # (nstations, nsites), (nsites, nsites) respectively
+    cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
+                            [target_imt], r.conditioning_imts, Y, r.D)
+    cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
+                            r.conditioning_imts, [target_imt], r.D, Y)
+    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
+                            [target_imt], [target_imt], Y, Y)
+
+    # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
+    RC = cov_WY_WD @ r.cov_WD_WD_inv  # shape (nsites, nstations)
+
+    # compute the mean, shape (nsites, 1)
+    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (r.zD - mu_BD_yD)
+
+    # covariance matrices can contain extremely small negative values
+
+    # Compute the conditioned within-event covariance matrix
+    # for the target sites clipped to zero, shape (nsites, nsites)
+    tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
+
+    # Compute the scaling matrix "C" for the conditioned between-event
+    # covariance matrix
+    if r.native_data_available:
+        C = tau_Y - RC @ r.T_D
+    else:
+        zeros = numpy.zeros((len(target_sitecol), len(r.conditioning_imts)))
+        C = numpy.block([tau_Y, zeros]) - RC @ r.T_D
+
+    # Compute the conditioned between-event covariance matrix
+    # for the target sites clipped to zero, shape (nsites, nsites)
+    phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
+    return {(r.g, r.m): (mu, tau, phi, msg)}
+
+
+def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
+                 mean_stds_D, mean_stds_Y, target, station_filtered,
+                 compute_cov, cross_correl_between, h5):
+    G = len(cmaker.gsims)
+    M = len(target_imts)
+    N = mean_stds_Y.shape[-1]
+    me = numpy.zeros((G, M, N, 1))
+    ta = numpy.zeros((G, M, N, N))
+    ph = numpy.zeros((G, M, N, N))
+    smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
+    for g, gsim in enumerate(cmaker.gsims):
+        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+            if not (type(gsim).__name__ == "ModifiableGMPE"
+                    and "add_between_within_stds" in gsim.kwargs):
+                raise NoInterIntraStdDevs(gsim)
+
+        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
+        # so, unlike the regular gsim get_mean_std, a numpy ndarray
+        # won't work well as the 4 components will be non-homogeneous
+        for m, o_imt in enumerate(observed_imts):
+            im = o_imt.string
+            sdata[im + "_median"] = mean_stds_D[0, g, m]
+            sdata[im + "_sigma"] = mean_stds_D[1, g, m]
+            sdata[im + "_tau"] = mean_stds_D[2, g, m]
+            sdata[im + "_phi"] = mean_stds_D[3, g, m]
+        for m, target_imt in enumerate(target_imts):
+            result = create_result(
+                g, m, target_imt, target_imts, observed_imts,
+                sdata, target, station_filtered,
+                compute_cov, cross_correl_between)
+            smap.submit(
+                (target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
+                 sdata, target, station_filtered, compute_cov, result))
+    for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
+        me[g, m] = mu
+        ta[g, m] = tau
+        ph[g, m] = phi
+        logging.info(msg)
+    return me, ta, ph
+
+
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
-        rupture, gsims, station_sitecol, station_data,
-        observed_imt_strs, target_sitecol, target_imts,
-        spatial_correl, cross_correl_between, cross_correl_within,
-        maximum_distance, sigma=True):
+        rupture, cmaker, station_sitecol, station_data, observed_imt_strs,
+        target_sitecol, target_imts, spatial_correl, cross_correl_between,
+        cross_correl_within, sigma=True, h5=None):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
-
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
 
@@ -468,9 +526,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = ContextMaker(
-        rupture.tectonic_region_type, gsims,
-        dict(imtls=observed_imtls, maximum_distance=maximum_distance))
+    cmaker_D = cmaker.copy(imtls=observed_imtls)
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
@@ -478,10 +534,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = ContextMaker(
-        rupture.tectonic_region_type, gsims, dict(
-            imtls={target_imts[0].string: [0]},
-            maximum_distance=maximum_distance))
+    cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
     mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
@@ -494,126 +547,15 @@ def get_mean_covs(
 
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
-
-    G = len(gsims)
-    M = len(target_imts)
-    N = len(ctx_Y)
-    me = numpy.zeros((G, M, N, 1))
-    ta = numpy.zeros((G, M, N, N))
-    ph = numpy.zeros((G, M, N, N))
-    for g, gsim in enumerate(gsims):
-        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-            if not (type(gsim).__name__ == "ModifiableGMPE"
-                    and "add_between_within_stds" in gsim.kwargs):
-                raise NoInterIntraStdDevs(gsim)
-
-        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
-        # so, unlike the regular gsim get_mean_std, a numpy ndarray
-        # won't work well as the 4 components will be non-homogeneous
-        sdata = station_data[mask].copy()    
-        for m, o_imt in enumerate(observed_imts):
-            im = o_imt.string
-            sdata[im + "_median"] = mean_stds_D[0, g, m]
-            sdata[im + "_sigma"] = mean_stds_D[1, g, m]
-            sdata[im + "_tau"] = mean_stds_D[2, g, m]
-            sdata[im + "_phi"] = mean_stds_D[3, g, m]
-        for m, target_imt in enumerate(target_imts):
-            result = create_result(
-                target_imt, target_imts, observed_imts,
-                sdata, target, station_filtered,
-                compute_cov, cross_correl_between)
-            mu, tau, phi = get_mu_tau_phi(
-                target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
-                sdata, target, station_filtered,
-                compute_cov, result)
-            me[g, m] = mu
-            ta[g, m] = tau
-            ph[g, m] = phi
-
+    me, ta, ph = get_me_ta_ph(
+        cmaker, station_data[mask].copy(), observed_imts, target_imts,
+        mean_stds_D, mean_stds_Y, target, station_filtered,
+        compute_cov, cross_correl_between, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:
         # save memory since sigma = tau + phi is not needed
         return [me, ta, ph]
-
-
-# In scenario/case_21 one has
-# target_imt = PGA = target_imts = observed_imts
-# ctx_Y with 571 elements, like target_sitecol
-# station_data has 140 elements like station_sitecol
-# 18 sites are discarded
-# the total sitecol has 571 + 140 + 18 = 729 sites
-def get_mu_tau_phi(target_imt, gsim, mean_stds,
-                   target_imts, observed_imts, station_data,
-                   target_sitecol, station_sitecol, compute_cov, t):
-
-    # Using Bayes rule, compute the posterior distribution of the
-    # normalized between-event residual H|YD=yD, employing
-    # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
-    # H|Y2=y2 is normally distributed with mean and covariance:
-    cov_HD_HD_yD = numpy.linalg.pinv(
-        numpy.linalg.multi_dot([t.T_D.T, t.cov_WD_WD_inv, t.T_D])
-        + numpy.linalg.pinv(t.corr_HD_HD))
-
-    mu_HD_yD = numpy.linalg.multi_dot(
-        [cov_HD_HD_yD, t.T_D.T, t.cov_WD_WD_inv, t.zD])
-
-    # Compute the distribution of the conditional between-event
-    # residual B|Y2=y2
-    mu_BD_yD = t.T_D @ mu_HD_yD
-    cov_BD_BD_yD = numpy.linalg.multi_dot([t.T_D, cov_HD_HD_yD, t.T_D.T])
-
-    # Get the nominal bias and its standard deviation as the means of the
-    # conditional between-event residual mean and standard deviation
-    nominal_bias_mean = numpy.mean(mu_BD_yD)
-    nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
-
-    logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
-                 "Nominal bias stddev: %.3f",
-                 gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
-                 target_imt, nominal_bias_mean, nominal_bias_stddev)
-
-    # Predicted mean at the target sites, from GSIM
-    mu_Y = mean_stds[0, 0][:, None]
-
-    # Predicted uncertainty components at the target sites, from GSIM
-    tau_Y = mean_stds[2, 0][:, None]
-    Y = numpy.diag(mean_stds[3, 0])
-
-    # Compute the mean of the conditional between-event residual B|YD=yD
-    # for the target sites; the shapes are (nsites, nstations),
-    # (nstations, nsites), (nsites, nsites) respectively
-    cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
-                            [target_imt], t.conditioning_imts, Y, t.D)
-    cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
-                            t.conditioning_imts, [target_imt], t.D, Y)
-    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
-                            [target_imt], [target_imt], Y, Y)
-
-    # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
-    RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
-
-    # compute the mean, shape (nsites, 1)
-    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zD - mu_BD_yD)
-
-    # covariance matrices can contain extremely small negative values
-
-    # Compute the conditioned within-event covariance matrix
-    # for the target sites clipped to zero, shape (nsites, nsites)
-    tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
-
-    # Compute the scaling matrix "C" for the conditioned between-event
-    # covariance matrix
-    if t.native_data_available:
-        C = tau_Y - RC @ t.T_D
-    else:
-        zeros = numpy.zeros((len(target_sitecol), len(t.conditioning_imts)))
-        C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
-
-    # Compute the conditioned between-event covariance matrix
-    # for the target sites clipped to zero, shape (nsites, nsites)
-    phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
-    return mu, tau, phi
 
 
 def _compute_spatial_cross_correlation_matrix(

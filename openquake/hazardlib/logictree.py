@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -582,8 +582,7 @@ class SourceModelLogicTree(object):
         # branches; however, you can actually raise the limit to 33489 branches
         # by commenting/uncommenting the two lines below, if you really need
         maxlen = 183
-        # maxlen = 183 if bsno else 33489  # the sourceModel branchset
-        #                                    can be longer
+        # maxlen = 183 if bsno else 33489  # sourceModel branchset can be longer
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
@@ -1119,7 +1118,7 @@ class FullLogicTree(object):
         self.trts = list(self.gsim_lt.values)
         R = self.get_num_paths()
         logging.info('Building {:_d} realizations'.format(R))
-        self.weights = numpy.array(
+        self.weights = numpy.array(  # shape (R, 1) or (R, M+1)
             [rlz.weight for rlz in self.get_realizations()])
         return self
 
@@ -1170,7 +1169,7 @@ class FullLogicTree(object):
         data = []
         for trt_smrs in all_trt_smrs:
             for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
-                data.append(self.weights[rlzs].sum())
+                data.append(self.weights[rlzs].sum(axis=0))
         return numpy.array(data)
 
     def trt_by(self, trt_smr):
@@ -1341,29 +1340,33 @@ class FullLogicTree(object):
 
     def _rlzs_by_gsim(self, trt_smr):
         # return dictionary gsim->rlzs
-        if not hasattr(self, '_rlzs_by'):
-            rlzs = self.get_realizations()
-            trtis = range(len(self.gsim_lt.values))
-            smrs = numpy.array([sm.ordinal for sm in self.sm_rlzs])
-            if self.source_model_lt.filename == 'fake.xml':  # scenario
-                smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
-                              for i, sm_rlz in enumerate(self.sm_rlzs)}
-                smidx = numpy.zeros(self.get_num_paths(), int)
-                for rlz in rlzs:
-                    smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
-                self._rlzs_by = _ddic(trtis, smrs,
-                                      lambda smr: rlzs[smidx == smr])
-            else:  # classical and event based
-                start = 0
-                slices = []
-                for sm in self.sm_rlzs:
-                    slices.append(slice(start, start + sm.samples))
-                    start += sm.samples
-                self._rlzs_by = _ddic(trtis, smrs,
-                                      lambda smr: rlzs[slices[smr]])
-        if not self._rlzs_by:
-            return {}
-        return self._rlzs_by[trt_smr]
+        return self.get_rlzs_by_gsim_dic()[trt_smr]
+
+    def get_rlzs_by_gsim_dic(self):
+        """
+        :returns: a dictionary trt_smr -> gsim -> rlz ordinals
+        """
+        if hasattr(self, '_rlzs_by'):
+            return self._rlzs_by
+        rlzs = self.get_realizations()
+        trtis = range(len(self.gsim_lt.values))
+        smrs = numpy.array([sm.ordinal for sm in self.sm_rlzs])
+        if self.source_model_lt.filename == 'fake.xml':  # scenario
+            smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
+                          for i, sm_rlz in enumerate(self.sm_rlzs)}
+            smidx = numpy.zeros(self.get_num_paths(), int)
+            for rlz in rlzs:
+                smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
+            self._rlzs_by = _ddic(trtis, smrs,
+                                  lambda smr: rlzs[smidx == smr])
+        else:  # classical and event based
+            start = 0
+            slices = []
+            for sm in self.sm_rlzs:
+                slices.append(slice(start, start + sm.samples))
+                start += sm.samples
+            self._rlzs_by = _ddic(trtis, smrs, lambda smr: rlzs[slices[smr]])
+        return self._rlzs_by
 
     def get_rlzs_by_gsim(self, trt_smr):
         """

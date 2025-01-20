@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.10.0-git142f82995c', start_date='2020-06-16T14:49:31', checksum=2230266278"
+#,,,,,,"generated_by='OpenQuake engine 3.22.0-gitdf92f4b764', start_date='2024-11-07T06:37:38', checksum=3851440608"
 asset_id,CRESTA,region,taxonomy,lon,lat,modal-ds-structural
 a1,?,?,RM,15.48000,38.09000,LS1
 a3,?,?,RM,15.48000,38.25000,LS2

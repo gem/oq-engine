@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import collections
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
 import numpy
+import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
@@ -1858,6 +1859,42 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
 
+    def test_multiple(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="EUR">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                            ToroEtAl2002
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        <logicTree logicTreeID="MIE">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="ASC">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        """)
+        lts = logictree.GsimLogicTree.read_dict(gettemp(xml))
+        self.assertEqual(list(lts), ['EUR', 'MIE'])
+
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
     def setUp(self):
@@ -2111,7 +2148,7 @@ class ReduceLtTestCase(unittest.TestCase):
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
-    taxonomies = {1: 'taxo1', 2: 'taxo2', 3: 'taxo3', 4: 'taxo4'}
+    taxidx = {'taxo1': 1, 'taxo2': 2, 'taxo3': 3, 'taxo4': 4}
 
     def test_missing_taxo(self):
         xml = '''taxonomy,conversion,weight
@@ -2123,7 +2160,7 @@ taxo3,taxo3,1
             inp = dict(taxonomy_mapping=gettemp(xml))
             oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                     aristotle=False)
-            readinput.taxonomy_mapping(oq, self.taxonomies)
+            readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
 
@@ -2139,7 +2176,7 @@ taxo4,taxo2,.4
             inp = dict(taxonomy_mapping=gettemp(xml))
             oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                     aristotle=False)
-            readinput.taxonomy_mapping(oq, self.taxonomies)
+            readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
 
@@ -2154,12 +2191,14 @@ taxo4,taxo1,.5
         inp = dict(taxonomy_mapping=gettemp(xml))
         oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
                                 aristotle=False)
-        dic = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
-        self.assertEqual(dic, {0: [('?', 1)],
-                               1: [('taxo1', 1.0)],
-                               2: [('taxo2', 1.0)],
-                               3: [('taxo3', 1.0)],
-                               4: [('taxo2', 0.5), ('taxo1', 0.5)]})
+        got = readinput.taxonomy_mapping(oq, self.taxidx)
+        exp = pandas.DataFrame(
+            dict(risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
+                 weight=[1., 1., .5, 1., .5],
+                 peril=['*'] * 5,
+                 country=['?'] * 5,
+                 taxi=[1, 2, 4, 3, 4]))
+        pandas.testing.assert_frame_equal(got, exp)
 
 
 def teardown_module():

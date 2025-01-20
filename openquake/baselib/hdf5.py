@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -359,13 +359,16 @@ class File(h5py.File):
         :param key:
             name of the dataset
         :param nametypes:
-            list of pairs (name, dtype) or (name, array) or DataFrame
+            pairs (name, dtype) or (name, array) or structured array or DataFrame
         :param compression:
             the kind of HDF5 compression to use
         :param kw:
             extra attributes to store
         """
-        if isinstance(nametypes, pandas.DataFrame):
+        if hasattr(nametypes, 'dtype') and nametypes.dtype.names:
+            nametypes = [(name, nametypes[name])
+                         for name in nametypes.dtype.names]
+        elif isinstance(nametypes, pandas.DataFrame):
             nametypes = [(name, nametypes[name].to_numpy())
                          for name in nametypes.columns]
         names = []

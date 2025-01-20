@@ -1019,11 +1019,7 @@ while calculations with a single nodal plane and hypocenter for each source will
 
 If you are interested only in speed and not in precision, you can set ``calculation_mode=preclassical``, run the 
 sensitivity analysis in parallel very quickly and then use the ``ps_grid_spacing`` value corresponding to the minimum 
-weight of the source model, which can be read from the logs. Here is the trick to run the calculations in parallel::
-
-	$ oq engine --multi --run job.ini -p calculation_mode=preclassical
-
-And here is how to extract the weight information, in the example of Alaska, with job IDs in the range 31692-31695::
+weight of the source model, which can be read from the logs. Here is how to extract the weight information, in the example of Alaska, with job IDs in the range 31692-31695::
 
 	$ oq db get_weight 31692
 	<Row(description=Alaska{'ps_grid_spacing': 0}, message=tot_weight=1_929_504, max_weight=120_594, num_sources=150_254)>

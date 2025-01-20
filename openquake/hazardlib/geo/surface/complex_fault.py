@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -76,20 +76,6 @@ class ComplexFaultSurface(BaseSurface):
         self.mesh = mesh
         assert 1 not in self.mesh.shape, self.mesh.shape
         self.strike = self.dip = None
-        return  # FIXME: temporarily disabled the check below
-        # A common user error is to create a ComplexFaultSourceSurface
-        # from invalid fault data (e.g. mixing the order of
-        # vertexes for top and bottom edges). Therefore, we want to
-        # restrict every complex source to have a projected enclosing
-        # polygon that is not a multipolygon.
-        if isinstance(
-                self.mesh._get_proj_enclosing_polygon()[1],
-                shapely.geometry.multipolygon.MultiPolygon):
-            raise ValueError("Invalid surface. "
-                             "The projected enclosing polygon "
-                             "must be a simple polygon. "
-                             "Check the geometry definition of the "
-                             "fault source")
 
     @property
     def tor(self):
@@ -133,7 +119,7 @@ class ComplexFaultSurface(BaseSurface):
         if self.strike is None:
             self.get_dip()  # this should cache strike value
         return self.strike
-            
+
     @classmethod
     def check_aki_richards_convention(cls, edges):
         """
@@ -305,6 +291,23 @@ class ComplexFaultSurface(BaseSurface):
         self = cls(mesh)
         self.surface_nodes = surface_nodes
         return self
+
+    def check_proj_polygon(self):
+        # called in ComplexFaultSource.iter_ruptures only in preclassical
+        """
+        A common user error is to create a ComplexFaultSourceSurface
+        from invalid fault data (e.g. mixing the order of
+        vertexes for top and bottom edges). Therefore, we want to
+        restrict every complex source to have a projected enclosing
+        polygon that is not a multipolygon.
+        """
+        if isinstance(self.mesh._get_proj_enclosing_polygon()[1],
+                      shapely.geometry.multipolygon.MultiPolygon):
+            raise ValueError("Invalid surface. "
+                             "The projected enclosing polygon "
+                             "must be a simple polygon. "
+                             "Check the geometry definition of the "
+                             "fault source")
 
     @classmethod
     def surface_projection_from_fault_data(cls, edges):

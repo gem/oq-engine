@@ -28,6 +28,17 @@ sudo mkdir /var/www
 sudo chown -R openquake /var/www/
 ```
 
+#### Configure the engine temporary folder
+
+By default, the engine stores temporary files into the system temporary directory. In case you want to use a different directory, you can customize it through the `/opt/openquake/openquake.cfg` configuration file. For instance, after creating the folder `/opt/openquake/tmp`, add to `/opt/openquake/openquake/cfg`:
+
+```yaml
+[directory]
+    custom_tmp = /opt/openquake/tmp
+```
+
+You can also setup a cron job in order to automatically delete old temporary files.
+
 #### Configure the directory to store the server user access log
 
 By default, user access information is logged through the standard Django logger.
@@ -42,14 +53,14 @@ sudo mkdir /var/log/oq-engine
 sudo chown -R openquake /var/log/oq-engine
 ```
 
-Upgrade the database to host users and sessions:
+#### Upgrade the database to host users and sessions
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake /opt/openquake/venv/bin/python3 manage.py migrate
 ```
 
-Install fixtures for cookie consent:
+#### Install fixtures for cookie consent
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
@@ -67,12 +78,15 @@ Required or optional cookies or groups of them can be added, removed or edited v
 New custom cookies can be managed similarly to what is done in `openquake/server/templates/engine/includes/cookie_analytics.html`.
 Please refer to `https://django-cookie-consent.readthedocs.io/en/latest/` for further details on how to customize cookies in Django.
 
-Add a new local superuser:
+#### Add a new local superuser
 
 ```console
 cd /opt/openquake/src/oq-engine/openquake/server
 sudo -u openquake /opt/openquake/venv/bin/python3 manage.py createsuperuser
 ```
+
+#### Setup static files
+
 To setup static files in Django, issue the following commands, making sure to refer to the actual folder where the engine was installed or cloned (see above):
 
 ```console
@@ -141,6 +155,53 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
+### Limit systemd services with control group (slice)
+
+If you need to set a limit on the resources available for the OpenQuake service, Systemd offers a simple solution to create resource limits for a service,
+a unit type called "slice".
+
+This is a control group, which may apply limits that affect all processes in this slice/control group.
+
+To create a slice called webui.slice:
+
+```console
+systemctl edit openquake-webui.slice
+
+[Unit]
+Description=OpenQuake Webui Slice
+Before=slices.target
+
+[Slice]
+MemoryAccounting=true
+MemoryMax=10G
+CPUAccounting=true
+CPUQuota=50%
+TasksMax=4096
+```
+
+Edit the webui.service file:
+```console
+systemctl edit --full openquake-webui.service
+```
+
+and add in the [Service] section:
+```console
+Slice=openquake-webui.slice
+```
+
+After changing systemd config files a reload of the daemon is required and a restart of the service:
+
+```console
+systemctl daemon-reload
+systemctl stop openquake-webui.service
+systemctl start openquake-webui.service
+```
+
+To check if the service is in the correct control group, run:
+
+```console
+systemctl status  openquake-webui.service
+```
 
 ### nginx
 

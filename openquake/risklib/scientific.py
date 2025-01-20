@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -45,6 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -91,7 +92,13 @@ def _reduce(nested_dic):
 
 
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """
+    :param iterable: a sequence of N values (s0, s1, ...)
+    :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
+ 
+    >>> list(pairwise('ABC'))
+    [('A', 'B'), ('B', 'C')]
+    """
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
@@ -670,7 +677,7 @@ class FragilityFunctionList(list):
         """For compatibility with vulnerability functions"""
         return fine_graining(self.imls, steps)
 
-    def build(self, limit_states, discretization, steps_per_interval):
+    def build(self, limit_states, discretization=20, steps_per_interval=1):
         """
         :param limit_states: a sequence of limit states
         :param discretization: continouos fragility discretization parameter
@@ -1007,12 +1014,12 @@ def classical_damage(
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
     afoos = pairwise_diff(
         pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
-    poes_per_damage_state = []
+    poes_per_dmgstate = []
     for ff in fragility_functions:
         fx = afoos @ ff(imls)
-        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
-        poes_per_damage_state.append(poe_per_damage_state)
-    poos = pairwise_diff([1] + poes_per_damage_state + [0])
+        poe_per_dmgstate = 1. - numpy.exp(-fx * risk_investigation_time)
+        poes_per_dmgstate.append(poe_per_dmgstate)
+    poos = pairwise_diff([1] + poes_per_dmgstate + [0])
     return poos
 
 #
@@ -1281,13 +1288,45 @@ def pla_factor(df):
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
-    "Averages between a value and the next value in a sequence"
+    """
+    Averages between a value and the next value in a sequence
+    """
     return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
-def pairwise_diff(values):
-    "Differences between a value and the next value in a sequence"
-    return numpy.array([x - y for x, y in pairwise(values)])
+def pairwise_diff(values, addlast=False):
+    """
+    Differences between a value and the next value in a sequence.
+    If addlast is set the last value is added to the difference,
+    i.e. N values are returned instead of N-1.
+    """
+    diff = [x - y for x, y in pairwise(values)]
+    if addlast:
+        diff.append(values[-1])
+    return numpy.array(diff)
+
+
+def dds_to_poes(dmg_dists):
+    """
+    Convert an array of damage distributions into an array of PoEs
+
+    >>> dds_to_poes([[.7, .2, .1], [0., 0., 1.0]])
+    array([[1. , 0.3, 0.1],
+           [1. , 1. , 1. ]])
+    """
+    arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
+    return arr
+    
+    
+def compose_dds(dmg_dists):
+    """
+    Compose an array of N damage distributions:
+
+    >>> compose_dds([[.6, .2, .1, .1], [.5, .3 ,.1, .1]])
+    array([0.3 , 0.34, 0.17, 0.19])
+    """
+    poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
+    return pairwise_diff(poes_per_dmgstate, addlast=True)
 
 
 def mean_std(fractions):
@@ -1613,65 +1652,108 @@ class RiskComputer(dict):
     :param crm: a CompositeRiskModel
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, asset_df):
-        [taxidx] = asset_df.taxonomy.unique()
-        self.asset_df = asset_df
-        self.imtls = crm.imtls
-        self.alias = {
-            imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
-        self.calculation_mode = crm.oqparam.calculation_mode
+    def __init__(self, crm, taxidx, country_str='?'):
+        oq = crm.oqparam
+        self.D = len(crm.damage_states)
+        self.P = len(crm.perils)
+        self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
-        self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
-        self.wdic = {}
-        for lt in self.minimum_asset_loss:
-            for riskid, weight in crm.tmap[lt][taxidx]:
-                self[riskid, lt] = crm._riskmodels[riskid]
-                self.wdic[riskid, lt] = weight
+        self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
+        self.wdic = {}  # (riskid, peril) -> weight
+        tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
+        for country, peril, riskid, weight in zip(
+                tm.country, tm.peril, tm.risk_id, tm.weight):
+            if country == '?' or country_str in country:
+                self[riskid] = crm._riskmodels[riskid]
+                if peril == '*':
+                    for per in crm.perils:
+                        self.wdic[riskid, per] = weight
+                else:
+                    self.wdic[riskid, peril] = weight
 
-    def output(self, haz, sec_losses=(), rndgen=None):
+    def output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
         Compute averages by using the taxonomy mapping
 
+        :param asset_df: assets on the same site with the same taxonomy
         :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
-        :returns: loss dict {extended_loss_type: loss_output}
+        :yields: dictionaries {loss_type: loss_output}
         """
-        dic = collections.defaultdict(list)  # lt -> outs
-        weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = self.alias.get(imt, imt)
-            if event:
-                out = rm(lt, self.asset_df, haz, col, rndgen)
-            else:  # classical
-                out = rm(lt, self.asset_df, haz[self.imtls(imt)])
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
-        out = {}
-        for lt in self.minimum_asset_loss:
-            outs = dic[lt]
-            if len(outs) == 0:  # can happen for nonstructural_ins
-                continue
-            elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                # computing the average dataframe for event_based_risk/case_8
-                out[lt] = _agg(outs, weights[lt])
-            elif len(outs) > 1:
-                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
-            else:
-                out[lt] = outs[0]
-        if event:
-            for update_losses in sec_losses:
-                update_losses(self.asset_df, out)
-        return out
+        dic = collections.defaultdict(list)  # peril, lt -> outs
+        weights = collections.defaultdict(list)  # peril, lt -> weights
+        perils = {'earthquake'}
+        for riskid, rm in self.items():
+            for (peril, lt), res in rm(asset_df, haz, rndgen).items():
+                # res is an array of fractions of shape (A, E, D) 
+                weights[peril, lt].append(self.wdic[riskid, peril])
+                dic[peril, lt].append(res)
+                perils.add(peril)
+        for peril in sorted(perils):
+            out = {}
+            for lt in self.minimum_asset_loss:
+                outs = dic[peril, lt]
+                if len(outs) == 0:  # can happen for nonstructural_ins
+                    continue
+                elif len(outs) > 1 and hasattr(outs[0], 'loss'):
+                    # computing the average dataframe for event_based_risk/case_8
+                    out[lt] = _agg(outs, weights[peril, lt])
+                elif len(outs) > 1:
+                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
+                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                else:
+                    out[lt] = outs[0]
+            if hasattr(haz, 'eid'):  # event based
+                for update_losses in sec_losses:
+                    update_losses(asset_df, out)
+            yield out
+
+    def get_dd5(self, adf, gmf_df, rng=None, C=0, crm=None):
+        """
+        :param adf:
+            DataFrame of assets on the given site with the same taxonomy
+        :param gmf_df:
+            GMFs on the given site for E events
+        :param rng:
+            MultiEvent random generator or None
+        :param C:
+            Number of consequences
+        :returns:
+            damage distribution of shape (P, A, E, L, D+C)
+        """
+        A = len(adf)
+        E = len(gmf_df)
+        L = len(self.loss_types)
+        D = self.D
+        assets = adf.to_records()
+        if rng is None:
+            number = assets['value-number']
+        else:
+            number = assets['value-number'] = U32(assets['value-number'])
+        dd5 = numpy.zeros((self.P, A, E, L, D + C), F32)
+        outs = self.output(adf, gmf_df)  # dicts loss_type -> array
+        for p, out in enumerate(outs):
+            for li, lt in enumerate(self.loss_types):
+                fractions = out[lt]  # shape (A, E, Dc)
+                if rng is None:
+                    for a in range(A):
+                        dd5[p, a, :, li, :D] = fractions[a] * number[a]
+                else:
+                    # this is a performance distaster; for instance
+                    # the Messina test in oq-risk-tests becomes 12x
+                    # slower even if it has only 25_736 assets
+                    dd5[p, :, :, li, :D] = rng.discrete_dmg_dist(
+                        gmf_df.eid, fractions, number)
+
+        if crm:
+            csqs = crm.get_consequences()
+            df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
+            csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, crm.oqparam)
+            csqidx = {dc: i for i, dc in enumerate(csqs, D)}
+            for (cons, li), values in csq.items():
+                dd5[:, :, :, li, csqidx[cons]] = values  # (P, A, E)
+        return dd5
 
     def todict(self):
         """
@@ -1679,21 +1761,19 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
-        df = self.asset_df
-        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfdic,
-                   wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   alias=self.alias,
-                   loss_types=self.loss_types,
-                   minimum_asset_loss=self.minimum_asset_loss,
-                   calculation_mode=self.calculation_mode)
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
+                            'retro'] = retro
+                    rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
+        dic = dict(risk_functions=rfdic, calculation_mode=self.calculation_mode)
+        if any(mal for mal in self.minimum_asset_loss.values()):
+            dic['minimum_asset_loss'] = self.minimum_asset_loss
+        if any(self.wdic[k] != 1 for k in self.wdic):
+            dic['wdic'] = {'%s#%s' % k: v for k, v in self.wdic.items()},
         return dic
 
     def pprint(self):
@@ -1703,26 +1783,30 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
+
+def consequence(consequence, assets, coeff, loss_type, time_event):
     """
     :param consequence: kind of consequence
-    :param coeffs: coefficients per damage state
-    :param asset: asset record
-    :param dmgdist: an array of probabilies of shape (E, D - 1)
-    :param loss_type: loss type string
-    :returns: array of shape E
+    :param assets: asset array (shape A)
+    :param coeff: composite array of coefficients of shape (A, E)
+    :param time_event: time event string
+    :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    if consequence.startswith(('loss', 'losses')):
-        return dmgdist @ coeffs * asset['value-' + loss_type]
+    if consequence.startswith('losses'):
+        res = (assets['value-' + loss_type].reshape(-1, 1) *
+               coeff) / assets['value-number'].reshape(-1, 1)
+        return res
     elif consequence in ['collapsed', 'non_operational']:
-        return dmgdist @ coeffs * asset['value-number']
+        return coeff
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
-        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
+        values = assets[f'occupants_{time_event}'] / assets['value-number']
+        return values.reshape(-1, 1) * coeff
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['value-residents']
+        values = assets['value-residents'] / assets['value-number']
+        return values.reshape(-1, 1) * coeff
     else:
         raise NotImplementedError(consequence)
 
@@ -1747,33 +1831,12 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
-        return aval[xltype]
+        try:
+            return aval[xltype]
+        except ValueError:  # liquefaction, landslide
+            return 0
     else:
         raise NotImplementedError(consequence)
-
-
-# ########################### u64_to_eal ################################# #
-
-def u64_to_eal(u64):
-    """
-    Convert an unit64 into a triple (eid, aid, lid)
-
-    >>> u64_to_eal(42949673216001)
-    (10000, 1000, 1)
-    """
-    eid, x = divmod(u64, TWO32)
-    aid, lid = divmod(x, 256)
-    return eid, aid, lid
-
-
-def eal_to_u64(eid, aid, lid):
-    """
-    Convert a triple (eid, aid, lid) into an uint64:
-
-    >>> eal_to_u64(10000, 1000, 1)
-    42949673216001
-    """
-    return U64(eid * TWO32) + U64(aid * 256) + U64(lid)
 
 
 if __name__ == '__main__':

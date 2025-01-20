@@ -237,6 +237,21 @@ Here *set_between_epsilon* is simply shifting the mean with the formula *mean ->
 the future ``ModifiableGMPE`` will likely grow more methods. If you want to understand how it works you should look at 
 the source code: `gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py>`_
 
+In engine 3.21 we added a helper function `valid.modified_gsim`
+to modify a GMPE. Internally it is creating a `ModifiableGMPE` instance,
+but it is much simpler to use. An example is:
+
+.. python:
+
+   >>> from openquake.hazardlib import valid
+   >>> orig_gsim = valid.gsim('Lin2011foot')
+   >>> gsim = valid.modified_gsim(
+   ...        orig_gsim, add_between_within_stds={'with_betw_ratio':1.5})
+   >>> print(gsim)
+   [ModifiableGMPE.gmpe.Lin2011foot]
+   [ModifiableGMPE.add_between_within_stds]
+   with_betw_ratio = 1.5
+
 ***************
 NRCan15SiteTerm
 ***************

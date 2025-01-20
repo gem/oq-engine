@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019-2024 GEM Foundation
+# Copyright (C) 2019-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@
 # This is required to load a custom  local_settings.py when 'oq webui' is used.
 export PYTHONPATH=$HOME
 
-oq dbserver upgrade &
+oq dbserver start &
 
 # Wait the DbServer to come up; may be replaced with a "oq dbserver wait"
 while :

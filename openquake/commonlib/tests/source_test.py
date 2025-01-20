@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -159,6 +159,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=1.5,
+            temporal_occurrence_model=PoissonTOM(50.),
             upper_seismogenic_depth=10.0,
             lower_seismogenic_depth=20.0,
             fault_trace=geo.Line(
@@ -166,9 +167,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                  geo.Point(-122.03880, 37.87710)]),
             dip=45.0,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-            hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
-            slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
+            hypo_slip_list=[numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
+                            numpy.array([[90, 0.7], [135, 0.3]])])
         return simple
 
     @property

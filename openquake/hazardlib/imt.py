@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ types.
 import re
 import collections
 import numpy
+from openquake.baselib.general import DictArray
 
 FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
@@ -95,6 +96,13 @@ def sort_by_imt(imtls):
     """
     imts = sorted(imtls, key=lambda imt: from_string(imt).period)
     return {imt: imtls[imt] for imt in imts}
+
+
+def dictarray(imtls):
+    """
+    :returns: a DictArray sorted by IMT
+    """
+    return DictArray(sort_by_imt(imtls))
 
 
 def repr(self):
@@ -268,7 +276,8 @@ def ASH():
     return IMT('ASH')
 
 
-# secondary perils
+# secondary IMTs
+sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
 
 def Disp():
     """
@@ -300,7 +309,7 @@ def LiqOccur():
 
 def LSE():
     """
-    Liquefaction spatial extent as percentage of a pixel area.
+    Liquefaction or Landslide spatial extent.
     """
     return IMT('LSE')
 
@@ -325,3 +334,10 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
+
+
+def LsProb():
+    """
+    Probability of landsliding.
+    """
+    return IMT('LsProb')

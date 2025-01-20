@@ -59,7 +59,7 @@ Richard Styron           (@cossatot)            July 2019
 Kris Vanneste            (@krisvanneste)        September 2019
 Alberto Chiusole         (@bebosudo)            November 2019
 Iason Grigoratos         (@jasongrig)           April 2020
-Francis Jenner Bernales  (@ftbernales)          August 2020
+Francis Bernales         (@ftbernales)          August 2020
 Athanasios Papadopoulos  (@thpap)               September 2020
 Viktor Polak             (@viktor76525)         November 2020
 Thomas Chartier          (@tomchartier)         December 2020
@@ -90,6 +90,8 @@ Fatemeh Alishahiha       (@FatemehAlsh)         May 2024
 Anna Rood                (@AnnaRood)            May 2024
 Kyle Smith               (@kslytherin)          June 2024
 Savvinos Aristeidou      (@Savvinos-Aristeidou) July 2024
+Enrico Abcede            (@emabcede30)          September 2024
+Ilaria Oliveti           (@IlariaOliveti)       October 2024
 
 Project management
 ------------------

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -60,3 +60,15 @@ class LoginRequiredMiddleware:
                     return HttpResponseRedirect(settings.LOGIN_URL)
 
         return self.get_response(request)
+
+
+class PrintHeadersMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        print(f"\nRequest {request} headers:")
+        for header, value in request.headers.items():
+            print(f"\t{header}: {value}")
+        response = self.get_response(request)
+        return response

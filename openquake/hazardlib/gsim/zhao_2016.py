@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,10 +29,10 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 import copy
 import numpy as np
 import pandas as pd
-import fiona
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
@@ -519,7 +519,7 @@ def get_volc_zones(volc_polygons):
         for i, f in enumerate(inp):
             
             # Get zone_id
-            zone_id[i] = pd.Series(f['properties'])[0]
+            zone_id[i] = pd.Series(f['properties']).iloc[0]
             
             # Per zone get lat and lon of each polygon vertices
             for c, coo in enumerate(f['geometry']['coordinates'][0]):

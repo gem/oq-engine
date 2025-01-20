@@ -261,8 +261,7 @@ class KiteSurface(BaseSurface):
             return distances
 
         # Get the projection
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(blo, bla))
+        proj = geo_utils.OrthographicProjection.from_(blo, bla)
 
         # Mesh projected coordinates
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])

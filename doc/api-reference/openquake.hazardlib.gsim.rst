@@ -1219,10 +1219,26 @@ utils
     :undoc-members:
     :show-inheritance:
 
+utils_usgs_chapman_guo_2021
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.utils_chapman_guo_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 utils_swiss_gmpe
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils_swiss_gmpe
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+utils_usgs_basin_scaling
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.utils_usgs_basin_scaling
     :members:
     :undoc-members:
     :show-inheritance:
@@ -1287,6 +1303,14 @@ yu_2013
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.yu_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+zafarani_2018
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zafarani_2018
     :members:
     :undoc-members:
     :show-inheritance:

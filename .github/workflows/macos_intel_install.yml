@@ -1,5 +1,5 @@
 name: MacOS Intel install and test
-'on':
+"on":
   workflow_dispatch:
     inputs:
       git-ref:
@@ -12,15 +12,15 @@ name: MacOS Intel install and test
     branches: [macos_test]
 
 jobs:
-
   install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-13]
-        python-version: ["3.11"]
+        python-version: ["3.11", "3.12"]
     steps:
-    # This Checkout use git-ref keyword from dispatch
+      # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
@@ -32,20 +32,20 @@ jobs:
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
-          python-version:  ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
-        env: 
+        env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
           #
           echo "branch to test: ${BRANCH}"
-          if [[ "$BRANCH" != "" ]] 
+          if [[ "$BRANCH" != "" ]]
           then
             python install.py devel --version ${BRANCH}
           else
-            python install.py devel 
+            python install.py devel
           fi
           source ~/openquake/bin/activate
           pip3 install pytest pyshp flake8
@@ -83,6 +83,7 @@ jobs:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         if: always()
         run: |
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine/openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib

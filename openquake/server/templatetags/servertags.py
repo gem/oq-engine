@@ -11,6 +11,24 @@ def get_imt(string):
     return string.split('-')[1].rstrip('.png')
 
 
+@register.filter
+def humanize_number(value):
+    """
+    Converts a large number into a human-readable format, e.g., 1000 -> 1K
+    """
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        return str(value)
+    if value < 1000:
+        return f'{value:.2f}'
+    if 1000 <= value < 1000000:
+        return f'{value/1000:.2f}K'
+    if 1000000 <= value < 1000000000:
+        return f'{value/1000000:.2f}M'
+    return f'{value/1000000000:.2f}B'
+
+
 @register.simple_tag()
 def no_optional_cookie_groups_except_hide_cookie_bar_exist(request):
     from cookie_consent.models import CookieGroup
@@ -28,3 +46,14 @@ def hide_cookie_bar_accepted(request):
     return get_cookie_value_from_request(
         request, "hide_cookie_bar_group",
         "hide_cookie_bar_group:hide_cookie_bar")
+
+
+@register.filter
+def addstr(arg1, arg2):
+    """
+    concatenate arg1 & arg2
+    NOTE: if arguments are numeric, the Django 'add' filter would sum them instead of
+    concatenating them as strings, so we need this new filter to make sure that
+    arguments are always treated as strings
+    """
+    return str(arg1) + str(arg2)
