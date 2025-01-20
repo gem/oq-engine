@@ -491,6 +491,15 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            $('#asce_version').on('change', function() {
+                const asce_version = $(this).val();
+                if (asce_version === 'ASCE7-16') {
+                    $('#vs30').prop('readonly', true).attr('placeholder', 'fixed at 760 m/s');
+                } else if (asce_version === 'ASCE7-22') {
+                    $('#vs30').prop('readonly', false).attr('placeholder', 'm/s');
+                }
+            });
+
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
