@@ -56,7 +56,7 @@ event based damage calculation is shown in the listing below.::
 	structural_fragility_file = structural_fragility_model.xml
 	
 	[consequence]
-	structural_consequence_file = structural_consequence_model.xml
+	consequence_file = {'taxonomy': "consequence_model.csv"}
 	
 	[risk_calculation]
 	master_seed = 42

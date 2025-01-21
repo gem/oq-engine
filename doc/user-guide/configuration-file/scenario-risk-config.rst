@@ -346,20 +346,21 @@ is shown in the listing below.::
 	nonstructural_fragility_file = nonstructural_fragility_model.xml
 	
 	[consequence]
-	structural_consequence_file = structural_consequence_model.xml
-	nonstructural_consequence_file = nonstructural_consequence_model.xml
+	consequence_file = {'taxonomy': "consequence_model.csv"}
 
-Note that one or more of the following parameters can be used in the same job configuration file to provide the 
-corresponding *Consequence Model* files:
+Note that the "consequence_model.csv" file will have a structure like the
+following::
 
-- ``structural_consequence_file``: a parameter used to define the path to a structural Consequence Model file
-- ``nonstructural_consequence_file``: a parameter used to define the path to a nonstructural Consequence Model file
-- ``contents_consequence_file``: a parameter used to define the path to a contents Consequence Model file
-- ``business_interruption_consequence_file``: a parameter used to define the path to a business interruption Consequence Model file
-
-It is important that the ``lossCategory`` parameter in the metadata section for each provided Consequence Model file 
-(“structural”, “nonstructural”, “contents”, or “business_interruption”) should match the loss type defined in the 
-configuration file by the relevant keyword above.
+taxonomy,consequence,loss_type,ds1,ds2,ds3,ds4
+tax1,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
+tax2,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
+tax3,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
+tax1,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
+tax2,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
+tax3,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
+tax1,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+tax2,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+tax3,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
 
 The above calculation can be run using the command line::
 
