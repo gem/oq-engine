@@ -658,6 +658,25 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     return contents, properties, shakemap_array, err
 
 
+def _get_nodal_planes(properties):
+    err = None
+    if 'moment-tensor' not in properties['products']:
+        err = 'Unable to retrieve information about the nodal solution'
+        return None, err
+    moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
+    props = moment_tensor['properties']
+    nodal_planes = {}
+    for key, value in props.items():
+        if key.startswith('nodal-plane-'):
+            parts = key.split('-')
+            plane = f'NP{parts[2]}'
+            attr = parts[3]  # Get the attribute (i.e. 'dip', 'rake' or 'strike')
+            if plane not in nodal_planes:
+                nodal_planes[plane] = {}
+            nodal_planes[plane][attr] = float(value)
+    return nodal_planes, err
+
+
 def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
                 use_shakemap=False, rupture_file=None,
                 station_data_file=None, monitor=performance.Monitor()):
@@ -717,11 +736,18 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if err:
         return None, None, err
 
-    if 'download/rupture.json' not in contents:
+    if ('download/rupture.json' not in contents
+            or approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']):
         # happens for us6000f65h in parsers_test
         rupdic = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
-    if not rupdic:
+
+    if approach == 'build_rup_from_usgs':
+        rupdic['nodal_planes'], err = _get_nodal_planes(properties)
+        if err:
+            return None, rupdic, err
+
+    if not rupdic or approach == 'use_finite_rup_from_usgs':
         if not rup_data:
             with monitor('Downloading rupture json'):
                 rup_data, rupture_file = download_rupture_data(

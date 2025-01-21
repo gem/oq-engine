@@ -129,6 +129,7 @@ ARISTOTLE_FORM_LABELS = {
     'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
+    'nodal_plane': 'Nodal plane',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -154,6 +155,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
+    'nodal_plane': '',
 }
 
 validators = {

@@ -626,14 +626,31 @@ function capitalizeFirstLetter(val) {
                 } else {
                     $('#upload_rupture_grp').addClass('hidden');
                 }
-                if (selected_approach == 'provide_rup_params') {
+                if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
                     $('#rup_params').removeClass('hidden');
+                    $('#rake').prop('disabled', false);
                     $('#dip').prop('disabled', false);
                     $('#strike').prop('disabled', false);
-                    $('#usgs_id').val('UserProvided');
+                    if (selected_approach == 'build_rup_from_usgs') {
+                        $('#rupture_from_usgs_grp').addClass('hidden');
+                    } else {  // provide_rup_params
+                        $('#usgs_id').val('UserProvided');
+                    }
                 } else {
                     $('#rup_params').addClass('hidden');
                 }
+                if (selected_approach == 'build_rup_from_usgs') {
+                    $('div#nodal_plane').removeClass('hidden');
+                } else {
+                    $('div#nodal_plane').addClass('hidden');
+                }
+            });
+
+            $('select#nodal_plane').change(function () {
+                const nodal_plane = $(this).find(':selected').data('details');
+                $('#rake').val(nodal_plane.rake);
+                $('#dip').val(nodal_plane.dip);
+                $('#strike').val(nodal_plane.strike);
             });
 
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
@@ -715,6 +732,26 @@ function capitalizeFirstLetter(val) {
                         $('#strike').prop('disabled', true);
                         $('#dip').val('');
                         $('#strike').val('');
+                    }
+                    if ('nodal_planes' in data) {
+                        nodal_planes = data.nodal_planes;
+                        const $select = $('select#nodal_plane');
+                        $select.empty();
+                        $.each(nodal_planes, function(key, values) {
+                            const optionText = `${key} (Dip: ${values.dip}, Rake: ${values.rake}, Strike: ${values.strike})`;
+                            const $option = $('<option>')
+                                .val(key) // Use the key as the value
+                                .text(optionText) // Display the formatted text
+                                .data('details', values); // Attach the object as data
+                            $select.append($option);
+                        });
+                        const nodal_plane = $select.find(':selected').data('details');
+                        $('#rake').prop('disabled', false);
+                        $('#dip').prop('disabled', false);
+                        $('#strike').prop('disabled', false);
+                        $('#rake').val(nodal_plane.rake);
+                        $('#dip').val(nodal_plane.dip);
+                        $('#strike').val(nodal_plane.strike);
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {
