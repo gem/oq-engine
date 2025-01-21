@@ -403,18 +403,19 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
     return df_seismic_non_null
 
 
-def _get_preferred_shakemap(shakemaps):
-    preferred_weights = [shakemap['preferredWeight'] for shakemap in shakemaps]
+def _get_preferred_item(items):
+    # items can be for instance shakemaps, moment tensors or finite faults
+    preferred_weights = [item['preferredWeight'] for item in items]
     preferred_idxs = [idx for idx, val in enumerate(preferred_weights)
                       if val == max(preferred_weights)]
-    preferred_shakemaps = [shakemaps[idx] for idx in preferred_idxs]
-    if len(preferred_shakemaps) > 1:
-        update_times = [shakemap['updateTime'] for shakemap in preferred_shakemaps]
+    preferred_items = [items[idx] for idx in preferred_idxs]
+    if len(preferred_items) > 1:
+        update_times = [item['updateTime'] for item in preferred_items]
         latest_idx = update_times.index(max(update_times))
-        shakemap = preferred_shakemaps[latest_idx]
+        item = preferred_items[latest_idx]
     else:
-        shakemap = preferred_shakemaps[0]
-    return shakemap
+        item = preferred_items[0]
+    return item
 
 
 def download_station_data_file(usgs_id, contents, user):
@@ -473,16 +474,15 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     """
     Extract the finite fault properties from products.
     NB: if the finite-fault list contains multiple elements we take the
-    first one.
+    preferred one.
     """
     logging.info('Getting finite-fault properties')
     try:
-        ff = products['finite-fault']
+        ffs = products['finite-fault']
     except KeyError:
         # FIXME: not tested
         raise MissingLink('There is no finite-fault info for %s' % usgs_id)
-    if isinstance(ff, list):
-        ff = ff[0]
+    ff = _get_preferred_item(ffs)
     p = ff['properties']
     lon = float(p['longitude'])
     lat = float(p['latitude'])
@@ -639,7 +639,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
     properties = js['properties']
 
     # NB: currently we cannot find a case with missing shakemap
-    shakemap = _get_preferred_shakemap(properties['products']['shakemap'])
+    shakemap = _get_preferred_item(properties['products']['shakemap'])
     contents = shakemap['contents']
 
     if (user.level == 1 or use_shakemap) and 'download/grid.xml' in contents:
